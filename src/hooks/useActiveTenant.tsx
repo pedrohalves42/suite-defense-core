@@ -140,23 +140,33 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   const setActiveTenant = useCallback(async (tenant: Tenant) => {
     const previousTenantId = activeTenantId;
     
-    // Update local state immediately for responsive UI
+    if (previousTenantId === tenant.id) {
+      // No change needed
+      return;
+    }
+    
+    // FASE 3 FIX: Sync to backend FIRST (blocking) before updating local state
+    // This ensures atomicity: local state only updates if backend confirms
+    const synced = await syncActiveTenantToBackend(tenant.id);
+    
+    if (!synced) {
+      // Backend sync failed - do NOT update local state
+      toast.error('Erro ao trocar de empresa', {
+        description: 'Não foi possível sincronizar com o servidor. Tente novamente.'
+      });
+      return;
+    }
+    
+    // Backend confirmed - now safe to update local state
     setActiveTenantId(tenant.id);
     localStorage.setItem(ACTIVE_TENANT_KEY, tenant.id);
     
-    if (previousTenantId !== tenant.id) {
-      // Sync to backend (updates JWT app_metadata)
-      const synced = await syncActiveTenantToBackend(tenant.id);
-      
-      // Invalidate all queries to force refetch with new tenant
-      queryClient.invalidateQueries();
-      
-      toast.success(`Alterado para ${tenant.name}`, {
-        description: synced 
-          ? 'Dados atualizados para a nova empresa'
-          : 'Dados locais atualizados (sincronização pendente)'
-      });
-    }
+    // Invalidate all queries to force refetch with new tenant context
+    queryClient.invalidateQueries();
+    
+    toast.success(`Alterado para ${tenant.name}`, {
+      description: 'Dados atualizados para a nova empresa'
+    });
   }, [activeTenantId, queryClient]);
 
   return (

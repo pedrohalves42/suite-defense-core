@@ -1,9 +1,17 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { checkRateLimit } from '../_shared/rate-limit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Rate limit config for token approval: strict to prevent brute-force
+const RATE_LIMIT_CONFIG = {
+  maxRequests: 10,      // 10 attempts
+  windowMinutes: 15,    // per 15 minutes
+  blockMinutes: 60,     // block for 1 hour if exceeded
 };
 
 /**
@@ -17,6 +25,7 @@ const corsHeaders = {
  * - Token expires in 24h
  * - Full audit trail (IP, user-agent, timestamp)
  * - No authentication required (token IS the secret)
+ * - Rate limited by IP to prevent brute-force attacks
  */
 
 interface ApprovalResult {
@@ -42,6 +51,29 @@ serve(async (req) => {
                    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
                    'unknown';
   const userAgent = req.headers.get('user-agent') || 'unknown';
+
+  // Create supabase client early for rate limiting
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+
+  // Rate limit by IP to prevent brute-force token guessing
+  const rateLimitResult = await checkRateLimit(
+    supabase,
+    clientIp,
+    'approve-via-token',
+    RATE_LIMIT_CONFIG
+  );
+
+  if (!rateLimitResult.allowed) {
+    console.log(`[approve-via-token] Rate limited - IP: ${clientIp} - resetAt: ${rateLimitResult.resetAt} - requestId: ${requestId}`);
+    return generateHtmlResponse({
+      success: false,
+      message: `Muitas tentativas. Tente novamente após ${rateLimitResult.resetAt?.toLocaleString('pt-BR')}`,
+      error: 'RATE_LIMITED'
+    });
+  }
 
   try {
     // Accept token from query string (GET) or body (POST)
@@ -70,11 +102,6 @@ serve(async (req) => {
     }
 
     console.log(`[approve-via-token] Processing approval - token: ${token.substring(0, 8)}... - requestId: ${requestId}`);
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
 
     // Find approval request by token
     const { data: approvalRequest, error: findError } = await supabase
