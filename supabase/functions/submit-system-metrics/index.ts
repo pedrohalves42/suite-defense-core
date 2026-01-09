@@ -367,31 +367,26 @@ Deno.serve(async (req) => {
     if (alertsToResolve.length > 0) {
       const now = new Date().toISOString();
 
-      // Primeiro, buscar os alertas que serão resolvidos para ter os IDs
-      const { data: alertsBeforeResolve } = await supabase
-        .from('system_alerts')
-        .select('id, tenant_id, alert_type, title, severity')
-        .eq('agent_id', agent.id)
-        .eq('resolved', false)
-        .in('alert_type', alertsToResolve);
-
-      // Resolver os alertas
+      // ADR-029 FIX: Alertas críticos requerem resolução humana (resolved_by obrigatório)
+      // Só resolver automaticamente alertas que NÃO são críticos
+      // Isso respeita o trigger enforce_critical_alert_human_review
+      // Usando filtro explícito com severity IN ('low','medium','high') para evitar críticos
       const { error: resolveError, count: resolvedCount } = await supabase
         .from('system_alerts')
-        .update({ resolved: true, resolved_at: now })
+        .update({ 
+          resolved: true, 
+          resolved_at: now,
+          resolution_notes: 'Auto-resolved: metric returned to normal threshold'
+        })
         .eq('agent_id', agent.id)
         .eq('resolved', false)
+        .in('severity', ['low', 'medium', 'high']) // Exclui 'critical' - precisam de resolução humana
         .in('alert_type', alertsToResolve);
 
       if (resolveError) {
         logger.error('Failed to auto-resolve alerts', resolveError);
-      } else if (alertsBeforeResolve && alertsBeforeResolve.length > 0) {
-        // AUDITABILITY: Criar decision_events para cada alerta resolvido
-        // O trigger na tabela system_alerts cria automaticamente via trg_decision_event_alert
-        // Mas logamos aqui para confirmar
-        logger.info(`Auto-resolved ${alertsBeforeResolve.length} critical alerts with decision tracking for ${agent.agent_name}`);
       } else if (resolvedCount && resolvedCount > 0) {
-        logger.info(`Auto-resolved ${resolvedCount} alerts for ${agent.agent_name}`);
+        logger.info(`Auto-resolved ${resolvedCount} non-critical alerts for ${agent.agent_name}`);
       }
     }
 

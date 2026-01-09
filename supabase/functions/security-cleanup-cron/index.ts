@@ -45,7 +45,8 @@ Deno.serve(async (req: Request) => {
       security_logs_archived: 0,
     };
 
-    // 1. Cleanup HMAC signatures > 24h
+    // 1. Cleanup HMAC signatures > 24h (anti-replay records)
+    // ADR-029: Tabela foi corrigida para ter estrutura correta (id, signature, agent_name, used_at)
     const hmacCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const { data: hmacDeleted, error: hmacError } = await supabase
       .from('hmac_signatures')
@@ -53,6 +54,9 @@ Deno.serve(async (req: Request) => {
       .lt('used_at', hmacCutoff.toISOString())
       .select('id');
     
+    if (hmacError) {
+      console.error(`[${requestId}] HMAC cleanup error:`, hmacError);
+    }
     stats.hmac_signatures_deleted = hmacDeleted?.length || 0;
     console.log(`[${requestId}] Deleted ${stats.hmac_signatures_deleted} old HMAC signatures`);
 
