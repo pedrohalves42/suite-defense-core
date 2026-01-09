@@ -7981,6 +7981,105 @@ export type Database = {
           },
         ]
       }
+      job_slo_state: {
+        Row: {
+          burn_rate: number
+          created_at: string
+          error_jobs: number
+          error_rate: number
+          evaluated_at: string
+          id: string
+          last_task_id: string | null
+          tenant_id: string
+          time_window: string
+          total_jobs: number
+          updated_at: string
+        }
+        Insert: {
+          burn_rate?: number
+          created_at?: string
+          error_jobs?: number
+          error_rate?: number
+          evaluated_at?: string
+          id?: string
+          last_task_id?: string | null
+          tenant_id: string
+          time_window: string
+          total_jobs?: number
+          updated_at?: string
+        }
+        Update: {
+          burn_rate?: number
+          created_at?: string
+          error_jobs?: number
+          error_rate?: number
+          evaluated_at?: string
+          id?: string
+          last_task_id?: string | null
+          tenant_id?: string
+          time_window?: string
+          total_jobs?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_slo_state_last_task_id_fkey"
+            columns: ["last_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_slo_state_last_task_id_fkey"
+            columns: ["last_task_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_risk_debt"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_slo_state_last_task_id_fkey"
+            columns: ["last_task_id"]
+            isOneToOne: false
+            referencedRelation: "v_risk_debt_active"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_slo_state_last_task_id_fkey"
+            columns: ["last_task_id"]
+            isOneToOne: false
+            referencedRelation: "v_tasks_requiring_closure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_slo_state_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "governance_health_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "job_slo_state_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_slo_state_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "job_slo_state_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           agent_id: string | null
@@ -19873,6 +19972,17 @@ export type Database = {
       }
       escalate_breached_sla_tasks: { Args: never; Returns: undefined }
       evaluate_decision_rules: { Args: never; Returns: Json }
+      evaluate_job_slo: {
+        Args: never
+        Returns: {
+          out_burn_rate: number
+          out_error_rate: number
+          out_severity: string
+          out_task_created: boolean
+          out_tenant_id: string
+          out_time_window: string
+        }[]
+      }
       evaluate_playbook_trigger: {
         Args: {
           p_agent_id?: string

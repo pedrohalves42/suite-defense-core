@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useJobsHealth } from '@/hooks/useJobsHealth';
+import { useJobsSLO, getBurnRateStatus } from '@/hooks/useJobsSLO';
 import { 
   Cog, 
   RefreshCw, 
@@ -10,13 +11,26 @@ import {
   XCircle, 
   Clock, 
   AlertTriangle,
-  ChevronRight
+  AlertOctagon,
+  Flame,
+  ChevronRight,
+  Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 
 export function JobsHealthCard() {
   const { summary, isLoading, refetch } = useJobsHealth();
+  const { 
+    sloState, 
+    burnRate, 
+    errorRate, 
+    status, 
+    isBreached,
+    burnRateFormatted,
+    errorRateFormatted,
+    isLoading: isSloLoading 
+  } = useJobsSLO();
 
   if (isLoading) {
     return (
@@ -48,6 +62,15 @@ export function JobsHealthCard() {
     return 'bg-red-500/10';
   };
 
+  // Get burn rate icon based on severity
+  const getBurnRateIcon = () => {
+    if (burnRate >= 10) return <AlertOctagon className="h-4 w-4" />;
+    if (burnRate >= 4) return <Flame className="h-4 w-4" />;
+    if (burnRate >= 2) return <AlertTriangle className="h-4 w-4" />;
+    if (burnRate >= 1) return <Activity className="h-4 w-4" />;
+    return <CheckCircle2 className="h-4 w-4" />;
+  };
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -56,18 +79,36 @@ export function JobsHealthCard() {
             <Cog className="h-4 w-4 text-muted-foreground" />
             Saúde do Job Engine
           </CardTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => refetch()}
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* SLO Status Badge */}
+            {!isSloLoading && sloState && (
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  "text-xs",
+                  status.textColor,
+                  status.level === 'critical' && 'border-red-500 animate-pulse',
+                  status.level === 'high' && 'border-orange-500',
+                  status.level === 'warning' && 'border-amber-500',
+                  status.level === 'ok' && 'border-green-500'
+                )}
+              >
+                SLO {status.label}
+              </Badge>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => refetch()}
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           {/* Success Rate */}
           <div className={cn("p-3 rounded-lg text-center", getSuccessRateBg())}>
             <div className={cn("text-2xl font-bold", getSuccessRateColor())}>
@@ -75,6 +116,19 @@ export function JobsHealthCard() {
             </div>
             <div className="text-xs text-muted-foreground mt-1">
               Taxa de Sucesso
+            </div>
+          </div>
+
+          {/* Burn Rate - NEW */}
+          <div className={cn("p-3 rounded-lg text-center", status.bgColor)}>
+            <div className={cn("flex items-center justify-center gap-1", status.textColor)}>
+              {getBurnRateIcon()}
+              <span className="text-2xl font-bold">
+                {isSloLoading ? '-' : burnRateFormatted}
+              </span>
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Burn Rate
             </div>
           </div>
 
@@ -129,9 +183,53 @@ export function JobsHealthCard() {
           </div>
         </div>
 
+        {/* SLO Info Bar */}
+        {!isSloLoading && sloState && (
+          <div className={cn(
+            "mt-4 p-2 rounded-md text-xs text-center",
+            isBreached ? status.bgColor : 'bg-muted/30'
+          )}>
+            <span className="text-muted-foreground">
+              SLO: <span className="font-medium text-foreground">99.5%</span>
+              {' | '}
+              Erro atual: <span className={cn("font-medium", isBreached && status.textColor)}>
+                {errorRateFormatted}
+              </span>
+              {' | '}
+              Janela: <span className="font-medium text-foreground">1h</span>
+              {sloState.total_jobs > 0 && (
+                <>
+                  {' | '}
+                  Jobs: <span className="font-medium text-foreground">
+                    {sloState.error_jobs}/{sloState.total_jobs}
+                  </span>
+                </>
+              )}
+            </span>
+          </div>
+        )}
+
         {/* Warning Messages */}
-        {(summary.stuckJobs > 0 || summary.failedJobs > 0) && (
+        {(summary.stuckJobs > 0 || summary.failedJobs > 0 || isBreached) && (
           <div className="mt-4 space-y-2">
+            {/* SLO Breach Warning */}
+            {isBreached && (
+              <div className={cn(
+                "flex items-center gap-2 text-sm p-2 rounded-md",
+                status.bgColor,
+                status.textColor
+              )}>
+                {getBurnRateIcon()}
+                <span>
+                  Burn Rate {burnRateFormatted} - {
+                    burnRate >= 10 ? 'Ação imediata necessária!' :
+                    burnRate >= 4 ? 'Consumo alto do orçamento de erro' :
+                    burnRate >= 2 ? 'Consumo acelerado do orçamento de erro' :
+                    'Orçamento de erro sendo consumido'
+                  }
+                </span>
+              </div>
+            )}
             {summary.stuckJobs > 0 && (
               <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-500/10 p-2 rounded-md">
                 <AlertTriangle className="h-4 w-4 shrink-0" />

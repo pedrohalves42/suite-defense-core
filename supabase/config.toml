@@ -652,3 +652,8 @@ schedule = "0 6 * * *"
 # === ADR-026: Multi-Tenant Active Context ===
 [functions.set-active-tenant]
 verify_jwt = false
+
+# === ADR-032: SLO Burn Rate Evaluation (every 5 minutes) ===
+[functions.evaluate-job-slo]
+verify_jwt = false
+schedule = "*/5 * * * *"
