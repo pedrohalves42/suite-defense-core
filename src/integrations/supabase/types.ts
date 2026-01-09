@@ -6751,6 +6751,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "failure_occurrences_fingerprint_id_fkey"
+            columns: ["fingerprint_id"]
+            isOneToOne: false
+            referencedRelation: "v_incident_groups_with_slo"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "failure_occurrences_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -7441,6 +7448,91 @@ export type Database = {
           used_at?: string
         }
         Relationships: []
+      }
+      incident_slo_state: {
+        Row: {
+          budget_consumed: number
+          budget_remaining: number
+          burn_rate_1h: number
+          burn_rate_24h: number
+          burn_rate_6h: number
+          created_at: string
+          error_budget: number
+          expected_rate_1h: number
+          fingerprint_id: string
+          id: string
+          last_evaluated_at: string
+          last_task_id: string | null
+          occurrences_1h: number
+          occurrences_24h: number
+          occurrences_6h: number
+          slo_target: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          budget_consumed?: number
+          budget_remaining?: number
+          burn_rate_1h?: number
+          burn_rate_24h?: number
+          burn_rate_6h?: number
+          created_at?: string
+          error_budget?: number
+          expected_rate_1h?: number
+          fingerprint_id: string
+          id?: string
+          last_evaluated_at?: string
+          last_task_id?: string | null
+          occurrences_1h?: number
+          occurrences_24h?: number
+          occurrences_6h?: number
+          slo_target?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          budget_consumed?: number
+          budget_remaining?: number
+          burn_rate_1h?: number
+          burn_rate_24h?: number
+          burn_rate_6h?: number
+          created_at?: string
+          error_budget?: number
+          expected_rate_1h?: number
+          fingerprint_id?: string
+          id?: string
+          last_evaluated_at?: string
+          last_task_id?: string | null
+          occurrences_1h?: number
+          occurrences_24h?: number
+          occurrences_6h?: number
+          slo_target?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_slo_state_fingerprint_id_fkey"
+            columns: ["fingerprint_id"]
+            isOneToOne: true
+            referencedRelation: "failure_fingerprints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_slo_state_fingerprint_id_fkey"
+            columns: ["fingerprint_id"]
+            isOneToOne: true
+            referencedRelation: "v_incident_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_slo_state_fingerprint_id_fkey"
+            columns: ["fingerprint_id"]
+            isOneToOne: true
+            referencedRelation: "v_incident_groups_with_slo"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       incident_timelines: {
         Row: {
@@ -13583,6 +13675,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tasks_fingerprint_id_fkey"
+            columns: ["fingerprint_id"]
+            isOneToOne: false
+            referencedRelation: "v_incident_groups_with_slo"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tasks_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -18278,6 +18377,35 @@ export type Database = {
         }
         Relationships: []
       }
+      v_incident_groups_with_slo: {
+        Row: {
+          budget_consumed: number | null
+          budget_remaining: number | null
+          burn_rate_1h: number | null
+          burn_rate_24h: number | null
+          burn_rate_6h: number | null
+          distinct_agents: number | null
+          distinct_tenants: number | null
+          error_budget: number | null
+          failure_class: string | null
+          fingerprint_hash: string | null
+          first_seen_at: string | null
+          id: string | null
+          is_active: boolean | null
+          is_ongoing: boolean | null
+          last_evaluated_at: string | null
+          last_seen_at: string | null
+          normalized_signature: Json | null
+          occurrences_1h: number | null
+          occurrences_6h: number | null
+          severity_hint: string | null
+          slo_status: string | null
+          slo_target: number | null
+          source_type: string | null
+          total_occurrences: number | null
+        }
+        Relationships: []
+      }
       v_integrity_score: {
         Row: {
           active_releases: number | null
@@ -19794,6 +19922,10 @@ export type Database = {
         Returns: number
       }
       calculate_fingerprint_hash: { Args: { signature: Json }; Returns: string }
+      calculate_incident_burn_rate: {
+        Args: { p_fingerprint_id: string }
+        Returns: undefined
+      }
       calculate_next_run: {
         Args: { from_time?: string; pattern: string }
         Returns: string
@@ -20443,6 +20575,10 @@ export type Database = {
         Args: { p_plan_name: string }
         Returns: number
       }
+      get_slo_target_for_severity: {
+        Args: { p_severity: string }
+        Returns: number
+      }
       get_software_risk_summary: {
         Args: { p_tenant_id: string }
         Returns: {
@@ -20568,6 +20704,7 @@ export type Database = {
         Args: { p_agent_id: string; p_end_time: string; p_start_time: string }
         Returns: Json
       }
+      refresh_all_incident_slos: { Args: never; Returns: number }
       register_agent_signing_key: {
         Args: {
           p_agent_id: string
