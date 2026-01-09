@@ -25,6 +25,7 @@ import { SafeModeCounter } from '@/components/admin/SafeModeCounter';
 import { GapsSummaryCard } from '@/components/admin/GapsSummaryCard';
 import { SystemCyclesHealthCard } from '@/components/admin/SystemCyclesHealthCard';
 import { JobsHealthCard } from '@/components/dashboard/JobsHealthCard';
+import { IncidentGroupsCard } from '@/components/dashboard/IncidentGroupsCard';
 import { CompactAlert } from '@/components/ui/explainable-alert';
 import { getAlertExplanation } from '@/lib/leigo-translator';
 import { SectionDivider } from '@/components/ui/section-divider';
@@ -277,6 +278,9 @@ export default function Dashboard() {
 
       {/* 🔧 JOBS ENGINE HEALTH - Saúde do motor de jobs */}
       <JobsHealthCard />
+
+      {/* 🔥 INCIDENT GROUPS - Padrões de falhas recorrentes (ADR-033) */}
+      <IncidentGroupsCard />
 
       {/* Divisor visual entre seções */}
       <SectionDivider label="Status de Proteção" />
