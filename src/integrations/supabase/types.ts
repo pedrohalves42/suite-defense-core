@@ -6659,6 +6659,7 @@ export type Database = {
           last_seen_at: string
           normalized_signature: Json
           severity_hint: string
+          slo_dirty: boolean | null
           source_type: string
           total_occurrences: number
           updated_at: string
@@ -6677,6 +6678,7 @@ export type Database = {
           last_seen_at?: string
           normalized_signature: Json
           severity_hint: string
+          slo_dirty?: boolean | null
           source_type: string
           total_occurrences?: number
           updated_at?: string
@@ -6695,6 +6697,7 @@ export type Database = {
           last_seen_at?: string
           normalized_signature?: Json
           severity_hint?: string
+          slo_dirty?: boolean | null
           source_type?: string
           total_occurrences?: number
           updated_at?: string
@@ -20027,6 +20030,7 @@ export type Database = {
         }[]
       }
       check_expired_risks: { Args: never; Returns: undefined }
+      check_incident_slo_task: { Args: never; Returns: number }
       check_installation_failure_rate: {
         Args: {
           p_hours_back?: number
@@ -20810,6 +20814,7 @@ export type Database = {
           passed: boolean
         }[]
       }
+      severity_floor_rate: { Args: { p_severity: string }; Returns: number }
       should_auto_execute_playbook: {
         Args: { p_context: Json; p_event_type: string; p_playbook_id: string }
         Returns: Json
