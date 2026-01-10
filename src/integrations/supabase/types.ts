@@ -18553,6 +18553,14 @@ export type Database = {
         }
         Relationships: []
       }
+      v_job_health_anomalies: {
+        Row: {
+          anomaly_type: string | null
+          count: number | null
+          oldest: string | null
+        }
+        Relationships: []
+      }
       v_job_hourly_trends: {
         Row: {
           completed: number | null
@@ -20195,6 +20203,7 @@ export type Database = {
           job_ids: string[]
         }[]
       }
+      cleanup_stuck_pending_jobs: { Args: never; Returns: number }
       collect_weekly_governance_metrics: {
         Args: { tenant_uuid: string; week_start?: string }
         Returns: Json
