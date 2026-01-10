@@ -1,0 +1,101 @@
+name: Job Engine Health Gate
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'supabase/functions/**'
+      - 'src/**'
+      - 'scripts/job-engine-*.sql'
+      - 'scripts/job-engine-*.sh'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - 'src/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to validate'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  code-lint:
+    name: 🔍 Code Lint (Static Analysis)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make lint script executable
+        run: chmod +x scripts/job-engine-lint.sh
+
+      - name: Run Job Engine Lint
+        run: ./scripts/job-engine-lint.sh
+
+  database-health:
+    name: 🔧 Database Health Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: code-lint
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Determine database URL
+        id: db-url
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            if [ "${{ github.event.inputs.environment }}" == "production" ]; then
+              echo "url=${{ secrets.DATABASE_URL_PROD }}" >> $GITHUB_OUTPUT
+            else
+              echo "url=${{ secrets.DATABASE_URL_STAGING }}" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Default to staging for automatic runs
+            echo "url=${{ secrets.DATABASE_URL_STAGING }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Health Gate SQL
+        run: |
+          psql "${{ steps.db-url.outputs.url }}" -f scripts/job-engine-health-gate.sql
+        env:
+          PGCONNECT_TIMEOUT: 30
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "## 🔧 Job Engine Health Gate" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **All invariants validated successfully**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Gate | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| #1 Health Anomalies | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| #2 Critical Triggers | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| #3 Code Lint | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| #4 DLQ Divergence | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| #5 Zombie Jobs | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Failure Summary
+        if: failure()
+        run: |
+          echo "## ❌ Job Engine Health Gate FAILED" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deploy blocked due to invariant violations.**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check the logs above for details on which gate failed." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See [ADR-037](docs/adr/ADR-037-job-engine-correction.md) and [ADR-038](docs/adr/ADR-038-job-engine-slo.md) for resolution guidance." >> $GITHUB_STEP_SUMMARY
