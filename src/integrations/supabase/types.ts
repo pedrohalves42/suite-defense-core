@@ -20943,6 +20943,7 @@ export type Database = {
           total_logs: number
         }[]
       }
+      verify_audit_log_integrity: { Args: never; Returns: Json }
       verify_document_signature: {
         Args: { p_document_hash: string; p_signature: string }
         Returns: {
