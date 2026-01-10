@@ -1,0 +1,134 @@
+-- ============================================================
+-- Job Engine Health Gate - CI/CD Hard Fail Validation
+-- ============================================================
+-- This script validates all Job Engine invariants.
+-- ANY failure = DEPLOY BLOCKED.
+-- 
+-- Gates validated:
+-- #1: Estados inválidos via v_job_health_anomalies
+-- #2: Triggers críticos ativos
+-- #4: Divergência Jobs vs DLQ = 0
+-- #5: Zombies delivered > 2h = 0
+--
+-- Gate #3 (status proibidos no código) is handled by job-engine-lint.sh
+-- ============================================================
+
+\set ON_ERROR_STOP on
+
+-- ============================================================
+-- Gate #1: Estados Inválidos (Core)
+-- Source: v_job_health_anomalies
+-- Rule: Resultado NÃO pode ter count > 0
+-- ============================================================
+DO $$
+DECLARE
+  anomaly_count integer;
+  anomaly_details text;
+BEGIN
+  SELECT 
+    COUNT(*),
+    string_agg(anomaly_type || ': ' || count::text, ', ')
+  INTO anomaly_count, anomaly_details
+  FROM v_job_health_anomalies
+  WHERE count > 0;
+  
+  IF anomaly_count > 0 THEN
+    RAISE EXCEPTION E'\n╔════════════════════════════════════════════════════════════╗\n║  HEALTH GATE FAILED: Job Health Anomalies Detected         ║\n╠════════════════════════════════════════════════════════════╣\n║  Anomalies: %                                               \n║  Details: %                                                 \n║                                                             ║\n║  Fix these issues before deploying!                        ║\n╚════════════════════════════════════════════════════════════╝', 
+      anomaly_count, COALESCE(anomaly_details, 'none');
+  END IF;
+  
+  RAISE NOTICE '✅ Gate #1 PASSED: No job health anomalies detected';
+END $$;
+
+-- ============================================================
+-- Gate #2: Triggers Críticos Ativos
+-- Verifica se triggers essenciais estão habilitados
+-- Rule: Nenhum trigger crítico pode estar desabilitado
+-- ============================================================
+DO $$
+DECLARE
+  disabled_count integer;
+  disabled_triggers text;
+BEGIN
+  SELECT 
+    COUNT(*),
+    string_agg(tgname, ', ')
+  INTO disabled_count, disabled_triggers
+  FROM pg_trigger 
+  WHERE tgname IN (
+    'tr_ensure_completed_at',
+    'tr_mark_slo_dirty',
+    'tr_create_task_from_failed_job',
+    'tr_validate_job_status_transition'
+  )
+  AND tgenabled = 'D'; -- 'D' = Disabled
+  
+  IF disabled_count > 0 THEN
+    RAISE EXCEPTION E'\n╔════════════════════════════════════════════════════════════╗\n║  HEALTH GATE FAILED: Critical Triggers Disabled            ║\n╠════════════════════════════════════════════════════════════╣\n║  Disabled count: %                                          \n║  Triggers: %                                                \n║                                                             ║\n║  Re-enable these triggers before deploying!                ║\n╚════════════════════════════════════════════════════════════╝',
+      disabled_count, COALESCE(disabled_triggers, 'unknown');
+  END IF;
+  
+  RAISE NOTICE '✅ Gate #2 PASSED: All critical triggers are enabled';
+END $$;
+
+-- ============================================================
+-- Gate #4: Divergência Jobs vs DLQ
+-- Rule: count(failed jobs) = count(DLQ entries)
+-- ============================================================
+DO $$
+DECLARE
+  failed_jobs_count integer;
+  dlq_count integer;
+  diff integer;
+BEGIN
+  SELECT COUNT(*) INTO failed_jobs_count
+  FROM jobs WHERE status = 'failed';
+  
+  SELECT COUNT(*) INTO dlq_count
+  FROM failed_jobs_dlq;
+  
+  diff := failed_jobs_count - dlq_count;
+  
+  IF diff <> 0 THEN
+    RAISE EXCEPTION E'\n╔════════════════════════════════════════════════════════════╗\n║  HEALTH GATE FAILED: DLQ Divergence Detected               ║\n╠════════════════════════════════════════════════════════════╣\n║  Failed Jobs: %                                             \n║  DLQ Entries: %                                             \n║  Divergence: % jobs                                         \n║                                                             ║\n║  All failed jobs must have DLQ entries!                    ║\n╚════════════════════════════════════════════════════════════╝',
+      failed_jobs_count, dlq_count, diff;
+  END IF;
+  
+  RAISE NOTICE '✅ Gate #4 PASSED: No DLQ divergence (% failed = % DLQ)', failed_jobs_count, dlq_count;
+END $$;
+
+-- ============================================================
+-- Gate #5: Zombies Ativos (> 2 horas)
+-- Rule: Nenhum job delivered sem execução por mais de 2h
+-- ============================================================
+DO $$
+DECLARE
+  zombie_count integer;
+  oldest_zombie timestamp with time zone;
+BEGIN
+  SELECT 
+    COUNT(*),
+    MIN(delivered_at)
+  INTO zombie_count, oldest_zombie
+  FROM jobs
+  WHERE status = 'delivered'
+    AND delivered_at < now() - interval '2 hours';
+  
+  IF zombie_count > 0 THEN
+    RAISE EXCEPTION E'\n╔════════════════════════════════════════════════════════════╗\n║  HEALTH GATE FAILED: Zombie Jobs Detected                  ║\n╠════════════════════════════════════════════════════════════╣\n║  Zombie Count: %                                            \n║  Oldest Zombie: %                                           \n║                                                             ║\n║  Jobs delivered but not executed for 2+ hours!             ║\n╚════════════════════════════════════════════════════════════╝',
+      zombie_count, oldest_zombie;
+  END IF;
+  
+  RAISE NOTICE '✅ Gate #5 PASSED: No zombie jobs detected';
+END $$;
+
+-- ============================================================
+-- Final Summary
+-- ============================================================
+DO $$
+BEGIN
+  RAISE NOTICE '';
+  RAISE NOTICE '╔════════════════════════════════════════════════════════════╗';
+  RAISE NOTICE '║  ✅ JOB ENGINE HEALTH GATE: ALL CHECKS PASSED             ║';
+  RAISE NOTICE '╚════════════════════════════════════════════════════════════╝';
+END $$;

@@ -18,6 +18,8 @@ import { useJobsHealth } from '@/hooks/useJobsHealth';
 import { JobMetricsByTypeTable } from '@/components/admin/jobs/JobMetricsByTypeTable';
 import { JobsTrendChart } from '@/components/admin/jobs/JobsTrendChart';
 import { StuckJobsAlert } from '@/components/admin/jobs/StuckJobsAlert';
+import { JobAnomaliesCard } from '@/components/admin/jobs/JobAnomaliesCard';
+import { JobSLOStatusCard } from '@/components/admin/jobs/JobSLOStatusCard';
 import { calculateRealSuccessRate } from '@/components/admin/JobStatusSimplified';
 import { SectionDivider } from '@/components/ui/section-divider';
 import { cn } from '@/lib/utils';
@@ -116,6 +118,14 @@ export default function JobsHealthDashboard() {
 
       {/* Stuck Jobs Alert */}
       <StuckJobsAlert stuckJobs={stuckJobs} onRefresh={refetch} />
+
+      {/* SLO & Health Status */}
+      <SectionDivider label="Estado do Sistema" />
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <JobAnomaliesCard />
+        <JobSLOStatusCard />
+      </div>
 
       <SectionDivider label="Métricas de Performance" />
 
