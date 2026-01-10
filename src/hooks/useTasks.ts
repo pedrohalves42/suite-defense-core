@@ -6,7 +6,7 @@ import type { Json } from '@/integrations/supabase/types';
 
 export type TaskStatus = 'open' | 'in_progress' | 'blocked' | 'resolved' | 'ignored' | 'accepted_risk';
 export type TaskSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
-export type TaskSourceType = 'ai_insight' | 'system_alert' | 'playbook_execution' | 'red_team' | 'manual';
+export type TaskSourceType = 'ai_insight' | 'system_alert' | 'playbook_execution' | 'red_team' | 'manual' | 'job' | 'dlq';
 
 export interface Task {
   id: string;
