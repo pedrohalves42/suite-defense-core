@@ -138,7 +138,7 @@ serve(async (req) => {
               tenant_id: action.tenant_id,
               agent_name: payload.agent_name,
               type: 'diagnostic',
-              status: 'pending',
+              status: 'queued',
               approved: true,
               payload: {
                 diagnostic_type: payload.diagnostic_type,
@@ -350,7 +350,7 @@ serve(async (req) => {
               tenant_id: action.tenant_id,
               agent_name: payload.agent_name,
               type: 'config',
-              status: 'pending',
+              status: 'queued',
               approved: true,
               payload: {
                 action: 'isolate_network',
@@ -464,7 +464,7 @@ serve(async (req) => {
               tenant_id: action.tenant_id,
               agent_name: payload.agent_name || 'all',
               type: 'config',
-              status: 'pending',
+              status: 'queued',
               approved: true,
               payload: { action: 'block_ip', ...jobPayload },
             })
@@ -492,7 +492,7 @@ serve(async (req) => {
               tenant_id: action.tenant_id,
               agent_name: payload.agent_name,
               type: 'fix_firewall',
-              status: 'pending',
+              status: 'queued',
               approved: true,
               payload: {
                 rule_type: payload.rule_type,
@@ -529,7 +529,7 @@ serve(async (req) => {
               tenant_id: action.tenant_id,
               agent_name: payload.agent_name,
               type: 'restart_service',
-              status: 'pending',
+              status: 'queued',
               approved: true,
               payload: {
                 service_name: payload.service_name,
