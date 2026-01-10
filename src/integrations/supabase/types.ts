@@ -13293,6 +13293,42 @@ export type Database = {
         }
         Relationships: []
       }
+      system_health_checks: {
+        Row: {
+          check_name: string
+          check_query: string
+          created_at: string | null
+          expected_result: boolean | null
+          id: string
+          is_critical: boolean | null
+          last_error: string | null
+          last_result: boolean | null
+          last_run_at: string | null
+        }
+        Insert: {
+          check_name: string
+          check_query: string
+          created_at?: string | null
+          expected_result?: boolean | null
+          id?: string
+          is_critical?: boolean | null
+          last_error?: string | null
+          last_result?: boolean | null
+          last_run_at?: string | null
+        }
+        Update: {
+          check_name?: string
+          check_query?: string
+          created_at?: string | null
+          expected_result?: boolean | null
+          id?: string
+          is_critical?: boolean | null
+          last_error?: string | null
+          last_result?: boolean | null
+          last_run_at?: string | null
+        }
+        Relationships: []
+      }
       system_kill_switch: {
         Row: {
           activated_at: string | null
@@ -20765,6 +20801,14 @@ export type Database = {
       revoke_agent_signing_key: {
         Args: { p_key_id: string; p_reason?: string }
         Returns: boolean
+      }
+      run_all_health_checks: {
+        Args: never
+        Returns: {
+          check_name: string
+          error_msg: string
+          passed: boolean
+        }[]
       }
       should_auto_execute_playbook: {
         Args: { p_context: Json; p_event_type: string; p_playbook_id: string }
