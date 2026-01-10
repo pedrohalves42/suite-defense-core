@@ -46,12 +46,14 @@ const statusConfig: Record<TaskStatus, { label: string; color: string; icon: Rea
   accepted_risk: { label: 'Risco Aceito', color: 'bg-orange-500', icon: <AlertTriangle className="h-4 w-4" /> },
 };
 
-const sourceTypeConfig = {
+const sourceTypeConfig: Record<string, { label: string; icon: React.ReactNode }> = {
   ai_insight: { label: 'AI Insight', icon: <Brain className="h-4 w-4" /> },
   system_alert: { label: 'Alerta', icon: <Bell className="h-4 w-4" /> },
   playbook_execution: { label: 'Playbook', icon: <Shield className="h-4 w-4" /> },
   red_team: { label: 'Red Team', icon: <Crosshair className="h-4 w-4" /> },
   manual: { label: 'Manual', icon: <ListTodo className="h-4 w-4" /> },
+  job: { label: 'Job Falho', icon: <AlertTriangle className="h-4 w-4 text-orange-500" /> },
+  dlq: { label: 'DLQ', icon: <AlertOctagon className="h-4 w-4 text-red-500" /> },
 };
 
 export default function Tasks() {
@@ -242,7 +244,7 @@ interface TaskRowProps {
 function TaskRow({ task, onSelect, onQuickAction }: TaskRowProps) {
   const severity = severityConfig[task.severity];
   const status = statusConfig[task.status];
-  const source = sourceTypeConfig[task.source_type];
+  const source = sourceTypeConfig[task.source_type] || { label: task.source_type || 'Desconhecido', icon: <ListTodo className="h-4 w-4" /> };
   const isSlaBreach = !!task.sla_breached_at;
   const isActive = task.status === 'open' || task.status === 'in_progress';
 
