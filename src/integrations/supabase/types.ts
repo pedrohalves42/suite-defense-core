@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      _audit_orphan_profiles: {
+        Row: {
+          archive_reason: string | null
+          archived_at: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          updated_at: string | null
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       agent_archive_events: {
         Row: {
           actor_id: string | null
