@@ -73,17 +73,24 @@ Deno.serve(async (req) => {
     const triagedCount = updated?.length || 0;
     console.log(`[auto-triage-insights] Auto-triaged ${triagedCount} insights`);
 
-    // Log audit event
+    // Log audit event (defensive - non-blocking)
     if (triagedCount > 0) {
-      await supabase.from('audit_events').insert({
-        event_type: 'auto_triage_insights',
-        actor_type: 'system',
-        description: `Auto-triaged ${triagedCount} informational insights older than 7 days`,
-        metadata: {
-          triaged_count: triagedCount,
-          insight_ids: updated?.map(i => i.id) || []
-        }
-      });
+      try {
+        await supabase.from('audit_logs').insert({
+          action: 'auto_triage_insights',
+          resource_type: 'ai_insight',
+          resource_id: 'system_cron',
+          details: {
+            triaged_count: triagedCount,
+            insight_ids: updated?.map(i => i.id) || [],
+            description: `Auto-triaged ${triagedCount} informational insights older than 7 days`
+          },
+          success: true
+        });
+      } catch (auditError) {
+        console.warn('[auto-triage-insights] Audit log failed (non-blocking):', auditError);
+        // Don't block the operation if audit fails
+      }
     }
 
     return new Response(
