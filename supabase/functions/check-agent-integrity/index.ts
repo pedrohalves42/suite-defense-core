@@ -36,6 +36,7 @@ interface IntegrityCheckResult {
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -320,7 +321,23 @@ Deno.serve(async (req) => {
       agents_deactivated: agentsToDeactivate.length,
     };
 
-    console.log(`[${requestId}] Integrity check completed:`, summary);
+    const durationMs = Date.now() - startedAt;
+
+    // Log successful job execution
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'check-agent-integrity',
+        p_success: true,
+        p_duration_ms: durationMs,
+        p_result: summary,
+        p_processed_count: problematicAgents?.length || 0,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.warn(`[${requestId}] Failed to log job run:`, logErr);
+    }
+
+    console.log(`[${requestId}] Integrity check completed in ${durationMs}ms:`, summary);
 
     return new Response(
       JSON.stringify({
@@ -328,7 +345,8 @@ Deno.serve(async (req) => {
         requestId,
         timestamp: new Date().toISOString(),
         summary,
-        issues: issues.slice(0, 50), // Limitar resposta
+        issues: issues.slice(0, 50),
+        duration_ms: durationMs,
       }),
       {
         status: 200,
@@ -337,7 +355,24 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
+    const durationMs = Date.now() - startedAt;
     console.error(`[${requestId}] Error in integrity check:`, error);
+
+    // Log failed job execution
+    try {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'check-agent-integrity',
+        p_success: false,
+        p_duration_ms: durationMs,
+        p_error: error instanceof Error ? error.message : 'Unknown error',
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.warn(`[${requestId}] Failed to log error:`, logErr);
+    }
     
     return new Response(
       JSON.stringify({

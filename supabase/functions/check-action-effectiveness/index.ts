@@ -228,6 +228,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startedAt = Date.now();
+
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -358,46 +360,58 @@ serve(async (req) => {
       console.log(`[check-action-effectiveness] Action ${action.id}: ${result.status} - ${result.reason}`);
     }
 
-    // Log job execution
-    if (actions && actions.length > 0) {
-      const tenantIds = [...new Set(
-        actions
-          .map(a => {
-            const insightData = a.ai_insights;
-            const insight = Array.isArray(insightData) ? insightData[0] : insightData;
-            return insight?.tenant_id;
-          })
-          .filter(Boolean)
-      )];
-      
-      for (const tenantId of tenantIds) {
-        await supabase
-          .from('scheduled_jobs_log')
-          .insert({
-            tenant_id: tenantId,
-            job_type: 'check_action_effectiveness',
-            status: 'completed',
-            result: { 
-              actions_checked: results.length,
-              results: results
-            }
-          });
-      }
-    }
+    // Log job execution with standardized RPC
+    const durationMs = Date.now() - startedAt;
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'check-action-effectiveness',
+      p_success: true,
+      p_duration_ms: durationMs,
+      p_result: {
+        actions_checked: results.length,
+        resolved: results.filter(r => r.status === 'resolved').length,
+        failed: results.filter(r => r.status === 'failed').length,
+        partial: results.filter(r => r.status === 'partial').length,
+        unknown: results.filter(r => r.status === 'unknown').length,
+      },
+      p_processed_count: results.length,
+      p_job_source: 'cron'
+    });
 
-    console.log(`[check-action-effectiveness] Completed. Checked ${results.length} actions`);
+    console.log(`[check-action-effectiveness] Completed. Checked ${results.length} actions in ${durationMs}ms`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         checked: results.length,
-        results 
+        results,
+        duration_ms: durationMs
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
+    const durationMs = Date.now() - startedAt;
     console.error('[check-action-effectiveness] Error:', error);
+
+    // Log failure
+    try {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'check-action-effectiveness',
+        p_success: false,
+        p_duration_ms: durationMs,
+        p_error: (error as Error).message,
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch (logError) {
+      console.error('[check-action-effectiveness] Failed to log error:', logError);
+    }
+
     return new Response(
       JSON.stringify({ error: (error as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

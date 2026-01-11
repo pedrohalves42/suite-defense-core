@@ -47,6 +47,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startedAt = Date.now();
+
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -247,6 +249,25 @@ serve(async (req) => {
       }
     }
 
+    const durationMs = Date.now() - startedAt;
+
+    // Log successful job execution
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'generate-weekly-report',
+        p_success: true,
+        p_duration_ms: durationMs,
+        p_result: {
+          reports_generated: reports.length,
+          tenants: reports.map(r => r.tenant),
+        },
+        p_processed_count: reports.length,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.error('[generate-weekly-report] Failed to log job run:', logErr);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       reports_generated: reports.length,
@@ -255,12 +276,34 @@ serve(async (req) => {
         start: weekStart.toISOString(),
         end: weekEnd.toISOString(),
       },
+      duration_ms: durationMs,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
+    const durationMs = Date.now() - startedAt;
     console.error('[generate-weekly-report] Error:', error);
+
+    // Log failed job execution
+    try {
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'generate-weekly-report',
+        p_success: false,
+        p_duration_ms: durationMs,
+        p_error: error instanceof Error ? error.message : 'Unknown error',
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.error('[generate-weekly-report] Failed to log error:', logErr);
+    }
+
     return new Response(JSON.stringify({
       error: error instanceof Error ? error.message : 'Unknown error',
     }), {

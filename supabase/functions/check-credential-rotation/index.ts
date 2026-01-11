@@ -25,6 +25,7 @@ interface TokenRotationCheck {
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -192,7 +193,23 @@ Deno.serve(async (req) => {
       tokens_flagged: tokensToFlag.length,
     };
 
-    console.log(`[${requestId}] Credential rotation check completed:`, summary);
+    const durationMs = Date.now() - startedAt;
+
+    // Log successful job execution
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'check-credential-rotation',
+        p_success: true,
+        p_duration_ms: durationMs,
+        p_result: summary,
+        p_processed_count: tokens?.length || 0,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.warn(`[${requestId}] Failed to log job run:`, logErr);
+    }
+
+    console.log(`[${requestId}] Credential rotation check completed in ${durationMs}ms:`, summary);
 
     return new Response(
       JSON.stringify({
@@ -201,6 +218,7 @@ Deno.serve(async (req) => {
         timestamp: new Date().toISOString(),
         summary,
         rotationChecks: rotationChecks.slice(0, 50),
+        duration_ms: durationMs,
       }),
       {
         status: 200,
@@ -209,7 +227,24 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
+    const durationMs = Date.now() - startedAt;
     console.error(`[${requestId}] Error in credential rotation check:`, error);
+
+    // Log failed job execution
+    try {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'check-credential-rotation',
+        p_success: false,
+        p_duration_ms: durationMs,
+        p_error: error instanceof Error ? error.message : 'Unknown error',
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.warn(`[${requestId}] Failed to log error:`, logErr);
+    }
     
     return new Response(
       JSON.stringify({
