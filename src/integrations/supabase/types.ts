@@ -20170,6 +20170,7 @@ export type Database = {
           total_attempts: number
         }[]
       }
+      check_job_health_anomalies_and_alert: { Args: never; Returns: undefined }
       check_offline_agents_for_playbook: { Args: never; Returns: undefined }
       check_segregation_rule: {
         Args: {

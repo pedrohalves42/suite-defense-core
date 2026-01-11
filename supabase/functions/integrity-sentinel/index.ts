@@ -51,8 +51,9 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
 
+  const startTime = Date.now()
+
   try {
-    const startTime = Date.now()
     console.log('[integrity-sentinel] Starting integrity check...')
 
     // ============================================================
@@ -199,6 +200,21 @@ Deno.serve(async (req) => {
       empty_output_jobs: emptyOutputJobs?.length || 0
     })
 
+    // Log success with observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'integrity-sentinel',
+      p_success: true,
+      p_duration_ms: duration,
+      p_result: {
+        violations_found: violations?.length || 0,
+        release_issues: releaseIntegrity?.filter((r: { is_valid: boolean }) => !r.is_valid).length || 0,
+        empty_output_jobs: emptyOutputJobs?.length || 0,
+        alerts_created: violations && violations.length > 0 ? new Set(violations.map((v: any) => v.tenant_id)).size : 0
+      },
+      p_processed_count: (violations?.length || 0) + (emptyOutputJobs?.length || 0),
+      p_job_source: 'cron'
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -212,6 +228,22 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     console.error('[integrity-sentinel] Unhandled error:', err)
+    
+    // Try to log failure
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'integrity-sentinel',
+        p_success: false,
+        p_duration_ms: Date.now() - startTime,
+        p_error: err instanceof Error ? err.message : 'Unknown error',
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {
+      console.error('[integrity-sentinel] Failed to log error');
+    }
+
     return new Response(
       JSON.stringify({ error: 'Internal error', details: err instanceof Error ? err.message : 'Unknown' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

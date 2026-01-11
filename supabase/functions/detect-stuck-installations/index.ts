@@ -13,6 +13,7 @@ serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
   console.log(`[${requestId}] Detect stuck installations cron job started`);
 
   try {
@@ -30,12 +31,34 @@ serve(async (req) => {
 
     if (queryError) {
       console.error(`[${requestId}] Error querying stuck agents:`, queryError);
+      
+      // Log failure with observability
+      await supabaseClient.rpc('log_scheduled_job_run', {
+        p_job_key: 'detect-stuck-installations',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: queryError.message,
+        p_result: { error: queryError.message },
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+      
       throw queryError;
     }
 
     console.log(`[${requestId}] Found ${stuckAgents?.length || 0} stuck agents`);
 
     if (!stuckAgents || stuckAgents.length === 0) {
+      // Log success with observability - no stuck agents
+      await supabaseClient.rpc('log_scheduled_job_run', {
+        p_job_key: 'detect-stuck-installations',
+        p_success: true,
+        p_duration_ms: Date.now() - startedAt,
+        p_result: { message: 'No stuck agents detected' },
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -120,7 +143,7 @@ serve(async (req) => {
         continue;
       }
 
-      // Create system alert
+      // Create system alert - use correct columns from v_agent_lifecycle_state
       const { data: alert, error: alertError } = await supabaseClient
         .from("system_alerts")
         .insert({
@@ -128,13 +151,13 @@ serve(async (req) => {
           alert_type: "stuck_installations",
           severity: "high",
           title: `${agentList.length} instalacao(oes) travada(s)`,
-          message: `${agentList.length} agente(s) com comando copiado ha mais de 30 minutos sem conclusao`,
+          message: `${agentList.length} agente(s) em estado travado detectados`,
           details: {
             stuck_agents: agentList.map(a => ({
               agent_name: a.agent_name,
-              command_copied_at: a.command_copied_at,
-              minutes_since_copy: a.minutes_between_copy_and_install,
-              platform: a.platform
+              agent_state: a.agent_state,
+              lifecycle_status: a.lifecycle_status,
+              last_heartbeat: a.last_heartbeat
             })),
             detected_at: new Date().toISOString(),
             request_id: requestId
@@ -159,22 +182,23 @@ serve(async (req) => {
       const resend = new Resend(resendApiKey);
 
       const emailHtml = `
-        <h2>[WARN] ? Instalacoes Travadas Detectadas - ${tenant.name}</h2>
-        <p><strong>${agentList.length}</strong> agente(s) estao com instalacao travada ha mais de 30 minutos:</p>
+        <h2>[WARN] Agentes em Estado Travado Detectados - ${tenant.name}</h2>
+        <p><strong>${agentList.length}</strong> agente(s) em estado travado:</p>
         <ul>
           ${agentList.map(a => `
             <li>
-              <strong>${a.agent_name}</strong> (${a.platform})<br/>
-              Comando copiado em: ${new Date(a.command_copied_at).toLocaleString('pt-BR')}<br/>
-              Tempo decorrido: ~${Math.round(a.minutes_between_copy_and_install || 0)} minutos
+              <strong>${a.agent_name}</strong><br/>
+              Estado: ${a.agent_state || 'unknown'}<br/>
+              Status: ${a.lifecycle_status || 'unknown'}<br/>
+              Último heartbeat: ${a.last_heartbeat ? new Date(a.last_heartbeat).toLocaleString('pt-BR') : 'nunca'}
             </li>
           `).join('')}
         </ul>
         <p>Possiveis causas:</p>
         <ul>
-          <li>Script nao foi executado</li>
-          <li>Erro de autenticacao (401)</li>
-          <li>Problemas de TLS/Proxy</li>
+          <li>Agente offline</li>
+          <li>Problemas de conectividade</li>
+          <li>Erro de autenticacao</li>
           <li>Firewall bloqueando conexao</li>
         </ul>
         <p>Acesse o dashboard para mais detalhes.</p>
@@ -186,7 +210,7 @@ serve(async (req) => {
         const emailResult = await resend.emails.send({
           from: "CyberShield Alerts <alerts@cybershield.com>",
           to: adminEmails,
-          subject: `[WARN] ? ${agentList.length} Instalacao(oes) Travada(s) - ${tenant.name}`,
+          subject: `[WARN] ${agentList.length} Agente(s) em Estado Travado - ${tenant.name}`,
           html: emailHtml
         });
 
@@ -210,6 +234,21 @@ serve(async (req) => {
       }
     }
 
+    // Log success with observability
+    await supabaseClient.rpc('log_scheduled_job_run', {
+      p_job_key: 'detect-stuck-installations',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: {
+        stuck_count: stuckAgents.length,
+        tenants_affected: Object.keys(stuckByTenant).length,
+        alerts_created: alertsCreated.length,
+        emails_sent: emailsSent.length
+      },
+      p_processed_count: stuckAgents.length,
+      p_job_source: 'cron'
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -227,6 +266,28 @@ serve(async (req) => {
 
   } catch (error) {
     console.error(`[${requestId}] Error:`, error);
+    
+    // Try to log failure
+    try {
+      const supabaseClient = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+        { auth: { persistSession: false } }
+      );
+      
+      await supabaseClient.rpc('log_scheduled_job_run', {
+        p_job_key: 'detect-stuck-installations',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: error instanceof Error ? error.message : 'Unknown error',
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {
+      console.error(`[${requestId}] Failed to log error`);
+    }
+
     return new Response(
       JSON.stringify({
         success: false,
