@@ -51,6 +51,7 @@ Deno.serve(async (req) => {
 
   try {
     logger.info(`[${requestId}] Starting watchdog non-execution detection`);
+    const startedAt = Date.now();
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -195,17 +196,29 @@ Deno.serve(async (req) => {
 
     logger.info(`[${requestId}] Watchdog completed: ${alertsCreated.length} alerts created, ${alertsSkipped.length} skipped, ${skippedDueToBusinessHours.length} outside business hours`);
 
+    const result = {
+      success: true,
+      problems_detected: unhealthyAgents.length,
+      alerts_created: alertsCreated.length,
+      alerts_skipped: alertsSkipped.length,
+      skipped_outside_business_hours: skippedDueToBusinessHours.length,
+      problems_by_type: problemsByType,
+      agents: alertsCreated,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Log observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'watchdog-non-execution',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: result,
+      p_processed_count: unhealthyAgents.length,
+      p_job_source: 'cron'
+    });
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        problems_detected: unhealthyAgents.length,
-        alerts_created: alertsCreated.length,
-        alerts_skipped: alertsSkipped.length,
-        skipped_outside_business_hours: skippedDueToBusinessHours.length,
-        problems_by_type: problemsByType,
-        agents: alertsCreated,
-        timestamp: new Date().toISOString(),
-      }),
+      JSON.stringify(result),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -214,6 +227,23 @@ Deno.serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`[${requestId}] Fatal error: ${errorMessage}`);
+
+    // Log error observability
+    try {
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'watchdog-non-execution',
+        p_success: false,
+        p_duration_ms: 0,
+        p_error: errorMessage,
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {}
 
     return new Response(
       JSON.stringify({

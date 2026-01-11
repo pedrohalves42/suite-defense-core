@@ -12,13 +12,15 @@ serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID().slice(0, 8)
+  const startedAt = Date.now()
   console.log(`[${requestId}] detect-blocked-attempts: Starting correlation...`)
 
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  )
+
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    )
 
     // Execute the correlation function
     const { data, error } = await supabase.rpc('detect_blocked_access_attempts')
@@ -38,6 +40,16 @@ serve(async (req) => {
     const insertedCount = data?.[0]?.inserted_count ?? 0
     console.log(`[${requestId}] Detected ${insertedCount} new blocked attempts`)
 
+    // Log observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'detect-blocked-attempts',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: { inserted_count: insertedCount },
+      p_processed_count: insertedCount,
+      p_job_source: 'cron'
+    })
+
     return new Response(
       JSON.stringify({ 
         status: 'ok',
@@ -49,6 +61,20 @@ serve(async (req) => {
 
   } catch (err) {
     console.error(`[${requestId}] Exception:`, err)
+    
+    // Log error observability
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'detect-blocked-attempts',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: String(err),
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      })
+    } catch {}
+    
     return new Response(
       JSON.stringify({ 
         status: 'error', 

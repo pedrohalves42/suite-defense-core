@@ -16,6 +16,7 @@ interface StuckBuild {
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
   
   logger.info('[build-watchdog] Starting watchdog check');
 
@@ -117,6 +118,16 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Log observability
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'build-watchdog',
+        p_success: true,
+        p_duration_ms: Date.now() - startedAt,
+        p_result: { checked_builds: stuckBuilds.length, marked_failed: results.length },
+        p_processed_count: stuckBuilds.length,
+        p_job_source: 'cron'
+      });
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -136,6 +147,21 @@ Deno.serve(async (req) => {
     }
     
     logger.error('[build-watchdog] Error', error);
+    
+    // Log error observability
+    try {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'build-watchdog',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: error instanceof Error ? error.message : 'Unknown error',
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {}
+    
     return new Response(
       JSON.stringify({
         error: 'Watchdog failed',

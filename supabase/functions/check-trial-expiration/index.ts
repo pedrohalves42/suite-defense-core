@@ -3,11 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 console.log("[CHECK-TRIAL-EXPIRATION] Cron job started");
 
 Deno.serve(async () => {
+  const startedAt = Date.now();
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
+  
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
 
     const now = new Date();
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -86,16 +88,42 @@ Deno.serve(async () => {
 
     console.log("[CHECK-TRIAL-EXPIRATION] Completed successfully");
 
+    const result = { 
+      success: true,
+      sent_7day: expiringSoon?.length || 0,
+      sent_1day: expiringTomorrow?.length || 0,
+    };
+
+    // Log observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'check-trial-expiration',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: result,
+      p_processed_count: (expiringSoon?.length || 0) + (expiringTomorrow?.length || 0),
+      p_job_source: 'cron'
+    });
+
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        sent_7day: expiringSoon?.length || 0,
-        sent_1day: expiringTomorrow?.length || 0,
-      }),
+      JSON.stringify(result),
       { headers: { "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
     console.error("[CHECK-TRIAL-EXPIRATION] Error:", error);
+    
+    // Log error observability
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'check-trial-expiration',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: error instanceof Error ? error.message : "Unknown error",
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {}
+    
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { headers: { "Content-Type": "application/json" }, status: 500 }

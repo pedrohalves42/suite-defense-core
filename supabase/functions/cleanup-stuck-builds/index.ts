@@ -7,6 +7,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
   
   logger.info('[cleanup-stuck-builds] Function started');
 
@@ -60,6 +61,16 @@ Deno.serve(async (req) => {
     
     logger.info(`[cleanup-stuck-builds] Cleanup completed: ${result.cleaned_count} builds cleaned`);
 
+    // Log observability
+    await supabaseClient.rpc('log_scheduled_job_run', {
+      p_job_key: 'cleanup-stuck-builds',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: result,
+      p_processed_count: result.cleaned_count,
+      p_job_source: 'cron'
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -77,6 +88,21 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     logger.error('[cleanup-stuck-builds] Unexpected error', error);
+    
+    // Log error observability
+    try {
+      const supabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      await supabaseClient.rpc('log_scheduled_job_run', {
+        p_job_key: 'cleanup-stuck-builds',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: error instanceof Error ? error.message : 'Unknown error',
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {}
+    
     return new Response(
       JSON.stringify({
         error: 'Internal server error',

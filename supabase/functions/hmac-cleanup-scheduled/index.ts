@@ -59,6 +59,16 @@ Deno.serve(async (req: Request) => {
       }
     });
 
+    // Log observability to scheduled_job_runs
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'hmac-cleanup-scheduled',
+      p_success: true,
+      p_duration_ms: duration,
+      p_result: { deleted_count: deletedCount, cutoff: cutoff.toISOString() },
+      p_processed_count: deletedCount,
+      p_job_source: 'cron'
+    });
+
     return new Response(JSON.stringify({ 
       success: true, 
       deleted: deletedCount,
@@ -73,6 +83,23 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const duration = Date.now() - startTime;
     logger.error(`[${requestId}] HMAC cleanup failed after ${duration}ms`, error);
+    
+    // Log error observability
+    try {
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'hmac-cleanup-scheduled',
+        p_success: false,
+        p_duration_ms: duration,
+        p_error: error instanceof Error ? error.message : 'Unknown error',
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {}
     
     return new Response(JSON.stringify({ 
       error: 'Cleanup failed',

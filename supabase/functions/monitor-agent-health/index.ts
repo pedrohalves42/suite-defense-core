@@ -23,6 +23,7 @@ Deno.serve(async (req) => {
   }
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const startedAt = Date.now();
 
   try {
     console.log('[Monitor] Checking agent health...');
@@ -198,17 +199,43 @@ Deno.serve(async (req) => {
       }
     }
 
+    const result = {
+      success: true,
+      offlineAgents: offlineAgents.length,
+      skippedAgents: skippedAgents.length,
+      failedJobs: failedJobs?.length || 0
+    };
+
+    // Log observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'monitor-agent-health',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: result,
+      p_processed_count: (agents?.length || 0),
+      p_job_source: 'cron'
+    });
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        offlineAgents: offlineAgents.length,
-        skippedAgents: skippedAgents.length,
-        failedJobs: failedJobs?.length || 0
-      }),
+      JSON.stringify(result),
       { headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
     console.error('[Monitor] Error:', error);
+    
+    // Log error observability
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'monitor-agent-health',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: error.message,
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {}
+    
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

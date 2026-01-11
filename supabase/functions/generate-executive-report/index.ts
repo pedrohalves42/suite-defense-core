@@ -121,6 +121,9 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  const startedAt = Date.now();
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
   try {
     // Parse request body
     let body: { tenantId?: string; date?: string; source?: string } = {};
@@ -149,8 +152,6 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[generate-executive-report] Authorized call from: ${isCronCall ? 'cron' : isInternalCall ? 'internal' : 'jwt'}`);
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
     const tenantId = body.tenantId;
     const targetDate = body.date || new Date().toISOString().split('T')[0];
@@ -294,17 +295,43 @@ Deno.serve(async (req) => {
       }
     }
 
+    const result = {
+      success: true,
+      date: targetDate,
+      processed: results.length,
+      results,
+    };
+
+    // Log observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'generate-executive-report',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: result,
+      p_processed_count: results.filter(r => r.success).length,
+      p_job_source: 'cron'
+    });
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        date: targetDate,
-        processed: results.length,
-        results,
-      }),
+      JSON.stringify(result),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error:', error);
+    
+    // Log error observability
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'generate-executive-report',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: String(error),
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {}
+    
     return new Response(
       JSON.stringify({ success: false, error: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

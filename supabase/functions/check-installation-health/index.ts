@@ -6,6 +6,8 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
+  const startedAt = Date.now()
+  let alertsCreated = 0
 
   try {
     await withTimeout(async () => {
@@ -67,6 +69,7 @@ Deno.serve(async (req) => {
           if (alertError) {
             console.error(`[check-installation-health] Erro ao criar alerta para tenant ${tenant.id}:`, alertError)
           } else {
+            alertsCreated++
             console.log(`[check-installation-health] Alerta criado para tenant ${tenant.name}`)
           }
         }
@@ -75,13 +78,37 @@ Deno.serve(async (req) => {
       console.log('[check-installation-health] Verificacao concluida')
     }, { timeoutMs: 60000 }) // Increased timeout for multi-tenant processing
 
+    // Log observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'check-installation-health',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: { success: true, alerts_created: alertsCreated },
+      p_processed_count: alertsCreated,
+      p_job_source: 'cron'
+    })
+
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, alerts_created: alertsCreated }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     console.error('[check-installation-health] Erro:', errorMessage)
+    
+    // Log error observability
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'check-installation-health',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: errorMessage,
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      })
+    } catch {}
+    
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
