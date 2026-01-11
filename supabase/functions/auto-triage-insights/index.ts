@@ -10,6 +10,8 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startedAt = Date.now();
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -93,18 +95,58 @@ Deno.serve(async (req) => {
       }
     }
 
+    const durationMs = Date.now() - startedAt;
+
+    // Log successful job execution
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'auto-triage-insights',
+        p_success: true,
+        p_duration_ms: durationMs,
+        p_result: {
+          triaged: triagedCount,
+          insight_ids: updated?.map(i => i.id) || [],
+        },
+        p_processed_count: triagedCount,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.warn('[auto-triage-insights] Failed to log job run:', logErr);
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
         triaged: triagedCount,
-        message: `Auto-triaged ${triagedCount} informational insights`
+        message: `Auto-triaged ${triagedCount} informational insights`,
+        duration_ms: durationMs
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
+    const durationMs = Date.now() - startedAt;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[auto-triage-insights] Error:', error);
+
+    // Log failed job execution
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'auto-triage-insights',
+        p_success: false,
+        p_duration_ms: durationMs,
+        p_error: errorMessage,
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.warn('[auto-triage-insights] Failed to log error:', logErr);
+    }
+
     return new Response(
       JSON.stringify({ 
         success: false, 

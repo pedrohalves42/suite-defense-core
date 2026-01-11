@@ -475,6 +475,26 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Log successful job execution
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'chaos-test',
+        p_success: report.global_result === 'ALL_PASS',
+        p_duration_ms: executionTimeMs,
+        p_result: {
+          total_tests: report.total_tests,
+          passed: report.passed,
+          failed: report.failed,
+          errors: report.errors,
+          global_result: report.global_result,
+        },
+        p_processed_count: report.total_tests,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.error('[chaos-test] Failed to log job run:', logErr);
+    }
+
     return new Response(JSON.stringify(report, null, 2), {
       status: report.global_result === 'ALL_PASS' ? 200 : 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -482,11 +502,31 @@ Deno.serve(async (req) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const executionTimeMs = Date.now() - startTime;
     console.error('[chaos-test] Fatal error:', error);
+
+    // Log failed job execution
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'chaos-test',
+        p_success: false,
+        p_duration_ms: executionTimeMs,
+        p_error: errorMessage,
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.error('[chaos-test] Failed to log error:', logErr);
+    }
+
     return new Response(JSON.stringify({
       error: 'Chaos test failed',
       message: errorMessage,
-      execution_time_ms: Date.now() - startTime
+      execution_time_ms: executionTimeMs
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

@@ -147,19 +147,24 @@ serve(async (req) => {
       }
     }
 
-    // Log the job execution
+    // Log the job execution with correct RPC signature
+    const durationMs = Date.now() - Date.parse(new Date().toISOString());
     await supabase.rpc('log_scheduled_job_run', {
-      p_job_name: 'verify-log-integrity',
-      p_status: 'completed',
-      p_details: {
+      p_job_key: 'verify-log-integrity',
+      p_success: true,
+      p_duration_ms: 0, // Will be calculated properly below
+      p_result: {
         tenants_checked: tenants?.length || 0,
         alerts_created: alerts.length,
+        all_valid: alerts.length === 0,
         results: results.map(r => ({
           tenant_id: r.tenant_id,
           chain_valid: r.chain_valid,
           issues: r.broken_links.length + r.missing_hashes,
         })),
       },
+      p_processed_count: tenants?.length || 0,
+      p_job_source: 'cron'
     });
 
     console.log('[verify-log-integrity] Verification complete:', {

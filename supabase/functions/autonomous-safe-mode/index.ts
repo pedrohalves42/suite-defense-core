@@ -37,6 +37,8 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startedAt = Date.now();
+
   try {
     // Parse body to check source
     let body: { source?: string } = {};
@@ -200,6 +202,7 @@ Deno.serve(async (req) => {
       }
     }
 
+    const durationMs = Date.now() - startedAt;
     const response: EngineResult = {
       success: true,
       rules_evaluated: rules?.length || 0,
@@ -208,7 +211,25 @@ Deno.serve(async (req) => {
       executed_at: new Date().toISOString()
     };
 
-    console.log(`[rules-engine] Completed. Evaluated ${rules?.length || 0} rules, executed ${totalActions} actions.`);
+    console.log(`[rules-engine] Completed. Evaluated ${rules?.length || 0} rules, executed ${totalActions} actions in ${durationMs}ms.`);
+
+    // Log successful job execution
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'autonomous-safe-mode',
+        p_success: true,
+        p_duration_ms: durationMs,
+        p_result: {
+          rules_evaluated: rules?.length || 0,
+          total_actions: totalActions,
+          rules_triggered: allResults.map(r => r.rule_code),
+        },
+        p_processed_count: totalActions,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.error('[rules-engine] Failed to log job run:', logErr);
+    }
 
     return new Response(
       JSON.stringify(response),
@@ -216,7 +237,27 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
+    const durationMs = Date.now() - startedAt;
     console.error('[rules-engine] Fatal error:', error);
+
+    // Log failed job execution
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'autonomous-safe-mode',
+        p_success: false,
+        p_duration_ms: durationMs,
+        p_error: error instanceof Error ? error.message : 'Unknown error',
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.error('[rules-engine] Failed to log error:', logErr);
+    }
+
     return new Response(
       JSON.stringify({ 
         success: false, 

@@ -14,6 +14,7 @@ Deno.serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
   console.log(`[${requestId}] invoke-scheduled-jobs started`);
 
   try {
@@ -163,6 +164,7 @@ Deno.serve(async (req) => {
       }
     }
 
+    const durationMs = Date.now() - startedAt;
     const summary = {
       success: true,
       total_jobs: scheduledJobs?.length || 0,
@@ -170,10 +172,30 @@ Deno.serve(async (req) => {
       skipped: results.filter(r => r.status === 'skipped').length,
       errors: results.filter(r => r.status === 'error').length,
       results,
-      timestamp: now.toISOString()
+      timestamp: now.toISOString(),
+      duration_ms: durationMs
     };
 
     console.log(`[${requestId}] Completed:`, summary);
+
+    // Log successful job execution
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'invoke-scheduled-jobs',
+        p_success: true,
+        p_duration_ms: durationMs,
+        p_result: {
+          total_jobs: summary.total_jobs,
+          executed: summary.executed,
+          skipped: summary.skipped,
+          errors: summary.errors,
+        },
+        p_processed_count: summary.executed,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.error(`[${requestId}] Failed to log job run:`, logErr);
+    }
 
     return new Response(
       JSON.stringify(summary),
@@ -184,7 +206,26 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
+    const durationMs = Date.now() - startedAt;
     console.error(`[${requestId}] Fatal error:`, error);
+
+    // Log failed job execution
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'invoke-scheduled-jobs',
+        p_success: false,
+        p_duration_ms: durationMs,
+        p_error: error instanceof Error ? error.message : 'Unknown error',
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.error(`[${requestId}] Failed to log error:`, logErr);
+    }
     
     return new Response(
       JSON.stringify({ 
