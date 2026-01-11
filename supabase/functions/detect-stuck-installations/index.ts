@@ -22,10 +22,10 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Query v_agent_lifecycle_state for stuck agents
+    // Query v_agent_lifecycle_state for stuck agents (is_stuck is now available in the view)
     const { data: stuckAgents, error: queryError } = await supabaseClient
       .from("v_agent_lifecycle_state")
-      .select("*")
+      .select("agent_id, tenant_id, agent_name, agent_state, last_heartbeat, lifecycle_status, is_stuck")
       .eq("is_stuck", true);
 
     if (queryError) {

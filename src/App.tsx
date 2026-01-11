@@ -235,6 +235,7 @@ const App = () => (
                 <Route path="my-account" element={<MyAccount />} />
                 <Route path="slo-dashboard" element={<SLODashboard />} />
                 <Route path="jobs-health" element={<JobsHealthDashboard />} />
+                <Route path="jobs" element={<JobsHealthDashboard />} />
                 <Route path="system-operations" element={<SystemOperations />} />
                 <Route path="compliance-timeline" element={<ComplianceTimeline />} />
                 <Route path="risk-score" element={<RiskScore />} />

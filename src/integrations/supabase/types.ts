@@ -10909,6 +10909,42 @@ export type Database = {
         }
         Relationships: []
       }
+      runbooks: {
+        Row: {
+          anomaly_type: string
+          created_at: string | null
+          id: string
+          owner: string | null
+          severity: string | null
+          sla_minutes: number | null
+          steps: Json
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          anomaly_type: string
+          created_at?: string | null
+          id?: string
+          owner?: string | null
+          severity?: string | null
+          sla_minutes?: number | null
+          steps?: Json
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          anomaly_type?: string
+          created_at?: string | null
+          id?: string
+          owner?: string | null
+          severity?: string | null
+          sla_minutes?: number | null
+          steps?: Json
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       sales_contacts: {
         Row: {
           client_ip: string | null
@@ -13463,6 +13499,30 @@ export type Database = {
         }
         Relationships: []
       }
+      system_state: {
+        Row: {
+          changed_by: string | null
+          id: number
+          mode: Database["public"]["Enums"]["system_operational_mode"]
+          reason: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          id?: number
+          mode?: Database["public"]["Enums"]["system_operational_mode"]
+          reason?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          id?: number
+          mode?: Database["public"]["Enums"]["system_operational_mode"]
+          reason?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       task_events: {
         Row: {
           action: string
@@ -13668,6 +13728,7 @@ export type Database = {
           risk_accepted_by: string | null
           risk_expiry_at: string | null
           risk_justification: string | null
+          semantic_fingerprint: string | null
           severity: string
           sla_breached_at: string | null
           source_id: string | null
@@ -13695,6 +13756,7 @@ export type Database = {
           risk_accepted_by?: string | null
           risk_expiry_at?: string | null
           risk_justification?: string | null
+          semantic_fingerprint?: string | null
           severity: string
           sla_breached_at?: string | null
           source_id?: string | null
@@ -13722,6 +13784,7 @@ export type Database = {
           risk_accepted_by?: string | null
           risk_expiry_at?: string | null
           risk_justification?: string | null
+          semantic_fingerprint?: string | null
           severity?: string
           sla_breached_at?: string | null
           source_id?: string | null
@@ -17603,9 +17666,11 @@ export type Database = {
           force_update_reason: string | null
           force_update_version: string | null
           is_isolated: boolean | null
+          is_stuck: boolean | null
           isolated_at: string | null
           isolation_reason: string | null
           last_forced_update_applied: string | null
+          last_heartbeat: string | null
           lifecycle_status: string | null
           requires_revalidation: boolean | null
           revalidation_reason: string | null
@@ -17624,9 +17689,11 @@ export type Database = {
           force_update_reason?: string | null
           force_update_version?: string | null
           is_isolated?: boolean | null
+          is_stuck?: never
           isolated_at?: string | null
           isolation_reason?: string | null
           last_forced_update_applied?: string | null
+          last_heartbeat?: string | null
           lifecycle_status?: never
           requires_revalidation?: boolean | null
           revalidation_reason?: string | null
@@ -17645,9 +17712,11 @@ export type Database = {
           force_update_reason?: string | null
           force_update_version?: string | null
           is_isolated?: boolean | null
+          is_stuck?: never
           isolated_at?: string | null
           isolation_reason?: string | null
           last_forced_update_applied?: string | null
+          last_heartbeat?: string | null
           lifecycle_status?: never
           requires_revalidation?: boolean | null
           revalidation_reason?: string | null
@@ -17756,6 +17825,12 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      v_anomalies_without_runbook: {
+        Row: {
+          anomaly_type: string | null
+        }
+        Relationships: []
       }
       v_audit_integrity_status: {
         Row: {
@@ -19628,6 +19703,13 @@ export type Database = {
           },
         ]
       }
+      v_system_contracts: {
+        Row: {
+          contract: string | null
+          value: string | null
+        }
+        Relationships: []
+      }
       v_system_operations_summary: {
         Row: {
           jobs_24h: number | null
@@ -20669,7 +20751,10 @@ export type Database = {
           risk_level: string
         }[]
       }
-      get_system_mode: { Args: never; Returns: Json }
+      get_system_mode: {
+        Args: never
+        Returns: Database["public"]["Enums"]["system_operational_mode"]
+      }
       get_tenant_mfa_policy: { Args: { _tenant_id: string }; Returns: Json }
       get_valid_agent_signing_key: {
         Args: { p_agent_id: string; p_fingerprint: string }
@@ -21003,6 +21088,7 @@ export type Database = {
         | "super_admin"
         | "member"
         | "analyst"
+      system_operational_mode: "normal" | "degraded" | "read_only" | "halt_jobs"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -21138,6 +21224,7 @@ export const Constants = {
         "member",
         "analyst",
       ],
+      system_operational_mode: ["normal", "degraded", "read_only", "halt_jobs"],
     },
   },
 } as const
