@@ -34,6 +34,7 @@ Deno.serve(async (req) => {
 
   try {
     logger.info(`[${requestId}] Starting stuck agents monitoring`);
+    const startedAt = Date.now();
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -122,20 +123,32 @@ Deno.serve(async (req) => {
 
     logger.info(`[${requestId}] Monitoring completed: ${stuckAgents.length} stuck agent(s) detected`);
 
+    const result = {
+      success: true,
+      stuck_agents: stuckAgents.length,
+      alerts_created: alerts.length,
+      agents: stuckAgents.map(a => ({
+        id: a.id,
+        name: a.agent_name,
+        minutes_stuck: Math.floor(
+          (Date.now() - new Date(a.enrolled_at).getTime()) / 1000 / 60
+        ),
+      })),
+      timestamp: new Date().toISOString(),
+    };
+
+    // Log observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'monitor-stuck-agents',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: result,
+      p_processed_count: stuckAgents.length,
+      p_job_source: 'cron'
+    });
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        stuck_agents: stuckAgents.length,
-        alerts_created: alerts.length,
-        agents: stuckAgents.map(a => ({
-          id: a.id,
-          name: a.agent_name,
-          minutes_stuck: Math.floor(
-            (Date.now() - new Date(a.enrolled_at).getTime()) / 1000 / 60
-          ),
-        })),
-        timestamp: new Date().toISOString(),
-      }),
+      JSON.stringify(result),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -144,6 +157,23 @@ Deno.serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`[${requestId}] Fatal error: ${errorMessage}`);
+
+    // Log error observability
+    try {
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'monitor-stuck-agents',
+        p_success: false,
+        p_duration_ms: 0,
+        p_error: errorMessage,
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {}
 
     return new Response(
       JSON.stringify({

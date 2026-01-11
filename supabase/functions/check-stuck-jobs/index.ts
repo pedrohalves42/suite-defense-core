@@ -38,6 +38,8 @@ Deno.serve(async (req) => {
     );
   }
 
+  const startedAt = Date.now();
+  
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -172,6 +174,16 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Check completed:`, result);
 
+    // Log observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'check-stuck-jobs',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: result,
+      p_processed_count: stuckJobs.length,
+      p_job_source: 'cron'
+    });
+
     return new Response(
       JSON.stringify(result),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -179,6 +191,22 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error(`[${requestId}] Fatal error:`, error);
+    
+    // Log error observability
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'check-stuck-jobs',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: error instanceof Error ? error.message : 'Unknown error',
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {}
     
     return new Response(
       JSON.stringify({ 

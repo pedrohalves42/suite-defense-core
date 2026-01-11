@@ -130,6 +130,7 @@ Deno.serve(async (req) => {
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const startedAt = Date.now();
 
   try {
     console.log('[ai-system-analyzer] Starting analysis cycle...');
@@ -307,14 +308,26 @@ Deno.serve(async (req) => {
       console.log('[ai-system-analyzer] No insights generated');
     }
 
+    const result = { 
+      success: true, 
+      insightsGenerated: insights.length,
+      tenantsAnalyzed: tenants.length - skippedTenants.length,
+      tenantsSkipped: skippedTenants.length,
+      skippedDetails: skippedTenants.map(t => ({ name: t.name, reason: t.reason }))
+    };
+
+    // Log observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'ai-system-analyzer',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: result,
+      p_processed_count: insights.length,
+      p_job_source: 'cron'
+    });
+
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        insightsGenerated: insights.length,
-        tenantsAnalyzed: tenants.length - skippedTenants.length,
-        tenantsSkipped: skippedTenants.length,
-        skippedDetails: skippedTenants.map(t => ({ name: t.name, reason: t.reason }))
-      }), 
+      JSON.stringify(result), 
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -323,6 +336,20 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('[ai-system-analyzer] Fatal error:', error);
+    
+    // Log error observability
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'ai-system-analyzer',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: error instanceof Error ? error.message : 'Unknown error',
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {}
+    
     return new Response(
       JSON.stringify({ 
         success: false, 

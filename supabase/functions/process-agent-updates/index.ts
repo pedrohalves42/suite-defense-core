@@ -20,6 +20,7 @@ Deno.serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
 
   try {
     logger.info('[process-agent-updates] Cron job started', { requestId });
@@ -174,12 +175,24 @@ Deno.serve(async (req) => {
       results
     });
 
+    const result = {
+      success: true,
+      total_jobs_created: totalJobsCreated,
+      platforms: results
+    };
+
+    // Log observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'process-agent-updates',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: result,
+      p_processed_count: totalJobsCreated,
+      p_job_source: 'cron'
+    });
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        total_jobs_created: totalJobsCreated,
-        platforms: results
-      }),
+      JSON.stringify(result),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -190,6 +203,20 @@ Deno.serve(async (req) => {
       error: err.message,
       stack: err.stack
     });
+
+    // Log error observability
+    try {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'process-agent-updates',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: err.message,
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {}
 
     return new Response(
       JSON.stringify({

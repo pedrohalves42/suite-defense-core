@@ -16,6 +16,7 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startedAt = Date.now();
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -181,22 +182,34 @@ Deno.serve(async (req) => {
 
     console.log('[check-production-health] Health check completed');
 
+    const result = {
+      success: true,
+      checked_at: now.toISOString(),
+      alerts_created: alerts.length,
+      alerts: alerts.map(a => ({
+        type: a.alert_type,
+        severity: a.severity,
+        title: a.title
+      })),
+      checks_performed: {
+        heartbeats: !heartbeatError,
+        installations: !installError,
+        queued_jobs: !jobsError
+      }
+    };
+
+    // Log observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'check-production-health',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: result,
+      p_processed_count: alerts.length,
+      p_job_source: 'cron'
+    });
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        checked_at: now.toISOString(),
-        alerts_created: alerts.length,
-        alerts: alerts.map(a => ({
-          type: a.alert_type,
-          severity: a.severity,
-          title: a.title
-        })),
-        checks_performed: {
-          heartbeats: !heartbeatError,
-          installations: !installError,
-          queued_jobs: !jobsError
-        }
-      }),
+      JSON.stringify(result),
       { 
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -205,6 +218,19 @@ Deno.serve(async (req) => {
 
   } catch (error: any) {
     console.error('[check-production-health] Unexpected error:', error);
+    
+    // Log error observability
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'check-production-health',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: error?.message || String(error),
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {}
     
     return new Response(
       JSON.stringify({

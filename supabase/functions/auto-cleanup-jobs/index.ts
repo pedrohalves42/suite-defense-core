@@ -184,6 +184,16 @@ Deno.serve(async (req) => {
     const duration = Date.now() - startTime
     console.log(`[${requestId}] Cleanup completed in ${duration}ms:`, result)
 
+    // Log observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'auto-cleanup-jobs',
+      p_success: true,
+      p_duration_ms: duration,
+      p_result: result,
+      p_processed_count: result.total_cleaned,
+      p_job_source: 'cron'
+    })
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -197,6 +207,22 @@ Deno.serve(async (req) => {
   } catch (error) {
     const duration = Date.now() - startTime
     console.error(`[${requestId}] Error after ${duration}ms:`, error)
+    
+    // Log error observability
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      const supabase = createClient(supabaseUrl, supabaseKey)
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'auto-cleanup-jobs',
+        p_success: false,
+        p_duration_ms: duration,
+        p_error: error instanceof Error ? error.message : 'Internal server error',
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      })
+    } catch {}
     
     return new Response(
       JSON.stringify({ 

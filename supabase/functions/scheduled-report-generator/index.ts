@@ -34,10 +34,13 @@ serve(async (req: Request): Promise<Response> => {
     });
   }
 
+  const startedAt = Date.now();
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    console.log("Starting scheduled report generation...");
 
     console.log("Starting scheduled report generation...");
 
@@ -148,19 +151,45 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log(`Scheduled report generation complete: generated=${generatedCount}, skipped=${skippedCount}`);
 
-    return new Response(JSON.stringify({
+    const result = {
       success: true,
       processed: tenants.length,
       generated: generatedCount,
       skipped: skippedCount,
       errors: errors.length > 0 ? errors : undefined
-    }), {
+    };
+
+    // Log observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'scheduled-report-generator',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: result,
+      p_processed_count: generatedCount,
+      p_job_source: 'cron'
+    });
+
+    return new Response(JSON.stringify(result), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (error: any) {
     console.error("Error in scheduled-report-generator:", error);
+    
+    // Log error observability
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'scheduled-report-generator',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: error.message,
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {}
+    
     return new Response(JSON.stringify({
       success: false,
       error: error.message

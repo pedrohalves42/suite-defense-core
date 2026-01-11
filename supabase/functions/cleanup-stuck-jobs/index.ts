@@ -30,6 +30,8 @@ Deno.serve(async (req) => {
     )
   }
 
+  const startedAt = Date.now()
+  
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -167,12 +169,39 @@ Deno.serve(async (req) => {
 
     console.log(`[cleanup-stuck-jobs] Summary: ${retriedCount} retried, ${exhaustedCount} exhausted, ${expiredCount} expired`)
 
+    // Log observability
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'cleanup-stuck-jobs',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: summary,
+      p_processed_count: retriedCount + exhaustedCount + expiredCount,
+      p_job_source: 'cron'
+    })
+
     return new Response(
       JSON.stringify(summary),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     console.error('[cleanup-stuck-jobs] Unexpected error:', error)
+    
+    // Log error observability
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      const supabase = createClient(supabaseUrl, supabaseKey)
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'cleanup-stuck-jobs',
+        p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: error instanceof Error ? error.message : 'Unknown error',
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      })
+    } catch {}
+    
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -133,6 +133,16 @@ Deno.serve(async (req: Request) => {
     const totalDeleted = Object.values(stats).reduce((a, b) => a + b, 0);
     console.log(`[${requestId}] Security cleanup complete. Total deleted: ${totalDeleted}. Time: ${executionTime}ms`);
 
+    // Log observability to scheduled_job_runs
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'security-cleanup-cron',
+      p_success: true,
+      p_duration_ms: executionTime,
+      p_result: stats,
+      p_processed_count: totalDeleted,
+      p_job_source: 'cron'
+    });
+
     return secureJsonResponse({
       success: true,
       request_id: requestId,
@@ -145,6 +155,21 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`[${requestId}] Error:`, error);
+    
+    // Log error observability
+    try {
+      const supabase = createClient(supabaseUrl, serviceRoleKey);
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'security-cleanup-cron',
+        p_success: false,
+        p_duration_ms: Date.now() - startTime,
+        p_error: errorMessage,
+        p_result: null,
+        p_processed_count: 0,
+        p_job_source: 'cron'
+      });
+    } catch {}
+    
     return secureErrorResponse(
       'Security cleanup failed',
       500,
