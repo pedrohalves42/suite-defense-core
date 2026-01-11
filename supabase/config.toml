@@ -657,3 +657,13 @@ verify_jwt = false
 [functions.evaluate-job-slo]
 verify_jwt = false
 schedule = "*/5 * * * *"
+
+# === Task SLA Breach Check (every 5 minutes) ===
+[functions.check-task-sla-breach]
+verify_jwt = false
+schedule = "*/5 * * * *"
+
+# === Detect Stuck Installations (every 30 minutes) ===
+[functions.detect-stuck-installations]
+verify_jwt = false
+schedule = "*/30 * * * *"

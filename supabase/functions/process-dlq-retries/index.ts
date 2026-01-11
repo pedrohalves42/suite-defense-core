@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
           .update({ status: 'retrying' })
           .eq('id', entry.id);
 
-        // Re-create the job
+        // Re-create the job with approved flag to ensure it can be claimed
         const { error: jobError } = await supabase
           .from('jobs')
           .insert({
@@ -89,6 +89,7 @@ Deno.serve(async (req) => {
             type: entry.job_type,
             payload: entry.payload,
             status: 'queued',
+            approved: true, // CRITICAL: DLQ retries must be pre-approved
           });
 
         if (jobError) {

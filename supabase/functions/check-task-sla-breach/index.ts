@@ -6,8 +6,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+/**
+ * CHECK-TASK-SLA-BREACH - Scheduled Edge Function
+ * 
+ * Runs every 5 minutes to:
+ * 1. Check for tasks that have exceeded their SLA due date
+ * 2. Flag them as breached via check_task_sla_breach() function
+ * 3. Log observability data via log_scheduled_job_run()
+ */
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -15,26 +22,27 @@ serve(async (req) => {
   const startedAt = Date.now();
 
   try {
-    console.log('[evaluate-job-slo] Starting SLO evaluation...');
+    console.log('[check-task-sla-breach] Starting SLA breach check...');
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Call the database function that evaluates SLOs and creates tasks
-    const { data, error } = await supabase.rpc('evaluate_job_slo');
+    // Call the database function that checks and flags SLA breaches
+    const { data: breachedCount, error: checkError } = await supabase
+      .rpc('check_task_sla_breach');
 
-    if (error) {
-      console.error('[evaluate-job-slo] Error evaluating SLO:', error);
+    if (checkError) {
+      console.error('[check-task-sla-breach] Error checking SLA breaches:', checkError);
       
       // Log failure with observability
       await supabase.rpc('log_scheduled_job_run', {
-        p_job_key: 'evaluate-job-slo',
+        p_job_key: 'check-task-sla-breach',
         p_success: false,
         p_duration_ms: Date.now() - startedAt,
-        p_error: error.message,
-        p_result: { error: error.message },
+        p_error: checkError.message,
+        p_result: { error: checkError.message },
         p_processed_count: 0,
         p_job_source: 'cron'
       });
@@ -42,7 +50,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: error.message 
+          error: checkError.message 
         }), 
         { 
           status: 500,
@@ -51,57 +59,40 @@ serve(async (req) => {
       );
     }
 
-    // Log results
-    const results = data || [];
-    const tasksCreated = results.filter((r: any) => r.out_task_created).length;
-    const highBurnRates = results.filter((r: any) => r.out_burn_rate >= 2);
-
-    console.log(`[evaluate-job-slo] Evaluation complete:`, {
-      tenantsEvaluated: results.length,
-      tasksCreated,
-      highBurnRates: highBurnRates.length,
-      timestamp: new Date().toISOString()
+    const tasksBreached = breachedCount || 0;
+    
+    console.log(`[check-task-sla-breach] SLA check complete:`, {
+      tasksBreached,
+      timestamp: new Date().toISOString(),
+      durationMs: Date.now() - startedAt
     });
 
-    // Log high burn rate warnings
-    for (const result of highBurnRates) {
-      console.warn(`[evaluate-job-slo] HIGH BURN RATE detected:`, {
-        tenantId: result.out_tenant_id,
-        burnRate: result.out_burn_rate,
-        errorRate: result.out_error_rate,
-        severity: result.out_severity,
-        taskCreated: result.out_task_created
-      });
+    // Also run anomaly alerts check
+    const { error: anomalyError } = await supabase
+      .rpc('check_job_health_anomalies_and_alert');
+    
+    if (anomalyError) {
+      console.warn('[check-task-sla-breach] Error checking job anomalies:', anomalyError);
     }
 
     // Log success with observability
     await supabase.rpc('log_scheduled_job_run', {
-      p_job_key: 'evaluate-job-slo',
+      p_job_key: 'check-task-sla-breach',
       p_success: true,
       p_duration_ms: Date.now() - startedAt,
-      p_result: {
-        tenantsEvaluated: results.length,
-        tasksCreated,
-        highBurnRates: highBurnRates.length
+      p_result: { 
+        tasksBreached,
+        anomalyCheckRan: !anomalyError
       },
-      p_processed_count: results.length,
+      p_processed_count: tasksBreached,
       p_job_source: 'cron'
     });
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        evaluated: results.length,
-        tasksCreated,
-        highBurnRates: highBurnRates.length,
-        results: results.map((r: any) => ({
-          tenantId: r.out_tenant_id,
-          window: r.out_time_window,
-          burnRate: Number(r.out_burn_rate).toFixed(2),
-          errorRate: (Number(r.out_error_rate) * 100).toFixed(2) + '%',
-          severity: r.out_severity,
-          taskCreated: r.out_task_created
-        })),
+        tasksBreached,
+        anomalyCheckRan: !anomalyError,
         timestamp: new Date().toISOString()
       }), 
       { 
@@ -112,7 +103,7 @@ serve(async (req) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[evaluate-job-slo] Unexpected error:', error);
+    console.error('[check-task-sla-breach] Unexpected error:', error);
     
     // Try to log failure
     try {
@@ -122,7 +113,7 @@ serve(async (req) => {
       );
       
       await supabase.rpc('log_scheduled_job_run', {
-        p_job_key: 'evaluate-job-slo',
+        p_job_key: 'check-task-sla-breach',
         p_success: false,
         p_duration_ms: Date.now() - startedAt,
         p_error: errorMessage,
@@ -131,7 +122,7 @@ serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch {
-      console.error('[evaluate-job-slo] Failed to log error');
+      console.error('[check-task-sla-breach] Failed to log error');
     }
 
     return new Response(
