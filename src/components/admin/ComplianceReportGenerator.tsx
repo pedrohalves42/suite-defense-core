@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatBrazilDateTime } from "@/lib/date-utils";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { HashBadge } from "@/components/ui/hash-badge";
 import { RiskGauge } from "@/components/ui/risk-gauge";
 import { ComplianceBadge } from "@/components/ui/compliance-badge";
@@ -117,12 +119,7 @@ export function ComplianceReportGenerator() {
 
     setIsGenerating(true);
     try {
-      const jsPDFModule = await import(/* @vite-ignore */ "jspdf");
-      const jsPDFClass = jsPDFModule.jsPDF || jsPDFModule.default;
-      const autoTableModule = await import(/* @vite-ignore */ "jspdf-autotable");
-      const autoTable = autoTableModule.default;
-
-      const doc = new jsPDFClass();
+      const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       let yPos = 0;

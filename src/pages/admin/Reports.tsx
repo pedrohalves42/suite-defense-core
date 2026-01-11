@@ -13,6 +13,8 @@ import { GeneratedReportsList } from "@/components/admin/GeneratedReportsList";
 import { ComplianceReportGenerator } from "@/components/admin/ComplianceReportGenerator";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { useTenant } from "@/hooks/useTenant";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Agent {
   id: string;
@@ -195,20 +197,7 @@ export default function Reports() {
 
       const reportData = data as SecurityReport;
       
-      // Dynamic import of jsPDF with error handling
-      let jsPDFClass: any;
-      let autoTable: any;
-      try {
-        const jsPDFModule = await import(/* @vite-ignore */ 'jspdf');
-        jsPDFClass = jsPDFModule.jsPDF || jsPDFModule.default;
-        const autoTableModule = await import(/* @vite-ignore */ 'jspdf-autotable');
-        autoTable = autoTableModule.default;
-      } catch (importError) {
-        console.error("Failed to import jsPDF:", importError);
-        throw new Error("Erro ao carregar biblioteca de PDF. Tente recarregar a página.");
-      }
-      
-      const doc = new jsPDFClass();
+      const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       let yPos = 20;
@@ -467,14 +456,9 @@ export default function Reports() {
 
       const reportData = data as SecurityReport;
       
-      // Dynamic imports
-      const jsPDFModule = await import(/* @vite-ignore */ 'jspdf');
-      const jsPDFClass = jsPDFModule.jsPDF || jsPDFModule.default;
-      const autoTableModule = await import(/* @vite-ignore */ 'jspdf-autotable');
-      const autoTable = autoTableModule.default;
       const QRCode = await import('qrcode');
       
-      const doc = new jsPDFClass();
+      const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       let yPos = 0;
