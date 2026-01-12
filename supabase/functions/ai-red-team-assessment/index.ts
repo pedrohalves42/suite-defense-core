@@ -196,15 +196,99 @@ serve(async (req) => {
       
       if (aiResponse.status === 429) {
         return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.', retry_after: 60 }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
+      // GRACEFUL FALLBACK: For 402 (credits exhausted), return deterministic assessment
       if (aiResponse.status === 402) {
+        console.warn('[ai-red-team-assessment] AI credits exhausted (402). Creating deterministic fallback.');
+        
+        // Calculate deterministic binary criteria from metrics
+        const binaryCriteria = {
+          offline_agents_exist: (metrics?.agents?.offline || 0) > 0,
+          human_approval_rate_zero: (metrics?.ai_actions?.approval_rate || 0) === 0,
+          human_reviewed_zero: (metrics?.ai_actions?.human_reviewed || 0) === 0,
+          rollback_never_tested: (metrics?.rollbacks?.total || 0) === 0,
+          single_user_system: (metrics?.users?.count || 0) <= 1,
+          dlq_has_items: (metrics?.dlq?.current || 0) > 0,
+          critical_alerts_open: (metrics?.critical_alerts?.open || 0) > 0,
+        };
+        
+        const criteriaCount = Object.values(binaryCriteria).filter(Boolean).length;
+        const threatLevel = criteriaCount >= 4 ? 'critical' : criteriaCount === 3 ? 'high' : criteriaCount === 2 ? 'medium' : 'low';
+        const redScore = Math.min(100, criteriaCount * 15);
+        
+        const deterministicResult = {
+          threat_level: threatLevel,
+          red_score: redScore,
+          binary_criteria: binaryCriteria,
+          attack_vectors: ['Análise determinística - créditos de IA esgotados'],
+          residual_risks: [`${criteriaCount} critérios de risco identificados automaticamente`],
+          dimension_threats: {
+            system_identity: binaryCriteria.offline_agents_exist ? 'medium' : 'low',
+            governance: binaryCriteria.human_approval_rate_zero ? 'high' : 'low',
+            evidence_proof: 'unknown',
+            human_oversight: binaryCriteria.human_reviewed_zero ? 'high' : 'low',
+            operational_resilience: binaryCriteria.dlq_has_items ? 'medium' : 'low',
+            cross_tenant_isolation: 'unknown',
+            transparency_explainability: 'unknown',
+            compliance_alignment: 'unknown',
+            market_trust: binaryCriteria.critical_alerts_open ? 'medium' : 'low',
+          },
+          executive_threat_summary: `Análise determinística: ${criteriaCount} critérios de risco ativos. Créditos de IA esgotados - adicione créditos para análise completa.`,
+          worst_case_scenario: 'Não disponível - análise de IA requer créditos',
+          recommended_hardening: ['Adicionar créditos de IA para análise completa', 'Revisar critérios binários identificados'],
+          _fallback_reason: 'AI_CREDITS_EXHAUSTED_402',
+          _is_deterministic: true,
+        };
+        
+        // Save deterministic assessment to database
+        const combinedPromptHash = `deterministic-fallback-402`;
+        
+        const { data: savedAssessment } = await serviceClient
+          .from('red_team_assessments')
+          .insert({
+            tenant_id: tenantId,
+            threat_level: deterministicResult.threat_level,
+            red_score: deterministicResult.red_score,
+            attack_vectors: deterministicResult.attack_vectors,
+            residual_risks: deterministicResult.residual_risks,
+            threat_system_identity: deterministicResult.dimension_threats.system_identity,
+            threat_governance: deterministicResult.dimension_threats.governance,
+            threat_evidence_proof: deterministicResult.dimension_threats.evidence_proof,
+            threat_human_oversight: deterministicResult.dimension_threats.human_oversight,
+            threat_operational_resilience: deterministicResult.dimension_threats.operational_resilience,
+            threat_cross_tenant_isolation: deterministicResult.dimension_threats.cross_tenant_isolation,
+            threat_transparency_explainability: deterministicResult.dimension_threats.transparency_explainability,
+            threat_compliance_alignment: deterministicResult.dimension_threats.compliance_alignment,
+            threat_market_trust: deterministicResult.dimension_threats.market_trust,
+            executive_threat_summary: deterministicResult.executive_threat_summary,
+            worst_case_scenario: deterministicResult.worst_case_scenario,
+            recommended_hardening: deterministicResult.recommended_hardening,
+            ai_model: 'deterministic-fallback',
+            ai_prompt_hash: combinedPromptHash,
+            ai_response_raw: deterministicResult,
+            metrics_snapshot: metrics,
+          })
+          .select()
+          .single();
+        
+        console.log(`[ai-red-team-assessment] Deterministic fallback saved. Threat level: ${threatLevel}, Red score: ${redScore}`);
+        
         return new Response(
-          JSON.stringify({ error: 'AI credits exhausted. Please add credits to continue.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({
+            success: true,
+            assessment_id: savedAssessment?.id,
+            prompt_versions: { persona: 'deterministic', template: 'fallback-402' },
+            prompt_hashes: { persona: 'n/a', template: 'n/a' },
+            ...deterministicResult,
+            metrics_snapshot: metrics,
+            tokens_used: 0,
+            warning: 'AI credits exhausted. This is a deterministic fallback assessment. Add credits for full AI analysis.',
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       

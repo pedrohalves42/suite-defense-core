@@ -389,9 +389,64 @@ serve(async (req) => {
       clearTimeout(redTimeoutId);
     }
 
+    // Handle AI API errors with graceful fallback for 402 (credits exhausted)
     if (!redResponse.ok) {
       const errorText = await redResponse.text();
       console.error('[ai-full-audit] Red Team AI error:', redResponse.status, errorText);
+      
+      // GRACEFUL FALLBACK: For 402 (credits exhausted), return deterministic audit result
+      if (redResponse.status === 402) {
+        console.warn('[ai-full-audit] AI credits exhausted (402). Returning deterministic audit result.');
+        
+        const fallbackCriteria = calculateBinaryCriteria(metrics);
+        const criteriaCount = Object.values(fallbackCriteria).filter(Boolean).length;
+        const deterministicThreatLevel = getDeterministicThreatLevel(criteriaCount);
+        const deterministicRedScore = Math.min(100, criteriaCount * 15);
+        const deterministicScore = calculateDeterministicScore(metrics);
+        
+        // Log the credit exhaustion event
+        await logGovernanceEvent(
+          serviceClient, tenantId, null, 'ai_credits_exhausted',
+          null, deterministicRedScore, 'deterministic_fallback',
+          'Créditos de IA esgotados (402). Usando análise determinística completa.',
+          { criteria_count: criteriaCount, threat_level: deterministicThreatLevel, deterministic_score: deterministicScore }
+        );
+        
+        // Return deterministic audit result without AI analysis
+        return new Response(
+          JSON.stringify({
+            success: true,
+            audit_id: null,
+            overall_score: deterministicScore,
+            market_score: Math.round(deterministicScore * 0.9), // Conservative
+            threat_level: deterministicThreatLevel,
+            red_score: deterministicRedScore,
+            confidence_gap: 0,
+            is_deterministic: true,
+            fallback_reason: 'AI_CREDITS_EXHAUSTED_402',
+            binary_criteria: fallbackCriteria,
+            governance_applied: ['deterministic_fallback'],
+            executive_summary: `Análise determinística: Score ${deterministicScore}/100 baseado em métricas. ${criteriaCount} critérios de risco identificados. Créditos de IA esgotados - adicione créditos para análise completa com Red Team e Ana.`,
+            recommendation: criteriaCount >= 3 ? 'Ação imediata requerida' : criteriaCount >= 2 ? 'Atenção recomendada' : 'Sistema operando normalmente',
+            tokens_used: 0,
+            warning: 'AI credits exhausted (402). This is a deterministic fallback audit based on metrics only. Add credits for full AI-powered Red Team + Ana analysis.',
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // For 429 (rate limit), return specific error
+      if (redResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Rate limit exceeded. Please try again later.', 
+            stage: 'red_team',
+            retry_after: 60
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ error: 'Red Team analysis failed', status: redResponse.status, stage: 'red_team' }),
         { status: redResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -597,6 +652,57 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     if (!anaResponse.ok) {
       const errorText = await anaResponse.text();
       console.error('[ai-full-audit] Ana AI error:', anaResponse.status, errorText);
+      
+      // GRACEFUL FALLBACK: For 402 (credits exhausted), return deterministic result
+      if (anaResponse.status === 402) {
+        console.warn('[ai-full-audit] AI credits exhausted (402) at Ana phase. Returning deterministic audit result.');
+        
+        const deterministicScore = calculateDeterministicScore(metrics);
+        const criteriaCountTrue = Object.values(binaryCriteria).filter(Boolean).length;
+        const deterministicThreatLevel = getDeterministicThreatLevel(criteriaCountTrue);
+        
+        await logGovernanceEvent(
+          serviceClient, tenantId, null, 'ai_credits_exhausted_ana_phase',
+          null, deterministicScore, 'deterministic_fallback',
+          'Créditos de IA esgotados (402) na fase Ana. Usando resultado determinístico com Red Team já executado.',
+          { criteria_count: criteriaCountTrue, red_score: redResult.red_score }
+        );
+        
+        return new Response(
+          JSON.stringify({
+            success: true,
+            audit_id: null,
+            overall_score: deterministicScore,
+            market_score: Math.round(deterministicScore * 0.9),
+            threat_level: deterministicThreatLevel,
+            red_score: redResult.red_score,
+            confidence_gap: 0,
+            is_deterministic: true,
+            fallback_reason: 'AI_CREDITS_EXHAUSTED_402_ANA_PHASE',
+            binary_criteria: binaryCriteria,
+            red_team_completed: true,
+            governance_applied: ['deterministic_fallback', 'red_team_completed'],
+            executive_summary: `Análise parcial: Red Team executado (score ${redResult.red_score}). Ana não executada por falta de créditos. Score determinístico: ${deterministicScore}/100.`,
+            recommendation: criteriaCountTrue >= 3 ? 'Ação imediata requerida' : criteriaCountTrue >= 2 ? 'Atenção recomendada' : 'Sistema operando normalmente',
+            tokens_used: redTokens,
+            warning: 'AI credits exhausted during Ana phase. Red Team completed. Add credits for full analysis.',
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // For 429 (rate limit), return specific error
+      if (anaResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Rate limit exceeded. Please try again later.', 
+            stage: 'ana',
+            retry_after: 60
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ error: 'Ana analysis failed', status: anaResponse.status, stage: 'ana' }),
         { status: anaResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
