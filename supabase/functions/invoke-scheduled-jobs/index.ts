@@ -71,6 +71,10 @@ Deno.serve(async (req) => {
       'detect_blocked_attempts': 'detect-blocked-attempts',
       'ai_insight_generator': 'ai-get-insights',
       'scan_vulnerabilities': 'scan-vulnerabilities',
+      // FASE 8: Adicionar mapeamentos faltantes (CRITICAL)
+      'ai-full-audit': 'ai-full-audit',
+      'ai-red-team-assessment': 'ai-red-team-assessment',
+      'generate-weekly-report': 'generate-weekly-report',
     };
 
     // Name-based mapping for edge_function type jobs

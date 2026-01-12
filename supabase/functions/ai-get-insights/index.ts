@@ -1,78 +1,127 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    // Verificar autenticacao
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Buscar roles do usuario (permite multiplos)
-    const { data: roles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('tenant_id, role')
-      .eq('user_id', user.id);
-
-    if (rolesError || !roles || roles.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden: admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const adminRole = roles.find(r => ['admin', 'super_admin'].includes(r.role));
-
-    if (!adminRole) {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden: admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const tenantId = adminRole.tenant_id;
-
-    // Rate limiting: 60 requests per minute per user
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    // FASE 7: Suportar X-Internal-Secret para chamadas internas (ADR-023)
+    const internalSecret = req.headers.get('X-Internal-Secret');
+    const INTERNAL_FUNCTION_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
     
-    const rateLimitResult = await checkRateLimit(supabaseAdmin, user.id, 'ai-get-insights', {
-      maxRequests: 60,
-      windowMinutes: 1,
-      blockMinutes: 2,
-    });
+    let tenantId: string | null = null;
+    let supabase;
+    let isInternalCall = false;
+    let userId: string | null = null;
 
-    if (!rateLimitResult.allowed) {
+    // Se for chamada interna autenticada via X-Internal-Secret
+    if (internalSecret && INTERNAL_FUNCTION_SECRET && internalSecret === INTERNAL_FUNCTION_SECRET) {
+      isInternalCall = true;
+      supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      // Para chamadas internas, tenant_id pode vir do body ou query string
+      const url = new URL(req.url);
+      tenantId = url.searchParams.get('tenant_id');
+      
+      if (!tenantId) {
+        try {
+          const body = await req.clone().json();
+          tenantId = body.tenant_id;
+        } catch {
+          // Body vazio ou inválido - ok para insights gerais
+        }
+      }
+      
+      // Para chamadas internas sem tenant_id, buscar todos os tenants
+      if (!tenantId) {
+        const { data: tenants } = await supabase.from('tenants').select('id').limit(1);
+        if (tenants && tenants.length > 0) {
+          tenantId = tenants[0].id;
+        }
+      }
+      
+      console.log('[ai-get-insights] Internal call authenticated, tenant_id:', tenantId);
+    } else {
+      // Chamada externa - requer Authorization header
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        return new Response(
+          JSON.stringify({ error: 'Missing authorization header' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+
+      // Verificar autenticacao
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      userId = user.id;
+
+      // Buscar roles do usuario (permite multiplos)
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('tenant_id, role')
+        .eq('user_id', user.id);
+
+      if (rolesError || !roles || roles.length === 0) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden: admin access required' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const adminRole = roles.find(r => ['admin', 'super_admin'].includes(r.role));
+
+      if (!adminRole) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden: admin access required' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      tenantId = adminRole.tenant_id;
+
+      // Rate limiting: 60 requests per minute per user (apenas para chamadas externas)
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+      
+      const rateLimitResult = await checkRateLimit(supabaseAdmin, user.id, 'ai-get-insights', {
+        maxRequests: 60,
+        windowMinutes: 1,
+        blockMinutes: 2,
+      });
+
+      if (!rateLimitResult.allowed) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Rate limit exceeded',
+            resetAt: rateLimitResult.resetAt?.toISOString(),
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Validar tenant_id
+    if (!tenantId) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Rate limit exceeded',
-          resetAt: rateLimitResult.resetAt?.toISOString(),
-        }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Tenant ID not found' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -136,6 +185,7 @@ Deno.serve(async (req) => {
           totalPages: Math.ceil((count || 0) / limit),
         },
         statistics,
+        isInternalCall,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
