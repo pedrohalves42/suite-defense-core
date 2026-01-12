@@ -18006,6 +18006,30 @@ export type Database = {
           silence_duration: unknown
           tenant_id: string | null
         }
+        Insert: {
+          cron_expr?: string | null
+          health_status?: never
+          id?: string | null
+          job_key?: string | null
+          job_name?: string | null
+          job_type?: string | null
+          last_run_at?: string | null
+          last_successful_run?: never
+          silence_duration?: never
+          tenant_id?: string | null
+        }
+        Update: {
+          cron_expr?: string | null
+          health_status?: never
+          id?: string | null
+          job_key?: string | null
+          job_name?: string | null
+          job_type?: string | null
+          last_run_at?: string | null
+          last_successful_run?: never
+          silence_duration?: never
+          tenant_id?: string | null
+        }
         Relationships: [
           {
             foreignKeyName: "scheduled_jobs_tenant_id_fkey"
