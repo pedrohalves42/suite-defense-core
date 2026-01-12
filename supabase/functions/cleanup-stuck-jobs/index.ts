@@ -16,19 +16,28 @@ Deno.serve(async (req) => {
 
   // P1-03 FIX: Validate internal secret or scheduled execution
   const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET')
+  const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')
   const providedSecret = req.headers.get('X-Internal-Secret')
+  const authHeader = req.headers.get('authorization')
   
-  // Allow scheduled execution (no auth) or internal secret
-  const isScheduled = !providedSecret && req.headers.get('authorization') === null
+  // Detect cron call (sends anon key in Bearer token)
+  const isCronCall = authHeader?.startsWith('Bearer ') && 
+                     authHeader?.includes(SUPABASE_ANON_KEY?.substring(0, 20) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9')
+  
+  // Allow scheduled execution (no auth headers), cron calls, or internal secret
+  const isScheduled = !providedSecret && !authHeader
   const isInternal = INTERNAL_SECRET && providedSecret === INTERNAL_SECRET
   
-  if (!isScheduled && !isInternal) {
+  if (!isScheduled && !isInternal && !isCronCall) {
     console.warn(`[${requestId}] Unauthorized access attempt to cleanup-stuck-jobs`)
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
+  
+  const callType = isCronCall ? 'cron' : isScheduled ? 'scheduled' : 'internal'
+  console.log(`[${requestId}] Authorized call type: ${callType}`)
 
   const startedAt = Date.now()
   
