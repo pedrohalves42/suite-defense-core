@@ -71,6 +71,8 @@ Deno.serve(async (req) => {
       'detect_blocked_attempts': 'detect-blocked-attempts',
       'ai_insight_generator': 'ai-get-insights',
       'scan_vulnerabilities': 'scan-vulnerabilities',
+      'monitor_thresholds': 'monitor-thresholds',
+      'cron_sentinel': 'cron-sentinel',
       // FASE 8: Adicionar mapeamentos faltantes (CRITICAL)
       'ai-full-audit': 'ai-full-audit',
       'ai-red-team-assessment': 'ai-red-team-assessment',
