@@ -17960,6 +17960,49 @@ export type Database = {
           },
         ]
       }
+      v_cron_silent_failures: {
+        Row: {
+          cron_expr: string | null
+          health_status: string | null
+          id: string | null
+          job_name: string | null
+          job_type: string | null
+          last_run_at: string | null
+          last_successful_run: string | null
+          silence_duration: unknown
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "governance_health_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "scheduled_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "scheduled_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_dlq_pending_attention: {
         Row: {
           agent_id: string | null
@@ -19568,10 +19611,9 @@ export type Database = {
       }
       v_security_invariants: {
         Row: {
-          description: string | null
-          invariant_type: string | null
+          invariant: string | null
           status: string | null
-          violation_count: number | null
+          violations: number | null
         }
         Relationships: []
       }
@@ -20026,6 +20068,7 @@ export type Database = {
             }
             Returns: undefined
           }
+      assert_system_allows_jobs: { Args: never; Returns: undefined }
       assert_system_not_stopped: { Args: never; Returns: undefined }
       authorize_agent_recovery: {
         Args: {
@@ -20765,6 +20808,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["system_operational_mode"]
       }
+      get_system_mode_safe: { Args: never; Returns: string }
       get_tenant_mfa_policy: { Args: { _tenant_id: string }; Returns: Json }
       get_valid_agent_signing_key: {
         Args: { p_agent_id: string; p_fingerprint: string }
