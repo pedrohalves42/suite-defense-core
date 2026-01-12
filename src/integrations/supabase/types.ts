@@ -13722,6 +13722,7 @@ export type Database = {
           due_at: string | null
           fingerprint_id: string | null
           id: string
+          metadata: Json | null
           playbook_id: string | null
           requires_human_review: boolean
           risk_accepted_at: string | null
@@ -13750,6 +13751,7 @@ export type Database = {
           due_at?: string | null
           fingerprint_id?: string | null
           id?: string
+          metadata?: Json | null
           playbook_id?: string | null
           requires_human_review?: boolean
           risk_accepted_at?: string | null
@@ -13778,6 +13780,7 @@ export type Database = {
           due_at?: string | null
           fingerprint_id?: string | null
           id?: string
+          metadata?: Json | null
           playbook_id?: string | null
           requires_human_review?: boolean
           risk_accepted_at?: string | null
@@ -17414,6 +17417,7 @@ export type Database = {
           agent_name: string | null
           chain_health: string | null
           chain_updated_at: string | null
+          health_status: string | null
           last_execution_hash: string | null
           last_execution_index: number | null
           tenant_id: string | null
