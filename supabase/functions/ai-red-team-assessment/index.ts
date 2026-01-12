@@ -13,14 +13,6 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Authorization header required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -36,60 +28,89 @@ serve(async (req) => {
 
     // Service client for admin operations
     const serviceClient = createClient(supabaseUrl, supabaseKey);
-    
-    // User client for RPC calls that depend on auth.uid()
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader,
-        },
-      },
-    });
 
-    // Parse request body for optional ana_summary
-    let anaSummary = '';
-    try {
-      const body = await req.json();
-      anaSummary = body.ana_summary || '';
-    } catch {
-      // No body or invalid JSON - that's fine
-    }
-
-    // Get user from token
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await serviceClient.auth.getUser(token);
+    // Check for internal call via X-Internal-Secret (ADR-023)
+    const internalSecret = req.headers.get('X-Internal-Secret');
+    const INTERNAL_FUNCTION_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+    const authHeader = req.headers.get('Authorization');
     
-    if (userError || !user) {
+    let tenantId: string | null = null;
+    let userClient = serviceClient; // Default to service client for internal calls
+    let isInternalCall = false;
+
+    if (internalSecret && INTERNAL_FUNCTION_SECRET && internalSecret === INTERNAL_FUNCTION_SECRET) {
+      // Internal call - use service role, get tenant_id from body
+      isInternalCall = true;
+      console.log('[ai-red-team-assessment] Internal call detected');
+      
+      try {
+        const body = await req.clone().json();
+        tenantId = body.tenant_id;
+      } catch {
+        // Try query param
+        const url = new URL(req.url);
+        tenantId = url.searchParams.get('tenant_id');
+      }
+      
+      if (!tenantId) {
+        // Get first tenant
+        const { data: tenants } = await serviceClient.from('tenants').select('id').limit(1);
+        tenantId = tenants?.[0]?.id;
+      }
+      
+      console.log('[ai-red-team-assessment] Internal call for tenant:', tenantId);
+    } else if (authHeader) {
+      // User call - validate token and get tenant from roles
+      userClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: userError } = await serviceClient.auth.getUser(token);
+      
+      if (userError || !user) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Get user's tenant - prefer x-tenant-id header
+      const requestedTenantId = req.headers.get('x-tenant-id');
+
+      // Get all user roles
+      const { data: userRoles } = await serviceClient
+        .from('user_roles')
+        .select('tenant_id, role')
+        .eq('user_id', user.id);
+
+      const adminRole = userRoles?.find(r => ['admin', 'super_admin'].includes(r.role));
+      if (!adminRole) {
+        return new Response(
+          JSON.stringify({ error: 'Admin access required' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      tenantId = adminRole.tenant_id;
+      if (requestedTenantId) {
+        const hasAccess = userRoles?.some(r => r.tenant_id === requestedTenantId);
+        if (hasAccess) {
+          tenantId = requestedTenantId;
+        }
+      }
+    } else {
       return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
+        JSON.stringify({ error: 'Authorization required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Get user's tenant - prefer x-tenant-id header
-    const requestedTenantId = req.headers.get('x-tenant-id');
-
-    // Get all user roles (avoid .single() for multi-role users)
-    const { data: userRoles } = await serviceClient
-      .from('user_roles')
-      .select('tenant_id, role')
-      .eq('user_id', user.id);
-
-    const adminRole = userRoles?.find(r => ['admin', 'super_admin'].includes(r.role));
-    if (!adminRole) {
+    
+    if (!tenantId) {
       return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Tenant ID not found' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-    }
-
-    // Use requested tenant if user has access
-    let tenantId = adminRole.tenant_id;
-    if (requestedTenantId) {
-      const hasAccess = userRoles?.some(r => r.tenant_id === requestedTenantId);
-      if (hasAccess) {
-        tenantId = requestedTenantId;
-      }
     }
     
     console.log(`[ai-red-team-assessment] Starting Red Team assessment for tenant ${tenantId}`);
@@ -110,8 +131,9 @@ serve(async (req) => {
     logPromptUsage('red-team-persona', personaPrompt.hash, tenantId, 'ai-red-team-assessment');
     logPromptUsage('red-team-analysis-template', analysisTemplate.hash, tenantId, 'ai-red-team-assessment');
 
-    // Get raw metrics using userClient (so auth.uid() works)
-    const { data: metrics, error: metricsError } = await userClient
+    // Get raw metrics using serviceClient for internal calls or userClient for user calls
+    const metricsClient = isInternalCall ? serviceClient : userClient;
+    const { data: metrics, error: metricsError } = await metricsClient
       .rpc('get_audit_raw_metrics', { p_tenant_id: tenantId });
 
     if (metricsError) {
@@ -129,21 +151,20 @@ serve(async (req) => {
       );
     }
 
-    // If no ana_summary provided, try to get the latest audit
-    if (!anaSummary) {
-      const { data: latestAudit } = await serviceClient
-        .from('system_audits')
-        .select('executive_summary, recommendation, overall_score')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    // Get ana_summary from latest audit
+    let anaSummary = '';
+    const { data: latestAudit } = await serviceClient
+      .from('system_audits')
+      .select('executive_summary, recommendation, overall_score')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-      if (latestAudit) {
-        anaSummary = `Score: ${latestAudit.overall_score}/100. Recommendation: ${latestAudit.recommendation}. Summary: ${latestAudit.executive_summary}`;
-      } else {
-        anaSummary = 'Nenhuma auditoria anterior disponível.';
-      }
+    if (latestAudit) {
+      anaSummary = `Score: ${latestAudit.overall_score}/100. Recommendation: ${latestAudit.recommendation}. Summary: ${latestAudit.executive_summary}`;
+    } else {
+      anaSummary = 'Nenhuma auditoria anterior disponível.';
     }
 
     console.log('[ai-red-team-assessment] Metrics collected, Ana summary available');
