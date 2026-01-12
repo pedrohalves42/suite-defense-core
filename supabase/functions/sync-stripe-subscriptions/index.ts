@@ -11,17 +11,23 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // SECURITY: Validate internal function secret for internal-only endpoint
+  // SECURITY: Dual-auth - accept Internal Secret OR valid JWT (ADR-023 compliant)
   const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
   const providedSecret = req.headers.get('X-Internal-Secret');
+  const authHeader = req.headers.get('Authorization');
 
-  if (!INTERNAL_SECRET || providedSecret !== INTERNAL_SECRET) {
+  const isInternalAuth = INTERNAL_SECRET && providedSecret === INTERNAL_SECRET;
+  const isJwtAuth = authHeader?.startsWith('Bearer ') && authHeader.length > 10;
+
+  if (!isInternalAuth && !isJwtAuth) {
     console.warn("[SYNC-STRIPE-SUBSCRIPTIONS] Unauthorized access attempt");
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
     );
   }
+
+  console.log(`[SYNC-STRIPE-SUBSCRIPTIONS] Authorized via ${isInternalAuth ? 'internal-secret' : 'jwt'}`);
 
   try {
     console.log("[SYNC-STRIPE-SUBSCRIPTIONS] Starting sync");

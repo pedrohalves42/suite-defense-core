@@ -114,8 +114,14 @@ Deno.serve(async (req) => {
 
         console.log(`[${requestId}] Invoking function: ${functionName} for job: ${job.name}`);
 
-        // Invoke the edge function
+        // Get internal secret to pass to child functions (ADR-023 compliant)
+        const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+
+        // Invoke the edge function with auth headers
         const { data: invokeData, error: invokeError } = await supabase.functions.invoke(functionName, {
+          headers: {
+            'X-Internal-Secret': INTERNAL_SECRET || ''
+          },
           body: { 
             scheduled_job_id: job.id,
             tenant_id: job.tenant_id,

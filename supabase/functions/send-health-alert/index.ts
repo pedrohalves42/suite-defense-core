@@ -20,17 +20,23 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Validate internal secret
+  // SECURITY: Dual-auth - accept Internal Secret OR valid JWT (ADR-023 compliant)
   const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
   const providedSecret = req.headers.get('X-Internal-Secret');
+  const authHeader = req.headers.get('Authorization');
 
-  if (providedSecret !== INTERNAL_SECRET) {
+  const isInternalAuth = INTERNAL_SECRET && providedSecret === INTERNAL_SECRET;
+  const isJwtAuth = authHeader?.startsWith('Bearer ') && authHeader.length > 10;
+
+  if (!isInternalAuth && !isJwtAuth) {
     console.error('[Health Alert] Unauthorized access attempt');
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
+
+  console.log(`[Health Alert] Authorized via ${isInternalAuth ? 'internal-secret' : 'jwt'}`);
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 

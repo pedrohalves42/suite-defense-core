@@ -51,20 +51,28 @@ serve(async (req: Request) => {
     });
   }
 
-  // SECURITY: Validate internal function secret for internal-only endpoint
+  // SECURITY: Dual-auth - accept Internal Secret OR valid JWT (ADR-023 compliant)
   const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
   const providedSecret = req.headers.get('X-Internal-Secret');
+  const authHeader = req.headers.get('Authorization');
 
-  if (!INTERNAL_SECRET || providedSecret !== INTERNAL_SECRET) {
+  const isInternalAuth = INTERNAL_SECRET && providedSecret === INTERNAL_SECRET;
+  const isJwtAuth = authHeader?.startsWith('Bearer ') && authHeader.length > 10;
+
+  if (!isInternalAuth && !isJwtAuth) {
     logger.warn('[dispatch-notification] Unauthorized access attempt', {
-      hasSecret: !!providedSecret,
-      secretMatch: providedSecret === INTERNAL_SECRET
+      hasInternalSecret: !!providedSecret,
+      hasJwt: !!authHeader
     });
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
+
+  logger.info('[dispatch-notification] Authorized via', { 
+    method: isInternalAuth ? 'internal-secret' : 'jwt' 
+  });
 
   try {
     const supabase = createClient(
