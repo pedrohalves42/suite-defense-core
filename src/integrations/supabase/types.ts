@@ -20278,7 +20278,17 @@ export type Database = {
         }[]
       }
       check_job_health_anomalies_and_alert: { Args: never; Returns: undefined }
-      check_offline_agents_for_playbook: { Args: never; Returns: undefined }
+      check_offline_agents_for_playbook:
+        | { Args: never; Returns: undefined }
+        | {
+            Args: { p_tenant_id: string }
+            Returns: {
+              agent_id: string
+              agent_name: string
+              last_heartbeat: string
+              minutes_offline: number
+            }[]
+          }
       check_segregation_rule: {
         Args: {
           _action_type: string
@@ -20427,6 +20437,10 @@ export type Database = {
         }[]
       }
       cleanup_stuck_pending_jobs: { Args: never; Returns: number }
+      collect_task_evidence: {
+        Args: { p_agent_id: string; p_task_type: string }
+        Returns: Json
+      }
       collect_weekly_governance_metrics: {
         Args: { tenant_uuid: string; week_start?: string }
         Returns: Json

@@ -1019,7 +1019,7 @@ async function processIgnoredInsightsRule(supabase: any, rule: any): Promise<Rul
     .from('ai_insights')
     .select('id, tenant_id, title, severity, created_at')
     .in('severity', ['critical', 'high'])
-    .eq('is_acknowledged', false)
+    .eq('acknowledged', false)
     .lt('created_at', cutoffDate)
     .not('title', 'ilike', '%[ESCALADO]%')
     .limit(50);
