@@ -11219,6 +11219,7 @@ export type Database = {
           description: string | null
           enabled: boolean
           id: string
+          job_key: string | null
           job_type: string
           last_run_at: string | null
           name: string
@@ -11235,6 +11236,7 @@ export type Database = {
           description?: string | null
           enabled?: boolean
           id?: string
+          job_key?: string | null
           job_type: string
           last_run_at?: string | null
           name: string
@@ -11251,6 +11253,7 @@ export type Database = {
           description?: string | null
           enabled?: boolean
           id?: string
+          job_key?: string | null
           job_type?: string
           last_run_at?: string | null
           name?: string
@@ -17969,6 +17972,7 @@ export type Database = {
           cron_expr: string | null
           health_status: string | null
           id: string | null
+          job_key: string | null
           job_name: string | null
           job_type: string | null
           last_run_at: string | null
