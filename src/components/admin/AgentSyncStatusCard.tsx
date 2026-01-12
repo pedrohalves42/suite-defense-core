@@ -22,7 +22,7 @@ export function AgentSyncStatusCard() {
       
       if (error) throw error;
       
-      toast.success(`Sincronização agendada para ${data?.jobsCreated || 0} computadores online`);
+      toast.success(`Sincronização agendada para ${data?.jobs_created ?? data?.jobsCreated ?? 0} computadores online`);
       
       // Refresh status after a short delay to show updated data
       setTimeout(() => refetch(), 2000);

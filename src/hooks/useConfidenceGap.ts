@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useActiveTenant } from './useActiveTenant';
 
 export interface ConfidenceGap {
   id: string;
@@ -38,44 +39,61 @@ export interface ConfidenceGapTrend {
 }
 
 export function useConfidenceGapHistory() {
+  const { activeTenant } = useActiveTenant();
+  
   return useQuery({
-    queryKey: ['confidence-gap-history'],
+    queryKey: ['confidence-gap-history', activeTenant?.id],
     queryFn: async () => {
+      if (!activeTenant?.id) return [];
+      
       const { data, error } = await supabase
         .from('audit_confidence_gaps')
         .select('*')
+        .eq('tenant_id', activeTenant.id)
         .order('created_at', { ascending: false })
         .limit(30);
 
       if (error) throw error;
       return data as ConfidenceGap[];
     },
+    enabled: !!activeTenant?.id,
   });
 }
 
 export function useConfidenceGapTrend() {
+  const { activeTenant } = useActiveTenant();
+  
   return useQuery({
-    queryKey: ['confidence-gap-trend'],
+    queryKey: ['confidence-gap-trend', activeTenant?.id],
     queryFn: async () => {
+      if (!activeTenant?.id) return [];
+      
       const { data, error } = await supabase
         .from('v_confidence_gap_trend')
         .select('*')
+        .eq('tenant_id', activeTenant.id)
         .order('created_at', { ascending: false })
         .limit(30);
 
       if (error) throw error;
       return data as ConfidenceGapTrend[];
     },
+    enabled: !!activeTenant?.id,
   });
 }
 
 export function useLatestConfidenceGap() {
+  const { activeTenant } = useActiveTenant();
+  
   return useQuery({
-    queryKey: ['confidence-gap-latest'],
+    queryKey: ['confidence-gap-latest', activeTenant?.id],
     queryFn: async () => {
+      if (!activeTenant?.id) return null;
+      
       const { data, error } = await supabase
         .from('audit_confidence_gaps')
         .select('*')
+        .eq('tenant_id', activeTenant.id)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -83,6 +101,7 @@ export function useLatestConfidenceGap() {
       if (error && error.code !== 'PGRST116') throw error;
       return data as ConfidenceGap | null;
     },
+    enabled: !!activeTenant?.id,
   });
 }
 

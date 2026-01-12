@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { deriveAgentState, getStateColorClasses } from '@/lib/agent-state-machine';
+import { useActiveTenant } from '@/hooks/useActiveTenant';
 
 interface AgentSelectorProps {
   value: string;
@@ -27,9 +28,13 @@ interface Agent {
 }
 
 export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
+  const { activeTenant } = useActiveTenant();
+  
   const { data: agents, isLoading, error } = useQuery({
-    queryKey: ['agents-list'],
+    queryKey: ['agents-list', activeTenant?.id],
     queryFn: async () => {
+      if (!activeTenant?.id) return [];
+      
       const { data, error } = await supabase
         .from('agents')
         .select(`
@@ -37,12 +42,14 @@ export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
           is_isolated, is_throttled, safe_mode_reason, safe_mode_entered_at,
           last_heartbeat, force_update_version, force_update_at, agent_state
         `)
+        .eq('tenant_id', activeTenant.id)
         .is('archived_at', null)
         .order('agent_name', { ascending: true });
 
       if (error) throw error;
       return data as Agent[];
     },
+    enabled: !!activeTenant?.id,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 

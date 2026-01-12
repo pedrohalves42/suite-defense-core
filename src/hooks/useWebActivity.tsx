@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { WebActivityItem } from '@/types/security';
+import { useActiveTenant } from './useActiveTenant';
 
 interface WebActivityRow {
   domain: string;
@@ -9,7 +10,7 @@ interface WebActivityRow {
   is_blocked?: boolean | null;
 }
 
-async function fetchWebActivity(agentId: string): Promise<WebActivityItem[]> {
+async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebActivityItem[]> {
   // Fetch raw data and aggregate manually
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   
@@ -17,6 +18,7 @@ async function fetchWebActivity(agentId: string): Promise<WebActivityItem[]> {
   const { data, error } = await supabase
     .from('agent_web_activity')
     .select('*')
+    .eq('tenant_id', tenantId)
     .eq('agent_id', agentId)
     .gte('visited_at', oneDayAgo)
     .order('visited_at', { ascending: false }) as { data: WebActivityRow[] | null; error: Error | null };
@@ -77,10 +79,12 @@ async function fetchWebActivity(agentId: string): Promise<WebActivityItem[]> {
 }
 
 export function useWebActivity(agentId: string, enabled = true) {
+  const { activeTenant } = useActiveTenant();
+  
   return useQuery({
-    queryKey: ['web-activity', agentId],
-    queryFn: () => fetchWebActivity(agentId),
-    enabled: enabled && !!agentId,
+    queryKey: ['web-activity', activeTenant?.id, agentId],
+    queryFn: () => fetchWebActivity(agentId, activeTenant!.id),
+    enabled: enabled && !!agentId && !!activeTenant?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }

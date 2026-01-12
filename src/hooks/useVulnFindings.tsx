@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { VulnFinding } from '@/types/security';
+import { useActiveTenant } from './useActiveTenant';
 
-async function fetchVulnFindings(agentId: string): Promise<VulnFinding[]> {
+async function fetchVulnFindings(agentId: string, tenantId: string): Promise<VulnFinding[]> {
   const { data, error } = await supabase
     .from('vuln_findings')
     .select('*')
+    .eq('tenant_id', tenantId)
     .eq('agent_id', agentId)
     .order('severity', { ascending: false })
     .order('first_seen_at', { ascending: false });
@@ -18,10 +20,12 @@ async function fetchVulnFindings(agentId: string): Promise<VulnFinding[]> {
 }
 
 export function useVulnFindings(agentId: string, enabled = true) {
+  const { activeTenant } = useActiveTenant();
+  
   return useQuery({
-    queryKey: ['vuln-findings', agentId],
-    queryFn: () => fetchVulnFindings(agentId),
-    enabled: enabled && !!agentId,
+    queryKey: ['vuln-findings', activeTenant?.id, agentId],
+    queryFn: () => fetchVulnFindings(agentId, activeTenant!.id),
+    enabled: enabled && !!agentId && !!activeTenant?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
