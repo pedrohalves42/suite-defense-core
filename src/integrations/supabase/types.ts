@@ -17420,17 +17420,10 @@ export type Database = {
           agent_mode: string | null
           agent_name: string | null
           agent_version: string | null
-          checked_at: string | null
-          health_description: string | null
+          enrolled_at: string | null
           health_status: string | null
-          last_execution_at: string | null
           last_heartbeat: string | null
-          minutes_since_execution: number | null
-          minutes_since_heartbeat: number | null
-          pending_jobs: number | null
-          severity: string | null
-          stale_delivered_jobs: number | null
-          stale_queued_jobs: number | null
+          seconds_since_heartbeat: number | null
           status: string | null
           tenant_id: string | null
         }
@@ -17439,17 +17432,10 @@ export type Database = {
           agent_mode?: string | null
           agent_name?: string | null
           agent_version?: string | null
-          checked_at?: never
-          health_description?: never
+          enrolled_at?: string | null
           health_status?: never
-          last_execution_at?: never
           last_heartbeat?: string | null
-          minutes_since_execution?: never
-          minutes_since_heartbeat?: never
-          pending_jobs?: never
-          severity?: never
-          stale_delivered_jobs?: never
-          stale_queued_jobs?: never
+          seconds_since_heartbeat?: never
           status?: string | null
           tenant_id?: string | null
         }
@@ -17458,17 +17444,10 @@ export type Database = {
           agent_mode?: string | null
           agent_name?: string | null
           agent_version?: string | null
-          checked_at?: never
-          health_description?: never
+          enrolled_at?: string | null
           health_status?: never
-          last_execution_at?: never
           last_heartbeat?: string | null
-          minutes_since_execution?: never
-          minutes_since_heartbeat?: never
-          pending_jobs?: never
-          severity?: never
-          stale_delivered_jobs?: never
-          stale_queued_jobs?: never
+          seconds_since_heartbeat?: never
           status?: string | null
           tenant_id?: string | null
         }
@@ -20278,17 +20257,15 @@ export type Database = {
         }[]
       }
       check_job_health_anomalies_and_alert: { Args: never; Returns: undefined }
-      check_offline_agents_for_playbook:
-        | { Args: never; Returns: undefined }
-        | {
-            Args: { p_tenant_id: string }
-            Returns: {
-              agent_id: string
-              agent_name: string
-              last_heartbeat: string
-              minutes_offline: number
-            }[]
-          }
+      check_offline_agents_for_playbook: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          agent_id: string
+          agent_name: string
+          last_heartbeat: string
+          minutes_offline: number
+        }[]
+      }
       check_segregation_rule: {
         Args: {
           _action_type: string
@@ -20480,10 +20457,8 @@ export type Database = {
           agent_name: string
           failure_count: number
           failure_type: string
-          first_failure: string
-          heartbeat_active: boolean
-          last_failure: string
-          last_heartbeat: string
+          first_seen: string
+          last_seen: string
           tenant_id: string
         }[]
       }
