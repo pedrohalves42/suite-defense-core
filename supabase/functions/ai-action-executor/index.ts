@@ -255,7 +255,7 @@ serve(async (req) => {
                 .delete()
                 .eq('tenant_id', action.tenant_id)
                 .lt('created_at', cutoffDate.toISOString())
-                .eq('is_acknowledged', true)
+                .eq('acknowledged', true)
                 .select('id');
               deletedCount += deletedAlerts?.length || 0;
             }
@@ -557,9 +557,9 @@ serve(async (req) => {
           
           let query = supabase
             .from('system_alerts')
-            .update({ is_acknowledged: true, acknowledged_at: new Date().toISOString() })
+            .update({ acknowledged: true, acknowledged_at: new Date().toISOString() })
             .eq('tenant_id', action.tenant_id)
-            .eq('is_acknowledged', false);
+            .eq('acknowledged', false);
 
           if (!payload.acknowledge_all && payload.alert_ids) {
             query = query.in('id', payload.alert_ids);
