@@ -55,11 +55,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get all active tenants
+    // Get all tenants (no is_active column exists, all tenants are active)
     const { data: tenants, error: tenantsError } = await supabase
       .from('tenants')
-      .select('id, name')
-      .eq('is_active', true);
+      .select('id, name');
 
     if (tenantsError) throw tenantsError;
 

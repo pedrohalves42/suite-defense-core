@@ -203,14 +203,6 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Authorization header required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -226,55 +218,93 @@ serve(async (req) => {
 
     // Service client for admin operations (inserts, updates)
     const serviceClient = createClient(supabaseUrl, supabaseKey);
-    
-    // User client for RPC calls that depend on auth.uid()
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader,
-        },
-      },
-    });
 
-    // Get user from token
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await serviceClient.auth.getUser(token);
+    // Check for internal call via X-Internal-Secret (ADR-023)
+    const internalSecret = req.headers.get('X-Internal-Secret');
+    const INTERNAL_FUNCTION_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+    const authHeader = req.headers.get('Authorization');
     
-    if (userError || !user) {
+    let tenantId: string | null = null;
+    let userClient = serviceClient; // Default to service client for internal calls
+    let isInternalCall = false;
+
+    if (internalSecret && INTERNAL_FUNCTION_SECRET && internalSecret === INTERNAL_FUNCTION_SECRET) {
+      // Internal call - use service role, get tenant_id from body
+      isInternalCall = true;
+      console.log('[ai-full-audit] Internal call detected');
+      
+      try {
+        const body = await req.clone().json();
+        tenantId = body.tenant_id;
+      } catch {
+        // Try query param
+        const url = new URL(req.url);
+        tenantId = url.searchParams.get('tenant_id');
+      }
+      
+      if (!tenantId) {
+        // Get first tenant
+        const { data: tenants } = await serviceClient.from('tenants').select('id').limit(1);
+        tenantId = tenants?.[0]?.id;
+      }
+      
+      console.log('[ai-full-audit] Internal call for tenant:', tenantId);
+    } else if (authHeader) {
+      // User call - validate token and get tenant from roles
+      userClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: userError } = await serviceClient.auth.getUser(token);
+      
+      if (userError || !user) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Get user's tenant - prefer x-tenant-id header
+      const requestedTenantId = req.headers.get('x-tenant-id');
+      console.log(`[ai-full-audit] Requested tenant from header: ${requestedTenantId || 'not provided'}`);
+
+      // Get all user roles
+      const { data: userRoles } = await serviceClient
+        .from('user_roles')
+        .select('tenant_id, role')
+        .eq('user_id', user.id);
+
+      const adminRole = userRoles?.find(r => ['admin', 'super_admin'].includes(r.role));
+      if (!adminRole) {
+        return new Response(
+          JSON.stringify({ error: 'Admin access required' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      tenantId = adminRole.tenant_id;
+      if (requestedTenantId) {
+        const hasAccessToRequested = userRoles?.some(r => r.tenant_id === requestedTenantId);
+        if (hasAccessToRequested) {
+          tenantId = requestedTenantId;
+          console.log(`[ai-full-audit] Using requested tenant: ${tenantId}`);
+        } else {
+          console.warn(`[ai-full-audit] User does not have access to requested tenant ${requestedTenantId}, using ${tenantId}`);
+        }
+      }
+    } else {
       return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
+        JSON.stringify({ error: 'Authorization required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Get user's tenant - prefer x-tenant-id header, fallback to first role
-    const requestedTenantId = req.headers.get('x-tenant-id');
-    console.log(`[ai-full-audit] Requested tenant from header: ${requestedTenantId || 'not provided'}`);
-
-    // Get user's tenant (supports users with multiple roles)
-    const { data: userRoles } = await serviceClient
-      .from('user_roles')
-      .select('tenant_id, role')
-      .eq('user_id', user.id);
-
-    const adminRole = userRoles?.find(r => ['admin', 'super_admin'].includes(r.role));
-    if (!adminRole) {
+    
+    if (!tenantId) {
       return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Tenant ID not found' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-    }
-
-    // Use requested tenant if user has access, otherwise use first admin role tenant
-    let tenantId = adminRole.tenant_id;
-    if (requestedTenantId) {
-      const hasAccessToRequested = userRoles?.some(r => r.tenant_id === requestedTenantId);
-      if (hasAccessToRequested) {
-        tenantId = requestedTenantId;
-        console.log(`[ai-full-audit] Using requested tenant: ${tenantId}`);
-      } else {
-        console.warn(`[ai-full-audit] User does not have access to requested tenant ${requestedTenantId}, using ${tenantId}`);
-      }
     }
     
     console.log(`[ai-full-audit] Starting FULL audit v2.0 for tenant ${tenantId} (Red → Ana → Gap)`);
@@ -767,7 +797,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
 
     const insertData: Record<string, any> = {
       tenant_id: tenantId,
-      created_by: user.id,
+      created_by: isInternalCall ? null : null, // User ID handled separately for non-internal calls
       overall_score: guardedScore, // Use guarded score as official overall
       raw_score: rawScore,
       official_score: officialScore,
