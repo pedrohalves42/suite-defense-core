@@ -17417,13 +17417,60 @@ export type Database = {
       v_agent_execution_health: {
         Row: {
           agent_id: string | null
+          agent_mode: string | null
           agent_name: string | null
-          chain_health: string | null
-          chain_updated_at: string | null
+          agent_version: string | null
+          checked_at: string | null
+          health_description: string | null
           health_status: string | null
-          last_execution_hash: string | null
-          last_execution_index: number | null
+          last_execution_at: string | null
+          last_heartbeat: string | null
+          minutes_since_execution: number | null
+          minutes_since_heartbeat: number | null
+          pending_jobs: number | null
+          severity: string | null
+          stale_delivered_jobs: number | null
+          stale_queued_jobs: number | null
+          status: string | null
           tenant_id: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_mode?: string | null
+          agent_name?: string | null
+          agent_version?: string | null
+          checked_at?: never
+          health_description?: never
+          health_status?: never
+          last_execution_at?: never
+          last_heartbeat?: string | null
+          minutes_since_execution?: never
+          minutes_since_heartbeat?: never
+          pending_jobs?: never
+          severity?: never
+          stale_delivered_jobs?: never
+          stale_queued_jobs?: never
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          agent_mode?: string | null
+          agent_name?: string | null
+          agent_version?: string | null
+          checked_at?: never
+          health_description?: never
+          health_status?: never
+          last_execution_at?: never
+          last_heartbeat?: string | null
+          minutes_since_execution?: never
+          minutes_since_heartbeat?: never
+          pending_jobs?: never
+          severity?: never
+          stale_delivered_jobs?: never
+          stale_queued_jobs?: never
+          status?: string | null
+          tenant_id?: string | null
         }
         Relationships: [
           {
