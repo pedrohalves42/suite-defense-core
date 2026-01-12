@@ -133,6 +133,20 @@ Deno.serve(async (req) => {
   const startedAt = Date.now();
 
   try {
+    // KILL SWITCH CHECK (ADR-FINAL) - Halt all automation if system is in halt_jobs mode
+    const { data: systemMode } = await supabase.rpc('get_system_mode_safe');
+    if (systemMode === 'halt_jobs') {
+      console.log('[ai-system-analyzer] SYSTEM_HALTED: Kill switch active, skipping analysis');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'SYSTEM_HALTED', 
+          message: 'Kill switch is active. Set system_state.mode to normal to resume.' 
+        }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log('[ai-system-analyzer] Starting analysis cycle...');
 
     // Buscar todos os tenants ativos

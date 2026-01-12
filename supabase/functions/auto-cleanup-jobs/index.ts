@@ -54,6 +54,20 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
+    // KILL SWITCH CHECK (ADR-FINAL) - Halt all automation if system is in halt_jobs mode
+    const { data: systemMode } = await supabase.rpc('get_system_mode_safe')
+    if (systemMode === 'halt_jobs') {
+      console.log(`[${requestId}] SYSTEM_HALTED: Kill switch active, skipping cleanup`)
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'SYSTEM_HALTED', 
+          message: 'Kill switch is active. Set system_state.mode to normal to resume.' 
+        }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Parse optional request body for custom thresholds
     // REDUZIDO: timeout de delivered de 1h para 30min para jobs mais responsivos
     let queuedThresholdHours = 2 // Reduzido de 24h para 2h

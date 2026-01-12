@@ -667,3 +667,9 @@ schedule = "*/5 * * * *"
 [functions.detect-stuck-installations]
 verify_jwt = false
 schedule = "*/30 * * * *"
+
+# === ADR-FINAL: Cron Sentinel (every 10 minutes) ===
+# Detects cron jobs silent failures and creates P0 tasks
+[functions.cron-sentinel]
+verify_jwt = false
+schedule = "*/10 * * * *"
