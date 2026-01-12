@@ -19566,6 +19566,15 @@ export type Database = {
         }
         Relationships: []
       }
+      v_security_invariants: {
+        Row: {
+          description: string | null
+          invariant_type: string | null
+          status: string | null
+          violation_count: number | null
+        }
+        Relationships: []
+      }
       v_soc2_readiness: {
         Row: {
           criteria_code: string | null
