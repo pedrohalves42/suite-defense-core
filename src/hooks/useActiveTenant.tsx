@@ -129,11 +129,16 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [activeTenant?.id]);
 
-  // Sync initial tenant to backend when user logs in
+  // Sync initial tenant to backend when user logs in (BLOCKING to ensure JWT has active_tenant_id)
   useEffect(() => {
     if (activeTenant && user) {
-      // Sync on initial load (non-blocking)
-      syncActiveTenantToBackend(activeTenant.id);
+      // Sync on initial load and force session refresh to get updated JWT
+      syncActiveTenantToBackend(activeTenant.id).then(async (synced) => {
+        if (synced) {
+          // Force refresh to ensure JWT has active_tenant_id claim
+          await supabase.auth.refreshSession();
+        }
+      });
     }
   }, [activeTenant?.id, user?.id]);
 
