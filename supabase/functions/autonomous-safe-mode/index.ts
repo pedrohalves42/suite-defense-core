@@ -385,6 +385,8 @@ async function processSafeModeRule(supabase: any, rule: any): Promise<RuleResult
       agent_id: agent.agent_id,
       agent_name: agent.agent_name,
       action: 'ENTER_SAFE_MODE',
+      decision_source: 'system',
+      decision_type: 'autonomous',
       evidence: {
         error_signature: agent.failure_type,
         failure_count: agent.failure_count,
@@ -456,6 +458,8 @@ async function processThrottleRule(supabase: any, rule: any): Promise<RuleResult
       agent_id: candidate.agent_id,
       agent_name: candidate.agent_name,
       action: 'THROTTLE',
+      decision_source: 'system',
+      decision_type: 'autonomous',
       evidence: {
         request_count: candidate.request_count,
         error_count: candidate.error_count,
@@ -546,6 +550,8 @@ async function processIsolateRule(supabase: any, rule: any): Promise<RuleResult>
       agent_id: candidate.agent_id,
       agent_name: candidate.agent_name,
       action: 'ISOLATE',
+      decision_source: 'system',
+      decision_type: 'autonomous',
       evidence: {
         event_count: candidate.event_count,
         event_types: candidate.event_types,
@@ -700,6 +706,8 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
       agent_id: candidate.agent_id,
       agent_name: candidate.agent_name,
       action: 'THROTTLE',
+      decision_source: 'system',
+      decision_type: 'autonomous',
       evidence: {
         health_status: candidate.health_status,
         minutes_since_heartbeat: candidate.minutes_since_heartbeat,
@@ -792,6 +800,8 @@ async function processAutoRevertThrottle(supabase: any, rule: any): Promise<Rule
       agent_id: candidate.agent_id,
       agent_name: candidate.agent_name,
       action: 'REMOVE_THROTTLE',
+      decision_source: 'system',
+      decision_type: 'autonomous',
       evidence: {
         throttled_at: candidate.throttled_at,
         minutes_since_execution: candidate.minutes_since_execution,
@@ -904,6 +914,8 @@ async function processSilentFailureDetection(supabase: any, rule: any): Promise<
         agent_id: failure.agent_id,
         agent_name: failure.agent_name || 'Unknown',
         action: 'DETECT_SILENT_FAILURE',
+        decision_source: 'system',
+        decision_type: 'autonomous',
         evidence: {
           job_id: failure.job_id,
           job_type: failure.job_type,
@@ -1054,6 +1066,8 @@ async function processIgnoredInsightsRule(supabase: any, rule: any): Promise<Rul
       tenant_id: insight.tenant_id,
       rule_code: rule.code,
       action: 'ESCALATE_INSIGHT',
+      decision_source: 'system',
+      decision_type: 'autonomous',
       evidence: {
         insight_id: insight.id,
         original_severity: insight.severity,
@@ -1061,7 +1075,7 @@ async function processIgnoredInsightsRule(supabase: any, rule: any): Promise<Rul
         escalated_at: new Date().toISOString(),
         hours_ignored: Math.round((Date.now() - new Date(insight.created_at).getTime()) / (60 * 60 * 1000))
       },
-      executed_actions: [{ type: 'ESCALATE_INSIGHT', success: true }]
+      actions_executed: [{ type: 'ESCALATE_INSIGHT', success: true }]
     });
 
     agents.push({
@@ -1171,13 +1185,15 @@ async function processBlockedAccessPatternRule(supabase: any, rule: any): Promis
       agent_id: agentId,
       agent_name: agentName,
       action: 'DETECT_BLOCKED_ACCESS_PATTERN',
+      decision_source: 'system',
+      decision_type: 'autonomous',
       evidence: {
         blocked_count: data.count,
         unique_domains: data.domains.size,
         time_window_minutes: conditions.time_window_minutes,
         detected_at: new Date().toISOString()
       },
-      executed_actions: [
+      actions_executed: [
         { type: 'CREATE_SYSTEM_ALERT', success: true },
         { type: 'CREATE_AI_INSIGHT', success: true }
       ]
@@ -1312,12 +1328,14 @@ async function processAgentDivergentRule(supabase: any, rule: any): Promise<Rule
       agent_id: divergent.agent_id,
       agent_name: agentName,
       action: 'DETECT_DIVERGENT_AGENT',
+      decision_source: 'system',
+      decision_type: 'autonomous',
       evidence: {
         cpu_deviation_stddev: divergent.cpuDeviation,
         memory_deviation_stddev: divergent.memDeviation,
         detected_at: new Date().toISOString()
       },
-      executed_actions: [{ type: 'CREATE_AI_INSIGHT', success: true }]
+      actions_executed: [{ type: 'CREATE_AI_INSIGHT', success: true }]
     });
 
     agents.push({
@@ -1432,13 +1450,15 @@ async function processProgressiveDegradationRule(supabase: any, rule: any): Prom
       agent_id: degrading.agent_id,
       agent_name: agentName,
       action: 'DETECT_DEGRADATION',
+      decision_source: 'system',
+      decision_type: 'autonomous',
       evidence: {
         old_success_rate: degrading.oldRate,
         new_success_rate: degrading.newRate,
         degradation_percent: degrading.degradation,
         detected_at: new Date().toISOString()
       },
-      executed_actions: [{ type: 'CREATE_AI_INSIGHT', success: true }]
+      actions_executed: [{ type: 'CREATE_AI_INSIGHT', success: true }]
     });
 
     agents.push({

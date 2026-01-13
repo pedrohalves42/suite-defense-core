@@ -100,6 +100,28 @@ serve(async (req) => {
     }
 
     const insightData = insight as AIInsight;
+    
+    // PHASE 4: Validate required fields to prevent 400 errors
+    if (!insightData.id || !insightData.tenant_id || !insightData.insight_type) {
+      console.warn('[ai-insight-dispatcher] Missing required fields:', {
+        hasId: !!insightData.id,
+        hasTenantId: !!insightData.tenant_id,
+        hasInsightType: !!insightData.insight_type,
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Missing required insight fields',
+          required: ['id', 'tenant_id', 'insight_type'],
+          received: {
+            id: insightData.id ? 'present' : 'missing',
+            tenant_id: insightData.tenant_id ? 'present' : 'missing',
+            insight_type: insightData.insight_type ? 'present' : 'missing',
+          }
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     console.log('[ai-insight-dispatcher] Processing insight:', {
       id: insightData.id,
       type: insightData.insight_type,
