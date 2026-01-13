@@ -41,5 +41,25 @@ BEGIN
     RAISE EXCEPTION 'FAIL: detect_throttle_revert_candidates() error: %', SQLERRM;
   END;
 
+  -- Test 5: Validate detect_silent_job_failures returns expected columns
+  -- This catches column reference errors like j.name or j.executed_at
+  BEGIN
+    PERFORM job_id, tenant_id, agent_id, job_name, job_type, last_status, 
+            last_execution_at, hours_since_execution, violation_type
+    FROM detect_silent_job_failures() LIMIT 0;
+    RAISE NOTICE 'PASS: detect_silent_job_failures() return columns are correct';
+  EXCEPTION WHEN OTHERS THEN
+    RAISE EXCEPTION 'FAIL: detect_silent_job_failures() column validation error: %', SQLERRM;
+  END;
+
+  -- Test 6: Validate check_offline_agents_for_playbook returns expected columns
+  BEGIN
+    PERFORM agent_id, tenant_id, agent_name, last_heartbeat, minutes_offline, playbook_triggered
+    FROM check_offline_agents_for_playbook() LIMIT 0;
+    RAISE NOTICE 'PASS: check_offline_agents_for_playbook() return columns are correct';
+  EXCEPTION WHEN OTHERS THEN
+    RAISE EXCEPTION 'FAIL: check_offline_agents_for_playbook() column validation error: %', SQLERRM;
+  END;
+
   RAISE NOTICE 'ALL FUNCTION VALIDATION TESTS PASSED';
 END $$;

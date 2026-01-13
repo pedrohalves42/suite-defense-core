@@ -5846,8 +5846,8 @@ export type Database = {
           agent_id?: string | null
           agent_name?: string | null
           created_at?: string
-          decision_source: string
-          decision_type: string
+          decision_source?: string
+          decision_type?: string
           evidence?: Json
           human_reviewed?: boolean | null
           id?: string
@@ -20471,9 +20471,11 @@ export type Database = {
           hours_since_execution: number
           job_id: string
           job_name: string
+          job_type: string
           last_execution_at: string
           last_status: string
           tenant_id: string
+          violation_type: string
         }[]
       }
       detect_throttle_candidates: {
