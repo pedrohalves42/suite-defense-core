@@ -42,7 +42,7 @@ BEGIN
   END;
 
   -- Test 5: Validate detect_silent_job_failures returns expected columns
-  -- This catches column reference errors like j.name or j.executed_at
+  -- This catches column reference errors like j.result or j.executed_at
   BEGIN
     PERFORM job_id, tenant_id, agent_id, job_name, job_type, last_status, 
             last_execution_at, hours_since_execution, violation_type
@@ -61,5 +61,24 @@ BEGIN
     RAISE EXCEPTION 'FAIL: check_offline_agents_for_playbook() column validation error: %', SQLERRM;
   END;
 
-  RAISE NOTICE 'ALL FUNCTION VALIDATION TESTS PASSED';
+  -- Test 7: Validate detect_throttle_revert_candidates returns expected columns
+  BEGIN
+    PERFORM agent_id, agent_name, tenant_id, throttled_at, minutes_since_execution, pending_jobs
+    FROM detect_throttle_revert_candidates() LIMIT 0;
+    RAISE NOTICE 'PASS: detect_throttle_revert_candidates() return columns are correct';
+  EXCEPTION WHEN OTHERS THEN
+    RAISE EXCEPTION 'FAIL: detect_throttle_revert_candidates() column validation error: %', SQLERRM;
+  END;
+
+  -- Test 8: Validate detect_improdutive_agents returns expected columns
+  BEGIN
+    PERFORM agent_id, agent_name, tenant_id, last_execution_at, minutes_since_execution, 
+            pending_jobs, health_status
+    FROM detect_improdutive_agents() LIMIT 0;
+    RAISE NOTICE 'PASS: detect_improdutive_agents() return columns are correct';
+  EXCEPTION WHEN OTHERS THEN
+    RAISE EXCEPTION 'FAIL: detect_improdutive_agents() column validation error: %', SQLERRM;
+  END;
+
+  RAISE NOTICE 'ALL FUNCTION VALIDATION TESTS PASSED (8 tests)';
 END $$;
