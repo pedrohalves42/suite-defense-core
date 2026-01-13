@@ -11,6 +11,7 @@ export const useAgentReleases = () => {
       const { data, error } = await supabase
         .from('agent_releases')
         .select('*')
+        .eq('is_active', true) // Phase 1: Filter to active releases only (RLS requires this)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
