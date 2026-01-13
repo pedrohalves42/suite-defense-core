@@ -13,8 +13,7 @@ import { GeneratedReportsList } from "@/components/admin/GeneratedReportsList";
 import { ComplianceReportGenerator } from "@/components/admin/ComplianceReportGenerator";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { useTenant } from "@/hooks/useTenant";
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// jsPDF and autoTable imported dynamically to avoid test/build issues
 
 interface Agent {
   id: string;
@@ -197,6 +196,8 @@ export default function Reports() {
 
       const reportData = data as SecurityReport;
       
+      const { default: jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -458,6 +459,8 @@ export default function Reports() {
       
       const QRCode = await import('qrcode');
       
+      const { default: jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();

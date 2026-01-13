@@ -18,8 +18,7 @@ import { ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// jsPDF and autoTable imported dynamically to avoid test/build issues
 
 interface EvidenceLog {
   id: string;
@@ -185,6 +184,8 @@ const ComplianceTimeline: React.FC = () => {
   // Export to PDF
   const exportPDF = async () => {
     try {
+      const { default: jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
       const doc = new jsPDF();
       
       // Header
