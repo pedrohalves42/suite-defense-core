@@ -1,16 +1,16 @@
-# ADR-024: RLS Hardening Phase 2 - Restrict Permissive SELECT Policies
+# ADR-024: RLS Hardening Phase 2 & 3 - Complete Security Remediation
 
 ## Status
 **Accepted** - 2026-01-13
 
 ## Context
 
-During comprehensive security scan, we identified 16 tables with overly permissive SELECT policies:
-- Tables exposing vulnerability/CVE data to all authenticated users
-- System tables (`system_state`, `system_liveness`) readable by non-admins
-- Agent version/release information accessible without role checks
+During comprehensive security scan, we identified multiple security issues:
+- 16 tables with overly permissive SELECT policies (Phase 2)
+- 19 views exposing data without proper tenant isolation (Phase 3)
+- 1 critical view (`hmac_agent_secrets`) with NO security controls
 
-## Decision
+## Phase 2: Table RLS Policies
 
 ### Tables with Hardened SELECT Policies
 
@@ -35,36 +35,60 @@ During comprehensive security scan, we identified 16 tables with overly permissi
 - `ai_insight_patterns`
 - `api_rate_limits`
 
+## Phase 3: View Security (security_invoker + Tenant Filtering)
+
+### Views Secured with Proper Tenant Isolation
+
+| View | Issue Fixed |
+|------|-------------|
+| `hmac_agent_secrets` | **CRITICAL**: Added admin-only access + tenant filtering |
+| `job_failure_health` | Added tenant filtering |
+| `circuit_breaker_health` | Added tenant filtering |
+| `dlq_categorized` | Added security_invoker |
+| `agents_safe` | Added security_invoker |
+| `agent_timeline_events` | Added security_invoker |
+| `installation_error_summary` | Added super_admin fallback |
+| `agents_health_view` | Added security_invoker |
+| `enrollment_keys_safe` | Added super_admin fallback |
+| `rate_limit_stats` | Added security_invoker |
+| `agent_system_metrics_unified` | Added security_invoker |
+| `audit_logs_safe` | Added super_admin fallback |
+| `invites_safe` | Added security_invoker |
+| `governance_health_metrics` | Added security_invoker |
+| `job_integrity_violations` | Added security_invoker |
+| `insight_feedback_quality` | Added security_invoker |
+| `jobs_normalized` | Added super_admin fallback |
+| `agent_installation_metrics` | Added super_admin fallback |
+| `agent_releases_public` | Added security_invoker |
+
+### Table RLS Policy Added
+| Table | Policy Added |
+|-------|--------------|
+| `agent_web_activity` | tenant_web_activity_select (tenant isolation) |
+
 ## Implementation
 
-All policies use the existing `public.has_role()` SECURITY DEFINER function to avoid RLS recursion:
+All policies use the existing `public.has_role()` and `public.is_current_super_admin()` SECURITY DEFINER functions to avoid RLS recursion.
 
-```sql
-CREATE POLICY "admin_only_select_vulnerability_baseline" 
-ON public.software_vulnerability_baseline
-FOR SELECT TO authenticated
-USING (
-  public.has_role(auth.uid(), 'admin') 
-  OR public.has_role(auth.uid(), 'super_admin')
-);
-```
+All views now use `WITH (security_invoker = true)` to execute with caller's permissions.
 
 ## Consequences
 
 ### Positive
-- Sensitive CVE/vulnerability data only visible to admins
-- System state tables protected from unauthorized access
+- All views now have proper tenant isolation
+- HMAC secrets are protected (admin-only)
+- security_invoker prevents privilege escalation
 - Follows principle of least privilege
 
 ### Negative
-- Frontend components querying these tables may need updates
-- Non-admin users lose visibility to previously accessible data
+- Frontend components may need updates for new access restrictions
 
 ### Remaining Linter Warnings
 3 remaining warnings are for `service_role` policies with `USING(true)` - expected and safe per ADR-023.
 
 ## Migration Files
-- `20260113_rls_hardening_phase2.sql`
+- `20260113_rls_hardening_phase2.sql` (Phase 2)
+- `20260113_rls_hardening_phase3.sql` (Phase 3)
 
 ## Related
 - [ADR-023: RLS Hardening](./ADR-023-rls-hardening.md)
