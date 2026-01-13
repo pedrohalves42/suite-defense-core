@@ -20206,15 +20206,27 @@ export type Database = {
         }[]
       }
       check_job_health_anomalies_and_alert: { Args: never; Returns: undefined }
-      check_offline_agents_for_playbook: {
-        Args: { p_tenant_id: string }
-        Returns: {
-          agent_id: string
-          agent_name: string
-          last_heartbeat: string
-          minutes_offline: number
-        }[]
-      }
+      check_offline_agents_for_playbook:
+        | {
+            Args: never
+            Returns: {
+              agent_id: string
+              agent_name: string
+              last_heartbeat: string
+              minutes_offline: number
+              playbook_triggered: boolean
+              tenant_id: string
+            }[]
+          }
+        | {
+            Args: { p_tenant_id: string }
+            Returns: {
+              agent_id: string
+              agent_name: string
+              last_heartbeat: string
+              minutes_offline: number
+            }[]
+          }
       check_segregation_rule: {
         Args: {
           _action_type: string
@@ -20452,11 +20464,11 @@ export type Database = {
         Args: never
         Returns: {
           agent_id: string
-          agent_name: string
-          failure_reason: string
-          finished_at: string
+          hours_since_execution: number
           job_id: string
-          job_type: string
+          job_name: string
+          last_execution_at: string
+          last_status: string
           tenant_id: string
         }[]
       }
