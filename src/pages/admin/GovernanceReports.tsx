@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { format, subDays, startOfWeek, endOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import jsPDF from 'jspdf';
+// jsPDF imported dynamically to avoid test/build issues
 
 export default function GovernanceReports() {
   const { tenant } = useTenant();
@@ -72,7 +72,8 @@ ${weeklyMetrics.critical_open > 0 ? `🔴 ${weeklyMetrics.critical_open} tasks c
     approveReport.mutate(reportId);
   };
 
-  const handleExportPDF = (report: typeof reports[0]) => {
+  const handleExportPDF = async (report: typeof reports[0]) => {
+    const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     
     doc.setFontSize(18);
