@@ -14542,6 +14542,33 @@ export type Database = {
           },
         ]
       }
+      token_validation_failures: {
+        Row: {
+          client_ip: string | null
+          created_at: string | null
+          failure_reason: string
+          id: string
+          token_hash_prefix: string
+          user_agent: string | null
+        }
+        Insert: {
+          client_ip?: string | null
+          created_at?: string | null
+          failure_reason: string
+          id?: string
+          token_hash_prefix: string
+          user_agent?: string | null
+        }
+        Update: {
+          client_ip?: string | null
+          created_at?: string | null
+          failure_reason?: string
+          id?: string
+          token_hash_prefix?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       url_reputation: {
         Row: {
           category: string | null
@@ -20574,6 +20601,10 @@ export type Database = {
       }
       execute_ai_action_rollback: {
         Args: { p_ai_action_id: string; p_notes?: string; p_success: boolean }
+        Returns: Json
+      }
+      execute_with_timeout: {
+        Args: { p_sql: string; p_timeout_ms?: number }
         Returns: Json
       }
       finalize_job_execution: {
