@@ -1,5 +1,6 @@
 -- CI Validation: Verify all public views have auth.uid() or is_current_super_admin() check
 -- This test ensures security-sensitive views cannot be accessed without authentication
+-- Updated: ADR-024 Phase 2 (2026-01-13)
 
 DO $$
 DECLARE
