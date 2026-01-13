@@ -20505,6 +20505,18 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      detect_silent_job_failures: {
+        Args: never
+        Returns: {
+          agent_id: string
+          agent_name: string
+          failure_reason: string
+          finished_at: string
+          job_id: string
+          job_type: string
+          tenant_id: string
+        }[]
+      }
       detect_throttle_candidates: {
         Args: { p_requests_per_minute?: number; p_time_window_minutes?: number }
         Returns: {
