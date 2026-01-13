@@ -17422,34 +17422,16 @@ export type Database = {
           agent_version: string | null
           enrolled_at: string | null
           health_status: string | null
+          last_execution_at: string | null
           last_heartbeat: string | null
+          minutes_since_execution: number | null
+          minutes_since_heartbeat: number | null
+          pending_jobs: number | null
           seconds_since_heartbeat: number | null
+          stale_delivered_jobs: number | null
+          stale_queued_jobs: number | null
           status: string | null
           tenant_id: string | null
-        }
-        Insert: {
-          agent_id?: string | null
-          agent_mode?: string | null
-          agent_name?: string | null
-          agent_version?: string | null
-          enrolled_at?: string | null
-          health_status?: never
-          last_heartbeat?: string | null
-          seconds_since_heartbeat?: never
-          status?: string | null
-          tenant_id?: string | null
-        }
-        Update: {
-          agent_id?: string | null
-          agent_mode?: string | null
-          agent_name?: string | null
-          agent_version?: string | null
-          enrolled_at?: string | null
-          health_status?: never
-          last_heartbeat?: string | null
-          seconds_since_heartbeat?: never
-          status?: string | null
-          tenant_id?: string | null
         }
         Relationships: [
           {
