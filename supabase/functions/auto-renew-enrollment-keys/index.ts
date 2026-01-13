@@ -31,47 +31,33 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Find tenants without active enrollment keys
-    const { data: tenantsWithoutKeys, error: queryError } = await supabaseAdmin.rpc(
-      'get_tenants_without_active_keys'
-    ).catch(() => {
-      // Fallback if RPC doesn't exist - use direct query
-      return { data: null, error: { message: 'RPC not found, using fallback' } };
-    });
+    // Find tenants without active enrollment keys using direct query
+    log.info('Querying for tenants without active enrollment keys');
+    
+    // Get all tenants
+    const { data: allTenants, error: tenantsError } = await supabaseAdmin
+      .from('tenants')
+      .select('id, name');
 
-    let orphanTenants: { id: string; name: string }[] = [];
-
-    if (queryError || !tenantsWithoutKeys) {
-      // Fallback: Direct query approach
-      log.info('Using fallback query for orphan tenants');
-      
-      // Get all tenants
-      const { data: allTenants, error: tenantsError } = await supabaseAdmin
-        .from('tenants')
-        .select('id, name');
-
-      if (tenantsError) {
-        log.error('Failed to fetch tenants', tenantsError);
-        throw new Error('Failed to fetch tenants');
-      }
-
-      // Get tenants with active keys
-      const { data: tenantsWithActiveKeys, error: activeKeysError } = await supabaseAdmin
-        .from('enrollment_keys')
-        .select('tenant_id')
-        .eq('is_active', true)
-        .gt('expires_at', new Date().toISOString());
-
-      if (activeKeysError) {
-        log.error('Failed to fetch active keys', activeKeysError);
-        throw new Error('Failed to fetch active keys');
-      }
-
-      const tenantsWithKeysSet = new Set(tenantsWithActiveKeys?.map(k => k.tenant_id) || []);
-      orphanTenants = (allTenants || []).filter(t => !tenantsWithKeysSet.has(t.id));
-    } else {
-      orphanTenants = tenantsWithoutKeys;
+    if (tenantsError) {
+      log.error('Failed to fetch tenants', tenantsError);
+      throw new Error('Failed to fetch tenants');
     }
+
+    // Get tenants with active keys (not expired and with available uses)
+    const { data: tenantsWithActiveKeys, error: activeKeysError } = await supabaseAdmin
+      .from('enrollment_keys')
+      .select('tenant_id')
+      .eq('is_active', true)
+      .gt('expires_at', new Date().toISOString());
+
+    if (activeKeysError) {
+      log.error('Failed to fetch active keys', activeKeysError);
+      throw new Error('Failed to fetch active keys');
+    }
+
+    const tenantsWithKeysSet = new Set(tenantsWithActiveKeys?.map(k => k.tenant_id) || []);
+    const orphanTenants = (allTenants || []).filter(t => !tenantsWithKeysSet.has(t.id));
 
     log.info('Tenants without active keys', { count: orphanTenants.length });
 
