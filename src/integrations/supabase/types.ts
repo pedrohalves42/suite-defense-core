@@ -20373,6 +20373,7 @@ export type Database = {
       cleanup_old_update_decisions: { Args: never; Returns: undefined }
       cleanup_orphaned_agents: { Args: never; Returns: number }
       cleanup_problematic_agent: { Args: { p_agent_id: string }; Returns: Json }
+      cleanup_stale_playbook_executions: { Args: never; Returns: number }
       cleanup_stale_queued_jobs: {
         Args: { p_hours_threshold?: number }
         Returns: {
@@ -20601,6 +20602,10 @@ export type Database = {
       }
       execute_ai_action_rollback: {
         Args: { p_ai_action_id: string; p_notes?: string; p_success: boolean }
+        Returns: Json
+      }
+      execute_playbook_actions: {
+        Args: { p_execution_id: string }
         Returns: Json
       }
       execute_with_timeout: {
