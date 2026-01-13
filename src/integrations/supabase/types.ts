@@ -6085,6 +6085,7 @@ export type Database = {
         Row: {
           agent_id: string | null
           agent_token: string | null
+          auto_generated: boolean | null
           created_at: string
           created_by: string | null
           current_uses: number
@@ -6106,6 +6107,7 @@ export type Database = {
         Insert: {
           agent_id?: string | null
           agent_token?: string | null
+          auto_generated?: boolean | null
           created_at?: string
           created_by?: string | null
           current_uses?: number
@@ -6127,6 +6129,7 @@ export type Database = {
         Update: {
           agent_id?: string | null
           agent_token?: string | null
+          auto_generated?: boolean | null
           created_at?: string
           created_by?: string | null
           current_uses?: number
