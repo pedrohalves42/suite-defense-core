@@ -154,6 +154,11 @@ verify_jwt = true
 [functions.cleanup-expired-enrollment-keys]
 verify_jwt = true
 
+# Auto-renew enrollment keys when all keys expire (every 30 minutes)
+[functions.auto-renew-enrollment-keys]
+verify_jwt = false
+schedule = "*/30 * * * *"
+
 [functions.cleanup-orphaned-data]
 verify_jwt = true
 
