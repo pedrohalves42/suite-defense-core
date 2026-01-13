@@ -52,15 +52,36 @@ serve(async (req) => {
 
     // Validate agent token using hash
     const tokenHash = await hashToken(agentToken);
+    
+    // PHASE 2: Enhanced logging for debugging 400 errors
+    console.log("[submit-agent-evidence] Token validation attempt:", {
+      tokenPrefix: agentToken.substring(0, 8) + "...",
+      hashPrefix: tokenHash.substring(0, 16) + "...",
+    });
+    
     const { data: tokenData, error: tokenError } = await supabase
       .from("agent_tokens")
       .select("agent_id, agents!inner(id, tenant_id, agent_name)")
       .eq("token_hash", tokenHash)
       .eq("is_active", true)
-      .single();
+      .maybeSingle();
 
-    if (tokenError || !tokenData) {
-      console.error("[submit-agent-evidence] Invalid token:", tokenError?.message);
+    if (tokenError) {
+      console.error("[submit-agent-evidence] Token query error:", {
+        message: tokenError.message,
+        code: tokenError.code,
+        details: tokenError.details,
+      });
+      return new Response(
+        JSON.stringify({ error: "Token validation failed", code: tokenError.code }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    if (!tokenData) {
+      console.warn("[submit-agent-evidence] Token not found or inactive:", {
+        hashPrefix: tokenHash.substring(0, 16) + "...",
+      });
       return new Response(
         JSON.stringify({ error: "Invalid or expired token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
