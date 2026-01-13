@@ -20051,6 +20051,10 @@ export type Database = {
             }
             Returns: undefined
           }
+      archive_old_evidence_logs: {
+        Args: { retention_days?: number }
+        Returns: number
+      }
       assert_system_allows_jobs: { Args: never; Returns: undefined }
       assert_system_not_stopped: { Args: never; Returns: undefined }
       authorize_agent_recovery: {
