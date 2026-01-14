@@ -18214,6 +18214,15 @@ export type Database = {
           },
         ]
       }
+      v_rls_continuous_check: {
+        Row: {
+          policy_count: number | null
+          rls_enabled: boolean | null
+          status: string | null
+          table_name: unknown
+        }
+        Relationships: []
+      }
       v_rls_security_status: {
         Row: {
           details: Json | null
@@ -18244,6 +18253,19 @@ export type Database = {
           test_name?: string | null
           test_run_id?: string | null
           tested_at?: string | null
+        }
+        Relationships: []
+      }
+      v_security_dashboard: {
+        Row: {
+          blocked_attacks_24h: number | null
+          critical_events_24h: number | null
+          current_system_mode: string | null
+          failed_jobs_1h: number | null
+          last_rls_test: string | null
+          open_critical_alerts: number | null
+          rls_failures_24h: number | null
+          snapshot_at: string | null
         }
         Relationships: []
       }
@@ -18900,6 +18922,17 @@ export type Database = {
               minutes_offline: number
             }[]
           }
+      check_security_thresholds: {
+        Args: never
+        Returns: {
+          alert_type: string
+          current_value: number
+          message: string
+          severity: string
+          should_alert: boolean
+          threshold: number
+        }[]
+      }
       check_segregation_rule: {
         Args: {
           _action_type: string
