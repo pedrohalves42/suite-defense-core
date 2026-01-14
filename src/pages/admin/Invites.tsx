@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Copy, Trash2, Mail } from 'lucide-react';
+import { Plus, Trash2, Mail } from 'lucide-react';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useTenant } from '@/hooks/useTenant';
 
@@ -25,8 +25,9 @@ export default function Invites() {
   const { data: invites, isLoading } = useQuery({
     queryKey: ['invites'],
     queryFn: async () => {
+      // Use invites_safe view to avoid exposing token field
       const { data, error } = await supabase
-        .from('invites')
+        .from('invites_safe')
         .select('*')
         .order('created_at', { ascending: false });
       
@@ -82,11 +83,8 @@ export default function Invites() {
     },
   });
 
-  const copyInviteLink = (token: string) => {
-    const link = `${window.location.origin}/accept-invite?token=${token}`;
-    navigator.clipboard.writeText(link);
-    toast({ title: 'Link copiado!' });
-  };
+  // Token is not exposed via invites_safe view for security
+  // Copy link functionality removed as tokens should not be exposed to frontend
 
   const getStatusBadge = (status: string, expiresAt: string) => {
     if (status === 'accepted') return { variant: 'default' as const, text: 'Aceito' };
@@ -186,16 +184,7 @@ export default function Invites() {
                       <TableCell>{formatBrazilDateTime(invite.created_at, 'datetime')}</TableCell>
                       <TableCell>{formatBrazilDateTime(invite.expires_at, 'datetime')}</TableCell>
                       <TableCell className="text-right space-x-2">
-                        {invite.status === 'pending' && (
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => copyInviteLink(invite.token)}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button 
+                        <Button
                           size="sm" 
                           variant="ghost"
                           onClick={() => deleteInvite.mutate(invite.id)}
