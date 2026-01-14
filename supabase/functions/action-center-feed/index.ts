@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-tenant-id',
 };
 
+// Events older than 15 minutes are considered historical (not urgent)
+const HISTORICAL_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
+
 interface ActionItem {
   item_id: string;
   source_type: 'playbook' | 'alert' | 'agent_offline' | 'ai_insight';
@@ -21,6 +24,7 @@ interface ActionItem {
   trigger_type: string;
   playbook_id: string | null;
   priority_score: number;
+  is_historical?: boolean;
 }
 
 interface ActionCenterFeed {
@@ -629,25 +633,52 @@ serve(async (req) => {
       // Merge all action items
       const allItems = [...playbookItems, ...offlineActionItems, ...aiInsightItems];
 
-      // Categorize items
-      const urgent = allItems
-        .filter(i => i.severity === 'critical' || i.severity === 'urgent' || i.severity === 'high' || i.priority_score >= 70)
-        .sort((a, b) => b.priority_score - a.priority_score)
-        .map(enrichActionItem) as any;
+      // Enrich items with historical flag (events older than 15 minutes)
+      const now = Date.now();
+      const enrichedItems = allItems.map(item => ({
+        ...item,
+        is_historical: (now - new Date(item.created_at).getTime()) > HISTORICAL_THRESHOLD_MS
+      }));
 
-      const recommended = allItems
+      // Categorize items - historical events are never urgent
+      // Urgent = only RECENT events AND (critical/high/urgent severity OR priority_score >= 70)
+      const urgent = enrichedItems
         .filter(i => 
-          i.severity !== 'critical' && 
-          i.severity !== 'urgent' && 
-          i.severity !== 'high' && 
-          i.priority_score >= 30 && 
-          i.priority_score < 70
+          !i.is_historical && 
+          (i.severity === 'critical' || i.severity === 'urgent' || i.severity === 'high' || i.priority_score >= 70)
         )
         .sort((a, b) => b.priority_score - a.priority_score)
         .map(enrichActionItem) as any;
 
-      const informational = allItems
-        .filter(i => i.priority_score < 30)
+      // Recommended = recent non-urgent items + historical high-severity items
+      const recommended = enrichedItems
+        .filter(i => 
+          // Recent items that don't qualify as urgent but have decent priority
+          (!i.is_historical && 
+           i.severity !== 'critical' && 
+           i.severity !== 'urgent' && 
+           i.severity !== 'high' && 
+           i.priority_score >= 30 && 
+           i.priority_score < 70) ||
+          // Historical items that WERE urgent (now demoted to recommended)
+          (i.is_historical && 
+           (i.severity === 'critical' || i.severity === 'urgent' || i.severity === 'high' || i.priority_score >= 70))
+        )
+        .sort((a, b) => b.priority_score - a.priority_score)
+        .map(enrichActionItem) as any;
+
+      // Informational = low priority recent items + historical non-urgent items
+      const informational = enrichedItems
+        .filter(i => 
+          // Recent low-priority items
+          (!i.is_historical && i.priority_score < 30) ||
+          // Historical items that weren't urgent
+          (i.is_historical && 
+           i.severity !== 'critical' && 
+           i.severity !== 'urgent' && 
+           i.severity !== 'high' && 
+           i.priority_score < 70)
+        )
         .sort((a, b) => b.priority_score - a.priority_score)
         .map(enrichActionItem) as any;
 
