@@ -17328,11 +17328,19 @@ export type Database = {
       }
       v_integrity_score: {
         Row: {
+          active_releases: number | null
           calculated_at: string | null
-          metric_type: string | null
-          score: number | null
+          completed_jobs: number | null
+          failed_jobs: number | null
+          failed_jobs_score: number | null
+          failed_with_error: number | null
+          global_integrity_score: number | null
+          job_integrity_score: number | null
           signed_releases: number | null
+          supply_chain_score: number | null
           total_releases: number | null
+          valid_active_releases: number | null
+          valid_completed_jobs: number | null
         }
         Relationships: []
       }
