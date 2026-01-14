@@ -18828,24 +18828,10 @@ export type Database = {
       check_task_sla_breach: { Args: never; Returns: number }
       claim_jobs_for_agent:
         | {
-            Args: { p_agent_id: string; p_agent_name: string; p_limit: number }
-            Returns: {
-              agent_id: string
-              agent_name: string
-              approved: boolean
-              created_at: string
-              expires_at: string
-              id: string
-              payload: Json
-              priority: number
-              type: string
-            }[]
-          }
-        | {
             Args: {
               p_agent_id: string
               p_agent_name: string
-              p_limit: number
+              p_limit?: number
               p_tenant_id: string
             }
             Returns: {
@@ -18856,10 +18842,11 @@ export type Database = {
               nonce: string
               payload: Json
               payload_hash: string
+              priority: number
             }[]
           }
         | {
-            Args: { p_agent_id: string; p_max_jobs: number }
+            Args: { p_agent_id: string; p_limit: number }
             Returns: {
               execution_id: string
               execution_index: number
