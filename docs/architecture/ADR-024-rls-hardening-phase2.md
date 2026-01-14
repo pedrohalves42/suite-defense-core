@@ -1,7 +1,7 @@
-# ADR-024: RLS Hardening Phase 2-5 - Complete Security Remediation
+# ADR-024: RLS Hardening Phase 2-6 - Complete Security Remediation
 
 ## Status
-**Accepted** - 2026-01-13
+**Accepted** - 2026-01-14 (Updated)
 
 ## Context
 
@@ -11,6 +11,7 @@ During comprehensive security scan, we identified multiple security issues requi
 - 1 critical view (`active_agents`) exposing `hmac_secret` without any filtering (Phase 4)
 - Multiple dependent views requiring CASCADE recreation (Phase 4)
 - `agent_releases` table with overly permissive policies (Phase 5)
+- 8 views with `security_invoker=true` but missing tenant filtering (Phase 6)
 
 ## Phase 2: Table RLS Policies
 
@@ -85,11 +86,42 @@ Tightened RLS on `agent_releases`:
 - Inactive releases: visible to admin/super_admin only
 - Manage operations: super_admin only
 
+## Phase 6: Views with security_invoker But Missing Tenant Filter
+
+Several views had `security_invoker=true` but lacked proper tenant filtering, meaning they could still expose data across tenants.
+
+### Views Corrected
+
+| View | Change Applied |
+|------|----------------|
+| `v_agent_lifecycle_state` | Added tenant filter via `user_roles` subquery |
+| `v_ai_anomalies` | Added tenant filter via `user_roles` subquery |
+| `v_audit_moving_average` | Added tenant filter via `user_roles` subquery |
+| `v_cron_silent_failures` | Added tenant filter via `scheduled_jobs.tenant_id` |
+| `v_edge_function_stats` | Added tenant filter + grouped by `tenant_id` |
+| `v_enforcement_compliance` | Added tenant filter via `security_policies.tenant_id` |
+| `v_execution_chain_health` | Added tenant filter via `agents.tenant_id` |
+| `v_task_stats` | Added tenant filter via `user_roles` subquery |
+
+### Intentionally Public View
+
+| View | Justification |
+|------|---------------|
+| `v_system_contracts` | Static enum reference table with no tenant-specific data |
+
 ## Implementation
 
 All policies use the existing `public.has_role()` and `public.is_current_super_admin()` SECURITY DEFINER functions to avoid RLS recursion.
 
 All views use `WITH (security_invoker = true)` which executes queries with caller's permissions.
+
+Standard tenant filter pattern:
+```sql
+WHERE (
+  tenant_id IN (SELECT ur.tenant_id FROM public.user_roles ur WHERE ur.user_id = auth.uid())
+  OR public.is_current_super_admin()
+)
+```
 
 ## Remaining Warnings
 
@@ -105,6 +137,7 @@ All views use `WITH (security_invoker = true)` which executes queries with calle
 - All views have tenant isolation
 - security_invoker prevents privilege escalation
 - Follows principle of least privilege
+- Views with `security_invoker` now properly filter by tenant
 
 ### Negative
 - Frontend components may need updates for new access restrictions
@@ -115,6 +148,7 @@ All views use `WITH (security_invoker = true)` which executes queries with calle
 - `20260113_rls_hardening_phase3.sql` (Phase 3)
 - `20260113_rls_hardening_phase4.sql` (Phase 4)
 - `20260113_rls_hardening_phase5.sql` (Phase 5)
+- `20260114_rls_hardening_phase6.sql` (Phase 6)
 
 ## Related
 - [ADR-023: RLS Hardening](./ADR-023-rls-hardening.md)
