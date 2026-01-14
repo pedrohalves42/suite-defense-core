@@ -5,13 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Shield, AlertTriangle, Activity, Ban, Unlock, Clock, User } from 'lucide-react';
+import { Shield, AlertTriangle, Activity, Ban, Unlock, Clock, User, LayoutDashboard } from 'lucide-react';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { toast } from 'sonner';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion } from 'framer-motion';
+import { SecurityControlPlane } from '@/components/security/SecurityControlPlane';
 
 interface SecurityLog {
   id: string;
@@ -242,8 +243,14 @@ export default function SecurityDashboard() {
       )}
 
       {/* Tabs for different views */}
-      <Tabs defaultValue="logs" className="space-y-4">
+      <Tabs defaultValue="control-plane" className="space-y-4">
         <TabsList>
+          {isSuperAdmin && (
+            <TabsTrigger value="control-plane">
+              <LayoutDashboard className="h-4 w-4 mr-2" />
+              Control Plane
+            </TabsTrigger>
+          )}
           <TabsTrigger value="logs">
             <Shield className="h-4 w-4 mr-2" />
             Registros de Segurança
@@ -261,6 +268,13 @@ export default function SecurityDashboard() {
             </>
           )}
         </TabsList>
+
+        {/* Security Control Plane Tab (Super Admin Only) */}
+        {isSuperAdmin && (
+          <TabsContent value="control-plane">
+            <SecurityControlPlane />
+          </TabsContent>
+        )}
 
         {/* Security Logs Tab */}
         <TabsContent value="logs">
