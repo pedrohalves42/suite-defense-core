@@ -10550,6 +10550,36 @@ export type Database = {
           },
         ]
       }
+      scheduled_job_heartbeat: {
+        Row: {
+          created_at: string
+          expected_interval: unknown
+          job_key: string
+          last_error: string | null
+          last_seen_at: string
+          missed_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expected_interval?: unknown
+          job_key: string
+          last_error?: string | null
+          last_seen_at?: string
+          missed_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expected_interval?: unknown
+          job_key?: string
+          last_error?: string | null
+          last_seen_at?: string
+          missed_count?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scheduled_job_runs: {
         Row: {
           created_at: string | null
@@ -16697,6 +16727,36 @@ export type Database = {
           },
         ]
       }
+      v_cron_silence: {
+        Row: {
+          expected_interval: unknown
+          job_key: string | null
+          last_error: string | null
+          last_seen_at: string | null
+          missed_count: number | null
+          silence_duration: unknown
+          status: string | null
+        }
+        Insert: {
+          expected_interval?: unknown
+          job_key?: string | null
+          last_error?: string | null
+          last_seen_at?: string | null
+          missed_count?: number | null
+          silence_duration?: never
+          status?: never
+        }
+        Update: {
+          expected_interval?: unknown
+          job_key?: string | null
+          last_error?: string | null
+          last_seen_at?: string | null
+          missed_count?: number | null
+          silence_duration?: never
+          status?: never
+        }
+        Relationships: []
+      }
       v_cron_silent_failures: {
         Row: {
           cron_expr: string | null
@@ -18944,7 +19004,7 @@ export type Database = {
       check_task_sla_breach: { Args: never; Returns: number }
       claim_jobs_for_agent:
         | {
-            Args: { p_agent_id: string; p_agent_name: string; p_limit?: number }
+            Args: { p_agent_id: string; p_agent_name: string; p_limit: number }
             Returns: {
               agent_id: string
               agent_name: string
@@ -18961,7 +19021,7 @@ export type Database = {
             Args: {
               p_agent_id: string
               p_agent_name: string
-              p_limit?: number
+              p_limit: number
               p_tenant_id: string
             }
             Returns: {
@@ -18975,7 +19035,7 @@ export type Database = {
             }[]
           }
         | {
-            Args: { p_agent_id: string; p_max_jobs?: number }
+            Args: { p_agent_id: string; p_max_jobs: number }
             Returns: {
               execution_id: string
               execution_index: number
@@ -19105,6 +19165,14 @@ export type Database = {
         Returns: string
       }
       current_user_tenant_id: { Args: never; Returns: string }
+      describe_table: {
+        Args: { p_table_name: string }
+        Returns: {
+          column_name: string
+          data_type: string
+          is_nullable: string
+        }[]
+      }
       detect_blocked_access_attempts: {
         Args: never
         Returns: {
@@ -19305,6 +19373,12 @@ export type Database = {
           p_status: string
         }
         Returns: Json
+      }
+      find_unsafe_definer_functions: {
+        Args: never
+        Returns: {
+          proname: string
+        }[]
       }
       force_review_unreviewed_dlq: {
         Args: { p_max_items?: number; p_reviewer_id: string }
@@ -19602,6 +19676,7 @@ export type Database = {
         Returns: boolean
       }
       is_current_super_admin: { Args: never; Returns: boolean }
+      is_emergency_mode: { Args: never; Returns: boolean }
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       log_scheduled_job_run: {
@@ -19785,6 +19860,10 @@ export type Database = {
           isolation_valid: boolean
           table_name: string
         }[]
+      }
+      update_job_heartbeat: {
+        Args: { p_error?: string; p_job_key: string }
+        Returns: undefined
       }
       update_quota_usage: {
         Args: { p_delta: number; p_feature_key: string; p_tenant_id: string }
