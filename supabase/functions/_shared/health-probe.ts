@@ -10,7 +10,9 @@
  * - Unified health check
  */
 
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// Use 'any' to avoid version conflicts between different edge functions
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseClient = any;
 
 // Current Edge Function version - updated on each deployment
 export const EDGE_VERSION = '2026.01.14.1';

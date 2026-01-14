@@ -1,6 +1,8 @@
 /**
  * Run RLS Tests
  * 
+ * CSA-FH Phase 3 - Production Hardened
+ * 
  * Automated RLS testing framework that validates:
  * - Tenant isolation
  * - Role-based access
@@ -10,6 +12,11 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsSecurityHeaders, secureJsonResponse, secureCorsPreflightResponse, secureErrorResponse } from '../_shared/security-headers.ts';
+import { 
+  healthProbeMiddleware, 
+  updateJobHeartbeat,
+  EDGE_VERSION 
+} from '../_shared/health-probe.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -28,10 +35,18 @@ Deno.serve(async (req: Request) => {
   }
 
   const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] Starting RLS tests...`);
+  console.log(`[${requestId}] Starting RLS tests - Edge v${EDGE_VERSION}`);
 
   try {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // Health probe - emergency mode & schema validation
+    const healthCheck = await healthProbeMiddleware(supabase, corsSecurityHeaders);
+    if (healthCheck) return healthCheck;
+
+    // Update heartbeat for cron silence monitoring
+    await updateJobHeartbeat(supabase, 'run-rls-tests', '60 minutes');
+
     const results: RlsTestResult[] = [];
     const startTime = Date.now();
 
