@@ -2,14 +2,22 @@
  * Security Alert Dispatcher
  * 
  * P1 - Real-time security alert system
+ * CSA-FH Phase 3 - Production Hardened
+ * 
  * Monitors for:
  * - Rate limit breaches
  * - Replay attack attempts
  * - Failed login spikes
  * - Critical security events
+ * - Cron job silence (via v_cron_silence)
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsSecurityHeaders, secureJsonResponse, secureCorsPreflightResponse, secureErrorResponse } from '../_shared/security-headers.ts';
+import { 
+  healthProbeMiddleware, 
+  updateJobHeartbeat,
+  EDGE_VERSION 
+} from '../_shared/health-probe.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -35,10 +43,18 @@ Deno.serve(async (req: Request) => {
   }
 
   const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] Security alert dispatcher started`);
+  console.log(`[${requestId}] Security alert dispatcher started - Edge v${EDGE_VERSION}`);
 
   try {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // Health probe - emergency mode & schema validation
+    const healthCheck = await healthProbeMiddleware(supabase, corsSecurityHeaders);
+    if (healthCheck) return healthCheck;
+
+    // Update heartbeat for cron silence monitoring
+    await updateJobHeartbeat(supabase, 'security-alert-dispatcher', '5 minutes');
+
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
@@ -132,6 +148,32 @@ Deno.serve(async (req: Request) => {
         `${criticalEvents} critical security events in the last hour`);
     }
 
+    // 6. Check for silent cron jobs (jobs that stopped executing)
+    try {
+      const { data: silentJobs, error: sjError } = await supabase
+        .from('v_cron_silence')
+        .select('*');
+
+      if (!sjError && silentJobs && silentJobs.length > 0) {
+        // Filter jobs with silence > 2x expected interval
+        const criticalSilentJobs = silentJobs.filter((job: any) => {
+          // Parse interval string to compare
+          const silenceMs = parseInterval(job.silence_duration);
+          const expectedMs = parseInterval(job.expected_interval);
+          return silenceMs > expectedMs * 2;
+        });
+
+        if (criticalSilentJobs.length > 0) {
+          const jobNames = criticalSilentJobs.map((j: any) => j.job_key).join(', ');
+          alerts.push(`Silent cron jobs detected: ${jobNames}`);
+          await createSystemAlert(supabase, 'cron_silence', 'critical',
+            `${criticalSilentJobs.length} scheduled jobs have stopped executing: ${jobNames}`);
+        }
+      }
+    } catch (cronError) {
+      console.warn(`[${requestId}] Cron silence check failed:`, cronError);
+    }
+
     // Log to security_logs
     await supabase.from('security_logs').insert({
       event_type: 'security_scan',
@@ -180,4 +222,35 @@ async function createSystemAlert(
   } catch (error) {
     console.error('Failed to create system alert:', error);
   }
+}
+
+/**
+ * Parse PostgreSQL interval string to milliseconds
+ * Supports formats like "00:10:00" (HH:MM:SS) or "5 minutes"
+ */
+function parseInterval(interval: string): number {
+  if (!interval) return 0;
+  
+  // Handle HH:MM:SS format
+  const hhmmss = interval.match(/^(\d+):(\d+):(\d+)/);
+  if (hhmmss) {
+    const hours = parseInt(hhmmss[1], 10);
+    const minutes = parseInt(hhmmss[2], 10);
+    const seconds = parseInt(hhmmss[3], 10);
+    return (hours * 3600 + minutes * 60 + seconds) * 1000;
+  }
+  
+  // Handle "N minutes" format
+  const minMatch = interval.match(/(\d+)\s*minute/i);
+  if (minMatch) {
+    return parseInt(minMatch[1], 10) * 60 * 1000;
+  }
+  
+  // Handle "N hours" format
+  const hourMatch = interval.match(/(\d+)\s*hour/i);
+  if (hourMatch) {
+    return parseInt(hourMatch[1], 10) * 3600 * 1000;
+  }
+  
+  return 0;
 }

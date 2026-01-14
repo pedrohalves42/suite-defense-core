@@ -1,5 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { 
+  healthProbeMiddleware, 
+  addHealthHeaders,
+  EDGE_VERSION 
+} from '../_shared/health-probe.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -293,24 +298,28 @@ function calculatePriorityScore(severity: string): number {
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: addHealthHeaders(corsHeaders) });
   }
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+    // Create service client for admin operations (bypass RLS)
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Health probe - emergency mode & schema validation
+    const healthCheck = await healthProbeMiddleware(serviceClient, corsHeaders);
+    if (healthCheck) return healthCheck;
+
     // Get auth token from request
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: addHealthHeaders({ ...corsHeaders, 'Content-Type': 'application/json' }) }
       );
     }
-
-    // Create service client for admin operations (bypass RLS)
-    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get user from token
     const { data: { user }, error: userError } = await serviceClient.auth.getUser(

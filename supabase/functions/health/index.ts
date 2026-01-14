@@ -1,4 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { 
+  EDGE_VERSION, 
+  EDGE_BUILD_TIMESTAMP,
+  getSystemMode,
+  validateSchema,
+  addHealthHeaders
+} from '../_shared/health-probe.ts'
 
 Deno.serve(async (req) => {
   const corsHeaders = {
@@ -7,7 +14,7 @@ Deno.serve(async (req) => {
   }
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: addHealthHeaders(corsHeaders) })
   }
 
   try {
@@ -16,7 +23,13 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Testar conexao DB com query simples
+    // Check system mode
+    const systemMode = await getSystemMode(supabase);
+    
+    // Validate critical schema
+    const schemaValidation = await validateSchema(supabase);
+
+    // Test DB connection with simple query
     const { error: dbError } = await supabase
       .from('agents')
       .select('id')
@@ -28,25 +41,30 @@ Deno.serve(async (req) => {
           status: 'unhealthy',
           component: 'database',
           error: dbError.message,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          edge_version: EDGE_VERSION
         }),
         { 
           status: 503, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          headers: addHealthHeaders({ ...corsHeaders, 'Content-Type': 'application/json' })
         }
       )
     }
 
     return new Response(
       JSON.stringify({ 
-        status: 'healthy',
+        status: schemaValidation.valid ? 'healthy' : 'degraded',
         timestamp: new Date().toISOString(),
-        version: '3.1.0',
+        edge_version: EDGE_VERSION,
+        edge_build: EDGE_BUILD_TIMESTAMP,
+        system_mode: systemMode,
+        schema_valid: schemaValidation.valid,
+        missing_tables: schemaValidation.missingTables,
         uptime: 'ok'
       }),
       { 
         status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: addHealthHeaders({ ...corsHeaders, 'Content-Type': 'application/json' })
       }
     )
   } catch (error) {
