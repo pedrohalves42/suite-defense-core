@@ -20,15 +20,16 @@ export default function MyAccount() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Fetch profile data
+  // Fetch profile data - only select needed fields
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       
+      // Only select necessary fields instead of select('*')
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, user_id, full_name, username, created_at, updated_at')
         .eq('user_id', user.id)
         .maybeSingle();
       

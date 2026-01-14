@@ -21,14 +21,15 @@ export default function TenantInvites() {
   const [newInviteEmail, setNewInviteEmail] = useState("");
   const [newInviteRole, setNewInviteRole] = useState<"admin" | "operator" | "viewer">("viewer");
 
-  // Fetch invites for current tenant
+  // Fetch invites for current tenant using secure view
   const { data: invites, isLoading } = useQuery({
     queryKey: ["tenant-invites", tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
       
+      // Use invites_safe view to avoid exposing token field
       const { data, error } = await supabase
-        .from("invites")
+        .from("invites_safe")
         .select("*")
         .eq("tenant_id", tenant.id)
         .order("created_at", { ascending: false });

@@ -83,9 +83,10 @@ export default function AuthDebug() {
 
   const testAdminUsers = async () => {
     await testEndpoint('Admin Users', async () => {
+      // Only select necessary fields instead of select('*')
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('user_id, full_name')
         .limit(5);
       
       if (error) throw error;
