@@ -35,17 +35,19 @@ export const IntegrityScoreCard = () => {
       if (error) throw error;
       
       if (data) {
+        // Cast to unknown first since the view schema has been updated
+        const record = data as unknown as Record<string, unknown>;
         setMetrics({
-          supply_chain_score: Number(data.supply_chain_score) || 100,
-          job_integrity_score: Number(data.job_integrity_score) || 100,
-          failed_jobs_score: Number(data.failed_jobs_score) || 100,
-          global_integrity_score: Number(data.global_integrity_score) || 100,
-          active_releases: Number(data.active_releases) || 0,
-          valid_active_releases: Number(data.valid_active_releases) || 0,
-          completed_jobs: Number(data.completed_jobs) || 0,
-          valid_completed_jobs: Number(data.valid_completed_jobs) || 0,
-          failed_jobs: Number(data.failed_jobs) || 0,
-          failed_with_error: Number(data.failed_with_error) || 0,
+          supply_chain_score: Number(record.supply_chain_score) || 100,
+          job_integrity_score: Number(record.job_integrity_score) || 100,
+          failed_jobs_score: Number(record.failed_jobs_score) || 100,
+          global_integrity_score: Number(record.global_integrity_score) || 100,
+          active_releases: Number(record.active_releases) || 0,
+          valid_active_releases: Number(record.valid_active_releases) || 0,
+          completed_jobs: Number(record.completed_jobs) || 0,
+          valid_completed_jobs: Number(record.valid_completed_jobs) || 0,
+          failed_jobs: Number(record.failed_jobs) || 0,
+          failed_with_error: Number(record.failed_with_error) || 0,
         });
       } else {
         setMetrics({

@@ -24,25 +24,39 @@ export function useGovernanceStats() {
         .from('v_governance_stats')
         .select('*')
         .eq('tenant_id', tenant!.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          return {
-            tenant_id: tenant!.id,
-            active_tasks: 0,
-            unassigned_tasks: 0,
-            sla_breached_active: 0,
-            critical_open: 0,
-            high_open: 0,
-            avg_resolution_hours: null,
-            resolved_24h: 0,
-            ignored_24h: 0,
-          } as GovernanceStats;
-        }
         throw error;
       }
-      return data as GovernanceStats;
+      
+      if (!data) {
+        return {
+          tenant_id: tenant!.id,
+          active_tasks: 0,
+          unassigned_tasks: 0,
+          sla_breached_active: 0,
+          critical_open: 0,
+          high_open: 0,
+          avg_resolution_hours: null,
+          resolved_24h: 0,
+          ignored_24h: 0,
+        } as GovernanceStats;
+      }
+      
+      // Cast to unknown first since the view schema has been updated
+      const record = data as unknown as Record<string, unknown>;
+      return {
+        tenant_id: String(record.tenant_id),
+        active_tasks: Number(record.active_tasks) || 0,
+        unassigned_tasks: Number(record.unassigned_tasks) || 0,
+        sla_breached_active: Number(record.sla_breached_active) || 0,
+        critical_open: Number(record.critical_open) || 0,
+        high_open: Number(record.high_open) || 0,
+        avg_resolution_hours: record.avg_resolution_hours != null ? Number(record.avg_resolution_hours) : null,
+        resolved_24h: Number(record.resolved_24h) || 0,
+        ignored_24h: Number(record.ignored_24h) || 0,
+      } as GovernanceStats;
     },
     enabled: !!tenant?.id,
     refetchInterval: 30000,
