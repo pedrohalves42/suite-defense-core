@@ -6853,7 +6853,7 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "job_integrity_violations"
-            referencedColumns: ["job_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "generated_reports_job_id_fkey"
@@ -7778,7 +7778,7 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "job_integrity_violations"
-            referencedColumns: ["job_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "job_executions_job_id_fkey"
@@ -8135,7 +8135,7 @@ export type Database = {
             columns: ["parent_job_id"]
             isOneToOne: false
             referencedRelation: "job_integrity_violations"
-            referencedColumns: ["job_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "jobs_parent_job_id_fkey"
@@ -14886,57 +14886,38 @@ export type Database = {
       audit_logs_safe: {
         Row: {
           action: string | null
-          actor_id: string | null
           created_at: string | null
           details: Json | null
           id: string | null
           ip_address: string | null
-          request_id: string | null
           resource_id: string | null
           resource_type: string | null
-          success: boolean | null
           tenant_id: string | null
-          user_agent: string | null
           user_id: string | null
         }
         Insert: {
           action?: string | null
-          actor_id?: string | null
           created_at?: string | null
           details?: Json | null
           id?: string | null
           ip_address?: string | null
-          request_id?: string | null
           resource_id?: string | null
           resource_type?: string | null
-          success?: boolean | null
           tenant_id?: string | null
-          user_agent?: string | null
           user_id?: string | null
         }
         Update: {
           action?: string | null
-          actor_id?: string | null
           created_at?: string | null
           details?: Json | null
           id?: string | null
           ip_address?: string | null
-          request_id?: string | null
           resource_id?: string | null
           resource_type?: string | null
-          success?: boolean | null
           tenant_id?: string | null
-          user_agent?: string | null
           user_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "audit_logs_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "audit_logs_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -15177,21 +15158,8 @@ export type Database = {
           },
         ]
       }
-      dlq_risk_overview: {
-        Row: {
-          newest_item: string | null
-          oldest_item: string | null
-          pending_items: number | null
-          requires_attention: boolean | null
-          risk_category: string | null
-          total_items: number | null
-        }
-        Relationships: []
-      }
       enrollment_keys_safe: {
         Row: {
-          agent_id: string | null
-          auto_generated: boolean | null
           created_at: string | null
           created_by: string | null
           current_uses: number | null
@@ -15199,12 +15167,11 @@ export type Database = {
           expires_at: string | null
           id: string | null
           is_active: boolean | null
+          key: string | null
           max_uses: number | null
           tenant_id: string | null
         }
         Insert: {
-          agent_id?: string | null
-          auto_generated?: boolean | null
           created_at?: string | null
           created_by?: string | null
           current_uses?: number | null
@@ -15212,12 +15179,11 @@ export type Database = {
           expires_at?: string | null
           id?: string | null
           is_active?: boolean | null
+          key?: string | null
           max_uses?: number | null
           tenant_id?: string | null
         }
         Update: {
-          agent_id?: string | null
-          auto_generated?: boolean | null
           created_at?: string | null
           created_by?: string | null
           current_uses?: number | null
@@ -15225,87 +15191,11 @@ export type Database = {
           expires_at?: string | null
           id?: string | null
           is_active?: boolean | null
+          key?: string | null
           max_uses?: number | null
           tenant_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "active_agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "hmac_agent_secrets"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_execution_health"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "enrollment_keys_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -15404,40 +15294,6 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      insight_feedback_quality: {
-        Row: {
-          false_positive: number | null
-          insight_type: string | null
-          noise: number | null
-          tenant_id: string | null
-          total_feedback: number | null
-          useful: number | null
-          usefulness_rate: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_insight_feedback_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_insight_feedback_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "ai_insight_feedback_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -15656,109 +15512,77 @@ export type Database = {
       }
       job_integrity_violations: {
         Row: {
-          agent_id: string | null
           completed_at: string | null
-          job_created_at: string | null
-          job_id: string | null
+          created_at: string | null
+          id: string | null
           job_type: string | null
+          started_at: string | null
           status: string | null
+          tenant_id: string | null
           violation_type: string | null
         }
         Insert: {
-          agent_id?: string | null
           completed_at?: string | null
-          job_created_at?: string | null
-          job_id?: string | null
+          created_at?: string | null
+          id?: string | null
           job_type?: string | null
+          started_at?: string | null
           status?: string | null
+          tenant_id?: string | null
           violation_type?: never
         }
         Update: {
-          agent_id?: string | null
           completed_at?: string | null
-          job_created_at?: string | null
-          job_id?: string | null
+          created_at?: string | null
+          id?: string | null
           job_type?: string | null
+          started_at?: string | null
           status?: string | null
+          tenant_id?: string | null
           violation_type?: never
         }
         Relationships: [
           {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
+            foreignKeyName: "fk_jobs_tenant"
+            columns: ["tenant_id"]
             isOneToOne: false
-            referencedRelation: "active_agents"
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
+            foreignKeyName: "fk_jobs_tenant"
+            columns: ["tenant_id"]
             isOneToOne: false
-            referencedRelation: "agents"
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "fk_jobs_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
+            foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
           },
           {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
+            foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
             isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "hmac_agent_secrets"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_execution_health"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -15951,7 +15775,7 @@ export type Database = {
             columns: ["parent_job_id"]
             isOneToOne: false
             referencedRelation: "job_integrity_violations"
-            referencedColumns: ["job_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "jobs_parent_job_id_fkey"
@@ -17803,7 +17627,7 @@ export type Database = {
             columns: ["parent_job_id"]
             isOneToOne: false
             referencedRelation: "job_integrity_violations"
-            referencedColumns: ["job_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "jobs_parent_job_id_fkey"
