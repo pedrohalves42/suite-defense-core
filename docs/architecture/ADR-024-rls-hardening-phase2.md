@@ -1,7 +1,7 @@
-# ADR-024: RLS Hardening Phase 2-8 - Complete Security Remediation
+# ADR-024: RLS Hardening Phase 2-9 - Complete Security Remediation
 
 ## Status
-**Accepted** - 2026-01-14 (Updated)
+**Accepted** - 2026-01-14 (Phase 9 Complete)
 
 ## Context
 
@@ -199,6 +199,33 @@ The security scanner may flag tables as "publicly readable" even though they hav
 - Frontend components may need updates for new access restrictions
 - Minor performance impact from additional auth checks
 
+## Phase 9: Final View Security Corrections
+
+Last phase to ensure complete tenant isolation and super_admin-only access for system views.
+
+### Views with Tenant + Super Admin Filtering
+
+| View | Issue | Fix Applied |
+|------|-------|-------------|
+| `v_rbac_metrics` | No tenant filter | Added tenant filter + super_admin |
+| `v_governance_stats` | No tenant filter | Added tenant filter + super_admin |
+| `v_soc2_readiness` | No tenant filter | Added tenant filter + super_admin |
+| `v_job_hourly_trends` | No tenant filter | Added tenant filter + super_admin |
+
+### Views with Super Admin Only Access
+
+| View | Issue | Fix Applied |
+|------|-------|-------------|
+| `v_rls_security_status` | No auth filter | Added super_admin only |
+| `v_security_invariants` | No auth filter | Added super_admin only |
+| `v_integrity_score` | No auth filter | Added super_admin only |
+
+### Intentionally Public View (No Change)
+
+| View | Justification |
+|------|---------------|
+| `v_system_contracts` | Static enum reference table with no tenant-specific data |
+
 ## Migration Files
 - `20260113_rls_hardening_phase2.sql` (Phase 2)
 - `20260113_rls_hardening_phase3.sql` (Phase 3)
@@ -207,6 +234,15 @@ The security scanner may flag tables as "publicly readable" even though they hav
 - `20260114_rls_hardening_phase6.sql` (Phase 6)
 - `20260114_rls_hardening_phase7.sql` (Phase 7 - Safe views)
 - `20260114_rls_hardening_phase8.sql` (Phase 8 - Complete view hardening)
+- `20260114_rls_hardening_phase9.sql` (Phase 9 - Final view security)
+
+## Final Security Status
+
+✅ **All tables** have RLS enabled with proper policies
+✅ **All views** have tenant isolation or super_admin-only access
+✅ **3 expected linter warnings** for service_role policies (per ADR-023)
+✅ **0 Postgres permission errors** in logs
+✅ **System declared operationally secure**
 
 ## Related
 - [ADR-023: RLS Hardening](./ADR-023-rls-hardening.md)

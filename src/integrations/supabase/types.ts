@@ -17213,17 +17213,11 @@ export type Database = {
       }
       v_governance_stats: {
         Row: {
-          active_risk_debt: number | null
           active_tasks: number | null
-          avg_resolution_hours: number | null
+          completed_tasks: number | null
           critical_open: number | null
-          high_open: number | null
-          ignored_24h: number | null
-          resolved_24h: number | null
-          risks_expiring_soon: number | null
-          sla_breached_active: number | null
           tenant_id: string | null
-          unassigned_tasks: number | null
+          total_tasks: number | null
         }
         Relationships: [
           {
@@ -17334,21 +17328,11 @@ export type Database = {
       }
       v_integrity_score: {
         Row: {
-          active_releases: number | null
-          archived_releases: number | null
           calculated_at: string | null
-          completed_jobs: number | null
-          completed_without_output: number | null
-          failed_jobs: number | null
-          failed_jobs_score: number | null
-          failed_with_error: number | null
-          global_integrity_score: number | null
-          job_integrity_score: number | null
-          supply_chain_score: number | null
-          total_jobs: number | null
+          metric_type: string | null
+          score: number | null
+          signed_releases: number | null
           total_releases: number | null
-          valid_active_releases: number | null
-          valid_completed_jobs: number | null
         }
         Relationships: []
       }
@@ -18224,53 +18208,109 @@ export type Database = {
       }
       v_rls_security_status: {
         Row: {
-          failed: number | null
-          pass_rate_pct: number | null
-          passed: number | null
-          run_at: string | null
+          details: Json | null
+          failure_reason: string | null
+          id: string | null
+          passed: boolean | null
+          table_name: string | null
+          test_name: string | null
           test_run_id: string | null
-          total_tests: number | null
+          tested_at: string | null
+        }
+        Insert: {
+          details?: Json | null
+          failure_reason?: string | null
+          id?: string | null
+          passed?: boolean | null
+          table_name?: string | null
+          test_name?: string | null
+          test_run_id?: string | null
+          tested_at?: string | null
+        }
+        Update: {
+          details?: Json | null
+          failure_reason?: string | null
+          id?: string | null
+          passed?: boolean | null
+          table_name?: string | null
+          test_name?: string | null
+          test_run_id?: string | null
+          tested_at?: string | null
         }
         Relationships: []
       }
       v_security_invariants: {
         Row: {
-          invariant: string | null
+          description: string | null
+          invariant_type: string | null
+          object_name: unknown
           status: string | null
-          violations: number | null
         }
         Relationships: []
       }
       v_soc2_readiness: {
         Row: {
-          criteria_code: string | null
-          criteria_name: string | null
-          criteria_readiness_score: number | null
-          criteria_status: string | null
-          implemented_controls: number | null
-          in_progress_controls: number | null
-          not_started_controls: number | null
+          control_code: string | null
+          control_name: string | null
+          description: string | null
+          due_date: string | null
+          evidence_ref: string | null
+          evidence_type: string | null
+          gap_notes: string | null
+          owner: string | null
+          remediation_plan: string | null
+          status: string | null
           tenant_id: string | null
-          total_controls: number | null
-          verified_controls: number | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          control_code?: string | null
+          control_name?: string | null
+          description?: string | null
+          due_date?: string | null
+          evidence_ref?: string | null
+          evidence_type?: string | null
+          gap_notes?: string | null
+          owner?: string | null
+          remediation_plan?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          control_code?: string | null
+          control_name?: string | null
+          description?: string | null
+          due_date?: string | null
+          evidence_ref?: string | null
+          evidence_type?: string | null
+          gap_notes?: string | null
+          owner?: string | null
+          remediation_plan?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "soc2_criteria_tenant_id_fkey"
+            foreignKeyName: "soc2_controls_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "soc2_criteria_tenant_id_fkey"
+            foreignKeyName: "soc2_controls_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_system_operations_summary"
             referencedColumns: ["tenant_id"]
           },
           {
-            foreignKeyName: "soc2_criteria_tenant_id_fkey"
+            foreignKeyName: "soc2_controls_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
