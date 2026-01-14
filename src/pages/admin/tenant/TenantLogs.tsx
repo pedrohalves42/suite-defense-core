@@ -20,17 +20,16 @@ export default function TenantLogs() {
   const debouncedSearch = useDebounce(searchTerm, 500);
 
   // Fetch audit logs for tenant
+  // ADR-FINAL-002: Fetch profile names separately from profiles_public view
   const { data: auditLogs, isLoading } = useQuery({
     queryKey: ["tenant-audit-logs", tenant?.id, debouncedSearch, filterAction, filterSuccess, pageSize],
     queryFn: async () => {
       if (!tenant?.id) return [];
       
+      // Fetch logs without JOIN
       let query = supabase
         .from("audit_logs")
-        .select(`
-          *,
-          profiles:profiles!audit_logs_actor_id_fkey(full_name)
-        `)
+        .select("*")
         .eq("tenant_id", tenant.id)
         .order("created_at", { ascending: false })
         .limit(pageSize);
@@ -49,10 +48,24 @@ export default function TenantLogs() {
         );
       }
 
-      const { data, error } = await query;
-
+      const { data: logs, error } = await query;
       if (error) throw error;
-      return data;
+      if (!logs || logs.length === 0) return [];
+
+      // Fetch profile names from profiles_public view
+      const actorIds = [...new Set(logs.map(l => l.actor_id).filter(Boolean))];
+      const { data: profiles } = await supabase
+        .from('profiles_public')
+        .select('user_id, full_name')
+        .in('user_id', actorIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
+      
+      // Attach profile names to logs
+      return logs.map(log => ({
+        ...log,
+        profiles: log.actor_id ? { full_name: profileMap.get(log.actor_id) || null } : null
+      }));
     },
     enabled: !!tenant?.id,
     refetchInterval: 30000,

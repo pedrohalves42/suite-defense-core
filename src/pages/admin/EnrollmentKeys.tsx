@@ -126,11 +126,11 @@ export default function EnrollmentKeys() {
       const { data, error, count } = await query;
       if (error) throw error;
 
-      // Buscar nomes dos criadores separadamente
+      // ADR-FINAL-002: Use profiles_public view for listing creator names
       if (data && data.length > 0) {
         const creatorIds = [...new Set(data.map(k => k.created_by).filter(Boolean))];
         const { data: profiles } = await supabase
-          .from('profiles')
+          .from('profiles_public')
           .select('user_id, full_name')
           .in('user_id', creatorIds);
 

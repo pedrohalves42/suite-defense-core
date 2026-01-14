@@ -84,11 +84,12 @@ export default function AuditLogs() {
     },
   });
 
+  // ADR-FINAL-002: Use profiles_public view for listing
   const { data: users } = useQuery({
     queryKey: ['audit-users'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, full_name');
       
       if (error) throw error;
