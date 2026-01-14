@@ -19,6 +19,7 @@ export interface ActionItem {
   trigger_type: string;
   playbook_id: string | null;
   priority_score: number;
+  is_historical?: boolean;
   humanized?: {
     title: string;
     description: string;
