@@ -14348,11 +14348,19 @@ export type Database = {
           enrolled_at: string | null
           hostname: string | null
           id: string | null
+          is_isolated: boolean | null
+          is_throttled: boolean | null
+          isolated_at: string | null
+          isolation_reason: string | null
           last_heartbeat: string | null
           os_type: string | null
           os_version: string | null
+          safe_mode_entered_at: string | null
+          safe_mode_reason: string | null
           status: string | null
           tenant_id: string | null
+          throttle_reason: string | null
+          throttled_at: string | null
         }
         Insert: {
           agent_mode?: string | null
@@ -14364,11 +14372,19 @@ export type Database = {
           enrolled_at?: string | null
           hostname?: string | null
           id?: string | null
+          is_isolated?: boolean | null
+          is_throttled?: boolean | null
+          isolated_at?: string | null
+          isolation_reason?: string | null
           last_heartbeat?: string | null
           os_type?: string | null
           os_version?: string | null
+          safe_mode_entered_at?: string | null
+          safe_mode_reason?: string | null
           status?: string | null
           tenant_id?: string | null
+          throttle_reason?: string | null
+          throttled_at?: string | null
         }
         Update: {
           agent_mode?: string | null
@@ -14380,11 +14396,19 @@ export type Database = {
           enrolled_at?: string | null
           hostname?: string | null
           id?: string | null
+          is_isolated?: boolean | null
+          is_throttled?: boolean | null
+          isolated_at?: string | null
+          isolation_reason?: string | null
           last_heartbeat?: string | null
           os_type?: string | null
           os_version?: string | null
+          safe_mode_entered_at?: string | null
+          safe_mode_reason?: string | null
           status?: string | null
           tenant_id?: string | null
+          throttle_reason?: string | null
+          throttled_at?: string | null
         }
         Relationships: [
           {

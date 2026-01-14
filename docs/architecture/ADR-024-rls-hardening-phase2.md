@@ -1,4 +1,4 @@
-# ADR-024: RLS Hardening Phase 2-7 - Complete Security Remediation
+# ADR-024: RLS Hardening Phase 2-8 - Complete Security Remediation
 
 ## Status
 **Accepted** - 2026-01-14 (Updated)
@@ -13,6 +13,7 @@ During comprehensive security scan, we identified multiple security issues requi
 - `agent_releases` table with overly permissive policies (Phase 5)
 - 8 views with `security_invoker=true` but missing tenant filtering (Phase 6)
 - Core safe views needing tenant filtering and HMAC secret protection (Phase 7)
+- 7 views missing `is_current_super_admin()` fallback (Phase 8)
 
 ## Phase 2: Table RLS Policies
 
@@ -126,6 +127,27 @@ Recreated all core "_safe" and "_public" views with proper security:
 | `invites_safe` | Excludes token, tenant-filtered |
 | `audit_logs_safe` | Excludes internal hash fields, tenant-filtered |
 
+## Phase 8: Complete View Hardening - Fix Permission & Filter Issues
+
+Final phase to ensure all views have proper tenant filtering and super_admin access:
+
+### Views Fixed
+
+| View | Issue | Fix Applied |
+|------|-------|-------------|
+| `agent_releases_public` | Missing super_admin fallback | Added `is_current_super_admin()` |
+| `v_agent_health_summary` | No tenant filter | Added tenant filter + super_admin |
+| `v_dlq_pending_attention` | No tenant filter | Added tenant filter + super_admin |
+| `v_problematic_agents` | No tenant filter | Added tenant filter + super_admin |
+| `v_stuck_jobs_report` | Missing super_admin fallback | Added `is_current_super_admin()` |
+| `agent_system_metrics_unified` | Missing super_admin fallback | Added `is_current_super_admin()` |
+| `agent_timeline_events` | Missing super_admin fallback | Added `is_current_super_admin()` |
+| `active_agents` | Missing columns for functions | Added is_throttled, is_isolated, safe_mode_* columns |
+
+### RLS Policy Added
+
+- `agent_releases`: New policy "Authenticated users can view active releases" allows any authenticated user to see active releases.
+
 ## Implementation
 
 All policies use the existing `public.has_role()` and `public.is_current_super_admin()` SECURITY DEFINER functions to avoid RLS recursion.
@@ -147,6 +169,22 @@ WHERE (
 - Used for Edge Functions to insert system data
 - Service role credentials never exposed to clients
 
+## Security Scanner False Positives
+
+The security scanner may flag tables as "publicly readable" even though they have proper RLS policies. This is a false positive when:
+
+1. RLS is enabled (`relrowsecurity = true` in pg_class)
+2. SELECT policies require authentication (e.g., `get_active_tenant_id()` or `auth.uid()`)
+3. Policies include tenant isolation or role checks
+
+**Verified Protected Tables:**
+- `agents`: SELECT requires `get_active_tenant_id() OR is_current_super_admin()`
+- `invites`: SELECT requires `get_active_tenant_id() OR is_current_super_admin()`
+- `enrollment_keys`: SELECT requires `get_active_tenant_id() OR is_current_super_admin()`
+- `api_keys`: SELECT requires `get_active_tenant_id() OR is_current_super_admin()`
+- `user_roles`: SELECT requires tenant match or self-access
+- All other flagged tables have similar RLS policies
+
 ## Consequences
 
 ### Positive
@@ -155,6 +193,7 @@ WHERE (
 - security_invoker prevents privilege escalation
 - Follows principle of least privilege
 - Views with `security_invoker` now properly filter by tenant
+- Super admins can access all tenant data for support
 
 ### Negative
 - Frontend components may need updates for new access restrictions
@@ -167,6 +206,7 @@ WHERE (
 - `20260113_rls_hardening_phase5.sql` (Phase 5)
 - `20260114_rls_hardening_phase6.sql` (Phase 6)
 - `20260114_rls_hardening_phase7.sql` (Phase 7 - Safe views)
+- `20260114_rls_hardening_phase8.sql` (Phase 8 - Complete view hardening)
 
 ## Related
 - [ADR-023: RLS Hardening](./ADR-023-rls-hardening.md)
