@@ -1,0 +1,17 @@
+{
+  "name": "cybershield-contracts",
+  "version": "1.0.0",
+  "description": "Contract tests for Edge ↔ DB validation",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:schemas": "playwright test schemas/",
+    "test:edge": "playwright test edge/",
+    "test:invariants": "playwright test invariants/"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@supabase/supabase-js": "^2.74.0",
+    "dotenv": "^17.2.3"
+  }
+}
