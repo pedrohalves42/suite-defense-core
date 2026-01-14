@@ -1,4 +1,4 @@
-# ADR-024: RLS Hardening Phase 2-6 - Complete Security Remediation
+# ADR-024: RLS Hardening Phase 2-7 - Complete Security Remediation
 
 ## Status
 **Accepted** - 2026-01-14 (Updated)
@@ -12,6 +12,7 @@ During comprehensive security scan, we identified multiple security issues requi
 - Multiple dependent views requiring CASCADE recreation (Phase 4)
 - `agent_releases` table with overly permissive policies (Phase 5)
 - 8 views with `security_invoker=true` but missing tenant filtering (Phase 6)
+- Core safe views needing tenant filtering and HMAC secret protection (Phase 7)
 
 ## Phase 2: Table RLS Policies
 
@@ -39,7 +40,7 @@ All views now use `WITH (security_invoker = true)` and include tenant filtering:
 
 | View | Protection Added |
 |------|------------------|
-| `hmac_agent_secrets` | admin-only access + tenant filtering |
+| `hmac_agent_secrets` | super_admin-only access (HMAC secrets) |
 | `job_failure_health` | tenant filtering |
 | `circuit_breaker_health` | tenant filtering |
 | `dlq_categorized` | security_invoker + tenant |
@@ -47,11 +48,11 @@ All views now use `WITH (security_invoker = true)` and include tenant filtering:
 | `agent_timeline_events` | security_invoker + tenant |
 | `installation_error_summary` | security_invoker + super_admin |
 | `agents_health_view` | security_invoker + tenant |
-| `enrollment_keys_safe` | security_invoker + super_admin |
+| `enrollment_keys_safe` | security_invoker + tenant |
 | `rate_limit_stats` | security_invoker + admin only |
 | `agent_system_metrics_unified` | security_invoker + tenant |
-| `audit_logs_safe` | security_invoker + super_admin |
-| `invites_safe` | security_invoker + super_admin |
+| `audit_logs_safe` | security_invoker + tenant |
+| `invites_safe` | security_invoker + tenant |
 | `governance_health_metrics` | security_invoker + tenant |
 | `job_integrity_violations` | security_invoker + tenant |
 | `insight_feedback_quality` | security_invoker + tenant |
@@ -109,6 +110,22 @@ Several views had `security_invoker=true` but lacked proper tenant filtering, me
 |------|---------------|
 | `v_system_contracts` | Static enum reference table with no tenant-specific data |
 
+## Phase 7: Core Safe Views with Tenant Filtering
+
+Recreated all core "_safe" and "_public" views with proper security:
+
+### Views Fixed
+
+| View | Changes |
+|------|---------|
+| `hmac_agent_secrets` | super_admin only (HMAC secrets are highly sensitive) |
+| `agents_public` | Excludes hmac_secret, tenant-filtered |
+| `agents_safe` | Excludes hmac_secret, tenant-filtered |
+| `active_agents` | Excludes hmac_secret, active only, tenant-filtered |
+| `enrollment_keys_safe` | Excludes key/token, tenant-filtered |
+| `invites_safe` | Excludes token, tenant-filtered |
+| `audit_logs_safe` | Excludes internal hash fields, tenant-filtered |
+
 ## Implementation
 
 All policies use the existing `public.has_role()` and `public.is_current_super_admin()` SECURITY DEFINER functions to avoid RLS recursion.
@@ -133,7 +150,7 @@ WHERE (
 ## Consequences
 
 ### Positive
-- `hmac_secret` is now properly protected (removed from `active_agents`)
+- `hmac_secret` is now properly protected (removed from all public views)
 - All views have tenant isolation
 - security_invoker prevents privilege escalation
 - Follows principle of least privilege
@@ -149,6 +166,7 @@ WHERE (
 - `20260113_rls_hardening_phase4.sql` (Phase 4)
 - `20260113_rls_hardening_phase5.sql` (Phase 5)
 - `20260114_rls_hardening_phase6.sql` (Phase 6)
+- `20260114_rls_hardening_phase7.sql` (Phase 7 - Safe views)
 
 ## Related
 - [ADR-023: RLS Hardening](./ADR-023-rls-hardening.md)

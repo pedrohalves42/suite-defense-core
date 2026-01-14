@@ -76,7 +76,8 @@ export default function SystemOperations() {
   const { data: summary, isLoading: loadingSummary } = useQuery({
     queryKey: ['system-operations-summary', tenant?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Using type assertion until types are regenerated after migration
+      const { data, error } = await (supabase as any)
         .from('v_system_operations_summary')
         .select('*')
         .single();
