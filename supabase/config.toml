@@ -678,3 +678,7 @@ schedule = "*/30 * * * *"
 [functions.cron-sentinel]
 verify_jwt = false
 schedule = "*/10 * * * *"
+
+# === Security Operations Framework ===
+[functions.run-rls-tests]
+verify_jwt = true
