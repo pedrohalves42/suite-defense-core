@@ -14,10 +14,9 @@ BEGIN
     'agents_public', 
     'agents_health_view', 
     'invites_safe', 
-    'dlq_risk_overview', 
     'governance_health_metrics',
-    'job_integrity_violations', 
-    'insight_feedback_quality'
+    'job_integrity_violations',
+    'profiles_public'
   )
   AND definition NOT LIKE '%auth.uid()%'
   AND definition NOT LIKE '%is_current_super_admin()%';
