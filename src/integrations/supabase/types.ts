@@ -18925,10 +18925,10 @@ export type Database = {
       check_security_thresholds: {
         Args: never
         Returns: {
+          alert_severity: string
           alert_type: string
           current_value: number
           message: string
-          severity: string
           should_alert: boolean
           threshold: number
         }[]
