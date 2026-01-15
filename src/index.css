@@ -2,185 +2,224 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* ============================================================
+   INTELLIGENCE SYSTEM - Design Tokens
+   
+   Posicionamento: Um sistema de inteligência operacional
+   que revela riscos, decisões e estados críticos com clareza absoluta.
+   
+   Cor Proprietária: Graphite Green (#2E3F3A)
+   Cor de Acento: Oxide Amber (#C89B3C)
+   ============================================================ */
 
 @layer base {
   :root {
-    --background: 220 40% 5%;
-    --foreground: 200 20% 92%;
-
-    --card: 220 30% 8%;
-    --card-foreground: 200 20% 92%;
-
-    --popover: 220 30% 8%;
-    --popover-foreground: 200 20% 92%;
-
-    /* Enterprise palette - autoridade, não marketing */
-    --primary: 174 72% 38%;
-    --primary-foreground: 220 40% 6%;
-
-    --secondary: 220 25% 16%;
-    --secondary-foreground: 200 20% 92%;
-
-    --muted: 220 20% 18%;
-    --muted-foreground: 200 15% 70%;
-
-    --accent: 189 65% 42%;
-    --accent-foreground: 220 40% 6%;
-
-    --destructive: 0 65% 50%;
-    --destructive-foreground: 200 20% 98%;
-
-    --warning: 35 85% 50%;
-    --warning-foreground: 220 40% 6%;
-
-    --success: 142 70% 42%;
-    --success-foreground: 220 40% 6%;
-
-    --info: 198 80% 55%;
-    --info-foreground: 220 40% 6%;
-
-    --border: 220 18% 22%;
-    --input: 220 18% 20%;
-    --ring: 174 72% 38%;
-
-    --radius: 0.5rem;
-
-    /* Enterprise background - infraestrutura silenciosa */
-    --gradient-hero: linear-gradient(180deg, hsl(220 40% 5%), hsl(220 38% 4%));
-    --gradient-card: linear-gradient(135deg, hsl(220 30% 7%), hsl(220 30% 6%));
-    --glow-primary: 0 0 30px hsl(174 72% 38% / 0.12);
-    --glow-accent: 0 0 20px hsl(189 65% 42% / 0.1);
-    --border-glow: 0 0 15px hsl(174 72% 38% / 0.15);
+    /* === INTELLIGENCE SYSTEM - LIGHT MODE === */
+    --background: 210 10% 96%;        /* #F5F6F7 */
+    --foreground: 210 25% 11%;        /* #1A1F24 */
     
-    /* RGB values for gradients */
-    --primary-rgb: 45, 158, 140;
-    --accent-rgb: 55, 145, 165;
+    --card: 0 0% 100%;                /* #FFFFFF */
+    --card-foreground: 210 25% 11%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 25% 11%;
+    
+    /* Graphite Green - Cor Proprietária */
+    --primary: 163 17% 21%;           /* #2E3F3A */
+    --primary-foreground: 0 0% 98%;
+    --primary-hover: 163 16% 27%;     /* #3A4F49 */
+    --primary-active: 163 17% 17%;    /* #25332F */
+    
+    --secondary: 210 10% 94%;         /* #EEF0F2 */
+    --secondary-foreground: 210 25% 11%;
+    
+    --muted: 210 10% 94%;
+    --muted-foreground: 163 12% 39%;  /* #5A6A65 */
+    
+    /* Oxide Amber - Acento Raro (uso com parcimônia) */
+    --accent: 41 54% 51%;             /* #C89B3C */
+    --accent-foreground: 210 25% 11%;
+    --accent-soft: 41 58% 68%;        /* #E2C47A */
+    
+    --destructive: 0 55% 50%;         /* #B94A48 */
+    --destructive-foreground: 0 0% 98%;
+    
+    /* Estados de Sistema */
+    --warning: 41 54% 51%;            /* #C89B3C */
+    --warning-foreground: 210 25% 11%;
+    
+    --success: 146 40% 48%;           /* #4FA36A */
+    --success-foreground: 210 25% 11%;
+    
+    --info: 207 28% 53%;              /* #6C8EA3 */
+    --info-foreground: 210 25% 11%;
+    
+    --border: 210 10% 87%;            /* #D9DEE3 */
+    --input: 210 10% 94%;
+    --ring: 163 17% 21%;
+    
+    --radius: 0.5rem;
+  }
+  
+  .dark {
+    /* === INTELLIGENCE SYSTEM - DARK MODE === */
+    --background: 210 20% 4%;         /* #0B0E11 */
+    --foreground: 210 10% 90%;        /* #E6E8EA */
+    
+    --card: 210 18% 9%;               /* #12171C */
+    --card-foreground: 210 10% 90%;
+    
+    --popover: 210 18% 9%;
+    --popover-foreground: 210 10% 90%;
+    
+    /* Graphite Green - mantém consistência em ambos os modos */
+    --primary: 163 17% 21%;           /* #2E3F3A */
+    --primary-foreground: 0 0% 98%;
+    --primary-hover: 163 16% 27%;     /* #3A4F49 */
+    --primary-active: 163 17% 17%;    /* #25332F */
+    
+    --secondary: 210 17% 12%;         /* #161C22 */
+    --secondary-foreground: 210 10% 90%;
+    
+    --muted: 210 17% 12%;
+    --muted-foreground: 163 12% 64%;  /* #9FB0AA */
+    
+    /* Oxide Amber - mesmo acento em dark */
+    --accent: 41 54% 51%;             /* #C89B3C */
+    --accent-foreground: 210 25% 11%;
+    --accent-soft: 41 58% 68%;        /* #E2C47A */
+    
+    --destructive: 0 55% 50%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --warning: 41 54% 51%;
+    --warning-foreground: 210 25% 11%;
+    
+    --success: 146 40% 48%;
+    --success-foreground: 210 25% 11%;
+    
+    --info: 207 28% 53%;
+    --info-foreground: 210 25% 11%;
+    
+    --border: 210 17% 15%;            /* #1F262D */
+    --input: 210 17% 12%;
+    --ring: 163 17% 21%;
   }
 }
 
-/* Animacao de glow personalizada */
-@keyframes glow-pulse {
-  0%, 100% {
-    box-shadow: 0 0 10px hsl(174 100% 46% / 0.3);
-  }
-  50% {
-    box-shadow: 0 0 20px hsl(174 100% 46% / 0.6);
-  }
-}
-
-.animate-glow-pulse {
-  animation: glow-pulse 2s ease-in-out infinite;
-}
+/* ============================================================
+   INTELLIGENCE SYSTEM - Utility Classes
+   ============================================================ */
 
 @layer utilities {
-  .shadow-glow-primary {
-    box-shadow: var(--glow-primary);
+  /* === CARD COM BORDA ESQUERDA (Assinatura Visual) === */
+  .card-intel {
+    @apply bg-card border border-border rounded-lg relative;
+    border-left: 2px solid hsl(var(--primary));
+  }
+
+  .card-intel-success {
+    border-left-color: hsl(var(--success));
+  }
+
+  .card-intel-warning {
+    border-left-color: hsl(var(--warning));
+  }
+
+  .card-intel-critical {
+    border-left-color: hsl(var(--destructive));
+  }
+
+  .card-intel-info {
+    border-left-color: hsl(var(--info));
+  }
+
+  /* === MÉTRICAS GRANDES === */
+  .metric-display {
+    @apply font-mono text-2xl font-medium tracking-tight;
+  }
+
+  .metric-display-lg {
+    @apply font-mono text-3xl font-semibold tracking-tight;
+  }
+
+  /* === LABELS DE SEÇÃO === */
+  .section-label {
+    @apply text-xs uppercase tracking-wider text-muted-foreground font-medium;
+  }
+
+  /* === TIMELINE ITEM === */
+  .timeline-item {
+    @apply relative pl-6 pb-4;
   }
   
-  .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
+  .timeline-item::before {
+    content: '';
+    @apply absolute left-0 top-1.5 w-2 h-2 rounded-full bg-primary -translate-x-1/2;
   }
   
-  @keyframes pulse-glow {
-    0%, 100% {
-      filter: drop-shadow(0 0 8px hsl(195 100% 50% / 0.5));
-    }
-    50% {
-      filter: drop-shadow(0 0 16px hsl(195 100% 50% / 0.8));
-    }
+  .timeline-item::after {
+    content: '';
+    @apply absolute left-0 top-3 bottom-0 w-px bg-border -translate-x-1/2;
   }
   
-  .animate-slide-in {
-    animation: slide-in 0.3s ease-out;
+  .timeline-item:last-child::after {
+    display: none;
+  }
+
+  /* === PAGE HEADER INTELLIGENCE === */
+  .page-header-intel {
+    @apply mb-6;
   }
   
-  @keyframes slide-in {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  .page-header-intel h1 {
+    @apply text-xl font-semibold text-foreground tracking-tight;
+  }
+  
+  .page-header-intel p {
+    @apply text-sm text-muted-foreground mt-1;
   }
 
-  .animate-fade-in {
-    animation: fade-in 0.6s ease-out;
+  /* === SIDEBAR ITEM ATIVO (Barra Vertical) === */
+  .sidebar-item-active {
+    @apply relative;
+  }
+  
+  .sidebar-item-active::before {
+    content: '';
+    @apply absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-primary rounded-r;
   }
 
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  /* === STATUS INDICATOR === */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+  
+  .status-dot-healthy {
+    @apply bg-success;
+  }
+  
+  .status-dot-warning {
+    @apply bg-warning;
+  }
+  
+  .status-dot-critical {
+    @apply bg-destructive;
   }
 
-  .animate-pulse-slow {
-    animation: pulse-slow 4s ease-in-out infinite;
-  }
-
-  @keyframes pulse-slow {
-    0%, 100% {
-      opacity: 0.5;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.8;
-      transform: scale(1.05);
-    }
-  }
-
-  .animate-gradient-x {
-    animation: gradient-x 3s ease infinite;
-    background-size: 200% 200%;
-  }
-
-  @keyframes gradient-x {
-    0%, 100% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-  }
-
-  .animate-gradient-slow {
-    animation: gradient-slow 8s ease infinite;
-  }
-
-  @keyframes gradient-slow {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.8;
-    }
-  }
-
-  /* === ENTERPRISE DESIGN SYSTEM === */
-
-  /* Enterprise Card - estilo "cofre" */
+  /* === LEGACY: Enterprise Design System (mantido para compatibilidade) === */
+  
   .card-enterprise {
     @apply backdrop-blur-xl bg-card/95 
-      border border-white/[0.06] 
-      shadow-[0_0_0_1px_rgba(45,158,140,0.03),0_20px_50px_rgba(0,0,0,0.4)]
+      border border-border 
+      shadow-sm
       rounded-xl;
   }
 
-  /* Card hover enterprise */
   .card-enterprise-hover {
-    @apply transition-all duration-300 hover:shadow-lg hover:border-white/[0.1];
+    @apply transition-all duration-300 hover:shadow-md hover:border-border/80;
   }
 
-  /* Page header padronizado */
   .page-header-enterprise {
     @apply mb-6;
   }
@@ -189,38 +228,33 @@ All colors MUST be HSL.
     @apply text-xl font-semibold text-foreground tracking-tight;
   }
   .page-header-enterprise p {
-    @apply text-sm text-muted-foreground/70 mt-1;
+    @apply text-sm text-muted-foreground mt-1;
   }
 
-  /* Stats card com borda lateral */
   .stats-card-enterprise {
-    @apply border-l-2 bg-card/95 rounded-xl border border-white/[0.06];
+    @apply border-l-2 bg-card rounded-xl border border-border;
   }
 
-  /* Section label enterprise */
   .section-label-enterprise {
-    @apply text-xs uppercase tracking-wider text-muted-foreground/60 font-medium;
+    @apply text-xs uppercase tracking-wider text-muted-foreground font-medium;
   }
 
-  /* Table enterprise */
   .table-enterprise {
-    @apply bg-card/50 rounded-xl border border-white/[0.06];
+    @apply bg-card/50 rounded-xl border border-border;
   }
 
-  /* Input focus enterprise */
   .input-enterprise {
     @apply focus:ring-2 focus:ring-primary/15 focus:border-primary/40 
       transition-all duration-200 bg-background/50;
   }
 
-  /* Button enterprise */
   .btn-enterprise {
-    @apply bg-primary/90 hover:bg-primary text-primary-foreground
+    @apply bg-primary hover:bg-primary/90 text-primary-foreground
       shadow-sm hover:shadow-md transition-all duration-200;
   }
 
   .btn-enterprise-ghost {
-    @apply hover:bg-accent/30 transition-all duration-200;
+    @apply hover:bg-muted transition-all duration-200;
   }
 }
 
@@ -230,15 +264,15 @@ All colors MUST be HSL.
   }
 
   html {
-    font-size: 11px; /* Compact professional look */
+    font-size: 14px;
   }
 
   body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'IBM Plex Sans', 'Inter', system-ui, -apple-system, sans-serif;
   }
 
   .font-mono {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-family: 'IBM Plex Mono', 'JetBrains Mono', 'Courier New', monospace;
   }
 }
