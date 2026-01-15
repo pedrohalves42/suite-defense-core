@@ -203,7 +203,8 @@ export default function NotificationSettings() {
       .from('user_roles')
       .select('tenant_id')
       .eq('user_id', user?.id)
-      .single();
+      .limit(1)
+      .maybeSingle();
     
     if (data) {
       setTenantId(data.tenant_id);

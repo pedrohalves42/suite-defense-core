@@ -13,7 +13,8 @@ export function useCriticalInsights() {
         .from("user_roles")
         .select("tenant_id")
         .eq("user_id", user.id)
-        .single();
+        .limit(1)
+        .maybeSingle();
       
       if (!userRole?.tenant_id) return 0;
       
