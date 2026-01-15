@@ -30,7 +30,7 @@ import Users from "./pages/admin/Users";
 import Settings from "./pages/admin/Settings";
 import AuditLogs from "./pages/admin/AuditLogs";
 import Invites from "./pages/admin/Invites";
-import Tenants from "./pages/admin/Tenants";
+
 import TenantFeatures from "./pages/admin/TenantFeatures";
 import Dashboard from "./pages/admin/Dashboard";
 import ApiKeys from "./pages/admin/ApiKeys";
