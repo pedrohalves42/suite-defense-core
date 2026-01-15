@@ -1,4 +1,4 @@
-import React from "react";
+
 import { Toaster } from "@/components/ui/toaster";
 import NotificationChannels from "@/pages/admin/NotificationChannels";
 import { Toaster as Sonner } from "@/components/ui/sonner";
