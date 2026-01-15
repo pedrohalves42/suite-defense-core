@@ -7,10 +7,36 @@ import { RedTeamAssessment } from './useRedTeamAssessment';
 
 export interface FullAuditResult {
   success: boolean;
+  version?: string;
+  execution_order?: string;
   red_team: RedTeamAssessment;
-  ana_audit: AuditResult;
-  confidence_gap: number;
-  gap_analysis: string;
+  ana: AuditResult;  // Edge function returns 'ana', not 'ana_audit'
+  confidence_gap: {
+    gap_id: string;
+    ana_score: number;
+    red_score: number;
+    gap: number;
+    health_status: string;
+    gap_delta: number;
+    alert_triggered: boolean;
+    alert_reason: string | null;
+  };
+  governance?: {
+    previous_score: number | null;
+    avg_last_3: number | null;
+    avg_last_7: number | null;
+    guardrail_max_delta: number;
+    variance_reduced: boolean;
+    fallback_used: boolean;
+  };
+  total_tokens?: number;
+  // Deterministic fallback fields
+  is_deterministic?: boolean;
+  fallback_reason?: string;
+  overall_score?: number;
+  market_score?: number;
+  threat_level?: string;
+  binary_criteria?: Record<string, boolean>;
 }
 
 export function useRunFullAudit() {
@@ -35,7 +61,14 @@ export function useRunFullAudit() {
       queryClient.invalidateQueries({ queryKey: ['confidence-gap'] });
 
       setProgress('done');
-      toast.success('Auditoria completa concluída com sucesso');
+      
+      // Show appropriate message based on audit type
+      if (result.is_deterministic) {
+        toast.warning('Auditoria determinística concluída (créditos AI esgotados)');
+      } else {
+        toast.success('Auditoria completa concluída com sucesso');
+      }
+      
       return result;
     } catch (error) {
       console.error('Full audit error:', error);
