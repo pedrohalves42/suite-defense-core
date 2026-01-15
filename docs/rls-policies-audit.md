@@ -95,13 +95,19 @@ Intentionally restricted tables where data is managed only via service role:
 
 - **Total RLS-enabled tables**: 45+
 - **Tables with `true` policies**: 7 (all intentional, documented above)
-- **Views with security_invoker**: 8 (all converted)
-- **SECURITY DEFINER functions with tenant checks**: 4 (ADR-VELLUM-001)
-- **Cross-tenant data leakage vectors**: 0 (verified via P0 security migration + Dr. Vellum audit)
+- **Views with security_invoker**: 10 (all converted, including v_incident_groups, v_job_health_anomalies)
+- **SECURITY DEFINER functions with tenant checks**: 6 (ADR-VELLUM-001)
+  - `apply_agent_isolation`, `apply_agent_throttle`, `remove_agent_isolation`, `remove_agent_throttle`
+  - `archive_agent(uuid)`, `archive_agent(uuid, text, text, uuid, text)`
+- **Cross-tenant data leakage vectors**: 0 (verified via Dr. Vellum Final Audit)
 
 ## Last Audit Date
 
-**2026-01-15** - Dr. Vellum deep audit completed. SECURITY DEFINER functions hardened with tenant verification.
+**2026-01-15** - Dr. Vellum Final Audit completed. All critical/high vulnerabilities resolved:
+- Views `v_incident_groups`, `v_job_health_anomalies`, `profiles_public` now tenant-isolated
+- All `archive_agent` overloads verify tenant ownership
+- RLS policies migrated from `public` to `authenticated` role
+- `vuln_findings` table now has complete RLS coverage
 
 ## Recommendations
 
@@ -110,4 +116,5 @@ Intentionally restricted tables where data is managed only via service role:
 3. ✅ No SECURITY DEFINER views remain
 4. ✅ Tenant isolation verified across all data paths
 5. ✅ SECURITY DEFINER functions now verify tenant ownership (ADR-VELLUM-001)
-6. ⚠️ Monitor `ai_learned_patterns` for any anomalous access patterns
+6. ✅ System approved for enterprise production (GO status)
+7. ⚠️ Monitor `ai_learned_patterns` for any anomalous access patterns

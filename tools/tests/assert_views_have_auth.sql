@@ -16,7 +16,9 @@ BEGIN
     'invites_safe', 
     'governance_health_metrics',
     'job_integrity_violations',
-    'profiles_public'
+    'profiles_public',
+    'v_incident_groups',
+    'v_job_health_anomalies'
   )
   AND definition NOT LIKE '%auth.uid()%'
   AND definition NOT LIKE '%is_current_super_admin()%';
