@@ -16478,12 +16478,12 @@ export type Database = {
       }
       v_audit_integrity_status: {
         Row: {
-          all_checks_valid: boolean | null
-          last_check: string | null
-          status: string | null
+          failed_checks: number | null
+          last_checked_at: string | null
           tenant_id: string | null
-          total_breaks: number | null
+          total_breaks_detected: number | null
           total_checks: number | null
+          valid_checks: number | null
         }
         Relationships: [
           {
@@ -17320,17 +17320,12 @@ export type Database = {
       v_job_health: {
         Row: {
           avg_duration_ms: number | null
-          failure_count_24h: number | null
-          health_status: string | null
+          failed_runs: number | null
           job_key: string | null
           job_source: string | null
-          last_failure: string | null
-          last_run: string | null
-          last_success: string | null
-          max_duration_ms: number | null
-          severity: string | null
-          success_count_24h: number | null
-          total_runs_24h: number | null
+          last_run_at: string | null
+          successful_runs: number | null
+          total_runs: number | null
         }
         Relationships: []
       }
