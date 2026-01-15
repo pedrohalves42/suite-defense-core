@@ -88,8 +88,10 @@ export const useJobAnomalies = () => {
   const query = useQuery({
     queryKey: ['job-anomalies', activeTenant?.id],
     queryFn: async (): Promise<JobAnomaly[]> => {
-      // Query the view - it may not have tenant filtering built-in
-      // so we fetch all and the view handles the logic
+      if (!activeTenant?.id) return [];
+      
+      // Note: v_job_health_anomalies aggregates job health across the system
+      // RLS on base tables (jobs, enrollment_keys) provides tenant isolation
       const { data, error } = await supabase
         .from('v_job_health_anomalies')
         .select('*');

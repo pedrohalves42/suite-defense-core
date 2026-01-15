@@ -76,6 +76,10 @@ Functions that bypass RLS for legitimate internal operations:
 | `is_super_admin()` | Checks super admin status | Used in RLS policies, returns boolean only |
 | `update_user_role_rpc()` | Role updates with validation | Explicit super_admin escalation prevention |
 | `cleanup_old_data()` | Housekeeping | Deletes expired data only, no read |
+| `apply_agent_isolation()` | Isolate agents from network | **ADR-VELLUM-001**: Tenant ownership verified before action |
+| `apply_agent_throttle()` | Rate-limit agent polling | **ADR-VELLUM-001**: Tenant ownership verified before action |
+| `remove_agent_isolation()` | Restore isolated agents | **ADR-VELLUM-001**: Tenant ownership verified before action |
+| `remove_agent_throttle()` | Remove rate-limiting | **ADR-VELLUM-001**: Tenant ownership verified before action |
 
 ## Tables Without INSERT/UPDATE/DELETE Policies
 
@@ -92,11 +96,12 @@ Intentionally restricted tables where data is managed only via service role:
 - **Total RLS-enabled tables**: 45+
 - **Tables with `true` policies**: 7 (all intentional, documented above)
 - **Views with security_invoker**: 8 (all converted)
-- **Cross-tenant data leakage vectors**: 0 (verified via P0 security migration)
+- **SECURITY DEFINER functions with tenant checks**: 4 (ADR-VELLUM-001)
+- **Cross-tenant data leakage vectors**: 0 (verified via P0 security migration + Dr. Vellum audit)
 
 ## Last Audit Date
 
-**2025-01-08** - Comprehensive RLS audit completed as part of P0/P1/P2 security remediation cycle.
+**2026-01-15** - Dr. Vellum deep audit completed. SECURITY DEFINER functions hardened with tenant verification.
 
 ## Recommendations
 
@@ -104,4 +109,5 @@ Intentionally restricted tables where data is managed only via service role:
 2. ✅ All views use `security_invoker=on`
 3. ✅ No SECURITY DEFINER views remain
 4. ✅ Tenant isolation verified across all data paths
-5. ⚠️ Monitor `ai_learned_patterns` for any anomalous access patterns
+5. ✅ SECURITY DEFINER functions now verify tenant ownership (ADR-VELLUM-001)
+6. ⚠️ Monitor `ai_learned_patterns` for any anomalous access patterns
