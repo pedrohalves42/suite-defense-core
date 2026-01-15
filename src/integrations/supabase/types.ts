@@ -14383,76 +14383,43 @@ export type Database = {
     Views: {
       active_agents: {
         Row: {
-          agent_mode: string | null
           agent_name: string | null
-          agent_state: string | null
-          agent_state_reason: string | null
           agent_version: string | null
           display_name: string | null
           enrolled_at: string | null
           hostname: string | null
           id: string | null
-          is_isolated: boolean | null
-          is_throttled: boolean | null
-          isolated_at: string | null
-          isolation_reason: string | null
           last_heartbeat: string | null
           os_type: string | null
           os_version: string | null
-          safe_mode_entered_at: string | null
-          safe_mode_reason: string | null
           status: string | null
           tenant_id: string | null
-          throttle_reason: string | null
-          throttled_at: string | null
         }
         Insert: {
-          agent_mode?: string | null
           agent_name?: string | null
-          agent_state?: string | null
-          agent_state_reason?: string | null
           agent_version?: string | null
           display_name?: string | null
           enrolled_at?: string | null
           hostname?: string | null
           id?: string | null
-          is_isolated?: boolean | null
-          is_throttled?: boolean | null
-          isolated_at?: string | null
-          isolation_reason?: string | null
           last_heartbeat?: string | null
           os_type?: string | null
           os_version?: string | null
-          safe_mode_entered_at?: string | null
-          safe_mode_reason?: string | null
           status?: string | null
           tenant_id?: string | null
-          throttle_reason?: string | null
-          throttled_at?: string | null
         }
         Update: {
-          agent_mode?: string | null
           agent_name?: string | null
-          agent_state?: string | null
-          agent_state_reason?: string | null
           agent_version?: string | null
           display_name?: string | null
           enrolled_at?: string | null
           hostname?: string | null
           id?: string | null
-          is_isolated?: boolean | null
-          is_throttled?: boolean | null
-          isolated_at?: string | null
-          isolation_reason?: string | null
           last_heartbeat?: string | null
           os_type?: string | null
           os_version?: string | null
-          safe_mode_entered_at?: string | null
-          safe_mode_reason?: string | null
           status?: string | null
           tenant_id?: string | null
-          throttle_reason?: string | null
-          throttled_at?: string | null
         }
         Relationships: [
           {
@@ -14901,33 +14868,30 @@ export type Database = {
         Row: {
           action: string | null
           created_at: string | null
-          details: Json | null
           id: string | null
-          ip_address: string | null
           resource_id: string | null
           resource_type: string | null
+          success: boolean | null
           tenant_id: string | null
           user_id: string | null
         }
         Insert: {
           action?: string | null
           created_at?: string | null
-          details?: Json | null
           id?: string | null
-          ip_address?: string | null
           resource_id?: string | null
           resource_type?: string | null
+          success?: boolean | null
           tenant_id?: string | null
           user_id?: string | null
         }
         Update: {
           action?: string | null
           created_at?: string | null
-          details?: Json | null
           id?: string | null
-          ip_address?: string | null
           resource_id?: string | null
           resource_type?: string | null
+          success?: boolean | null
           tenant_id?: string | null
           user_id?: string | null
         }
@@ -15851,21 +15815,21 @@ export type Database = {
       }
       profiles_public: {
         Row: {
+          created_at: string | null
           full_name: string | null
           id: string | null
-          user_id: string | null
           username: string | null
         }
         Insert: {
+          created_at?: string | null
           full_name?: string | null
           id?: string | null
-          user_id?: string | null
           username?: string | null
         }
         Update: {
+          created_at?: string | null
           full_name?: string | null
           id?: string | null
-          user_id?: string | null
           username?: string | null
         }
         Relationships: []
