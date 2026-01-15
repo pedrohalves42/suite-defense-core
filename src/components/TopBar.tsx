@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Bell, User, LogOut, Bug, Settings, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,15 +16,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export const TopBar = ({ alerts = 0 }: { alerts?: number }) => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useIsAdmin();
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const showDiagnostics = import.meta.env.VITE_SHOW_DIAGNOSTICS === 'true';
 
@@ -58,18 +64,7 @@ export const TopBar = ({ alerts = 0 }: { alerts?: number }) => {
         )}
       >
         {/* Theme Toggle */}
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="btn-enterprise-ghost"
-        >
-          {theme === 'dark' ? (
-            <Sun className="h-5 w-5 text-muted-foreground" />
-          ) : (
-            <Moon className="h-5 w-5 text-muted-foreground" />
-          )}
-        </Button>
+        <ThemeToggle className="btn-enterprise-ghost" />
 
         {/* Notifications */}
         <Button 
@@ -117,8 +112,8 @@ export const TopBar = ({ alerts = 0 }: { alerts?: number }) => {
               <Settings className="mr-2 h-4 w-4" />
               Configurações da Empresa
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-              {theme === 'dark' ? (
+            <DropdownMenuItem onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}>
+              {resolvedTheme === 'dark' ? (
                 <Sun className="mr-2 h-4 w-4" />
               ) : (
                 <Moon className="mr-2 h-4 w-4" />
