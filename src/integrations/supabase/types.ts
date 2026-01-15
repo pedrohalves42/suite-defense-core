@@ -16182,8 +16182,7 @@ export type Database = {
           id: string | null
           last_heartbeat: string | null
           minutes_since_heartbeat: number | null
-          pending_dlq: number | null
-          recent_failures: number | null
+          recent_rollbacks: number | null
           status: string | null
           tenant_id: string | null
         }
@@ -16195,8 +16194,7 @@ export type Database = {
           id?: string | null
           last_heartbeat?: string | null
           minutes_since_heartbeat?: never
-          pending_dlq?: never
-          recent_failures?: never
+          recent_rollbacks?: never
           status?: string | null
           tenant_id?: string | null
         }
@@ -16208,8 +16206,7 @@ export type Database = {
           id?: string | null
           last_heartbeat?: string | null
           minutes_since_heartbeat?: never
-          pending_dlq?: never
-          recent_failures?: never
+          recent_rollbacks?: never
           status?: string | null
           tenant_id?: string | null
         }
