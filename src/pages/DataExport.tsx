@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { Download, FileSpreadsheet, FileText, Calendar, CheckCircle, Loader2 } from 'lucide-react';
 import { subDays } from 'date-fns';
 import { formatBrazilDateTime } from '@/lib/date-utils';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { logger } from '@/lib/logger';
 
 type ExportType = 'agents' | 'scans' | 'jobs' | 'quarantine' | 'audit_logs';
@@ -220,7 +220,7 @@ export default function DataExport() {
       if (exportFormat === 'csv') {
         exportToCSV(data, filename);
       } else {
-        exportToExcel(data, filename);
+        await exportToExcel(data, filename);
       }
 
       toast.success(`${data.length} registros exportados com sucesso!`);
@@ -262,25 +262,45 @@ export default function DataExport() {
     link.click();
   };
 
-  const exportToExcel = (data: any[], filename: string) => {
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Dados');
+  const exportToExcel = async (data: any[], filename: string) => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Dados');
 
-    // Auto-size columns
-    const maxWidth = 50;
-    const colWidths = Object.keys(data[0] || {}).map(key => ({
-      wch: Math.min(
-        maxWidth,
-        Math.max(
-          key.length,
-          ...data.map(row => String(row[key] || '').length)
-        )
-      )
-    }));
-    worksheet['!cols'] = colWidths;
+    if (data.length > 0) {
+      const headers = Object.keys(data[0]);
+      
+      // Add columns with auto-width
+      worksheet.columns = headers.map(key => ({
+        header: key,
+        key: key,
+        width: Math.min(50, Math.max(
+          key.length + 2,
+          ...data.map(row => String(row[key] || '').length + 2)
+        ))
+      }));
 
-    XLSX.writeFile(workbook, `${filename}.xlsx`);
+      // Style header row
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' }
+      };
+
+      // Add data rows
+      data.forEach(row => worksheet.addRow(row));
+    }
+
+    // Generate and download file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
 
   const exportOptions = [
