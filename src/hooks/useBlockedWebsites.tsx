@@ -72,7 +72,8 @@ export function useBlockedWebsites() {
         .from('user_roles')
         .select('tenant_id')
         .eq('user_id', userData.user.id)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (!userRole?.tenant_id) throw new Error('Tenant not found');
 

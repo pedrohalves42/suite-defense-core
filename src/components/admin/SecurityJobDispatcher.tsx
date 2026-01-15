@@ -46,7 +46,8 @@ export function SecurityJobDispatcher({ agents }: { agents: Agent[] }) {
         .from('user_roles')
         .select('tenant_id')
         .eq('user_id', user.id)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (!userRole) throw new Error("Tenant não encontrado");
 
