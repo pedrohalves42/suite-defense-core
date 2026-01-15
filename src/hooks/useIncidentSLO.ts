@@ -155,6 +155,10 @@ export const useIncidentGroupsWithSLO = (limit = 50) => {
   return useQuery({
     queryKey: ['incident-groups-slo', activeTenant?.id, limit],
     queryFn: async (): Promise<IncidentGroupWithSLO[]> => {
+      if (!activeTenant?.id) return [];
+      
+      // Note: View joins v_incident_groups with incident_slo_state
+      // RLS on base tables provides tenant isolation
       const { data, error } = await supabase
         .from('v_incident_groups_with_slo' as any)
         .select('*')

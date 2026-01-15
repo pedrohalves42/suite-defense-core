@@ -57,11 +57,14 @@ export default function AuditLogs() {
   const [isExporting, setIsExporting] = useState(false);
 
   const { data: logs, isLoading } = useQuery({
-    queryKey: ['audit-logs', page, actionFilter, userFilter, searchTerm],
+    queryKey: ['audit-logs', activeTenant?.id, page, actionFilter, userFilter, searchTerm],
     queryFn: async () => {
+      if (!activeTenant?.id) return { data: [], count: 0 };
+      
       let query = supabase
         .from('audit_logs')
         .select('*, actor:profiles!audit_logs_actor_id_fkey(full_name)', { count: 'exact' })
+        .eq('tenant_id', activeTenant.id) // Defense-in-depth: explicit tenant filter
         .order('created_at', { ascending: false })
         .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
 
@@ -106,9 +109,15 @@ export default function AuditLogs() {
   const handleExportCSV = async () => {
     setIsExporting(true);
     try {
+      if (!activeTenant?.id) {
+        toast.error('Tenant não selecionado');
+        return;
+      }
+      
       let query = supabase
         .from('audit_logs')
         .select('*, actor:profiles!audit_logs_actor_id_fkey(full_name)')
+        .eq('tenant_id', activeTenant.id) // Defense-in-depth: explicit tenant filter
         .order('created_at', { ascending: false })
         .limit(1000);
 

@@ -38,6 +38,10 @@ export const useIncidentGroups = (limit = 50) => {
   return useQuery({
     queryKey: ['incident-groups', activeTenant?.id, limit],
     queryFn: async (): Promise<IncidentGroup[]> => {
+      if (!activeTenant?.id) return [];
+      
+      // Note: v_incident_groups aggregates cross-tenant data for super admins
+      // RLS on base tables (failure_fingerprints, failure_occurrences) provides isolation
       const { data, error } = await supabase
         .from('v_incident_groups' as any)
         .select('*')
