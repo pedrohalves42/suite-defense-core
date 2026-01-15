@@ -27,6 +27,7 @@ createRoot(document.getElementById("root")!).render(
       defaultTheme="dark"
       enableSystem={false}
       storageKey="intelligence-theme"
+      disableTransitionOnChange
     >
       <QueryClientProvider client={queryClient}>
         <ActiveTenantProvider>
