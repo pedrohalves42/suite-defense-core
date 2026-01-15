@@ -1,9 +1,10 @@
-import { Shield, Menu, X } from "lucide-react";
+import { Shield, Menu, X, Sun, Moon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { CONTACT } from "@/constants/config";
+import { useTheme } from "next-themes";
 
 const NAV_SECTIONS = [
   { id: "inicio", label: "Início" },
@@ -16,6 +17,7 @@ export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("inicio");
+  const { theme, setTheme } = useTheme();
 
   // Handle scroll for navbar background
   useEffect(() => {
@@ -107,6 +109,18 @@ export const Navbar = () => {
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-3">
               <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="h-9 w-9"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </Button>
+              <Button 
                 asChild 
                 variant="default" 
                 size="sm" 
@@ -155,6 +169,19 @@ export const Navbar = () => {
               </button>
             ))}
             <div className="pt-3 border-t border-border space-y-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="w-full justify-start"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="mr-2 h-4 w-4" />
+                ) : (
+                  <Moon className="mr-2 h-4 w-4" />
+                )}
+                {theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+              </Button>
               <Button 
                 asChild 
                 variant="default" 

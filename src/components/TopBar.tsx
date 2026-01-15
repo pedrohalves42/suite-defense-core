@@ -1,4 +1,4 @@
-import { Bell, User, LogOut, Bug, Settings } from 'lucide-react';
+import { Bell, User, LogOut, Bug, Settings, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -17,10 +17,12 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useTheme } from 'next-themes';
 
 export const TopBar = ({ alerts = 0 }: { alerts?: number }) => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   
   const showDiagnostics = import.meta.env.VITE_SHOW_DIAGNOSTICS === 'true';
@@ -55,6 +57,20 @@ export const TopBar = ({ alerts = 0 }: { alerts?: number }) => {
           showDiagnostics ? 'mt-10' : ''
         )}
       >
+        {/* Theme Toggle */}
+        <Button 
+          variant="ghost" 
+          size="icon"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="btn-enterprise-ghost"
+        >
+          {theme === 'dark' ? (
+            <Sun className="h-5 w-5 text-muted-foreground" />
+          ) : (
+            <Moon className="h-5 w-5 text-muted-foreground" />
+          )}
+        </Button>
+
         {/* Notifications */}
         <Button 
           variant="ghost" 
@@ -100,6 +116,14 @@ export const TopBar = ({ alerts = 0 }: { alerts?: number }) => {
             <DropdownMenuItem onClick={() => navigate('/admin/tenant')}>
               <Settings className="mr-2 h-4 w-4" />
               Configurações da Empresa
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+              {theme === 'dark' ? (
+                <Sun className="mr-2 h-4 w-4" />
+              ) : (
+                <Moon className="mr-2 h-4 w-4" />
+              )}
+              Alternar Tema
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive">
