@@ -157,31 +157,36 @@ export const AppSidebar = () => {
   const renderNavItem = (item: MenuItem, idx: number, variant: 'default' | 'super' = 'default') => {
     const Icon = item.icon;
     const isSuper = variant === 'super';
+    const isActive = location.pathname === item.to || (item.to !== '/admin/dashboard' && location.pathname.startsWith(item.to));
     
     const navContent = (
       <NavLink
         to={item.to}
         end={item.end}
         className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground transition-all duration-200",
+          "flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground transition-all duration-200 relative",
           isSuper 
             ? "hover:bg-destructive/10 hover:text-destructive"
-            : "hover:bg-accent hover:text-accent-foreground",
+            : "hover:bg-muted hover:text-foreground",
           collapsed && "justify-center px-2"
         )}
         activeClassName={cn(
-          "font-medium",
+          "font-medium text-foreground",
           isSuper 
             ? "bg-destructive/10 text-destructive"
-            : "bg-accent text-accent-foreground"
+            : "bg-primary/5"
         )}
       >
+        {/* Barra vertical Graphite Green para item ativo */}
+        {isActive && !isSuper && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-primary rounded-r" />
+        )}
         <Icon className="h-4 w-4 shrink-0" />
         {!collapsed && (
           <>
             <span className="text-sm flex-1">{item.label}</span>
             {item.badge && item.badge > 0 && (
-              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+              <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-warning/10 text-warning border-0">
                 {item.badge}
               </Badge>
             )}
@@ -280,10 +285,9 @@ export const AppSidebar = () => {
     <TooltipProvider>
       <aside
         className={cn(
-          'fixed left-0 top-0 h-screen border-r border-border/40',
-          'bg-card/95 backdrop-blur-xl transition-all duration-300 z-40 flex flex-col',
-          'shadow-[1px_0_10px_rgba(0,0,0,0.1)]',
-          collapsed ? 'w-16' : 'w-60'
+          'fixed left-0 top-0 h-screen border-r border-border',
+          'bg-card transition-all duration-300 z-40 flex flex-col',
+          collapsed ? 'w-16' : 'w-52'
         )}
       >
         {/* Logo CyberShield Cloud */}
