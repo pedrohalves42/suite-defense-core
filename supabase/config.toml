@@ -266,6 +266,9 @@ verify_jwt = false
 [functions.send-invite]
 verify_jwt = true
 
+[functions.validate-invite]
+verify_jwt = false
+
 [functions.accept-invite]
 verify_jwt = true
 
