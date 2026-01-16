@@ -16270,8 +16270,11 @@ export type Database = {
           avg_latency_ms: number | null
           failed: number | null
           failed_calls: number | null
+          first_call: string | null
           function_name: string | null
-          last_called_at: string | null
+          last_call: string | null
+          max_latency_ms: number | null
+          min_latency_ms: number | null
           p50_latency_ms: number | null
           p95_latency_ms: number | null
           p99_latency_ms: number | null
