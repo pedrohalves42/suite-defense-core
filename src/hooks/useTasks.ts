@@ -39,16 +39,24 @@ export interface TaskFilters {
   slaBreach?: boolean;
 }
 
+// Interface aligned with v_task_stats view (ADR-026)
 export interface TaskStats {
-  open_count: number;
-  in_progress_count: number;
-  blocked_count: number;
-  resolved_count: number;
-  ignored_count: number;
-  critical_open: number;
-  high_open: number;
-  sla_breached: number;
-  avg_resolution_hours: number | null;
+  tenant_id: string;
+  total_tasks: number;
+  pending: number;
+  in_progress: number;
+  completed: number;
+  failed: number;
+  // Computed properties for backward compatibility
+  open_count?: number;
+  in_progress_count?: number;
+  blocked_count?: number;
+  resolved_count?: number;
+  ignored_count?: number;
+  critical_open?: number;
+  high_open?: number;
+  sla_breached?: number;
+  avg_resolution_hours?: number | null;
 }
 
 // Hook para listar tasks
@@ -116,6 +124,13 @@ export function useTaskStats() {
         // Se não houver tasks, retorna zeros
         if (error.code === 'PGRST116') {
           return {
+            tenant_id: tenant!.id,
+            total_tasks: 0,
+            pending: 0,
+            in_progress: 0,
+            completed: 0,
+            failed: 0,
+            // Backward compatibility
             open_count: 0,
             in_progress_count: 0,
             blocked_count: 0,
@@ -129,7 +144,20 @@ export function useTaskStats() {
         }
         throw error;
       }
-      return data as TaskStats;
+      // Map view columns to expected interface for backward compatibility
+      const stats = data as TaskStats;
+      return {
+        ...stats,
+        open_count: stats.pending || 0,
+        in_progress_count: stats.in_progress || 0,
+        blocked_count: 0, // Not in current view
+        resolved_count: stats.completed || 0,
+        ignored_count: 0, // Not in current view  
+        critical_open: 0, // Not in current view
+        high_open: 0, // Not in current view
+        sla_breached: 0, // Not in current view
+        avg_resolution_hours: null, // Not in current view
+      } as TaskStats;
     },
     enabled: !!tenant?.id,
     refetchInterval: 30000,

@@ -15,7 +15,7 @@ export function RecentJobsActivity({ tenantId }: RecentJobsActivityProps) {
       if (!tenantId) return [];
       const { data, error } = await supabase
         .from('jobs_normalized')
-        .select('id, type, normalized_status, agent_name, created_at, finished_at, error_message, is_v3, duration_seconds, output')
+        .select('id, type, normalized_status, agent_name, created_at, completed_at, error_message, is_v3, duration_seconds, output')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
         .limit(10);
