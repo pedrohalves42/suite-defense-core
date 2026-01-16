@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useAgentReleases } from "@/hooks/useAgentReleases";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Package, CheckCircle, AlertCircle, ShieldCheck, Loader2, Ban, ShieldOff } from "lucide-react";
 import { formatBrazilDateTime } from '@/lib/date-utils';
@@ -15,13 +14,41 @@ import { RegisterLatestRelease } from "@/components/admin/RegisterLatestRelease"
 import { useQuery } from "@tanstack/react-query";
 import { useAgentActions } from "@/hooks/useAgentActions";
 
+// Admin-only interface with all fields
+interface AdminRelease {
+  id: string;
+  version: string;
+  platform: string;
+  channel: string;
+  sha256: string;
+  release_notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  script_content: string;
+  signature_base64: string | null;
+  signed_at: string | null;
+  signed_by: string | null;
+}
+
 export default function AgentReleases() {
-  const { releases, isLoading, error, refetch } = useAgentReleases();
   const { isSuperAdmin } = useSuperAdmin();
   const [isSigningReleases, setIsSigningReleases] = useState(false);
   const [isProcessingUpdates, setIsProcessingUpdates] = useState(false);
   const [validatingHash, setValidatingHash] = useState<string | null>(null);
   const { unblockVersion } = useAgentActions();
+
+  // SECURITY: Admin-only query via Edge Function (bypasses column-level restrictions)
+  const { data: releases = [], isLoading, error, refetch } = useQuery<AdminRelease[]>({
+    queryKey: ['admin-agent-releases'],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('get-admin-releases');
+      if (error) throw error;
+      return data?.releases || [];
+    },
+    enabled: isSuperAdmin,
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+  });
 
   // Fetch blocked versions
   const { data: blockedVersions, refetch: refetchBlockedVersions } = useQuery({

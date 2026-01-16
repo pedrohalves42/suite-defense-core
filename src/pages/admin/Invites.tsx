@@ -68,18 +68,21 @@ export default function Invites() {
     },
   });
 
+  // SECURITY: Use Edge Function for delete (Phase 3 hardening - column privileges block direct access)
   const deleteInvite = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('invites')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.functions.invoke('delete-invite', {
+        body: { inviteId: id },
+      });
       
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invites'] });
       toast({ title: 'Convite removido com sucesso!' });
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message || 'Erro ao remover convite', variant: 'destructive' });
     },
   });
 

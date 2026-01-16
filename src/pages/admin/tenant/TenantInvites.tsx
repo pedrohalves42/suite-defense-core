@@ -68,13 +68,12 @@ export default function TenantInvites() {
     },
   });
 
-  // Delete invite mutation
+  // SECURITY: Use Edge Function for delete (Phase 3 hardening - column privileges block direct access)
   const deleteInvite = useMutation({
     mutationFn: async (inviteId: string) => {
-      const { error } = await supabase
-        .from("invites")
-        .delete()
-        .eq("id", inviteId);
+      const { error } = await supabase.functions.invoke("delete-invite", {
+        body: { inviteId },
+      });
 
       if (error) throw error;
     },

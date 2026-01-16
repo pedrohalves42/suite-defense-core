@@ -685,3 +685,13 @@ schedule = "*/10 * * * *"
 # === Security Operations Framework ===
 [functions.run-rls-tests]
 verify_jwt = true
+
+# === Security Hardening Edge Functions (Phase 3) ===
+[functions.delete-invite]
+verify_jwt = true
+
+[functions.dlq-action]
+verify_jwt = true
+
+[functions.get-admin-releases]
+verify_jwt = true

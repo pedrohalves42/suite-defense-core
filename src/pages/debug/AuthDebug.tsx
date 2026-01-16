@@ -83,9 +83,9 @@ export default function AuthDebug() {
 
   const testAdminUsers = async () => {
     await testEndpoint('Admin Users', async () => {
-      // Only select necessary fields instead of select('*')
+      // SECURITY: Use profiles_public view instead of profiles table (Phase 3 hardening)
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, full_name')
         .limit(5);
       
