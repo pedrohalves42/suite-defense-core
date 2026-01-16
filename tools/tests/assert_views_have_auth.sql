@@ -10,6 +10,7 @@ BEGIN
   FROM pg_views
   WHERE schemaname = 'public'
   AND viewname IN (
+    'active_agents',
     'agents_safe', 
     'agents_public', 
     'agents_health_view', 

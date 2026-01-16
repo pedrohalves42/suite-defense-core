@@ -70,7 +70,7 @@ export function EmptyActionCenter({
           </Link>
         </Button>
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/admin/settings">
+          <Link to="/admin/tenant?tab=settings">
             <Settings className="h-4 w-4 mr-1" />
             Configurar
           </Link>
