@@ -38,7 +38,7 @@ interface StuckJob {
   created_at: string;
   delivered_at: string | null;
   minutes_stuck: number;
-  problem_type: string;
+  stuck_reason: string; // Aligned with v_stuck_jobs_report view (ADR-026)
 }
 
 interface EdgeFunctionStat {
@@ -460,7 +460,7 @@ export default function SystemOperations() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="destructive" className="text-xs">
-                        {job.problem_type.replace('stuck_', '').toUpperCase()}
+                        {job.stuck_reason.replace('stuck_', '').toUpperCase()}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-mono">
