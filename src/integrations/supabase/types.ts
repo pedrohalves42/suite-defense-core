@@ -14400,7 +14400,6 @@ export type Database = {
           force_update_override_safe_mode_expires_at: string | null
           force_update_reason: string | null
           force_update_version: string | null
-          hmac_secret: string | null
           hostname: string | null
           id: string | null
           is_isolated: boolean | null
@@ -14448,7 +14447,6 @@ export type Database = {
           force_update_override_safe_mode_expires_at?: string | null
           force_update_reason?: string | null
           force_update_version?: string | null
-          hmac_secret?: string | null
           hostname?: string | null
           id?: string | null
           is_isolated?: boolean | null
@@ -14496,7 +14494,6 @@ export type Database = {
           force_update_override_safe_mode_expires_at?: string | null
           force_update_reason?: string | null
           force_update_version?: string | null
-          hmac_secret?: string | null
           hostname?: string | null
           id?: string | null
           is_isolated?: boolean | null

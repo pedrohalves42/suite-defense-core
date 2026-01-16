@@ -1,0 +1,114 @@
+-- ============================================================
+-- SECURITY INVARIANT TEST: hmac_secret MUST NOT appear in any public view
+-- ADR-023: RLS Hardening - Phase 4 Prevention Gate
+-- ============================================================
+-- This test MUST be run in CI to prevent regression of security issues.
+-- If this test fails, the deployment MUST be blocked.
+-- 
+-- History:
+-- - 2026-01-16: Created after hmac_secret was accidentally reintroduced
+--               in migration 20260116002515_2b24b825-f8b5-4dcc-80bc-60130c099415
+-- ============================================================
+
+DO $$
+DECLARE
+    violation_count INTEGER;
+    violation_views TEXT;
+BEGIN
+    -- Check for hmac_secret in any view definition
+    SELECT 
+        COUNT(*),
+        STRING_AGG(viewname, ', ')
+    INTO violation_count, violation_views
+    FROM pg_views
+    WHERE schemaname = 'public'
+      AND (
+        definition ILIKE '%hmac_secret%'
+        OR definition ILIKE '%hmac%secret%'
+      );
+
+    IF violation_count > 0 THEN
+        RAISE EXCEPTION '
+╔══════════════════════════════════════════════════════════════════╗
+║  CRITICAL SECURITY VIOLATION: hmac_secret EXPOSED IN VIEWS       ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Affected views: %                                               
+║                                                                   
+║  hmac_secret MUST NEVER be exposed in public views.              
+║  This column contains cryptographic secrets used for             
+║  agent authentication and MUST remain server-side only.          
+║                                                                   
+║  FIX: Remove hmac_secret from the view definition.               
+║  REF: docs/architecture/ADR-023-rls-hardening.md                 
+╚══════════════════════════════════════════════════════════════════╝
+', violation_views;
+    END IF;
+
+    RAISE NOTICE 'SECURITY CHECK PASSED: No hmac_secret exposure in public views';
+END $$;
+
+-- Also verify token column is not exposed in invite-related views
+DO $$
+DECLARE
+    token_violation_count INTEGER;
+    token_violation_views TEXT;
+BEGIN
+    SELECT 
+        COUNT(*),
+        STRING_AGG(viewname, ', ')
+    INTO token_violation_count, token_violation_views
+    FROM pg_views
+    WHERE schemaname = 'public'
+      AND viewname ILIKE '%invite%'
+      AND definition ILIKE '% token%'
+      AND definition NOT ILIKE '%token_used%'  -- Allow tracking columns
+      AND definition NOT ILIKE '%token_count%';
+
+    IF token_violation_count > 0 THEN
+        RAISE EXCEPTION '
+╔══════════════════════════════════════════════════════════════════╗
+║  SECURITY VIOLATION: Invite token EXPOSED IN VIEWS               ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Affected views: %                                               
+║                                                                   
+║  Invite tokens MUST NOT be exposed in public views.              
+║  Use Edge Functions for token validation instead.                
+║                                                                   
+║  REF: docs/architecture/ADR-023-rls-hardening.md                 
+╚══════════════════════════════════════════════════════════════════╝
+', token_violation_views;
+    END IF;
+
+    RAISE NOTICE 'SECURITY CHECK PASSED: No token exposure in invite views';
+END $$;
+
+-- Verify security_invoker is enabled on critical views
+DO $$
+DECLARE
+    missing_invoker_views TEXT;
+    missing_count INTEGER;
+BEGIN
+    SELECT 
+        COUNT(*),
+        STRING_AGG(viewname, ', ')
+    INTO missing_count, missing_invoker_views
+    FROM pg_views v
+    LEFT JOIN pg_class c ON c.relname = v.viewname
+    LEFT JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
+    WHERE v.schemaname = 'public'
+      AND v.viewname IN (
+        'active_agents',
+        'agents_safe', 
+        'agents_public',
+        'invites_safe',
+        'enrollment_keys_safe',
+        'profiles_public'
+      )
+      AND v.definition NOT ILIKE '%security_invoker%';
+
+    IF missing_count > 0 THEN
+        RAISE WARNING 'Views missing security_invoker: % (may be set via ALTER VIEW)', missing_invoker_views;
+    END IF;
+END $$;
+
+SELECT 'All security invariant checks passed' AS result;

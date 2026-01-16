@@ -41,28 +41,38 @@ export default function AcceptInvite() {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('invites')
-          .select('*')
-          .eq('token', token)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        // SECURITY: Use Edge Function to validate invite - never query invites table directly
+        // This prevents token exposure to frontend (Phase 3 RLS Hardening)
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-invite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
 
-        if (error || !data) {
-          toast({ title: 'Convite nao encontrado ou expirado', variant: 'destructive' });
+        if (!response.ok) {
+          toast({ title: 'Erro ao validar convite', variant: 'destructive' });
           navigate('/login');
           return;
         }
 
-        if (new Date(data.expires_at) < new Date()) {
-          toast({ title: 'Convite expirado', variant: 'destructive' });
+        const data = await response.json();
+
+        if (!data.is_valid) {
+          const message = data.error_code === 'EXPIRED' 
+            ? 'Convite expirado' 
+            : 'Convite nao encontrado ou expirado';
+          toast({ title: message, variant: 'destructive' });
           navigate('/login');
           return;
         }
 
-        setInvite(data);
+        // Store safe invite data (no token exposed)
+        setInvite({
+          email: data.email,
+          role: data.role,
+          expires_at: data.expires_at,
+          tenant_name: data.tenant_name,
+        });
       } catch (error) {
         logger.error('Error fetching invite', error);
         toast({ title: 'Erro ao carregar convite', variant: 'destructive' });
