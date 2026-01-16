@@ -22,9 +22,9 @@ export const OutdatedAgentsBanner = () => {
       if (!tenant?.id) return;
       
       try {
-        // Get latest agent version
+        // SECURITY: Use agent_releases_public view (Phase 3 hardening - column privileges block script_content)
         const { data: releases } = await supabase
-          .from('agent_releases')
+          .from('agent_releases_public')
           .select('version')
           .eq('is_active', true)
           .eq('platform', 'windows')
