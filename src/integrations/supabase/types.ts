@@ -16396,21 +16396,20 @@ export type Database = {
           agent_state: string | null
           agent_state_changed_at: string | null
           agent_state_reason: string | null
+          agent_version: string | null
           force_update_at: string | null
           force_update_reason: string | null
           force_update_version: string | null
           is_isolated: boolean | null
-          is_stuck: boolean | null
           isolated_at: string | null
           isolation_reason: string | null
-          last_forced_update_applied: string | null
           last_heartbeat: string | null
-          lifecycle_status: string | null
           requires_revalidation: boolean | null
           revalidation_reason: string | null
           revalidation_required_at: string | null
           safe_mode_entered_at: string | null
           safe_mode_reason: string | null
+          status: string | null
           tenant_id: string | null
         }
         Insert: {
@@ -16419,21 +16418,20 @@ export type Database = {
           agent_state?: string | null
           agent_state_changed_at?: string | null
           agent_state_reason?: string | null
+          agent_version?: string | null
           force_update_at?: string | null
           force_update_reason?: string | null
           force_update_version?: string | null
           is_isolated?: boolean | null
-          is_stuck?: never
           isolated_at?: string | null
           isolation_reason?: string | null
-          last_forced_update_applied?: string | null
           last_heartbeat?: string | null
-          lifecycle_status?: never
           requires_revalidation?: boolean | null
           revalidation_reason?: string | null
           revalidation_required_at?: string | null
           safe_mode_entered_at?: string | null
           safe_mode_reason?: string | null
+          status?: string | null
           tenant_id?: string | null
         }
         Update: {
@@ -16442,21 +16440,20 @@ export type Database = {
           agent_state?: string | null
           agent_state_changed_at?: string | null
           agent_state_reason?: string | null
+          agent_version?: string | null
           force_update_at?: string | null
           force_update_reason?: string | null
           force_update_version?: string | null
           is_isolated?: boolean | null
-          is_stuck?: never
           isolated_at?: string | null
           isolation_reason?: string | null
-          last_forced_update_applied?: string | null
           last_heartbeat?: string | null
-          lifecycle_status?: never
           requires_revalidation?: boolean | null
           revalidation_reason?: string | null
           revalidation_required_at?: string | null
           safe_mode_entered_at?: string | null
           safe_mode_reason?: string | null
+          status?: string | null
           tenant_id?: string | null
         }
         Relationships: [
