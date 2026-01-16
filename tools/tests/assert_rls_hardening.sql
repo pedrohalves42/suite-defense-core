@@ -1,5 +1,5 @@
 -- =============================================================================
--- CI Guard: Validate RLS Hardening (ADR-023)
+-- CI Guard: Validate RLS Hardening (ADR-023 + ADR-026)
 -- =============================================================================
 -- This test ensures no dangerous public policies exist after hardening.
 -- Run this during migrations or CI to prevent security regressions.
@@ -9,6 +9,7 @@ DO $$
 DECLARE
   dangerous_count integer;
   missing_views integer;
+  tables_without_rls text[];
 BEGIN
   -- Check for dangerous public policies with USING(true) or WITH CHECK(true)
   SELECT COUNT(*) INTO dangerous_count
@@ -29,7 +30,7 @@ BEGIN
 
   -- Check for required secure views
   SELECT COUNT(*) INTO missing_views
-  FROM (VALUES ('agents_public'), ('invites_safe')) AS required(view_name)
+  FROM (VALUES ('agents_public'), ('invites_safe'), ('agents_safe'), ('enrollment_keys_safe')) AS required(view_name)
   WHERE NOT EXISTS (
     SELECT 1 FROM information_schema.views 
     WHERE table_schema = 'public' AND table_name = required.view_name
@@ -41,5 +42,27 @@ BEGIN
       missing_views;
   END IF;
   
-  RAISE NOTICE 'SECURITY VALIDATION PASSED: RLS hardening verified (ADR-023)';
+  -- ADR-026: Check critical multi-tenant tables have RLS enabled
+  SELECT array_agg(tablename) INTO tables_without_rls
+  FROM pg_tables t
+  WHERE t.schemaname = 'public'
+    AND t.tablename IN (
+      'agents', 'jobs', 'invites', 'profiles', 'vuln_findings',
+      'agent_tokens', 'enrollment_keys', 'api_keys'
+    )
+    AND NOT EXISTS (
+      SELECT 1 FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE c.relname = t.tablename
+        AND n.nspname = 'public'
+        AND c.relrowsecurity = true
+    );
+
+  IF array_length(tables_without_rls, 1) > 0 THEN
+    RAISE EXCEPTION 
+      'SECURITY VALIDATION FAILED: Critical tables without RLS: %. See ADR-026.',
+      tables_without_rls;
+  END IF;
+  
+  RAISE NOTICE 'SECURITY VALIDATION PASSED: RLS hardening verified (ADR-023 + ADR-026)';
 END $$;

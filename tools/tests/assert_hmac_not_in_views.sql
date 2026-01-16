@@ -1,13 +1,16 @@
 -- ============================================================
--- SECURITY INVARIANT TEST: hmac_secret MUST NOT appear in any public view
--- ADR-023: RLS Hardening - Phase 4 Prevention Gate
+-- SECURITY INVARIANT TEST: Sensitive fields MUST NOT appear in public views
+-- ADR-023 + ADR-026: RLS Hardening - Prevention Gate
 -- ============================================================
 -- This test MUST be run in CI to prevent regression of security issues.
 -- If this test fails, the deployment MUST be blocked.
 -- 
--- History:
--- - 2026-01-16: Created after hmac_secret was accidentally reintroduced
---               in migration 20260116002515_2b24b825-f8b5-4dcc-80bc-60130c099415
+-- Checks for:
+-- - hmac_secret (agent authentication)
+-- - token (invite tokens)
+-- - script_content (agent release scripts)
+-- - signature_base64 (cryptographic signatures)
+-- - payload/metadata in DLQ views (sensitive job data)
 -- ============================================================
 
 DO $$
@@ -45,6 +48,42 @@ BEGIN
     END IF;
 
     RAISE NOTICE 'SECURITY CHECK PASSED: No hmac_secret exposure in public views';
+END $$;
+
+-- Check for script_content and signature_base64 in agent_releases views
+DO $$
+DECLARE
+    crypto_violation_count INTEGER;
+    crypto_violation_views TEXT;
+BEGIN
+    SELECT 
+        COUNT(*),
+        STRING_AGG(viewname, ', ')
+    INTO crypto_violation_count, crypto_violation_views
+    FROM pg_views
+    WHERE schemaname = 'public'
+      AND viewname ILIKE '%release%'
+      AND (
+        definition ILIKE '%script_content%'
+        OR definition ILIKE '%signature_base64%'
+      );
+
+    IF crypto_violation_count > 0 THEN
+        RAISE EXCEPTION '
+╔══════════════════════════════════════════════════════════════════╗
+║  SECURITY VIOLATION: Cryptographic material EXPOSED IN VIEWS     ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Affected views: %                                               
+║                                                                   
+║  script_content and signature_base64 MUST NOT be exposed.        
+║  Use Edge Functions for secure script distribution.              
+║                                                                   
+║  REF: docs/architecture/ADR-023-rls-hardening.md                 
+╚══════════════════════════════════════════════════════════════════╝
+', crypto_violation_views;
+    END IF;
+
+    RAISE NOTICE 'SECURITY CHECK PASSED: No cryptographic material in release views';
 END $$;
 
 -- Also verify token column is not exposed in invite-related views
