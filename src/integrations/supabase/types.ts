@@ -94,27 +94,6 @@ export type Database = {
             foreignKeyName: "agent_archive_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -124,34 +103,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -247,27 +198,6 @@ export type Database = {
             foreignKeyName: "agent_builds_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_builds_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_builds_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_builds_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -279,45 +209,10 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "agent_builds_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_builds_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_builds_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_builds_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "agent_builds_enrollment_key_id_fkey"
             columns: ["enrollment_key_id"]
             isOneToOne: false
             referencedRelation: "enrollment_keys"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_builds_enrollment_key_id_fkey"
-            columns: ["enrollment_key_id"]
-            isOneToOne: false
-            referencedRelation: "enrollment_keys_safe"
             referencedColumns: ["id"]
           },
           {
@@ -326,20 +221,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_builds_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agent_builds_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -408,27 +289,6 @@ export type Database = {
             foreignKeyName: "agent_disk_metrics_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -440,53 +300,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "agent_disk_metrics_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_disk_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agent_disk_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -552,27 +370,6 @@ export type Database = {
             foreignKeyName: "agent_evidence_logs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -584,53 +381,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "agent_evidence_logs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_evidence_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agent_evidence_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -672,27 +427,6 @@ export type Database = {
             foreignKeyName: "agent_execution_chain_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: true
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -702,34 +436,6 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -805,20 +511,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "agent_groups_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agent_groups_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       agent_metrics_daily: {
@@ -880,20 +572,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_metrics_daily_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agent_metrics_daily_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -971,27 +649,6 @@ export type Database = {
             foreignKeyName: "agent_network_info_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_network_info_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_network_info_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_network_info_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -1003,53 +660,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "agent_network_info_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_network_info_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_network_info_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_network_info_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "agent_network_info_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_network_info_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agent_network_info_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -1115,27 +730,6 @@ export type Database = {
             foreignKeyName: "agent_recovery_authorizations_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_recovery_authorizations_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_recovery_authorizations_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_recovery_authorizations_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -1145,34 +739,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_recovery_authorizations_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_recovery_authorizations_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_recovery_authorizations_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_recovery_authorizations_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "agent_recovery_authorizations_safe_mode_event_id_fkey"
@@ -1187,20 +753,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_recovery_authorizations_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agent_recovery_authorizations_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -1311,27 +863,6 @@ export type Database = {
             foreignKeyName: "agent_rollback_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_rollback_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_rollback_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_rollback_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -1343,53 +874,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "agent_rollback_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_rollback_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_rollback_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_rollback_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "agent_rollback_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_rollback_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agent_rollback_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -1452,27 +941,6 @@ export type Database = {
             foreignKeyName: "agent_safe_mode_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_safe_mode_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_safe_mode_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_safe_mode_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -1484,53 +952,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "agent_safe_mode_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_safe_mode_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_safe_mode_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_safe_mode_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "agent_safe_mode_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_safe_mode_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agent_safe_mode_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -1596,27 +1022,6 @@ export type Database = {
             foreignKeyName: "agent_signing_keys_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_signing_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_signing_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_signing_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -1626,34 +1031,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_signing_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_signing_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_signing_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_signing_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -1743,27 +1120,6 @@ export type Database = {
             foreignKeyName: "agent_system_metrics_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -1775,53 +1131,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "agent_system_metrics_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -2160,27 +1474,6 @@ export type Database = {
             foreignKeyName: "agent_tokens_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_tokens_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_tokens_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_tokens_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -2190,34 +1483,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_tokens_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_tokens_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_tokens_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_tokens_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -2277,27 +1542,6 @@ export type Database = {
             foreignKeyName: "agent_update_decisions_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_update_decisions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_update_decisions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_update_decisions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -2307,34 +1551,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_update_decisions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_update_decisions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_update_decisions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_update_decisions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -2493,27 +1709,6 @@ export type Database = {
             foreignKeyName: "agent_web_activity_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_web_activity_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_web_activity_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_web_activity_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -2525,53 +1720,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "agent_web_activity_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_web_activity_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_web_activity_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_web_activity_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "agent_web_activity_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_web_activity_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agent_web_activity_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -2729,39 +1882,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "fk_agents_tenant"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -2797,27 +1922,6 @@ export type Database = {
             foreignKeyName: "agents_groups_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_groups_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_groups_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_groups_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -2827,34 +1931,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agents_groups_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_groups_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_groups_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agents_groups_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "agents_groups_group_id_fkey"
@@ -2965,20 +2041,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "ai_action_executions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "ai_action_executions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       ai_action_logs: {
@@ -3019,20 +2081,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_action_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "ai_action_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -3090,20 +2138,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_action_validations_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "ai_action_validations_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -3248,20 +2282,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "ai_actions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "ai_actions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       ai_anomalies: {
@@ -3312,20 +2332,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "ai_anomalies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "ai_anomalies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       ai_decision_reports: {
@@ -3369,20 +2375,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_decision_reports_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "ai_decision_reports_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -3443,20 +2435,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "ai_inference_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "ai_inference_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       ai_insight_feedback: {
@@ -3501,20 +2479,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_insight_feedback_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "ai_insight_feedback_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -3652,27 +2616,6 @@ export type Database = {
             foreignKeyName: "ai_insights_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_insights_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_insights_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_insights_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -3682,34 +2625,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "ai_insights_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_insights_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_insights_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "ai_insights_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "ai_insights_resolved_by_decision_event_fkey"
@@ -3724,20 +2639,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_insights_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "ai_insights_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -3782,20 +2683,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_learned_patterns_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "ai_learned_patterns_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -3847,20 +2734,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_rejected_decisions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "ai_rejected_decisions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -3917,27 +2790,6 @@ export type Database = {
             foreignKeyName: "anomaly_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "anomaly_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "anomaly_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "anomaly_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -3949,53 +2801,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "anomaly_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "anomaly_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "anomaly_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "anomaly_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "anomaly_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "anomaly_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "anomaly_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -4058,27 +2868,6 @@ export type Database = {
             foreignKeyName: "antivirus_status_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "antivirus_status_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "antivirus_status_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "antivirus_status_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -4090,53 +2879,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "antivirus_status_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "antivirus_status_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "antivirus_status_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "antivirus_status_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "antivirus_status_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "antivirus_status_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "antivirus_status_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -4194,20 +2941,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "api_keys_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "api_keys_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       api_request_logs: {
@@ -4262,20 +2995,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "api_request_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "api_request_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       approval_chains: {
@@ -4328,20 +3047,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "approval_chains_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "approval_chains_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -4439,27 +3144,6 @@ export type Database = {
             foreignKeyName: "approval_requests_target_agent_id_fkey"
             columns: ["target_agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "approval_requests_target_agent_id_fkey"
-            columns: ["target_agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "approval_requests_target_agent_id_fkey"
-            columns: ["target_agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "approval_requests_target_agent_id_fkey"
-            columns: ["target_agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -4471,53 +3155,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "approval_requests_target_agent_id_fkey"
-            columns: ["target_agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "approval_requests_target_agent_id_fkey"
-            columns: ["target_agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "approval_requests_target_agent_id_fkey"
-            columns: ["target_agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "approval_requests_target_agent_id_fkey"
-            columns: ["target_agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "approval_requests_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "approval_requests_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "approval_requests_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -4627,20 +3269,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "audit_confidence_gaps_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "audit_confidence_gaps_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       audit_integrity_checks: {
@@ -4684,20 +3312,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "audit_integrity_checks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "audit_integrity_checks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -4782,39 +3396,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "audit_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "audit_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "fk_audit_logs_tenant"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_audit_logs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_audit_logs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -4853,20 +3439,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "audit_reason_trees_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "audit_reason_trees_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -4962,20 +3534,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "blast_radius_policies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "blast_radius_policies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       blocked_access_attempts: {
@@ -5037,27 +3595,6 @@ export type Database = {
             foreignKeyName: "blocked_access_attempts_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -5067,34 +3604,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "blocked_access_attempts_policy_id_fkey"
@@ -5109,20 +3618,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "blocked_access_attempts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "blocked_access_attempts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -5188,20 +3683,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "blocked_websites_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "blocked_websites_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -5286,20 +3767,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "circuit_breaker_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "circuit_breaker_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       compliance_policies: {
@@ -5365,20 +3832,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "compliance_policies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "compliance_policies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       custom_trials: {
@@ -5434,20 +3887,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "custom_trials_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "custom_trials_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -5618,27 +4057,6 @@ export type Database = {
             foreignKeyName: "decision_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "decision_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "decision_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "decision_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -5650,53 +4068,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "decision_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "decision_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "decision_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "decision_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "decision_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "decision_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "decision_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -5777,20 +4153,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "edge_function_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "edge_function_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -5880,27 +4242,6 @@ export type Database = {
             foreignKeyName: "enrollment_keys_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -5912,34 +4253,6 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "enrollment_keys_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -5947,39 +4260,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "enrollment_keys_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "fk_enrollment_keys_tenant"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_enrollment_keys_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_enrollment_keys_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -6078,20 +4363,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "evidence_bundles_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "evidence_bundles_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -6217,27 +4488,6 @@ export type Database = {
             foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -6247,34 +4497,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "failed_jobs_dlq_decision_event_id_fkey"
@@ -6289,20 +4511,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -6344,20 +4552,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_login_attempts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "failed_login_attempts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -6484,20 +4678,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "failure_occurrences_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "failure_occurrences_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       feature_flags: {
@@ -6532,20 +4712,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feature_flags_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "feature_flags_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -6611,27 +4777,6 @@ export type Database = {
             foreignKeyName: "forensic_snapshots_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "forensic_snapshots_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "forensic_snapshots_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "forensic_snapshots_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -6643,53 +4788,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "forensic_snapshots_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "forensic_snapshots_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "forensic_snapshots_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "forensic_snapshots_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "forensic_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "forensic_snapshots_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "forensic_snapshots_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -6803,27 +4906,6 @@ export type Database = {
             foreignKeyName: "generated_reports_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "generated_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "generated_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "generated_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -6833,41 +4915,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "generated_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "generated_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "generated_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "generated_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "generated_reports_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "job_integrity_violations"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "generated_reports_job_id_fkey"
@@ -6880,28 +4927,7 @@ export type Database = {
             foreignKeyName: "generated_reports_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
-            referencedRelation: "jobs_normalized"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "generated_reports_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
             referencedRelation: "v_jobs_status_corrected"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "generated_reports_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "generated_reports_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "v_stuck_jobs_report"
             referencedColumns: ["id"]
           },
           {
@@ -6910,20 +4936,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "generated_reports_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "generated_reports_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -6974,20 +4986,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "governance_adrs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "governance_adrs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -7047,20 +5045,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "governance_reports_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "governance_reports_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -7286,27 +5270,6 @@ export type Database = {
             foreignKeyName: "incident_timelines_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "incident_timelines_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "incident_timelines_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "incident_timelines_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -7318,53 +5281,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "incident_timelines_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "incident_timelines_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "incident_timelines_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "incident_timelines_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "incident_timelines_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "incident_timelines_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "incident_timelines_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -7442,27 +5363,6 @@ export type Database = {
             foreignKeyName: "installation_analytics_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -7474,53 +5374,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "installation_analytics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "installation_analytics_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -7570,39 +5428,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_invites_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_invites_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "invites_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invites_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "invites_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -7728,27 +5558,6 @@ export type Database = {
             foreignKeyName: "job_executions_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "job_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "job_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "job_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -7758,41 +5567,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "job_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "job_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "job_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "job_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "job_executions_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "job_integrity_violations"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "job_executions_job_id_fkey"
@@ -7805,28 +5579,7 @@ export type Database = {
             foreignKeyName: "job_executions_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
-            referencedRelation: "jobs_normalized"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "job_executions_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
             referencedRelation: "v_jobs_status_corrected"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "job_executions_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "job_executions_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "v_stuck_jobs_report"
             referencedColumns: ["id"]
           },
           {
@@ -7835,20 +5588,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "job_executions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "job_executions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -7927,20 +5666,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "job_slo_state_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "job_slo_state_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -8047,20 +5772,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "jobs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
@@ -8078,27 +5789,6 @@ export type Database = {
             foreignKeyName: "jobs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -8110,45 +5800,10 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "jobs_current_execution_id_fkey"
             columns: ["current_execution_id"]
             isOneToOne: false
             referencedRelation: "job_executions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
-            referencedRelation: "job_integrity_violations"
             referencedColumns: ["id"]
           },
           {
@@ -8162,28 +5817,7 @@ export type Database = {
             foreignKeyName: "jobs_parent_job_id_fkey"
             columns: ["parent_job_id"]
             isOneToOne: false
-            referencedRelation: "jobs_normalized"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
             referencedRelation: "v_jobs_status_corrected"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
-            referencedRelation: "v_stuck_jobs_report"
             referencedColumns: ["id"]
           },
           {
@@ -8192,20 +5826,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -8256,20 +5876,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "marketing_costs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "marketing_costs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -8347,27 +5953,6 @@ export type Database = {
             foreignKeyName: "network_anomalies_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "network_anomalies_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "network_anomalies_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "network_anomalies_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -8379,53 +5964,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "network_anomalies_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "network_anomalies_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "network_anomalies_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "network_anomalies_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "network_anomalies_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "network_anomalies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "network_anomalies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -8473,20 +6016,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notification_channels_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "notification_channels_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -8555,20 +6084,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "notification_log_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "notification_log_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       notification_preferences: {
@@ -8625,20 +6140,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notification_preferences_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "notification_preferences_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -8703,20 +6204,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "notification_queue_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "notification_queue_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       onboarding_progress: {
@@ -8763,20 +6250,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "onboarding_progress_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "onboarding_progress_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -8825,20 +6298,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "operational_calendar_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "operational_calendar_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       performance_metrics: {
@@ -8882,20 +6341,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "performance_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "performance_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -8967,27 +6412,6 @@ export type Database = {
             foreignKeyName: "persistent_failure_alerts_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "persistent_failure_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "persistent_failure_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "persistent_failure_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -8999,53 +6423,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "persistent_failure_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "persistent_failure_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "persistent_failure_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "persistent_failure_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "persistent_failure_alerts_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "persistent_failure_alerts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "persistent_failure_alerts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -9185,27 +6567,6 @@ export type Database = {
             foreignKeyName: "playbook_executions_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "playbook_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "playbook_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "playbook_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -9215,34 +6576,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "playbook_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "playbook_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "playbook_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "playbook_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "playbook_executions_playbook_id_fkey"
@@ -9257,20 +6590,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "playbook_executions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "playbook_executions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -9334,20 +6653,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "playbooks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "playbooks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       poe_chain_breaks: {
@@ -9403,27 +6708,6 @@ export type Database = {
             foreignKeyName: "poe_chain_breaks_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "poe_chain_breaks_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "poe_chain_breaks_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "poe_chain_breaks_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -9435,53 +6719,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "poe_chain_breaks_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "poe_chain_breaks_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "poe_chain_breaks_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "poe_chain_breaks_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "poe_chain_breaks_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "poe_chain_breaks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "poe_chain_breaks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -9585,27 +6827,6 @@ export type Database = {
             foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -9615,34 +6836,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "policy_enforcement_logs_policy_id_fkey"
@@ -9664,20 +6857,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "policy_enforcement_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "policy_enforcement_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -9919,20 +7098,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "red_team_assessments_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "red_team_assessments_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       report_executions: {
@@ -9996,20 +7161,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "report_executions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "report_executions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       reports: {
@@ -10049,39 +7200,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_reports_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_reports_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "reports_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reports_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "reports_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -10153,27 +7276,6 @@ export type Database = {
             foreignKeyName: "risk_decision_log_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "risk_decision_log_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "risk_decision_log_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "risk_decision_log_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -10183,34 +7285,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "risk_decision_log_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "risk_decision_log_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "risk_decision_log_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "risk_decision_log_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "risk_decision_log_playbook_execution_id_fkey"
@@ -10232,20 +7306,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "risk_decision_log_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "risk_decision_log_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -10305,20 +7365,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "risk_delta_snapshots_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "risk_delta_snapshots_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -10442,20 +7488,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "sales_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "sales_contacts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       sales_pipeline: {
@@ -10528,39 +7560,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "sales_pipeline_converted_tenant_id_fkey"
-            columns: ["converted_tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "sales_pipeline_converted_tenant_id_fkey"
-            columns: ["converted_tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "sales_pipeline_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sales_pipeline_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "sales_pipeline_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -10642,20 +7646,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "scheduled_job_runs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "scheduled_job_runs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       scheduled_jobs: {
@@ -10729,27 +7719,6 @@ export type Database = {
             foreignKeyName: "scheduled_jobs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scheduled_jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scheduled_jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scheduled_jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -10761,53 +7730,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "scheduled_jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scheduled_jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scheduled_jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "scheduled_jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "scheduled_jobs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scheduled_jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "scheduled_jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -10886,20 +7813,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "scheduled_reports_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "scheduled_reports_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       score_governance_log: {
@@ -10956,20 +7869,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "score_governance_log_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "score_governance_log_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -11080,27 +7979,6 @@ export type Database = {
             foreignKeyName: "security_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -11110,34 +7988,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "security_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "security_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "security_events_policy_id_fkey"
@@ -11159,20 +8009,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "security_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -11227,20 +8063,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "security_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "security_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       security_policies: {
@@ -11293,20 +8115,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_policies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "security_policies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -11413,27 +8221,6 @@ export type Database = {
             foreignKeyName: "security_reports_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -11445,53 +8232,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "security_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "security_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "security_reports_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_reports_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "security_reports_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -11542,20 +8287,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "segregation_rules_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "segregation_rules_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -11666,20 +8397,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "slo_alerts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "slo_alerts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       slo_definitions: {
@@ -11773,20 +8490,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "slo_measurements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "slo_measurements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       soc2_controls: {
@@ -11865,20 +8568,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "soc2_controls_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "soc2_controls_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       soc2_criteria: {
@@ -11928,20 +8617,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "soc2_criteria_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "soc2_criteria_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -12001,27 +8676,6 @@ export type Database = {
             foreignKeyName: "software_inventory_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "software_inventory_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "software_inventory_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "software_inventory_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -12033,53 +8687,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "software_inventory_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "software_inventory_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "software_inventory_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "software_inventory_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "software_inventory_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "software_inventory_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "software_inventory_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -12269,20 +8881,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "subscription_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "subscription_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       subscription_plans: {
@@ -12437,27 +9035,6 @@ export type Database = {
             foreignKeyName: "system_alerts_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "system_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "system_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "system_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -12467,34 +9044,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_execution_health"
             referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "system_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "system_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "system_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "system_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "system_alerts_decision_event_id_fkey"
@@ -12509,20 +9058,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "system_alerts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "system_alerts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -12658,20 +9193,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "system_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "system_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       system_global_state: {
@@ -12781,20 +9302,6 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "system_kill_switch_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "system_kill_switch_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -12922,20 +9429,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "task_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "task_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       task_evidence: {
@@ -13010,20 +9503,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_evidence_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "task_evidence_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -13144,20 +9623,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       tenant_action_policies: {
@@ -13198,20 +9663,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_action_policies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_action_policies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -13260,20 +9711,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "tenant_features_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_features_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       tenant_job_quotas: {
@@ -13308,20 +9745,6 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_job_quotas_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_job_quotas_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -13381,27 +9804,6 @@ export type Database = {
             foreignKeyName: "tenant_risk_scores_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -13413,53 +9815,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "tenant_risk_scores_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_risk_scores_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_risk_scores_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -13530,39 +9890,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_tenant_settings_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_tenant_settings_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "tenant_settings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_settings_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_settings_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -13632,20 +9964,6 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_subscriptions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_subscriptions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -13775,20 +10093,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "threat_intelligence_cache_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "threat_intelligence_cache_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       token_validation_failures: {
@@ -13860,20 +10164,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "url_reputation_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "url_reputation_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       user_roles: {
@@ -13910,39 +10200,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_user_roles_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_user_roles_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "user_roles_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_roles_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "user_roles_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -14012,20 +10274,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "vendor_risk_registry_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "vendor_risk_registry_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       virus_scans: {
@@ -14077,39 +10325,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_virus_scans_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_virus_scans_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "virus_scans_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "virus_scans_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "virus_scans_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -14172,27 +10392,6 @@ export type Database = {
             foreignKeyName: "vuln_findings_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vuln_findings_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vuln_findings_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vuln_findings_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -14204,53 +10403,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "vuln_findings_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vuln_findings_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vuln_findings_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "vuln_findings_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "vuln_findings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vuln_findings_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "vuln_findings_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -14305,20 +10462,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "web_access_policies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "web_access_policies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       weekly_security_reports: {
@@ -14362,20 +10505,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "weekly_security_reports_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "weekly_security_reports_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -14532,78 +10661,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "fk_agents_tenant"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      agent_installation_metrics: {
-        Row: {
-          avg_install_time_seconds: number | null
-          failed_events: number | null
-          last_event_at: string | null
-          platform: string | null
-          successful_events: number | null
-          tenant_id: string | null
-          total_copied: number | null
-          total_downloaded: number | null
-          total_generated: number | null
-          total_installed: number | null
-          with_network: number | null
-          without_network: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "installation_analytics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -14639,332 +10701,6 @@ export type Database = {
           version?: string | null
         }
         Relationships: []
-      }
-      agent_system_metrics_unified: {
-        Row: {
-          agent_id: string | null
-          collected_at: string | null
-          cpu_cores: number | null
-          cpu_name: string | null
-          cpu_usage_percent: number | null
-          created_at: string | null
-          disk_free_gb: number | null
-          disk_total_gb: number | null
-          disk_usage_percent: number | null
-          disk_used_gb: number | null
-          id: string | null
-          last_boot_time: string | null
-          memory_free_gb: number | null
-          memory_total_gb: number | null
-          memory_usage_percent: number | null
-          memory_used_gb: number | null
-          network_bytes_received: number | null
-          network_bytes_sent: number | null
-          tenant_id: string | null
-          uptime_seconds: number | null
-        }
-        Relationships: []
-      }
-      agent_timeline_events: {
-        Row: {
-          agent_id: string | null
-          data: Json | null
-          event_key: string | null
-          event_time: string | null
-          event_type: string | null
-          source_id: string | null
-          tenant_id: string | null
-        }
-        Relationships: []
-      }
-      agents_health_view: {
-        Row: {
-          agent_name: string | null
-          agent_state: string | null
-          agent_version: string | null
-          cpu_usage_percent: number | null
-          disk_usage_percent: number | null
-          display_name: string | null
-          enrolled_at: string | null
-          health_status: string | null
-          hostname: string | null
-          id: string | null
-          is_isolated: boolean | null
-          isolation_reason: string | null
-          last_heartbeat: string | null
-          memory_usage_percent: number | null
-          metrics_collected_at: string | null
-          os_type: string | null
-          os_version: string | null
-          status: string | null
-          tenant_id: string | null
-          uptime_seconds: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      agents_public: {
-        Row: {
-          agent_mode: string | null
-          agent_name: string | null
-          agent_state: string | null
-          agent_state_changed_at: string | null
-          agent_state_reason: string | null
-          agent_version: string | null
-          display_name: string | null
-          enrolled_at: string | null
-          hostname: string | null
-          id: string | null
-          last_heartbeat: string | null
-          os_type: string | null
-          os_version: string | null
-          status: string | null
-          tenant_id: string | null
-        }
-        Insert: {
-          agent_mode?: string | null
-          agent_name?: string | null
-          agent_state?: string | null
-          agent_state_changed_at?: string | null
-          agent_state_reason?: string | null
-          agent_version?: string | null
-          display_name?: string | null
-          enrolled_at?: string | null
-          hostname?: string | null
-          id?: string | null
-          last_heartbeat?: string | null
-          os_type?: string | null
-          os_version?: string | null
-          status?: string | null
-          tenant_id?: string | null
-        }
-        Update: {
-          agent_mode?: string | null
-          agent_name?: string | null
-          agent_state?: string | null
-          agent_state_changed_at?: string | null
-          agent_state_reason?: string | null
-          agent_version?: string | null
-          display_name?: string | null
-          enrolled_at?: string | null
-          hostname?: string | null
-          id?: string | null
-          last_heartbeat?: string | null
-          os_type?: string | null
-          os_version?: string | null
-          status?: string | null
-          tenant_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      agents_safe: {
-        Row: {
-          agent_mode: string | null
-          agent_name: string | null
-          agent_state: string | null
-          agent_state_changed_at: string | null
-          agent_state_reason: string | null
-          agent_version: string | null
-          archived_at: string | null
-          archived_reason: string | null
-          display_name: string | null
-          enrolled_at: string | null
-          hostname: string | null
-          id: string | null
-          is_isolated: boolean | null
-          is_throttled: boolean | null
-          isolated_at: string | null
-          isolation_reason: string | null
-          last_heartbeat: string | null
-          os_type: string | null
-          os_version: string | null
-          safe_mode_entered_at: string | null
-          safe_mode_reason: string | null
-          status: string | null
-          tenant_id: string | null
-          throttled_at: string | null
-        }
-        Insert: {
-          agent_mode?: string | null
-          agent_name?: string | null
-          agent_state?: string | null
-          agent_state_changed_at?: string | null
-          agent_state_reason?: string | null
-          agent_version?: string | null
-          archived_at?: string | null
-          archived_reason?: string | null
-          display_name?: string | null
-          enrolled_at?: string | null
-          hostname?: string | null
-          id?: string | null
-          is_isolated?: boolean | null
-          is_throttled?: boolean | null
-          isolated_at?: string | null
-          isolation_reason?: string | null
-          last_heartbeat?: string | null
-          os_type?: string | null
-          os_version?: string | null
-          safe_mode_entered_at?: string | null
-          safe_mode_reason?: string | null
-          status?: string | null
-          tenant_id?: string | null
-          throttled_at?: string | null
-        }
-        Update: {
-          agent_mode?: string | null
-          agent_name?: string | null
-          agent_state?: string | null
-          agent_state_changed_at?: string | null
-          agent_state_reason?: string | null
-          agent_version?: string | null
-          archived_at?: string | null
-          archived_reason?: string | null
-          display_name?: string | null
-          enrolled_at?: string | null
-          hostname?: string | null
-          id?: string | null
-          is_isolated?: boolean | null
-          is_throttled?: boolean | null
-          isolated_at?: string | null
-          isolation_reason?: string | null
-          last_heartbeat?: string | null
-          os_type?: string | null
-          os_version?: string | null
-          safe_mode_entered_at?: string | null
-          safe_mode_reason?: string | null
-          status?: string | null
-          tenant_id?: string | null
-          throttled_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
       }
       audit_logs_safe: {
         Row: {
@@ -15006,88 +10742,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "audit_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "audit_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "fk_audit_logs_tenant"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_audit_logs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_audit_logs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      circuit_breaker_health: {
-        Row: {
-          failure_count: number | null
-          health_status: string | null
-          last_event: string | null
-          service: string | null
-          state: string | null
-          tenant_id: string | null
-        }
-        Insert: {
-          failure_count?: number | null
-          health_status?: never
-          last_event?: string | null
-          service?: string | null
-          state?: string | null
-          tenant_id?: string | null
-        }
-        Update: {
-          failure_count?: number | null
-          health_status?: never
-          last_event?: string | null
-          service?: string | null
-          state?: string | null
-          tenant_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "circuit_breaker_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "circuit_breaker_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "circuit_breaker_events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -15156,27 +10815,6 @@ export type Database = {
             foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -15188,135 +10826,11 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      enrollment_keys_safe: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          current_uses: number | null
-          description: string | null
-          expires_at: string | null
-          id: string | null
-          is_active: boolean | null
-          key: string | null
-          max_uses: number | null
-          tenant_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          current_uses?: number | null
-          description?: string | null
-          expires_at?: string | null
-          id?: string | null
-          is_active?: boolean | null
-          key?: string | null
-          max_uses?: number | null
-          tenant_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          current_uses?: number | null
-          description?: string | null
-          expires_at?: string | null
-          id?: string | null
-          is_active?: boolean | null
-          key?: string | null
-          max_uses?: number | null
-          tenant_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "enrollment_keys_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_enrollment_keys_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_enrollment_keys_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_enrollment_keys_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -15345,159 +10859,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "fk_agents_tenant"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      installation_error_summary: {
-        Row: {
-          error_count: number | null
-          error_message: string | null
-          event_type: string | null
-          last_occurrence: string | null
-          platform: string | null
-          tenant_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "installation_analytics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      installation_health_status: {
-        Row: {
-          activation_rate_pct: number | null
-          active_agents: number | null
-          pending_agents: number | null
-          stuck_agents: number | null
-          tenant_id: string | null
-          total_agents: number | null
-          window_interval: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      installation_metrics_summary: {
-        Row: {
-          date: string | null
-          event_count: number | null
-          event_type: string | null
-          platform: string | null
-          tenant_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "installation_analytics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -15544,374 +10910,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_invites_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_invites_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "invites_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invites_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "invites_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      job_failure_health: {
-        Row: {
-          failure_class: string | null
-          is_retryable: boolean | null
-          last_24h: number | null
-          last_7d: number | null
-          total: number | null
-        }
-        Relationships: []
-      }
-      job_integrity_violations: {
-        Row: {
-          completed_at: string | null
-          created_at: string | null
-          id: string | null
-          job_type: string | null
-          started_at: string | null
-          status: string | null
-          tenant_id: string | null
-          violation_type: string | null
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string | null
-          id?: string | null
-          job_type?: string | null
-          started_at?: string | null
-          status?: string | null
-          tenant_id?: string | null
-          violation_type?: never
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string | null
-          id?: string | null
-          job_type?: string | null
-          started_at?: string | null
-          status?: string | null
-          tenant_id?: string | null
-          violation_type?: never
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      jobs_normalized: {
-        Row: {
-          agent_id: string | null
-          agent_name: string | null
-          approved: boolean | null
-          completed_at: string | null
-          created_at: string | null
-          delivered_at: string | null
-          duration_seconds: number | null
-          error_message: string | null
-          execution_time_seconds: number | null
-          finished_at: string | null
-          id: string | null
-          is_recurring: boolean | null
-          is_stuck: boolean | null
-          is_v3: boolean | null
-          last_run_at: string | null
-          next_run_at: string | null
-          normalized_status: string | null
-          output: Json | null
-          parent_job_id: string | null
-          payload: Json | null
-          recurrence_pattern: string | null
-          scheduled_at: string | null
-          started_at: string | null
-          status: string | null
-          tenant_id: string | null
-          type: string | null
-        }
-        Insert: {
-          agent_id?: string | null
-          agent_name?: string | null
-          approved?: boolean | null
-          completed_at?: string | null
-          created_at?: string | null
-          delivered_at?: string | null
-          duration_seconds?: number | null
-          error_message?: string | null
-          execution_time_seconds?: number | null
-          finished_at?: string | null
-          id?: string | null
-          is_recurring?: boolean | null
-          is_stuck?: never
-          is_v3?: never
-          last_run_at?: string | null
-          next_run_at?: string | null
-          normalized_status?: string | null
-          output?: Json | null
-          parent_job_id?: string | null
-          payload?: Json | null
-          recurrence_pattern?: string | null
-          scheduled_at?: string | null
-          started_at?: string | null
-          status?: string | null
-          tenant_id?: string | null
-          type?: string | null
-        }
-        Update: {
-          agent_id?: string | null
-          agent_name?: string | null
-          approved?: boolean | null
-          completed_at?: string | null
-          created_at?: string | null
-          delivered_at?: string | null
-          duration_seconds?: number | null
-          error_message?: string | null
-          execution_time_seconds?: number | null
-          finished_at?: string | null
-          id?: string | null
-          is_recurring?: boolean | null
-          is_stuck?: never
-          is_v3?: never
-          last_run_at?: string | null
-          next_run_at?: string | null
-          normalized_status?: string | null
-          output?: Json | null
-          parent_job_id?: string | null
-          payload?: Json | null
-          recurrence_pattern?: string | null
-          scheduled_at?: string | null
-          started_at?: string | null
-          status?: string | null
-          tenant_id?: string | null
-          type?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "active_agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "hmac_agent_secrets"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_execution_health"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
-            referencedRelation: "job_integrity_violations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
-            referencedRelation: "jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
-            referencedRelation: "jobs_normalized"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
-            referencedRelation: "v_jobs_status_corrected"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
-            referencedRelation: "v_stuck_jobs_report"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -15966,18 +10969,6 @@ export type Database = {
         }
         Relationships: []
       }
-      v_action_center: {
-        Row: {
-          action_type: string | null
-          agent_name: string | null
-          created_at: string | null
-          details: string | null
-          resource_id: string | null
-          resource_type: string | null
-          tenant_id: string | null
-        }
-        Relationships: []
-      }
       v_active_risk_debt: {
         Row: {
           days_until_expiry: number | null
@@ -16026,20 +11017,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       v_agent_archive_reason_tree: {
@@ -16075,27 +11052,6 @@ export type Database = {
             foreignKeyName: "agent_archive_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -16107,34 +11063,6 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "agents_tenant_id_new_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -16142,39 +11070,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "fk_agents_tenant"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -16206,333 +11106,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "fk_agents_tenant"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      v_agent_health_by_node: {
-        Row: {
-          active_safe_mode_events: number | null
-          agent_name: string | null
-          health_status: string | null
-          hostname: string | null
-          id: string | null
-          last_heartbeat: string | null
-          minutes_since_heartbeat: number | null
-          recent_rollbacks: number | null
-          status: string | null
-          tenant_id: string | null
-        }
-        Insert: {
-          active_safe_mode_events?: never
-          agent_name?: string | null
-          health_status?: never
-          hostname?: string | null
-          id?: string | null
-          last_heartbeat?: string | null
-          minutes_since_heartbeat?: never
-          recent_rollbacks?: never
-          status?: string | null
-          tenant_id?: string | null
-        }
-        Update: {
-          active_safe_mode_events?: never
-          agent_name?: string | null
-          health_status?: never
-          hostname?: string | null
-          id?: string | null
-          last_heartbeat?: string | null
-          minutes_since_heartbeat?: never
-          recent_rollbacks?: never
-          status?: string | null
-          tenant_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      v_agent_health_summary: {
-        Row: {
-          active_safe_mode_events: number | null
-          agent_name: string | null
-          agent_state: string | null
-          agent_version: string | null
-          display_name: string | null
-          health_status: string | null
-          hostname: string | null
-          id: string | null
-          is_isolated: boolean | null
-          last_heartbeat: string | null
-          latest_cpu: number | null
-          latest_disk: number | null
-          latest_memory: number | null
-          latest_uptime: number | null
-          rollbacks_24h: number | null
-          status: string | null
-          tenant_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      v_agent_lifecycle_state: {
-        Row: {
-          agent_id: string | null
-          agent_name: string | null
-          agent_state: string | null
-          agent_state_changed_at: string | null
-          agent_state_reason: string | null
-          agent_version: string | null
-          force_update_at: string | null
-          force_update_reason: string | null
-          force_update_version: string | null
-          is_isolated: boolean | null
-          isolated_at: string | null
-          isolation_reason: string | null
-          last_heartbeat: string | null
-          requires_revalidation: boolean | null
-          revalidation_reason: string | null
-          revalidation_required_at: string | null
-          safe_mode_entered_at: string | null
-          safe_mode_reason: string | null
-          status: string | null
-          tenant_id: string | null
-        }
-        Insert: {
-          agent_id?: string | null
-          agent_name?: string | null
-          agent_state?: string | null
-          agent_state_changed_at?: string | null
-          agent_state_reason?: string | null
-          agent_version?: string | null
-          force_update_at?: string | null
-          force_update_reason?: string | null
-          force_update_version?: string | null
-          is_isolated?: boolean | null
-          isolated_at?: string | null
-          isolation_reason?: string | null
-          last_heartbeat?: string | null
-          requires_revalidation?: boolean | null
-          revalidation_reason?: string | null
-          revalidation_required_at?: string | null
-          safe_mode_entered_at?: string | null
-          safe_mode_reason?: string | null
-          status?: string | null
-          tenant_id?: string | null
-        }
-        Update: {
-          agent_id?: string | null
-          agent_name?: string | null
-          agent_state?: string | null
-          agent_state_changed_at?: string | null
-          agent_state_reason?: string | null
-          agent_version?: string | null
-          force_update_at?: string | null
-          force_update_reason?: string | null
-          force_update_version?: string | null
-          is_isolated?: boolean | null
-          isolated_at?: string | null
-          isolation_reason?: string | null
-          last_heartbeat?: string | null
-          requires_revalidation?: boolean | null
-          revalidation_reason?: string | null
-          revalidation_required_at?: string | null
-          safe_mode_entered_at?: string | null
-          safe_mode_reason?: string | null
-          status?: string | null
-          tenant_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      v_ai_anomalies: {
-        Row: {
-          action_type: string | null
-          anomaly_type: string | null
-          executed: number | null
-          failed: number | null
-          resolved_insights: number | null
-          severity: string | null
-          tenant_id: string | null
-          total_actions: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_actions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_actions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "ai_actions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -16541,71 +11119,6 @@ export type Database = {
           anomaly_type: string | null
         }
         Relationships: []
-      }
-      v_audit_integrity_status: {
-        Row: {
-          failed_checks: number | null
-          last_checked_at: string | null
-          tenant_id: string | null
-          total_breaks_detected: number | null
-          total_checks: number | null
-          valid_checks: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "audit_integrity_checks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "audit_integrity_checks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "audit_integrity_checks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      v_audit_moving_average: {
-        Row: {
-          created_at: string | null
-          moving_avg_5: number | null
-          overall_score: number | null
-          score_delta: number | null
-          tenant_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "system_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "system_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "system_audits_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
       }
       v_confidence_gap_trend: {
         Row: {
@@ -16632,20 +11145,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "audit_confidence_gaps_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "audit_confidence_gaps_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -16679,281 +11178,6 @@ export type Database = {
         }
         Relationships: []
       }
-      v_cron_silent_failures: {
-        Row: {
-          cron_expr: string | null
-          health_status: string | null
-          id: string | null
-          job_key: string | null
-          job_name: string | null
-          job_type: string | null
-          last_run_at: string | null
-          last_successful_run: string | null
-          silence_duration: unknown
-          tenant_id: string | null
-        }
-        Insert: {
-          cron_expr?: string | null
-          health_status?: never
-          id?: string | null
-          job_key?: string | null
-          job_name?: string | null
-          job_type?: string | null
-          last_run_at?: string | null
-          last_successful_run?: never
-          silence_duration?: never
-          tenant_id?: string | null
-        }
-        Update: {
-          cron_expr?: string | null
-          health_status?: never
-          id?: string | null
-          job_key?: string | null
-          job_name?: string | null
-          job_type?: string | null
-          last_run_at?: string | null
-          last_successful_run?: never
-          silence_duration?: never
-          tenant_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "scheduled_jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scheduled_jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "scheduled_jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      v_dlq_pending_attention: {
-        Row: {
-          agent_id: string | null
-          agent_name: string | null
-          auto_flagged_reason: string | null
-          classification: string | null
-          created_at: string | null
-          decision_event_id: string | null
-          error_count: number | null
-          error_message: string | null
-          failure_class: string | null
-          first_failure_at: string | null
-          flagged_suspicious: boolean | null
-          hours_pending: number | null
-          id: string | null
-          job_type: string | null
-          last_failure_at: string | null
-          max_retries: number | null
-          metadata: Json | null
-          next_retry_at: string | null
-          original_job_id: string | null
-          payload: Json | null
-          payload_excerpt: string | null
-          payload_hash: string | null
-          payload_schema: string | null
-          resolution_notes: string | null
-          resolution_source: string | null
-          resolved_at: string | null
-          resolved_by: string | null
-          retry_count: number | null
-          review_notes: string | null
-          review_required: boolean | null
-          risk_category: string | null
-          status: string | null
-          tenant_id: string | null
-        }
-        Insert: {
-          agent_id?: string | null
-          agent_name?: string | null
-          auto_flagged_reason?: string | null
-          classification?: string | null
-          created_at?: string | null
-          decision_event_id?: string | null
-          error_count?: number | null
-          error_message?: string | null
-          failure_class?: string | null
-          first_failure_at?: string | null
-          flagged_suspicious?: boolean | null
-          hours_pending?: never
-          id?: string | null
-          job_type?: string | null
-          last_failure_at?: string | null
-          max_retries?: number | null
-          metadata?: Json | null
-          next_retry_at?: string | null
-          original_job_id?: string | null
-          payload?: Json | null
-          payload_excerpt?: string | null
-          payload_hash?: string | null
-          payload_schema?: string | null
-          resolution_notes?: string | null
-          resolution_source?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          retry_count?: number | null
-          review_notes?: string | null
-          review_required?: boolean | null
-          risk_category?: string | null
-          status?: string | null
-          tenant_id?: string | null
-        }
-        Update: {
-          agent_id?: string | null
-          agent_name?: string | null
-          auto_flagged_reason?: string | null
-          classification?: string | null
-          created_at?: string | null
-          decision_event_id?: string | null
-          error_count?: number | null
-          error_message?: string | null
-          failure_class?: string | null
-          first_failure_at?: string | null
-          flagged_suspicious?: boolean | null
-          hours_pending?: never
-          id?: string | null
-          job_type?: string | null
-          last_failure_at?: string | null
-          max_retries?: number | null
-          metadata?: Json | null
-          next_retry_at?: string | null
-          original_job_id?: string | null
-          payload?: Json | null
-          payload_excerpt?: string | null
-          payload_hash?: string | null
-          payload_schema?: string | null
-          resolution_notes?: string | null
-          resolution_source?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          retry_count?: number | null
-          review_notes?: string | null
-          review_required?: boolean | null
-          risk_category?: string | null
-          status?: string | null
-          tenant_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "active_agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "hmac_agent_secrets"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_execution_health"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_decision_event_id_fkey"
-            columns: ["decision_event_id"]
-            isOneToOne: false
-            referencedRelation: "decision_events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
       v_dlq_risk_overview: {
         Row: {
           manually_reviewed: number | null
@@ -16971,257 +11195,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      v_edge_function_stats: {
-        Row: {
-          avg_latency_ms: number | null
-          failed_calls: number | null
-          first_call: string | null
-          function_name: string | null
-          last_call: string | null
-          max_latency_ms: number | null
-          min_latency_ms: number | null
-          p50_latency_ms: number | null
-          p95_latency_ms: number | null
-          p99_latency_ms: number | null
-          successful_calls: number | null
-          tenant_id: string | null
-          total_calls: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "edge_function_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "edge_function_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "edge_function_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      v_enforcement_compliance: {
-        Row: {
-          active_policies: number | null
-          groups_with_policies: number | null
-          policy_assignments: number | null
-          tenant_id: string | null
-          total_policies: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "security_policies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_policies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "security_policies_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      v_execution_chain_health: {
-        Row: {
-          agent_id: string | null
-          agent_name: string | null
-          chain_status: string | null
-          last_execution_hash: string | null
-          last_execution_index: number | null
-          seconds_since_update: number | null
-          tenant_id: string | null
-          updated_at: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "active_agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "hmac_agent_secrets"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "v_agent_execution_health"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      v_governance_stats: {
-        Row: {
-          active_tasks: number | null
-          completed_tasks: number | null
-          critical_open: number | null
-          tenant_id: string | null
-          total_tasks: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -17347,39 +11320,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "jobs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -17403,60 +11348,6 @@ export type Database = {
         }
         Relationships: []
       }
-      v_job_hourly_trends: {
-        Row: {
-          completed: number | null
-          failed: number | null
-          hour: string | null
-          success_rate_pct: number | null
-          tenant_id: string | null
-          total: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
       v_job_metrics_by_type: {
         Row: {
           avg_execution_seconds: number | null
@@ -17479,39 +11370,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "jobs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -17618,20 +11481,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "jobs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
@@ -17649,27 +11498,6 @@ export type Database = {
             foreignKeyName: "jobs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "hmac_agent_secrets"
             referencedColumns: ["agent_id"]
           },
@@ -17681,45 +11509,10 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "jobs_current_execution_id_fkey"
             columns: ["current_execution_id"]
             isOneToOne: false
             referencedRelation: "job_executions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
-            referencedRelation: "job_integrity_violations"
             referencedColumns: ["id"]
           },
           {
@@ -17733,28 +11526,7 @@ export type Database = {
             foreignKeyName: "jobs_parent_job_id_fkey"
             columns: ["parent_job_id"]
             isOneToOne: false
-            referencedRelation: "jobs_normalized"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
             referencedRelation: "v_jobs_status_corrected"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_parent_job_id_fkey"
-            columns: ["parent_job_id"]
-            isOneToOne: false
-            referencedRelation: "v_stuck_jobs_report"
             referencedColumns: ["id"]
           },
           {
@@ -17763,20 +11535,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -17794,312 +11552,6 @@ export type Database = {
           type: string | null
         }
         Relationships: []
-      }
-      v_problematic_agents: {
-        Row: {
-          agent_name: string | null
-          agent_state: string | null
-          agent_version: string | null
-          display_name: string | null
-          hostname: string | null
-          id: string | null
-          is_isolated: boolean | null
-          isolation_reason: string | null
-          last_heartbeat: string | null
-          problem_since: string | null
-          problem_type: string | null
-          status: string | null
-          tenant_id: string | null
-        }
-        Insert: {
-          agent_name?: string | null
-          agent_state?: string | null
-          agent_version?: string | null
-          display_name?: string | null
-          hostname?: string | null
-          id?: string | null
-          is_isolated?: boolean | null
-          isolation_reason?: string | null
-          last_heartbeat?: string | null
-          problem_since?: never
-          problem_type?: never
-          status?: string | null
-          tenant_id?: string | null
-        }
-        Update: {
-          agent_name?: string | null
-          agent_state?: string | null
-          agent_version?: string | null
-          display_name?: string | null
-          hostname?: string | null
-          id?: string | null
-          is_isolated?: boolean | null
-          isolation_reason?: string | null
-          last_heartbeat?: string | null
-          problem_since?: never
-          problem_type?: never
-          status?: string | null
-          tenant_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      v_problematic_jobs: {
-        Row: {
-          agent_id: string | null
-          agent_name: string | null
-          created_at: string | null
-          delivered_at: string | null
-          error_message: string | null
-          id: string | null
-          minutes_stuck: number | null
-          problem_type: string | null
-          status: string | null
-          tenant_id: string | null
-          type: string | null
-        }
-        Insert: {
-          agent_id?: string | null
-          agent_name?: string | null
-          created_at?: string | null
-          delivered_at?: string | null
-          error_message?: string | null
-          id?: string | null
-          minutes_stuck?: never
-          problem_type?: never
-          status?: string | null
-          tenant_id?: string | null
-          type?: string | null
-        }
-        Update: {
-          agent_id?: string | null
-          agent_name?: string | null
-          created_at?: string | null
-          delivered_at?: string | null
-          error_message?: string | null
-          id?: string | null
-          minutes_stuck?: never
-          problem_type?: never
-          status?: string | null
-          tenant_id?: string | null
-          type?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "active_agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "hmac_agent_secrets"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_execution_health"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_by_node"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_health_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      v_rbac_metrics: {
-        Row: {
-          admin_count: number | null
-          analyst_count: number | null
-          tenant_id: string | null
-          total_users: number | null
-          viewer_count: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_user_roles_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_user_roles_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_user_roles_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "user_roles_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_roles_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "user_roles_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
       }
       v_risk_debt_active: {
         Row: {
@@ -18143,20 +11595,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       v_risk_debt_summary: {
@@ -18174,20 +11612,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -18255,237 +11679,12 @@ export type Database = {
         }
         Relationships: []
       }
-      v_soc2_readiness: {
-        Row: {
-          control_code: string | null
-          control_name: string | null
-          description: string | null
-          due_date: string | null
-          evidence_ref: string | null
-          evidence_type: string | null
-          gap_notes: string | null
-          owner: string | null
-          remediation_plan: string | null
-          status: string | null
-          tenant_id: string | null
-          verified_at: string | null
-          verified_by: string | null
-        }
-        Insert: {
-          control_code?: string | null
-          control_name?: string | null
-          description?: string | null
-          due_date?: string | null
-          evidence_ref?: string | null
-          evidence_type?: string | null
-          gap_notes?: string | null
-          owner?: string | null
-          remediation_plan?: string | null
-          status?: string | null
-          tenant_id?: string | null
-          verified_at?: string | null
-          verified_by?: string | null
-        }
-        Update: {
-          control_code?: string | null
-          control_name?: string | null
-          description?: string | null
-          due_date?: string | null
-          evidence_ref?: string | null
-          evidence_type?: string | null
-          gap_notes?: string | null
-          owner?: string | null
-          remediation_plan?: string | null
-          status?: string | null
-          tenant_id?: string | null
-          verified_at?: string | null
-          verified_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "soc2_controls_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "soc2_controls_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "soc2_controls_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      v_stuck_jobs_report: {
-        Row: {
-          agent_name: string | null
-          created_at: string | null
-          delivered_at: string | null
-          id: string | null
-          minutes_stuck: number | null
-          problem_type: string | null
-          status: string | null
-          tenant_id: string | null
-          type: string | null
-        }
-        Insert: {
-          agent_name?: string | null
-          created_at?: string | null
-          delivered_at?: string | null
-          id?: string | null
-          minutes_stuck?: never
-          problem_type?: never
-          status?: string | null
-          tenant_id?: string | null
-          type?: string | null
-        }
-        Update: {
-          agent_name?: string | null
-          created_at?: string | null
-          delivered_at?: string | null
-          id?: string | null
-          minutes_stuck?: never
-          problem_type?: never
-          status?: string | null
-          tenant_id?: string | null
-          type?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_jobs_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "jobs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
       v_system_contracts: {
         Row: {
           contract: string | null
           value: string | null
         }
         Relationships: []
-      }
-      v_system_operations_summary: {
-        Row: {
-          active_agents: number | null
-          active_crons: number | null
-          dlq_pending: number | null
-          jobs_completed_24h: number | null
-          jobs_failed_24h: number | null
-          offline_agents: number | null
-          pending_jobs: number | null
-          running_jobs: number | null
-          tenant_id: string | null
-          tenant_name: string | null
-        }
-        Insert: {
-          active_agents?: never
-          active_crons?: never
-          dlq_pending?: never
-          jobs_completed_24h?: never
-          jobs_failed_24h?: never
-          offline_agents?: never
-          pending_jobs?: never
-          running_jobs?: never
-          tenant_id?: string | null
-          tenant_name?: string | null
-        }
-        Update: {
-          active_agents?: never
-          active_crons?: never
-          dlq_pending?: never
-          jobs_completed_24h?: never
-          jobs_failed_24h?: never
-          offline_agents?: never
-          pending_jobs?: never
-          running_jobs?: never
-          tenant_id?: string | null
-          tenant_name?: string | null
-        }
-        Relationships: []
-      }
-      v_task_stats: {
-        Row: {
-          avg_resolution_hours: number | null
-          blocked_count: number | null
-          critical_open: number | null
-          high_open: number | null
-          ignored_count: number | null
-          in_progress_count: number | null
-          open_count: number | null
-          resolved_count: number | null
-          sla_breached: number | null
-          tenant_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
       }
       v_tasks_requiring_closure: {
         Row: {
@@ -18571,20 +11770,6 @@ export type Database = {
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tasks_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
       }
       v_tenant_isolation_metrics: {
@@ -18604,77 +11789,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
             foreignKeyName: "fk_agents_tenant"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
         ]
-      }
-      v_tenant_plan_status: {
-        Row: {
-          active_agents: number | null
-          auto_action_mode: string | null
-          created_at: string | null
-          mfa_policy: Json | null
-          setup_completed: boolean | null
-          slug: string | null
-          tenant_id: string | null
-          tenant_name: string | null
-          user_count: number | null
-        }
-        Insert: {
-          active_agents?: never
-          auto_action_mode?: string | null
-          created_at?: string | null
-          mfa_policy?: Json | null
-          setup_completed?: boolean | null
-          slug?: string | null
-          tenant_id?: string | null
-          tenant_name?: string | null
-          user_count?: never
-        }
-        Update: {
-          active_agents?: never
-          auto_action_mode?: string | null
-          created_at?: string | null
-          mfa_policy?: Json | null
-          setup_completed?: boolean | null
-          slug?: string | null
-          tenant_id?: string | null
-          tenant_name?: string | null
-          user_count?: never
-        }
-        Relationships: []
       }
     }
     Functions: {
