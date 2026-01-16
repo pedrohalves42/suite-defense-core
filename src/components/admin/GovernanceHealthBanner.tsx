@@ -265,7 +265,7 @@ export function GovernanceHealthBanner() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* MFA Coverage */}
                     <Link 
-                      to="/admin/settings?tab=security"
+                      to="/admin/tenant?tab=security"
                       className="p-3 rounded-lg bg-background/50 hover:bg-background/80 transition-colors group"
                     >
                       <div className="flex items-center justify-between">
