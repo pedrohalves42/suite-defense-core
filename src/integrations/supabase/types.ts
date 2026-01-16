@@ -15222,9 +15222,13 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           delivered_at: string | null
+          duration_seconds: number | null
           error_message: string | null
           execution_time_seconds: number | null
           id: string | null
+          is_v3: boolean | null
+          normalized_status: string | null
+          output: Json | null
           payload_hash: string | null
           priority: number | null
           queue_time_seconds: number | null
@@ -15238,9 +15242,13 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           delivered_at?: string | null
+          duration_seconds?: never
           error_message?: string | null
-          execution_time_seconds?: never
+          execution_time_seconds?: number | null
           id?: string | null
+          is_v3?: never
+          normalized_status?: string | null
+          output?: Json | null
           payload_hash?: string | null
           priority?: number | null
           queue_time_seconds?: never
@@ -15254,9 +15262,13 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           delivered_at?: string | null
+          duration_seconds?: never
           error_message?: string | null
-          execution_time_seconds?: never
+          execution_time_seconds?: number | null
           id?: string | null
+          is_v3?: never
+          normalized_status?: string | null
+          output?: Json | null
           payload_hash?: string | null
           priority?: number | null
           queue_time_seconds?: never
@@ -16255,9 +16267,16 @@ export type Database = {
       v_edge_function_stats: {
         Row: {
           avg_execution_ms: number | null
+          avg_latency_ms: number | null
           failed: number | null
+          failed_calls: number | null
           function_name: string | null
+          last_called_at: string | null
+          p50_latency_ms: number | null
+          p95_latency_ms: number | null
+          p99_latency_ms: number | null
           successful: number | null
+          successful_calls: number | null
           tenant_id: string | null
           total_calls: number | null
         }
