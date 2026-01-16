@@ -1,0 +1,83 @@
+-- =============================================================================
+-- CI Guard: Validate Sensitive Tables Have No Public Access (ADR-026)
+-- =============================================================================
+-- This test ensures that sensitive tables do not grant access to
+-- anonymous users or overly permissive authenticated access.
+-- =============================================================================
+
+DO $$
+DECLARE
+  vulnerable_tables text[];
+  vulnerable_count integer;
+BEGIN
+  -- Check for tables that should NOT have anon SELECT access
+  SELECT array_agg(tablename) INTO vulnerable_tables
+  FROM pg_tables t
+  WHERE t.schemaname = 'public'
+    AND t.tablename IN (
+      'agents',           -- contains hmac_secret
+      'agent_tokens',     -- service_role only
+      'invites',          -- contains token
+      'enrollment_keys',  -- contains sensitive keys
+      'api_keys',         -- contains secrets
+      'failed_jobs_dlq'   -- contains payload/metadata
+    )
+    AND EXISTS (
+      SELECT 1 FROM information_schema.role_table_grants g
+      WHERE g.table_name = t.tablename
+        AND g.table_schema = 'public'
+        AND g.grantee = 'anon'
+        AND g.privilege_type = 'SELECT'
+    );
+
+  vulnerable_count := COALESCE(array_length(vulnerable_tables, 1), 0);
+
+  IF vulnerable_count > 0 THEN
+    RAISE EXCEPTION '
+╔══════════════════════════════════════════════════════════════════╗
+║  SECURITY VIOLATION: Sensitive tables with anon access          ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Affected tables: %                                              
+║                                                                   
+║  These tables contain sensitive data and should NOT be           
+║  accessible to anonymous users.                                  
+║                                                                   
+║  FIX: REVOKE ALL ON <table> FROM anon;                          
+║                                                                   
+║  REF: docs/architecture/ADR-023-rls-hardening.md                
+╚══════════════════════════════════════════════════════════════════╝
+', vulnerable_tables;
+  END IF;
+
+  RAISE NOTICE 'SECURITY CHECK PASSED: No sensitive tables have anon access';
+END $$;
+
+-- Verify agent_tokens is service_role only
+DO $$
+DECLARE
+  has_authenticated_access boolean;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.role_table_grants
+    WHERE table_name = 'agent_tokens'
+      AND table_schema = 'public'
+      AND grantee = 'authenticated'
+      AND privilege_type = 'SELECT'
+  ) INTO has_authenticated_access;
+
+  IF has_authenticated_access THEN
+    RAISE EXCEPTION '
+╔══════════════════════════════════════════════════════════════════╗
+║  SECURITY VIOLATION: agent_tokens accessible to authenticated   ║
+╠══════════════════════════════════════════════════════════════════╣
+║  The agent_tokens table MUST be service_role only.              
+║                                                                   
+║  FIX: REVOKE ALL ON agent_tokens FROM authenticated;            
+╚══════════════════════════════════════════════════════════════════╝
+';
+  END IF;
+
+  RAISE NOTICE 'SECURITY CHECK PASSED: agent_tokens is service_role only';
+END $$;
+
+SELECT 'Sensitive tables access check passed' AS result;
