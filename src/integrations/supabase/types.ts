@@ -18171,7 +18171,7 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: Json
       }
-      cleanup_expired_keys: { Args: never; Returns: undefined }
+      cleanup_expired_keys: { Args: never; Returns: number }
       cleanup_offline_agents_jobs: {
         Args: never
         Returns: {
