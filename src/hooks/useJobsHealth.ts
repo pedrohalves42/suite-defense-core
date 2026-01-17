@@ -47,14 +47,13 @@ export const useJobsHealth = () => {
         .eq('tenant_id', tenantId);
       
       if (error) throw error;
-      // Map database columns to interface
       return (data || []).map(row => ({
         tenant_id: row.tenant_id,
         type: row.type,
-        total_count: row.total_count,
-        completed_count: row.completed_count,
-        failed_count: row.failed_count,
-        avg_duration_seconds: row.avg_duration_seconds,
+        total_count: Number(row.total_count) || 0,
+        completed_count: Number(row.completed_count) || 0,
+        failed_count: Number(row.failed_count) || 0,
+        avg_duration_seconds: row.avg_duration_seconds ? Number(row.avg_duration_seconds) : null,
       }));
     },
     enabled: !!tenantId,
@@ -123,7 +122,7 @@ export const useJobsHealth = () => {
       summary.completedJobs += m.completed_count;
       summary.failedJobs += m.failed_count;
       
-      if (m.avg_duration_seconds) {
+      if (m.avg_duration_seconds !== null) {
         totalExecTime += m.avg_duration_seconds * m.completed_count;
         execTimeCount += m.completed_count;
       }

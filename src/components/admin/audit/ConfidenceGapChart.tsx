@@ -2,7 +2,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Minus, AlertCircle, Activity, ArrowUp, ArrowDown, ArrowRight } from 'lucide-react';
 import { 
-  Line, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -10,7 +9,8 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Area,
-  ComposedChart
+  ComposedChart,
+  Line
 } from 'recharts';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
