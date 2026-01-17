@@ -2,17 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 
+// Interface aligned with v_job_metrics_by_type view (ADR-026)
 export interface JobMetricsByType {
   tenant_id: string;
   type: string;
-  total_jobs: number;
-  completed: number;
-  failed: number;
-  queued: number;
-  delivered: number;
-  stuck: number;
-  avg_execution_seconds: number | null;
-  success_rate_pct: number | null;
+  total_count: number;
+  completed_count: number;
+  failed_count: number;
+  avg_duration_seconds: number | null;
 }
 
 export interface JobHourlyTrend {
@@ -50,7 +47,15 @@ export const useJobsHealth = () => {
         .eq('tenant_id', tenantId);
       
       if (error) throw error;
-      return (data || []) as JobMetricsByType[];
+      // Map database columns to interface
+      return (data || []).map(row => ({
+        tenant_id: row.tenant_id,
+        type: row.type,
+        total_count: row.total_count,
+        completed_count: row.completed_count,
+        failed_count: row.failed_count,
+        avg_duration_seconds: row.avg_duration_seconds,
+      }));
     },
     enabled: !!tenantId,
     refetchInterval: 30000,
@@ -97,14 +102,14 @@ export const useJobsHealth = () => {
     refetchInterval: 30000,
   });
 
-  // Calculate summary from metrics
+  // Calculate summary from metrics (ADR-026 aligned with new view columns)
   const summary: JobsHealthSummary = {
     totalJobs: 0,
     completedJobs: 0,
     failedJobs: 0,
     queuedJobs: 0,
     executingJobs: 0,
-    stuckJobs: 0,
+    stuckJobs: stuckJobsQuery.data?.length || 0,
     overallSuccessRate: 0,
     avgExecutionSeconds: 0,
   };
@@ -114,16 +119,13 @@ export const useJobsHealth = () => {
     let execTimeCount = 0;
 
     metricsQuery.data.forEach((m) => {
-      summary.totalJobs += m.total_jobs;
-      summary.completedJobs += m.completed;
-      summary.failedJobs += m.failed;
-      summary.queuedJobs += m.queued;
-      summary.executingJobs += m.delivered;
-      summary.stuckJobs += m.stuck;
+      summary.totalJobs += m.total_count;
+      summary.completedJobs += m.completed_count;
+      summary.failedJobs += m.failed_count;
       
-      if (m.avg_execution_seconds) {
-        totalExecTime += m.avg_execution_seconds * m.completed;
-        execTimeCount += m.completed;
+      if (m.avg_duration_seconds) {
+        totalExecTime += m.avg_duration_seconds * m.completed_count;
+        execTimeCount += m.completed_count;
       }
     });
 

@@ -20,22 +20,26 @@ export interface ConfidenceGap {
   created_at: string;
 }
 
+// Interface aligned with v_confidence_gap_trend view (ADR-026)
 export interface ConfidenceGapTrend {
   id: string;
   tenant_id: string;
-  created_at: string;
+  audit_id: string | null;
+  red_team_id: string | null;
   ana_score: number;
   red_score: number;
   confidence_gap: number;
   health_status: string;
+  previous_gap: number | null;
   gap_delta: number | null;
   alert_triggered: boolean;
+  alert_reason: string | null;
+  dimension_gaps: Record<string, unknown>;
+  created_at: string;
+  prev_gap: number | null;
   avg_gap_30d: number | null;
   avg_gap_90d: number | null;
-  gap_change: number | null;
-  trend_direction: 'improving' | 'stable' | 'degrading' | null;
-  consecutive_decrease: boolean;
-  consecutive_alerts: number | null;
+  is_improving: boolean;
 }
 
 export function useConfidenceGapHistory() {
@@ -76,7 +80,27 @@ export function useConfidenceGapTrend() {
         .limit(30);
 
       if (error) throw error;
-      return data as ConfidenceGapTrend[];
+      // Map database columns to interface
+      return (data || []).map(row => ({
+        id: row.id,
+        tenant_id: row.tenant_id,
+        audit_id: row.audit_id,
+        red_team_id: row.red_team_id,
+        ana_score: row.ana_score,
+        red_score: row.red_score,
+        confidence_gap: row.confidence_gap,
+        health_status: row.health_status,
+        previous_gap: row.previous_gap,
+        gap_delta: row.gap_delta,
+        alert_triggered: row.alert_triggered,
+        alert_reason: row.alert_reason,
+        dimension_gaps: row.dimension_gaps as Record<string, unknown>,
+        created_at: row.created_at,
+        prev_gap: row.prev_gap,
+        avg_gap_30d: row.avg_gap_30d,
+        avg_gap_90d: row.avg_gap_90d,
+        is_improving: row.is_improving,
+      })) as ConfidenceGapTrend[];
     },
     enabled: !!activeTenant?.id,
   });

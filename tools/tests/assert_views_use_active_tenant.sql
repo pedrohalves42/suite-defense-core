@@ -20,16 +20,26 @@ BEGIN
       -- Core security views
       'agents_safe', 'agents_public', 'agents_health_view',
       'invites_safe', 'enrollment_keys_safe', 'profiles_public',
+      -- Audit & security views (ADR-026 hardened)
+      'audit_logs_safe', 'v_security_dashboard',
       -- Health & monitoring views
       'v_agent_health_summary', 'v_agent_health_by_node', 'v_agent_lifecycle_state',
       'v_problematic_agents', 'v_problematic_jobs',
+      -- Agent execution views (ADR-026 hardened)
+      'v_agent_execution_health', 'v_agent_archive_reason_tree',
       -- Action & governance views  
       'v_action_center', 'v_soc2_readiness', 'v_governance_stats',
+      -- Risk & compliance views (ADR-026 hardened)
+      'v_active_risk_debt', 'v_confidence_gap_trend', 'v_tasks_requiring_closure',
       -- DLQ & jobs views
       'v_dlq_pending_attention', 'dlq_categorized', 'jobs_normalized',
       'v_job_hourly_trends', 'v_stuck_jobs_report',
+      -- Job metrics views (ADR-026 hardened)
+      'v_job_execution_health', 'v_jobs_status_corrected', 'v_job_metrics_by_type',
       -- System views
-      'v_system_operations_summary', 'v_tenant_plan_status', 'v_rbac_metrics'
+      'v_system_operations_summary', 'v_tenant_plan_status', 'v_rbac_metrics',
+      -- Tenant isolation views (ADR-026 hardened)
+      'v_tenant_isolation_metrics', 'v_pipeline_health_metrics'
     )
     AND definition LIKE '%tenant_id IN%'
     AND definition LIKE '%user_roles%'

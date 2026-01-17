@@ -2,7 +2,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Minus, AlertCircle, Activity, ArrowUp, ArrowDown, ArrowRight } from 'lucide-react';
 import { 
-  LineChart, 
   Line, 
   XAxis, 
   YAxis, 
@@ -29,6 +28,13 @@ interface ConfidenceGapChartProps {
 }
 
 export function ConfidenceGapChart({ latestGap, trendData }: ConfidenceGapChartProps) {
+  // Helper to derive trend direction from is_improving flag
+  const getTrendDirectionFromData = (item: ConfidenceGapTrend): string => {
+    if (item.is_improving) return 'improving';
+    if (item.gap_delta && item.gap_delta < 0) return 'degrading';
+    return 'stable';
+  };
+
   const chartData = trendData
     .slice()
     .reverse()
@@ -40,11 +46,12 @@ export function ConfidenceGapChart({ latestGap, trendData }: ConfidenceGapChartP
       gap: item.confidence_gap,
       health: item.health_status,
       avg90d: item.avg_gap_90d,
-      trendDirection: item.trend_direction,
+      trendDirection: getTrendDirectionFromData(item),
     }));
 
   // Get latest trend data for 90d metrics
   const latestTrend = trendData[0];
+  const latestTrendDirection = latestTrend ? getTrendDirectionFromData(latestTrend) : null;
 
   const getTrendIcon = () => {
     if (!latestGap?.gap_delta) return <Minus className="h-4 w-4" />;
@@ -144,13 +151,13 @@ export function ConfidenceGapChart({ latestGap, trendData }: ConfidenceGapChartP
               {/* 90d Trend */}
               <div className="text-center border-l">
                 <div className="flex items-center justify-center gap-1">
-                  {getTrendDirectionIcon(latestTrend?.trend_direction)}
-                  <span className={`text-lg font-bold ${getTrendDirectionColor(latestTrend?.trend_direction)}`}>
+                  {getTrendDirectionIcon(latestTrendDirection)}
+                  <span className={`text-lg font-bold ${getTrendDirectionColor(latestTrendDirection)}`}>
                     {latestTrend?.avg_gap_90d?.toFixed(0) || 'N/A'}
                   </span>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Média 90d ({getTrendDirectionLabel(latestTrend?.trend_direction)})
+                  Média 90d ({getTrendDirectionLabel(latestTrendDirection)})
                 </div>
               </div>
             </div>
@@ -165,13 +172,13 @@ export function ConfidenceGapChart({ latestGap, trendData }: ConfidenceGapChartP
               </div>
             )}
 
-            {/* Consecutive decrease warning */}
-            {latestTrend?.consecutive_decrease && (
+            {/* Gap decreasing warning - derived from is_improving being false with negative gap_delta */}
+            {latestTrend && !latestTrend.is_improving && latestTrend.gap_delta && latestTrend.gap_delta < -5 && (
               <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-start gap-2">
                 <TrendingDown className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
                 <div className="text-sm">
                   <span className="font-medium text-yellow-500">Atenção: </span>
-                  Gap em queda por {latestTrend.consecutive_alerts || 3}+ medições consecutivas.
+                  Gap em queda significativa (delta: {latestTrend.gap_delta}).
                 </div>
               </div>
             )}
