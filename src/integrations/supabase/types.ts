@@ -17474,14 +17474,11 @@ export type Database = {
       }
       v_security_dashboard: {
         Row: {
-          blocked_attacks_24h: number | null
+          active_agents: number | null
           critical_events_24h: number | null
-          current_system_mode: string | null
-          failed_jobs_1h: number | null
-          last_rls_test: string | null
-          open_critical_alerts: number | null
-          rls_failures_24h: number | null
-          snapshot_at: string | null
+          events_24h: number | null
+          generated_at: string | null
+          metric_type: string | null
         }
         Relationships: []
       }
