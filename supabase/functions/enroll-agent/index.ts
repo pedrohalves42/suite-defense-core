@@ -106,13 +106,14 @@ Deno.serve(async (req) => {
 
     if (keyError || !keyData) {
       logger.warn(`[${requestId}] Invalid enrollment key`);
+      // ADR-026 FIX: Never log plaintext enrollmentKey - use masked prefix only
       await createAuditLog({
         supabase,
         tenantId: 'unknown',
         action: 'agent_enrollment_failed',
         resourceType: 'agent',
         resourceId: agentName,
-        details: { reason: 'invalid_key', key: enrollmentKey },
+        details: { reason: 'invalid_key', key_prefix: getTokenPrefix(enrollmentKey) },
         request: req,
         success: false,
       });

@@ -71,20 +71,29 @@ Deno.serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (authError || !user) {
-      logger.error('Authentication failed', authError); // CORRECAO: Usar logger
+      logger.error('Authentication failed', authError);
       return createError('UNAUTHORIZED', 'Authentication required', requestId, 401);
     }
 
-    logger.info(`[${requestId}] Checking role for user: ${user.id}`); // CORRECAO: Usar logger
+    logger.info(`[${requestId}] Checking role for user: ${user.id}`);
     
-    // Check if user is admin and get tenant
+    // ADR-026 FIX: Get active_tenant_id from JWT claims for deterministic behavior
+    const activeTenantId = user.app_metadata?.active_tenant_id;
+    
+    if (!activeTenantId) {
+      logger.warn(`[${requestId}] No active tenant in session for user ${user.id}`);
+      return createError('BAD_REQUEST', 'No active tenant in session. Please switch to a tenant first.', requestId, 400);
+    }
+
+    // Check if user is admin - now explicitly filtering by active tenant to avoid non-deterministic results
     const { data: actorRole, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role, tenant_id')
       .eq('user_id', user.id)
+      .eq('tenant_id', activeTenantId) // ADR-026: Explicit tenant filter
       .maybeSingle();
 
-    logger.debug(`[${requestId}] Actor role query result`, { actorRole, roleError }); // CORRECAO: Usar logger
+    logger.debug(`[${requestId}] Actor role query result`, { actorRole, activeTenantId, roleError });
 
     if (roleError) {
       logger.error(`[${requestId}] Error fetching actor role`, roleError); // CORRECAO: Usar logger
