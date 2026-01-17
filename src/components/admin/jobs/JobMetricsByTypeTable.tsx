@@ -2,7 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { JobMetricsByType } from '@/hooks/useJobsHealth';
 
@@ -52,14 +52,16 @@ export function JobMetricsByTypeTable({ metrics, isLoading }: JobMetricsByTypeTa
           <TableHead className="text-center">Total</TableHead>
           <TableHead className="text-center">Sucesso</TableHead>
           <TableHead className="text-center">Falha</TableHead>
-          <TableHead className="text-center">Travados</TableHead>
           <TableHead>Taxa de Sucesso</TableHead>
           <TableHead className="text-right">Tempo Médio</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {metrics.map((metric) => {
-          const successRate = metric.success_rate_pct || 0;
+          // Calculate success rate from available data (ADR-026 aligned)
+          const successRate = metric.total_count > 0 
+            ? (metric.completed_count / metric.total_count) * 100 
+            : 0;
           const isHealthy = successRate >= 90;
           const isWarning = successRate >= 70 && successRate < 90;
           const isCritical = successRate < 70;
@@ -70,28 +72,18 @@ export function JobMetricsByTypeTable({ metrics, isLoading }: JobMetricsByTypeTa
                 {jobTypeLabels[metric.type] || metric.type}
               </TableCell>
               <TableCell className="text-center">
-                <Badge variant="outline">{metric.total_jobs}</Badge>
+                <Badge variant="outline">{metric.total_count}</Badge>
               </TableCell>
               <TableCell className="text-center">
                 <span className="text-green-600 dark:text-green-400 font-medium">
-                  {metric.completed}
+                  {metric.completed_count}
                 </span>
               </TableCell>
               <TableCell className="text-center">
-                {metric.failed > 0 ? (
+                {metric.failed_count > 0 ? (
                   <span className="text-red-600 dark:text-red-400 font-medium">
-                    {metric.failed}
+                    {metric.failed_count}
                   </span>
-                ) : (
-                  <span className="text-muted-foreground">0</span>
-                )}
-              </TableCell>
-              <TableCell className="text-center">
-                {metric.stuck > 0 ? (
-                  <Badge variant="destructive" className="gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    {metric.stuck}
-                  </Badge>
                 ) : (
                   <span className="text-muted-foreground">0</span>
                 )}
@@ -118,8 +110,8 @@ export function JobMetricsByTypeTable({ metrics, isLoading }: JobMetricsByTypeTa
                 </div>
               </TableCell>
               <TableCell className="text-right text-muted-foreground">
-                {metric.avg_execution_seconds 
-                  ? `${metric.avg_execution_seconds.toFixed(1)}s`
+                {metric.avg_duration_seconds 
+                  ? `${metric.avg_duration_seconds.toFixed(1)}s`
                   : '-'
                 }
               </TableCell>
