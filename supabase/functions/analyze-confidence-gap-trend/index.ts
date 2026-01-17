@@ -10,10 +10,10 @@ interface GapTrendAnalysis {
   tenant_id: string;
   current_gap: number;
   avg_gap_30d: number;
-  trend_direction: 'improving' | 'degrading' | 'stable';
+  is_improving: boolean;
   worst_dimension: string | null;
   worst_dimension_gap: number;
-  consecutive_degradations: number;
+  consecutive_alerts: number;
   alert_triggered: boolean;
 }
 
@@ -64,27 +64,26 @@ serve(async (req) => {
       const currentGap = gapHistory[0].confidence_gap;
       const avgGap30d = gapHistory.reduce((sum, g) => sum + g.confidence_gap, 0) / gapHistory.length;
 
-      // Determine trend direction
-      let trendDirection: 'improving' | 'degrading' | 'stable' = 'stable';
+      // Determine if trend is improving (lower gap is better)
+      let isImproving = false;
       if (gapHistory.length >= 3) {
         const recentAvg = (gapHistory[0].confidence_gap + gapHistory[1].confidence_gap + gapHistory[2].confidence_gap) / 3;
         const oldAvg = gapHistory.length >= 6 
           ? (gapHistory[3].confidence_gap + gapHistory[4].confidence_gap + gapHistory[5].confidence_gap) / 3
           : avgGap30d;
         
-        if (recentAvg < oldAvg - 2) trendDirection = 'improving';
-        else if (recentAvg > oldAvg + 2) trendDirection = 'degrading';
+        isImproving = recentAvg < oldAvg - 2;
       }
 
       // Find worst dimension from latest gap
       const worstDimension = gapHistory[0].worst_dimension as string | null;
       const worstDimensionGap = gapHistory[0].worst_gap || 0;
 
-      // Count consecutive degradations
-      let consecutiveDegradations = 0;
+      // Count consecutive alerts (gaps increasing)
+      let consecutiveAlerts = 0;
       for (let i = 0; i < gapHistory.length - 1; i++) {
         if (gapHistory[i].confidence_gap > gapHistory[i + 1].confidence_gap) {
-          consecutiveDegradations++;
+          consecutiveAlerts++;
         } else {
           break;
         }
@@ -92,7 +91,7 @@ serve(async (req) => {
 
       // Determine if alert should be triggered
       const alertTriggered = 
-        consecutiveDegradations >= 3 || 
+        consecutiveAlerts >= 3 || 
         currentGap > 10 || 
         (worstDimensionGap && Math.abs(worstDimensionGap) > 15);
 
@@ -100,10 +99,10 @@ serve(async (req) => {
         tenant_id: tenant.id,
         current_gap: currentGap,
         avg_gap_30d: avgGap30d,
-        trend_direction: trendDirection,
+        is_improving: isImproving,
         worst_dimension: worstDimension,
         worst_dimension_gap: worstDimensionGap,
-        consecutive_degradations: consecutiveDegradations,
+        consecutive_alerts: consecutiveAlerts,
         alert_triggered: alertTriggered,
       };
 
@@ -111,8 +110,8 @@ serve(async (req) => {
 
       // Create insight if alert triggered
       if (alertTriggered) {
-        const insightTitle = consecutiveDegradations >= 3
-          ? `Gap de Confiança em Degradação Contínua (${consecutiveDegradations} vezes)`
+        const insightTitle = consecutiveAlerts >= 3
+          ? `Gap de Confiança em Degradação Contínua (${consecutiveAlerts} vezes)`
           : currentGap > 10
           ? `Gap de Confiança Crítico: ${currentGap.toFixed(1)} pontos`
           : `Dimensão ${worstDimension} com Gap Crítico: ${Math.abs(worstDimensionGap).toFixed(1)} pontos`;
@@ -138,7 +137,7 @@ serve(async (req) => {
           insight_type: 'compliance',
           severity: currentGap > 10 ? 'critical' : 'high',
           title: insightTitle,
-          description: `A diferença entre a avaliação interna (Ana) e adversarial (Red Team) está em ${currentGap.toFixed(1)} pontos. Tendência: ${trendDirection === 'improving' ? 'melhorando' : trendDirection === 'degrading' ? 'piorando' : 'estável'}.`,
+          description: `A diferença entre a avaliação interna (Ana) e adversarial (Red Team) está em ${currentGap.toFixed(1)} pontos. Tendência: ${isImproving ? 'melhorando' : 'estável ou piorando'}.`,
           evidence: {
             analysis,
             recommendation: suggestedAction,
@@ -162,8 +161,8 @@ serve(async (req) => {
         summary: {
           tenants_analyzed: analyses.length,
           alerts_triggered: analyses.filter(a => a.alert_triggered).length,
-          degrading: analyses.filter(a => a.trend_direction === 'degrading').length,
-          improving: analyses.filter(a => a.trend_direction === 'improving').length,
+          improving: analyses.filter(a => a.is_improving).length,
+          not_improving: analyses.filter(a => !a.is_improving).length,
         },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
