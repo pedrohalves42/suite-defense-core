@@ -345,15 +345,18 @@ USING (
 
 ## Status Final — FECHAMENTO DEFINITIVO
 
-🟢 **FULLY CLOSED — All Cycles Complete (2026-01-08)**
+🟢 **FULLY CLOSED — All Cycles Complete (2026-01-17)**
 
 - **0 legacy RLS policies remain** (user_has_tenant_access, user_belongs_to_tenant)
 - **157 active_tenant policies** enforcing isolation (150 base + 7 FASE 4A)
 - **40+ multi-tenant tables** protected with RLS
 - **0 tables without policy** (views excluded)
+- **18/18 critical views** with `security_invoker=on`
+- **8/8 sensitive functions** with public access revoked
 - Frontend errors cannot bypass database isolation
 - ESLint plugin blocks insecure queries at dev time
 - CI blocks regression at lint + E2E levels (hard fail)
+- **3/3 SQL invariant tests** passing
 
 Este ADR representa o **FECHAMENTO DEFINITIVO** de todos os ciclos de segurança multi-tenant.
 
@@ -366,6 +369,8 @@ Este ADR representa o **FECHAMENTO DEFINITIVO** de todos os ciclos de segurança
 | Token incorreto | ❌ RLS bloqueia |
 | Super admin | ✅ Controlado e auditado |
 | Regressão futura | ❌ CI falha |
+| View privilege escalation | ❌ `security_invoker=on` |
+| Sensitive function exposure | ❌ Public grants revoked |
 | Auditoria SOC/ISO | ✅ Passa |
 
 **Sistema seguro por construção, não por disciplina.**
@@ -399,6 +404,49 @@ Este ADR representa o **FECHAMENTO DEFINITIVO** de todos os ciclos de segurança
 
 ### ✅ Fase 6: Últimos Gaps de RLS (2026-01-08)
 - `agents_groups`: 4 policies CRUD (herda tenant via `group_id`)
+
+### ✅ Fase 7: Security Hardening - Views & Functions (2026-01-17)
+
+**18 Views Críticas com `security_invoker=on`:**
+
+| View | Finalidade |
+|------|------------|
+| `audit_logs_safe` | Logs de auditoria filtrados |
+| `v_security_dashboard` | Dashboard de segurança |
+| `v_agent_execution_health` | Saúde de execução de agentes |
+| `v_agent_archive_reason_tree` | Histórico de arquivamento |
+| `v_agent_lifecycle_state` | Estado do ciclo de vida |
+| `v_problematic_agents` | Agentes problemáticos |
+| `v_job_execution_health` | Saúde de execução de jobs |
+| `v_stuck_jobs_report` | Jobs travados |
+| `v_problematic_jobs` | Jobs problemáticos |
+| `v_active_risk_debt` | Dívida de risco ativa |
+| `v_soc2_readiness` | Prontidão SOC 2 |
+| `v_governance_stats` | Estatísticas de governança |
+| `v_dlq_pending_attention` | DLQ pendente |
+| `dlq_categorized` | DLQ categorizada |
+| `v_pipeline_health_metrics` | Métricas de pipeline |
+| `v_tenant_isolation_metrics` | Métricas de isolamento |
+| `agents_safe` | Agentes sem dados sensíveis |
+| `invites_safe` | Convites sem tokens |
+
+**8 Funções Sensíveis com Acesso Público Revogado:**
+
+| Função | Risco Mitigado |
+|--------|----------------|
+| `get_enrollment_key_full` | Exposição de chaves de enrollment |
+| `get_recent_jobs` | Dados de jobs entre tenants |
+| `get_active_tenant_id` | Manipulação de contexto |
+| `is_active_tenant` | Bypass de isolamento |
+| `is_current_super_admin` | Escalação de privilégio |
+| `verify_agent_signature` | Falsificação de assinatura |
+| `register_agent_public_key` | Registro de chave maliciosa |
+| `generate_agent_hmac_secret` | Geração de segredo HMAC |
+
+**Testes de Invariantes SQL:**
+- `assert_no_unsafe_exposed_functions.sql` ✅
+- `assert_views_have_security_invoker.sql` ✅
+- `assert_views_use_active_tenant.sql` ✅
 - `chaos_test_results`: 3 policies (super admin only)
 
 ---
