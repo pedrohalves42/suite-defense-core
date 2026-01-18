@@ -79,12 +79,12 @@ async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebA
 }
 
 export function useWebActivity(agentId: string, enabled = true) {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant();
   
   return useQuery({
     queryKey: ['web-activity', activeTenant?.id, agentId],
     queryFn: () => fetchWebActivity(agentId, activeTenant!.id),
-    enabled: enabled && !!agentId && !!activeTenant?.id,
+    enabled: enabled && !!agentId && !loading && !!activeTenant?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }

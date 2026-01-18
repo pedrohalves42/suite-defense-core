@@ -91,7 +91,7 @@ export function useInsightFeedback(insightId?: string) {
 
 // Hook for feedback statistics (admin dashboard)
 export function useFeedbackStats() {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant();
 
   return useQuery({
     queryKey: ['feedback-stats', activeTenant?.id],
@@ -114,7 +114,7 @@ export function useFeedbackStats() {
       
       return stats;
     },
-    enabled: !!activeTenant?.id,
+    enabled: !loading && !!activeTenant?.id,
     staleTime: 60000,
   });
 }
@@ -124,7 +124,7 @@ export function useFeedbackStats() {
  * Usa a view insight_feedback_quality
  */
 export function useFeedbackQualityMetrics() {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant();
 
   return useQuery({
     queryKey: ['feedback-quality-metrics', activeTenant?.id],
@@ -144,7 +144,7 @@ export function useFeedbackQualityMetrics() {
 
       return data || [];
     },
-    enabled: !!activeTenant?.id,
+    enabled: !loading && !!activeTenant?.id,
     staleTime: 120000, // 2 minutes
   });
 }

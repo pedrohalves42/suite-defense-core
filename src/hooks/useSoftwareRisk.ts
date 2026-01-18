@@ -35,7 +35,7 @@ export interface SoftwareInventoryItem {
 }
 
 export function useSoftwareRiskSummary() {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant();
 
   return useQuery({
     queryKey: ['software-risk-summary', activeTenant?.id],
@@ -49,13 +49,13 @@ export function useSoftwareRiskSummary() {
       if (error) throw error;
       return (data || []) as SoftwareRiskSummary[];
     },
-    enabled: !!activeTenant?.id,
+    enabled: !loading && !!activeTenant?.id,
     staleTime: 60 * 1000,
   });
 }
 
 export function useSoftwareByRisk(riskLevel?: string, limit = 50) {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant();
 
   return useQuery({
     queryKey: ['software-by-risk', activeTenant?.id, riskLevel, limit],
@@ -77,7 +77,7 @@ export function useSoftwareByRisk(riskLevel?: string, limit = 50) {
       if (error) throw error;
       return (data || []) as SoftwareInventoryItem[];
     },
-    enabled: !!activeTenant?.id,
+    enabled: !loading && !!activeTenant?.id,
   });
 }
 

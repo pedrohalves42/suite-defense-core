@@ -20,12 +20,12 @@ async function fetchVulnFindings(agentId: string, tenantId: string): Promise<Vul
 }
 
 export function useVulnFindings(agentId: string, enabled = true) {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant();
   
   return useQuery({
     queryKey: ['vuln-findings', activeTenant?.id, agentId],
     queryFn: () => fetchVulnFindings(agentId, activeTenant!.id),
-    enabled: enabled && !!agentId && !!activeTenant?.id,
+    enabled: enabled && !!agentId && !loading && !!activeTenant?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
