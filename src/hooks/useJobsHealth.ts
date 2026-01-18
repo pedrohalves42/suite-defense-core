@@ -45,8 +45,11 @@ export const useJobsHealth = () => {
     queryFn: async (): Promise<JobMetricsByType[]> => {
       if (!tenantId) return [];
       
-      const { data, error } = await tenantQuery('v_job_metrics_by_type', tenantId)
-        .select('*');
+      // v_job_metrics_by_type is a view - use supabase.from() directly with tenant filter
+      const { data, error } = await supabase
+        .from('v_job_metrics_by_type')
+        .select('*')
+        .eq('tenant_id', tenantId);
       
       if (error) throw error;
       return (data || []).map(row => ({
@@ -68,8 +71,11 @@ export const useJobsHealth = () => {
     queryFn: async (): Promise<JobHourlyTrend[]> => {
       if (!tenantId) return [];
       
-      const { data, error } = await tenantQuery('v_job_hourly_trends', tenantId)
+      // v_job_hourly_trends is a view - use supabase.from() directly with tenant filter
+      const { data, error } = await supabase
+        .from('v_job_hourly_trends')
         .select('*')
+        .eq('tenant_id', tenantId)
         .order('hour', { ascending: true });
       
       if (error) throw error;
