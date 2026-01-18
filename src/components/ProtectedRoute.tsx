@@ -19,7 +19,8 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [hasValidSession, setHasValidSession] = useState<boolean | null>(null);
   
   // ADR-026 FIX: Get tenant info for validation
-  const { tenants, loading: tenantLoading } = useActiveTenant();
+  // PATCH #4: Include isFetched to prevent premature redirects
+  const { tenants, loading: tenantLoading, isFetched } = useActiveTenant();
 
   // Second chance: verify session directly if useAuth says no user
   useEffect(() => {
@@ -80,8 +81,9 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   // ADR-026 FIX: Validate tenant association
-  // Wait for tenant data to load before making a decision
-  if (!tenantLoading && tenants !== undefined) {
+  // PATCH #4: Wait for both loading AND isFetched before making redirect decision
+  // This prevents flash of /no-tenant during initial fetch
+  if (!tenantLoading && isFetched && tenants !== undefined) {
     const hasTenant = tenants && tenants.length > 0;
     
     // User has no tenant and is not on allowed pages
