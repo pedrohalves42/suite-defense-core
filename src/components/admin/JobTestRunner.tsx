@@ -57,8 +57,9 @@ export default function JobTestRunner() {
     queryFn: async () => {
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data, error } = await supabase
-        .from("agents")
+        .from("agents_safe")
         .select("id, agent_name, hostname, last_heartbeat, status")
         .eq("status", "active")
         .gte("last_heartbeat", fiveMinutesAgo)

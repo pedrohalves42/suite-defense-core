@@ -34,8 +34,9 @@ export default function ArchivedAgents() {
     queryFn: async () => {
       if (!tenant?.id) return [];
       
+      // ADR-026: Use agents_safe view for SELECT (but update still goes to agents table)
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, agent_name, display_name, hostname, os_type, status, enrolled_at, last_heartbeat, archived_at, archived_reason')
         .eq('tenant_id', tenant.id)
         .not('archived_at', 'is', null)

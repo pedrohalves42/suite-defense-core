@@ -50,8 +50,9 @@ export default function TestComplianceGenerator() {
       
       setLoadingAgents(true);
       try {
+        // ADR-026: Use agents_safe view to protect hmac_secret
         const { data, error } = await supabase
-          .from("agents")
+          .from("agents_safe")
           .select("id, agent_name, hostname, status, os_type, agent_version, last_heartbeat")
           .eq("tenant_id", tenant.id)
           .order("agent_name");

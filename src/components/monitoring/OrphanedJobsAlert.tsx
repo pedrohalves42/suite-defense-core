@@ -31,10 +31,11 @@ export function OrphanedJobsAlert({ tenantId, onRefresh }: OrphanedJobsAlertProp
     const fetchOrphanedJobs = async () => {
       try {
         // Get offline agents (no heartbeat in last 30 minutes)
+        // ADR-026: Use agents_safe view to protect hmac_secret
         const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
         
         const { data: offlineAgents } = await supabase
-          .from('agents')
+          .from('agents_safe')
           .select('id, agent_name')
           .eq('tenant_id', tenantId)
           .or(`last_heartbeat.is.null,last_heartbeat.lt.${thirtyMinutesAgo}`);

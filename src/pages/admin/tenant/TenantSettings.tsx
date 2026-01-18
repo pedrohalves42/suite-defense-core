@@ -46,8 +46,9 @@ export default function TenantSettings() {
     queryKey: ["agent-count", tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return 0;
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { count, error } = await supabase
-        .from("agents")
+        .from("agents_safe")
         .select("*", { count: "exact", head: true })
         .eq("tenant_id", tenant.id);
       if (error) throw error;

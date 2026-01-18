@@ -51,9 +51,9 @@ export default function JobsV3Migration() {
         else stats.v1++;
       }
 
-      // Buscar heartbeats dos agentes
+      // Buscar heartbeats dos agentes - ADR-026: Use agents_safe view
       const { data: agents } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('agent_name, last_heartbeat')
         .eq('tenant_id', tenant.id)
         .is('archived_at', null);

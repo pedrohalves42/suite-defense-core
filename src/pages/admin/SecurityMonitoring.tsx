@@ -108,9 +108,10 @@ export default function SecurityMonitoring() {
         .in('severity', ['high', 'critical']);
 
       // Offline agents - usa threshold de alerta (1h) para segurança
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const offlineAlertThreshold = subHours(new Date(), AGENT_STATUS_THRESHOLDS.OFFLINE_ALERT_HOURS).toISOString();
       const { count: offlineAgents } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('*', { count: 'exact' })
         .eq('tenant_id', tenant.id)
         .lt('last_heartbeat', offlineAlertThreshold)

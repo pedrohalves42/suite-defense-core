@@ -29,9 +29,9 @@ export function ValidationJobDispatcher() {
 
       if (!userRole) throw new Error("Tenant não encontrado");
 
-      // Get TESTEMIT agent
+      // Get TESTEMIT agent - ADR-026: Use agents_safe view
       const { data: testemitAgent, error: testemitError } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, agent_name')
         .eq('agent_name', 'TESTEMIT')
         .eq('tenant_id', userRole.tenant_id)
@@ -63,9 +63,9 @@ export function ValidationJobDispatcher() {
         }
       }
 
-      // Get testepc2 agent
+      // Get testepc2 agent - ADR-026: Use agents_safe view
       const { data: testepc2Agent, error: testepc2Error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, agent_name')
         .eq('agent_name', 'testepc2')
         .eq('tenant_id', userRole.tenant_id)

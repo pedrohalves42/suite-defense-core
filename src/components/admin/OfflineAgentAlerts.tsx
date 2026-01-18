@@ -171,8 +171,9 @@ export function OfflineAgentAlerts() {
 
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, agent_name, last_heartbeat, hostname, os_type')
         .eq('tenant_id', tenant.id)
         .eq('status', 'active')

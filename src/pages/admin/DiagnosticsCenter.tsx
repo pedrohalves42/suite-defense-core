@@ -100,8 +100,9 @@ export default function DiagnosticsCenter() {
     queryKey: ['diagnostics-agents', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, agent_name, tenant_id, status, enrolled_at, last_heartbeat, hostname, os_type, is_throttled, is_isolated, safe_mode_entered_at, throttle_reason, isolation_reason, safe_mode_reason')
         .eq('tenant_id', tenant.id)
         .is('archived_at', null)

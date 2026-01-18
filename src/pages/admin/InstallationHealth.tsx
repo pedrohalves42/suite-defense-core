@@ -47,9 +47,9 @@ export default function InstallationHealth() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Agentes problematicos
+      // Agentes problematicos - ADR-026: Use agents_safe view to protect hmac_secret
       const { data: agents, error: agentsError } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, agent_name, status, enrolled_at, last_heartbeat')
         .or('status.eq.pending,last_heartbeat.is.null')
         .is('archived_at', null)

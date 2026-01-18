@@ -28,8 +28,9 @@ export default function SuperAdminMetrics() {
   const { data: agentStats } = useQuery({
     queryKey: ['super-admin-agent-stats'],
     queryFn: async () => {
+      // ADR-026: Use agents_safe view
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('status, tenant_id')
         .is('archived_at', null);
       

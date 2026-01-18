@@ -48,8 +48,9 @@ const ClientOnboarding = () => {
 
   const fetchAgentStats = async () => {
     try {
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data: agents } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, status, last_heartbeat');
       
       if (agents) {

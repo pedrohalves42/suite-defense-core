@@ -21,9 +21,10 @@ export default function PitchDeck() {
   const { data: metrics } = useQuery({
     queryKey: ['pitch-metrics'],
     queryFn: async () => {
+      // ADR-026: Use agents_safe view
       const [tenants, agents, jobs, subscriptions] = await Promise.all([
         supabase.from('tenants').select('id, created_at'),
-        supabase.from('agents').select('id, status'),
+        supabase.from('agents_safe').select('id, status'),
         supabase.from('jobs').select('id, status'),
         supabase.from('tenant_subscriptions').select('id, status, device_quantity, plan_id, subscription_plans(price)')
       ]);

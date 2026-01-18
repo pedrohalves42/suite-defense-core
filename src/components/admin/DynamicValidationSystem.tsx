@@ -76,9 +76,9 @@ export function DynamicValidationSystem() {
 
       if (!userRole) throw new Error("Tenant não encontrado");
 
-      // Get all active agents
+      // Get all active agents - ADR-026: Use agents_safe view
       const { data: agentsData } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, agent_name, agent_version, last_heartbeat')
         .eq('tenant_id', userRole.tenant_id)
         .eq('status', 'active')

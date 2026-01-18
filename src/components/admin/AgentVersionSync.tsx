@@ -41,8 +41,9 @@ export function AgentVersionSync({ latestVersions }: AgentVersionSyncProps) {
     queryFn: async () => {
       if (!tenant?.id) return [];
       
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, agent_name, agent_version, status, last_heartbeat, os_type, tenant_id')
         .eq('tenant_id', tenant.id)
         .eq('status', 'active')

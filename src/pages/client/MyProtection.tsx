@@ -32,10 +32,10 @@ export const MyProtection = () => {
     queryFn: async () => {
       if (!tenant?.id) return null;
 
-      // Parallel fetches
+      // Parallel fetches - ADR-026: Use agents_safe view to protect hmac_secret
       const [agentsRes, alertsRes, reportsRes, avRes] = await Promise.all([
         supabase
-          .from('agents')
+          .from('agents_safe')
           .select('id, agent_name, last_heartbeat, status')
           .eq('tenant_id', tenant.id)
           .is('archived_at', null),
