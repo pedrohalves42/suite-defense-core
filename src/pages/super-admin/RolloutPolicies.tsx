@@ -455,8 +455,9 @@ function AgentRolloutSimulator({ policies }: { policies: RolloutPolicy[] }) {
   const { data: agents } = useQuery({
     queryKey: ['agents-for-rollout'],
     queryFn: async () => {
+      // ADR-026: Use agents_safe view
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, agent_name, os_type, agent_version, status')
         .eq('status', 'active')
         .is('archived_at', null);

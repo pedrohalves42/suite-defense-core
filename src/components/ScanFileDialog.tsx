@@ -20,8 +20,9 @@ export function ScanFileDialog() {
   const { data: agents, isLoading: agentsLoading } = useQuery({
     queryKey: ['active-agents'],
     queryFn: async () => {
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('agent_name, status')
         .eq('status', 'active')
         .is('archived_at', null)

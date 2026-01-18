@@ -38,8 +38,9 @@ export function SystemScanButton() {
   const { data: agents, isLoading: isLoadingAgents } = useQuery({
     queryKey: ["active-agents"],
     queryFn: async () => {
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data, error } = await supabase
-        .from("agents")
+        .from("agents_safe")
         .select("id, agent_name, status")
         .eq("status", "active")
         .order("agent_name");

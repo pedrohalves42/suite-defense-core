@@ -34,9 +34,9 @@ export function ProtectionTrendChart() {
       const days = 7;
       const result: TrendData[] = [];
 
-      // Get agents for calculating protection score
+      // Get agents for calculating protection score - ADR-026: Use agents_safe view
       const { data: agents } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, status, last_heartbeat')
         .eq('tenant_id', tenant.id)
         .is('archived_at', null);

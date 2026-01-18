@@ -136,8 +136,9 @@ const AgentMonitoring = () => {
     queryFn: async () => {
       if (!tenant?.id) return [];
       
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('agent_name, last_heartbeat, enrolled_at')
         .eq('tenant_id', tenant.id);
       

@@ -36,9 +36,9 @@ export const OnboardingProgress = () => {
 
   const fetchProgress = async () => {
     try {
-      // Check agents
+      // Check agents - ADR-026: Use agents_safe view to protect hmac_secret
       const { data: agents } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, status, last_heartbeat')
         .is('archived_at', null);
       

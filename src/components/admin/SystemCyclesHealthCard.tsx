@@ -52,9 +52,9 @@ export function SystemCyclesHealthCard() {
           .eq('status', 'delivered')
           .is('completed_at', null),
         
-        // Agents offline > 24h
+        // Agents offline > 24h - ADR-026: Use agents_safe view
         supabase
-          .from('agents')
+          .from('agents_safe')
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id)
           .is('archived_at', null)

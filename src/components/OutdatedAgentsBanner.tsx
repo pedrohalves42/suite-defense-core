@@ -40,9 +40,9 @@ export const OutdatedAgentsBanner = () => {
           return;
         }
 
-        // Get agents with outdated versions (specifically v3.10.21 and below that need reinstall)
+        // Get agents with outdated versions - ADR-026: Use agents_safe view
         const { data: agents } = await supabase
-          .from('agents')
+          .from('agents_safe')
           .select('agent_name, agent_version')
           .eq('tenant_id', tenant?.id)
           .eq('status', 'active')

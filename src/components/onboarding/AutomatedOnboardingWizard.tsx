@@ -73,9 +73,9 @@ export const AutomatedOnboardingWizard = ({
         }
       }
 
-      // Check for agents
+      // Check for agents - ADR-026: Use agents_safe view to protect hmac_secret
       const { data: agents } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, last_heartbeat')
         .eq('tenant_id', tenant.id)
         .is('archived_at', null)

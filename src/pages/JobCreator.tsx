@@ -63,8 +63,9 @@ const JobCreator = () => {
 
   const loadAgents = useCallback(async () => {
     try {
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data, error } = await supabase
-        .from("agents")
+        .from("agents_safe")
         .select("id, agent_name, hostname, display_name, status, last_heartbeat")
         .order("agent_name", { ascending: true });
 

@@ -69,8 +69,9 @@ export function FirstTimeSetupWizard() {
       icon: <Monitor className="h-8 w-8" />,
       checkFn: async () => {
         if (!tenantId) return false;
+        // ADR-026: Use agents_safe view to protect hmac_secret
         const { count } = await supabase
-          .from('agents')
+          .from('agents_safe')
           .select('*', { count: 'exact', head: true })
           .eq('tenant_id', tenantId)
           .is('archived_at', null);
@@ -87,8 +88,9 @@ export function FirstTimeSetupWizard() {
       icon: <Shield className="h-8 w-8" />,
       checkFn: async () => {
         if (!tenantId) return false;
+        // ADR-026: Use agents_safe view to protect hmac_secret
         const { data } = await supabase
-          .from('agents')
+          .from('agents_safe')
           .select('last_heartbeat')
           .eq('tenant_id', tenantId)
           .is('archived_at', null)

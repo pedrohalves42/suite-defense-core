@@ -60,8 +60,8 @@ export default function ExecutiveDashboard() {
     // Using any to avoid TypeScript deep type instantiation issues
     const sb = supabase as any;
 
-    // Fetch agents
-    const agentsRes = await sb.from('agents').select('id, agent_name, agent_state, last_heartbeat').eq('tenant_id', tid).is('archived_at', null);
+    // Fetch agents - ADR-026: Use agents_safe view to protect hmac_secret
+    const agentsRes = await sb.from('agents_safe').select('id, agent_name, agent_state, last_heartbeat').eq('tenant_id', tid).is('archived_at', null);
     const agents: Array<{ id: string; agent_name: string; agent_state: string; last_heartbeat: string | null }> = agentsRes.data || [];
 
     // Fetch alerts count

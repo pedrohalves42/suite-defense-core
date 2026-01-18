@@ -84,9 +84,9 @@ export const ClientDashboard = () => {
     queryFn: async () => {
       if (!tenant?.id) return null;
 
-      // Fetch agents
+      // Fetch agents - ADR-026: Use agents_safe view to protect hmac_secret
       const { data: agents } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, status, last_heartbeat, agent_name')
         .eq('tenant_id', tenant.id);
 

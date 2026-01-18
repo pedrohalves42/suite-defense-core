@@ -46,8 +46,9 @@ export function OnboardingRequiredBanner() {
           .from('enrollment_keys')
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id),
+        // ADR-026: Use agents_safe view to protect hmac_secret
         supabase
-          .from('agents')
+          .from('agents_safe')
           .select('id, last_heartbeat')
           .eq('tenant_id', tenant.id)
           .is('archived_at', null)

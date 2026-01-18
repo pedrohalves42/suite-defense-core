@@ -87,8 +87,9 @@ export default function Reports() {
     queryKey: ["agents", tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data, error } = await supabase
-        .from("agents")
+        .from("agents_safe")
         .select("id, agent_name, status")
         .eq("tenant_id", tenant.id)
         .eq("status", "active")

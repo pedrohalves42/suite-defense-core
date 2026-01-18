@@ -35,8 +35,9 @@ export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
     queryFn: async () => {
       if (!activeTenant?.id) return [];
       
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select(`
           id, agent_name, status, os_type,
           is_isolated, is_throttled, safe_mode_reason, safe_mode_entered_at,

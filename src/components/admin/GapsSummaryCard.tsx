@@ -66,8 +66,9 @@ export function GapsSummaryCard() {
     queryKey: ['gaps-offline-agents'],
     queryFn: async () => {
       const threshold = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      // ADR-026: Use agents_safe view
       const { count } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('*', { count: 'exact', head: true })
         .is('archived_at', null)
         .lt('last_heartbeat', threshold);
