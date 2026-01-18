@@ -51,8 +51,9 @@ export default function Dashboard() {
     queryKey: ['dashboard-agents', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, agent_name, status, last_heartbeat')
         .eq('tenant_id', tenant.id)
         .is('archived_at', null);

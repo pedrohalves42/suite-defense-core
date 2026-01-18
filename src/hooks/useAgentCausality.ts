@@ -53,9 +53,9 @@ export function useAgentCausality(agentId: string | null) {
     queryFn: async (): Promise<AgentCausality | null> => {
       if (!agentId) return null;
 
-      // Buscar dados do agente
+      // Buscar dados do agente (via agents_safe view to protect hmac_secret - ADR-026)
       const { data: agent, error: agentError } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('*')
         .eq('id', agentId)
         .single();

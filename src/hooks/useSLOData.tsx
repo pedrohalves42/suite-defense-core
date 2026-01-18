@@ -130,9 +130,9 @@ export const useCalculatedSLOs = () => {
       const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-      // Heartbeat success rate (last 24h)
+      // Heartbeat success rate (last 24h) - ADR-026: Use agents_safe view
       const { data: agents } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, last_heartbeat')
         .eq('tenant_id', tenant.id)
         .is('archived_at', null);

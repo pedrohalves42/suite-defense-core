@@ -134,8 +134,9 @@ export default function RealTimeSecurityDashboard() {
       
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
       
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, status, last_heartbeat, is_isolated')
         .eq('tenant_id', tenant.id)
         .is('archived_at', null);

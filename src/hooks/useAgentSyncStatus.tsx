@@ -20,8 +20,9 @@ export function useAgentSyncStatus() {
     queryFn: async (): Promise<AgentSyncStatus[]> => {
       if (!tenant?.id) return [];
       
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, agent_name, display_name, status, last_heartbeat, last_block_sync_at, archived_at')
         .eq('tenant_id', tenant.id)
         .eq('status', 'active')
