@@ -57,11 +57,6 @@ const MULTI_TENANT_TABLES = new Set([
   'antivirus_status',
   'custom_trials',
   'policy_assignments',
-  // ADR-030 FASE 3 - Views e tabelas adicionais
-  'v_task_stats',
-  'v_job_metrics_by_type',
-  'v_job_hourly_trends',
-  'agent_group_policies',
 ]);
 
 type TableName = keyof Database['public']['Tables'];

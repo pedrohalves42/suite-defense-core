@@ -113,8 +113,11 @@ export function useTaskStats() {
   return useQuery({
     queryKey: ['task-stats', tenant?.id],
     queryFn: async () => {
-      const { data, error } = await tenantQuery('v_task_stats', tenant!.id)
+      // v_task_stats is a view - use supabase.from() directly with tenant filter
+      const { data, error } = await supabase
+        .from('v_task_stats')
         .select('*')
+        .eq('tenant_id', tenant!.id)
         .single();
 
       if (error) {
