@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
+import { tenantQuery } from '@/lib/tenantQuery';
 import { toast } from 'sonner';
 
 export interface TenantActionPolicy {
@@ -22,10 +23,8 @@ export function useTenantActionPolicies() {
     queryFn: async () => {
       if (!activeTenant?.id) return [];
       
-      const { data, error } = await supabase
-        .from('tenant_action_policies')
+      const { data, error } = await tenantQuery('tenant_action_policies', activeTenant.id)
         .select('*')
-        .eq('tenant_id', activeTenant.id)
         .order('insight_type');
       
       if (error) throw error;

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
+import { tenantQuery } from '@/lib/tenantQuery';
 
 // Interface aligned with v_job_metrics_by_type view (ADR-026)
 export interface JobMetricsByType {
@@ -44,10 +45,8 @@ export const useJobsHealth = () => {
     queryFn: async (): Promise<JobMetricsByType[]> => {
       if (!tenantId) return [];
       
-      const { data, error } = await supabase
-        .from('v_job_metrics_by_type')
-        .select('*')
-        .eq('tenant_id', tenantId);
+      const { data, error } = await tenantQuery('v_job_metrics_by_type', tenantId)
+        .select('*');
       
       if (error) throw error;
       return (data || []).map(row => ({
@@ -69,10 +68,8 @@ export const useJobsHealth = () => {
     queryFn: async (): Promise<JobHourlyTrend[]> => {
       if (!tenantId) return [];
       
-      const { data, error } = await supabase
-        .from('v_job_hourly_trends')
+      const { data, error } = await tenantQuery('v_job_hourly_trends', tenantId)
         .select('*')
-        .eq('tenant_id', tenantId)
         .order('hour', { ascending: true });
       
       if (error) throw error;
@@ -88,10 +85,8 @@ export const useJobsHealth = () => {
     queryFn: async () => {
       if (!tenantId) return [];
       
-      const { data, error } = await supabase
-        .from('jobs')
+      const { data, error } = await tenantQuery('jobs', tenantId)
         .select('id, type, agent_name, status, created_at, delivered_at')
-        .eq('tenant_id', tenantId)
         .eq('status', 'delivered')
         .lt('delivered_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
         .order('delivered_at', { ascending: true })
