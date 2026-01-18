@@ -33,7 +33,7 @@ export interface IncidentStatus {
 }
 
 export const useIncidentGroups = (limit = 50) => {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant(); // ADR-030 CRIT-01
 
   return useQuery({
     queryKey: ['incident-groups', activeTenant?.id, limit],
@@ -50,7 +50,7 @@ export const useIncidentGroups = (limit = 50) => {
       if (error) throw error;
       return (data || []) as unknown as IncidentGroup[];
     },
-    enabled: !!activeTenant?.id,
+    enabled: !loading && !!activeTenant?.id, // ADR-030 CRIT-01
     refetchInterval: 60000,
     staleTime: 30000,
   });

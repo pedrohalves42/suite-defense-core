@@ -18,7 +18,7 @@ export interface CoverageResult {
 }
 
 export function useCoverageGates() {
-  const { tenant } = useTenant();
+  const { tenant, loading } = useTenant(); // ADR-030 CRIT-01
 
   return useQuery({
     queryKey: ['coverage-gates', tenant?.id],
@@ -30,7 +30,7 @@ export function useCoverageGates() {
       if (error) throw error;
       return data as unknown as CoverageResult;
     },
-    enabled: !!tenant?.id,
+    enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
     refetchInterval: 60000,
   });
 }

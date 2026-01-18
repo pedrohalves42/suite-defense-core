@@ -43,7 +43,7 @@ export interface ConfidenceGapTrend {
 }
 
 export function useConfidenceGapHistory() {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant(); // ADR-030 CRIT-01
   
   return useQuery({
     queryKey: ['confidence-gap-history', activeTenant?.id],
@@ -60,12 +60,12 @@ export function useConfidenceGapHistory() {
       if (error) throw error;
       return data as ConfidenceGap[];
     },
-    enabled: !!activeTenant?.id,
+    enabled: !loading && !!activeTenant?.id, // ADR-030 CRIT-01
   });
 }
 
 export function useConfidenceGapTrend() {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant(); // ADR-030 CRIT-01
   
   return useQuery({
     queryKey: ['confidence-gap-trend', activeTenant?.id],
@@ -102,12 +102,12 @@ export function useConfidenceGapTrend() {
         is_improving: row.is_improving,
       })) as ConfidenceGapTrend[];
     },
-    enabled: !!activeTenant?.id,
+    enabled: !loading && !!activeTenant?.id, // ADR-030 CRIT-01
   });
 }
 
 export function useLatestConfidenceGap() {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant(); // ADR-030 CRIT-01
   
   return useQuery({
     queryKey: ['confidence-gap-latest', activeTenant?.id],
@@ -125,7 +125,7 @@ export function useLatestConfidenceGap() {
       if (error && error.code !== 'PGRST116') throw error;
       return data as ConfidenceGap | null;
     },
-    enabled: !!activeTenant?.id,
+    enabled: !loading && !!activeTenant?.id, // ADR-030 CRIT-01
   });
 }
 
