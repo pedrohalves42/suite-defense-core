@@ -18,7 +18,7 @@ export interface AgentGroupMember {
 }
 
 export function useAgentGroups() {
-  const { tenant } = useTenant();
+  const { tenant, loading } = useTenant();
   const queryClient = useQueryClient();
 
   // Fetch all groups
@@ -34,7 +34,7 @@ export function useAgentGroups() {
       if (error) throw error;
       return data as AgentGroup[];
     },
-    enabled: !!tenant?.id,
+    enabled: !loading && !!tenant?.id,
   });
 
   // Fetch group members count
@@ -49,11 +49,11 @@ export function useAgentGroups() {
       
       const counts: Record<string, number> = {};
       data.forEach(({ group_id }) => {
-        counts[group_id] = (counts[group_id] || 0) + 1;
+        counts[group_id] || 0) + 1;
       });
       return counts;
     },
-    enabled: !!tenant?.id,
+    enabled: !loading && !!tenant?.id,
   });
 
   // Create group
@@ -202,7 +202,7 @@ export function useAgentGroupMembers(groupId: string | null) {
 }
 
 export function useAvailableAgents(groupId: string | null) {
-  const { tenant } = useTenant();
+  const { tenant, loading } = useTenant();
 
   // Fetch agents NOT in the current group
   const { data: agents = [], isLoading } = useQuery({
@@ -231,7 +231,7 @@ export function useAvailableAgents(groupId: string | null) {
       const memberIds = new Set(groupMembers?.map(m => m.agent_id) || []);
       return (allAgents || []).filter(agent => !memberIds.has(agent.id));
     },
-    enabled: !!tenant?.id,
+    enabled: !loading && !!tenant?.id,
   });
 
   return { agents, isLoading };

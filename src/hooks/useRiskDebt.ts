@@ -17,7 +17,7 @@ export interface RiskDebtItem {
 }
 
 export function useRiskDebt() {
-  const { tenant } = useTenant();
+  const { tenant, loading } = useTenant();
 
   return useQuery({
     queryKey: ['risk-debt', tenant?.id],
@@ -31,7 +31,7 @@ export function useRiskDebt() {
       if (error) throw error;
       return data as RiskDebtItem[];
     },
-    enabled: !!tenant?.id,
+    enabled: !loading && !!tenant?.id,
     refetchInterval: 60000,
   });
 }
