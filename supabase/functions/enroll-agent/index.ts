@@ -237,6 +237,38 @@ Deno.serve(async (req) => {
         p_expected_tenant_id: keyData.tenant_id  // ADR-029 CRIT-06: Validação cross-tenant
       });
 
+      // ADR-029 CRIT-06: Tratamento de tentativa cross-tenant
+      if (reviveResult?.error === 'TENANT_MISMATCH') {
+        logger.error(`[${requestId}] SECURITY: Cross-tenant attack attempt detected!`, {
+          agent_id: existingAgent.id,
+          expected_tenant: keyData.tenant_id,
+          enrollment_key: enrollmentKey.substring(0, 8) + '...'
+        });
+        
+        await createAuditLog({
+          supabase,
+          tenantId: keyData.tenant_id,
+          action: 'agent_reenroll_cross_tenant_blocked',
+          resourceType: 'agent',
+          resourceId: existingAgent.id,
+          details: { 
+            reason: 'cross_tenant_attack_blocked',
+            agent_name: agentName,
+            expected_tenant_id: keyData.tenant_id
+          },
+          request: req,
+          success: false,
+        });
+        
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Unauthorized: Agent belongs to different tenant' 
+          }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       if (reviveError) {
         logger.warn(`[${requestId}] Failed to revive agent via RPC, falling back to direct update`, reviveError);
         
