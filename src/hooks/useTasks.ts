@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
+import { tenantQuery } from '@/lib/tenantQuery';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -66,10 +67,8 @@ export function useTasks(filters?: TaskFilters) {
   return useQuery({
     queryKey: ['tasks', tenant?.id, filters],
     queryFn: async () => {
-      let query = supabase
-        .from('tasks')
+      let query = tenantQuery('tasks', tenant!.id)
         .select('*')
-        .eq('tenant_id', tenant!.id)
         .order('severity', { ascending: true })
         .order('created_at', { ascending: false });
 
@@ -114,10 +113,8 @@ export function useTaskStats() {
   return useQuery({
     queryKey: ['task-stats', tenant?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('v_task_stats')
+      const { data, error } = await tenantQuery('v_task_stats', tenant!.id)
         .select('*')
-        .eq('tenant_id', tenant!.id)
         .single();
 
       if (error) {
@@ -274,10 +271,8 @@ export function useOpenTasksCount() {
   return useQuery({
     queryKey: ['open-tasks-count', tenant?.id],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('tasks')
+      const { count, error } = await tenantQuery('tasks', tenant!.id)
         .select('id', { count: 'exact', head: true })
-        .eq('tenant_id', tenant!.id)
         .in('status', ['open', 'in_progress']);
 
       if (error) throw error;

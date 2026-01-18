@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
+import { tenantQuery } from '@/lib/tenantQuery';
 import { toast } from 'sonner';
 import type { SecurityPolicy } from '@/types/security-policies';
 import type { Json } from '@/integrations/supabase/types';
@@ -14,10 +15,8 @@ export const useSecurityPolicies = () => {
     queryFn: async () => {
       if (!tenant?.id) return [];
       
-      const { data, error } = await supabase
-        .from('security_policies')
+      const { data, error } = await tenantQuery('security_policies', tenant.id)
         .select('*')
-        .eq('tenant_id', tenant.id)
         .order('priority', { ascending: false });
       
       if (error) throw error;

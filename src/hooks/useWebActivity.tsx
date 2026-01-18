@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { WebActivityItem } from '@/types/security';
 import { useActiveTenant } from './useActiveTenant';
+import { tenantQuery } from '@/lib/tenantQuery';
 
 interface WebActivityRow {
   domain: string;
@@ -15,10 +16,8 @@ async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebA
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   
   // Use explicit any to bypass type inference issues with new columns
-  const { data, error } = await supabase
-    .from('agent_web_activity')
+  const { data, error } = await tenantQuery('agent_web_activity', tenantId)
     .select('*')
-    .eq('tenant_id', tenantId)
     .eq('agent_id', agentId)
     .gte('visited_at', oneDayAgo)
     .order('visited_at', { ascending: false }) as { data: WebActivityRow[] | null; error: Error | null };

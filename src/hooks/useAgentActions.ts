@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { prepareJobForInsert } from '@/lib/job-utils';
+import { tenantQuery } from '@/lib/tenantQuery';
 
 export function useAgentActions() {
   const queryClient = useQueryClient();
@@ -155,7 +156,7 @@ export function useAgentActions() {
         approved: true,
       });
       
-      const { error } = await supabase.from('jobs').insert(job);
+      const { error } = await tenantQuery('jobs', agent.tenant_id).insert(job);
       if (error) throw error;
     },
     onSuccess: () => {
