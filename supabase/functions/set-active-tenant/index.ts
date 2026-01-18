@@ -5,6 +5,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+/**
+ * ADR-026: Atomic tenant switch endpoint
+ * Uses switch_tenant_atomic RPC to eliminate race conditions between
+ * access verification and metadata update
+ */
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -55,63 +60,60 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Verify user has access to the requested tenant
-    const { data: access, error: accessError } = await supabase
-      .from('user_roles')
-      .select('tenant_id, role')
-      .eq('user_id', user.id)
-      .eq('tenant_id', tenant_id)
-      .limit(1)
-      .maybeSingle()
+    // ADR-026 FIX: Use atomic RPC to verify access AND collect tenant data in single transaction
+    // This eliminates the race condition where access could be revoked between check and update
+    const { data: switchResult, error: switchError } = await supabaseAdmin
+      .rpc('switch_tenant_atomic', {
+        p_user_id: user.id,
+        p_new_tenant_id: tenant_id
+      })
 
-    if (accessError) {
-      console.error('[set-active-tenant] Access check error:', accessError)
-      return new Response(JSON.stringify({ error: 'Failed to verify access' }), {
+    if (switchError) {
+      console.error('[set-active-tenant] Atomic switch RPC error:', switchError)
+      return new Response(JSON.stringify({ error: 'Failed to verify tenant access' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    if (!access) {
-      console.log(`[set-active-tenant] User ${user.id} denied access to tenant ${tenant_id}`)
-      return new Response(JSON.stringify({ error: 'Tenant access denied' }), {
+    // Check if the RPC returned success
+    if (!switchResult?.success) {
+      const errorCode = switchResult?.error || 'TENANT_ACCESS_DENIED'
+      const errorMessage = switchResult?.message || 'Tenant access denied'
+      
+      console.log(`[set-active-tenant] User ${user.id} denied: ${errorCode}`)
+      
+      // Handle concurrent modification - suggest retry
+      if (errorCode === 'CONCURRENT_MODIFICATION') {
+        return new Response(JSON.stringify({ 
+          error: errorMessage,
+          retry: true 
+        }), {
+          status: 409, // Conflict
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      return new Response(JSON.stringify({ error: errorMessage }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    // Fetch all tenants the user has access to
-    const { data: allRoles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('tenant_id, role')
-      .eq('user_id', user.id)
-
-    if (rolesError) {
-      console.error('[set-active-tenant] Error fetching roles:', rolesError)
-      return new Response(JSON.stringify({ error: 'Failed to fetch user roles' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    // Check if user is super admin
-    const isSuperAdmin = allRoles?.some(r => r.role === 'super_admin') ?? false
-    const tenantIds = [...new Set(allRoles?.map(r => r.tenant_id) ?? [])]
-
-    console.log(`[set-active-tenant] User has access to ${tenantIds.length} tenants, is_super_admin: ${isSuperAdmin}`)
+    console.log(`[set-active-tenant] Atomic verification passed, updating metadata`)
 
     // Get previous active tenant for audit
     const previousTenantId = user.app_metadata?.active_tenant_id
 
-    // Update user's app_metadata with active_tenant_id
+    // Update user's app_metadata with the atomically verified data
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       user.id,
       {
         app_metadata: {
           ...user.app_metadata,
-          active_tenant_id: tenant_id,
-          tenants: tenantIds,
-          is_super_admin: isSuperAdmin
+          active_tenant_id: switchResult.active_tenant_id,
+          tenants: switchResult.tenants,
+          is_super_admin: switchResult.is_super_admin
         }
       }
     )
@@ -136,7 +138,8 @@ Deno.serve(async (req) => {
           details: { 
             previous_tenant_id: previousTenantId,
             new_tenant_id: tenant_id,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            atomic_switch: true // ADR-026: Mark as atomic switch
           }
         })
         console.log(`[set-active-tenant] Audit log recorded: ${previousTenantId} → ${tenant_id}`)
@@ -150,9 +153,10 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      active_tenant_id: tenant_id,
-      tenants: tenantIds,
-      is_super_admin: isSuperAdmin
+      active_tenant_id: switchResult.active_tenant_id,
+      tenants: switchResult.tenants,
+      is_super_admin: switchResult.is_super_admin,
+      tenant_count: switchResult.tenant_count
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })

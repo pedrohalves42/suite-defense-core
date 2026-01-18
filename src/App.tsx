@@ -100,6 +100,7 @@ import ComplianceTimeline from "./pages/admin/ComplianceTimeline";
 import VerificarLaudo from "./pages/VerificarLaudo";
 import ApprovePage from "./pages/ApprovePage";
 import TestComplianceGenerator from "./pages/TestComplianceGenerator";
+import NoTenant from "./pages/NoTenant";
 import RiskScore from "./pages/admin/RiskScore";
 import Playbooks from "./pages/admin/Playbooks";
 import DecisionAudit from "./pages/admin/DecisionAudit";
@@ -154,6 +155,7 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="/force-password-change" element={<ProtectedRoute><ForcePasswordChange /></ProtectedRoute>} />
+            <Route path="/no-tenant" element={<ProtectedRoute><NoTenant /></ProtectedRoute>} />
             <Route path="/accept-invite" element={<AcceptInvite />} />
             <Route path="/checkout/success" element={<CheckoutSuccess />} />
             <Route path="/checkout/cancel" element={<CheckoutCancel />} />

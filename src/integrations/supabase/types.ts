@@ -20239,6 +20239,10 @@ export type Database = {
         Args: { p_decision: string; p_reason?: string; p_request_id: string }
         Returns: Json
       }
+      switch_tenant_atomic: {
+        Args: { p_new_tenant_id: string; p_user_id: string }
+        Returns: Json
+      }
       sync_agent_state_from_heartbeat: {
         Args: never
         Returns: {
