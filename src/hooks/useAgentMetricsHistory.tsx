@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { subDays } from 'date-fns';
 
 interface MetricDataPoint {
@@ -9,11 +10,17 @@ interface MetricDataPoint {
   disk_usage_percent: number | null;
 }
 
-export function useAgentMetricsHistory(tenantId: string | undefined, daysBack: number = 7) {
+/**
+ * Hook to fetch agent metrics history for the active tenant
+ * ADR-029 CRIT-04: Refactored to use useActiveTenant with loading guard
+ */
+export function useAgentMetricsHistory(daysBack: number = 7) {
+  const { activeTenant, loading } = useActiveTenant();
+  
   return useQuery({
-    queryKey: ['agent-metrics-history', tenantId, daysBack],
+    queryKey: ['agent-metrics-history', activeTenant?.id, daysBack],
     queryFn: async () => {
-      if (!tenantId) return [];
+      if (!activeTenant?.id) return [];
       
       const startDate = subDays(new Date(), daysBack).toISOString();
       
@@ -25,14 +32,14 @@ export function useAgentMetricsHistory(tenantId: string | undefined, daysBack: n
           memory_usage_percent,
           disk_usage_percent
         `)
-        .eq('tenant_id', tenantId)
+        .eq('tenant_id', activeTenant.id)
         .gte('collected_at', startDate)
         .order('collected_at', { ascending: true });
       
       if (error) throw error;
       return data as MetricDataPoint[];
     },
-    enabled: !!tenantId,
-    refetchInterval: 60000, // Atualizar a cada 1 minuto
+    enabled: !loading && !!activeTenant?.id,  // ADR-029 CRIT-04: Guard with loading state
+    refetchInterval: 60000,
   });
 }

@@ -14,7 +14,7 @@ export interface TenantActionPolicy {
 }
 
 export function useTenantActionPolicies() {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant();  // ADR-029 CRIT-04: Add loading
   const queryClient = useQueryClient();
 
   const { data: policies, isLoading, error } = useQuery({
@@ -31,7 +31,7 @@ export function useTenantActionPolicies() {
       if (error) throw error;
       return data as TenantActionPolicy[];
     },
-    enabled: !!activeTenant?.id,
+    enabled: !loading && !!activeTenant?.id,  // ADR-029 CRIT-04: Guard with loading state
   });
 
   const upsertPolicy = useMutation({

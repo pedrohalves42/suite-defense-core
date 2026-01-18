@@ -45,6 +45,7 @@ Deno.serve(async (req: Request) => {
       await createAuditLog({
         supabase,
         userId: user.id,
+        tenantId: userRole?.tenant_id || 'unknown',  // ADR-029 HIGH-06: Required tenantId
         action: 'test_virustotal_integration',
         resourceType: 'integration',
         details: { error: 'Unauthorized' },
@@ -64,6 +65,7 @@ Deno.serve(async (req: Request) => {
       await createAuditLog({
         supabase,
         userId: user.id,
+        tenantId: userRole.tenant_id,  // ADR-029 HIGH-06: Required tenantId
         action: 'test_virustotal_integration',
         resourceType: 'integration',
         details: { error: 'API key not configured' },
@@ -96,6 +98,7 @@ Deno.serve(async (req: Request) => {
       await createAuditLog({
         supabase,
         userId: user.id,
+        tenantId: userRole.tenant_id,  // ADR-029 HIGH-06: Required tenantId
         action: 'test_virustotal_integration',
         resourceType: 'integration',
         details: { 
@@ -123,6 +126,7 @@ Deno.serve(async (req: Request) => {
     await createAuditLog({
       supabase,
       userId: user.id,
+      tenantId: userRole.tenant_id,  // ADR-029 HIGH-06: Required tenantId
       action: 'test_virustotal_integration',
       resourceType: 'integration',
       details: { 
