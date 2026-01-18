@@ -210,9 +210,9 @@ export function useAvailableAgents(groupId: string | null) {
     queryFn: async () => {
       if (!tenant?.id) return [];
       
-      // Get all agents
+      // Get all agents (via agents_safe view to protect hmac_secret - ADR-026)
       const { data: allAgents, error: agentsError } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, agent_name, display_name, hostname, status')
         .eq('tenant_id', tenant.id)
         .is('archived_at', null)

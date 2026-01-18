@@ -30,8 +30,9 @@ export default function SystemHealth() {
     queryKey: ["system-health-agents", tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return null;
+      // ADR-026: Use agents_safe view to protect hmac_secret
       const { data, error } = await supabase
-        .from("agents")
+        .from("agents_safe")
         .select("id, status, last_heartbeat")
         .eq("tenant_id", tenant.id)
         .order("last_heartbeat", { ascending: false });
