@@ -238,6 +238,23 @@ Deno.serve(async (req) => {
       if (reviveError) {
         logger.warn(`[${requestId}] Failed to revive agent via RPC, falling back to direct update`, reviveError);
         
+        // P2 MED-02: Audit log for RPC fallback path
+        await createAuditLog({
+          supabase,
+          tenantId: keyData.tenant_id,
+          action: 'agent_reenroll_rpc_fallback',
+          resourceType: 'agent',
+          resourceId: agentName,
+          details: { 
+            reason: 'rpc_revive_failed', 
+            error: reviveError.message,
+            agent_id: existingAgent.id,
+            fallback_method: 'direct_update'
+          },
+          request: req,
+          success: true, // Fallback succeeded
+        });
+        
         // Fallback: update direto se RPC falhar
         await supabase
           .from('agents')

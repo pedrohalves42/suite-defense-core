@@ -35,12 +35,21 @@ const ACTIVE_TENANT_KEY = 'cybershield_active_tenant_id';
 /**
  * Syncs the active tenant to the backend, updating the user's JWT app_metadata.
  * This ensures RLS policies can optionally use active_tenant_id for stricter isolation.
+ * P2 MED-01: Added 10s timeout to prevent indefinite hanging
  */
 async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
+  const SYNC_TIMEOUT_MS = 10000; // P2 MED-01: 10 second timeout
+  
   try {
+    // P2 MED-01: Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS);
+
     const { error } = await supabase.functions.invoke('set-active-tenant', {
       body: { tenant_id: tenantId }
     });
+
+    clearTimeout(timeoutId);
 
     if (error) {
       console.error('[syncActiveTenantToBackend] Edge function error:', error);
@@ -56,6 +65,11 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
 
     return true;
   } catch (err) {
+    // P2 MED-01: Handle timeout specifically
+    if (err instanceof Error && err.name === 'AbortError') {
+      console.error('[syncActiveTenantToBackend] Sync timeout after 10s');
+      return false;
+    }
     console.error('[syncActiveTenantToBackend] Unexpected error:', err);
     return false;
   }
