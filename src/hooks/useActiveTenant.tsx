@@ -25,6 +25,7 @@ interface ActiveTenantContextType {
   setActiveTenant: (tenant: Tenant) => Promise<void>;
   loading: boolean;
   hasMultipleTenants: boolean;
+  isFetched: boolean; // PATCH #4: Expose fetch status for ProtectedRoute
 }
 
 const ActiveTenantContext = createContext<ActiveTenantContextType | undefined>(undefined);
@@ -69,9 +70,13 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     }
     return null;
   });
+  
+  // PATCH #2: Add isSyncing state to block queries until JWT is updated
+  const [isSyncing, setIsSyncing] = useState(true);
 
   // Fetch all tenants for the user
-  const { data: userTenantRoles = [], isLoading } = useQuery({
+  // PATCH #4: Expose isFetched for ProtectedRoute to prevent premature redirects
+  const { data: userTenantRoles = [], isLoading, isFetched } = useQuery({
     queryKey: ['user-tenants', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -129,17 +134,29 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [activeTenant?.id]);
 
-  // Sync initial tenant to backend when user logs in (BLOCKING to ensure JWT has active_tenant_id)
+  // PATCH #2: Sync initial tenant to backend BLOCKING to ensure JWT has active_tenant_id
+  // Queries are blocked via isSyncing until this completes
   useEffect(() => {
-    if (activeTenant && user) {
-      // Sync on initial load and force session refresh to get updated JWT
-      syncActiveTenantToBackend(activeTenant.id).then(async (synced) => {
-        if (synced) {
+    if (!activeTenant || !user) {
+      setIsSyncing(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsSyncing(true);
+
+    syncActiveTenantToBackend(activeTenant.id)
+      .then(async (synced) => {
+        if (synced && !cancelled) {
           // Force refresh to ensure JWT has active_tenant_id claim
           await supabase.auth.refreshSession();
         }
+      })
+      .finally(() => {
+        if (!cancelled) setIsSyncing(false);
       });
-    }
+
+    return () => { cancelled = true; };
   }, [activeTenant?.id, user?.id]);
 
   const setActiveTenant = useCallback(async (tenant: Tenant) => {
@@ -180,8 +197,11 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         tenants, 
         activeTenant, 
         setActiveTenant, 
-        loading: isLoading,
-        hasMultipleTenants 
+        // PATCH #2: Include isSyncing in loading state to block queries
+        loading: isLoading || isSyncing,
+        hasMultipleTenants,
+        // PATCH #4: Expose isFetched for ProtectedRoute
+        isFetched,
       }}
     >
       {children}
