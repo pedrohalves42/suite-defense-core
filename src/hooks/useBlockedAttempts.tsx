@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useActiveTenant } from './useActiveTenant';
 
 export interface BlockedAttempt {
   id: string;
@@ -33,13 +34,15 @@ interface BlockedAttemptsStats {
 
 export function useBlockedAttempts(options: UseBlockedAttemptsOptions = {}) {
   const { agentId, limit = 100 } = options;
+  const { activeTenant, loading: tenantLoading } = useActiveTenant();
 
   const { data: attempts, isLoading, error, refetch } = useQuery({
-    queryKey: ['blocked-attempts', agentId, limit],
+    queryKey: ['blocked-attempts', activeTenant?.id, agentId, limit],
     queryFn: async (): Promise<BlockedAttempt[]> => {
       let query = (supabase as any)
         .from('blocked_access_attempts')
         .select('*')
+        .eq('tenant_id', activeTenant!.id) // P0 CRIT-02: Explicit tenant filter
         .order('attempted_at', { ascending: false })
         .limit(limit);
 
@@ -57,6 +60,7 @@ export function useBlockedAttempts(options: UseBlockedAttemptsOptions = {}) {
       return (data || []) as BlockedAttempt[];
     },
     staleTime: 30 * 1000,
+    enabled: !tenantLoading && !!activeTenant?.id, // P0 CRIT-02: Race condition fix
   });
 
   // Enhanced stats calculation
