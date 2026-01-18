@@ -20357,18 +20357,10 @@ export type Database = {
         }
         Returns: Json
       }
-      update_user_role_rpc:
-        | {
-            Args: {
-              p_new_role: Database["public"]["Enums"]["app_role"]
-              p_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: { p_new_role: string; p_user_id: string }
-            Returns: undefined
-          }
+      update_user_role_rpc: {
+        Args: { p_new_role: string; p_user_id: string }
+        Returns: undefined
+      }
       user_belongs_to_tenant: { Args: { _tenant_id: string }; Returns: boolean }
       user_has_tenant_access: { Args: { _tenant_id: string }; Returns: boolean }
       validate_agent_release_integrity: {
