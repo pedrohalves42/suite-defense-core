@@ -49,7 +49,7 @@ export function useAgentGroups() {
       
       const counts: Record<string, number> = {};
       data.forEach(({ group_id }) => {
-        counts[group_id] || 0) + 1;
+        counts[group_id] = (counts[group_id] || 0) + 1;
       });
       return counts;
     },
