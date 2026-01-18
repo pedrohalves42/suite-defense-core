@@ -19190,6 +19190,16 @@ export type Database = {
           },
         ]
       }
+      v_tenant_claim_health: {
+        Row: {
+          cross_tenant_attempts: number | null
+          missing_claims: number | null
+          period: string | null
+          tenant_switches: number | null
+          valid_claims: number | null
+        }
+        Relationships: []
+      }
       v_tenant_isolation_metrics: {
         Row: {
           agent_count: number | null

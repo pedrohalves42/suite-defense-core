@@ -28,6 +28,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { formatBrazilDateTime } from '@/lib/date-utils';
+import { TenantClaimAlerts } from './TenantClaimAlerts';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -466,6 +467,9 @@ export function SecurityControlPlane() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ADR-026: Tenant Claim Health */}
+      <TenantClaimAlerts />
 
       {/* System Status Summary */}
       <Card>
