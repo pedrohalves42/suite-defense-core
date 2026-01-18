@@ -3,12 +3,23 @@ import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { useActiveTenant } from '@/hooks/useActiveTenant';
 
+/**
+ * ADR-026: Enhanced ProtectedRoute with tenant validation
+ * - Validates user authentication
+ * - Validates user has at least one tenant associated
+ * - Handles force password change flow
+ * - Provides second-chance session verification
+ */
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
   const [verifyingSession, setVerifyingSession] = useState(false);
   const [hasValidSession, setHasValidSession] = useState<boolean | null>(null);
+  
+  // ADR-026 FIX: Get tenant info for validation
+  const { tenants, loading: tenantLoading } = useActiveTenant();
 
   // Second chance: verify session directly if useAuth says no user
   useEffect(() => {
@@ -35,6 +46,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     verifySession();
   }, [user, loading, hasValidSession]);
 
+  // Loading states
   if (loading || verifyingSession) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -60,9 +72,28 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // Check if user must change password (ADR-008: Access Governance)
   const mustChangePassword = user?.user_metadata?.must_change_password === true;
   const isOnForcePasswordPage = location.pathname === '/force-password-change';
+  const isOnNoTenantPage = location.pathname === '/no-tenant';
   
+  // Force password change takes priority
   if (mustChangePassword && !isOnForcePasswordPage) {
     return <Navigate to="/force-password-change" replace />;
+  }
+
+  // ADR-026 FIX: Validate tenant association
+  // Wait for tenant data to load before making a decision
+  if (!tenantLoading && tenants !== undefined) {
+    const hasTenant = tenants && tenants.length > 0;
+    
+    // User has no tenant and is not on allowed pages
+    if (!hasTenant && !isOnNoTenantPage && !isOnForcePasswordPage) {
+      logger.warn('ProtectedRoute: User has no associated tenant, redirecting to /no-tenant');
+      return <Navigate to="/no-tenant" replace />;
+    }
+    
+    // User has tenant but is on no-tenant page - redirect to dashboard
+    if (hasTenant && isOnNoTenantPage) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return <>{children}</>;
