@@ -45,6 +45,7 @@ Deno.serve(async (req: Request) => {
       await createAuditLog({
         supabase,
         userId: user.id,
+        tenantId: userRole?.tenant_id || 'unknown',  // ADR-029 HIGH-06: Required tenantId
         action: 'test_webhook',
         resourceType: 'integration',
         details: { error: 'Unauthorized' },
@@ -71,6 +72,7 @@ Deno.serve(async (req: Request) => {
       await createAuditLog({
         supabase,
         userId: user.id,
+        tenantId: userRole.tenant_id,  // ADR-029 HIGH-06: Required tenantId
         action: 'test_webhook',
         resourceType: 'integration',
         details: { error: 'Settings not found' },
@@ -92,6 +94,7 @@ Deno.serve(async (req: Request) => {
       await createAuditLog({
         supabase,
         userId: user.id,
+        tenantId: userRole.tenant_id,  // ADR-029 HIGH-06: Required tenantId
         action: 'test_webhook',
         resourceType: 'integration',
         details: { error: 'Webhook URL not configured' },
@@ -148,6 +151,7 @@ Deno.serve(async (req: Request) => {
       await createAuditLog({
         supabase,
         userId: user.id,
+        tenantId: userRole.tenant_id,  // ADR-029 HIGH-06: Required tenantId
         action: 'test_webhook',
         resourceType: 'integration',
         details: { 
@@ -201,6 +205,7 @@ Deno.serve(async (req: Request) => {
       await createAuditLog({
         supabase,
         userId: user.id,
+        tenantId: userRole.tenant_id,  // ADR-029 HIGH-06: Required tenantId
         action: 'test_webhook',
         resourceType: 'integration',
         details: { 

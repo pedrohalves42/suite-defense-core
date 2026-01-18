@@ -82,9 +82,10 @@ export function getBurnRateStatus(burnRate: number): BurnRateStatus {
 /**
  * Hook to fetch the current SLO state for the active tenant
  * Refreshes every 30 seconds for near-real-time monitoring
+ * ADR-029 CRIT-04: Added loading guard to prevent race conditions
  */
 export const useJobsSLO = () => {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant();  // ADR-029 CRIT-04: Add loading
   
   const query = useQuery({
     queryKey: ['job-slo-state', activeTenant?.id],
@@ -106,9 +107,9 @@ export const useJobsSLO = () => {
       
       return data as unknown as JobSLOState | null;
     },
-    enabled: !!activeTenant?.id,
-    refetchInterval: 30000, // Refresh every 30 seconds
-    staleTime: 15000, // Consider data stale after 15 seconds
+    enabled: !loading && !!activeTenant?.id,  // ADR-029 CRIT-04: Guard with loading state
+    refetchInterval: 30000,
+    staleTime: 15000,
   });
 
   // Calculate derived values

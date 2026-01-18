@@ -81,9 +81,10 @@ export function getAnomalySeverityConfig(severity: 'critical' | 'high' | 'medium
 /**
  * Hook to fetch job health anomalies from v_job_health_anomalies
  * Refreshes every 60 seconds for monitoring
+ * ADR-029 CRIT-04: Added loading guard to prevent race conditions
  */
 export const useJobAnomalies = () => {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant();  // ADR-029 CRIT-04: Add loading
 
   const query = useQuery({
     queryKey: ['job-anomalies', activeTenant?.id],
@@ -109,9 +110,9 @@ export const useJobAnomalies = () => {
         description: row.description || getDefaultDescription(row.anomaly_type)
       }));
     },
-    enabled: !!activeTenant?.id,
-    refetchInterval: 60000, // Refresh every 60 seconds
-    staleTime: 30000, // Consider stale after 30 seconds
+    enabled: !loading && !!activeTenant?.id,  // ADR-029 CRIT-04: Guard with loading state
+    refetchInterval: 60000,
+    staleTime: 30000,
   });
 
   // Calculate summary

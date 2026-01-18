@@ -32,8 +32,11 @@ export interface JobsHealthSummary {
   avgExecutionSeconds: number;
 }
 
+/**
+ * ADR-029 CRIT-04: Added loading guard to prevent race conditions
+ */
 export const useJobsHealth = () => {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant();  // ADR-029 CRIT-04: Add loading
   const tenantId = activeTenant?.id;
 
   const metricsQuery = useQuery({
@@ -56,7 +59,7 @@ export const useJobsHealth = () => {
         avg_duration_seconds: row.avg_duration_seconds ? Number(row.avg_duration_seconds) : null,
       }));
     },
-    enabled: !!tenantId,
+    enabled: !loading && !!tenantId,  // ADR-029 CRIT-04: Guard with loading state
     refetchInterval: 30000,
     staleTime: 10000,
   });
@@ -75,7 +78,7 @@ export const useJobsHealth = () => {
       if (error) throw error;
       return (data || []) as JobHourlyTrend[];
     },
-    enabled: !!tenantId,
+    enabled: !loading && !!tenantId,  // ADR-029 CRIT-04: Guard with loading state
     refetchInterval: 60000,
     staleTime: 30000,
   });
@@ -97,7 +100,7 @@ export const useJobsHealth = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!tenantId,
+    enabled: !loading && !!tenantId,  // ADR-029 CRIT-04: Guard with loading state
     refetchInterval: 30000,
   });
 
