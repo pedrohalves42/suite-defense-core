@@ -61,7 +61,7 @@ export interface TaskStats {
 
 // Hook para listar tasks
 export function useTasks(filters?: TaskFilters) {
-  const { tenant } = useTenant();
+  const { tenant, loading } = useTenant(); // ADR-030 CRIT-01
 
   return useQuery({
     queryKey: ['tasks', tenant?.id, filters],
@@ -102,14 +102,14 @@ export function useTasks(filters?: TaskFilters) {
       if (error) throw error;
       return data as Task[];
     },
-    enabled: !!tenant?.id,
+    enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
     refetchInterval: 30000,
   });
 }
 
 // Hook para estatísticas de tasks
 export function useTaskStats() {
-  const { tenant } = useTenant();
+  const { tenant, loading } = useTenant(); // ADR-030 CRIT-01
 
   return useQuery({
     queryKey: ['task-stats', tenant?.id],
@@ -159,7 +159,7 @@ export function useTaskStats() {
         avg_resolution_hours: null, // Not in current view
       } as TaskStats;
     },
-    enabled: !!tenant?.id,
+    enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
     refetchInterval: 30000,
   });
 }
@@ -269,7 +269,7 @@ export function useAssignTask() {
 
 // Hook para contagem de tasks abertas (para badge no menu)
 export function useOpenTasksCount() {
-  const { tenant } = useTenant();
+  const { tenant, loading } = useTenant(); // ADR-030 CRIT-01
 
   return useQuery({
     queryKey: ['open-tasks-count', tenant?.id],
@@ -283,7 +283,7 @@ export function useOpenTasksCount() {
       if (error) throw error;
       return count || 0;
     },
-    enabled: !!tenant?.id,
+    enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
     refetchInterval: 60000,
     staleTime: 30000,
   });

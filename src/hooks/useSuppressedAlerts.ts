@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
 
 export function useSuppressedAlertsByArchive() {
-  const { tenant } = useTenant();
+  const { tenant, loading } = useTenant(); // ADR-030 CRIT-01
 
   return useQuery({
     queryKey: ['suppressed-alerts-archive', tenant?.id],
@@ -17,7 +17,7 @@ export function useSuppressedAlertsByArchive() {
       if (error) throw error;
       return data?.length || 0;
     },
-    enabled: !!tenant?.id,
+    enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
     staleTime: 30000,
   });
 }
