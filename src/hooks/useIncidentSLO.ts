@@ -150,7 +150,7 @@ export function getErrorBudgetColor(consumed: number): string {
  * Hook to fetch incident groups with SLO data
  */
 export const useIncidentGroupsWithSLO = (limit = 50) => {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant(); // ADR-029 CRIT-04
 
   return useQuery({
     queryKey: ['incident-groups-slo', activeTenant?.id, limit],
@@ -167,7 +167,7 @@ export const useIncidentGroupsWithSLO = (limit = 50) => {
       if (error) throw error;
       return (data || []) as unknown as IncidentGroupWithSLO[];
     },
-    enabled: !!activeTenant?.id,
+    enabled: !loading && !!activeTenant?.id, // ADR-029 CRIT-04
     refetchInterval: 30000, // 30s for fresher burn rate data
     staleTime: 15000,
   });
@@ -177,7 +177,7 @@ export const useIncidentGroupsWithSLO = (limit = 50) => {
  * Hook to fetch SLO summary stats
  */
 export const useIncidentSLOSummary = () => {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant(); // ADR-029 CRIT-04
 
   return useQuery({
     queryKey: ['incident-slo-summary', activeTenant?.id],
@@ -204,7 +204,7 @@ export const useIncidentSLOSummary = () => {
           : 0,
       };
     },
-    enabled: !!activeTenant?.id,
+    enabled: !loading && !!activeTenant?.id, // ADR-029 CRIT-04
     refetchInterval: 30000,
     staleTime: 15000,
   });
