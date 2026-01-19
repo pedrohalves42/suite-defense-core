@@ -19953,39 +19953,20 @@ export type Database = {
         Returns: boolean
       }
       check_task_sla_breach: { Args: never; Returns: number }
-      claim_jobs_for_agent:
-        | {
-            Args: {
-              p_agent_id: string
-              p_agent_name: string
-              p_limit?: number
-              p_tenant_id: string
-            }
-            Returns: {
-              execution_id: string
-              expires_at: string
-              job_id: string
-              job_type: string
-              nonce: string
-              payload: Json
-              payload_hash: string
-              priority: number
-            }[]
-          }
-        | {
-            Args: { p_agent_id: string; p_limit: number }
-            Returns: {
-              execution_id: string
-              execution_index: number
-              expires_at: string
-              job_id: string
-              job_type: string
-              nonce: string
-              payload: Json
-              payload_hash: string
-              previous_execution_hash: string
-            }[]
-          }
+      claim_jobs_for_agent: {
+        Args: { p_agent_id: string; p_limit?: number }
+        Returns: {
+          execution_id: string
+          execution_index: number
+          expires_at: string
+          job_id: string
+          job_type: string
+          nonce: string
+          payload: Json
+          payload_hash: string
+          previous_execution_hash: string
+        }[]
+      }
       classify_job_failure: {
         Args: { p_error_message: string }
         Returns: string
