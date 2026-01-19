@@ -11,6 +11,7 @@ import { InstallationTrendChart } from "@/components/admin/InstallationTrendChar
 import { AgentQuickActions } from "@/components/admin/AgentQuickActions";
 import { getJobTypeLabel } from "@/lib/job-labels";
 import { formatBrazilDateTime } from "@/lib/date-utils";
+import { useActiveTenant } from "@/hooks/useActiveTenant";
 
 type ProblematicAgent = {
   id: string;
@@ -38,6 +39,8 @@ type InstallationError = {
 };
 
 export default function InstallationHealth() {
+  // ADR-VELLUM V-102: Use centralized tenant hook with loading guard
+  const { activeTenant, loading: tenantLoading, isFetched } = useActiveTenant();
   const [problematicAgents, setProblematicAgents] = useState<ProblematicAgent[]>([]);
   const [stuckJobs, setStuckJobs] = useState<StuckJob[]>([]);
   const [recentErrors, setRecentErrors] = useState<InstallationError[]>([]);
@@ -121,13 +124,15 @@ export default function InstallationHealth() {
     }
   };
 
+  // ADR-VELLUM V-102: Guard - only fetch when tenant is fully synchronized
   useEffect(() => {
-    fetchData();
-
-    // Auto-refresh a cada 2 minutos
-    const interval = setInterval(fetchData, 120000);
-    return () => clearInterval(interval);
-  }, []);
+    if (!tenantLoading && isFetched && activeTenant?.id) {
+      fetchData();
+      // Auto-refresh a cada 2 minutos
+      const interval = setInterval(fetchData, 120000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTenant?.id, tenantLoading, isFetched]);
 
   const getSeverityColor = (minutesSince: number) => {
     if (minutesSince > 60) return "bg-red-500";
