@@ -869,12 +869,13 @@ Deno.serve(async (req) => {
       // Tentar buscar a execution mais recente para este job
       console.log('[submit-job-result] [AUDIT_TRAIL] No execution_id provided, attempting fallback lookup')
       
+      // FIX 2026-01-19: Search for 'running' status (new RPC) OR 'claimed' (legacy)
       const { data: existingExecution } = await supabase
         .from('job_executions')
         .select('id')
         .eq('job_id', job_id)
         .eq('agent_id', agent.id)
-        .eq('status', 'claimed')
+        .in('status', ['running', 'claimed'])
         .order('claimed_at', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -902,7 +903,43 @@ Deno.serve(async (req) => {
           console.log('[submit-job-result] [AUDIT_TRAIL] Fallback execution finalized:', execResult)
         }
       } else {
-        console.log('[submit-job-result] [AUDIT_TRAIL] No existing execution found - legacy job without audit trail')
+        // FIX 2026-01-19: Create retroactive execution for jobs claimed before RPC fix
+        console.log('[submit-job-result] [AUDIT_TRAIL] No execution found - creating retroactive execution')
+        
+        const retroNonce = crypto.randomUUID()
+        const retroExecutionId = crypto.randomUUID()
+        
+        const { error: insertError } = await supabase
+          .from('job_executions')
+          .insert({
+            id: retroExecutionId,
+            job_id: job_id,
+            agent_id: agent.id,
+            tenant_id: agent.tenant_id,
+            agent_version: agentVersion,
+            agent_name: agent.agent_name,
+            nonce: retroNonce,
+            execution_index: 0, // Unknown chain position
+            payload_hash: job.payload_hash,
+            claimed_at: new Date().toISOString(),
+            started_at: started_at || new Date().toISOString(),
+            finished_at: finished_at || new Date().toISOString(),
+            status: status,
+            output_hash: outputHash,
+            error_message: error_message ? sanitizeErrorMessage(error_message) : null,
+            execution_time_seconds: execution_time_seconds || null
+          })
+        
+        if (insertError) {
+          console.error('[submit-job-result] [AUDIT_TRAIL] Failed to create retroactive execution:', insertError)
+        } else {
+          executionFinalized = true
+          console.log('[submit-job-result] [AUDIT_TRAIL] Created retroactive execution:', {
+            execution_id: retroExecutionId,
+            job_id,
+            note: 'Job was claimed before RPC fix (2026-01-19)'
+          })
+        }
       }
     }
     
