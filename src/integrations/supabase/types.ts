@@ -20714,19 +20714,14 @@ export type Database = {
         }
         Returns: Json
       }
-      revive_agent_on_reenroll:
-        | {
-            Args: { p_agent_id: string; p_new_hmac_secret: string }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_agent_id: string
-              p_expected_tenant_id?: string
-              p_new_hmac_secret: string
-            }
-            Returns: Json
-          }
+      revive_agent_on_reenroll: {
+        Args: {
+          p_agent_id: string
+          p_expected_tenant_id?: string
+          p_new_hmac_secret: string
+        }
+        Returns: Json
+      }
       revoke_agent_signing_key: {
         Args: { p_key_id: string; p_reason?: string }
         Returns: boolean
