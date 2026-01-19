@@ -1,0 +1,89 @@
+# ADR-026: Security Checks Workflow
+# Runs security-related CI checks on every push and PR
+
+name: Security Checks
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  multi-tenant-validation:
+    name: Multi-Tenant Table Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Make scripts executable
+        run: |
+          chmod +x scripts/validate-multi-tenant-tables.sh
+          chmod +x scripts/check-tenant-queries.sh
+      
+      - name: Validate MULTI_TENANT_TABLES registration
+        run: ./scripts/validate-multi-tenant-tables.sh
+      
+      - name: Check tenant query isolation
+        run: ./scripts/check-tenant-queries.sh
+
+  security-lint:
+    name: Security Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run TypeScript check
+        run: npx tsc --noEmit
+      
+      - name: Check for hardcoded secrets
+        run: |
+          echo "Checking for potential hardcoded secrets..."
+          
+          # Check for API keys or secrets in code (excluding test files and configs)
+          if grep -rn --include="*.ts" --include="*.tsx" \
+            -e "sk_live_" -e "pk_live_" \
+            -e "SUPABASE_SERVICE_ROLE" \
+            src/ 2>/dev/null | grep -v ".test." | grep -v "types.ts"; then
+            echo "⚠️ Potential hardcoded secrets found!"
+            exit 1
+          fi
+          
+          echo "✓ No hardcoded secrets found"
+
+  rls-policy-check:
+    name: RLS Policy Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Analyze RLS policies in migrations
+        run: |
+          echo "Analyzing RLS policies in migrations..."
+          
+          # Check for tables without RLS in recent migrations
+          for file in supabase/migrations/*.sql; do
+            if grep -q "CREATE TABLE" "$file"; then
+              TABLE_NAME=$(grep -oP "CREATE TABLE.*?public\.(\w+)" "$file" | head -1 | sed 's/.*public\.//')
+              if [ -n "$TABLE_NAME" ] && ! grep -q "ENABLE ROW LEVEL SECURITY" "$file"; then
+                echo "⚠️ Table '$TABLE_NAME' in $file may not have RLS enabled"
+              fi
+            fi
+          done
+          
+          echo "✓ RLS policy analysis complete"
