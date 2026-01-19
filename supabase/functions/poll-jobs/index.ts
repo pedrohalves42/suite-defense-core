@@ -228,11 +228,16 @@ Deno.serve(async (req) => {
     const { data: jobs, error: jobsError } = await supabase
       .rpc('claim_jobs_for_agent', {
         p_agent_id: token.agent_id,
-        p_max_jobs: 3
+        p_limit: 3
       }) as { data: ClaimedJob[] | null, error: { message: string } | null }
 
     if (jobsError) {
-      logger.error('Error claiming jobs', { error: jobsError.message, agentName: agent.agent_name })
+      logger.error('Error claiming jobs', { 
+        error: jobsError.message, 
+        errorFull: JSON.stringify(jobsError),
+        agentName: agent.agent_name,
+        agentId: token.agent_id
+      })
       return new Response(
         JSON.stringify([]),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
