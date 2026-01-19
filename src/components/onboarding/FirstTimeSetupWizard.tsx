@@ -104,7 +104,7 @@ export function FirstTimeSetupWizard() {
     }
   ];
 
-  // Verificar status de cada step
+  // ADR-VELLUM V-102: Guard - only check steps when tenant is ready
   useEffect(() => {
     const checkSteps = async () => {
       if (!tenantId) return;
@@ -130,10 +130,11 @@ export function FirstTimeSetupWizard() {
       }
     };
     
-    if (showOnboarding && tenantId) {
+    // V-102: Guard - ensure tenant is fully synchronized before checking steps
+    if (showOnboarding && tenantId && activeTenant?.id) {
       checkSteps();
     }
-  }, [tenantId, showOnboarding]);
+  }, [tenantId, showOnboarding, activeTenant?.id]);
 
   const completedSteps = Object.values(stepStatuses).filter(Boolean).length;
   const progress = (completedSteps / steps.length) * 100;

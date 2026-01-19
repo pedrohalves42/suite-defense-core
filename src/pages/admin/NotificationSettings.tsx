@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -150,12 +151,15 @@ const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => ({
 export default function NotificationSettings() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  // ADR-VELLUM V-103: Use centralized tenant hook instead of local fetch
+  const { activeTenant, loading: tenantLoading, isFetched } = useActiveTenant();
+  const tenantId = activeTenant?.id || null;
+  
   const [channels, setChannels] = useState<NotificationChannel[]>([]);
   const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
   const [logs, setLogs] = useState<NotificationLog[]>([]);
   const [scheduledReports, setScheduledReports] = useState<ScheduledReport[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tenantId, setTenantId] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newChannel, setNewChannel] = useState({
     type: 'email' as 'whatsapp' | 'telegram' | 'email',
@@ -186,30 +190,13 @@ export default function NotificationSettings() {
     }
   }, [user, authLoading, navigate]);
 
+  // ADR-VELLUM V-103: Removed vulnerable fetchTenantId - using useActiveTenant hook
+  // Guard - only fetch when tenant is fully synchronized
   useEffect(() => {
-    if (user) {
-      fetchTenantId();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (tenantId) {
+    if (!tenantLoading && isFetched && tenantId) {
       fetchData();
     }
-  }, [tenantId]);
-
-  const fetchTenantId = async () => {
-    const { data } = await supabase
-      .from('user_roles')
-      .select('tenant_id')
-      .eq('user_id', user?.id)
-      .limit(1)
-      .maybeSingle();
-    
-    if (data) {
-      setTenantId(data.tenant_id);
-    }
-  };
+  }, [tenantId, tenantLoading, isFetched]);
 
   const fetchData = useCallback(async () => {
     if (!tenantId) return;
