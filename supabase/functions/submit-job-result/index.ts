@@ -283,6 +283,12 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ============================================================
+    // V-203: Require execution_id for recent jobs
+    // Jobs created after transition date MUST have execution_id
+    // ============================================================
+    const TRANSITION_DATE = new Date('2026-01-19T00:00:00Z')
+    
     console.log('[submit-job-result] Processing job result:', {
       job_id,
       agent: agent.agent_name,
@@ -307,9 +313,10 @@ Deno.serve(async (req) => {
 
     // Buscar o job - CORRIGIDO: usar 'type' não 'job_type'
     // P1: Incluir payload_hash para validação de integridade
+    // V-203: Incluir created_at para validação de execution_id
     const { data: job, error: fetchError } = await supabase
       .from('jobs')
-      .select('id, agent_name, tenant_id, status, type, agent_id, payload_hash')
+      .select('id, agent_name, tenant_id, status, type, agent_id, payload_hash, created_at')
       .eq('id', job_id)
       .maybeSingle()
 
@@ -397,7 +404,43 @@ Deno.serve(async (req) => {
     }
 
     // ============================================================
-    // P1: VALIDAÇÃO DE INTEGRIDADE OBRIGATÓRIA
+    // V-203: Require execution_id for jobs created after transition date
+    // This ensures audit trail integrity for all new jobs
+    // ============================================================
+    const jobCreatedAt = new Date(job.created_at || 0)
+    if (!execution_id && jobCreatedAt > TRANSITION_DATE) {
+      console.error('[submit-job-result] [V-203] Missing execution_id for recent job:', {
+        job_id,
+        job_created_at: job.created_at,
+        transition_date: TRANSITION_DATE.toISOString(),
+        agent_name: agent.agent_name
+      })
+      
+      await logSecurityEvent({
+        supabase,
+        tenantId: agent.tenant_id,
+        ipAddress,
+        endpoint: '/submit-job-result',
+        attackType: 'invalid_input',  // V-203: Missing execution_id
+        severity: 'high',
+        blocked: true,
+        details: { 
+          job_id, 
+          agent_name: agent.agent_name,
+          job_created_at: job.created_at,
+          reason: 'EXECUTION_ID_REQUIRED: Jobs created after transition require execution_id for audit trail'
+        }
+      })
+      
+      return new Response(
+        JSON.stringify({ 
+          error: 'EXECUTION_ID_REQUIRED',
+          message: 'Jobs created after 2026-01-19 require execution_id for audit compliance'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Comparar payload_hash do job com payload_hash da execution
     // Se diferir → ataque, bug ou corrupção
     // ============================================================

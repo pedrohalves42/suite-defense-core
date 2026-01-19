@@ -20539,6 +20539,13 @@ export type Database = {
       }
       get_system_mode_safe: { Args: never; Returns: string }
       get_tenant_mfa_policy: { Args: { _tenant_id: string }; Returns: Json }
+      get_user_roles: {
+        Args: { _user_id: string }
+        Returns: {
+          role: Database["public"]["Enums"]["app_role"]
+          tenant_id: string
+        }[]
+      }
       get_user_tenant_id_safe: { Args: { p_user_id?: string }; Returns: string }
       get_valid_agent_signing_key: {
         Args: { p_agent_id: string; p_fingerprint: string }
