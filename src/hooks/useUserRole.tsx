@@ -6,6 +6,15 @@ import { type AppRole, APP_ROLES } from '@/types/roles';
 
 type UserRole = AppRole | null;
 
+interface RoleResult {
+  role: AppRole;
+  tenant_id: string;
+}
+
+/**
+ * V-205: Optimized useUserRole hook
+ * Uses single get_user_roles RPC instead of 5 sequential has_role calls
+ */
 export const useUserRole = () => {
   const { user } = useAuth();
   const [role, setRole] = useState<UserRole>(null);
@@ -20,69 +29,34 @@ export const useUserRole = () => {
       }
 
       try {
-        // Check roles in priority order using RPC to avoid RLS issues
-        // Super admin first (highest privilege)
-        const { data: isSuperAdmin, error: superAdminError } = await supabase.rpc('has_role', {
-          _user_id: user.id,
-          _role: 'super_admin'
-        });
+        // V-205: Single RPC call replaces 5 sequential calls
+        const { data: roles, error } = await supabase.rpc('get_user_roles', {
+          _user_id: user.id
+        }) as { data: RoleResult[] | null; error: Error | null };
 
-        if (superAdminError) throw superAdminError;
-        if (isSuperAdmin === true) {
-          setRole('super_admin');
+        if (error) throw error;
+
+        if (!roles || roles.length === 0) {
+          setRole(null);
           setLoading(false);
           return;
         }
 
-        const { data: isAdmin, error: adminError } = await supabase.rpc('has_role', {
-          _user_id: user.id,
-          _role: 'admin'
-        });
+        // Priority order: super_admin > admin > analyst > operator > viewer
+        const rolePriority: Record<AppRole, number> = {
+          'super_admin': 1,
+          'admin': 2,
+          'analyst': 3,
+          'operator': 4,
+          'viewer': 5
+        };
 
-        if (adminError) throw adminError;
-        if (isAdmin === true) {
-          setRole('admin');
-          setLoading(false);
-          return;
-        }
+        // Find highest priority role
+        const sortedRoles = roles.sort((a, b) => 
+          (rolePriority[a.role] || 99) - (rolePriority[b.role] || 99)
+        );
 
-        const { data: isAnalyst, error: analystError } = await supabase.rpc('has_role', {
-          _user_id: user.id,
-          _role: 'analyst'
-        });
-
-        if (analystError) throw analystError;
-        if (isAnalyst === true) {
-          setRole('analyst');
-          setLoading(false);
-          return;
-        }
-
-        const { data: isOperator, error: operatorError } = await supabase.rpc('has_role', {
-          _user_id: user.id,
-          _role: 'operator'
-        });
-
-        if (operatorError) throw operatorError;
-        if (isOperator === true) {
-          setRole('operator');
-          setLoading(false);
-          return;
-        }
-
-        const { data: isViewer, error: viewerError } = await supabase.rpc('has_role', {
-          _user_id: user.id,
-          _role: 'viewer'
-        });
-
-        if (viewerError) throw viewerError;
-        if (isViewer === true) {
-          setRole('viewer');
-          setLoading(false);
-          return;
-        }
-
-        setRole(null);
+        setRole(sortedRoles[0].role);
       } catch (error) {
         logger.error('Error checking user role', error);
         setRole(null);
