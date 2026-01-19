@@ -10,6 +10,30 @@ const corsHeaders = {
  * Uses switch_tenant_atomic RPC to eliminate race conditions between
  * access verification and metadata update
  */
+/**
+ * Extract client IP from request headers
+ */
+function extractClientIp(req: Request): string {
+  // Try various headers in order of preference
+  const forwardedFor = req.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0].trim();
+  }
+  
+  const realIp = req.headers.get('x-real-ip');
+  if (realIp) {
+    return realIp.trim();
+  }
+  
+  const cfConnectingIp = req.headers.get('cf-connecting-ip');
+  if (cfConnectingIp) {
+    return cfConnectingIp.trim();
+  }
+  
+  // Default fallback
+  return '127.0.0.1';
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -50,6 +74,46 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[set-active-tenant] User ${user.id} requesting tenant switch`)
+
+    // ADR-026 P1.1: IP Whitelist Check for Super Admin
+    const clientIp = extractClientIp(req);
+    console.log(`[set-active-tenant] Client IP: ${clientIp}`);
+
+    const { data: ipAllowed, error: ipCheckError } = await supabaseAdmin.rpc('check_super_admin_ip_access', {
+      _user_id: user.id,
+      _ip_address: clientIp
+    });
+
+    if (ipCheckError) {
+      console.error('[set-active-tenant] IP check error:', ipCheckError);
+      // Non-blocking - log but continue if RPC fails
+    } else if (ipAllowed === false) {
+      console.warn(`[set-active-tenant] User ${user.id} blocked: IP not in whitelist`);
+      
+      // Log blocked attempt to audit_logs
+      try {
+        await supabaseAdmin.from('audit_logs').insert({
+          user_id: user.id,
+          action: 'super_admin_ip_blocked',
+          target_type: 'security',
+          details: { 
+            ip_address: clientIp,
+            user_agent: req.headers.get('user-agent'),
+            timestamp: new Date().toISOString()
+          }
+        });
+      } catch (auditErr) {
+        console.warn('[set-active-tenant] Failed to log IP block:', auditErr);
+      }
+
+      return new Response(JSON.stringify({ 
+        error: 'IP not authorized for super admin access',
+        code: 'IP_BLOCKED'
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
     const { tenant_id } = await req.json()
     

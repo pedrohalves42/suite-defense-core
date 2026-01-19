@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
+import { SessionProvider } from '@/components/SessionProvider';
 
 /**
  * ADR-026: Enhanced ProtectedRoute with tenant validation
@@ -98,5 +99,6 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     }
   }
 
-  return <>{children}</>;
+  // ADR-026: Wrap children with SessionProvider for session timeout and tracking
+  return <SessionProvider>{children}</SessionProvider>;
 };

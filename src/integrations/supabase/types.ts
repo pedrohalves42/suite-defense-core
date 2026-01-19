@@ -47,6 +47,139 @@ export type Database = {
         }
         Relationships: []
       }
+      active_sessions: {
+        Row: {
+          expires_at: string
+          id: string
+          ip_address: string
+          is_super_admin: boolean | null
+          last_activity_at: string | null
+          metadata: Json | null
+          session_token_hash: string | null
+          started_at: string | null
+          tenant_id: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          expires_at: string
+          id?: string
+          ip_address: string
+          is_super_admin?: boolean | null
+          last_activity_at?: string | null
+          metadata?: Json | null
+          session_token_hash?: string | null
+          started_at?: string | null
+          tenant_id?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          expires_at?: string
+          id?: string
+          ip_address?: string
+          is_super_admin?: boolean | null
+          last_activity_at?: string | null
+          metadata?: Json | null
+          session_token_hash?: string | null
+          started_at?: string | null
+          tenant_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "active_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "active_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "active_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      admin_ip_whitelist: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          ip_address: unknown
+          is_active: boolean | null
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address: unknown
+          is_active?: boolean | null
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address?: unknown
+          is_active?: boolean | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_ip_whitelist_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_ip_whitelist_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "admin_ip_whitelist_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "admin_ip_whitelist_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       agent_archive_events: {
         Row: {
           actor_id: string | null
@@ -13926,6 +14059,7 @@ export type Database = {
           name: string
           owner_user_id: string
           phone: string | null
+          session_timeout_minutes: Json | null
           setup_completed: boolean | null
           slug: string
           state: string | null
@@ -13949,6 +14083,7 @@ export type Database = {
           name: string
           owner_user_id: string
           phone?: string | null
+          session_timeout_minutes?: Json | null
           setup_completed?: boolean | null
           slug: string
           state?: string | null
@@ -13972,6 +14107,7 @@ export type Database = {
           name?: string
           owner_user_id?: string
           phone?: string | null
+          session_timeout_minutes?: Json | null
           setup_completed?: boolean | null
           slug?: string
           state?: string | null
@@ -19490,6 +19626,10 @@ export type Database = {
         }
         Returns: Json
       }
+      check_super_admin_ip_access: {
+        Args: { _ip_address: string; _user_id: string }
+        Returns: boolean
+      }
       check_task_sla_breach: { Args: never; Returns: number }
       claim_jobs_for_agent:
         | {
@@ -19533,6 +19673,7 @@ export type Database = {
         Returns: Json
       }
       cleanup_expired_keys: { Args: never; Returns: number }
+      cleanup_expired_sessions: { Args: never; Returns: number }
       cleanup_offline_agents_jobs: {
         Args: never
         Returns: {
@@ -20076,6 +20217,7 @@ export type Database = {
         Args: { p_plan_name: string }
         Returns: number
       }
+      get_session_timeout_minutes: { Args: { _role: string }; Returns: number }
       get_slo_target_for_severity: {
         Args: { p_severity: string }
         Returns: number
@@ -20175,6 +20317,10 @@ export type Database = {
           p_resource_type: string
         }
         Returns: undefined
+      }
+      log_session_start: {
+        Args: { _ip_address: string; _user_agent: string }
+        Returns: string
       }
       log_state_change: {
         Args: {
@@ -20356,6 +20502,10 @@ export type Database = {
       }
       update_quota_usage: {
         Args: { p_delta: number; p_feature_key: string; p_tenant_id: string }
+        Returns: undefined
+      }
+      update_session_activity: {
+        Args: { _session_id: string }
         Returns: undefined
       }
       update_user_role: {
