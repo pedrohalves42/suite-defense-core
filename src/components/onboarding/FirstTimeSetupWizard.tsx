@@ -35,7 +35,8 @@ interface Step {
 
 export function FirstTimeSetupWizard() {
   const { showOnboarding, completeOnboarding, dismissFor7Days } = useOnboarding();
-  const { activeTenant } = useActiveTenant();
+  // V-314: include loading to prevent race conditions during tenant sync
+  const { activeTenant, loading } = useActiveTenant();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [stepStatuses, setStepStatuses] = useState<Record<string, boolean>>({});
@@ -130,11 +131,11 @@ export function FirstTimeSetupWizard() {
       }
     };
     
-    // V-102: Guard - ensure tenant is fully synchronized before checking steps
-    if (showOnboarding && tenantId && activeTenant?.id) {
+    // V-314: Guard - ensure tenant is fully synchronized before checking steps
+    if (showOnboarding && !loading && tenantId && activeTenant?.id) {
       checkSteps();
     }
-  }, [tenantId, showOnboarding, activeTenant?.id]);
+  }, [tenantId, showOnboarding, activeTenant?.id, loading]);
 
   const completedSteps = Object.values(stepStatuses).filter(Boolean).length;
   const progress = (completedSteps / steps.length) * 100;

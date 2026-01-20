@@ -95,6 +95,68 @@ Deno.serve(async (req) => {
     const queuedCutoff = new Date(Date.now() - queuedThresholdHours * 60 * 60 * 1000).toISOString()
     const deliveredCutoff = new Date(Date.now() - deliveredThresholdHours * 60 * 60 * 1000).toISOString()
 
+    // ADR-VELLUM V-311: Blast radius governance for tenant-scoped cleanup
+    // Only enforced when an explicit tenant_id is provided (manual/targeted cleanup).
+    // Scheduled/global cleanup remains governed by kill switch + backend automation controls.
+    if (targetTenantId) {
+      const { count: queuedCount, error: queuedCountError } = await supabase
+        .from('jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'queued')
+        .lt('created_at', queuedCutoff)
+        .eq('tenant_id', targetTenantId)
+
+      if (queuedCountError) throw queuedCountError
+
+      const { count: deliveredCount, error: deliveredCountError } = await supabase
+        .from('jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'delivered')
+        .lt('delivered_at', deliveredCutoff)
+        .eq('tenant_id', targetTenantId)
+
+      if (deliveredCountError) throw deliveredCountError
+
+      const totalAffected = (queuedCount ?? 0) + (deliveredCount ?? 0)
+      if (totalAffected > 0) {
+        const { data: blastCheck, error: blastError } = await supabase.rpc('check_blast_radius' as any, {
+          p_tenant_id: targetTenantId,
+          p_action_type: 'cancel_jobs',
+          p_affected_count: totalAffected,
+        })
+
+        if (blastError) {
+          console.error(`[${requestId}] Blast radius check failed:`, blastError)
+          return new Response(
+            JSON.stringify({ error: 'BLAST_RADIUS_CHECK_FAILED', message: blastError.message, request_id: requestId }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        if (!blastCheck?.allowed) {
+          console.warn(`[${requestId}] [V-311] Blast radius exceeded for tenant cleanup`, {
+            tenant_id: targetTenantId,
+            requested: totalAffected,
+            affected_percent: blastCheck?.affected_percent,
+            requires_approval: blastCheck?.requires_approval,
+            message: blastCheck?.message,
+          })
+          return new Response(
+            JSON.stringify({
+              error: 'BLAST_RADIUS_EXCEEDED',
+              requested: totalAffected,
+              affected_percent: blastCheck?.affected_percent,
+              max_allowed_percent: blastCheck?.max_allowed_percent,
+              requires_approval: blastCheck?.requires_approval,
+              message: blastCheck?.message || 'Blast radius exceeded',
+              request_id: requestId,
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+      }
+    }
+
     // Step 1: Cancel old queued jobs
     let queuedQuery = supabase
       .from('jobs')
