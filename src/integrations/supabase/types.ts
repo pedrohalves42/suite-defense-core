@@ -17471,6 +17471,42 @@ export type Database = {
           status: string | null
           tenant_id: string | null
         }
+        Insert: {
+          agent_id?: string | null
+          agent_installed_at?: string | null
+          agent_name?: string | null
+          agent_state?: string | null
+          archived_at?: string | null
+          archived_reason?: string | null
+          command_copied_at?: string | null
+          display_name?: string | null
+          enrolled_at?: string | null
+          id?: string | null
+          is_stuck?: never
+          last_heartbeat?: string | null
+          lifecycle_status?: never
+          minutes_between_copy_and_install?: never
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          agent_installed_at?: string | null
+          agent_name?: string | null
+          agent_state?: string | null
+          archived_at?: string | null
+          archived_reason?: string | null
+          command_copied_at?: string | null
+          display_name?: string | null
+          enrolled_at?: string | null
+          id?: string | null
+          is_stuck?: never
+          last_heartbeat?: string | null
+          lifecycle_status?: never
+          minutes_between_copy_and_install?: never
+          status?: string | null
+          tenant_id?: string | null
+        }
         Relationships: [
           {
             foreignKeyName: "agents_tenant_id_new_fkey"
