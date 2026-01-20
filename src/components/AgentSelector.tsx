@@ -28,7 +28,8 @@ interface Agent {
 }
 
 export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
-  const { activeTenant } = useActiveTenant();
+  // V-301: Add loading guard to prevent race conditions during tenant sync
+  const { activeTenant, loading } = useActiveTenant();
   
   const { data: agents, isLoading, error } = useQuery({
     queryKey: ['agents-list', activeTenant?.id],
@@ -50,7 +51,8 @@ export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
       if (error) throw error;
       return data as Agent[];
     },
-    enabled: !!activeTenant?.id,
+    // V-301: Guard with !loading to prevent queries before JWT sync completes
+    enabled: !loading && !!activeTenant?.id,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 

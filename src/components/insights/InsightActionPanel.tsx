@@ -39,7 +39,8 @@ const severityConfig = {
 };
 
 export function InsightActionPanel() {
-  const { activeTenant } = useActiveTenant();
+  // V-302: Add loading guard to prevent race conditions during tenant sync
+  const { activeTenant, loading } = useActiveTenant();
   const tenantId = activeTenant?.id;
   const queryClient = useQueryClient();
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
@@ -63,7 +64,8 @@ export function InsightActionPanel() {
         recommendation: item.recommendation || null,
       })) as Insight[];
     },
-    enabled: !!tenantId,
+    // V-302: Guard with !loading to prevent queries before JWT sync completes
+    enabled: !loading && !!tenantId,
     refetchInterval: 30000,
   });
 
