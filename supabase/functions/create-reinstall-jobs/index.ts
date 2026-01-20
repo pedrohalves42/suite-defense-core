@@ -131,6 +131,56 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ADR-VELLUM V-310: Blast radius governance before mass job creation
+    // Uses existing blast radius engine (check_blast_radius) to fail-closed for oversized operations.
+    const { data: blastCheck, error: blastError } = await supabase
+      .rpc('check_blast_radius' as any, {
+        p_tenant_id: adminRole.tenant_id,
+        // Map reinstall to an existing mass-impact action type.
+        p_action_type: 'force_update_agents',
+        p_affected_count: agentsToReinstall.length,
+      });
+
+    if (blastError) {
+      logger.error('[create-reinstall-jobs] Blast radius check failed', {
+        requestId,
+        error: blastError.message,
+      });
+      return new Response(
+        JSON.stringify({
+          error: 'BLAST_RADIUS_CHECK_FAILED',
+          message: blastError.message,
+          requestId,
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!blastCheck?.allowed) {
+      logger.warn('[create-reinstall-jobs] Blast radius exceeded', {
+        requestId,
+        tenant_id: adminRole.tenant_id,
+        action_type: 'force_update_agents',
+        requested: agentsToReinstall.length,
+        affected_percent: blastCheck?.affected_percent,
+        requires_approval: blastCheck?.requires_approval,
+        message: blastCheck?.message,
+      });
+
+      return new Response(
+        JSON.stringify({
+          error: 'BLAST_RADIUS_EXCEEDED',
+          requested: agentsToReinstall.length,
+          affected_percent: blastCheck?.affected_percent,
+          max_allowed_percent: blastCheck?.max_allowed_percent,
+          requires_approval: blastCheck?.requires_approval,
+          message: blastCheck?.message || 'Blast radius exceeded',
+          requestId,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Criar jobs de reinstalacao
     const jobsToCreate = agentsToReinstall.map(agent => ({
       agent_id: agent.id,
