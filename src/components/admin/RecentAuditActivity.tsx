@@ -4,9 +4,10 @@ import { formatBrazilDateTime } from '@/lib/date-utils';
 
 interface RecentAuditActivityProps {
   tenantId?: string;
+  loading?: boolean;  // V-501: Guard para sincronização de tenant
 }
 
-export function RecentAuditActivity({ tenantId }: RecentAuditActivityProps) {
+export function RecentAuditActivity({ tenantId, loading }: RecentAuditActivityProps) {
   const { data: logs = [] } = useQuery({
     queryKey: ['recent-audit', tenantId],
     queryFn: async () => {
@@ -20,7 +21,7 @@ export function RecentAuditActivity({ tenantId }: RecentAuditActivityProps) {
       if (error) throw error;
       return data;
     },
-    enabled: !!tenantId,
+    enabled: !loading && !!tenantId,  // V-501: Só executar após sincronização
   });
 
   return (

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AgentLifecycleState, DashboardAgentCard, LifecycleStage } from '@/types/agent-lifecycle';
 
-export function useAgentLifecycle(tenantId: string | undefined) {
+export function useAgentLifecycle(tenantId: string | undefined, loading?: boolean) {
   return useQuery<DashboardAgentCard[]>({
     queryKey: ['agent-lifecycle', tenantId],
     queryFn: async () => {
@@ -19,7 +19,7 @@ export function useAgentLifecycle(tenantId: string | undefined) {
       // Transform AgentLifecycleState to DashboardAgentCard
       return (data as unknown as AgentLifecycleState[]).map(transformToCard);
     },
-    enabled: !!tenantId,
+    enabled: !loading && !!tenantId,  // V-503a: Guard para sincronização
     staleTime: 30000, // Cache por 30s
     retry: 2, // Tentar 2 vezes antes de falhar
     retryDelay: 1000, // Esperar 1s entre tentativas
@@ -93,7 +93,7 @@ function getStatusBadge(state: AgentLifecycleState): DashboardAgentCard['status_
   }
 }
 
-export function usePipelineMetrics(tenantId: string | undefined, hoursBack: number | null = null) {
+export function usePipelineMetrics(tenantId: string | undefined, hoursBack: number | null = null, loading?: boolean) {
   return useQuery({
     queryKey: ['pipeline-metrics', tenantId, hoursBack],
     queryFn: async () => {
@@ -113,7 +113,7 @@ export function usePipelineMetrics(tenantId: string | undefined, hoursBack: numb
       
       return data.metrics;
     },
-    enabled: !!tenantId,
+    enabled: !loading && !!tenantId,  // V-503b: Guard para sincronização
     refetchInterval: 60000, // Refetch every minute
     staleTime: 30000, // Cache por 30s
     retry: 2, // Tentar 2 vezes antes de falhar
@@ -121,7 +121,7 @@ export function usePipelineMetrics(tenantId: string | undefined, hoursBack: numb
   });
 }
 
-export function useFailureRate(tenantId: string | undefined, hoursBack: number = 1) {
+export function useFailureRate(tenantId: string | undefined, hoursBack: number = 1, loading?: boolean) {
   return useQuery({
     queryKey: ['failure-rate', tenantId, hoursBack],
     queryFn: async () => {
@@ -137,7 +137,7 @@ export function useFailureRate(tenantId: string | undefined, hoursBack: number =
       
       return data && data.length > 0 ? data[0] : null;
     },
-    enabled: !!tenantId,
+    enabled: !loading && !!tenantId,  // V-503c: Guard para sincronização
     refetchInterval: 60000, // Refetch every minute
     staleTime: 30000,
     retry: 2,

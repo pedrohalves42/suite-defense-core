@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 
 export default function SystemLogs() {
-  const { tenant } = useTenant();
+  const { tenant, loading: tenantLoading } = useTenant();
   const { isSuperAdmin } = useSuperAdmin();
   const queryClient = useQueryClient();
   const [severityFilter, setSeverityFilter] = useState<string>("all");
@@ -304,7 +304,7 @@ export default function SystemLogs() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <RecentAuditActivity tenantId={tenant?.id} />
+          <RecentAuditActivity tenantId={tenant?.id} loading={tenantLoading} />
         </CardContent>
       </Card>
 

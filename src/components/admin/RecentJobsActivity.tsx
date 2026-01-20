@@ -6,9 +6,10 @@ import { formatBrazilDateTime } from '@/lib/date-utils';
 
 interface RecentJobsActivityProps {
   tenantId?: string;
+  loading?: boolean;  // V-502: Guard para sincronização de tenant
 }
 
-export function RecentJobsActivity({ tenantId }: RecentJobsActivityProps) {
+export function RecentJobsActivity({ tenantId, loading }: RecentJobsActivityProps) {
   const { data: jobs = [] } = useQuery({
     queryKey: ['recent-jobs', tenantId],
     queryFn: async () => {
@@ -22,7 +23,7 @@ export function RecentJobsActivity({ tenantId }: RecentJobsActivityProps) {
       if (error) throw error;
       return data;
     },
-    enabled: !!tenantId,
+    enabled: !loading && !!tenantId,  // V-502: Só executar após sincronização
   });
 
   const statusColors = {

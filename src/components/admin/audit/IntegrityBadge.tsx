@@ -10,13 +10,14 @@ interface IntegrityBadgeProps {
   startDate?: Date;
   endDate?: Date;
   className?: string;
+  loading?: boolean;  // V-504: Guard para sincronização de tenant
 }
 
-export function IntegrityBadge({ tenantId, startDate, endDate, className }: IntegrityBadgeProps) {
+export function IntegrityBadge({ tenantId, startDate, endDate, className, loading }: IntegrityBadgeProps) {
   const { data: verification, isLoading, error } = useQuery({
     queryKey: ['audit-integrity', tenantId, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: () => verifyAuditLogChain(tenantId, startDate, endDate),
-    enabled: !!tenantId,
+    enabled: !loading && !!tenantId,  // V-504: Só executar após sincronização
     staleTime: 60 * 1000, // 1 minute
     refetchOnWindowFocus: false,
   });
