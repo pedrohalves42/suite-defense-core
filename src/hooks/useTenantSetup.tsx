@@ -55,7 +55,7 @@ export const useTenantSetup = () => {
 
       return data?.setup_completed !== true;
     },
-    enabled: !!activeTenant?.id,
+    enabled: !tenantLoading && !!activeTenant?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -102,7 +102,7 @@ export const useTenantSetup = () => {
         businessHours,
       };
     },
-    enabled: !!activeTenant?.id && needsSetup === true,
+    enabled: !tenantLoading && !!activeTenant?.id && needsSetup === true,
   });
 
   // Mutation to save setup data

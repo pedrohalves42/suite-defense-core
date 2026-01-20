@@ -48,7 +48,7 @@ interface TrendData {
 }
 
 export default function ExecutiveDashboard() {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading: tenantLoading } = useActiveTenant();
   const tenantId = activeTenant?.id;
 
   // Helper para evitar deep type instantiation
@@ -114,7 +114,7 @@ export default function ExecutiveDashboard() {
   const { data: summaryData, isLoading, refetch } = useQuery({
     queryKey: ['executive-summary', tenantId],
     queryFn: () => tenantId ? fetchSummaryData(tenantId) : null,
-    enabled: !!tenantId,
+    enabled: !tenantLoading && !!tenantId,
     refetchInterval: 60000, // Atualiza a cada minuto
   });
 

@@ -16,7 +16,7 @@ export interface InsightFeedback {
 }
 
 export function useInsightFeedback(insightId?: string) {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant();
   const queryClient = useQueryClient();
 
   // Fetch existing feedback for a specific insight
@@ -34,7 +34,7 @@ export function useInsightFeedback(insightId?: string) {
       if (error) throw error;
       return data as InsightFeedback | null;
     },
-    enabled: !!insightId,
+    enabled: !loading && !!insightId,
   });
 
   const submitFeedback = useMutation({
