@@ -30,12 +30,12 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function InstallationHealthOverview() {
-  const { tenant } = useTenant();
+  const { tenant, loading: tenantLoading } = useTenant();
   const [hoursBack] = useState<number | null>(null);
 
-  const { data: agents, isLoading: agentsLoading, isError: agentsError, error: agentsErrorData, refetch: refetchAgents } = useAgentLifecycle(tenant?.id);
-  const { data: metrics, isLoading: metricsLoading, isError: metricsError, error: metricsErrorData, refetch: refetchMetrics } = usePipelineMetrics(tenant?.id, hoursBack);
-  const { data: failureRate } = useFailureRate(tenant?.id, 1);
+  const { data: agents, isLoading: agentsLoading, isError: agentsError, error: agentsErrorData, refetch: refetchAgents } = useAgentLifecycle(tenant?.id, tenantLoading);
+  const { data: metrics, isLoading: metricsLoading, isError: metricsError, error: metricsErrorData, refetch: refetchMetrics } = usePipelineMetrics(tenant?.id, hoursBack, tenantLoading);
+  const { data: failureRate } = useFailureRate(tenant?.id, 1, tenantLoading);
 
   // Calcular estado global
   const globalHealth = useMemo(() => {

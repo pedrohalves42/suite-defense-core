@@ -30,14 +30,14 @@ import { exportToCSV } from "@/lib/csv-export";
 import { toast } from "sonner";
 
 export default function InstallationPipelineMonitor() {
-  const { tenant } = useTenant();
+  const { tenant, loading: tenantLoading } = useTenant();
   const [hoursBack, setHoursBack] = useState<number | null>(null); // null = all time
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
 
-  const { data: agents, isLoading: agentsLoading, isError: agentsError, error: agentsErrorData, refetch: refetchAgents } = useAgentLifecycle(tenant?.id);
-  const { data: metrics, isLoading: metricsLoading, isError: metricsError, error: metricsErrorData, refetch: refetchMetrics } = usePipelineMetrics(tenant?.id, hoursBack);
-  const { data: failureRate } = useFailureRate(tenant?.id, 1); // Last hour
+  const { data: agents, isLoading: agentsLoading, isError: agentsError, error: agentsErrorData, refetch: refetchAgents } = useAgentLifecycle(tenant?.id, tenantLoading);
+  const { data: metrics, isLoading: metricsLoading, isError: metricsError, error: metricsErrorData, refetch: refetchMetrics } = usePipelineMetrics(tenant?.id, hoursBack, tenantLoading);
+  const { data: failureRate } = useFailureRate(tenant?.id, 1, tenantLoading); // Last hour
 
   const filteredAgents = agents?.filter(agent => {
     if (stageFilter === 'all') return true;

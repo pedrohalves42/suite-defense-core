@@ -47,7 +47,7 @@ const resourceLabels: Record<string, string> = {
 };
 
 export default function AuditLogs() {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading: tenantLoading } = useActiveTenant();
   const [page, setPage] = useState(0);
   const [actionFilter, setActionFilter] = useState('all');
   const [userFilter, setUserFilter] = useState('all');
@@ -247,7 +247,7 @@ export default function AuditLogs() {
             <CardDescription className="flex items-center gap-2">
               Mostrando {logs?.data?.length || 0} de {logs?.count || 0} atividades
               {activeTenant?.id && (
-                <IntegrityBadge tenantId={activeTenant.id} />
+                <IntegrityBadge tenantId={activeTenant.id} loading={tenantLoading} />
               )}
             </CardDescription>
           </div>
