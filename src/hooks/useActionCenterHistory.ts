@@ -34,7 +34,8 @@ export interface ActionHistoryItem {
 }
 
 export function useActionCenterHistory(limit = 50) {
-  const { tenant } = useTenant();
+  // V-FIX: Use loading guard to prevent race condition during tenant sync
+  const { tenant, loading: tenantLoading } = useTenant();
 
   return useQuery({
     queryKey: ['action-center-history', tenant?.id, limit],
@@ -83,7 +84,8 @@ export function useActionCenterHistory(limit = 50) {
         ai_actions: item.ai_actions as ActionHistoryItem['ai_actions']
       }));
     },
-    enabled: !!tenant?.id,
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id,
     staleTime: 30000,
   });
 }
