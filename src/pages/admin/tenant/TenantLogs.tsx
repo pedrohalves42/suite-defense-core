@@ -67,7 +67,8 @@ export default function TenantLogs() {
         profiles: log.actor_id ? { full_name: profileMap.get(log.actor_id) || null } : null
       }));
     },
-    enabled: !!tenant?.id,
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 30000,
   });
 

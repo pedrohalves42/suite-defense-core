@@ -8,6 +8,7 @@ import { Shield, AlertTriangle, CheckCircle2, XCircle, Activity } from "lucide-r
 import { formatRelativeTime } from '@/lib/date-utils';
 
 export default function TenantSecurity() {
+  // V-FIX: Extract loading guard to prevent race conditions during tenant sync
   const { tenant, loading: tenantLoading } = useTenant();
 
   // Fetch audit logs for tenant (security events)
@@ -26,7 +27,8 @@ export default function TenantSecurity() {
       if (error) throw error;
       return data;
     },
-    enabled: !!tenant?.id,
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id,
   });
 
   // Fetch failed login attempts for tenant
@@ -45,7 +47,8 @@ export default function TenantSecurity() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!tenant?.id,
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id,
   });
 
   // Count active agents
@@ -68,7 +71,8 @@ export default function TenantSecurity() {
       
       return { total, active, offline };
     },
-    enabled: !!tenant?.id,
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id,
   });
 
   if (tenantLoading) {

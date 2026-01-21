@@ -38,7 +38,8 @@ export default function TenantSettings() {
       if (error) throw error;
       return data;
     },
-    enabled: !!tenant?.id,
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id,
   });
 
   // Fetch current agent count
@@ -54,7 +55,8 @@ export default function TenantSettings() {
       if (error) throw error;
       return count ?? 0;
     },
-    enabled: !!tenant?.id,
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id,
   });
 
   // Fetch current user count
@@ -69,7 +71,8 @@ export default function TenantSettings() {
       if (error) throw error;
       return count ?? 0;
     },
-    enabled: !!tenant?.id,
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id,
   });
 
   // Fetch tenant settings
@@ -107,7 +110,8 @@ export default function TenantSettings() {
       
       return data;
     },
-    enabled: !!tenant?.id,
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id,
   });
 
   // Update tenant mutation
