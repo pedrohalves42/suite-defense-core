@@ -35,13 +35,15 @@ interface SelectedAgent {
 }
 
 export default function AgentHealthMonitor() {
-  const { tenant } = useTenant();
+  // V-FIX: Use loading guard to prevent race condition during tenant sync
+  const { tenant, loading: tenantLoading } = useTenant();
   const [liveHeartbeats, setLiveHeartbeats] = useState<number>(0);
   const [recentHeartbeats, setRecentHeartbeats] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedAgent, setSelectedAgent] = useState<SelectedAgent | null>(null);
 
   // Fetch agent health metrics using RPC
+  // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
   const { data: agentsHealth = [], isLoading, isError, error: errorData, refetch } = useQuery({
     queryKey: ['agent-health', tenant?.id],
     queryFn: async () => {
@@ -51,7 +53,7 @@ export default function AgentHealthMonitor() {
       if (error) throw error;
       return data;
     },
-    enabled: !!tenant?.id,
+    enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 30000,
   });
 
@@ -131,7 +133,8 @@ export default function AgentHealthMonitor() {
   const { data: diskMetrics = {} } = useAgentsDiskMetrics(agentIds);
 
   // Conditional returns AFTER all hooks
-  if (isLoading) {
+  // V-FIX: Show loading during tenant sync as well
+  if (isLoading || tenantLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-9 w-80" />

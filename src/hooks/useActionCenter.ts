@@ -40,7 +40,8 @@ export interface ActionCenterFeed {
 
 
 export function useActionCenter() {
-  const { tenant } = useTenant();
+  // V-FIX: Use loading guard to prevent race condition during tenant sync
+  const { tenant, loading: tenantLoading } = useTenant();
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -56,7 +57,8 @@ export function useActionCenter() {
       if (error) throw error;
       return data as ActionCenterFeed;
     },
-    enabled: !!tenant?.id,
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 30000, // Refetch every 30 seconds
     staleTime: 10000,
   });
