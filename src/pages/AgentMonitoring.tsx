@@ -31,7 +31,8 @@ interface Job {
 }
 
 const AgentMonitoring = () => {
-  const { tenant } = useTenant();
+  // V-FIX: Extract loading guard to prevent race conditions during tenant sync
+  const { tenant, loading: tenantLoading } = useTenant();
   const queryClient = useQueryClient();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
@@ -70,7 +71,8 @@ const AgentMonitoring = () => {
       if (error) throw error;
       return data as Agent[];
     },
-    enabled: !!tenant?.id
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id
   });
 
   const { data: initialJobs } = useQuery({
@@ -89,7 +91,8 @@ const AgentMonitoring = () => {
       if (error) throw error;
       return data as Job[];
     },
-    enabled: !!tenant?.id
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id
   });
 
   // Historical data for charts - last 7 days
@@ -109,7 +112,8 @@ const AgentMonitoring = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!tenant?.id
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id
   });
 
   const { data: historicalJobs } = useQuery({
@@ -128,7 +132,8 @@ const AgentMonitoring = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!tenant?.id
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id
   });
 
   const { data: agentUptimeData } = useQuery({
@@ -145,7 +150,8 @@ const AgentMonitoring = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!tenant?.id
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id
   });
 
   // Setup realtime subscriptions - with tenant filter

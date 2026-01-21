@@ -31,7 +31,8 @@ import { getAlertExplanation } from '@/lib/leigo-translator';
 import { SectionDivider } from '@/components/ui/section-divider';
 
 export default function Dashboard() {
-  const { tenant } = useTenant();
+  // V-FIX: Extract loading guard to prevent race conditions during tenant sync
+  const { tenant, loading: tenantLoading } = useTenant();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -60,7 +61,8 @@ export default function Dashboard() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!tenant?.id,
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 30000,
   });
 
@@ -78,7 +80,8 @@ export default function Dashboard() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!tenant?.id,
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 30000,
   });
 
@@ -96,7 +99,8 @@ export default function Dashboard() {
       const critical = data?.filter(v => v.severity === 'critical' || v.severity === 'high').length || 0;
       return { total, critical };
     },
-    enabled: !!tenant?.id,
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id,
   });
 
   // Fetch AI insights count
@@ -112,7 +116,8 @@ export default function Dashboard() {
       if (error) throw error;
       return count || 0;
     },
-    enabled: !!tenant?.id,
+    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
+    enabled: !tenantLoading && !!tenant?.id,
   });
 
 
