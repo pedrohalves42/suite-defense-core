@@ -13,6 +13,7 @@ import { getJobTypeLabel, getJobStatusLabel } from "@/lib/job-labels";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { PipelineHealthInline } from "@/components/pipeline/PipelineHealthInline";
 interface Agent {
   id: string;
   agent_name: string;
@@ -410,6 +411,9 @@ const AgentMonitoring = () => {
           </Button>
         </div>
       </div>
+
+      {/* 🧭 P0 ANTI-SILÊNCIO - frescor das fontes de dados */}
+      <PipelineHealthInline tenantId={tenant?.id} tenantLoading={tenantLoading} />
 
       {/* 🟢 CAMADA 1: ESTADO GLOBAL */}
       <Card className={cn(

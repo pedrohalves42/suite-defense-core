@@ -21,6 +21,7 @@ import { useTenant } from '@/hooks/useTenant';
 import { prepareJobForInsert } from '@/lib/job-utils';
 import { AgentVersionStatus } from '@/components/monitoring/AgentVersionStatus';
 import { OrphanedJobsAlert } from '@/components/monitoring/OrphanedJobsAlert';
+import { PipelineHealthInline } from '@/components/pipeline/PipelineHealthInline';
 
 interface AgentMetrics {
   id: string;
@@ -419,6 +420,9 @@ export default function AgentMonitoringAdvanced() {
           {isRefreshing ? 'Atualizando...' : 'Atualizar'}
         </Button>
       </div>
+
+      {/* 🧭 P0 ANTI-SILÊNCIO - frescor das fontes de dados */}
+      <PipelineHealthInline tenantId={tenant?.id} tenantLoading={!tenant?.id} />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

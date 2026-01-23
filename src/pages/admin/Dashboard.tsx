@@ -29,6 +29,7 @@ import { IncidentGroupsCard } from '@/components/dashboard/IncidentGroupsCard';
 import { CompactAlert } from '@/components/ui/explainable-alert';
 import { getAlertExplanation } from '@/lib/leigo-translator';
 import { SectionDivider } from '@/components/ui/section-divider';
+import { PipelineHealthCard } from '@/components/pipeline/PipelineHealthCard';
 
 export default function Dashboard() {
   // V-FIX: Extract loading guard to prevent race conditions during tenant sync
@@ -278,6 +279,9 @@ export default function Dashboard() {
 
       {/* 📊 GAPS SUMMARY - Ciclos e pendências do sistema */}
       <GapsSummaryCard />
+
+      {/* 🧭 P0 ANTI-SILÊNCIO - frescor das fontes de dados */}
+      <PipelineHealthCard tenantId={tenant.id} tenantLoading={tenantLoading} />
 
       {/* 🔄 CYCLES HEALTH - Saúde dos ciclos operacionais */}
       <SystemCyclesHealthCard />
