@@ -29,6 +29,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { TenantClaimAlerts } from './TenantClaimAlerts';
+import { useTenant } from '@/hooks/useTenant';
+import { PipelineHealthInline } from '@/components/pipeline/PipelineHealthInline';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,6 +60,7 @@ interface SecurityDashboardData {
 
 export function SecurityControlPlane() {
   const queryClient = useQueryClient();
+  const { tenant, loading: tenantLoading } = useTenant();
 
   // Fetch security dashboard data
   const { data: dashboardData, isLoading, refetch } = useQuery({
@@ -325,6 +328,9 @@ export function SecurityControlPlane() {
             : 'Aguardando...'}
         </span>
       </div>
+
+      {/* 🧭 P0 ANTI-SILÊNCIO - frescor das fontes de dados */}
+      <PipelineHealthInline tenantId={tenant?.id} tenantLoading={tenantLoading} />
 
       {/* KPI Cards Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
