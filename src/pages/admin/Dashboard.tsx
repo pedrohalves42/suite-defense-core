@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense, lazy } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,6 +30,8 @@ import { CompactAlert } from '@/components/ui/explainable-alert';
 import { getAlertExplanation } from '@/lib/leigo-translator';
 import { SectionDivider } from '@/components/ui/section-divider';
 import { PipelineHealthCard } from '@/components/pipeline/PipelineHealthCard';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BurningIssuesCard } from '@/components/dashboard/BurningIssuesCard';
 
 export default function Dashboard() {
   // V-FIX: Extract loading guard to prevent race conditions during tenant sync
@@ -277,302 +279,329 @@ export default function Dashboard() {
       {/* 🔐 GOVERNANCE HEALTH BANNER - MFA Enforcement + Metrics */}
       <GovernanceHealthBanner />
 
-      {/* 📊 GAPS SUMMARY - Ciclos e pendências do sistema */}
-      <GapsSummaryCard />
+      {/* 🔥 BURNING ISSUES - O que precisa de atenção AGORA (P2) */}
+      <BurningIssuesCard 
+        criticalAlerts={criticalAlerts}
+        offlineAgents={offlineAgents}
+        criticalVulns={vulnStats?.critical || 0}
+        pendingInsights={insightsCount || 0}
+      />
 
-      {/* 🧭 P0 ANTI-SILÊNCIO - frescor das fontes de dados */}
-      <PipelineHealthCard tenantId={tenant.id} tenantLoading={tenantLoading} />
+      {/* TABS para organizar conteúdo (P2) */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full max-w-lg grid-cols-4">
+          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          <TabsTrigger value="cycles">Ciclos</TabsTrigger>
+          <TabsTrigger value="details">Detalhes</TabsTrigger>
+        </TabsList>
 
-      {/* 🔄 CYCLES HEALTH - Saúde dos ciclos operacionais */}
-      <SystemCyclesHealthCard />
-
-      {/* 🔧 JOBS ENGINE HEALTH - Saúde do motor de jobs */}
-      <JobsHealthCard />
-
-      {/* 🔥 INCIDENT GROUPS - Padrões de falhas recorrentes (ADR-033) */}
-      <IncidentGroupsCard />
-
-      {/* Divisor visual entre seções */}
-      <SectionDivider label="Status de Proteção" />
-
-      {/* 🔐 CARD PRINCIPAL DE STATUS - Responde "Estou protegido?" em 3 segundos */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <Card className={cn(
-          "border-2",
-          globalStatus.variant === 'success' && "bg-green-500/5 border-green-500/30",
-          globalStatus.variant === 'warning' && "bg-amber-500/5 border-amber-500/30",
-          globalStatus.variant === 'danger' && "bg-red-500/5 border-red-500/30"
-        )}>
-          <CardContent className="py-6">
-            <div className="flex items-center gap-4">
-              <div className={cn(
-                "p-4 rounded-full",
-                globalStatus.variant === 'success' && "bg-green-500/10",
-                globalStatus.variant === 'warning' && "bg-amber-500/10",
-                globalStatus.variant === 'danger' && "bg-red-500/10"
-              )}>
-                <Shield className={cn(
-                  "h-10 w-10",
-                  globalStatus.variant === 'success' && "text-green-500",
-                  globalStatus.variant === 'warning' && "text-amber-500",
-                  globalStatus.variant === 'danger' && "text-red-500"
-                )} />
-              </div>
-              <div className="flex-1">
-                <h2 className={cn(
-                  "text-xl font-bold",
-                  globalStatus.variant === 'success' && "text-green-600 dark:text-green-400",
-                  globalStatus.variant === 'warning' && "text-amber-600 dark:text-amber-400",
-                  globalStatus.variant === 'danger' && "text-red-600 dark:text-red-400"
-                )}>
-                  {globalStatus.emoji} {globalStatus.title}
-                </h2>
-                <p className="text-muted-foreground mt-1">
-                  {globalStatus.description}
-                </p>
-              </div>
-              <div className="text-right">
-                <div className={cn(
-                  "text-3xl font-bold",
-                  securityScore >= 80 && "text-green-600",
-                  securityScore >= 60 && securityScore < 80 && "text-amber-600",
-                  securityScore < 60 && "text-red-600"
-                )}>
-                  {securityScore}%
-                </div>
-                <div className="text-xs text-muted-foreground">Nível de proteção</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* 📈 CAMADA 3: Gráfico de Tendência */}
-      <ProtectionTrendChart />
-
-      {/* Critical Alert Action (if any) */}
-      {criticalAlerts > 0 && (
-        <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="bg-destructive/5 border-destructive/20">
-            <CardContent className="py-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-                <span className="text-sm text-destructive font-medium">
-                  {criticalAlerts} alerta{criticalAlerts > 1 ? 's' : ''} crítico{criticalAlerts > 1 ? 's' : ''} aguardando ação
-                </span>
-              </div>
-              <Button 
-                size="sm" 
-                variant="outline"
-                className="border-destructive/30 text-destructive hover:bg-destructive/10"
-                onClick={() => acknowledgeAllMutation.mutate()}
-                disabled={acknowledgeAllMutation.isPending}
-              >
-                Reconhecer
-              </Button>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
-      {/* Divisor visual */}
-      <SectionDivider label="Alertas e Resumo" />
-
-      {/* 2️⃣ Main Grid: Problems + Quick Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* O que pode virar problema */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }} 
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.15 }}
-          className="lg:col-span-2"
-        >
-          <Card className="h-full">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                O que pode virar problema se você ignorar
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {problems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <CheckCircle className="h-14 w-14 text-green-500 mb-4" />
-                  <p className="text-lg font-medium text-foreground">🎉 Nada para se preocupar!</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Todos os seus computadores estão protegidos
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {problems.slice(0, 3).map((item, idx) => (
-                    <CompactAlert
-                      key={idx}
-                      type={item.alertType}
-                      severity={item.priority === 'high' ? 'error' : item.priority === 'medium' ? 'warning' : 'info'}
-                      onClick={() => navigate(item.to)}
-                    />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Quick Stats */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }} 
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="h-full">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Server className="h-4 w-4 text-muted-foreground" />
-                Resumo rápido
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Computadores */}
-              <Link to="/admin/agent-health" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Server className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Computadores</span>
+        {/* OVERVIEW TAB */}
+        <TabsContent value="overview" className="mt-6 space-y-6">
+          {/* 🔐 CARD PRINCIPAL DE STATUS - Responde "Estou protegido?" em 3 segundos */}
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+            <Card className={cn(
+              "border-2",
+              globalStatus.variant === 'success' && "bg-green-500/5 border-green-500/30",
+              globalStatus.variant === 'warning' && "bg-amber-500/5 border-amber-500/30",
+              globalStatus.variant === 'danger' && "bg-red-500/5 border-red-500/30"
+            )}>
+              <CardContent className="py-6">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "p-4 rounded-full",
+                    globalStatus.variant === 'success' && "bg-green-500/10",
+                    globalStatus.variant === 'warning' && "bg-amber-500/10",
+                    globalStatus.variant === 'danger' && "bg-red-500/10"
+                  )}>
+                    <Shield className={cn(
+                      "h-10 w-10",
+                      globalStatus.variant === 'success' && "text-green-500",
+                      globalStatus.variant === 'warning' && "text-amber-500",
+                      globalStatus.variant === 'danger' && "text-red-500"
+                    )} />
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-lg font-bold text-green-600">{onlineAgents}</span>
-                  <span className="text-sm text-muted-foreground">online</span>
-                  {offlineAgents > 0 && (
-                    <span className="text-sm text-red-500">• {offlineAgents} offline</span>
-                  )}
-                </div>
-              </Link>
-
-              {/* Alertas */}
-              <Link to="/admin/security-monitoring" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ShieldAlert className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Alertas</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className={cn("text-lg font-bold", (alerts?.length || 0) > 0 ? "text-yellow-600" : "text-green-600")}>
-                    {alerts?.length || 0}
-                  </span>
-                  <span className="text-sm text-muted-foreground">ativos</span>
-                  {criticalAlerts > 0 && (
-                    <span className="text-sm text-red-500">• {criticalAlerts} críticos</span>
-                  )}
-                </div>
-              </Link>
-
-              {/* Vulnerabilidades */}
-              <Link to="/admin/vulnerabilities" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Bug className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Riscos detectados</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className={cn("text-xl font-bold", (vulnStats?.critical || 0) > 0 ? "text-orange-600" : "text-green-600")}>
-                    {vulnStats?.total || 0}
-                  </span>
-                  <span className="text-sm text-muted-foreground">total</span>
-                  {(vulnStats?.critical || 0) > 0 && (
-                    <span className="text-sm text-orange-500">• {vulnStats?.critical} críticos</span>
-                  )}
-                </div>
-              </Link>
-
-              {/* Avisos da IA */}
-              <Link to="/admin/ai-insights" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Brain className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Avisos da IA</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className={cn("text-lg font-bold", (insightsCount || 0) > 0 ? "text-blue-600" : "text-green-600")}>
-                    {insightsCount || 0}
-                  </span>
-                  <span className="text-sm text-muted-foreground">pendentes</span>
-                </div>
-              </Link>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* 🛡️ RBAC Metrics + Safe Mode Counter */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <RBACMetricsCard />
-        <SafeModeCounter />
-      </div>
-
-      {/* Quick Links */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <Link to="/admin/ai-insights">
-            <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-              <CardContent className="py-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Brain className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Insights da IA</p>
-                    <p className="text-sm text-muted-foreground">
-                      {insightsCount || 0} pendente{(insightsCount || 0) !== 1 ? 's' : ''}
+                  <div className="flex-1">
+                    <h2 className={cn(
+                      "text-xl font-bold",
+                      globalStatus.variant === 'success' && "text-green-600 dark:text-green-400",
+                      globalStatus.variant === 'warning' && "text-amber-600 dark:text-amber-400",
+                      globalStatus.variant === 'danger' && "text-red-600 dark:text-red-400"
+                    )}>
+                      {globalStatus.emoji} {globalStatus.title}
+                    </h2>
+                    <p className="text-muted-foreground mt-1">
+                      {globalStatus.description}
                     </p>
                   </div>
-                </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Link to="/admin/reports">
-            <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-              <CardContent className="py-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Shield className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Relatórios de Segurança</p>
-                    <p className="text-sm text-muted-foreground">Visualizar laudos</p>
+                  <div className="text-right">
+                    <div className={cn(
+                      "text-3xl font-bold",
+                      securityScore >= 80 && "text-green-600",
+                      securityScore >= 60 && securityScore < 80 && "text-amber-600",
+                      securityScore < 60 && "text-red-600"
+                    )}>
+                      {securityScore}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">Nível de proteção</div>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground" />
               </CardContent>
             </Card>
-          </Link>
-        </motion.div>
-      </div>
+          </motion.div>
 
-      {/* 4️⃣ ÂNCORA DE SEGURO OPERACIONAL */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-        <Card className="bg-muted/20 border-dashed">
-          <CardContent className="py-4 flex items-center justify-center gap-3 text-center">
-            <Lightbulb className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-            <p className="text-sm text-muted-foreground">
-              O CyberShield monitora seus computadores automaticamente. 
-              <span className="font-medium text-foreground"> Se algo crítico acontecer, você será avisado.</span>
-            </p>
-          </CardContent>
-        </Card>
-      </motion.div>
+          {/* 📈 CAMADA 3: Gráfico de Tendência */}
+          <ProtectionTrendChart />
+
+          {/* Critical Alert Action (if any) */}
+          {criticalAlerts > 0 && (
+            <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+              <Card className="bg-destructive/5 border-destructive/20">
+                <CardContent className="py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                    <span className="text-sm text-destructive font-medium">
+                      {criticalAlerts} alerta{criticalAlerts > 1 ? 's' : ''} crítico{criticalAlerts > 1 ? 's' : ''} aguardando ação
+                    </span>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                    onClick={() => acknowledgeAllMutation.mutate()}
+                    disabled={acknowledgeAllMutation.isPending}
+                  >
+                    Reconhecer
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Divisor visual */}
+          <SectionDivider label="Alertas e Resumo" />
+
+          {/* Main Grid: Problems + Quick Stats */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* O que pode virar problema */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.15 }}
+              className="lg:col-span-2"
+            >
+              <Card className="h-full">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                    O que pode virar problema se você ignorar
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {problems.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                      <CheckCircle className="h-14 w-14 text-green-500 mb-4" />
+                      <p className="text-lg font-medium text-foreground">🎉 Nada para se preocupar!</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Todos os seus computadores estão protegidos
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {problems.slice(0, 3).map((item, idx) => (
+                        <CompactAlert
+                          key={idx}
+                          type={item.alertType}
+                          severity={item.priority === 'high' ? 'error' : item.priority === 'medium' ? 'warning' : 'info'}
+                          onClick={() => navigate(item.to)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Quick Stats */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card className="h-full">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Server className="h-4 w-4 text-muted-foreground" />
+                    Resumo rápido
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Computadores */}
+                  <Link to="/admin/agent-health" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Server className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">Computadores</span>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="text-lg font-bold text-green-600">{onlineAgents}</span>
+                      <span className="text-sm text-muted-foreground">online</span>
+                      {offlineAgents > 0 && (
+                        <span className="text-sm text-red-500">• {offlineAgents} offline</span>
+                      )}
+                    </div>
+                  </Link>
+
+                  {/* Alertas */}
+                  <Link to="/admin/security-monitoring" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">Alertas</span>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className={cn("text-lg font-bold", (alerts?.length || 0) > 0 ? "text-yellow-600" : "text-green-600")}>
+                        {alerts?.length || 0}
+                      </span>
+                      <span className="text-sm text-muted-foreground">ativos</span>
+                      {criticalAlerts > 0 && (
+                        <span className="text-sm text-red-500">• {criticalAlerts} críticos</span>
+                      )}
+                    </div>
+                  </Link>
+
+                  {/* Vulnerabilidades */}
+                  <Link to="/admin/vulnerabilities" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bug className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">Riscos detectados</span>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className={cn("text-xl font-bold", (vulnStats?.critical || 0) > 0 ? "text-orange-600" : "text-green-600")}>
+                        {vulnStats?.total || 0}
+                      </span>
+                      <span className="text-sm text-muted-foreground">total</span>
+                      {(vulnStats?.critical || 0) > 0 && (
+                        <span className="text-sm text-orange-500">• {vulnStats?.critical} críticos</span>
+                      )}
+                    </div>
+                  </Link>
+
+                  {/* Avisos da IA */}
+                  <Link to="/admin/ai-insights" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Brain className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">Avisos da IA</span>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className={cn("text-lg font-bold", (insightsCount || 0) > 0 ? "text-blue-600" : "text-green-600")}>
+                        {insightsCount || 0}
+                      </span>
+                      <span className="text-sm text-muted-foreground">pendentes</span>
+                    </div>
+                  </Link>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+
+          {/* Quick Links */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+              <Link to="/admin/ai-insights">
+                <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+                  <CardContent className="py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <Brain className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Insights da IA</p>
+                        <p className="text-sm text-muted-foreground">
+                          {insightsCount || 0} pendente{(insightsCount || 0) !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                  </CardContent>
+                </Card>
+              </Link>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+              <Link to="/admin/reports">
+                <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+                  <CardContent className="py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <Shield className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Relatórios de Segurança</p>
+                        <p className="text-sm text-muted-foreground">Visualizar laudos</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                  </CardContent>
+                </Card>
+              </Link>
+            </motion.div>
+          </div>
+        </TabsContent>
+
+        {/* PIPELINE TAB */}
+        <TabsContent value="pipeline" className="mt-6 space-y-6">
+          {/* 🧭 P0 ANTI-SILÊNCIO - frescor das fontes de dados */}
+          <PipelineHealthCard tenantId={tenant.id} tenantLoading={tenantLoading} />
+          
+          {/* 📊 GAPS SUMMARY - Ciclos e pendências do sistema */}
+          <GapsSummaryCard />
+        </TabsContent>
+
+        {/* CYCLES TAB */}
+        <TabsContent value="cycles" className="mt-6 space-y-6">
+          {/* 🔄 CYCLES HEALTH - Saúde dos ciclos operacionais */}
+          <SystemCyclesHealthCard />
+
+          {/* 🔧 JOBS ENGINE HEALTH - Saúde do motor de jobs */}
+          <JobsHealthCard />
+
+          {/* 🔥 INCIDENT GROUPS - Padrões de falhas recorrentes (ADR-033) */}
+          <IncidentGroupsCard />
+        </TabsContent>
+
+        {/* DETAILS TAB */}
+        <TabsContent value="details" className="mt-6 space-y-6">
+          {/* 🛡️ RBAC Metrics + Safe Mode Counter */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <RBACMetricsCard />
+            <SafeModeCounter />
+          </div>
+
+          {/* 4️⃣ ÂNCORA DE SEGURO OPERACIONAL */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+            <Card className="bg-muted/20 border-dashed">
+              <CardContent className="py-4 flex items-center justify-center gap-3 text-center">
+                <Lightbulb className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  O CyberShield monitora seus computadores automaticamente. 
+                  <span className="font-medium text-foreground"> Se algo crítico acontecer, você será avisado.</span>
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </TabsContent>
+      </Tabs>
 
       <OnboardingWizard open={showOnboarding} onComplete={() => setShowOnboarding(false)} />
     </div>

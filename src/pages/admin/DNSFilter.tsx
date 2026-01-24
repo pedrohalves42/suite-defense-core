@@ -35,8 +35,10 @@ import {
   ShieldX,
   Users,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle2
 } from 'lucide-react';
+import { DNSControlProof } from '@/components/dns/DNSControlProof';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { toast } from 'sonner';
 
@@ -84,7 +86,7 @@ export default function DNSFilter() {
     >
       <div className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-lg grid-cols-4">
+          <TabsList className="grid w-full max-w-2xl grid-cols-5">
             <TabsTrigger value="manager" className="gap-2">
               <Settings className="h-4 w-4" />
               Gerenciar
@@ -100,6 +102,10 @@ export default function DNSFilter() {
             <TabsTrigger value="stats" className="gap-2">
               <BarChart3 className="h-4 w-4" />
               Estatísticas
+            </TabsTrigger>
+            <TabsTrigger value="proof" className="gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Prova de Controle
             </TabsTrigger>
           </TabsList>
 
@@ -373,6 +379,11 @@ export default function DNSFilter() {
           {/* Stats Tab */}
           <TabsContent value="stats" className="mt-6">
             <BlockedSitesStats stats={blockedStats} />
+          </TabsContent>
+
+          {/* Proof Tab (P1-B) */}
+          <TabsContent value="proof" className="mt-6">
+            <DNSControlProof />
           </TabsContent>
         </Tabs>
       </div>

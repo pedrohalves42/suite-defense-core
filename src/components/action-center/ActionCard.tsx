@@ -52,6 +52,7 @@ import { InsightInvestigationDrawer } from './InsightInvestigationDrawer';
 import { getSuggestedActions } from '@/lib/insight-action-mapping';
 import { executeInsightAction } from '@/lib/insight-actions';
 import { useTenant } from '@/hooks/useTenant';
+import { EffectivenessBadge } from './EffectivenessBadge';
 
 interface ActionCardProps {
   item: ActionItem;
@@ -330,6 +331,14 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
                       <Sparkles className="h-3 w-3" />
                       Detecção Inteligente
                     </Badge>
+                  )}
+                  {/* Effectiveness Badge (P1-A) */}
+                  {item.is_historical && (item.context as any)?.effectiveness_status && (
+                    <EffectivenessBadge
+                      status={(item.context as any).effectiveness_status}
+                      checkedAt={(item.context as any).effectiveness_checked_at}
+                      evidence={(item.context as any).effectiveness_evidence}
+                    />
                   )}
                 </CardTitle>
                 {/* WHERE: Machine/Agent info */}
