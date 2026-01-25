@@ -333,11 +333,11 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
                     </Badge>
                   )}
                   {/* Effectiveness Badge (P1-A) */}
-                  {item.is_historical && (item.context as any)?.effectiveness_status && (
+                  {item.is_historical && item.effectiveness_status && (
                     <EffectivenessBadge
-                      status={(item.context as any).effectiveness_status}
-                      checkedAt={(item.context as any).effectiveness_checked_at}
-                      evidence={(item.context as any).effectiveness_evidence}
+                      status={item.effectiveness_status}
+                      checkedAt={item.effectiveness_checked_at}
+                      evidence={item.effectiveness_evidence}
                     />
                   )}
                 </CardTitle>

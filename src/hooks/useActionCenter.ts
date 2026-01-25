@@ -25,6 +25,10 @@ export interface ActionItem {
     description: string;
     cta: string;
   } | null;
+  // P1-A: Campos de efetividade para o EffectivenessBadge
+  effectiveness_status?: 'pending' | 'resolved' | 'partial' | 'failed' | 'unknown' | null;
+  effectiveness_checked_at?: string | null;
+  effectiveness_evidence?: Record<string, unknown> | null;
 }
 
 export interface ActionCenterFeed {
