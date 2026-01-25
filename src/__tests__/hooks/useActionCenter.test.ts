@@ -3,28 +3,35 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
+// Create mock functions before vi.mock calls
+const mockInvoke = vi.fn();
+const mockRemoveChannel = vi.fn();
+
+// Create a chainable channel mock
+function createMockChannel() {
+  const mock: Record<string, ReturnType<typeof vi.fn>> = {};
+  mock.on = vi.fn(() => mock);
+  mock.subscribe = vi.fn(() => mock);
+  return mock;
+}
+
+const mockChannel = createMockChannel();
+
 // Mock dependencies
 vi.mock('@/hooks/useTenant', () => ({
   useTenant: () => ({
     tenant: { id: 'test-tenant-id' },
-    isLoading: false,
+    loading: false,
   }),
 }));
-
-const mockInvoke = vi.fn();
-const mockChannel = {
-  on: vi.fn().mockReturnThis(),
-  subscribe: vi.fn().mockReturnThis(),
-};
-const mockRemoveChannel = vi.fn();
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     functions: {
-      invoke: (...args: unknown[]) => mockInvoke(...args),
+      invoke: (name: string, options: unknown) => mockInvoke(name, options),
     },
     channel: () => mockChannel,
-    removeChannel: mockRemoveChannel,
+    removeChannel: (channel: unknown) => mockRemoveChannel(channel),
   },
 }));
 
@@ -145,6 +152,9 @@ describe('useActionCenter', () => {
     expect(result.current.data).toEqual(mockFeedData);
     expect(mockInvoke).toHaveBeenCalledWith('action-center-feed', {
       method: 'GET',
+      headers: {
+        'x-tenant-id': 'test-tenant-id',
+      },
     });
   });
 
@@ -239,6 +249,9 @@ describe('useExecuteActionItem', () => {
 
     expect(mockInvoke).toHaveBeenCalledWith('action-center-feed', {
       method: 'POST',
+      headers: {
+        'x-tenant-id': 'test-tenant-id',
+      },
       body: {
         item_id: 'exec-001',
         source_type: 'playbook',
@@ -264,6 +277,9 @@ describe('useExecuteActionItem', () => {
 
     expect(mockInvoke).toHaveBeenCalledWith('action-center-feed', {
       method: 'POST',
+      headers: {
+        'x-tenant-id': 'test-tenant-id',
+      },
       body: {
         item_id: 'exec-001',
         source_type: 'playbook',
@@ -288,6 +304,9 @@ describe('useExecuteActionItem', () => {
 
     expect(mockInvoke).toHaveBeenCalledWith('action-center-feed', {
       method: 'POST',
+      headers: {
+        'x-tenant-id': 'test-tenant-id',
+      },
       body: {
         item_id: 'alert-001',
         source_type: 'alert',
