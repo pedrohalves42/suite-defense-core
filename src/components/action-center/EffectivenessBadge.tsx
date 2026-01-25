@@ -91,13 +91,15 @@ export function EffectivenessBadge({ status, checkedAt, evidence, compact = fals
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Icon className={cn(
-              'h-4 w-4',
-              config.color,
-              status === 'pending' && 'animate-spin'
-            )} />
+            <span data-testid="effectiveness-compact">
+              <Icon className={cn(
+                'h-4 w-4',
+                config.color,
+                status === 'pending' && 'animate-spin'
+              )} />
+            </span>
           </TooltipTrigger>
-          <TooltipContent>{tooltipContent}</TooltipContent>
+          <TooltipContent data-testid="effectiveness-tooltip">{tooltipContent}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
     );
@@ -109,6 +111,7 @@ export function EffectivenessBadge({ status, checkedAt, evidence, compact = fals
         <TooltipTrigger asChild>
           <Badge 
             variant="outline" 
+            data-testid={`effectiveness-${status}`}
             className={cn(
               'gap-1 cursor-help',
               config.bgColor,
@@ -122,7 +125,7 @@ export function EffectivenessBadge({ status, checkedAt, evidence, compact = fals
             {config.label}
           </Badge>
         </TooltipTrigger>
-        <TooltipContent>{tooltipContent}</TooltipContent>
+        <TooltipContent data-testid="effectiveness-tooltip">{tooltipContent}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

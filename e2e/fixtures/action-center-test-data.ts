@@ -141,6 +141,16 @@ export const ACTION_CENTER_SELECTORS = {
   
   // Loading states
   loadingSkeleton: '[data-testid="action-center-skeleton"]',
+  
+  // Effectiveness badges (P1-A)
+  effectivenessBadge: '[data-testid^="effectiveness-"]',
+  effectivenessPending: '[data-testid="effectiveness-pending"]',
+  effectivenessResolved: '[data-testid="effectiveness-resolved"]',
+  effectivenessPartial: '[data-testid="effectiveness-partial"]',
+  effectivenessFailed: '[data-testid="effectiveness-failed"]',
+  effectivenessUnknown: '[data-testid="effectiveness-unknown"]',
+  effectivenessCompact: '[data-testid="effectiveness-compact"]',
+  effectivenessTooltip: '[data-testid="effectiveness-tooltip"]',
 };
 
 /**
