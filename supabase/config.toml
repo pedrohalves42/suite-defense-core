@@ -105,7 +105,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.evaluate-software-risk]
-verify_jwt = true
+verify_jwt = false
 
 # === Installation Functions ===
 [functions.auto-generate-enrollment]
@@ -469,8 +469,7 @@ verify_jwt = false
 schedule = "*/5 * * * *"
 
 # === V4.0 Software Risk Engine ===
-[functions.evaluate-software-risk]
-verify_jwt = true
+# (Moved to line 107-108 with verify_jwt = false for cron access)
 
 # === V4.0 Compliance Reports ===
 [functions.generate-compliance-report]
