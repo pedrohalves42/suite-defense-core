@@ -7,12 +7,12 @@ Após varredura profunda, identifiquei **6 problemas críticos** que impedem o f
 
 | # | Problema | Impacto | Status Atual |
 |---|----------|---------|--------------|
-| 1 | **Cron faltando para `check-action-effectiveness`** | 20 ações há 30 dias sem verificação | ❌ Não existe |
-| 2 | **Cron faltando para `generate_ai_actions_from_insights`** | 805 insights críticos sem ação | ❌ Não existe |
-| 3 | **Job órfão em `pending`** | 1 job expirado violando ADR-037 | ❌ Pendente |
-| 4 | **378 alertas não auto-resolvidos** | Alertas acumulados há 14 dias | ❌ Sem trigger |
+| 1 | **Cron faltando para `check-action-effectiveness`** | 20 ações há 30 dias sem verificação | ✅ Cron #68 criado |
+| 2 | **Cron faltando para `generate_ai_actions_from_insights`** | 805 insights críticos sem ação | ✅ Cron #69 criado |
+| 3 | **Job órfão em `pending`** | 1 job expirado violando ADR-037 | ✅ Cancelado |
+| 4 | **378 alertas não auto-resolvidos** | Alertas acumulados há 14 dias | ✅ 213 resolvidos |
 | 5 | **8 playbooks nunca executaram** | Triggers não acionando | ⚠️ Investigar |
-| 6 | **Trigger de auto-resolve existe mas não está ativo** | Função existe, trigger não | ❌ Falta trigger |
+| 6 | **Trigger de auto-resolve existe mas não está ativo** | Função existe, trigger não | ✅ Trigger ativo |
 
 ### O Que Está Funcionando
 

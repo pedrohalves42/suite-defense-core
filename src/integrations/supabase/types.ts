@@ -19477,6 +19477,14 @@ export type Database = {
         }
         Relationships: []
       }
+      v_system_cycle_health: {
+        Row: {
+          cycle: string | null
+          oldest_pending: string | null
+          pending_count: number | null
+        }
+        Relationships: []
+      }
       v_system_operations_summary: {
         Row: {
           active_agents: number | null
