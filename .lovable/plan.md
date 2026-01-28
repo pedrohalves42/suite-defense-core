@@ -1,256 +1,251 @@
 
-# 🛠️ Plano Consolidado de Correções do Sistema CyberShield
 
-## Visão Geral da Análise
+# 🔍 Análise dos 8 Playbooks Inativos - Problemas e Correções
 
-Após varredura profunda, identifiquei **6 problemas críticos** que impedem o funcionamento completo do sistema:
+## Resumo Executivo
 
-| # | Problema | Impacto | Status Atual |
-|---|----------|---------|--------------|
-| 1 | **Cron faltando para `check-action-effectiveness`** | 20 ações há 30 dias sem verificação | ✅ Cron #68 criado |
-| 2 | **Cron faltando para `generate_ai_actions_from_insights`** | 805 insights críticos sem ação | ✅ Cron #69 criado |
-| 3 | **Job órfão em `pending`** | 1 job expirado violando ADR-037 | ✅ Cancelado |
-| 4 | **378 alertas não auto-resolvidos** | Alertas acumulados há 14 dias | ✅ 213 resolvidos |
-| 5 | **8 playbooks nunca executaram** | Triggers não acionando | ⚠️ Investigar |
-| 6 | **Trigger de auto-resolve existe mas não está ativo** | Função existe, trigger não | ✅ Trigger ativo |
+Após análise profunda, identifiquei **3 problemas raiz** que impedem os 8 playbooks de executar:
 
-### O Que Está Funcionando
-
-- ✅ 55 crons ativos e executando
-- ✅ `auto-execute-ai-actions-every-2min` rodando
-- ✅ `ai-system-analyzer-every-6h` rodando (mas pulando tenants expirados)
-- ✅ 4 tenants com subscription ativa (Atlaviamit, Genial Cred, Pedro Alves, Teste)
-- ✅ Insights sendo gerados (809 nos últimos 7 dias)
+| Problema | Impacto | Playbooks Afetados |
+|----------|---------|-------------------|
+| **Falta cron para processar `ai_action_logs` pendentes** | 219 triggers de playbook pendentes há 21 dias | 1 (Job crítico) |
+| **Falta trigger/cron para eventos DNS** | 710 bloqueios e 20+ eventos 10+/hora não detectados | 2 (DNS, Múltiplos Acessos) |
+| **Falta integração de dados upstream** | Nenhum dado de vulnerabilidade, software de risco | 5 (Vuln, Software Risk, Nav Suspeita) |
 
 ---
 
-## Fase 1: Correções Críticas (P0)
+## 📊 Evidências Encontradas
 
-### 1.1 Criar Cron para `check-action-effectiveness`
+### 1. `ai_action_logs` com 219 Triggers Pendentes (NUNCA processados)
 
-**Problema**: Edge Function completa, mas sem cron agendado.
+```
+action_type: playbook_trigger_evaluation
+status: pending = 219 (100% não processados)
+oldest: 2026-01-07 (21 dias atrás!)
+```
 
-**SQL para executar via Cloud Run SQL:**
+**Causa**: O trigger `tr_playbook_on_job_failure` insere eventos em `ai_action_logs`, mas **não existe cron/função que processe esses logs** para chamar `evaluate-playbook-triggers`.
+
+**Playbook afetado**: "Job crítico falhou repetidamente"
+
+### 2. Bloqueios DNS Que Deveriam Acionar Playbooks
+
+**Dados existentes**:
+- 710 bloqueios DNS nos últimos 7 dias
+- 20+ eventos com 10+ bloqueios/hora (threshold do playbook é 10)
+- Categorias bloqueadas: apenas "social" (0 de malware/c2/botnet)
+
+**Playbooks afetados**:
+- "DNS bloqueou múltiplas tentativas" - condição met (10+ bloqueios/hora existe)
+- "Múltiplos Acessos Maliciosos" - condição NÃO met (0 categorias maliciosas)
+- "Navegação Suspeita Detectada" - condição NÃO met (0 categorias suspeitas)
+
+**Causa**: 
+1. Não existe trigger em `agent_web_activity` para chamar `evaluate-playbook-triggers`
+2. Não existe cron para varrer bloqueios e disparar playbooks
+
+### 3. Dados Upstream Faltando
+
+| Playbook | Dados Necessários | Status |
+|----------|-------------------|--------|
+| Vulnerabilidade Crítica | Tabela `software_vulnerability_baseline` ou similar | ❌ Sem dados de vuln com CVSS |
+| Software de Alto Risco | `software_inventory.risk_level = high/critical` | ⚠️ Só "unknown", "low", "medium" |
+| Navegação Suspeita | `category IN (malware, phishing, suspicious)` | ❌ Só "social" |
+
+### 4. Jobs Críticos Falhando Repetidamente (Deveriam ter acionado playbook)
+
+```
+agent feba35aa-b478: 21 falhas em collect_antivirus_status
+agent feba35aa-b478: 20 falhas em software_inventory_collect  
+agent db27a406-b510: 20 falhas em light_vuln_scan
+... (20+ agentes com 3+ falhas em jobs críticos)
+```
+
+**Mas**: O playbook "Job crítico falhou repetidamente" tem 0 execuções porque os eventos ficaram em `ai_action_logs.status = 'pending'`.
+
+---
+
+## 🛠️ Plano de Correção
+
+### Fase 1: Processar `ai_action_logs` Pendentes (P0)
+
+**Criar cron para processar eventos de trigger de playbook:**
 
 ```sql
 SELECT cron.schedule(
-  'check-action-effectiveness-every-15min',
-  '*/15 * * * *',
+  'process-playbook-trigger-events-every-5min',
+  '*/5 * * * *',
   $$
+  WITH pending_events AS (
+    SELECT id, action_data
+    FROM ai_action_logs
+    WHERE action_type = 'playbook_trigger_evaluation'
+      AND status = 'pending'
+    LIMIT 50
+  )
+  UPDATE ai_action_logs
+  SET status = 'processing'
+  WHERE id IN (SELECT id FROM pending_events);
+  
+  -- Nota: A chamada real à Edge Function será via http_post
   SELECT net.http_post(
-    url:='https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/check-action-effectiveness',
+    url:='https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/evaluate-playbook-triggers',
     headers:=jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ***REMOVED***'
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+      'X-Internal-Secret', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'INTERNAL_FUNCTION_SECRET')
     ),
-    body:='{"source": "cron"}'::jsonb
-  ) as request_id;
+    body:=jsonb_build_object(
+      'tenant_id', pe.action_data->>'tenant_id',
+      'trigger_type', pe.action_data->>'trigger_type',
+      'agent_id', pe.action_data->>'agent_id',
+      'context', pe.action_data
+    )
+  )
+  FROM pending_events pe;
   $$
 );
 ```
 
-### 1.2 Criar Cron para `generate_ai_actions_from_insights`
+**Alternativa mais simples - Criar Edge Function processadora:**
 
-**Problema**: Função RPC existe mas não é chamada periodicamente. 805 insights críticos/high sem ação.
+Criar uma nova Edge Function `process-playbook-trigger-logs` que:
+1. Busca `ai_action_logs` com `status = 'pending'` e `action_type = 'playbook_trigger_evaluation'`
+2. Para cada log, chama internamente `evaluate-playbook-triggers`
+3. Marca o log como `processed`
 
-**SQL:**
+### Fase 2: Criar Trigger para Bloqueios DNS (P1)
 
-```sql
-SELECT cron.schedule(
-  'generate-ai-actions-every-30min',
-  '*/30 * * * *',
-  $$
-  SELECT public.generate_ai_actions_from_insights();
-  $$
-);
-```
-
-### 1.3 Limpar Job Órfão Expirado
-
-**Problema**: Job `85ce188c-05a6-4d43-b856-e19989416579` está em `pending` mas expirou.
-
-**SQL:**
+**Criar função e trigger para detectar múltiplos bloqueios:**
 
 ```sql
-UPDATE jobs 
-SET status = 'cancelled', 
-    completed_at = NOW(),
-    error_message = 'Cancelado automaticamente: job expirado em status pending (ADR-037)'
-WHERE id = '85ce188c-05a6-4d43-b856-e19989416579'
-  AND status = 'pending';
-```
+CREATE OR REPLACE FUNCTION trigger_playbook_on_multiple_dns_blocks()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_blocked_count INTEGER;
+  v_tenant_id UUID;
+BEGIN
+  -- Só processar bloqueios
+  IF NOT NEW.is_blocked THEN
+    RETURN NEW;
+  END IF;
+  
+  -- Contar bloqueios na última hora para este agente
+  SELECT COUNT(*), t.id INTO v_blocked_count, v_tenant_id
+  FROM agent_web_activity aw
+  JOIN agents a ON aw.agent_id = a.id
+  JOIN tenants t ON a.tenant_id = t.id
+  WHERE aw.agent_id = NEW.agent_id
+    AND aw.is_blocked = true
+    AND aw.created_at > NOW() - INTERVAL '1 hour'
+  GROUP BY t.id;
+  
+  -- Se atingiu 10 bloqueios, criar evento para playbook
+  IF v_blocked_count >= 10 THEN
+    INSERT INTO ai_action_logs (
+      tenant_id,
+      action_type,
+      action_data,
+      status
+    ) VALUES (
+      v_tenant_id,
+      'playbook_trigger_evaluation',
+      jsonb_build_object(
+        'trigger_type', 'dns_blocked',
+        'agent_id', NEW.agent_id,
+        'blocked_count', v_blocked_count,
+        'time_window_hours', 1,
+        'latest_domain', NEW.domain,
+        'category', NEW.category
+      ),
+      'pending'
+    );
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
----
-
-## Fase 2: Correções de Fechamento de Ciclo (P1)
-
-### 2.1 Ativar Trigger de Auto-Resolução de Alertas
-
-**Problema**: Função `auto_resolve_resource_alerts` existe mas não há trigger vinculado.
-
-**SQL - Criar trigger:**
-
-```sql
--- Verificar e criar trigger para auto-resolver alertas
-CREATE OR REPLACE TRIGGER tr_auto_resolve_resource_alerts
-  AFTER INSERT ON agent_system_metrics_partitioned
+CREATE TRIGGER tr_playbook_on_dns_blocks
+  AFTER INSERT ON agent_web_activity
   FOR EACH ROW
-  EXECUTE FUNCTION auto_resolve_resource_alerts();
-
--- Também criar trigger na tabela base (se usada)
-DROP TRIGGER IF EXISTS tr_auto_resolve_resource_alerts ON agent_system_metrics;
-CREATE TRIGGER tr_auto_resolve_resource_alerts
-  AFTER INSERT ON agent_system_metrics
-  FOR EACH ROW
-  EXECUTE FUNCTION auto_resolve_resource_alerts();
+  WHEN (NEW.is_blocked = true)
+  EXECUTE FUNCTION trigger_playbook_on_multiple_dns_blocks();
 ```
 
-### 2.2 Resolver Alertas Antigos Manualmente
+### Fase 3: Processar 219 Eventos Pendentes Imediatamente (P0)
 
-**Problema**: 378 alertas (`pending_agents` e `high_cpu`) acumulados há 14 dias.
+**Processar em lote os eventos antigos:**
 
-**SQL para resolução em lote:**
+Chamar manualmente a Edge Function ou criar uma query que converta os eventos em execuções de playbook:
 
 ```sql
--- Resolver alertas pending_agents onde agentes já estão ativos
-UPDATE system_alerts sa
+-- Marcar eventos como processados (já muito antigos para serem úteis)
+UPDATE ai_action_logs
 SET 
-  resolved_at = NOW(),
-  status = 'resolved',
-  resolution_notes = 'Auto-resolvido: condição normalizada (batch cleanup)'
-WHERE sa.alert_type = 'pending_agents'
-  AND sa.resolved_at IS NULL
-  AND sa.created_at < NOW() - INTERVAL '7 days';
-
--- Resolver alertas high_cpu antigos (> 7 dias sem resolução = provavelmente resolvido)
-UPDATE system_alerts sa
-SET 
-  resolved_at = NOW(),
-  status = 'resolved',
-  resolution_notes = 'Auto-resolvido: timeout após 7 dias sem nova ocorrência'
-WHERE sa.alert_type = 'high_cpu'
-  AND sa.resolved_at IS NULL
-  AND sa.created_at < NOW() - INTERVAL '7 days';
+  status = 'expired',
+  processed_at = NOW(),
+  notes = 'Expirado: evento de 21+ dias sem processamento. Corrigido via recovery plan.'
+WHERE action_type = 'playbook_trigger_evaluation'
+  AND status = 'pending'
+  AND created_at < NOW() - INTERVAL '7 days';
 ```
+
+### Fase 4: Melhorar Dados Upstream (P2)
+
+Para os playbooks de vulnerabilidade e software de risco funcionarem, é necessário:
+
+1. **Scan de Vulnerabilidades**: Garantir que `scan-vulnerabilities` Edge Function está rodando e populando dados
+2. **Risk Level em Software**: Garantir que `evaluate-software-risk` está classificando software corretamente
+3. **Categorias de DNS**: Verificar se o serviço de categorização de URLs está retornando categorias além de "social"
 
 ---
 
-## Fase 3: Otimizações (P2)
-
-### 3.1 Criar Cron para Limpeza de DLQ
-
-**SQL:**
-
-```sql
-SELECT cron.schedule(
-  'dlq-cleanup-weekly',
-  '0 4 * * 0',
-  $$
-  DELETE FROM failed_jobs_dlq 
-  WHERE created_at < NOW() - INTERVAL '90 days';
-  $$
-);
-```
-
-### 3.2 Criar View de Saúde dos Ciclos
-
-**SQL - View para monitoramento:**
-
-```sql
-CREATE OR REPLACE VIEW v_system_cycle_health AS
-SELECT 
-  'ai_actions_pending_verification' as cycle,
-  COUNT(*) as pending_count,
-  MIN(executed_at) as oldest_pending
-FROM ai_actions
-WHERE effectiveness_status = 'pending' AND status = 'executed'
-UNION ALL
-SELECT 
-  'insights_without_action' as cycle,
-  COUNT(*) as pending_count,
-  MIN(i.created_at) as oldest_pending
-FROM ai_insights i
-LEFT JOIN ai_actions a ON a.insight_id = i.id
-WHERE i.severity IN ('critical', 'high')
-  AND i.acknowledged = false
-  AND a.id IS NULL
-  AND i.created_at > NOW() - INTERVAL '7 days'
-UNION ALL
-SELECT 
-  'unresolved_alerts' as cycle,
-  COUNT(*) as pending_count,
-  MIN(created_at) as oldest_pending
-FROM system_alerts
-WHERE resolved_at IS NULL
-  AND created_at < NOW() - INTERVAL '24 hours'
-UNION ALL
-SELECT 
-  'orphan_pending_jobs' as cycle,
-  COUNT(*) as pending_count,
-  MIN(created_at) as oldest_pending
-FROM jobs
-WHERE status = 'pending'
-  AND expires_at < NOW();
-```
-
----
-
-## Resumo de Arquivos/Alterações
+## 📋 Resumo de Alterações
 
 | Tipo | Descrição | Prioridade |
 |------|-----------|------------|
-| **Cron Job** | `check-action-effectiveness-every-15min` | P0 |
-| **Cron Job** | `generate-ai-actions-every-30min` | P0 |
-| **Data Update** | Cancelar job órfão | P0 |
-| **Trigger** | `tr_auto_resolve_resource_alerts` | P1 |
-| **Data Update** | Resolver 378 alertas antigos | P1 |
-| **Cron Job** | `dlq-cleanup-weekly` | P2 |
-| **View** | `v_system_cycle_health` | P2 |
+| **Edge Function** | Criar `process-playbook-trigger-logs` | P0 |
+| **Cron Job** | `process-playbook-trigger-events-every-5min` | P0 |
+| **Trigger** | `tr_playbook_on_dns_blocks` em `agent_web_activity` | P1 |
+| **Data Update** | Expirar 219 eventos pendentes antigos | P0 |
+| **Investigação** | Verificar pipeline de vulnerabilidades | P2 |
 
 ---
 
-## Critérios de Validação Pós-Implementação
+## ✅ Validação Pós-Implementação
 
 ```sql
--- 1. Verificar crons criados
-SELECT jobname, schedule, active 
-FROM cron.job 
-WHERE jobname IN (
-  'check-action-effectiveness-every-15min',
-  'generate-ai-actions-every-30min',
-  'dlq-cleanup-weekly'
-);
+-- 1. Verificar ai_action_logs processados
+SELECT status, COUNT(*) 
+FROM ai_action_logs 
+WHERE action_type = 'playbook_trigger_evaluation'
+GROUP BY status;
 
--- 2. Verificar job órfão cancelado
-SELECT id, status, error_message 
-FROM jobs 
-WHERE id = '85ce188c-05a6-4d43-b856-e19989416579';
+-- 2. Verificar playbooks executando
+SELECT p.name, COUNT(pe.id) as executions
+FROM playbooks p
+LEFT JOIN playbook_executions pe ON pe.playbook_id = p.id
+WHERE p.is_enabled = true
+GROUP BY p.id, p.name
+ORDER BY executions DESC;
 
--- 3. Verificar alertas resolvidos
-SELECT alert_type, COUNT(*) as unresolved
-FROM system_alerts
-WHERE resolved_at IS NULL
-GROUP BY alert_type;
-
--- 4. Verificar ações pendentes de verificação
-SELECT COUNT(*) FROM ai_actions 
-WHERE effectiveness_status = 'pending';
-
--- 5. Verificar ciclos saudáveis
-SELECT * FROM v_system_cycle_health;
+-- 3. Verificar trigger de DNS ativo
+SELECT tgname, tgenabled FROM pg_trigger WHERE tgname = 'tr_playbook_on_dns_blocks';
 ```
 
 ---
 
-## Notas de Implementação
+## Notas Importantes
 
-1. **Backup**: As queries são idempotentes e seguras, mas recomenda-se verificar contagens antes de executar UPDATEs em lote.
+1. **O trigger `tr_playbook_on_job_failure` existe e funciona**, mas os eventos vão para `ai_action_logs` que **nunca são processados**.
 
-2. **Ordem de Execução**:
-   - Primeiro: Crons (P0)
-   - Segundo: Job órfão e triggers (P1)
-   - Terceiro: Limpeza e views (P2)
+2. **Não existe nenhum cron** que chame `evaluate-playbook-triggers` periodicamente. A Edge Function só é chamada manualmente ou via `useTriggerManualPlaybook`.
 
-3. **Monitoramento**: Após implementação, aguardar 30 minutos e verificar logs de execução dos novos crons.
+3. **Bloqueios DNS de 10+ por hora existem** (20 eventos), mas o playbook "DNS bloqueou múltiplas tentativas" já executou 2 vezes - provavelmente via trigger manual. O problema é que não há automação.
 
-4. **Playbooks Inativos**: Os 8 playbooks que nunca executaram precisam de investigação adicional sobre suas `trigger_conditions` - pode ser que os eventos específicos (ex: `suspicious_web_activity`, `vulnerability_critical`) não estejam sendo gerados pelos sistemas upstream.
+4. **Categorias maliciosas (malware, c2, botnet)**: 0 registros. Isso pode indicar:
+   - Rede segura (sem ameaças reais)
+   - Serviço de categorização não está classificando corretamente
+   - Bloqueios estão funcionando apenas para "social" (redes sociais)
+
