@@ -8,7 +8,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 interface SoftwareItem {
   name: string;
   version: string;
-  publisher?: string;
+  vendor?: string;
 }
 
 interface VulnerabilityBaseline {
@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
       
       const { data: inventory, error: invError } = await supabase
         .from('software_inventory')
-        .select('name, version, publisher')
+        .select('name, version, vendor')
         .eq('agent_id', agent_id)
         .order('name');
       
