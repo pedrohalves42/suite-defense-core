@@ -1,75 +1,114 @@
 
+# Plano de Correção: Criação de Contas + Licença Genial Cred
 
-# 🔧 Plano de Correção: Bug Crítico em evaluate-software-risk
+## Problema 1: Novos usuários não conseguem criar conta
 
-## 🔴 Problema Encontrado
+### Diagnóstico
 
-A Edge Function `evaluate-software-risk` está falhando com erro **"column does not exist" (42703)** porque:
-
-- **Código atual**: `select('name, version, publisher')`
-- **Schema real**: A coluna se chama `vendor`, não `publisher`
-
-Este bug impede **100% das avaliações de risco de software**, causando:
-- `vuln_findings` tabela vazia (0 registros)
-- 14 agentes com software vulnerável não detectados
-- Playbooks de vulnerabilidade nunca ativam
-
-## 📊 Impacto Atual
-
-| Métrica | Valor |
-|---------|-------|
-| Agentes com WinRAR vulnerável (4.20/5.80) | 8 |
-| Agentes com 7-Zip vulnerável (19.00/22.01) | 6 |
-| vuln_findings registros | 0 |
-| Cron evaluate-software-risk execuções com sucesso | 0 |
-
-## 🛠️ Correção Necessária
-
-### Arquivo: `supabase/functions/evaluate-software-risk/index.ts`
-
-**Linha 175** - Alterar:
-
-```typescript
-// DE:
-.select('name, version, publisher')
-
-// PARA:
-.select('name, version, vendor')
-```
-
-### Código Completo da Correção (linhas 173-177):
-
-```typescript
-      const { data: inventory, error: invError } = await supabase
-        .from('software_inventory')
-        .select('name, version, vendor')
-        .eq('agent_id', agent_id)
-        .order('name');
-```
-
-## ✅ Resultado Esperado
-
-Após a correção:
-1. **Função executará com sucesso** para todos os agentes
-2. **14+ vulnerabilidades serão detectadas** em WinRAR/7-Zip
-3. **vuln_findings será populada** com severidade critical/high
-4. **Playbooks de vulnerabilidade poderão executar**
-
-## 🧪 Validação Pós-Deploy
+A função `handle_new_user()` (trigger executado após signup) contém um **bug crítico**:
 
 ```sql
--- 1. Verificar vuln_findings populadas
-SELECT severity, COUNT(*) FROM vuln_findings GROUP BY severity;
-
--- 2. Verificar software com risk_level atualizado
-SELECT name, version, risk_level FROM software_inventory 
-WHERE risk_level IN ('high', 'critical');
+-- CÓDIGO ATUAL (linha 73-78):
+UPDATE public.tenant_subscriptions
+SET 
+  trial_end = now() + interval '30 days',
+  status = 'trialing'
+WHERE tenant_id = new_tenant_id;
 ```
 
-## 📋 Sequência de Implementação
+**Problema**: O `UPDATE` nunca funciona porque a `tenant_subscription` **não existe ainda**! A função cria o tenant, cria o user_role, mas esquece de **criar** a subscription antes de atualizá-la.
 
-1. Corrigir a Edge Function `evaluate-software-risk/index.ts`
-2. Aguardar deploy automático
-3. Testar manualmente para um agente vulnerável
-4. Aguardar próximo cron (Job #72) às 06:00
+### Impacto
 
+| Cenário | Resultado |
+|---------|-----------|
+| Signup normal | Tenant criado, mas SEM subscription |
+| Trial de 14 dias | Nunca ativado |
+| Acesso ao dashboard | Usuário bloqueado ou sem features |
+
+### Solução
+
+Corrigir `handle_new_user()` para **INSERT** a subscription antes de configurar features:
+
+```sql
+-- APÓS criar tenant e role:
+
+-- 1. INSERIR subscription com trial de 14 dias (plano free)
+INSERT INTO public.tenant_subscriptions (
+  tenant_id, 
+  plan_id, 
+  status, 
+  trial_end, 
+  current_period_end
+)
+SELECT 
+  new_tenant_id,
+  id,
+  'trialing',
+  now() + interval '14 days',
+  now() + interval '14 days'
+FROM public.subscription_plans 
+WHERE name = 'free'
+LIMIT 1;
+
+-- 2. Configurar features do plano free
+PERFORM public.ensure_tenant_features(new_tenant_id, 'free', 1);
+```
+
+---
+
+## Problema 2: Genial Cred - Estender licença Pro até 2026
+
+### Status Atual
+
+| Campo | Valor Atual |
+|-------|-------------|
+| Tenant ID | `2584d2cd-8b99-4ca7-a8e2-b61256e82b3e` |
+| Plano | Pro (`ae808b7a-9da8-4462-9c4f-92c7dacd6282`) |
+| Status | active |
+| Expira em | `2026-01-31` |
+| Dispositivos | 200 |
+
+### Alteração Necessária
+
+Estender `current_period_end` e `trial_end` para **31/12/2026**:
+
+```sql
+UPDATE tenant_subscriptions 
+SET 
+  current_period_end = '2026-12-31 23:59:59+00'::timestamptz,
+  trial_end = '2026-12-31 23:59:59+00'::timestamptz,
+  updated_at = now()
+WHERE tenant_id = '2584d2cd-8b99-4ca7-a8e2-b61256e82b3e';
+```
+
+---
+
+## Resumo das Alterações
+
+### 1. Migration SQL
+
+Corrige o trigger `handle_new_user` para:
+- **INSERIR** a subscription com plano `free` e trial de 14 dias
+- Garantir que `ensure_tenant_features` seja chamado após a subscription existir
+
+### 2. Migration SQL Genial Cred
+
+Atualiza a subscription do Genial Cred para expirar em 31/12/2026.
+
+---
+
+## Resultado Esperado
+
+| Cenário | Antes | Depois |
+|---------|-------|--------|
+| Novo signup | Sem subscription | 14 dias trial ativo |
+| Dashboard novo usuário | Bloqueado/erro | Funcional com features free |
+| Genial Cred expira | 31/01/2026 | 31/12/2026 |
+
+---
+
+## Arquivos Modificados
+
+1. **Migration**: Corrigir `handle_new_user()` com INSERT antes de UPDATE
+2. **Migration**: Estender licença Genial Cred até 31/12/2026
