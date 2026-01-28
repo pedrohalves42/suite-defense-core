@@ -1,162 +1,72 @@
 
+Objetivo
+- Corrigir definitivamente o erro 500 ao criar nova conta (POST /auth/v1/signup) que está impedindo o signup.
 
-# Plano de Resolução Definitiva - Security Scan
+Diagnóstico (baseado em evidência real)
+- O erro atual é: `duplicate key value violates unique constraint "tenant_subscriptions_tenant_id_key" (SQLSTATE 23505)`.
+- Isso acontece dentro do fluxo de signup porque há duas rotas criando a assinatura do mesmo tenant:
+  1) Trigger em `public.tenants` chamado `create_tenant_subscription` (função `public.create_default_subscription`) que faz:
+     - `INSERT INTO public.tenant_subscriptions (tenant_id, plan_id) VALUES (NEW.id, free_plan_id);`
+  2) Trigger `public.handle_new_user()` (AFTER INSERT em `auth.users`) que após criar o tenant também tenta:
+     - `INSERT INTO public.tenant_subscriptions (...) SELECT ... WHERE name='free' ...;`
+- Como `tenant_subscriptions.tenant_id` é UNIQUE, o segundo INSERT aborta a transação e o signup vira 500.
 
-## Resumo
+Solução proposta (robusta e “à prova de duplicidade”)
+Ajustar o trigger `public.handle_new_user()` para ser idempotente e compatível com o trigger existente em `public.tenants`.
 
-Após análise detalhada do banco de dados e código, identifiquei que **6 dos 7 erros são FALSOS POSITIVOS**. O scanner não consegue interpretar corretamente que as views têm:
-- `security_invoker = on/true` configurado
-- Filtros de tenant (`WHERE tenant_id = get_active_tenant_id() OR is_current_super_admin()`)
-- Nenhum grant para role `anon`
+Mudança principal (obrigatória)
+- Substituir o trecho que faz INSERT direto em `tenant_subscriptions` por UPSERT:
+  - `INSERT ... ON CONFLICT (tenant_id) DO UPDATE`
+  - Assim, se a assinatura já foi criada pelo trigger `create_tenant_subscription`, o `handle_new_user()` apenas atualiza a assinatura para:
+    - `status = 'trialing'`
+    - `trial_end = now() + interval '14 days'`
+    - `current_period_end = now() + interval '14 days'`
+    - `device_quantity = 1` (mantendo o padrão atual; podemos evoluir depois para respeitar o “Quantos computadores…”)
 
-### Correções Reais Necessárias (2)
+Hardening opcional (recomendado)
+- Tornar também o trigger `public.create_default_subscription()` tolerante a duplicidade para cenários futuros:
+  - `INSERT ... ON CONFLICT (tenant_id) DO NOTHING`
+  - Isso cria “dupla proteção” e evita que qualquer alteração futura volte a quebrar signup por 23505.
 
-| Issue | Problema Real | Correção |
-|-------|---------------|----------|
-| `v_system_cycle_health` | View sem `security_invoker`, acessa dados de múltiplos tenants | Recriar com `security_invoker=on` + filtro tenant |
-| `xlsx` vulnerability | Dependência legacy com CVE ativo (Prototype Pollution + ReDoS) | Remover do package.json (projeto usa `exceljs`) |
+Implementação (o que será feito no código do projeto)
+1) Criar uma nova migration SQL que:
+   1.1) `CREATE OR REPLACE FUNCTION public.handle_new_user()` com a alteração do bloco de assinatura para UPSERT.
+   1.2) (Opcional) `CREATE OR REPLACE FUNCTION public.create_default_subscription()` com `ON CONFLICT DO NOTHING`.
+   1.3) Não altera tabelas nem dados históricos; apenas corrige a lógica do onboarding.
 
-### Falsos Positivos (6) - Marcar como Ignorados
+2) Garantir compatibilidade com o estado atual do schema:
+   - `tenant_subscriptions` tem colunas e defaults adequados (`status` default 'active', `device_quantity` default 1). O UPSERT vai forçar para trialing e setar datas.
 
-| Finding | Evidência de Segurança | Justificativa |
-|---------|------------------------|---------------|
-| agents_public | `security_invoker=on` + `WHERE tenant_id = get_active_tenant_id()` | View retorna 0 linhas para anon (tenant_id = NULL) |
-| agent_releases_public | `security_invoker=true` + filtro `user_roles` | Requer autenticação via `auth.uid()` check |
-| profiles_public | `security_invoker=on` | Filtro via joins com tenant isolation |
-| enrollment_keys_safe | `security_invoker=on` | Tenant filter ativo |
-| audit_logs_safe | `security_invoker=on` | Tenant filter ativo |
-| admin_ip_whitelist | RLS enabled + policy `super_admin` exists | `USING (EXISTS (SELECT 1 FROM user_roles WHERE role = 'super_admin'))` |
+3) Publicação/propagação:
+   - Aplicar a migration no ambiente de teste.
+   - Publicar para levar a correção ao ambiente live (onde seu domínio está criando contas).
 
----
+Validação (checklist objetivo)
+A) Teste funcional end-to-end
+- Criar uma conta com um email nunca usado.
+- Confirmar que o POST /auth/v1/signup retorna 200 (sem 500).
+- Confirmar que o app redireciona para o dashboard/onboarding.
 
-## Implementação
+B) Verificação no banco (queries de verificação)
+- Confirmar que o tenant recém-criado tem exatamente 1 subscription:
+  - `SELECT tenant_id, count(*) FROM tenant_subscriptions GROUP BY tenant_id HAVING count(*) > 1;` (deve retornar zero linhas)
+- Confirmar que a subscription do novo tenant está em trial:
+  - `SELECT tenant_id, status, trial_end, current_period_end, device_quantity FROM tenant_subscriptions ORDER BY created_at DESC LIMIT 5;`
 
-### 1. Migration SQL - Corrigir v_system_cycle_health
+C) Observabilidade
+- Revalidar logs: não deve haver mais SQLSTATE 23505 em signup.
 
-Recriar a view com `security_invoker=on` e adicionar filtro de tenant para garantir isolamento:
+Riscos e mitigação
+- Risco: plano ‘free’ não existir (plan_id nulo) faria o UPSERT falhar por NOT NULL.
+  - Mitigação: na função, buscar explicitamente o `free_plan_id` e lançar erro claro caso não exista (para não ficar “500 genérico” sem causa).
+- Risco: mudanças futuras reintroduzirem duplicidade.
+  - Mitigação: hardening opcional no `create_default_subscription` com `ON CONFLICT DO NOTHING`.
 
-```sql
-DROP VIEW IF EXISTS public.v_system_cycle_health;
+Escopo propositalmente fora (para não atrasar a correção do signup)
+- Ajustar `device_quantity` com base no campo “Quantos computadores…” do formulário (hoje o frontend manda `device_count` como string “1-3”, etc.). Podemos fazer isso após o signup voltar a funcionar, com uma regra clara de mapeamento (ex.: “1-3” → 3) e validação.
 
-CREATE VIEW public.v_system_cycle_health 
-WITH (security_invoker = on) AS
-SELECT 
-  'ai_actions_pending_verification' as cycle,
-  COUNT(*) as pending_count,
-  MIN(executed_at) as oldest_pending
-FROM ai_actions
-WHERE effectiveness_status = 'pending' 
-  AND status = 'executed'
-  AND (tenant_id = get_active_tenant_id() OR is_current_super_admin())
-UNION ALL
-SELECT 
-  'insights_without_action' as cycle,
-  COUNT(*) as pending_count,
-  MIN(i.created_at) as oldest_pending
-FROM ai_insights i
-LEFT JOIN ai_actions a ON a.insight_id = i.id
-WHERE i.severity IN ('critical', 'high')
-  AND i.acknowledged = false
-  AND a.id IS NULL
-  AND i.created_at > NOW() - INTERVAL '7 days'
-  AND (i.tenant_id = get_active_tenant_id() OR is_current_super_admin())
-UNION ALL
-SELECT 
-  'unresolved_alerts' as cycle,
-  COUNT(*) as pending_count,
-  MIN(created_at) as oldest_pending
-FROM system_alerts
-WHERE resolved_at IS NULL
-  AND created_at < NOW() - INTERVAL '24 hours'
-  AND (tenant_id = get_active_tenant_id() OR is_current_super_admin())
-UNION ALL
-SELECT 
-  'orphan_pending_jobs' as cycle,
-  COUNT(*) as pending_count,
-  MIN(created_at) as oldest_pending
-FROM jobs
-WHERE status = 'pending'
-  AND expires_at < NOW()
-  AND (tenant_id = get_active_tenant_id() OR is_current_super_admin());
-
--- Grant apenas para authenticated
-GRANT SELECT ON public.v_system_cycle_health TO authenticated;
-GRANT SELECT ON public.v_system_cycle_health TO service_role;
-
--- Documentar segurança
-COMMENT ON VIEW public.v_system_cycle_health IS 
-  'ADR-023: System health metrics with security_invoker=on + tenant isolation';
-```
-
-### 2. Remover Dependência Vulnerável xlsx
-
-Editar `package.json` para remover a linha 103:
-
-```diff
-- "xlsx": "^0.18.5",
-```
-
-O projeto já utiliza `exceljs` (linha 79) para todas as exportações Excel. A dependência `xlsx` é legacy não utilizada.
-
-### 3. Marcar Falsos Positivos como Ignorados
-
-Usar a ferramenta de gerenciamento de findings para ignorar os 6 falsos positivos com justificativas técnicas documentadas.
-
----
-
-## Resultado Esperado
-
-| Métrica | Antes | Depois |
-|---------|-------|--------|
-| Errors | 7 | 0 |
-| Warnings | 2 | 1 (RLS Always True já ignorado) |
-| Infos | 3 | 3 |
-| Vulnerabilidades npm | 2 (xlsx) | 0 |
-
----
-
-## Seção Técnica
-
-### Por que as views são seguras
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│                    FLUXO DE SEGURANÇA                        │
-├──────────────────────────────────────────────────────────────┤
-│  1. Usuário Anônimo tenta: SELECT * FROM agents_public       │
-│                                                              │
-│  2. security_invoker=on → Executa com permissões do CALLER   │
-│                                                              │
-│  3. get_active_tenant_id() → Retorna NULL (sem JWT válido)   │
-│                                                              │
-│  4. WHERE tenant_id = NULL → 0 linhas retornadas             │
-│                                                              │
-│  5. is_current_super_admin() → false (sem auth.uid())        │
-│                                                              │
-│  ✅ RESULTADO: Acesso negado sem expor dados                 │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### Evidência do Banco de Dados
-
-| View | security_invoker | grant anon |
-|------|------------------|------------|
-| agents_public | ON | ❌ Sem grant |
-| agent_releases_public | TRUE | ❌ Sem grant |
-| profiles_public | ON | ❌ Sem grant |
-| enrollment_keys_safe | ON | ❌ Sem grant |
-| audit_logs_safe | ON | ❌ Sem grant |
-
-### admin_ip_whitelist
-
-- RLS: ✅ Habilitado (`relrowsecurity = true`)
-- Policy: ✅ `super_admin` only (`polcmd = '*'` com check de role)
-
----
-
-## Arquivos Modificados
-
-1. **Nova Migration SQL**: Corrige `v_system_cycle_health`
-2. **package.json**: Remove dependência `xlsx` vulnerável  
-3. **Security Findings**: 6 findings marcados como ignorados
+Resultado esperado
+- Signup deixa de retornar 500.
+- O tenant é criado normalmente.
+- A assinatura fica em `trialing` com `trial_end` e `current_period_end` em 14 dias, sem violar o UNIQUE `(tenant_id)`.
 
