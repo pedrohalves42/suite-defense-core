@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazil } from '@/lib/date-utils';
 import { 
   Scale, 
   Shield, 
@@ -97,7 +96,7 @@ export default function DecisionAudit() {
       const evidence = getEvidence(event);
       const actions = getActionsExecuted(event);
       return [
-        format(new Date(event.created_at), "yyyy-MM-dd HH:mm:ss"),
+        formatBrazil(event.created_at, "yyyy-MM-dd HH:mm:ss"),
         event.rule_code,
         event.agent_name || 'N/A',
         event.action,
@@ -114,7 +113,7 @@ export default function DecisionAudit() {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `decision-audit-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.download = `decision-audit-${formatBrazil(new Date(), 'yyyy-MM-dd')}.csv`;
     link.click();
 
     toast.success('Exportação concluída');
@@ -327,7 +326,7 @@ export default function DecisionAudit() {
                     onClick={() => handleEventClick(event)}
                   >
                     <TableCell className="font-mono text-sm">
-                      {format(new Date(event.created_at), "dd/MM HH:mm:ss", { locale: ptBR })}
+                      {formatBrazil(event.created_at, "dd/MM HH:mm:ss")}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-mono text-xs">

@@ -30,8 +30,9 @@ import {
   Package,
   ShieldAlert
 } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatBrazil } from '@/lib/date-utils';
 import { 
   useUpdateTaskStatus, 
   type Task, 
@@ -199,13 +200,13 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Criada:</span>
-                    <span>{format(new Date(task.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                    <span>{formatBrazil(task.created_at, "dd/MM/yyyy 'às' HH:mm")}</span>
                   </div>
                   {task.due_at && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Prazo SLA:</span>
                       <span className={isSlaBreach ? 'text-destructive font-medium' : ''}>
-                        {format(new Date(task.due_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        {formatBrazil(task.due_at, "dd/MM/yyyy 'às' HH:mm")}
                         {isSlaBreach && ' (Violado)'}
                       </span>
                     </div>
@@ -213,7 +214,7 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
                   {task.closed_at && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Fechada:</span>
-                      <span>{format(new Date(task.closed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                      <span>{formatBrazil(task.closed_at, "dd/MM/yyyy 'às' HH:mm")}</span>
                     </div>
                   )}
                   <div className="flex justify-between">

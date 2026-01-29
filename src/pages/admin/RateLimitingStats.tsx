@@ -7,11 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Activity, Shield, Ban, Clock, RefreshCw, TrendingUp } from 'lucide-react';
+import { Activity, Shield, Ban, Clock, RefreshCw, TrendingUp, Info } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
+import { formatBrazilTime } from '@/lib/date-utils';
 
 interface RateLimitSummary {
   endpoint: string;
@@ -316,7 +316,7 @@ export default function RateLimitingStats() {
                         <TableCell className="text-right text-xs">
                           <Badge variant="outline">
                             <Clock className="h-3 w-3 mr-1" />
-                            {new Date(row.blocked_until).toLocaleTimeString()}
+                            {formatBrazilTime(row.blocked_until)}
                           </Badge>
                         </TableCell>
                       </TableRow>

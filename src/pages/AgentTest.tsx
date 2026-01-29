@@ -19,6 +19,7 @@ import {
   Trash2
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { formatBrazilTime } from '@/lib/date-utils';
 
 interface TestResult {
   step: string;
@@ -456,7 +457,7 @@ export default function AgentTest() {
                           </details>
                         )}
                         <p className="text-xs text-muted-foreground">
-                          {new Date(result.timestamp).toLocaleTimeString()}
+                          {formatBrazilTime(result.timestamp)}
                         </p>
                       </div>
                     </div>

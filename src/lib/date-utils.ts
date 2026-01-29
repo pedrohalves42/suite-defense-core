@@ -1,9 +1,22 @@
-const BRASILIA_TIMEZONE = 'America/Sao_Paulo';
+import { format as formatTz, toZonedTime } from 'date-fns-tz';
+import { ptBR } from 'date-fns/locale';
+
+export const BRASILIA_TIMEZONE = 'America/Sao_Paulo';
 
 /**
  * Indicador visual de timezone para exibição em headers
  */
 export const TIMEZONE_INDICATOR = '(UTC-3)';
+
+/**
+ * Converte uma data para o timezone de Brasília
+ */
+export function toBrasiliaTime(date: Date | string | null | undefined): Date | null {
+  if (!date) return null;
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return null;
+  return toZonedTime(d, BRASILIA_TIMEZONE);
+}
 
 /**
  * Formata data/hora para o fuso horário de Brasília (UTC-3)
@@ -84,6 +97,40 @@ export function formatBrazilDateTime(
     default:
       return date.toLocaleString('pt-BR', options);
   }
+}
+
+/**
+ * Formata data usando date-fns com timezone de Brasília
+ * @param date - Data em qualquer formato
+ * @param formatString - String de formato do date-fns (ex: "dd/MM/yyyy HH:mm")
+ */
+export function formatBrazil(
+  date: string | Date | null | undefined,
+  formatString: string
+): string {
+  if (!date) return '-';
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return '-';
+  
+  const zonedDate = toZonedTime(d, BRASILIA_TIMEZONE);
+  return formatTz(zonedDate, formatString, { 
+    locale: ptBR,
+    timeZone: BRASILIA_TIMEZONE 
+  });
+}
+
+/**
+ * Formata hora para exibição em gráficos (HH:mm) com timezone de Brasília
+ */
+export function formatBrazilTime(date: string | Date | null | undefined): string {
+  return formatBrazil(date, 'HH:mm');
+}
+
+/**
+ * Formata data curta para gráficos (dd/MM) com timezone de Brasília
+ */
+export function formatBrazilShortDate(date: string | Date | null | undefined): string {
+  return formatBrazil(date, 'dd/MM');
 }
 
 /**
