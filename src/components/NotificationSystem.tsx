@@ -41,6 +41,7 @@ const STATE_NOTIFICATIONS: Record<AgentState, {
   isolated: { icon: ShieldOff, type: 'error' },
   offline: { icon: WifiOff, type: 'warning' },
   quarantined: { icon: ShieldOff, type: 'error' },
+  shutdown: null, // Don't notify for shutdown (terminal state)
 };
 
 export const NotificationSystem = () => {

@@ -9,7 +9,7 @@ import { Database } from '@/integrations/supabase/types';
 
 type Agent = Database['public']['Tables']['agents']['Row'];
 
-// Estados formais do agente
+// Estados formais do agente (FSM Enterprise v2.0)
 export type AgentState = 
   | 'healthy'           // Online, executando normalmente
   | 'degraded'          // Online, mas com problemas (throttled)
@@ -18,7 +18,8 @@ export type AgentState =
   | 'rollback'          // Voltando para versão anterior
   | 'isolated'          // Bloqueado por segurança
   | 'offline'           // Sem contato
-  | 'quarantined';      // Requer intervenção manual
+  | 'quarantined'       // Requer intervenção manual
+  | 'shutdown';         // Estado terminal (desinstalação/ordem explícita)
 
 export interface StateDescription {
   label: string;
@@ -94,19 +95,28 @@ export const STATE_DESCRIPTIONS: Record<AgentState, StateDescription> = {
     icon: 'alert-octagon',
     actions: ['view_details', 'remove_quarantine', 'diagnostics'],
     nextSteps: 'Ação manual necessária. Verifique os logs e contate suporte.'
+  },
+  shutdown: {
+    label: 'Desligado',
+    description: 'Computador em processo de desinstalação ou desligamento ordenado.',
+    color: 'muted',
+    icon: 'power-off',
+    actions: ['view_details'],
+    nextSteps: 'Estado terminal. Nenhuma ação disponível.'
   }
 };
 
-// Transições permitidas entre estados
+// Transições permitidas entre estados (FSM Enterprise v2.0)
 export const STATE_TRANSITIONS: Record<AgentState, AgentState[]> = {
   healthy: ['degraded', 'safe_mode', 'updating', 'isolated', 'offline'],
-  degraded: ['healthy', 'safe_mode', 'isolated', 'offline'],
+  degraded: ['healthy', 'safe_mode', 'isolated', 'offline', 'shutdown'],
   safe_mode: ['healthy', 'updating', 'offline', 'quarantined'],
   updating: ['healthy', 'rollback', 'offline'],
   rollback: ['healthy', 'safe_mode', 'offline', 'quarantined'],
   isolated: ['healthy', 'quarantined'],
   offline: ['healthy', 'degraded', 'safe_mode', 'isolated'],
-  quarantined: ['healthy']
+  quarantined: ['healthy'],
+  shutdown: []  // Terminal - sem saídas permitidas
 };
 
 // Tempo em minutos para considerar offline

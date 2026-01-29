@@ -48,6 +48,7 @@ const STATE_ICONS: Record<AgentState, React.ComponentType<{ className?: string }
   isolated: ShieldOff,
   offline: WifiOff,
   quarantined: AlertOctagon,
+  shutdown: WifiOff,
 };
 
 export function AgentStateBadge({ agent, compact = false, showTooltip = true }: AgentStateBadgeProps) {
