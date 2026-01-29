@@ -59,16 +59,20 @@ export default function SoftwareInventory() {
   const { data: agents } = useQuery({
     queryKey: ['agents-list-for-jobs', tenant?.id],
     queryFn: async () => {
-      if (!tenant) return [];
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name')
-        .eq('tenant_id', tenant.id)
-        .is('archived_at', null);
-      return data || [];
+      if (!tenant?.id) return [];
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false
+      });
+      if (error) throw error;
+      // Map RPC response to expected format
+      return ((data || []) as any[]).map((agent: any) => ({
+        id: agent.id,
+        agent_name: agent.agent_name,
+      }));
     },
-    enabled: !!tenant
+    enabled: !!tenant?.id
   });
   
   const { data: software, isLoading, error } = useSoftwareInventory(selectedAgent, !!selectedAgent);
