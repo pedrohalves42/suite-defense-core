@@ -1,613 +1,328 @@
 
-# Plano Unificado: Correção Total de Sincronização + FSM Enterprise + Edge Function Canônica
+# Plano de Fechamento: Gaps Remanescentes + Melhorias de Produção
 
-## ✅ STATUS: IMPLEMENTADO (2026-01-29)
+## Situação Atual (Após Implementação Anterior)
 
-Este plano foi implementado com sucesso. Todas as fases foram concluídas:
-- ✅ FASE 1: Edge Function `agent-snapshot` + View + RPC
-- ✅ FASE 2: Race conditions corrigidas em DiagnosticsCenter e SystemHealth
-- ✅ FASE 3: Central de Ações corrigida (ActionCard, RejectInsightDialog)
-- ✅ FASE 4: AgentMonitoring sincronizado com agent_state do banco
-- ✅ FASE 5-6: Agentes Linux/macOS atualizados para v4.4.0 com FSM Enterprise v2.0
+### ✅ O Que Já Foi Implementado Corretamente
 
----
-
-## Resumo Executivo
-
----
-
-## Arquitetura Unificada
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    EDGE FUNCTION CANÔNICA                        │
-│                    agent-snapshot                                │
-│                                                                  │
-│  Input: agent_id (UUID)                                          │
-│  Output: AgentSnapshot { identity, connectivity, health, diag }  │
-│  Segurança: JWT + tenant isolation via RPC                       │
-└─────────────────────────────────────────────────────────────────┘
-                              ▲
-                              │ Chamada única
-                              │
-     ┌────────────────────────┼────────────────────────────┐
-     │                        │                            │
-     ▼                        ▼                            ▼
-┌─────────────┐     ┌─────────────────┐         ┌─────────────────┐
-│ Monitoramento│     │ Diagnósticos   │         │ Central Ações   │
-│ AgentMonitoring│   │ DiagnosticsCenter│       │ ActionCard      │
-└─────────────┘     └─────────────────┘         └─────────────────┘
-```
+| Item | Status | Evidência |
+|------|--------|-----------|
+| Edge Function `agent-snapshot` | ✅ Completa | `supabase/functions/agent-snapshot/index.ts` |
+| View `agent_snapshots` + RPC | ✅ Completa | Migration `20260129125114...sql` |
+| Hook `useAgentSnapshot` | ✅ Completo | `src/hooks/useAgentSnapshot.ts` |
+| Race conditions DiagnosticsCenter | ✅ Corrigido | Linha 90: `loading: tenantLoading`, linha 114/132: guards |
+| Race conditions SystemHealth | ✅ Corrigido | Linha 27: `loading: tenantLoading`, linha 64: guard |
+| ActionCard.tsx - agent_id null | ✅ Corrigido | Linhas 189-210: trata insights de sistema |
+| RejectInsightDialog - validação | ✅ Corrigido | Linha 56: valida prefixos `offline_`, `alert_`, `system_` |
+| AgentMonitoring - agent_state | ✅ Corrigido | Linhas 43-72: prioriza agent_state |
+| AgentSelector - loading guard | ✅ Corrigido | Linha 32/55: usa `useActiveTenant` com guard |
+| Agentes Linux v4.4.0 FSM | ✅ Completo | SHUTDOWN, FailurePolicy, write_log_dedup, write_health_snapshot, write_incident_summary |
+| Agentes macOS v4.4.0 FSM | ✅ Completo | Mesmas funcionalidades que Linux |
 
 ---
 
-## FASE 1: Edge Function Canônica (Fonte Única de Verdade)
+## 🔴 Gaps Críticos Identificados (Ainda Não Implementados)
 
-### 1.1 Criar View Materializada no Banco
+### GAP 1: Snapshot em Lista para Dashboards
 
-**SQL Migration**:
+**Problema**: A Edge Function `agent-snapshot` retorna **1 agente por vez**, mas:
+- Dashboard de Monitoramento precisa de lista de todos os agentes
+- Saúde do Sistema precisa de contagem agregada
+- Isso força queries diretas à tabela `agents`/`agents_safe` ao invés da view canônica
+
+**Solução**: Criar RPC `get_agents_snapshots_list` que retorna todos os snapshots do tenant.
+
 ```sql
--- View para snapshot do agente (fonte única)
-CREATE OR REPLACE VIEW agent_snapshots 
-WITH (security_invoker = on) AS
-SELECT
-  a.id AS agent_id,
-  a.tenant_id,
-  a.hostname,
-  a.os_type,
-  a.agent_version AS version,
-  a.last_heartbeat,
-  (a.last_heartbeat > now() - interval '2 minutes') AS online,
-  EXTRACT(epoch FROM (now() - a.last_heartbeat)) * 1000 AS latency_ms,
-  a.agent_state,
-  COALESCE(a.safe_mode_entered_at IS NOT NULL, false) AS safe_mode,
-  a.safe_mode_reason,
-  COALESCE(a.is_isolated, false) AS is_isolated,
-  COALESCE(a.is_throttled, false) AS is_throttled,
-  (SELECT COUNT(*) FROM diagnostic_issues di 
-   WHERE di.agent_id = a.id AND di.resolved = false) AS active_issues,
-  (SELECT COUNT(*) FROM ai_insights ai 
-   WHERE ai.agent_id = a.id AND ai.status = 'open') AS unresolved_insights,
-  now() AS snapshot_at
-FROM agents a
-WHERE a.tenant_id = get_active_tenant_id() OR is_current_super_admin();
-
--- RPC segura
-CREATE OR REPLACE FUNCTION get_agent_snapshot(p_agent_id uuid)
-RETURNS jsonb
+-- Nova RPC para lista de snapshots
+CREATE OR REPLACE FUNCTION get_agents_snapshots_list()
+RETURNS SETOF jsonb
 LANGUAGE sql
 STABLE
-SECURITY DEFINER
-SET search_path = public
+SECURITY INVOKER
 AS $$
   SELECT to_jsonb(s)
-  FROM agent_snapshots s
-  WHERE s.agent_id = p_agent_id;
+  FROM agent_snapshots s;
 $$;
 ```
 
-### 1.2 Criar Edge Function `agent-snapshot`
+**Impacto**: Permite que Monitoramento e Dashboard usem a mesma fonte de verdade.
 
-**Arquivo**: `supabase/functions/agent-snapshot/index.ts`
+---
 
-```typescript
-import { serve } from "https://deno.land/std@0.203.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { corsHeaders } from '../_shared/cors.ts'
+### GAP 2: WebActivity e Outras Páginas Sem Guard Completo
 
-serve(async (req) => {
-  const correlationId = crypto.randomUUID()
+**Problema**: WebActivity.tsx e outras páginas usam `AgentSelector` (que tem guard), mas:
+- Os hooks internos como `useWebActivity` podem não ter guards consistentes
+- Múltiplas páginas (SoftwareInventory, AgentTimeline, VulnerabilityFindings) dependem do padrão
 
-  // CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+**Solução**: Auditar e adicionar guards em todos os hooks de dados.
 
-  try {
-    // Apenas POST
-    if (req.method !== 'POST') {
-      return jsonError(405, 'Method not allowed', correlationId)
-    }
+**Arquivos a verificar**:
+- `src/hooks/useWebActivity.ts`
+- `src/hooks/useSoftwareInventory.ts`
+- `src/hooks/useAgentTimeline.ts`
+- `src/hooks/useVulnFindings.ts`
 
-    // Cliente com contexto do usuário
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    )
+---
 
-    // Autenticação
-    const { data: authData, error: authError } = await supabase.auth.getUser()
-    if (authError || !authData?.user) {
-      return jsonError(401, 'Unauthorized', correlationId)
-    }
+### GAP 3: set_state nos Agentes Não Bloqueia SHUTDOWN
 
-    // Parse body
-    let body: { agent_id?: string }
-    try {
-      body = await req.json()
-    } catch {
-      return jsonError(400, 'Invalid JSON body', correlationId)
-    }
+**Problema**: O comentário no seu feedback indica:
+> "Se o agente está em SHUTDOWN, nenhuma transição é permitida. Sem isso, o agente entra em loop silencioso."
 
-    const { agent_id } = body
-    if (!agent_id) {
-      return jsonError(400, 'agent_id is required', correlationId)
-    }
+**Evidência no Código Atual** (Linux linha ~400-450):
+- A função `set_state` valida transições mas NÃO tem hard block para SHUTDOWN
 
-    // Chamada RPC
-    const { data: snapshot, error: rpcError } = await supabase
-      .rpc('get_agent_snapshot', { p_agent_id: agent_id })
+**Solução**: Adicionar check explícito no início de `set_state`:
 
-    if (rpcError) {
-      console.error('[agent-snapshot][RPC_ERROR]', { rpcError, agent_id, correlationId })
-      return jsonError(500, 'Failed to fetch agent snapshot', correlationId)
-    }
+```bash
+set_state() {
+    local new_state="$1"
+    local reason="$2"
 
-    if (!snapshot) {
-      return jsonError(404, 'Agent not found', correlationId)
-    }
-
-    // Resposta padronizada
-    return new Response(
-      JSON.stringify({
-        data: {
-          ...snapshot,
-          meta: { correlation_id: correlationId, snapshot_at: new Date().toISOString() }
-        }
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-
-  } catch (err) {
-    console.error('[agent-snapshot][UNHANDLED_ERROR]', { err, correlationId })
-    return jsonError(500, 'Unexpected error', correlationId)
-  }
-})
-
-function jsonError(status: number, message: string, correlationId: string) {
-  return new Response(
-    JSON.stringify({ error: message, correlation_id: correlationId }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  )
+    # HARD BLOCK: SHUTDOWN é terminal
+    if [[ "${AGENT_STATE[current]}" == "SHUTDOWN" ]]; then
+        log "CRITICAL" "[FSM] Agent is in SHUTDOWN. No transitions allowed."
+        exit 1
+    fi
+    
+    # ... resto da função
 }
 ```
 
-### 1.3 Hook React para Consumir o Snapshot
+---
 
-**Arquivo**: `src/hooks/useAgentSnapshot.ts`
+### GAP 4: Auto-Update Rollback Não Explícito
+
+**Problema**: O mecanismo `perform_self_update` pode falhar sem rollback:
+- Download pode falhar
+- Aplicação pode falhar
+- Sem transição clara para DEGRADED
+
+**Solução**: Garantir que `perform_self_update` (se existir) tem fallback:
+
+```bash
+perform_self_update() {
+    local target_version="$1"
+    
+    log "INFO" "[UPDATE] Starting self-update to $target_version"
+    
+    # Backup antes de qualquer coisa
+    cp "$0" "${PREVIOUS_SCRIPT_PATH}" || {
+        log "ERROR" "[UPDATE] Failed to backup current script"
+        set_state "DEGRADED" "update_backup_failed"
+        return 1
+    }
+    
+    # Download + aplicação (sua lógica existente)
+    if ! download_and_apply_update "$target_version"; then
+        log "ERROR" "[UPDATE] Failed to apply update"
+        set_state "DEGRADED" "update_apply_failed"
+        # Tentar rollback
+        if [[ -f "${PREVIOUS_SCRIPT_PATH}" ]]; then
+            cp "${PREVIOUS_SCRIPT_PATH}" "$0"
+            log "INFO" "[UPDATE] Rolled back to previous version"
+        fi
+        return 1
+    fi
+    
+    log "INFO" "[UPDATE] Successfully updated to $target_version"
+    set_state "ENFORCING" "update_success"
+}
+```
+
+---
+
+### GAP 5: Falta RPC para Lista Canônica em Edge Function
+
+**Problema**: Páginas como SystemHealth consultam `agents_safe` diretamente ao invés de usar snapshot canônico.
+
+**Solução**: Criar nova Edge Function `agent-snapshots-list` ou RPC adicional.
+
+---
+
+## Ordem de Implementação
+
+| Fase | Tarefa | Tempo | Prioridade |
+|------|--------|-------|------------|
+| 1 | Hard block SHUTDOWN nos agentes | 15min | 🔴 Crítico |
+| 2 | RPC `get_agents_snapshots_list` | 20min | 🟠 Alto |
+| 3 | Auditar hooks com guards faltantes | 30min | 🟡 Médio |
+| 4 | Rollback explícito no auto-update | 20min | 🟡 Médio |
+
+**Total estimado**: ~1h30min
+
+---
+
+## Detalhes de Implementação
+
+### Fase 1: Hard Block SHUTDOWN nos Agentes
+
+**Arquivos**:
+- `public/agent-scripts/cybershield-agent-linux-v4.sh`
+- `public/agent-scripts/cybershield-agent-macos-v4.sh`
+
+**Localização**: Função `set_state()` (linha ~400-450 em ambos)
+
+**Mudança**: Adicionar no início da função:
+```bash
+# HARD BLOCK: SHUTDOWN é estado terminal
+if [[ "${AGENT_STATE[current]}" == "SHUTDOWN" ]]; then
+    log "CRITICAL" "[FSM] Agent is in SHUTDOWN state. No transitions allowed. Exiting."
+    exit 1
+fi
+```
+
+---
+
+### Fase 2: RPC para Lista de Snapshots
+
+**Arquivo**: Nova migration SQL
+
+```sql
+-- RPC para obter lista de snapshots do tenant
+CREATE OR REPLACE FUNCTION get_agents_snapshots_list()
+RETURNS SETOF agent_snapshots
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+AS $$
+  SELECT * FROM agent_snapshots;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_agents_snapshots_list() TO authenticated;
+```
+
+**Hook atualizado** (`src/hooks/useAgentSnapshots.ts` - NOVO):
 
 ```typescript
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
+import type { AgentSnapshot } from './useAgentSnapshot';
 
-export interface AgentSnapshot {
-  agent_id: string;
-  tenant_id: string;
-  hostname: string | null;
-  os_type: string | null;
-  version: string | null;
-  last_heartbeat: string | null;
-  online: boolean;
-  latency_ms: number | null;
-  agent_state: string | null;
-  safe_mode: boolean;
-  safe_mode_reason: string | null;
-  is_isolated: boolean;
-  is_throttled: boolean;
-  active_issues: number;
-  unresolved_insights: number;
-  meta: {
-    correlation_id: string;
-    snapshot_at: string;
-  };
-}
-
-export function useAgentSnapshot(agentId?: string) {
+/**
+ * Hook para lista canônica de snapshots (todos os agentes do tenant)
+ * Usa RPC para garantir consistência com useAgentSnapshot individual
+ */
+export function useAgentSnapshots() {
   const { tenant, loading: tenantLoading } = useTenant();
 
   return useQuery({
-    queryKey: ['agent-snapshot', agentId],
-    queryFn: async (): Promise<AgentSnapshot> => {
-      const { data, error } = await supabase.functions.invoke('agent-snapshot', {
-        body: { agent_id: agentId }
-      });
+    queryKey: ['agent-snapshots-list', tenant?.id],
+    queryFn: async (): Promise<AgentSnapshot[]> => {
+      const { data, error } = await supabase.rpc('get_agents_snapshots_list');
       
       if (error) throw new Error(error.message);
-      return data.data as AgentSnapshot;
+      return (data || []) as AgentSnapshot[];
     },
-    enabled: !tenantLoading && !!tenant?.id && !!agentId,
+    enabled: !tenantLoading && !!tenant?.id,
     staleTime: 30_000,
-    retry: 1,
+    refetchInterval: 30_000, // Auto-refresh a cada 30s
   });
 }
 ```
 
 ---
 
-## FASE 2: Correção de Race Conditions (Todas as Páginas)
+### Fase 3: Auditar Hooks de Dados
 
-### 2.1 DiagnosticsCenter.tsx
+**Padrão a verificar em cada hook**:
 
-**Problema**: Linha 90 usa `useTenant()` sem extrair `loading`
-
-**Correção**:
 ```typescript
-// Linha 90 - ANTES:
-const { tenant } = useTenant();
-
-// DEPOIS:
+// ✅ CORRETO
 const { tenant, loading: tenantLoading } = useTenant();
 
-// Linha 114 - Adicionar guard:
-enabled: !tenantLoading && !!tenant?.id,
+const query = useQuery({
+  queryKey: ['data', tenant?.id],
+  queryFn: async () => { /* ... */ },
+  enabled: !tenantLoading && !!tenant?.id,  // GUARD OBRIGATÓRIO
+});
 
-// Linha 132 - Adicionar guard:
-enabled: !tenantLoading && !!tenant?.id,
-```
-
-### 2.2 SystemHealth.tsx
-
-**Problema**: Linha 27 usa `useTenant()` sem `loading`
-
-**Correção**:
-```typescript
-// Linha 26-27 - ANTES:
+// ❌ INCORRETO - causa race condition
 const { tenant } = useTenant();
 
-// DEPOIS:
-const { tenant, loading: tenantLoading } = useTenant();
-
-// Linhas 29, 68, 115, 149, 174 - Adicionar guard:
-enabled: !tenantLoading && !!tenant?.id,
-```
-
-### 2.3 WebActivity.tsx (se existir)
-
-Aplicar o mesmo padrão de loading guard.
-
----
-
-## FASE 3: Central de Ações - Correções Críticas
-
-### 3.1 ActionCard.tsx - Tratar agent_id null
-
-**Problema**: Linha 189 falha silenciosamente quando `agent_id` é null
-
-**Correção** (linhas 182-218):
-```typescript
-const handleSuggestedAction = async (actionType: string) => {
-  // Navegação não requer agent_id específico
-  if (actionType === 'navigate_agent' && item.agent_id) {
-    navigate(`/admin/agent-health?agent=${item.agent_id}`);
-    return;
-  }
-
-  if (!tenant?.id) {
-    hToast.error('Tenant não identificado. Faça login novamente.');
-    return;
-  }
-  
-  // Para ações que NÃO requerem agent_id
-  if (!item.agent_id) {
-    hToast.info('Este insight é de nível sistema - marcando como revisado');
-    await executeAction.mutateAsync({
-      itemId: item.item_id,
-      sourceType: item.source_type,
-      action: 'acknowledge',
-    });
-    onExecuted?.();
-    return;
-  }
-
-  // Resto do código original...
-};
-```
-
-### 3.2 RejectInsightDialog.tsx - Validar tipo de item
-
-**Problema**: Linha 76 falha quando `insightId` é formato `offline_UUID`
-
-**Correção** (linha 53-54):
-```typescript
-const rejectMutation = useMutation({
-  mutationFn: async () => {
-    // Validar que é um insight real da IA
-    if (insightId.startsWith('offline_') || insightId.startsWith('alert_')) {
-      throw new Error('Alertas de sistema não podem ser rejeitados como insights da IA');
-    }
-    
-    // Resto do código original...
-  },
+const query = useQuery({
+  queryKey: ['data', tenant?.id],
+  enabled: !!tenant?.id,  // Falta !loading
 });
 ```
 
-### 3.3 ActionCard.tsx - Ocultar botão Rejeitar para non-insights
-
-**Correção** (próximo à linha 580-617):
-```typescript
-{/* Só mostrar Rejeitar para insights reais da IA */}
-{item.source_type === 'ai_insight' && 
- !item.item_id.startsWith('offline_') && 
- !item.item_id.startsWith('alert_') && (
-  <Button variant="outline" onClick={() => setRejectDialogOpen(true)}>
-    Rejeitar
-  </Button>
-)}
-```
+**Arquivos a auditar**:
+- `src/hooks/useWebActivity.ts`
+- `src/hooks/useSoftwareInventory.ts`
+- `src/hooks/useAgentTimeline.ts`
+- `src/hooks/useVulnFindings.ts`
+- `src/hooks/useBlockedWebsites.ts`
+- `src/hooks/useBlockedAttempts.ts`
 
 ---
 
-## FASE 4: Sincronização de Estado - Monitoramento vs Detalhes
+### Fase 4: Rollback Explícito no Auto-Update
 
-### 4.1 AgentMonitoring.tsx - Usar agent_state do banco
+**Arquivos**:
+- `public/agent-scripts/cybershield-agent-linux-v4.sh`
+- `public/agent-scripts/cybershield-agent-macos-v4.sh`
 
-**Problema**: `getAgentCalculatedStatus` calcula localmente, mas detalhes usam `agent_state`
+**Localização**: Função que processa `force_update_version` do heartbeat
 
-**Correção** (linha 43-49):
-```typescript
-const getAgentCalculatedStatus = (agent: Agent): 'online' | 'warning' | 'offline' | 'never_connected' => {
-  // PRIORIZAR agent_state do banco para consistência
-  if (agent.agent_state) {
-    switch (agent.agent_state) {
-      case 'healthy':
-      case 'enforcing':
-        return 'online';
-      case 'degraded':
-      case 'recovery':
-        return 'warning';
-      case 'error':
-      case 'shutdown':
-        return 'offline';
-    }
-  }
-  
-  // Fallback para cálculo por heartbeat
-  if (!agent.last_heartbeat) return 'never_connected';
-  const minutesSince = (Date.now() - new Date(agent.last_heartbeat).getTime()) / 1000 / 60;
-  if (minutesSince < 2) return 'online';
-  if (minutesSince < 5) return 'warning';
-  return 'offline';
-};
-```
-
----
-
-## FASE 5: Atualização dos Agentes Linux e macOS para v4.4.0
-
-### 5.1 Agente Linux - Adicionar FSM Enterprise
-
-**Arquivo**: `public/agent-scripts/cybershield-agent-linux-v4.sh`
-
-**Alterações**:
-
-1. **Adicionar SHUTDOWN aos estados** (linha 77):
+**Verificar se existe e adicionar fallback**:
 ```bash
-declare -a VALID_STATES=("BOOTSTRAP" "SYNCING" "ENFORCING" "DEGRADED" "ERROR" "RECOVERY" "SHUTDOWN")
-
-declare -A STATE_TRANSITIONS=(
-    ["BOOTSTRAP"]="SYNCING ERROR"
-    ["SYNCING"]="ENFORCING DEGRADED ERROR"
-    ["ENFORCING"]="DEGRADED ERROR SYNCING"
-    ["DEGRADED"]="RECOVERY ERROR ENFORCING SHUTDOWN"
-    ["RECOVERY"]="ENFORCING DEGRADED ERROR SHUTDOWN"
-    ["ERROR"]="RECOVERY SHUTDOWN"
-    ["SHUTDOWN"]=""  # Terminal
-)
-```
-
-2. **Adicionar FailurePolicy** (após linha 110):
-```bash
-# Failure Policy (FSM Enterprise v2.0)
-declare -A FAILURE_POLICY=(
-    [max_recovery_attempts]=5
-    [recovery_window_seconds]=300
-    [cooldown_seconds]=600
-    [max_consecutive_failures]=10
-    [on_exhaust]="DEGRADED"
-)
-
-declare -A FAILURE_COUNTERS
-```
-
-3. **Adicionar funções de observabilidade** (após add_evidence):
-```bash
-# Log com deduplicação
-declare -A LOG_DEDUP_CACHE
-LOG_DEDUP_TTL=30
-
-write_log_dedup() {
-    local level="$1"
-    local message="$2"
-    local cache_key="${level}|${message}"
-    local now=$(date +%s)
-    
-    if [[ -n "${LOG_DEDUP_CACHE[$cache_key]:-}" ]]; then
-        local last_log="${LOG_DEDUP_CACHE[$cache_key]}"
-        local elapsed=$((now - last_log))
-        if [[ $elapsed -lt $LOG_DEDUP_TTL ]]; then
-            return  # Suprimir duplicado
-        fi
-    fi
-    
-    LOG_DEDUP_CACHE[$cache_key]=$now
-    log "$level" "$message"
-}
-
-# Health snapshot único por ciclo
-write_health_snapshot() {
-    local correlation_id="$1"
-    local dns_status="unknown"
-    
-    if [[ "$DNS_FILTER_ENABLED" == "true" ]]; then
-        if systemctl is-active --quiet "$DNS_FILTER_SERVICE" 2>/dev/null; then
-            dns_status="ok"
-        else
-            dns_status="failed"
-        fi
-    else
-        dns_status="disabled"
-    fi
-    
-    local snapshot="{\"state\":\"${AGENT_STATE[current]}\",\"components\":{\"dns_filter\":\"$dns_status\"},\"correlation_id\":\"$correlation_id\"}"
-    add_evidence "health_snapshot" "$snapshot" "" "" "info"
-}
-
-# Incident summary ao entrar em estado crítico
-write_incident_summary() {
-    local root_cause="$1"
-    local correlation_id="$2"
-    local incident_id=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid)
-    
-    local recommended_action="contact_support"
-    if [[ "$root_cause" == *"dns"* ]]; then
-        recommended_action="reinstall_dns_service"
-    elif [[ "$root_cause" == *"heartbeat"* ]]; then
-        recommended_action="check_network_connectivity"
-    fi
-    
-    local summary="{\"incident_id\":\"$incident_id\",\"root_cause\":\"$root_cause\",\"recommended_action\":\"$recommended_action\",\"agent_version\":\"$AGENT_VERSION\",\"correlation_id\":\"$correlation_id\"}"
-    add_evidence "incident_summary" "$summary" "" "" "critical"
-    
-    log "ERROR" "[INCIDENT] Summary generated: $incident_id - $recommended_action"
-}
-```
-
-4. **Atualizar set_state para gerar incident_summary**:
-```bash
-# Ao final de set_state, adicionar:
-if [[ "$new_state" == "ERROR" || "$new_state" == "DEGRADED" ]]; then
-    write_incident_summary "$reason" "$(date +%s)"
-fi
-```
-
-5. **Atualizar versão**:
-```bash
-AGENT_VERSION="v4.4.0"
-```
-
-### 5.2 Agente macOS - Mesmas alterações
-
-**Arquivo**: `public/agent-scripts/cybershield-agent-macos-v4.sh`
-
-Aplicar exatamente as mesmas modificações (código muito similar ao Linux).
-
----
-
-## FASE 6: Sincronização de Auto-Update
-
-### 6.1 Verificar processamento de force_update nos agentes Linux/macOS
-
-Garantir que ambos os scripts processam a resposta do heartbeat:
-
-```bash
-handle_heartbeat_response() {
+handle_force_update() {
     local response="$1"
+    local force_version
+    force_version=$(echo "$response" | jq -r '.force_update_version // empty')
     
-    # Force update check
-    local force_update_version=$(echo "$response" | jq -r '.force_update_version // empty')
-    if [[ -n "$force_update_version" && "$force_update_version" != "null" ]]; then
-        log "INFO" "[UPDATE] Force update to $force_update_version requested"
-        perform_self_update "$force_update_version"
+    if [[ -n "$force_version" && "$force_version" != "null" ]]; then
+        log "INFO" "[UPDATE] Force update to $force_version requested"
+        
+        # Backup
+        local backup_path="${CONFIG_DIR}/agent_backup_$(date +%s).sh"
+        cp "$0" "$backup_path" 2>/dev/null || true
+        
+        # Tentar update
+        if ! perform_self_update "$force_version"; then
+            log "ERROR" "[UPDATE] Update failed, attempting rollback"
+            if [[ -f "$backup_path" ]]; then
+                cp "$backup_path" "$0"
+                log "INFO" "[UPDATE] Rollback completed"
+            fi
+            set_state "DEGRADED" "force_update_failed"
+        fi
     fi
 }
 ```
 
 ---
 
-## Arquivos a Modificar
+## Validação Final
 
-| Arquivo | Fase | Tipo | Descrição |
-|---------|------|------|-----------|
-| **Migrations SQL** | 1 | New | View `agent_snapshots` + RPC `get_agent_snapshot` |
-| `supabase/functions/agent-snapshot/index.ts` | 1 | New | Edge Function canônica |
-| `src/hooks/useAgentSnapshot.ts` | 1 | New | Hook para consumir snapshot |
-| `src/pages/admin/DiagnosticsCenter.tsx` | 2 | Fix | Adicionar `!tenantLoading` guard |
-| `src/pages/admin/SystemHealth.tsx` | 2 | Fix | Adicionar `!tenantLoading` guard |
-| `src/components/action-center/ActionCard.tsx` | 3 | Fix | Tratar `agent_id` null, ocultar Rejeitar |
-| `src/components/action-center/RejectInsightDialog.tsx` | 3 | Fix | Validar tipo de item |
-| `src/pages/AgentMonitoring.tsx` | 4 | Fix | Priorizar `agent_state` do banco |
-| `public/agent-scripts/cybershield-agent-linux-v4.sh` | 5 | Upgrade | FSM v2.0, invariantes, hard stops |
-| `public/agent-scripts/cybershield-agent-macos-v4.sh` | 5 | Upgrade | FSM v2.0, invariantes, hard stops |
+### Após Implementação das 4 Fases:
 
----
+1. **SHUTDOWN Hard Block**:
+   - Forçar agente para SHUTDOWN via heartbeat
+   - Tentar qualquer transição → Deve falhar com exit 1
 
-## Ordem de Execução
+2. **Lista de Snapshots**:
+   - Chamar RPC `get_agents_snapshots_list` → Deve retornar todos os agentes do tenant
+   - Comparar com `agent-snapshot` individual → Dados devem ser idênticos
 
-1. **Fase 1** (45min): Criar SQL + Edge Function + Hook
-2. **Fase 2** (30min): Corrigir race conditions em páginas admin
-3. **Fase 3** (30min): Corrigir Central de Ações
-4. **Fase 4** (15min): Sincronizar cálculo de estado
-5. **Fase 5** (1h30): Atualizar agentes Linux/macOS para v4.4.0
-6. **Fase 6** (15min): Verificar auto-update
+3. **Hooks Auditados**:
+   - Deslogar → Logar → Navegar para WebActivity → Deve carregar normalmente (sem flash vazio)
 
-**Total estimado**: ~4h
+4. **Rollback de Update**:
+   - Simular falha de update → Agente deve fazer rollback e entrar em DEGRADED
 
 ---
 
-## Validação Pós-Implementação
+## Resultado Esperado
 
-1. **Monitoramento**: Clicar em agente "crítico" deve mostrar mesmo status nos detalhes
-2. **Diagnósticos**: Deve mostrar lista de computadores imediatamente (sem esperar)
-3. **Central de Ações**:
-   - "Ver sugestões" funciona para insights com e sem `agent_id`
-   - "Rejeitar" só aparece para insights reais da IA
-4. **Navegador Web**: Deve permitir selecionar computador
-5. **Saúde do Sistema**: Mostra contagem correta de online/offline
-6. **Agentes Linux/macOS**: Devem reportar v4.4.0 no próximo heartbeat
+Após implementação deste plano:
 
----
+- ✅ **0 bugs de estado**: SHUTDOWN é terminal, sem loops
+- ✅ **0 race conditions**: Todos os hooks têm guards
+- ✅ **Fonte única de verdade**: Dashboard usa `useAgentSnapshots()`, detalhes usa `useAgentSnapshot()`
+- ✅ **Rollback seguro**: Updates falhos não "brickam" agentes
+- ✅ **FSM Enterprise v2.0 completa**: Paridade Windows/Linux/macOS
 
-## Seção Técnica: Contrato da Edge Function
-
-### Request
-```json
-POST /functions/v1/agent-snapshot
-Authorization: Bearer USER_JWT
-Content-Type: application/json
-
-{
-  "agent_id": "uuid"
-}
-```
-
-### Response (Sucesso)
-```json
-{
-  "data": {
-    "agent_id": "uuid",
-    "tenant_id": "uuid",
-    "hostname": "PC-01",
-    "os_type": "windows",
-    "version": "v4.4.0",
-    "last_heartbeat": "2026-01-29T12:47:00Z",
-    "online": true,
-    "latency_ms": 1234,
-    "agent_state": "healthy",
-    "safe_mode": false,
-    "is_isolated": false,
-    "is_throttled": false,
-    "active_issues": 0,
-    "unresolved_insights": 1,
-    "meta": {
-      "correlation_id": "abc123",
-      "snapshot_at": "2026-01-29T12:48:00Z"
-    }
-  }
-}
-```
-
-### Response (Erro)
-```json
-{
-  "error": "Agent not found",
-  "correlation_id": "abc123"
-}
-```
-
-### Garantias
-- Tenant isolado via RLS (nunca retorna dados de outro tenant)
-- Todas as UIs veem o mesmo estado
-- Correlation ID para debug
-- Erros claros, sem falha silenciosa
+Este é o fechamento técnico definitivo para "zerar bugs" e ter um sistema vendável com confiança.
