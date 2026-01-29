@@ -21,7 +21,9 @@ export function useAgentSnapshots() {
   return useQuery({
     queryKey: ['agent-snapshots-list', tenant?.id],
     queryFn: async (): Promise<AgentSnapshot[]> => {
-      const { data, error } = await supabase.rpc('get_agents_snapshots_list');
+      const { data, error } = await supabase.rpc('get_agents_snapshots_list', { 
+        p_tenant_id: tenant?.id 
+      });
       
       if (error) {
         console.error('[useAgentSnapshots] Error:', error);

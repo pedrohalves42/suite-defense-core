@@ -1,13 +1,27 @@
 
-# Plano de Correções Obrigatórias - Veredito Técnico Final
+# ✅ Plano de Correções Obrigatórias - CONCLUÍDO
+
+## Status Final: IMPLEMENTADO
+
+Todas as 3 correções obrigatórias foram aplicadas com sucesso.
+
+### ✅ CORREÇÃO 1: RPC `get_agents_snapshots_list` - Segurança
+- Migration aplicada: `SECURITY DEFINER` com parâmetro `p_tenant_id` explícito
+- Hook atualizado: `src/hooks/useAgentSnapshots.ts` passa `p_tenant_id`
+
+### ✅ CORREÇÃO 2: useBlockedWebsites - Guard de Loading  
+- Import `useActiveTenant` adicionado
+- Query key inclui `activeTenant?.id`
+- Filtro explícito `.eq('tenant_id', activeTenant.id)`
+- Guard `enabled: !tenantLoading && !!activeTenant?.id`
+
+### ✅ CORREÇÃO 3: Auto-Update Lock nos Agentes
+- `cybershield-agent-linux-v4.sh`: Lock adicionado em `apply_forced_update`
+- `cybershield-agent-macos-v4.sh`: Lock adicionado em `apply_forced_update`
+
+---
 
 ## Análise do Estado Atual
-
-### ✅ O que já está CORRETO (NÃO precisa de mudança)
-
-| Item | Status | Evidência |
-|------|--------|-----------|
-| **SHUTDOWN Hard Block** | ✅ Correto | Linux linha 369-374, macOS linha 371-376 - `exit 1` implementado |
 | **useWebActivity guards** | ✅ Correto | Linha 86: `enabled && !!agentId && !loading && !!activeTenant?.id` |
 | **useSoftwareInventory guards** | ✅ Correto | Linha 33: `enabled && !!agentId && !loading && !!activeTenant?.id` |
 | **useVulnFindings guards** | ✅ Correto | Linha 27: `enabled && !!agentId && !loading && !!activeTenant?.id` |
