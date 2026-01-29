@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useActiveTenant } from './useActiveTenant';
 
 export interface BlockedWebsite {
   id: string;
@@ -41,10 +42,13 @@ async function syncWithAgents(): Promise<{ jobsCreated: number; agentNames: stri
 export function useBlockedWebsites() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { activeTenant, loading: tenantLoading } = useActiveTenant();
 
   const { data: blockedWebsites, isLoading, error } = useQuery({
-    queryKey: ['blocked-websites'],
+    queryKey: ['blocked-websites', activeTenant?.id],
     queryFn: async () => {
+      if (!activeTenant?.id) return [];
+      
       const { data, error } = await supabase
         .from('blocked_websites')
         .select(`
@@ -54,12 +58,14 @@ export function useBlockedWebsites() {
             name
           )
         `)
+        .eq('tenant_id', activeTenant.id)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data as (BlockedWebsite & { agent_groups: { id: string; name: string } | null })[];
     },
+    enabled: !tenantLoading && !!activeTenant?.id,
   });
 
   const blockWebsite = useMutation({

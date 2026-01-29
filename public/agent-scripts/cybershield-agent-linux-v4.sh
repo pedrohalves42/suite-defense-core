@@ -713,6 +713,17 @@ is_safe_mode() {
 apply_forced_update() {
     local response="$1"
     
+    # LOCK: Evitar updates simultâneos (race condition)
+    local lock_file="${CONFIG_DIR}/update.lock"
+    exec 9>"$lock_file" || {
+        log "ERROR" "[UPDATE] Cannot acquire lock file"
+        return 1
+    }
+    flock -n 9 || {
+        log "WARN" "[UPDATE] Another update already in progress, skipping"
+        return 0
+    }
+    
     log "INFO" "[UPDATE] Processing forced update..."
     
     # Check Safe Mode
