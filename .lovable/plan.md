@@ -1,482 +1,608 @@
 
-# Plano: Evolução Enterprise do Agente Windows - FSM v2.0
+# Plano Unificado: Correção Total de Sincronização + FSM Enterprise + Edge Function Canônica
 
 ## Resumo Executivo
 
-Com base na análise detalhada fornecida e na exploração do código existente, o agente Windows v4.1.2 **já possui uma base sólida** de FSM com 6 estados, auto-recovery com backoff, rollback seguro e Safe Mode. Porém, há gaps críticos que impedem operação enterprise:
+Este plano combina dois planos complementares em uma solução definitiva:
+- **Plano 1 (Meu)**: Correção de race conditions, Central de Ações, sincronização de estado
+- **Plano 2 (Seu)**: Edge Function canônica `agent-snapshot` como fonte única de verdade
 
-1. **Estados mentirosos**: ENFORCING mantido mesmo com DNS não funcional
-2. **Loops infinitos**: 1289+ falhas consecutivas sem escalação
-3. **Ruído excessivo**: Logs duplicados dificultam forensics
-4. **Sem observabilidade**: Falta correlation_id e incident_summary
-
-Este plano implementa as melhorias em **4 fases incrementais**, mantendo compatibilidade com o backend existente.
+A combinação cria uma arquitetura onde **todas as páginas consomem o mesmo snapshot** via Edge Function, eliminando dessincronização.
 
 ---
 
-## Fase 1: Disciplina de Estados (FSM Formal)
+## Arquitetura Unificada
 
-### 1.1 Adicionar Estado SHUTDOWN
-
-O estado SHUTDOWN está na especificação mas falta no código atual.
-
-**Arquivo**: `scripts/cybershield-agent-windows-v4.1.2.ps1`
-
-**Mudanças**:
-```powershell
-# Linha ~765 - Adicionar SHUTDOWN aos estados válidos
-$Global:ValidStates = @("BOOTSTRAP", "SYNCING", "ENFORCING", "DEGRADED", "ERROR", "RECOVERY", "SHUTDOWN")
-
-# Linha ~766-773 - Atualizar transições
-$Global:StateTransitions = @{
-    "BOOTSTRAP" = @("SYNCING", "ERROR")
-    "SYNCING" = @("ENFORCING", "DEGRADED", "ERROR")
-    "ENFORCING" = @("DEGRADED", "ERROR", "SYNCING")
-    "DEGRADED" = @("RECOVERY", "ERROR", "ENFORCING", "SHUTDOWN")
-    "RECOVERY" = @("ENFORCING", "DEGRADED", "ERROR", "SHUTDOWN")
-    "ERROR" = @("RECOVERY", "SHUTDOWN")
-    "SHUTDOWN" = @()  # Terminal - sem saídas
-}
-```
-
-### 1.2 Função de Validação de Estado Rigorosa
-
-Implementar invariantes que impedem ENFORCING se componentes críticos falharam.
-
-**Nova função** (após linha ~856):
-```powershell
-function Test-StateInvariants {
-    <#
-    .SYNOPSIS
-        Valida invariantes de estado - ENFORCING só é permitido se tudo OK
-    #>
-    param([string]$ProposedState)
-    
-    if ($ProposedState -eq "ENFORCING") {
-        $violations = @()
-        
-        # DNS Filter obrigatório se habilitado
-        if ($Global:DNSFilterConfig.Enabled) {
-            $dnsStatus = Get-DNSFilterStatus
-            if (-not $dnsStatus.running) {
-                $violations += "dns_filter_not_running"
-            }
-        }
-        
-        # Health check recente obrigatório
-        $lastHeartbeat = $Global:AgentState.LastHeartbeat
-        if ($lastHeartbeat -and ((Get-Date) - $lastHeartbeat).TotalMinutes > 5) {
-            $violations += "heartbeat_stale"
-        }
-        
-        if ($violations.Count -gt 0) {
-            Write-Log "[STATE INVARIANT] ENFORCING blocked: $($violations -join ', ')" "WARN"
-            return @{ valid = $false; violations = $violations }
-        }
-    }
-    
-    return @{ valid = $true; violations = @() }
-}
-```
-
-### 1.3 Atualizar Set-AgentState para Validar Invariantes
-
-**Modificar função Set-AgentState** (linha ~778):
-```powershell
-function Set-AgentState {
-    param(
-        [Parameter(Mandatory = $true)]
-        [ValidateSet("BOOTSTRAP", "SYNCING", "ENFORCING", "DEGRADED", "ERROR", "RECOVERY", "SHUTDOWN")]
-        [string]$NewState,
-        
-        [Parameter(Mandatory = $true)]
-        [string]$Reason,
-        
-        [Parameter(Mandatory = $false)]
-        [string]$ErrorDetails = $null,
-        
-        [Parameter(Mandatory = $false)]
-        [string]$CorrelationId = $null
-    )
-    
-    # Gerar correlation_id se não fornecido
-    if (-not $CorrelationId) {
-        $CorrelationId = [guid]::NewGuid().ToString().Substring(0, 8)
-    }
-    
-    $currentState = $Global:AgentState.Current
-    
-    # NOVO: Validar invariantes antes de permitir transição
-    $invariants = Test-StateInvariants -ProposedState $NewState
-    if (-not $invariants.valid) {
-        Write-Log "[STATE] INVARIANT VIOLATION: Cannot enter $NewState - $($invariants.violations -join ', ')" "WARN"
-        
-        # Forçar DEGRADED ao invés de ENFORCING inválido
-        if ($NewState -eq "ENFORCING") {
-            $NewState = "DEGRADED"
-            $Reason = "Invariant violation: $($invariants.violations -join ', ')"
-        }
-    }
-    
-    # ... resto da função existente ...
-}
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    EDGE FUNCTION CANÔNICA                        │
+│                    agent-snapshot                                │
+│                                                                  │
+│  Input: agent_id (UUID)                                          │
+│  Output: AgentSnapshot { identity, connectivity, health, diag }  │
+│  Segurança: JWT + tenant isolation via RPC                       │
+└─────────────────────────────────────────────────────────────────┘
+                              ▲
+                              │ Chamada única
+                              │
+     ┌────────────────────────┼────────────────────────────┐
+     │                        │                            │
+     ▼                        ▼                            ▼
+┌─────────────┐     ┌─────────────────┐         ┌─────────────────┐
+│ Monitoramento│     │ Diagnósticos   │         │ Central Ações   │
+│ AgentMonitoring│   │ DiagnosticsCenter│       │ ActionCard      │
+└─────────────┘     └─────────────────┘         └─────────────────┘
 ```
 
 ---
 
-## Fase 2: Regras Duras de Falha
+## FASE 1: Edge Function Canônica (Fonte Única de Verdade)
 
-### 2.1 Política de Falha Global
+### 1.1 Criar View Materializada no Banco
 
-**Nova variável global** (após linha ~182):
-```powershell
-# Política de falha - configurável via policy.json
-$Global:FailurePolicy = @{
-    MaxRecoveryAttempts = 5          # Máximo de tentativas antes de SAFE_MODE
-    RecoveryWindowSeconds = 300      # Janela para contar tentativas
-    CooldownSeconds = 600            # Cooldown após exaurir tentativas
-    MaxConsecutiveFailures = 10      # Máximo de falhas consecutivas por componente
-    OnExhaust = "SAFE_MODE"          # Estado ao exaurir: SAFE_MODE ou ERROR
-}
+**SQL Migration**:
+```sql
+-- View para snapshot do agente (fonte única)
+CREATE OR REPLACE VIEW agent_snapshots 
+WITH (security_invoker = on) AS
+SELECT
+  a.id AS agent_id,
+  a.tenant_id,
+  a.hostname,
+  a.os_type,
+  a.agent_version AS version,
+  a.last_heartbeat,
+  (a.last_heartbeat > now() - interval '2 minutes') AS online,
+  EXTRACT(epoch FROM (now() - a.last_heartbeat)) * 1000 AS latency_ms,
+  a.agent_state,
+  COALESCE(a.safe_mode_entered_at IS NOT NULL, false) AS safe_mode,
+  a.safe_mode_reason,
+  COALESCE(a.is_isolated, false) AS is_isolated,
+  COALESCE(a.is_throttled, false) AS is_throttled,
+  (SELECT COUNT(*) FROM diagnostic_issues di 
+   WHERE di.agent_id = a.id AND di.resolved = false) AS active_issues,
+  (SELECT COUNT(*) FROM ai_insights ai 
+   WHERE ai.agent_id = a.id AND ai.status = 'open') AS unresolved_insights,
+  now() AS snapshot_at
+FROM agents a
+WHERE a.tenant_id = get_active_tenant_id() OR is_current_super_admin();
 
-# Contadores por componente
-$Global:FailureCounters = @{
-    dns_filter = @{ consecutive = 0; last_failure = $null; cooldown_until = $null }
-    heartbeat = @{ consecutive = 0; last_failure = $null; cooldown_until = $null }
-    policy_sync = @{ consecutive = 0; last_failure = $null; cooldown_until = $null }
-    job_engine = @{ consecutive = 0; last_failure = $null; cooldown_until = $null }
-}
+-- RPC segura
+CREATE OR REPLACE FUNCTION get_agent_snapshot(p_agent_id uuid)
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT to_jsonb(s)
+  FROM agent_snapshots s
+  WHERE s.agent_id = p_agent_id;
+$$;
 ```
 
-### 2.2 Função de Contagem de Falhas com Hard Stop
+### 1.2 Criar Edge Function `agent-snapshot`
 
-**Nova função** (após FailurePolicy):
-```powershell
-function Add-ComponentFailure {
-    <#
-    .SYNOPSIS
-        Registra falha de componente com hard stop após limite
-    #>
-    param(
-        [string]$Component,
-        [string]$ErrorMessage,
-        [string]$CorrelationId
+**Arquivo**: `supabase/functions/agent-snapshot/index.ts`
+
+```typescript
+import { serve } from "https://deno.land/std@0.203.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { corsHeaders } from '../_shared/cors.ts'
+
+serve(async (req) => {
+  const correlationId = crypto.randomUUID()
+
+  // CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
+  try {
+    // Apenas POST
+    if (req.method !== 'POST') {
+      return jsonError(405, 'Method not allowed', correlationId)
+    }
+
+    // Cliente com contexto do usuário
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     )
-    
-    if (-not $Global:FailureCounters.ContainsKey($Component)) {
-        $Global:FailureCounters[$Component] = @{ consecutive = 0; last_failure = $null; cooldown_until = $null }
-    }
-    
-    $counter = $Global:FailureCounters[$Component]
-    
-    # Verificar se está em cooldown
-    if ($counter.cooldown_until -and (Get-Date) -lt $counter.cooldown_until) {
-        Write-Log "[FAILURE] $Component in cooldown until $($counter.cooldown_until)" "DEBUG"
-        return @{ action = "cooldown"; remaining_seconds = ((Get-Date) - $counter.cooldown_until).TotalSeconds }
-    }
-    
-    $counter.consecutive++
-    $counter.last_failure = Get-Date
-    
-    # Hard stop após MaxConsecutiveFailures
-    if ($counter.consecutive -ge $Global:FailurePolicy.MaxConsecutiveFailures) {
-        Write-Log "[CRITICAL] $Component exceeded max failures ($($counter.consecutive)) - HARD STOP" "ERROR"
-        
-        # Entrar em cooldown
-        $counter.cooldown_until = (Get-Date).AddSeconds($Global:FailurePolicy.CooldownSeconds)
-        
-        # Log único de exaustão (não múltiplos)
-        Add-EvidenceEntry -Type "recovery_exhausted" -Data @{
-            component = $Component
-            consecutive_failures = $counter.consecutive
-            action = $Global:FailurePolicy.OnExhaust
-            cooldown_until = $counter.cooldown_until.ToString("o")
-            correlation_id = $CorrelationId
-        } -Severity "critical"
-        
-        # Transição para SAFE_MODE ou ERROR
-        Set-AgentState -NewState $Global:FailurePolicy.OnExhaust `
-            -Reason "Component $Component exhausted after $($counter.consecutive) failures" `
-            -CorrelationId $CorrelationId
-        
-        return @{ action = "exhausted"; state = $Global:FailurePolicy.OnExhaust }
-    }
-    
-    return @{ action = "retry"; attempt = $counter.consecutive }
-}
 
-function Reset-ComponentFailure {
-    param([string]$Component)
-    
-    if ($Global:FailureCounters.ContainsKey($Component)) {
-        $Global:FailureCounters[$Component].consecutive = 0
-        Write-Log "[FAILURE] $Component counter reset" "DEBUG"
+    // Autenticação
+    const { data: authData, error: authError } = await supabase.auth.getUser()
+    if (authError || !authData?.user) {
+      return jsonError(401, 'Unauthorized', correlationId)
     }
+
+    // Parse body
+    let body: { agent_id?: string }
+    try {
+      body = await req.json()
+    } catch {
+      return jsonError(400, 'Invalid JSON body', correlationId)
+    }
+
+    const { agent_id } = body
+    if (!agent_id) {
+      return jsonError(400, 'agent_id is required', correlationId)
+    }
+
+    // Chamada RPC
+    const { data: snapshot, error: rpcError } = await supabase
+      .rpc('get_agent_snapshot', { p_agent_id: agent_id })
+
+    if (rpcError) {
+      console.error('[agent-snapshot][RPC_ERROR]', { rpcError, agent_id, correlationId })
+      return jsonError(500, 'Failed to fetch agent snapshot', correlationId)
+    }
+
+    if (!snapshot) {
+      return jsonError(404, 'Agent not found', correlationId)
+    }
+
+    // Resposta padronizada
+    return new Response(
+      JSON.stringify({
+        data: {
+          ...snapshot,
+          meta: { correlation_id: correlationId, snapshot_at: new Date().toISOString() }
+        }
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+
+  } catch (err) {
+    console.error('[agent-snapshot][UNHANDLED_ERROR]', { err, correlationId })
+    return jsonError(500, 'Unexpected error', correlationId)
+  }
+})
+
+function jsonError(status: number, message: string, correlationId: string) {
+  return new Response(
+    JSON.stringify({ error: message, correlation_id: correlationId }),
+    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  )
 }
 ```
 
-### 2.3 Atualizar Loop Principal com Hard Stop
+### 1.3 Hook React para Consumir o Snapshot
 
-**Modificar seção DNS Health Check** (linha ~3996-4010):
-```powershell
-# DNS Health Check a cada 2 minutos (COM HARD STOP)
-if ($Global:DNSFilterConfig.Enabled -and (($now - $lastDNSHealthCheck).TotalSeconds) -ge 120) {
-    $correlationId = "dns_" + (Get-Date -Format "yyyyMMdd_HHmmss")
-    $dnsHealth = Test-DNSFilterHealth
-    
-    if (-not $dnsHealth.healthy) {
-        $failureResult = Add-ComponentFailure -Component "dns_filter" `
-            -ErrorMessage $dnsHealth.reason `
-            -CorrelationId $correlationId
-        
-        # Só tenta recovery se não exauriu
-        if ($failureResult.action -eq "retry" -and $failureResult.attempt -ge 3) {
-            Invoke-AutoRecovery -FailedComponent "dns_filter" -ErrorMessage $dnsHealth.reason
-        }
-        # Se exauriu, já entrou em SAFE_MODE
-        
-    } else {
-        # Sucesso - resetar contador
-        Reset-ComponentFailure -Component "dns_filter"
-    }
-    
-    $lastDNSHealthCheck = Get-Date
+**Arquivo**: `src/hooks/useAgentSnapshot.ts`
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from './useTenant';
+
+export interface AgentSnapshot {
+  agent_id: string;
+  tenant_id: string;
+  hostname: string | null;
+  os_type: string | null;
+  version: string | null;
+  last_heartbeat: string | null;
+  online: boolean;
+  latency_ms: number | null;
+  agent_state: string | null;
+  safe_mode: boolean;
+  safe_mode_reason: string | null;
+  is_isolated: boolean;
+  is_throttled: boolean;
+  active_issues: number;
+  unresolved_insights: number;
+  meta: {
+    correlation_id: string;
+    snapshot_at: string;
+  };
+}
+
+export function useAgentSnapshot(agentId?: string) {
+  const { tenant, loading: tenantLoading } = useTenant();
+
+  return useQuery({
+    queryKey: ['agent-snapshot', agentId],
+    queryFn: async (): Promise<AgentSnapshot> => {
+      const { data, error } = await supabase.functions.invoke('agent-snapshot', {
+        body: { agent_id: agentId }
+      });
+      
+      if (error) throw new Error(error.message);
+      return data.data as AgentSnapshot;
+    },
+    enabled: !tenantLoading && !!tenant?.id && !!agentId,
+    staleTime: 30_000,
+    retry: 1,
+  });
 }
 ```
 
 ---
 
-## Fase 3: Redução de Ruído (Logging Profissional)
+## FASE 2: Correção de Race Conditions (Todas as Páginas)
 
-### 3.1 Função de Log Deduplicado
+### 2.1 DiagnosticsCenter.tsx
 
-**Nova função** (após Write-Log):
-```powershell
-# Cache de logs recentes para deduplicação
-$Global:LogDeduplicationCache = @{}
-$Global:LogDeduplicationTTLSeconds = 30
+**Problema**: Linha 90 usa `useTenant()` sem extrair `loading`
 
-function Write-LogDedup {
-    <#
-    .SYNOPSIS
-        Log com deduplicação automática
-    #>
-    param(
-        [string]$Message,
-        [string]$Level = "INFO",
-        [string]$CorrelationId = $null
-    )
-    
-    $cacheKey = "$Level|$Message"
-    $now = Get-Date
-    
-    # Verificar se já logou recentemente
-    if ($Global:LogDeduplicationCache.ContainsKey($cacheKey)) {
-        $lastLog = $Global:LogDeduplicationCache[$cacheKey]
-        $elapsed = ($now - $lastLog).TotalSeconds
-        
-        if ($elapsed -lt $Global:LogDeduplicationTTLSeconds) {
-            # Suprimir log duplicado
-            return
-        }
-    }
-    
-    # Registrar e logar
-    $Global:LogDeduplicationCache[$cacheKey] = $now
-    
-    # Adicionar correlation_id se presente
-    if ($CorrelationId) {
-        $Message = "[$CorrelationId] $Message"
-    }
-    
-    Write-Log $Message $Level
-}
+**Correção**:
+```typescript
+// Linha 90 - ANTES:
+const { tenant } = useTenant();
+
+// DEPOIS:
+const { tenant, loading: tenantLoading } = useTenant();
+
+// Linha 114 - Adicionar guard:
+enabled: !tenantLoading && !!tenant?.id,
+
+// Linha 132 - Adicionar guard:
+enabled: !tenantLoading && !!tenant?.id,
 ```
 
-### 3.2 Health Snapshot Único por Ciclo
+### 2.2 SystemHealth.tsx
 
-**Nova função** (substituir múltiplos logs de estado):
-```powershell
-function Write-HealthSnapshot {
-    <#
-    .SYNOPSIS
-        Snapshot único de saúde por ciclo (1 evento = 1 log)
-    #>
-    param([string]$CorrelationId)
-    
-    $dnsStatus = if ($Global:DNSFilterConfig.Enabled) { 
-        $s = Get-DNSFilterStatus
-        if ($s.running) { "ok" } else { "failed" }
-    } else { "disabled" }
-    
-    $policyStatus = if ($Global:PolicyContract.LastSync) { "ok" } else { "unknown" }
-    
-    $snapshot = @{
-        state = Get-AgentState
-        components = @{
-            dns_filter = $dnsStatus
-            policy_sync = $policyStatus
-            heartbeat = "ok"  # Se chegou aqui, heartbeat funcionou
-        }
-        failure_counters = @{
-            dns_filter = $Global:FailureCounters.dns_filter.consecutive
-            heartbeat = $Global:FailureCounters.heartbeat.consecutive
-        }
-        correlation_id = $CorrelationId
+**Problema**: Linha 27 usa `useTenant()` sem `loading`
+
+**Correção**:
+```typescript
+// Linha 26-27 - ANTES:
+const { tenant } = useTenant();
+
+// DEPOIS:
+const { tenant, loading: tenantLoading } = useTenant();
+
+// Linhas 29, 68, 115, 149, 174 - Adicionar guard:
+enabled: !tenantLoading && !!tenant?.id,
+```
+
+### 2.3 WebActivity.tsx (se existir)
+
+Aplicar o mesmo padrão de loading guard.
+
+---
+
+## FASE 3: Central de Ações - Correções Críticas
+
+### 3.1 ActionCard.tsx - Tratar agent_id null
+
+**Problema**: Linha 189 falha silenciosamente quando `agent_id` é null
+
+**Correção** (linhas 182-218):
+```typescript
+const handleSuggestedAction = async (actionType: string) => {
+  // Navegação não requer agent_id específico
+  if (actionType === 'navigate_agent' && item.agent_id) {
+    navigate(`/admin/agent-health?agent=${item.agent_id}`);
+    return;
+  }
+
+  if (!tenant?.id) {
+    hToast.error('Tenant não identificado. Faça login novamente.');
+    return;
+  }
+  
+  // Para ações que NÃO requerem agent_id
+  if (!item.agent_id) {
+    hToast.info('Este insight é de nível sistema - marcando como revisado');
+    await executeAction.mutateAsync({
+      itemId: item.item_id,
+      sourceType: item.source_type,
+      action: 'acknowledge',
+    });
+    onExecuted?.();
+    return;
+  }
+
+  // Resto do código original...
+};
+```
+
+### 3.2 RejectInsightDialog.tsx - Validar tipo de item
+
+**Problema**: Linha 76 falha quando `insightId` é formato `offline_UUID`
+
+**Correção** (linha 53-54):
+```typescript
+const rejectMutation = useMutation({
+  mutationFn: async () => {
+    // Validar que é um insight real da IA
+    if (insightId.startsWith('offline_') || insightId.startsWith('alert_')) {
+      throw new Error('Alertas de sistema não podem ser rejeitados como insights da IA');
     }
     
-    Add-EvidenceEntry -Type "health_snapshot" -Data $snapshot -Severity "info"
-}
+    // Resto do código original...
+  },
+});
+```
+
+### 3.3 ActionCard.tsx - Ocultar botão Rejeitar para non-insights
+
+**Correção** (próximo à linha 580-617):
+```typescript
+{/* Só mostrar Rejeitar para insights reais da IA */}
+{item.source_type === 'ai_insight' && 
+ !item.item_id.startsWith('offline_') && 
+ !item.item_id.startsWith('alert_') && (
+  <Button variant="outline" onClick={() => setRejectDialogOpen(true)}>
+    Rejeitar
+  </Button>
+)}
 ```
 
 ---
 
-## Fase 4: Observabilidade Forense
+## FASE 4: Sincronização de Estado - Monitoramento vs Detalhes
 
-### 4.1 Incident Summary Automático
+### 4.1 AgentMonitoring.tsx - Usar agent_state do banco
 
-**Nova função** (chamada ao entrar em SAFE_MODE ou ERROR):
-```powershell
-function Write-IncidentSummary {
-    <#
-    .SYNOPSIS
-        Gera resumo de incidente ao entrar em estado crítico
-    #>
-    param(
-        [string]$RootCause,
-        [string]$CorrelationId
-    )
-    
-    $incidentId = [guid]::NewGuid().ToString()
-    
-    # Construir timeline dos últimos 10 eventos de estado
-    $timeline = $Global:AgentState.History | Select-Object -Last 10 | ForEach-Object {
-        "$($_.timestamp.Substring(11, 5)) $($_.from)->$($_.to)"
+**Problema**: `getAgentCalculatedStatus` calcula localmente, mas detalhes usam `agent_state`
+
+**Correção** (linha 43-49):
+```typescript
+const getAgentCalculatedStatus = (agent: Agent): 'online' | 'warning' | 'offline' | 'never_connected' => {
+  // PRIORIZAR agent_state do banco para consistência
+  if (agent.agent_state) {
+    switch (agent.agent_state) {
+      case 'healthy':
+      case 'enforcing':
+        return 'online';
+      case 'degraded':
+      case 'recovery':
+        return 'warning';
+      case 'error':
+      case 'shutdown':
+        return 'offline';
     }
+  }
+  
+  // Fallback para cálculo por heartbeat
+  if (!agent.last_heartbeat) return 'never_connected';
+  const minutesSince = (Date.now() - new Date(agent.last_heartbeat).getTime()) / 1000 / 60;
+  if (minutesSince < 2) return 'online';
+  if (minutesSince < 5) return 'warning';
+  return 'offline';
+};
+```
+
+---
+
+## FASE 5: Atualização dos Agentes Linux e macOS para v4.4.0
+
+### 5.1 Agente Linux - Adicionar FSM Enterprise
+
+**Arquivo**: `public/agent-scripts/cybershield-agent-linux-v4.sh`
+
+**Alterações**:
+
+1. **Adicionar SHUTDOWN aos estados** (linha 77):
+```bash
+declare -a VALID_STATES=("BOOTSTRAP" "SYNCING" "ENFORCING" "DEGRADED" "ERROR" "RECOVERY" "SHUTDOWN")
+
+declare -A STATE_TRANSITIONS=(
+    ["BOOTSTRAP"]="SYNCING ERROR"
+    ["SYNCING"]="ENFORCING DEGRADED ERROR"
+    ["ENFORCING"]="DEGRADED ERROR SYNCING"
+    ["DEGRADED"]="RECOVERY ERROR ENFORCING SHUTDOWN"
+    ["RECOVERY"]="ENFORCING DEGRADED ERROR SHUTDOWN"
+    ["ERROR"]="RECOVERY SHUTDOWN"
+    ["SHUTDOWN"]=""  # Terminal
+)
+```
+
+2. **Adicionar FailurePolicy** (após linha 110):
+```bash
+# Failure Policy (FSM Enterprise v2.0)
+declare -A FAILURE_POLICY=(
+    [max_recovery_attempts]=5
+    [recovery_window_seconds]=300
+    [cooldown_seconds]=600
+    [max_consecutive_failures]=10
+    [on_exhaust]="DEGRADED"
+)
+
+declare -A FAILURE_COUNTERS
+```
+
+3. **Adicionar funções de observabilidade** (após add_evidence):
+```bash
+# Log com deduplicação
+declare -A LOG_DEDUP_CACHE
+LOG_DEDUP_TTL=30
+
+write_log_dedup() {
+    local level="$1"
+    local message="$2"
+    local cache_key="${level}|${message}"
+    local now=$(date +%s)
     
-    # Determinar ação recomendada
-    $recommendedAction = switch ($RootCause) {
-        { $_ -match "dns" } { "reinstall_dns_service" }
-        { $_ -match "heartbeat" } { "check_network_connectivity" }
-        { $_ -match "rollback" } { "manual_version_downgrade" }
-        default { "contact_support" }
-    }
+    if [[ -n "${LOG_DEDUP_CACHE[$cache_key]:-}" ]]; then
+        local last_log="${LOG_DEDUP_CACHE[$cache_key]}"
+        local elapsed=$((now - last_log))
+        if [[ $elapsed -lt $LOG_DEDUP_TTL ]]; then
+            return  # Suprimir duplicado
+        fi
+    fi
     
-    $summary = @{
-        incident_id = $incidentId
-        root_cause = $RootCause
-        timeline = $timeline
-        recommended_action = $recommendedAction
-        failure_counters = $Global:FailureCounters
-        agent_version = $Global:AgentVersion
-        correlation_id = $CorrelationId
-    }
+    LOG_DEDUP_CACHE[$cache_key]=$now
+    log "$level" "$message"
+}
+
+# Health snapshot único por ciclo
+write_health_snapshot() {
+    local correlation_id="$1"
+    local dns_status="unknown"
     
-    Add-EvidenceEntry -Type "incident_summary" -Data $summary -Severity "critical"
+    if [[ "$DNS_FILTER_ENABLED" == "true" ]]; then
+        if systemctl is-active --quiet "$DNS_FILTER_SERVICE" 2>/dev/null; then
+            dns_status="ok"
+        else
+            dns_status="failed"
+        fi
+    else
+        dns_status="disabled"
+    fi
     
-    Write-Log "[INCIDENT] Summary generated: $incidentId - $recommendedAction" "ERROR"
+    local snapshot="{\"state\":\"${AGENT_STATE[current]}\",\"components\":{\"dns_filter\":\"$dns_status\"},\"correlation_id\":\"$correlation_id\"}"
+    add_evidence "health_snapshot" "$snapshot" "" "" "info"
+}
+
+# Incident summary ao entrar em estado crítico
+write_incident_summary() {
+    local root_cause="$1"
+    local correlation_id="$2"
+    local incident_id=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid)
     
-    return $incidentId
+    local recommended_action="contact_support"
+    if [[ "$root_cause" == *"dns"* ]]; then
+        recommended_action="reinstall_dns_service"
+    elif [[ "$root_cause" == *"heartbeat"* ]]; then
+        recommended_action="check_network_connectivity"
+    fi
+    
+    local summary="{\"incident_id\":\"$incident_id\",\"root_cause\":\"$root_cause\",\"recommended_action\":\"$recommended_action\",\"agent_version\":\"$AGENT_VERSION\",\"correlation_id\":\"$correlation_id\"}"
+    add_evidence "incident_summary" "$summary" "" "" "critical"
+    
+    log "ERROR" "[INCIDENT] Summary generated: $incident_id - $recommended_action"
 }
 ```
 
-### 4.2 Atualizar Set-AgentState para Gerar Incident Summary
-
-**Adicionar ao final de Set-AgentState** (antes do return $true):
-```powershell
-    # Gerar incident summary para estados críticos
-    if ($NewState -in @("SAFE_MODE", "ERROR")) {
-        Write-IncidentSummary -RootCause $Reason -CorrelationId $CorrelationId
-    }
+4. **Atualizar set_state para gerar incident_summary**:
+```bash
+# Ao final de set_state, adicionar:
+if [[ "$new_state" == "ERROR" || "$new_state" == "DEGRADED" ]]; then
+    write_incident_summary "$reason" "$(date +%s)"
+fi
 ```
 
-### 4.3 Correlation ID em Todos os Eventos
+5. **Atualizar versão**:
+```bash
+AGENT_VERSION="v4.4.0"
+```
 
-**Atualizar Add-EvidenceEntry** (linha ~871):
-```powershell
-function Add-EvidenceEntry {
-    param(
-        # ... parâmetros existentes ...
-        
-        [Parameter(Mandatory = $false)]
-        [string]$CorrelationId = $null
-    )
+### 5.2 Agente macOS - Mesmas alterações
+
+**Arquivo**: `public/agent-scripts/cybershield-agent-macos-v4.sh`
+
+Aplicar exatamente as mesmas modificações (código muito similar ao Linux).
+
+---
+
+## FASE 6: Sincronização de Auto-Update
+
+### 6.1 Verificar processamento de force_update nos agentes Linux/macOS
+
+Garantir que ambos os scripts processam a resposta do heartbeat:
+
+```bash
+handle_heartbeat_response() {
+    local response="$1"
     
-    # Na criação do entry (linha ~910)
-    $entry = @{
-        event_id = [guid]::NewGuid().ToString()  # NOVO: UUID único
-        correlation_id = $CorrelationId           # NOVO: Para agrupar eventos
-        timestamp = (Get-Date).ToUniversalTime().ToString("o")
-        # ... resto igual ...
-    }
+    # Force update check
+    local force_update_version=$(echo "$response" | jq -r '.force_update_version // empty')
+    if [[ -n "$force_update_version" && "$force_update_version" != "null" ]]; then
+        log "INFO" "[UPDATE] Force update to $force_update_version requested"
+        perform_self_update "$force_update_version"
+    fi
+}
 ```
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Mudanças |
-|---------|----------|
-| `scripts/cybershield-agent-windows-v4.1.2.ps1` | FSM completa, hard stops, dedup logs |
-| `public/agent-scripts/cybershield-agent-windows-v4.ps1` | Sync com v4.1.2 |
-| `supabase/functions/_shared/agent-script-windows-content.ts` | Sync embedded |
-| `src/lib/agent-state-machine.ts` | Adicionar SHUTDOWN se necessário |
+| Arquivo | Fase | Tipo | Descrição |
+|---------|------|------|-----------|
+| **Migrations SQL** | 1 | New | View `agent_snapshots` + RPC `get_agent_snapshot` |
+| `supabase/functions/agent-snapshot/index.ts` | 1 | New | Edge Function canônica |
+| `src/hooks/useAgentSnapshot.ts` | 1 | New | Hook para consumir snapshot |
+| `src/pages/admin/DiagnosticsCenter.tsx` | 2 | Fix | Adicionar `!tenantLoading` guard |
+| `src/pages/admin/SystemHealth.tsx` | 2 | Fix | Adicionar `!tenantLoading` guard |
+| `src/components/action-center/ActionCard.tsx` | 3 | Fix | Tratar `agent_id` null, ocultar Rejeitar |
+| `src/components/action-center/RejectInsightDialog.tsx` | 3 | Fix | Validar tipo de item |
+| `src/pages/AgentMonitoring.tsx` | 4 | Fix | Priorizar `agent_state` do banco |
+| `public/agent-scripts/cybershield-agent-linux-v4.sh` | 5 | Upgrade | FSM v2.0, invariantes, hard stops |
+| `public/agent-scripts/cybershield-agent-macos-v4.sh` | 5 | Upgrade | FSM v2.0, invariantes, hard stops |
 
 ---
 
-## Compatibilidade com Backend
+## Ordem de Execução
 
-As mudanças são **100% compatíveis** com o backend existente:
+1. **Fase 1** (45min): Criar SQL + Edge Function + Hook
+2. **Fase 2** (30min): Corrigir race conditions em páginas admin
+3. **Fase 3** (30min): Corrigir Central de Ações
+4. **Fase 4** (15min): Sincronizar cálculo de estado
+5. **Fase 5** (1h30): Atualizar agentes Linux/macOS para v4.4.0
+6. **Fase 6** (15min): Verificar auto-update
 
-- Tabela `agents` já tem `agent_state`, `agent_mode`, `safe_mode_reason`
-- Edge Function `agent-heartbeat` já processa `agent_mode: 'SAFE_MODE'`
-- Evidence Journal já envia para `submit-agent-evidence`
-- Tipos de evento existentes são reutilizados
-
----
-
-## Novos Tipos de Evento (Evidence Journal)
-
-| Tipo | Quando | Campos |
-|------|--------|--------|
-| `health_snapshot` | 1x por ciclo de 5min | state, components, failure_counters |
-| `recovery_exhausted` | Ao exaurir tentativas | component, consecutive_failures, cooldown_until |
-| `incident_summary` | Ao entrar SAFE_MODE/ERROR | incident_id, root_cause, timeline, recommended_action |
-
----
-
-## Resultado Esperado
-
-Após implementação:
-
-- **0 loops infinitos**: Hard stop após 10 falhas
-- **0 estados mentirosos**: Invariantes bloqueiam ENFORCING inválido
-- **Logs reduzidos em ~80%**: Deduplicação + 1 snapshot por ciclo
-- **Forensics completa**: correlation_id + incident_summary
-
----
-
-## Ordem de Implementação
-
-1. **Fase 1** (Disciplina): 30min - Invariantes e SHUTDOWN
-2. **Fase 2** (Hard Stops): 45min - FailurePolicy e contadores
-3. **Fase 3** (Ruído): 30min - Dedup e snapshots
-4. **Fase 4** (Observabilidade): 30min - Incident summary
-
-**Total estimado**: ~2h15min
+**Total estimado**: ~4h
 
 ---
 
 ## Validação Pós-Implementação
 
-1. Simular falha de DNS (parar serviço)
-   - Esperar: ENFORCING → DEGRADED (imediato, não após 3 falhas)
-   
-2. Simular 10 falhas consecutivas
-   - Esperar: Hard stop + SAFE_MODE + incident_summary
-   
-3. Verificar logs
-   - Esperar: Sem duplicatas, com correlation_id
+1. **Monitoramento**: Clicar em agente "crítico" deve mostrar mesmo status nos detalhes
+2. **Diagnósticos**: Deve mostrar lista de computadores imediatamente (sem esperar)
+3. **Central de Ações**:
+   - "Ver sugestões" funciona para insights com e sem `agent_id`
+   - "Rejeitar" só aparece para insights reais da IA
+4. **Navegador Web**: Deve permitir selecionar computador
+5. **Saúde do Sistema**: Mostra contagem correta de online/offline
+6. **Agentes Linux/macOS**: Devem reportar v4.4.0 no próximo heartbeat
 
-4. Verificar Evidence Journal
-   - Esperar: health_snapshot a cada 5min, não a cada evento
+---
+
+## Seção Técnica: Contrato da Edge Function
+
+### Request
+```json
+POST /functions/v1/agent-snapshot
+Authorization: Bearer USER_JWT
+Content-Type: application/json
+
+{
+  "agent_id": "uuid"
+}
+```
+
+### Response (Sucesso)
+```json
+{
+  "data": {
+    "agent_id": "uuid",
+    "tenant_id": "uuid",
+    "hostname": "PC-01",
+    "os_type": "windows",
+    "version": "v4.4.0",
+    "last_heartbeat": "2026-01-29T12:47:00Z",
+    "online": true,
+    "latency_ms": 1234,
+    "agent_state": "healthy",
+    "safe_mode": false,
+    "is_isolated": false,
+    "is_throttled": false,
+    "active_issues": 0,
+    "unresolved_insights": 1,
+    "meta": {
+      "correlation_id": "abc123",
+      "snapshot_at": "2026-01-29T12:48:00Z"
+    }
+  }
+}
+```
+
+### Response (Erro)
+```json
+{
+  "error": "Agent not found",
+  "correlation_id": "abc123"
+}
+```
+
+### Garantias
+- Tenant isolado via RLS (nunca retorna dados de outro tenant)
+- Todas as UIs veem o mesmo estado
+- Correlation ID para debug
+- Erros claros, sem falha silenciosa
