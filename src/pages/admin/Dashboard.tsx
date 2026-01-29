@@ -55,14 +55,19 @@ export default function Dashboard() {
     queryKey: ['dashboard-agents', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data, error } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name, status, last_heartbeat')
-        .eq('tenant_id', tenant.id)
-        .is('archived_at', null);
+      // ADR-026: Usar RPC com tenant_id explícito para evitar dessincronização JWT
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false
+      });
       if (error) throw error;
-      return data || [];
+      // RPC retorna jsonb objects com nomes de campos corretos
+      return (data || []).map((agent: any) => ({
+        id: agent.id,
+        agent_name: agent.agent_name,
+        status: agent.status,
+        last_heartbeat: agent.last_heartbeat,
+      }));
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
