@@ -36,20 +36,29 @@ export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
     queryFn: async () => {
       if (!activeTenant?.id) return [];
       
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data, error } = await supabase
-        .from('agents_safe')
-        .select(`
-          id, agent_name, status, os_type,
-          is_isolated, is_throttled, safe_mode_reason, safe_mode_entered_at,
-          last_heartbeat, force_update_version, force_update_at, agent_state
-        `)
-        .eq('tenant_id', activeTenant.id)
-        .is('archived_at', null)
-        .order('agent_name', { ascending: true });
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: activeTenant.id,
+        p_include_archived: false
+      });
 
       if (error) throw error;
-      return data as Agent[];
+      
+      // Map RPC jsonb response to Agent interface
+      return ((data || []) as any[]).map((agent): Agent => ({
+        id: agent.id,
+        agent_name: agent.agent_name,
+        status: agent.status,
+        os_type: agent.os_type,
+        is_isolated: agent.is_isolated,
+        is_throttled: agent.is_throttled,
+        safe_mode_reason: agent.safe_mode_reason,
+        safe_mode_entered_at: agent.safe_mode_entered_at,
+        last_heartbeat: agent.last_heartbeat,
+        force_update_version: agent.force_update_version,
+        force_update_at: agent.force_update_at,
+        agent_state: agent.agent_state,
+      })).sort((a, b) => a.agent_name.localeCompare(b.agent_name));
     },
     // V-301: Guard with !loading to prevent queries before JWT sync completes
     enabled: !loading && !!activeTenant?.id,
