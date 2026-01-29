@@ -63,7 +63,8 @@ const STATE_ICONS: Record<AgentState, typeof CheckCircle> = {
   rollback: Download,
   isolated: ShieldOff,
   offline: WifiOff,
-  quarantined: ShieldOff
+  quarantined: ShieldOff,
+  shutdown: WifiOff
 };
 
 const STATE_LABELS: Record<AgentState, string> = {
@@ -74,7 +75,8 @@ const STATE_LABELS: Record<AgentState, string> = {
   rollback: 'Rollback',
   isolated: 'Isolado',
   offline: 'Offline',
-  quarantined: 'Quarentena'
+  quarantined: 'Quarentena',
+  shutdown: 'Desligado'
 };
 
 export function AgentDetailsDrawer({

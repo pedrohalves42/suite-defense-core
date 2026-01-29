@@ -41,7 +41,8 @@ const STATE_ICONS: Record<AgentState, typeof CheckCircle> = {
   rollback: RotateCcw,
   isolated: ShieldOff,
   offline: WifiOff,
-  quarantined: AlertOctagon
+  quarantined: AlertOctagon,
+  shutdown: WifiOff
 };
 
 const STATE_LABELS: Record<AgentState, string> = {
@@ -52,7 +53,8 @@ const STATE_LABELS: Record<AgentState, string> = {
   rollback: 'Rollback',
   isolated: 'Isolado',
   offline: 'Offline',
-  quarantined: 'Quarentena'
+  quarantined: 'Quarentena',
+  shutdown: 'Desligado'
 };
 
 interface AgentStateExplainerProps {
