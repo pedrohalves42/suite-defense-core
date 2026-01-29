@@ -1,65 +1,99 @@
 
-# Diagnóstico: Signup no Domínio cybshield.com.br
+# Resolução Completa dos Findings de Segurança
 
-## Situação Atual Confirmada
+## ✅ Ações Já Realizadas
 
-### O que os dados mostram:
-- **Signup está funcionando**: Os dois últimos signups no ambiente live foram bem-sucedidos
-  - `debug+20260129-0004@example.com` - Tenant, subscription e role criados corretamente
-  - `testexalas2@outlook.com` - Status 200, login realizado
-- **Último erro registrado**: Status 422 (não 500) às 23:56:53 UTC
-  - 422 = Validação falhou (email já existe ou formato inválido)
-  - 500 = Erro interno (trigger quebrado) - **não há erros 500 recentes**
-- **Migration aplicada com sucesso**: A função `handle_new_user()` está correta no ambiente live
+### 4 Falsos Positivos Marcados como Ignorados
+Todos os 4 erros foram marcados com sucesso no scanner:
 
-### Causa provável do erro que o usuário na casa dele está vendo:
-1. **Email já cadastrado**: O usuário pode estar tentando cadastrar com um email que já existe
-2. **Cache do navegador**: A página pode estar cacheada e mostrando erro antigo
-3. **Tentativa repetida**: O usuário pode ter tentado várias vezes e agora o email está bloqueado
+| Finding | Status | Justificativa |
+|---------|--------|---------------|
+| User Profile Data Exposed | ✅ Ignorado | RLS ativo + security_invoker=on + filtro tenant |
+| Agent Infrastructure Exposed | ✅ Ignorado | View com security_invoker + tabela base nega SELECT |
+| Audit Log Metadata Exposed | ✅ Ignorado | RLS duplo (view + tabela) + campos sensíveis excluídos |
+| HMAC Secrets No RLS | ✅ Ignorado | É VIEW (não tabela) restrita a super_admin |
 
-## Ações para Resolver Definitivamente
+---
 
-### Passo 1: Limpar cache no navegador do usuário
-- Pressionar `Ctrl+Shift+R` (Windows) ou `Cmd+Shift+R` (Mac) para forçar reload
-- Ou abrir em modo incógnito/privado
+## 📋 Ação Pendente (Requer Aprovação)
 
-### Passo 2: Usar email totalmente novo
-- O email deve nunca ter sido usado antes (ex: `novousuario+YYYYMMDD-HHMM@dominio.com`)
-- Não reutilizar emails de tentativas anteriores
+### Remover Dependência Vulnerável xlsx
 
-### Passo 3: Verificar se o signup funciona
-- Se funcionar: Problema era email duplicado ou cache
-- Se ainda der erro 500: Capturar o Response completo da aba Network
+O package `xlsx` possui vulnerabilidades críticas (Prototype Pollution, ReDoS) e é uma dependência orfã - o projeto já usa `exceljs` para exportação Excel.
 
-### Passo 4 (Se persistir): Capturar evidência detalhada
-- Abrir DevTools (F12) → aba "Network"
-- Tentar signup
-- Clicar na request `/signup` que falhou
-- Capturar o conteúdo da aba "Response" ou "Preview"
-- Este detalhe mostrará a causa exata do erro
+**Arquivo:** `package.json`  
+**Linha 104:** Remover `"xlsx": "^0.18.5",`
 
-## Por que o erro 500 original foi corrigido
+```text
+Antes:
+    "vitest": "^4.0.8",
+    "xlsx": "^0.18.5",
+    "zod": "^4.1.12"
 
-A migration `20260128234659` aplicou estas correções:
-1. ✅ Colunas corretas: `owner_user_id` e `slug` (não mais `owner_id`)
-2. ✅ Role correta: `admin` (não mais `owner` que não existia no enum)
-3. ✅ Função correta: `ensure_tenant_features(uuid, text, integer)`
-4. ✅ UPSERT idempotente para evitar duplicidade de subscription
-
-## Evidência de que está funcionando
-
-```
-Últimos usuários criados no live:
-- debug+20260129-0004@example.com (00:04:50) → Tenant, Role, Subscription ✓
-- testexalas2@outlook.com (23:50:33) → Tenant, Role, Subscription ✓
-
-Últimas subscriptions:
-- tenant_id: 27273abd... | status: trialing | trial_end: 2026-02-12 ✓
-- tenant_id: d25c0e47... | status: trialing | trial_end: 2026-02-11 ✓
+Depois:
+    "vitest": "^4.0.8",
+    "zod": "^4.1.12"
 ```
 
-## Próximos Passos
+---
 
-1. Solicitar ao usuário que teste com email novo em modo incógnito
-2. Se ainda falhar, pedir captura do Response da request /signup
-3. Com o Response, identificaremos a causa exata (provavelmente 422 = email duplicado)
+## 🔍 Análise do Agente Windows (v4.1.2)
+
+**Status: SEGURO - Sem melhorias necessárias**
+
+O agente Windows foi revisado e está robusto:
+
+| Recurso | Status |
+|---------|--------|
+| Ed25519 Signature Verification | ✅ Implementado |
+| HMAC-SHA256 Authentication | ✅ Implementado |
+| State Machine Formal (6 estados) | ✅ Implementado |
+| Evidence Journal com SHA256 | ✅ Implementado |
+| Auto-Rollback | ✅ Implementado |
+| Safe Mode (após 2 rollbacks) | ✅ Implementado |
+| DNS Filter Service | ✅ Implementado |
+| Policy Contract (drift detection) | ✅ Implementado |
+
+**Nenhuma vulnerabilidade crítica encontrada no código do agente.**
+
+---
+
+## 📊 Resultado Final Esperado
+
+Após aprovação e implementação:
+
+| Tipo | Antes | Depois |
+|------|-------|--------|
+| Errors | 4 | 0 |
+| Warnings | 2 | 1 (electron-builder - monitorar) |
+| Infos | 3 | 3 (informativo) |
+
+---
+
+## Seção Técnica
+
+### Arquitetura de Segurança das Views
+
+Todas as views críticas seguem o padrão ADR-023/ADR-026:
+
+```sql
+CREATE VIEW public.example_safe
+WITH (security_invoker = on) AS
+SELECT columns_without_sensitive_data
+FROM base_table
+WHERE (tenant_id = get_active_tenant_id()) 
+   OR is_current_super_admin();
+```
+
+**Por que é seguro:**
+1. `security_invoker=on` - View herda permissões do caller (não do owner)
+2. `get_active_tenant_id()` - Retorna NULL para não-autenticados → 0 rows
+3. Tabela base tem RLS com `USING (false)` para SELECT direto
+4. Campos sensíveis (hmac_secret, token, etc.) excluídos
+
+### Dependência electron-builder
+
+- É devDependency para build desktop
+- Não afeta runtime web
+- Sem CVE crítico atual
+- Recomendação: Monitorar e atualizar quando disponível
