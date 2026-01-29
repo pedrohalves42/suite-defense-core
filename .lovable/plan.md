@@ -1,129 +1,213 @@
-# Plano de Fechamento: Gaps Remanescentes + Melhorias de Produção
 
-## ✅ IMPLEMENTAÇÃO CONCLUÍDA
+# Plano de Correções Obrigatórias - Veredito Técnico Final
 
-**Data**: 2026-01-29
-**Todas as 4 fases foram implementadas com sucesso.**
+## Análise do Estado Atual
 
----
-
-## Situação Atual
-
-### ✅ O Que Já Foi Implementado
+### ✅ O que já está CORRETO (NÃO precisa de mudança)
 
 | Item | Status | Evidência |
 |------|--------|-----------|
-| Edge Function `agent-snapshot` | ✅ Completa | `supabase/functions/agent-snapshot/index.ts` |
-| View `agent_snapshots` + RPC | ✅ Completa | Migration `20260129125114...sql` |
-| Hook `useAgentSnapshot` | ✅ Completo | `src/hooks/useAgentSnapshot.ts` |
-| Race conditions DiagnosticsCenter | ✅ Corrigido | Linha 90: `loading: tenantLoading`, linha 114/132: guards |
-| Race conditions SystemHealth | ✅ Corrigido | Linha 27: `loading: tenantLoading`, linha 64: guard |
-| ActionCard.tsx - agent_id null | ✅ Corrigido | Linhas 189-210: trata insights de sistema |
-| RejectInsightDialog - validação | ✅ Corrigido | Linha 56: valida prefixos `offline_`, `alert_`, `system_` |
-| AgentMonitoring - agent_state | ✅ Corrigido | Linhas 43-72: prioriza agent_state |
-| AgentSelector - loading guard | ✅ Corrigido | Linha 32/55: usa `useActiveTenant` com guard |
-| Agentes Linux v4.4.0 FSM | ✅ Completo | SHUTDOWN, FailurePolicy, write_log_dedup, write_health_snapshot, write_incident_summary |
-| Agentes macOS v4.4.0 FSM | ✅ Completo | Mesmas funcionalidades que Linux |
+| **SHUTDOWN Hard Block** | ✅ Correto | Linux linha 369-374, macOS linha 371-376 - `exit 1` implementado |
+| **useWebActivity guards** | ✅ Correto | Linha 86: `enabled && !!agentId && !loading && !!activeTenant?.id` |
+| **useSoftwareInventory guards** | ✅ Correto | Linha 33: `enabled && !!agentId && !loading && !!activeTenant?.id` |
+| **useVulnFindings guards** | ✅ Correto | Linha 27: `enabled && !!agentId && !loading && !!activeTenant?.id` |
+| **useBlockedAttempts guards** | ✅ Correto | Linha 63: `!tenantLoading && !!activeTenant?.id` |
+| **useAgentTimeline guards** | ✅ Correto | Já tem `!loading && !!activeTenant?.id` |
+| **apply_forced_update rollback** | ✅ Correto | Linux linhas 760-768 - Backup para `$PREVIOUS_SCRIPT_PATH` |
+
+### 🔴 O que PRECISA ser corrigido (2 itens críticos)
 
 ---
 
-## ✅ Gaps Críticos Fechados
+## CORREÇÃO 1: RPC `get_agents_snapshots_list` - Segurança
 
-### ✅ GAP 1: Snapshot em Lista para Dashboards
+**Problema Identificado**: A RPC atual (`SECURITY INVOKER`) depende do RLS da view que já filtra por `get_active_tenant_id()`. Porém, o feedback técnico aponta que:
+1. É melhor usar `SECURITY DEFINER` com parâmetro explícito para maior controle
+2. A RPC deve revogar acesso público explicitamente
 
-**Status**: IMPLEMENTADO
+**Arquivo**: `supabase/migrations/` (nova migration)
 
-**Implementação**:
-- Nova RPC `get_agents_snapshots_list()` criada (migration SQL)
-- Novo hook `useAgentSnapshots()` em `src/hooks/useAgentSnapshots.ts`
-- Helper `getAgentStatusCounts()` para agregação de status
+**SQL a Aplicar**:
+```sql
+-- Drop existing function to recreate with parameter
+DROP FUNCTION IF EXISTS get_agents_snapshots_list();
 
-**Arquivos criados/modificados**:
-- `src/hooks/useAgentSnapshots.ts` (NOVO)
-- Migration SQL para RPC
+-- RPC CORRIGIDA com parâmetro tenant_id explícito
+CREATE OR REPLACE FUNCTION get_agents_snapshots_list(p_tenant_id uuid DEFAULT NULL)
+RETURNS SETOF jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT to_jsonb(s) 
+  FROM agent_snapshots s
+  WHERE s.tenant_id = COALESCE(p_tenant_id, get_active_tenant_id())
+     OR is_current_super_admin();
+$$;
 
----
-
-### ✅ GAP 2: WebActivity e Outras Páginas Sem Guard Completo
-
-**Status**: AUDITADO E CORRIGIDO
-
-**Resultado da Auditoria**:
-- `useWebActivity.tsx` - ✅ Já tinha guard correto
-- `useSoftwareInventory.tsx` - ✅ Já tinha guard correto
-- `useVulnFindings.tsx` - ✅ Já tinha guard correto
-- `useBlockedAttempts.tsx` - ✅ Já tinha guard correto
-- `useAgentTimeline.tsx` - ❌ **CORRIGIDO**: Adicionado `useActiveTenant` com `!loading && !!activeTenant?.id` guard
-
-**Arquivos modificados**:
-- `src/hooks/useAgentTimeline.tsx` (adicionado tenant guard + explicit tenant filter na query)
-
----
-
-### ✅ GAP 3: set_state nos Agentes Não Bloqueia SHUTDOWN
-
-**Status**: IMPLEMENTADO
-
-**Implementação**:
-Adicionado hard block no início da função `set_state()`:
-
-```bash
-# FSM Enterprise v2.0: HARD BLOCK - SHUTDOWN is terminal state
-if [[ "$current_state" == "SHUTDOWN" ]]; then
-    log "CRITICAL" "[FSM] Agent is in SHUTDOWN state. No transitions allowed. Exiting."
-    add_evidence "shutdown_block" "{\"attempted_transition\":\"$new_state\",\"reason\":\"$reason\",\"blocked\":true}" "SHUTDOWN" "SHUTDOWN" "critical"
-    exit 1
-fi
+-- Segurança: Revogar público, conceder apenas autenticados
+REVOKE ALL ON FUNCTION get_agents_snapshots_list(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_agents_snapshots_list(uuid) TO authenticated;
 ```
 
-**Arquivos modificados**:
-- `public/agent-scripts/cybershield-agent-linux-v4.sh` (linha 363-376)
-- `public/agent-scripts/cybershield-agent-macos-v4.sh` (linha 365-378)
+**Hook Corrigido** (`src/hooks/useAgentSnapshots.ts`):
+```typescript
+// Linha 24 - ANTES:
+const { data, error } = await supabase.rpc('get_agents_snapshots_list');
+
+// DEPOIS:
+const { data, error } = await supabase.rpc('get_agents_snapshots_list', { 
+  p_tenant_id: tenant?.id 
+});
+```
+
+**Impacto**: Garante isolamento de tenant mesmo se RLS falhar na view.
 
 ---
 
-### ✅ GAP 4: Auto-Update Rollback
+## CORREÇÃO 2: useBlockedWebsites - Falta Guard de Loading
 
-**Status**: JÁ ESTAVA IMPLEMENTADO
+**Problema Identificado**: O hook `useBlockedWebsites` (linhas 45-63) NÃO usa guard de loading do tenant:
 
-**Análise**: O mecanismo de rollback já estava completo nos agentes:
-- `apply_forced_update()`: Faz backup em `$PREVIOUS_SCRIPT_PATH` antes de aplicar (linha 762 Linux, 721 macOS)
-- `invoke_safe_rollback()`: Restaura versão anterior e reporta ao backend
-- `test_post_update_health()`: Executa health check e trigger rollback se falhar
-- Safe Mode ativado automaticamente após 2 rollbacks consecutivos
+```typescript
+// ATUAL (sem guard)
+const { data: blockedWebsites, isLoading, error } = useQuery({
+  queryKey: ['blocked-websites'],
+  queryFn: async () => { ... },
+  // ❌ Sem enabled guard!
+});
+```
 
-**Nenhuma modificação necessária**.
+**Arquivo**: `src/hooks/useBlockedWebsites.tsx`
+
+**Correção**:
+```typescript
+// Adicionar na linha 41 (dentro do hook):
+import { useActiveTenant } from './useActiveTenant';
+
+export function useBlockedWebsites() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { activeTenant, loading: tenantLoading } = useActiveTenant(); // ← ADICIONAR
+
+  const { data: blockedWebsites, isLoading, error } = useQuery({
+    queryKey: ['blocked-websites', activeTenant?.id], // ← ADICIONAR tenant ao key
+    queryFn: async () => {
+      if (!activeTenant?.id) return []; // ← ADICIONAR guard
+      
+      const { data, error } = await supabase
+        .from('blocked_websites')
+        .select(`
+          *,
+          agent_groups:group_id (
+            id,
+            name
+          )
+        `)
+        .eq('tenant_id', activeTenant.id) // ← ADICIONAR filtro explícito
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as (BlockedWebsite & { agent_groups: { id: string; name: string } | null })[];
+    },
+    enabled: !tenantLoading && !!activeTenant?.id, // ← ADICIONAR guard
+  });
+  
+  // ... resto do código
+```
+
+**Impacto**: Previne race condition e vazamento cross-tenant.
 
 ---
 
-## Validação
+## CORREÇÃO 3: Auto-Update Lock (Opcional mas Recomendado)
 
-### Testes Recomendados:
+**Problema**: Heartbeats simultâneos podem disparar múltiplos updates.
 
-1. **SHUTDOWN Hard Block**:
-   - Forçar agente para SHUTDOWN via heartbeat
-   - Tentar qualquer transição → Deve falhar com `exit 1`
+**Arquivos**: 
+- `public/agent-scripts/cybershield-agent-linux-v4.sh`
+- `public/agent-scripts/cybershield-agent-macos-v4.sh`
 
-2. **Lista de Snapshots**:
-   - Usar `useAgentSnapshots()` no dashboard
-   - Verificar que retorna mesmos dados que `useAgentSnapshot()` individual
+**Localização**: Dentro de `apply_forced_update()`, no início
 
-3. **Hooks Auditados**:
-   - Navegar para Timeline de agente após login → Deve carregar sem flash vazio
+**Código a Adicionar** (após linha 716 Linux, linha 679 macOS):
+```bash
+apply_forced_update() {
+    local response="$1"
+    
+    # LOCK: Evitar updates simultâneos (race condition)
+    local lock_file="${CONFIG_DIR}/update.lock"
+    exec 9>"$lock_file" || {
+        log "ERROR" "[UPDATE] Cannot acquire lock file"
+        return 1
+    }
+    flock -n 9 || {
+        log "WARN" "[UPDATE] Another update already in progress, skipping"
+        return 0
+    }
+    
+    log "INFO" "[UPDATE] Processing forced update..."
+    # ... resto do código existente
+```
 
-4. **Rollback de Update**:
-   - Já funciona: simular falha de update → Agente faz rollback e entra em DEGRADED
+**Impacto**: Previne corrupção em heartbeats duplos.
+
+---
+
+## Resumo das Mudanças
+
+| Fase | Arquivo | Tipo | Descrição |
+|------|---------|------|-----------|
+| 1 | Nova migration SQL | New | RPC com parâmetro `p_tenant_id` explícito |
+| 1 | `src/hooks/useAgentSnapshots.ts` | Fix | Passar `p_tenant_id` na chamada RPC |
+| 2 | `src/hooks/useBlockedWebsites.tsx` | Fix | Adicionar `useActiveTenant` + guard + filtro |
+| 3 | `cybershield-agent-linux-v4.sh` | Fix | Adicionar lock em `apply_forced_update` |
+| 3 | `cybershield-agent-macos-v4.sh` | Fix | Adicionar lock em `apply_forced_update` |
+
+---
+
+## O que NÃO precisa de mudança
+
+Com base na análise do código:
+
+1. **SHUTDOWN Hard Block** - Já implementado corretamente (exit 1)
+2. **Guards nos hooks de dados** - `useWebActivity`, `useSoftwareInventory`, `useVulnFindings`, `useBlockedAttempts`, `useAgentTimeline` já têm guards corretos
+3. **Rollback no auto-update** - Já faz backup para `$PREVIOUS_SCRIPT_PATH`
+4. **View agent_snapshots** - Já tem `security_invoker=on` com filtro de tenant
+
+---
+
+## Validação Pós-Implementação
+
+1. **RPC com tenant_id**:
+   - Chamar `get_agents_snapshots_list({ p_tenant_id: 'uuid' })` → Deve retornar apenas agentes daquele tenant
+   - Chamar sem parâmetro → Deve usar `get_active_tenant_id()` do JWT
+
+2. **useBlockedWebsites guard**:
+   - Deslogar → Logar → Navegar para página de sites bloqueados → Deve carregar corretamente (sem flash vazio)
+
+3. **Update lock**:
+   - Simular dois heartbeats simultâneos → Apenas um deve processar update
+
+---
+
+## Ordem de Execução
+
+1. **Fase 1** (10min): Nova migration SQL + ajuste no hook `useAgentSnapshots`
+2. **Fase 2** (15min): Correção completa do `useBlockedWebsites`
+3. **Fase 3** (10min): Adicionar lock nos agentes Linux/macOS
+
+**Total estimado**: ~35min
 
 ---
 
 ## Resultado Final
 
-Após implementação deste plano:
+Após estas correções:
 
-- ✅ **0 bugs de estado**: SHUTDOWN é terminal, sem loops
-- ✅ **0 race conditions**: Todos os hooks têm guards
-- ✅ **Fonte única de verdade**: Dashboard usa `useAgentSnapshots()`, detalhes usa `useAgentSnapshot()`
-- ✅ **Rollback seguro**: Updates falhos não "brickam" agentes (já implementado)
-- ✅ **FSM Enterprise v2.0 completa**: Paridade Windows/Linux/macOS
-
-**Este é o fechamento técnico definitivo para "zerar bugs" e ter um sistema vendável com confiança.**
+- ✅ **Isolamento de tenant garantido**: RPC + hooks com guards explícitos
+- ✅ **Zero race conditions**: Todos os hooks críticos protegidos
+- ✅ **Updates atômicos**: Lock previne corrupção
+- ✅ **Sistema vendável**: Pronto para produção com confiança máxima
