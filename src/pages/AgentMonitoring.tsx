@@ -93,15 +93,15 @@ const AgentMonitoring = () => {
       });
       
       if (error) throw error;
-      // RPC retorna jsonb row objects, mapear e ordenar por enrolled_at
+      // RPC retorna jsonb objects com nomes de campos corretos, ordenar por enrolled_at
       return ((data || []) as any[])
         .map((agent: any) => ({
-          id: agent.f1,
-          agent_name: agent.f3,
-          status: agent.f5,
-          last_heartbeat: agent.f12,
-          enrolled_at: agent.f11,
-          agent_state: agent.f14,
+          id: agent.id,
+          agent_name: agent.agent_name,
+          status: agent.status,
+          last_heartbeat: agent.last_heartbeat,
+          enrolled_at: agent.enrolled_at,
+          agent_state: agent.agent_state,
         }))
         .sort((a, b) => new Date(b.enrolled_at).getTime() - new Date(a.enrolled_at).getTime()) as Agent[];
     },
@@ -182,11 +182,11 @@ const AgentMonitoring = () => {
       });
       
       if (error) throw error;
-      // RPC retorna jsonb row objects, mapear campos
+      // RPC retorna jsonb objects com nomes de campos corretos
       return (data || []).map((agent: any) => ({
-        agent_name: agent.f3,
-        last_heartbeat: agent.f12,
-        enrolled_at: agent.f11,
+        agent_name: agent.agent_name,
+        last_heartbeat: agent.last_heartbeat,
+        enrolled_at: agent.enrolled_at,
       }));
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes

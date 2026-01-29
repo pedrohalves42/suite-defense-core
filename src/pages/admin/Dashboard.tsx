@@ -61,12 +61,12 @@ export default function Dashboard() {
         p_include_archived: false
       });
       if (error) throw error;
-      // RPC retorna jsonb objects, mapear para interface esperada
+      // RPC retorna jsonb objects com nomes de campos corretos
       return (data || []).map((agent: any) => ({
-        id: agent.f1,
-        agent_name: agent.f3,
-        status: agent.f5,
-        last_heartbeat: agent.f12,
+        id: agent.id,
+        agent_name: agent.agent_name,
+        status: agent.status,
+        last_heartbeat: agent.last_heartbeat,
       }));
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
