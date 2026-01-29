@@ -186,8 +186,26 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
       return;
     }
 
-    if (!item.agent_id || !tenant?.id) {
-      hToast.error('Agente ou tenant não identificado');
+    // Verificar tenant primeiro
+    if (!tenant?.id) {
+      hToast.error('Tenant não identificado. Faça login novamente.');
+      return;
+    }
+    
+    // Para ações que NÃO requerem agent_id (insights de sistema)
+    if (!item.agent_id) {
+      hToast.info('Este insight é de nível sistema - marcando como revisado');
+      try {
+        await executeAction.mutateAsync({
+          itemId: item.item_id,
+          sourceType: item.source_type,
+          action: 'acknowledge',
+        });
+        onExecuted?.();
+      } catch (error) {
+        console.error('[ActionCard] Error acknowledging system insight:', error);
+        hToast.error('Erro ao marcar como revisado');
+      }
       return;
     }
 
@@ -596,24 +614,29 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
                   </Tooltip>
                 </TooltipProvider>
                 
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        onClick={() => setRejectDialogOpen(true)}
-                        disabled={executeAction.isPending}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <XCircle className="h-4 w-4 mr-2" />
-                        Rejeitar
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs">Marcar como falso positivo ou não relevante. Isso ajuda a melhorar as detecções futuras.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                {/* Só mostrar Rejeitar para insights reais da IA (não alertas de sistema) */}
+                {!item.item_id.startsWith('offline_') && 
+                 !item.item_id.startsWith('alert_') && 
+                 !item.item_id.startsWith('system_') && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          onClick={() => setRejectDialogOpen(true)}
+                          disabled={executeAction.isPending}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Rejeitar
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs">Marcar como falso positivo ou não relevante. Isso ajuda a melhorar as detecções futuras.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </>
             )}
 

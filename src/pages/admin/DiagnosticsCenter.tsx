@@ -87,7 +87,7 @@ export default function DiagnosticsCenter() {
   const preSelectedAgentId = searchParams.get('agent');
   const viewMode = searchParams.get('view') as 'default' | 'soc' | null;
   
-  const { tenant } = useTenant();
+  const { tenant, loading: tenantLoading } = useTenant();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(preSelectedAgentId);
@@ -111,7 +111,7 @@ export default function DiagnosticsCenter() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!tenant?.id,
+    enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 30000,
   });
 
@@ -129,7 +129,7 @@ export default function DiagnosticsCenter() {
       return (data || []) as unknown as ProblematicAgent[];
     },
     refetchInterval: 30000,
-    enabled: !!tenant?.id,
+    enabled: !tenantLoading && !!tenant?.id,
   });
 
   // Get selected agent data

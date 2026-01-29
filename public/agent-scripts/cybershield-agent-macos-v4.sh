@@ -40,7 +40,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTES E VARIAVEIS GLOBAIS
 # ============================================
-AGENT_VERSION="v4.2.1"
+AGENT_VERSION="v4.4.0"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -74,15 +74,16 @@ declare -A AGENT_STATE=(
     [last_state_change]=""
 )
 
-# Valid states and transitions
-declare -a VALID_STATES=("BOOTSTRAP" "SYNCING" "ENFORCING" "DEGRADED" "ERROR" "RECOVERY")
+# Valid states and transitions - FSM Enterprise v2.0
+declare -a VALID_STATES=("BOOTSTRAP" "SYNCING" "ENFORCING" "DEGRADED" "ERROR" "RECOVERY" "SHUTDOWN")
 declare -A STATE_TRANSITIONS=(
     ["BOOTSTRAP"]="SYNCING ERROR"
     ["SYNCING"]="ENFORCING DEGRADED ERROR"
     ["ENFORCING"]="DEGRADED ERROR SYNCING"
-    ["DEGRADED"]="RECOVERY ERROR ENFORCING"
-    ["RECOVERY"]="ENFORCING DEGRADED ERROR"
-    ["ERROR"]="RECOVERY"
+    ["DEGRADED"]="RECOVERY ERROR ENFORCING SHUTDOWN"
+    ["RECOVERY"]="ENFORCING DEGRADED ERROR SHUTDOWN"
+    ["ERROR"]="RECOVERY SHUTDOWN"
+    ["SHUTDOWN"]=""  # Terminal - sem saídas permitidas
 )
 JOB_EXECUTION_STATES="ENFORCING DEGRADED"
 
@@ -110,6 +111,124 @@ EVIDENCE_FLUSH_THRESHOLD=10
 # SSA-004: Ed25519 Public Key for job signature verification
 ED25519_PUBLIC_KEY="MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZih0iggaoI="
 REQUIRE_JOB_SIGNATURES=true
+
+# ============================================
+#  FSM ENTERPRISE v2.0: FAILURE POLICY + OBSERVABILITY
+# ============================================
+
+# Failure Policy - Hard stops após limite
+declare -A FAILURE_POLICY=(
+    [max_recovery_attempts]=5
+    [recovery_window_seconds]=300
+    [cooldown_seconds]=600
+    [max_consecutive_failures]=10
+    [on_exhaust]="DEGRADED"
+)
+
+# Contadores por componente
+declare -A FAILURE_COUNTERS
+
+# Log Deduplication
+declare -A LOG_DEDUP_CACHE
+LOG_DEDUP_TTL=30
+
+# write_log_dedup - Log com deduplicação automática
+write_log_dedup() {
+    local level="$1"
+    local message="$2"
+    local cache_key="${level}|${message}"
+    local now
+    now=$(date +%s)
+    
+    if [[ -n "${LOG_DEDUP_CACHE[$cache_key]:-}" ]]; then
+        local last_log="${LOG_DEDUP_CACHE[$cache_key]}"
+        local elapsed=$((now - last_log))
+        if [[ $elapsed -lt $LOG_DEDUP_TTL ]]; then
+            return  # Suprimir duplicado
+        fi
+    fi
+    
+    LOG_DEDUP_CACHE[$cache_key]=$now
+    log "$level" "$message"
+}
+
+# add_component_failure - Registra falha com hard stop
+add_component_failure() {
+    local component="$1"
+    local error_message="$2"
+    local correlation_id="${3:-$(date +%s)}"
+    
+    if [[ -z "${FAILURE_COUNTERS[$component]:-}" ]]; then
+        FAILURE_COUNTERS[$component]=0
+    fi
+    
+    ((FAILURE_COUNTERS[$component]++))
+    local count="${FAILURE_COUNTERS[$component]}"
+    
+    # Hard stop após max_consecutive_failures
+    if [[ $count -ge ${FAILURE_POLICY[max_consecutive_failures]} ]]; then
+        write_log_dedup "ERROR" "[CRITICAL] $component exceeded max failures ($count) - HARD STOP"
+        
+        add_evidence "recovery_exhausted" "{\"component\":\"$component\",\"consecutive_failures\":$count,\"action\":\"${FAILURE_POLICY[on_exhaust]}\",\"correlation_id\":\"$correlation_id\"}" "" "" "critical"
+        
+        set_state "${FAILURE_POLICY[on_exhaust]}" "Component $component exhausted after $count failures"
+        
+        echo "exhausted"
+        return
+    fi
+    
+    echo "retry:$count"
+}
+
+# reset_component_failure - Reseta contador após sucesso
+reset_component_failure() {
+    local component="$1"
+    if [[ -n "${FAILURE_COUNTERS[$component]:-}" ]]; then
+        FAILURE_COUNTERS[$component]=0
+        write_log_dedup "DEBUG" "[FAILURE] $component counter reset"
+    fi
+}
+
+# write_health_snapshot - Snapshot único por ciclo
+write_health_snapshot() {
+    local correlation_id="$1"
+    local dns_status="unknown"
+    
+    if [[ "$DNS_FILTER_ENABLED" == "true" ]]; then
+        if launchctl list | grep -q "com.cybershield.dns" 2>/dev/null; then
+            dns_status="ok"
+        else
+            dns_status="failed"
+        fi
+    else
+        dns_status="disabled"
+    fi
+    
+    local snapshot="{\"state\":\"${AGENT_STATE[current]}\",\"components\":{\"dns_filter\":\"$dns_status\"},\"failure_counters\":{\"dns_filter\":${FAILURE_COUNTERS[dns_filter]:-0},\"heartbeat\":${FAILURE_COUNTERS[heartbeat]:-0}},\"correlation_id\":\"$correlation_id\"}"
+    add_evidence "health_snapshot" "$snapshot" "" "" "info"
+}
+
+# write_incident_summary - Gera resumo de incidente
+write_incident_summary() {
+    local root_cause="$1"
+    local correlation_id="$2"
+    local incident_id
+    incident_id=$(uuidgen 2>/dev/null || date +%s)
+    
+    local recommended_action="contact_support"
+    if [[ "$root_cause" == *"dns"* ]]; then
+        recommended_action="reinstall_dns_service"
+    elif [[ "$root_cause" == *"heartbeat"* ]]; then
+        recommended_action="check_network_connectivity"
+    elif [[ "$root_cause" == *"rollback"* ]]; then
+        recommended_action="manual_version_downgrade"
+    fi
+    
+    local summary="{\"incident_id\":\"$incident_id\",\"root_cause\":\"$root_cause\",\"recommended_action\":\"$recommended_action\",\"agent_version\":\"$AGENT_VERSION\",\"correlation_id\":\"$correlation_id\"}"
+    add_evidence "incident_summary" "$summary" "" "" "critical"
+    
+    log "ERROR" "[INCIDENT] Summary generated: $incident_id - $recommended_action"
+}
 
 # ============================================
 #  PHASE 1: PROTECTED TARGETS (DEFENSE IN DEPTH)

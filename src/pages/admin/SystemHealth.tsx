@@ -24,7 +24,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import { useTenant } from "@/hooks/useTenant";
 
 export default function SystemHealth() {
-  const { tenant } = useTenant();
+  const { tenant, loading: tenantLoading } = useTenant();
 
   const { data: agentStats, isLoading: loadingAgents } = useQuery({
     queryKey: ["system-health-agents", tenant?.id],
@@ -61,7 +61,7 @@ export default function SystemHealth() {
         ).length,
       };
     },
-    enabled: !!tenant?.id,
+    enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 30000,
   });
 
@@ -108,7 +108,7 @@ export default function SystemHealth() {
         stuckCount: stuckJobs.length,
       };
     },
-    enabled: !!tenant?.id,
+    enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 30000,
   });
 
@@ -142,7 +142,7 @@ export default function SystemHealth() {
       
       return Object.values(hourlyData).slice(-12);
     },
-    enabled: !!tenant?.id,
+    enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 60000,
   });
 
@@ -167,7 +167,7 @@ export default function SystemHealth() {
         info: data.filter(i => i.severity === 'info').length,
       };
     },
-    enabled: !!tenant?.id,
+    enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 60000,
   });
 
