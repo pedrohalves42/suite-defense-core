@@ -20,14 +20,11 @@ export function useAgentSyncStatus() {
     queryFn: async (): Promise<AgentSyncStatus[]> => {
       if (!tenant?.id) return [];
       
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data, error } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name, display_name, status, last_heartbeat, last_block_sync_at, archived_at')
-        .eq('tenant_id', tenant.id)
-        .eq('status', 'active')
-        .is('archived_at', null)
-        .order('agent_name');
+      // ADR-026: Use get_agents_list RPC with explicit tenant_id to avoid JWT sync issues
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false
+      });
 
       if (error) {
         console.error('[useAgentSyncStatus] Error fetching agents:', error);
@@ -38,6 +35,7 @@ export function useAgentSyncStatus() {
       const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
+      // RPC returns jsonb objects, map to expected interface
       return (data || []).map((agent: any) => {
         const lastHeartbeat = agent.last_heartbeat ? new Date(agent.last_heartbeat) : null;
         const lastBlockSync = agent.last_block_sync_at ? new Date(agent.last_block_sync_at) : null;
@@ -55,7 +53,12 @@ export function useAgentSyncStatus() {
         }
 
         return {
-          ...agent,
+          id: agent.id,
+          agent_name: agent.agent_name,
+          display_name: agent.display_name,
+          status: agent.status,
+          last_heartbeat: agent.last_heartbeat,
+          last_block_sync_at: agent.last_block_sync_at,
           syncStatus,
         };
       });

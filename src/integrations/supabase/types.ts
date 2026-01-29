@@ -20854,6 +20854,10 @@ export type Database = {
         }[]
       }
       get_agent_snapshot: { Args: { p_agent_id: string }; Returns: Json }
+      get_agents_list: {
+        Args: { p_include_archived?: boolean; p_tenant_id: string }
+        Returns: Json[]
+      }
       get_agents_snapshots_list: {
         Args: { p_tenant_id?: string }
         Returns: Json[]
