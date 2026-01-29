@@ -86,14 +86,24 @@ const AgentMonitoring = () => {
     queryKey: ['agents-monitoring', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-      const { data, error } = await supabase
-        .from('agents_safe')
-        .select('*')
-        .eq('tenant_id', tenant.id)
-        .order('enrolled_at', { ascending: false });
+      // ADR-026: Usar RPC com tenant_id explícito para evitar dessincronização JWT
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false
+      });
       
       if (error) throw error;
-      return data as Agent[];
+      // RPC retorna jsonb row objects, mapear e ordenar por enrolled_at
+      return ((data || []) as any[])
+        .map((agent: any) => ({
+          id: agent.f1,
+          agent_name: agent.f3,
+          status: agent.f5,
+          last_heartbeat: agent.f12,
+          enrolled_at: agent.f11,
+          agent_state: agent.f14,
+        }))
+        .sort((a, b) => new Date(b.enrolled_at).getTime() - new Date(a.enrolled_at).getTime()) as Agent[];
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id
@@ -165,14 +175,19 @@ const AgentMonitoring = () => {
     queryFn: async () => {
       if (!tenant?.id) return [];
       
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data, error } = await supabase
-        .from('agents_safe')
-        .select('agent_name, last_heartbeat, enrolled_at')
-        .eq('tenant_id', tenant.id);
+      // ADR-026: Usar RPC com tenant_id explícito para evitar dessincronização JWT
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false
+      });
       
       if (error) throw error;
-      return data;
+      // RPC retorna jsonb row objects, mapear campos
+      return (data || []).map((agent: any) => ({
+        agent_name: agent.f3,
+        last_heartbeat: agent.f12,
+        enrolled_at: agent.f11,
+      }));
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id
