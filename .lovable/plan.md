@@ -20,24 +20,20 @@ Correções incluídas na v4.4.0:
 - **Test-StateInvariants** - Bloqueia ENFORCING com componentes falhados
 - **flock update lock** (Linux/macOS) - Evita race conditions
 
-## 🔴 FASE 3: Sincronizar script_content - BLOQUEIO
+## ✅ FASE 3: script_content Registrado + Force Update - CONCLUÍDO
 
-**CRÍTICO:** `agent_releases` não tem v4.4.0 registrado com `script_content`.
+Force update `v4.4.0` disparado via `force_update_version` no banco.
 
-Os 14 agentes têm `force_update_version = v4.4.0` mas **não receberão** o update no heartbeat até que o script seja registrado.
+Os agentes Windows online receberão o update no próximo heartbeat (máximo 60s).
 
-**Para completar, acesse:**
-→ `/admin/agent-releases` e registre Windows v4.4.0 com o script de `public/agent-scripts/cybershield-agent-windows-v4.ps1`
+## Resultado Final
 
-Ou execute localmente:
-```bash
-node scripts/sync-all-agents.js --windows
-```
+| Plataforma | Versão Latest | agent_releases | Force Update | Status |
+|------------|---------------|----------------|--------------|--------|
+| Windows | v4.4.0 ✅ | ✅ Registrado | ✅ Disparado | 🟢 Completo |
+| Linux | v4.4.0 ✅ | ✅ Registrado | N/A (0 agentes) | 🟢 Pronto |
+| macOS | v4.4.0 ✅ | ✅ Registrado | N/A (0 agentes) | 🟢 Pronto |
 
-## Resultado Atual
+## Monitoramento
 
-| Plataforma | Versão Latest | Agentes Ativos | Status |
-|------------|---------------|----------------|--------|
-| Windows | v4.4.0 ✅ | 15 | ⏳ Aguardando script_content |
-| Linux | v4.4.0 ✅ | 0 | ✅ Pronto para deploy |
-| macOS | v4.4.0 ✅ | 0 | ✅ Pronto para deploy |
+Acompanhe a atualização em `/admin/computers` - a coluna `agent_version` deve mudar para `v4.4.0` conforme os agentes fazem heartbeat.
