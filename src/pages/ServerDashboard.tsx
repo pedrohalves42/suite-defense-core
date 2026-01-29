@@ -209,7 +209,8 @@ const ServerDashboard = () => {
 
     try {
       const [agentsRes, jobsRes, reportsRes, tokensRes, rateLimitsRes, scansRes, logsRes] = await Promise.all([
-        supabase.from("agents_safe").select("*").eq("tenant_id", tenant.id).order("enrolled_at", { ascending: false }),
+        // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+        supabase.rpc('get_agents_list', { p_tenant_id: tenant.id, p_include_archived: false }),
         supabase.from("jobs").select("*").eq("tenant_id", tenant.id).order("created_at", { ascending: false }).limit(100),
         supabase.from("reports").select("*").eq("tenant_id", tenant.id).order("created_at", { ascending: false }).limit(100),
         supabase.from("agent_tokens").select("*, agents!inner(agent_name, tenant_id)").eq("agents.tenant_id", tenant.id).order("created_at", { ascending: false }),
@@ -219,8 +220,17 @@ const ServerDashboard = () => {
       ]);
 
       if (agentsRes.data) {
-        setAgents(agentsRes.data);
-        const inactiveCount = agentsRes.data.filter(a => {
+        // Map RPC response to expected Agent interface
+        const mappedAgents: Agent[] = ((agentsRes.data || []) as any[]).map((agent) => ({
+          id: agent.id,
+          agent_name: agent.agent_name,
+          status: agent.status,
+          enrolled_at: agent.enrolled_at,
+          last_heartbeat: agent.last_heartbeat,
+          tenant_id: agent.tenant_id,
+        }));
+        setAgents(mappedAgents);
+        const inactiveCount = mappedAgents.filter(a => {
           if (!a.last_heartbeat) return true;
           const lastHeartbeat = new Date(a.last_heartbeat);
           return (new Date().getTime() - lastHeartbeat.getTime()) > 5 * 60 * 1000;
