@@ -368,6 +368,13 @@ set_state() {
     local error_details="${3:-}"
     local current_state="${AGENT_STATE[current]}"
     
+    # FSM Enterprise v2.0: HARD BLOCK - SHUTDOWN is terminal state
+    if [[ "$current_state" == "SHUTDOWN" ]]; then
+        log "CRITICAL" "[FSM] Agent is in SHUTDOWN state. No transitions allowed. Exiting."
+        add_evidence "shutdown_block" "{\"attempted_transition\":\"$new_state\",\"reason\":\"$reason\",\"blocked\":true}" "SHUTDOWN" "SHUTDOWN" "critical"
+        exit 1
+    fi
+    
     if [[ "$current_state" != "$new_state" ]]; then
         local allowed="${STATE_TRANSITIONS[$current_state]}"
         if [[ ! " $allowed " =~ " $new_state " ]]; then

@@ -1,0 +1,87 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from './useTenant';
+import type { AgentSnapshot } from './useAgentSnapshot';
+
+/**
+ * Hook para lista canônica de snapshots (todos os agentes do tenant)
+ * 
+ * Usa RPC get_agents_snapshots_list para garantir consistência
+ * com useAgentSnapshot individual - ambos leem da mesma view.
+ * 
+ * Uso:
+ * ```tsx
+ * const { data: snapshots, isLoading } = useAgentSnapshots();
+ * // snapshots é uma lista de AgentSnapshot[]
+ * ```
+ */
+export function useAgentSnapshots() {
+  const { tenant, loading: tenantLoading } = useTenant();
+
+  return useQuery({
+    queryKey: ['agent-snapshots-list', tenant?.id],
+    queryFn: async (): Promise<AgentSnapshot[]> => {
+      const { data, error } = await supabase.rpc('get_agents_snapshots_list');
+      
+      if (error) {
+        console.error('[useAgentSnapshots] Error:', error);
+        throw new Error(error.message || 'Failed to fetch agent snapshots list');
+      }
+      
+      return (data || []) as unknown as AgentSnapshot[];
+    },
+    enabled: !tenantLoading && !!tenant?.id,
+    staleTime: 30_000,
+    refetchInterval: 30_000, // Auto-refresh a cada 30s para dashboards
+  });
+}
+
+/**
+ * Helper para obter contagem de status dos agentes
+ */
+export function getAgentStatusCounts(snapshots: AgentSnapshot[] | undefined) {
+  if (!snapshots || snapshots.length === 0) {
+    return {
+      total: 0,
+      online: 0,
+      warning: 0,
+      offline: 0,
+      never_connected: 0,
+    };
+  }
+
+  return snapshots.reduce(
+    (acc, snapshot) => {
+      acc.total++;
+      
+      if (snapshot.agent_state) {
+        switch (snapshot.agent_state) {
+          case 'healthy':
+          case 'enforcing':
+            acc.online++;
+            break;
+          case 'degraded':
+          case 'recovery':
+            acc.warning++;
+            break;
+          case 'error':
+          case 'shutdown':
+            acc.offline++;
+            break;
+          default:
+            if (snapshot.online) acc.online++;
+            else if (!snapshot.last_heartbeat) acc.never_connected++;
+            else acc.offline++;
+        }
+      } else {
+        // Fallback baseado em online/heartbeat
+        if (snapshot.online) acc.online++;
+        else if (!snapshot.last_heartbeat) acc.never_connected++;
+        else acc.offline++;
+      }
+      
+      return acc;
+    },
+    { total: 0, online: 0, warning: 0, offline: 0, never_connected: 0 }
+  );
+}

@@ -20854,6 +20854,7 @@ export type Database = {
         }[]
       }
       get_agent_snapshot: { Args: { p_agent_id: string }; Returns: Json }
+      get_agents_snapshots_list: { Args: never; Returns: Json[] }
       get_alert_decision_chain: { Args: { p_alert_id: string }; Returns: Json }
       get_audit_raw_metrics: { Args: { p_tenant_id: string }; Returns: Json }
       get_autonomy_metrics: {
