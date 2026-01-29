@@ -1,131 +1,217 @@
 
-## Objetivo (o que vai mudar)
-Fazer todas as telas que ainda mostram “Nenhum computador encontrado / Computadores 0” passarem a listar os 3 computadores do tenant corretamente, independentemente do JWT estar (ou não) com o claim `active_tenant_id`.
-
-Pelos prints, **algumas telas já enxergam os 3 agentes** (ex.: lista de computadores com “Todos 3”), mas **as telas que dependem do seletor de computador** (Atividade Web / Programas Instalados) continuam vazias, e o **Tempo Real (/admin/monitoring-advanced)** continua mostrando “Computadores 0”.
-
----
-
-## Diagnóstico final (por que “continua tudo do mesmo jeito”)
-### 1) “Atividade Web” e “Programas Instalados” falham por causa do `AgentSelector`
-Essas páginas renderizam o `<AgentSelector />`, e o `AgentSelector` **ainda consulta `agents_safe` diretamente**:
-- `src/components/AgentSelector.tsx` faz `supabase.from('agents_safe')...`
-Quando essa query retorna vazio (por qualquer motivo de sincronização/visibilidade), o componente cai no estado:
-> “Nenhum computador encontrado. Instale o software…”
-
-Ou seja: mesmo que outras páginas estejam usando RPC, **essas telas continuam presas no caminho “view”**.
-
-### 2) “Monitoramento em Tempo Real” (/admin/monitoring-advanced) falha por depender de um RPC que lê de `active_agents`
-A tela `AgentMonitoringAdvanced` chama a função de backend `get-agent-dashboard-data`, que por sua vez chama o RPC `get_latest_agent_metrics(p_tenant_id)`.
-
-Hoje, o `get_latest_agent_metrics` e `get_agent_health_metrics` estão implementados como:
-- `FROM active_agents a WHERE a.tenant_id = p_tenant_id`
-
-E o `active_agents` (view) no banco está definido como:
-- `WHERE archived_at IS NULL AND (tenant_id = get_active_tenant_id() OR is_current_super_admin())`
-
-Quando a chamada vem do backend “service role” (ou sem claim), `get_active_tenant_id()` vira `NULL` e `is_current_super_admin()` não ajuda, então **`active_agents` pode ficar vazio**, fazendo os RPCs retornarem 0 e o dashboard mostrar “Computadores 0”.
-
-Conclusão: precisamos eliminar a dependência desses RPCs em `active_agents` (ou tornar `active_agents` robusto para chamadas server-side).
+## Objetivo
+Resolver todos os problemas identificados nas screenshots:
+1. Dashboard mostrando "0 computadores monitorados" para Genial Cred (11 agentes no banco)
+2. Erro 500 na RPC `get_audit_raw_metrics` ("more than one row returned by a subquery")
+3. Erros 403 em múltiplas tabelas (agent_tokens, agent_releases)
+4. IntegrityScoreCard mostrando erro
 
 ---
 
-## Escopo da correção (P0: resolver o que aparece nos prints)
-1) Migrar `AgentSelector` para usar a RPC `get_agents_list(p_tenant_id)` (mesmo padrão já usado no Dashboard/AgentMonitoring).
-2) Ajustar os RPCs `get_latest_agent_metrics` e `get_agent_health_metrics` para **consultarem a tabela `agents` diretamente** (com filtro por `p_tenant_id`), em vez de depender de `active_agents`.
-3) Garantir que `get-agent-dashboard-data` continue funcionando sem depender de claim JWT (ele já valida tenant, só precisa de RPC confiável).
+## Diagnóstico Final
+
+### Problema 1: Dashboard Principal (ServerDashboard) mostra 0 computadores
+**Causa**: `src/pages/ServerDashboard.tsx` linha 212 ainda usa `agents_safe` view:
+```typescript
+supabase.from("agents_safe").select("*").eq("tenant_id", tenant.id)
+```
+Essa view depende de `get_active_tenant_id()` que retorna NULL quando JWT não tem o claim.
+
+**Nota**: O admin Dashboard (`src/pages/admin/Dashboard.tsx`) já foi corrigido e usa RPC corretamente.
+
+### Problema 2: RPC `get_audit_raw_metrics` retorna 500
+**Causa**: A função tenta ler de views (`v_tenant_isolation_metrics`, `v_rbac_metrics`, `v_enforcement_compliance`) que:
+- Retornam 0 linhas quando `get_active_tenant_id()` = NULL
+- Mas podem retornar múltiplas linhas em outros cenários, causando erro "more than one row returned by a subquery"
+
+Logs do banco mostram erros recentes:
+- `more than one row returned by a subquery used as an expression`
+- `column audit_confidence_gaps.calculated_at does not exist`
+- `column ai_actions.handler does not exist`
+
+### Problema 3: Erros 403 (Permission Denied)
+**Causa**: Tabelas `agent_tokens` e `agent_releases` não têm RLS policies para SELECT/UPDATE para usuários autenticados.
 
 ---
 
-## Implementação (passo a passo)
+## Implementação (Passo a Passo)
 
-### Fase A — Frontend (P0): corrigir “Nenhum computador encontrado” nas telas com seletor
-#### A1) Atualizar `src/components/AgentSelector.tsx`
-- Trocar `supabase.from('agents_safe')...eq('tenant_id', activeTenant.id)` por:
-  - `supabase.rpc('get_agents_list', { p_tenant_id: activeTenant.id, p_include_archived: false })`
-- Mapear o retorno `jsonb` para o formato esperado do seletor (id, agent_name, status, os_type, flags, heartbeat…).
-- Manter o `enabled: !loading && !!activeTenant?.id` (já existe).
-- Resultado esperado: o dropdown passa a listar `MIT-SERVIDOR`, `pcteste1`, `PCteste2` em “Atividade Web” e “Programas Instalados”.
+### Fase A: Frontend - Migrar ServerDashboard para RPC (P0)
 
-#### A2) Remover/evitar queries auxiliares que ainda usam `agents_safe` nas páginas afetadas
-- `src/pages/admin/SoftwareInventory.tsx` tem uma query “agents-list-for-jobs” usando `agents_safe`.
-  - Trocar para usar `get_agents_list` também, ou melhor: reutilizar a lista do `AgentSelector` (se decidirmos centralizar via um hook comum).
-- Resultado esperado: “Atualizar Lista” consegue resolver `agent_name` sem depender de `agents_safe`.
+**Arquivo**: `src/pages/ServerDashboard.tsx`
 
-Opcional (P0 UX, recomendado):
-- Ajustar a mensagem “Nenhum computador encontrado” para distinguir:
-  - “Ainda sincronizando empresa…” (quando `loading`/`tenantLoading`), vs
-  - “Nenhum computador cadastrado” (quando a RPC retorna zero mesmo).
+**Mudança** (linha 212): Trocar query de `agents_safe` por RPC `get_agents_list`:
 
----
+```typescript
+// ANTES:
+supabase.from("agents_safe").select("*").eq("tenant_id", tenant.id)
 
-### Fase B — Banco (P0): corrigir “Computadores 0” no /admin/monitoring-advanced
-#### B1) Atualizar `public.get_latest_agent_metrics(p_tenant_id)`
-- Mudar `FROM active_agents a` para `FROM agents a`
-- Adicionar filtros explícitos:
-  - `a.tenant_id = p_tenant_id`
-  - `a.archived_at IS NULL`
-  - (opcional) `a.status = 'active'` se essa for a semântica correta
-- Manter join com `agent_system_metrics_partitioned` como está.
+// DEPOIS:
+supabase.rpc('get_agents_list', { p_tenant_id: tenant.id, p_include_archived: false })
+```
 
-#### B2) Atualizar `public.get_agent_health_metrics(p_tenant_id)`
-- Mudar `FROM active_agents a` para `FROM agents a`
-- Adicionar filtros explícitos iguais:
-  - `a.tenant_id = p_tenant_id`
-  - `a.archived_at IS NULL`
-  - (opcional) `a.status = 'active'`
-
-Isso garante que:
-- chamadas do frontend (usuário logado),
-- e chamadas do backend (service role),
-tenham o mesmo resultado: lista correta.
+**Mapeamento** (após linha 221):
+```typescript
+if (agentsRes.data) {
+  // Mapear retorno da RPC para formato esperado
+  const mappedAgents = (agentsRes.data || []).map((agent: any) => ({
+    id: agent.id,
+    agent_name: agent.agent_name,
+    status: agent.status,
+    enrolled_at: agent.enrolled_at,
+    last_heartbeat: agent.last_heartbeat,
+    tenant_id: agent.tenant_id,
+  }));
+  setAgents(mappedAgents);
+  // ... resto do código existente
+}
+```
 
 ---
 
-### Fase C — Validação (P0): prova end-to-end (sem “achismo”)
-Após implementar:
+### Fase B: Banco - Corrigir RPC `get_audit_raw_metrics` (P0)
 
-1) **Atividade Web**
-- Abrir `/admin/web-activity`
-- Confirmar que o dropdown “Selecionar Computador” lista 3 computadores.
-- Selecionar um e confirmar que a página sai do estado vazio.
+**Problema**: Subqueries para views podem retornar múltiplas linhas ou zero.
 
-2) **Programas Instalados**
-- Abrir `/admin/software-inventory`
-- Confirmar que o dropdown lista 3 computadores.
-- Selecionar um e clicar “Atualizar Lista” (se aplicável) para confirmar que a criação de job acha o `agent_name`.
+**Solução**: Usar LIMIT 1 nas subqueries e garantir fallback:
 
-3) **Tempo Real**
-- Abrir `/admin/monitoring-advanced`
-- Confirmar que “Computadores” > 0 e que os cards não ficam N/A por ausência total de agentes.
-- Verificar se continua mostrando alertas pendentes coerentes.
+```sql
+DROP FUNCTION IF EXISTS public.get_audit_raw_metrics(uuid);
 
-4) Verificação técnica rápida (opcional)
-- Checar no console/network se as páginas pararam de chamar `agents_safe` e passaram a chamar `rpc/get_agents_list`.
-- Checar se a chamada `get-agent-dashboard-data` retorna `summary.total_agents > 0`.
+CREATE OR REPLACE FUNCTION public.get_audit_raw_metrics(p_tenant_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+DECLARE
+  result jsonb;
+BEGIN
+  SELECT jsonb_build_object(
+    -- AGENTS (consulta direta - seguro)
+    'agents', jsonb_build_object(
+      'total', (SELECT COUNT(*) FROM agents WHERE tenant_id = p_tenant_id AND archived_at IS NULL),
+      'online', (SELECT COUNT(*) FROM agents WHERE tenant_id = p_tenant_id AND archived_at IS NULL AND status = 'active'),
+      'offline', (SELECT COUNT(*) FROM agents WHERE tenant_id = p_tenant_id AND archived_at IS NULL AND status != 'active'),
+      'in_safe_mode', (SELECT COUNT(*) FROM agent_safe_mode_events WHERE tenant_id = p_tenant_id AND resolved_at IS NULL)
+    ),
+    
+    -- DECISION EVENTS
+    'decision_events', jsonb_build_object(
+      'total', COALESCE((SELECT COUNT(*) FROM decision_events WHERE tenant_id = p_tenant_id), 0),
+      'by_human', COALESCE((SELECT COUNT(*) FROM decision_events WHERE tenant_id = p_tenant_id AND actor_type = 'human'), 0),
+      'by_system', COALESCE((SELECT COUNT(*) FROM decision_events WHERE tenant_id = p_tenant_id AND actor_type = 'system'), 0)
+    ),
+    
+    -- AI ACTIONS
+    'ai_actions', jsonb_build_object(
+      'total', COALESCE((SELECT COUNT(*) FROM ai_actions WHERE tenant_id = p_tenant_id), 0),
+      'human_reviewed', COALESCE((SELECT COUNT(*) FROM ai_actions WHERE tenant_id = p_tenant_id AND human_reviewed = true), 0),
+      'approved', COALESCE((SELECT COUNT(*) FROM ai_actions WHERE tenant_id = p_tenant_id AND review_decision = 'approved'), 0),
+      'pending', COALESCE((SELECT COUNT(*) FROM ai_actions WHERE tenant_id = p_tenant_id AND review_decision IS NULL), 0)
+    ),
+    
+    -- DLQ
+    'dlq', jsonb_build_object(
+      'current', COALESCE((SELECT COUNT(*) FROM failed_jobs_dlq WHERE tenant_id = p_tenant_id AND status = 'pending'), 0),
+      'total', COALESCE((SELECT COUNT(*) FROM failed_jobs_dlq WHERE tenant_id = p_tenant_id), 0)
+    ),
+    
+    -- ROLLBACKS
+    'rollbacks', jsonb_build_object(
+      'total', COALESCE((SELECT COUNT(*) FROM agent_rollback_events WHERE tenant_id = p_tenant_id), 0),
+      'last_30d', COALESCE((SELECT COUNT(*) FROM agent_rollback_events WHERE tenant_id = p_tenant_id AND created_at > NOW() - INTERVAL '30 days'), 0)
+    ),
+    
+    -- ALERTS
+    'alerts', jsonb_build_object(
+      'open', (SELECT COUNT(*) FROM system_alerts WHERE tenant_id = p_tenant_id AND resolved = false),
+      'critical_open', (SELECT COUNT(*) FROM system_alerts WHERE tenant_id = p_tenant_id AND resolved = false AND severity = 'critical')
+    ),
+    
+    -- USERS
+    'users', jsonb_build_object(
+      'count', (SELECT COUNT(DISTINCT user_id) FROM user_roles WHERE tenant_id = p_tenant_id)
+    ),
+    
+    -- POLICIES
+    'policies', jsonb_build_object(
+      'total', (SELECT COUNT(*) FROM security_policies WHERE tenant_id = p_tenant_id),
+      'active', (SELECT COUNT(*) FROM security_policies WHERE tenant_id = p_tenant_id AND is_active = true)
+    ),
+    
+    -- REMOVIDO: tenant_isolation, rbac, enforcement (views problemáticas)
+    -- Substituído por queries diretas simples
+    
+    -- TENANT STATS (substituindo v_tenant_isolation_metrics)
+    'tenant_stats', jsonb_build_object(
+      'agent_count', (SELECT COUNT(*) FROM agents WHERE tenant_id = p_tenant_id AND archived_at IS NULL),
+      'job_count', (SELECT COUNT(*) FROM jobs WHERE tenant_id = p_tenant_id),
+      'user_count', (SELECT COUNT(DISTINCT user_id) FROM user_roles WHERE tenant_id = p_tenant_id)
+    ),
+    
+    -- METADATA
+    'collected_at', NOW(),
+    'version', '3.0.0'
+  ) INTO result;
+
+  RETURN result;
+END;
+$$;
+```
 
 ---
 
-## Riscos e cuidados
-- `get_agents_list` atualmente filtra `status = 'active'`. Se existirem agentes relevantes com status diferente, precisamos alinhar a semântica:
-  - ou relaxar o filtro na RPC,
-  - ou manter “active-only” e ajustar UI para não esperar outros status.
-- Os RPCs `get_latest_agent_metrics`/`get_agent_health_metrics` ao lerem direto de `agents` precisam manter exatamente a mesma lista esperada (ex.: excluir arquivados).
-- Evitar mexer em arquivos auto-gerados do cliente/tipos; qualquer ajuste deve ser só em componentes/hooks e migrations do banco.
+### Fase C: Banco - Adicionar RLS para agent_tokens e agent_releases (P1)
+
+```sql
+-- agent_tokens RLS
+ALTER TABLE agent_tokens ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view tokens for agents in their tenant"
+ON agent_tokens FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM agents a
+    JOIN user_roles ur ON ur.tenant_id = a.tenant_id
+    WHERE a.id = agent_tokens.agent_id
+    AND ur.user_id = auth.uid()
+  )
+);
+
+-- agent_releases RLS (já pode ter)
+-- Verificar se existe e adicionar policy de SELECT
+```
 
 ---
 
-## Entregáveis (o que vai ser alterado)
-- Frontend:
-  - `src/components/AgentSelector.tsx` (P0)
-  - `src/pages/admin/SoftwareInventory.tsx` (P0, se necessário para “agents-list-for-jobs”)
-- Banco (migration):
-  - `CREATE OR REPLACE FUNCTION public.get_latest_agent_metrics(p_tenant_id uuid)` (P0)
-  - `CREATE OR REPLACE FUNCTION public.get_agent_health_metrics(p_tenant_id uuid)` (P0)
+## Entregáveis
+
+| Arquivo | Tipo | Prioridade |
+|---------|------|------------|
+| `src/pages/ServerDashboard.tsx` | Frontend | P0 |
+| `get_audit_raw_metrics` migration | Banco SQL | P0 |
+| RLS policies para agent_tokens | Banco SQL | P1 |
+| RLS policies para agent_releases | Banco SQL | P1 |
 
 ---
 
-## Resultado esperado
-- “Atividade Web” e “Programas Instalados” deixam de exibir “Nenhum computador encontrado” e passam a permitir seleção de computador.
-- “Monitoramento em Tempo Real” deixa de mostrar “Computadores 0” quando existe agente ativo no tenant.
-- O sistema fica resiliente: mesmo se o claim `active_tenant_id` estiver faltando/atrasado, as telas continuam funcionando porque as consultas principais passam a usar **tenant_id explícito** via RPC e os RPCs deixam de depender de uma view que exige claim.
+## Validação
+
+1. **Dashboard Principal** (`/dashboard`):
+   - Selecionar "Genial Cred" → Deve mostrar "11 computadores monitorados"
+   - Selecionar "Pedro Alves" → Deve mostrar "3 computadores monitorados"
+
+2. **Console do Browser**:
+   - Não deve mais mostrar erro 500 em `get_audit_raw_metrics`
+   - Não deve mostrar erro 403 para `agent_tokens`
+
+3. **IntegrityScoreCard**:
+   - Não deve mais exibir erro de carregamento
+
+---
+
+## Riscos e Cuidados
+
+- A RPC `get_agents_list` retorna campos diferentes do que `agents_safe`. Verificar que o mapeamento está correto.
+- Ao remover dependência de views problemáticas em `get_audit_raw_metrics`, algumas métricas avançadas (RLS coverage, RBAC stats) ficam temporariamente indisponíveis - podem ser restauradas depois com queries diretas.
