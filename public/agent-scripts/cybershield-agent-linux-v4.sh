@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - Linux v4.2.1
+# CyberShield Agent - Linux v4.4.0
 #
-# v4.2.1: SYNC com Windows - Paridade Completa
+# v4.4.0: FSM Enterprise v2.0 - Full Parity
 # - NEW: Coleta de historico de navegadores (Chrome, Firefox, Opera, Opera GX, Chromium)
 # - NEW: Bloqueio de sites via /etc/hosts
 # - NEW: Proof of Execution (PoE) com ECDSA P-256
