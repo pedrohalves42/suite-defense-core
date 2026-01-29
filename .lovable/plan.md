@@ -1,13 +1,18 @@
 
 # Plano Unificado: Correção Total de Sincronização + FSM Enterprise + Edge Function Canônica
 
+## ✅ STATUS: IMPLEMENTADO (2026-01-29)
+
+Este plano foi implementado com sucesso. Todas as fases foram concluídas:
+- ✅ FASE 1: Edge Function `agent-snapshot` + View + RPC
+- ✅ FASE 2: Race conditions corrigidas em DiagnosticsCenter e SystemHealth
+- ✅ FASE 3: Central de Ações corrigida (ActionCard, RejectInsightDialog)
+- ✅ FASE 4: AgentMonitoring sincronizado com agent_state do banco
+- ✅ FASE 5-6: Agentes Linux/macOS atualizados para v4.4.0 com FSM Enterprise v2.0
+
+---
+
 ## Resumo Executivo
-
-Este plano combina dois planos complementares em uma solução definitiva:
-- **Plano 1 (Meu)**: Correção de race conditions, Central de Ações, sincronização de estado
-- **Plano 2 (Seu)**: Edge Function canônica `agent-snapshot` como fonte única de verdade
-
-A combinação cria uma arquitetura onde **todas as páginas consomem o mesmo snapshot** via Edge Function, eliminando dessincronização.
 
 ---
 

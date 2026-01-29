@@ -39,8 +39,31 @@ const AgentMonitoring = () => {
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  // Helper function to calculate agent status based on last_heartbeat
-  const getAgentCalculatedStatus = (agent: Agent): 'online' | 'warning' | 'offline' | 'never_connected' => {
+  // Helper function to calculate agent status - PRIORIZA agent_state do banco para consistência
+  const getAgentCalculatedStatus = (agent: Agent & { agent_state?: string }): 'online' | 'warning' | 'offline' | 'never_connected' => {
+    // PRIORIZAR agent_state do banco para consistência com AgentDetailsDrawer
+    if ((agent as any).agent_state) {
+      const state = (agent as any).agent_state;
+      switch (state) {
+        case 'healthy':
+        case 'enforcing':
+          return 'online';
+        case 'degraded':
+        case 'recovery':
+        case 'safe_mode':
+        case 'updating':
+        case 'rollback':
+          return 'warning';
+        case 'error':
+        case 'shutdown':
+        case 'isolated':
+        case 'quarantined':
+        case 'offline':
+          return 'offline';
+      }
+    }
+    
+    // Fallback para cálculo por heartbeat
     if (!agent.last_heartbeat) return 'never_connected';
     const minutesSince = (Date.now() - new Date(agent.last_heartbeat).getTime()) / 1000 / 60;
     if (minutesSince < 2) return 'online';

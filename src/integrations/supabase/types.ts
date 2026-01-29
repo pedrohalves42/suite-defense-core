@@ -220,6 +220,13 @@ export type Database = {
             foreignKeyName: "agent_archive_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_archive_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -361,6 +368,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_builds_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "agent_builds_agent_id_fkey"
@@ -527,6 +541,13 @@ export type Database = {
             foreignKeyName: "agent_disk_metrics_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -671,6 +692,13 @@ export type Database = {
             foreignKeyName: "agent_evidence_logs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -786,6 +814,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_execution_chain_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "agent_execution_chain_agent_id_fkey"
@@ -1104,6 +1139,13 @@ export type Database = {
             foreignKeyName: "agent_network_info_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_network_info_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -1243,6 +1285,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_recovery_authorizations_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "agent_recovery_authorizations_agent_id_fkey"
@@ -1444,6 +1493,13 @@ export type Database = {
             foreignKeyName: "agent_rollback_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_rollback_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -1580,6 +1636,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_safe_mode_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "agent_safe_mode_events_agent_id_fkey"
@@ -1729,6 +1792,13 @@ export type Database = {
             foreignKeyName: "agent_signing_keys_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_signing_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -1864,6 +1934,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_system_metrics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "agent_system_metrics_agent_id_fkey"
@@ -2286,6 +2363,13 @@ export type Database = {
             foreignKeyName: "agent_tokens_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_tokens_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -2391,6 +2475,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_update_decisions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "agent_update_decisions_agent_id_fkey"
@@ -2600,6 +2691,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_web_activity_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "agent_web_activity_agent_id_fkey"
@@ -2918,6 +3016,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agents_groups_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "agents_groups_agent_id_fkey"
@@ -3827,6 +3932,13 @@ export type Database = {
             foreignKeyName: "ai_insights_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "ai_insights_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -4106,6 +4218,13 @@ export type Database = {
             foreignKeyName: "anomaly_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "anomaly_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -4242,6 +4361,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "antivirus_status_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "antivirus_status_agent_id_fkey"
@@ -4644,6 +4770,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_target_agent_id_fkey"
+            columns: ["target_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "approval_requests_target_agent_id_fkey"
@@ -5289,6 +5422,13 @@ export type Database = {
             foreignKeyName: "blocked_access_attempts_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -5898,6 +6038,13 @@ export type Database = {
             foreignKeyName: "decision_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "decision_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -6162,6 +6309,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "enrollment_keys_agent_id_fkey"
@@ -6513,6 +6667,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
@@ -6933,6 +7094,13 @@ export type Database = {
             foreignKeyName: "forensic_snapshots_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "forensic_snapshots_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -7120,6 +7288,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "generated_reports_agent_id_fkey"
@@ -7622,6 +7797,13 @@ export type Database = {
             foreignKeyName: "incident_timelines_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "incident_timelines_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -7773,6 +7955,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installation_analytics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "installation_analytics_agent_id_fkey"
@@ -8073,6 +8262,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "job_executions_agent_id_fkey"
@@ -8442,6 +8638,13 @@ export type Database = {
             foreignKeyName: "jobs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -8713,6 +8916,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_anomalies_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "network_anomalies_agent_id_fkey"
@@ -9387,6 +9597,13 @@ export type Database = {
             foreignKeyName: "persistent_failure_alerts_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "persistent_failure_alerts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -9600,6 +9817,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "playbook_executions_agent_id_fkey"
@@ -9830,6 +10054,13 @@ export type Database = {
             foreignKeyName: "poe_chain_breaks_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "poe_chain_breaks_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -10014,6 +10245,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
@@ -10624,6 +10862,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_decision_log_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "risk_decision_log_agent_id_fkey"
@@ -11240,6 +11485,13 @@ export type Database = {
             foreignKeyName: "scheduled_jobs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "scheduled_jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -11605,6 +11857,13 @@ export type Database = {
             foreignKeyName: "security_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "security_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -11961,6 +12220,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "security_reports_agent_id_fkey"
@@ -12589,6 +12855,13 @@ export type Database = {
             foreignKeyName: "software_inventory_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "software_inventory_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -13027,6 +13300,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_alerts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "system_alerts_agent_id_fkey"
@@ -14032,6 +14312,13 @@ export type Database = {
             foreignKeyName: "tenant_risk_scores_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -14896,6 +15183,13 @@ export type Database = {
             foreignKeyName: "vuln_findings_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "vuln_findings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -15405,6 +15699,120 @@ export type Database = {
           version?: string | null
         }
         Relationships: []
+      }
+      agent_snapshots: {
+        Row: {
+          active_issues: number | null
+          agent_id: string | null
+          agent_state: string | null
+          hostname: string | null
+          is_isolated: boolean | null
+          is_throttled: boolean | null
+          last_heartbeat: string | null
+          latency_ms: number | null
+          online: boolean | null
+          os_type: string | null
+          safe_mode: boolean | null
+          safe_mode_reason: string | null
+          snapshot_at: string | null
+          tenant_id: string | null
+          unresolved_insights: number | null
+          version: string | null
+        }
+        Insert: {
+          active_issues?: never
+          agent_id?: string | null
+          agent_state?: string | null
+          hostname?: string | null
+          is_isolated?: never
+          is_throttled?: never
+          last_heartbeat?: string | null
+          latency_ms?: never
+          online?: never
+          os_type?: string | null
+          safe_mode?: never
+          safe_mode_reason?: string | null
+          snapshot_at?: never
+          tenant_id?: string | null
+          unresolved_insights?: never
+          version?: string | null
+        }
+        Update: {
+          active_issues?: never
+          agent_id?: string | null
+          agent_state?: string | null
+          hostname?: string | null
+          is_isolated?: never
+          is_throttled?: never
+          last_heartbeat?: string | null
+          latency_ms?: never
+          online?: never
+          os_type?: string | null
+          safe_mode?: never
+          safe_mode_reason?: string | null
+          snapshot_at?: never
+          tenant_id?: string | null
+          unresolved_insights?: never
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_tenant_id_new_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agents_tenant_id_new_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agents_tenant_id_new_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agents_tenant_id_new_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "fk_agents_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_agents_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "fk_agents_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "fk_agents_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       agent_system_metrics_unified: {
         Row: {
@@ -16033,6 +16441,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
@@ -16680,6 +17095,13 @@ export type Database = {
             foreignKeyName: "jobs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -16865,6 +17287,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "jobs_agent_id_fkey"
@@ -17115,6 +17544,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_archive_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "agent_archive_events_agent_id_fkey"
@@ -18132,6 +18568,13 @@ export type Database = {
             foreignKeyName: "agent_execution_chain_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: true
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_execution_chain_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -18690,6 +19133,13 @@ export type Database = {
             foreignKeyName: "jobs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
@@ -18974,6 +19424,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "active_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "jobs_agent_id_fkey"
@@ -20396,6 +20853,7 @@ export type Database = {
           throttle_reason: string
         }[]
       }
+      get_agent_snapshot: { Args: { p_agent_id: string }; Returns: Json }
       get_alert_decision_chain: { Args: { p_alert_id: string }; Returns: Json }
       get_audit_raw_metrics: { Args: { p_tenant_id: string }; Returns: Json }
       get_autonomy_metrics: {

@@ -52,6 +52,11 @@ export function RejectInsightDialog({
 
   const rejectMutation = useMutation({
     mutationFn: async () => {
+      // Validar que é um insight real da IA (não alertas de sistema como offline_UUID)
+      if (insightId.startsWith('offline_') || insightId.startsWith('alert_') || insightId.startsWith('system_')) {
+        throw new Error('Alertas de sistema não podem ser rejeitados como insights da IA. Use "Entendido" para marcá-los como revisados.');
+      }
+      
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('Usuário não autenticado');
 
