@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { JobHourlyTrend } from '@/hooks/useJobsHealth';
+import { formatBrazilTime } from '@/lib/date-utils';
 
 interface JobsTrendChartProps {
   trends: JobHourlyTrend[];
@@ -11,7 +12,7 @@ interface JobsTrendChartProps {
 export function JobsTrendChart({ trends, isLoading }: JobsTrendChartProps) {
   const chartData = useMemo(() => {
     return trends.map(t => ({
-      hour: new Date(t.hour).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      hour: formatBrazilTime(t.hour),
       completed: t.completed,
       failed: t.failed,
       total: t.total,

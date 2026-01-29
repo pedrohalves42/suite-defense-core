@@ -1,7 +1,6 @@
 import { useTaskEvents, TASK_EVENT_LABELS, ACTOR_TYPE_LABELS } from '@/hooks/useTaskEvents';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { 
+import { formatBrazil } from '@/lib/date-utils';
+import {
   CircleDot, 
   Play, 
   CheckCircle2, 
@@ -129,7 +128,7 @@ export function TaskTimeline({ taskId }: TaskTimelineProps) {
 
                   {event.action === 'sla_breached' && metadata.due_at && (
                     <p className="text-xs text-destructive mt-1">
-                      Prazo era: {format(new Date(metadata.due_at as string), "dd/MM HH:mm", { locale: ptBR })}
+                      Prazo era: {formatBrazil(metadata.due_at as string, "dd/MM HH:mm")}
                     </p>
                   )}
 
@@ -141,7 +140,7 @@ export function TaskTimeline({ taskId }: TaskTimelineProps) {
 
                   {/* Timestamp */}
                   <p className="text-xs text-muted-foreground mt-1">
-                    {format(new Date(event.created_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+                    {formatBrazil(event.created_at, "dd/MM/yyyy 'às' HH:mm:ss")}
                   </p>
                 </div>
               </div>

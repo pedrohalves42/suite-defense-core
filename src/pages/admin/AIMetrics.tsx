@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Brain, Clock, CheckCircle, XCircle, Zap, DollarSign, Activity, TrendingUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import CVEDatabaseStatus from '@/components/admin/CVEDatabaseStatus';
+import { formatBrazilTime } from '@/lib/date-utils';
 
 interface AIMetric {
   id: string;
@@ -75,7 +76,7 @@ export default function AIMetrics() {
   
   // Prepare chart data
   const latencyOverTime = metrics?.reduce((acc, m) => {
-    const hour = new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const hour = formatBrazilTime(m.created_at);
     const existing = acc.find(item => item.time === hour);
     if (existing) {
       existing.count++;
@@ -382,7 +383,7 @@ export default function AIMetrics() {
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-sm">{error.function_name}</span>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(error.created_at).toLocaleTimeString('pt-BR')}
+                          {formatBrazilTime(error.created_at)}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1 truncate">

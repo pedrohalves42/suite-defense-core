@@ -10,8 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Brain, CheckCircle, XCircle, AlertTriangle, Clock, ThumbsUp, ThumbsDown, RefreshCw, Filter } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazil } from '@/lib/date-utils';
 
 interface AIInsight {
   id: string;
@@ -408,7 +407,7 @@ export default function InsightTriageCenter() {
                       <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {format(new Date(insight.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          {formatBrazil(insight.created_at, "dd/MM/yyyy 'às' HH:mm")}
                         </span>
                       </div>
                     </div>

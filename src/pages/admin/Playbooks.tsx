@@ -30,8 +30,7 @@ import {
   PlaybookExecution,
 } from '@/hooks/usePlaybooks';
 import { PlaybookRecommendation } from '@/components/admin/PlaybookRecommendation';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazil } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 
 const TRIGGER_TYPE_LABELS: Record<string, string> = {
@@ -411,7 +410,7 @@ function ExecutionHistoryItem({ execution }: { execution: PlaybookExecution }) {
           </p>
           <p className="text-xs text-muted-foreground">
             {execution.agent?.agent_name || 'Sistema'} • {' '}
-            {format(new Date(execution.triggered_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+            {formatBrazil(execution.triggered_at, "dd/MM/yyyy HH:mm")}
           </p>
         </div>
       </div>

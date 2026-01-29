@@ -9,8 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertTriangle, CheckCircle, Eye, Search, Filter, Brain, Shield } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazil } from '@/lib/date-utils';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -340,9 +339,7 @@ export default function AIAnomalies() {
                         {anomaly.context?.description || '-'}
                       </TableCell>
                       <TableCell>
-                        {format(new Date(anomaly.detected_at), "dd/MM/yyyy HH:mm", {
-                          locale: ptBR,
-                        })}
+                        {formatBrazil(anomaly.detected_at, "dd/MM/yyyy HH:mm")}
                       </TableCell>
                       <TableCell>
                         {anomaly.reviewed_at ? (
@@ -411,9 +408,7 @@ export default function AIAnomalies() {
                 <div>
                   <label className="text-sm font-medium">Detectado em</label>
                   <p className="text-sm">
-                    {format(new Date(selectedAnomaly.detected_at), "dd/MM/yyyy HH:mm:ss", {
-                      locale: ptBR,
-                    })}
+                    {formatBrazil(selectedAnomaly.detected_at, "dd/MM/yyyy HH:mm:ss")}
                   </p>
                 </div>
               </div>

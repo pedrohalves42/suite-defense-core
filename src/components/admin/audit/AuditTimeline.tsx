@@ -1,5 +1,3 @@
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Clock, TrendingUp, TrendingDown, Minus, Eye } from 'lucide-react';
 import { SystemAudit, RECOMMENDATION_LABELS } from '@/hooks/useSystemAudit';
 import { cn } from '@/lib/utils';
+import { formatBrazil } from '@/lib/date-utils';
 
 interface AuditTimelineProps {
   audits: SystemAudit[];
@@ -84,7 +83,7 @@ export function AuditTimeline({ audits, selectedAuditId, onSelectAudit }: AuditT
                       </div>
                       
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(audit.created_at), "dd MMM yyyy 'às' HH:mm", { locale: ptBR })}
+                        {formatBrazil(audit.created_at, "dd MMM yyyy 'às' HH:mm")}
                       </p>
                       
                       {audit.final_sentence && (
