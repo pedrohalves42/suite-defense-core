@@ -1,90 +1,52 @@
-
 # Plano: Registrar e Deployar Novas Versões dos Agentes
 
-## Problema Identificado
+## ✅ Fase 1: Linux/macOS v4.4.0 - CONCLUÍDO
 
-Os scripts dos agentes foram atualizados com correções críticas (FSM Enterprise v2.0), mas as novas versões **não foram registradas no banco** e os agentes em produção **ainda rodam versões antigas**.
+- `agent_versions` atualizada: Linux e macOS agora mostram v4.4.0 como `is_latest`
+- Scripts públicos atualizados com comentários corretos (v4.4.0)
+- Correções incluídas: SHUTDOWN hard block, update lock (flock), observabilidade
 
-### Discrepância Atual
+## 🔴 DESCOBERTA: Windows v4.4.0 também disponível!
 
-| Plataforma | Versão no Script | Versão Registrada | Versão nos Agentes |
-|------------|------------------|-------------------|-------------------|
-| Windows | v3.10.41-AUTO-RECOVERY | v4.2.2 | v4.2.2 (14 agentes) |
-| Linux | v4.4.0 | v4.2.1 | Nenhum ativo |
-| macOS | v4.4.0 | v4.2.1 | Nenhum ativo |
+| Arquivo | Versão | Status |
+|---------|--------|--------|
+| `public/agent-scripts/cybershield-agent-windows-v4.ps1` | v4.4.0 | **NÃO REGISTRADO** |
+| Banco `agent_releases` | v4.2.2 | Atualmente ativo |
+| 14 agentes Windows | v4.2.2 | Em produção |
 
-### Correções Incluídas na v4.4.0 (Linux/macOS)
+### Correções no Windows v4.4.0 (não deployadas):
+1. **SHUTDOWN Hard Block** - Estado terminal sem saídas
+2. **FailurePolicy** - Hard stop após 10 falhas consecutivas
+3. **Write-LogDedup** - Evita logs duplicados
+4. **Write-HealthSnapshot** - 1 snapshot por ciclo
+5. **Write-IncidentSummary** - Resumo de incidente ao entrar em SAFE_MODE
+6. **Test-StateInvariants** - Bloqueia ENFORCING com componentes falhados
+7. **CorrelationId** - Rastreabilidade forense
 
-1. **SHUTDOWN Hard Block** - `exit 1` quando em estado SHUTDOWN (linha 369-374)
-2. **Update Lock** - `flock -n 9` para evitar race conditions (linha 716-725)
-3. **FSM Enterprise v2.0** - Estados determinísticos completos
-4. **Observabilidade** - `write_log_dedup`, `write_health_snapshot`
+## Próximos Passos (Aguardando Aprovação)
 
----
+### Fase 2: Registrar Windows v4.4.0
+1. Registrar `cybershield-agent-windows-v4.ps1` em `agent_releases`
+2. Atualizar `agent_versions` para is_latest = true
 
-## Plano de Implementação
-
-### Fase 1: Registrar Novas Releases no Banco (5min)
-
-Registrar as novas versões via Edge Function `register-agent-release`:
-
-**Linux v4.4.0:**
-- Ler conteúdo do script `public/agent-scripts/cybershield-agent-linux-v4.sh`
-- Calcular SHA256 do conteúdo normalizado
-- Chamar Edge Function com `version: 'v4.4.0'`, `platform: 'linux'`
-
-**macOS v4.4.0:**
-- Ler conteúdo do script `public/agent-scripts/cybershield-agent-macos-v4.sh`
-- Calcular SHA256 do conteúdo normalizado
-- Chamar Edge Function com `version: 'v4.4.0'`, `platform: 'macos'`
-
-### Fase 2: Disparar Force Update (3min)
-
-Para agentes Linux/macOS online (se houver):
-
+### Fase 3: Force Update (14 agentes)
 ```sql
 UPDATE agents 
 SET 
   force_update_version = 'v4.4.0',
-  force_update_reason = 'FSM Enterprise v2.0 - SHUTDOWN hard block + update lock',
+  force_update_reason = 'FSM Enterprise v2.0 - Correções críticas de estabilidade',
   force_update_at = NOW()
 WHERE 
   status = 'active' 
-  AND os_type IN ('linux', 'macos')
+  AND os_type = 'windows'
   AND agent_version != 'v4.4.0'
   AND last_heartbeat > NOW() - INTERVAL '10 minutes';
 ```
 
-### Fase 3: Verificar Windows (5min)
+## Resultado Atual
 
-O script Windows tem uma discrepância de nomenclatura:
-- Parâmetro default: `v3.10.41-AUTO-RECOVERY`
-- Banco registra: `v4.2.2`
-- Agentes reportam: `v4.2.2`
-
-Isso indica que o parâmetro no script é sobrescrito pelo processo de update. Verificar se as correções da FSM estão presentes no script Windows atual.
-
----
-
-## Arquivos a Modificar
-
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| Banco: `agent_releases` | INSERT | Registrar v4.4.0 para Linux e macOS |
-| Banco: `agents` | UPDATE | Disparar force_update para agentes desatualizados |
-
----
-
-## Validação Pós-Implementação
-
-1. **Releases registradas:** Query `agent_releases` deve mostrar v4.4.0 para Linux/macOS
-2. **Force update disparado:** Agentes online recebem no próximo heartbeat
-3. **Agentes atualizados:** Após ~2 minutos, `agent_version` muda para v4.4.0
-
----
-
-## Resultado Esperado
-
-- Todas as plataformas com versões mais recentes registradas
-- Correções de segurança (SHUTDOWN, update lock) deployadas
-- Sistema pronto para produção com agentes sincronizados
+| Plataforma | Versão Latest | Agentes Ativos | Status |
+|------------|---------------|----------------|--------|
+| Windows | v4.2.2 → v4.4.0 pendente | 14 | ⏳ Aguardando |
+| Linux | v4.4.0 ✅ | 0 | ✅ Pronto |
+| macOS | v4.4.0 ✅ | 0 | ✅ Pronto |
