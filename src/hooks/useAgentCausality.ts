@@ -54,13 +54,25 @@ export function useAgentCausality(agentId: string | null) {
       if (!agentId) return null;
 
       // Buscar dados do agente (via agents_safe view to protect hmac_secret - ADR-026)
-      const { data: agent, error: agentError } = await supabase
-        .from('agents_safe')
-        .select('*')
-        .eq('id', agentId)
-        .single();
+      let agent = null;
+      let agentError = null;
+      
+      try {
+        const { data, error } = await supabase
+          .from('agents_safe')
+          .select('*')
+          .eq('id', agentId)
+          .single();
+        agent = data;
+        agentError = error;
+      } catch (e) {
+        console.error('[useAgentCausality] Error fetching agent:', e);
+        agentError = e;
+      }
 
+      // Se falhou, lançar erro para retry
       if (agentError || !agent) {
+        console.warn('[useAgentCausality] Failed to fetch agent, error:', agentError);
         throw new Error('Computador não encontrado');
       }
 
@@ -205,7 +217,9 @@ export function useAgentCausality(agentId: string | null) {
       };
     },
     enabled: !!agentId,
-    refetchInterval: 30000 // Atualizar a cada 30 segundos
+    refetchInterval: 30000, // Atualizar a cada 30 segundos
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
 }
 
