@@ -204,22 +204,30 @@ export function useAgentGroupMembers(groupId: string | null) {
 export function useAvailableAgents(groupId: string | null) {
   const { tenant, loading } = useTenant();
 
-  // Fetch agents NOT in the current group
+  // Fetch agents NOT in the current group using RPC for reliable tenant isolation
   const { data: agents = [], isLoading } = useQuery({
     queryKey: ['available-agents-for-group', tenant?.id, groupId],
     queryFn: async () => {
       if (!tenant?.id) return [];
       
-      // Get all agents (via agents_safe view to protect hmac_secret - ADR-026)
-      const { data: allAgents, error: agentsError } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name, display_name, hostname, status')
-        .eq('tenant_id', tenant.id)
-        .is('archived_at', null)
-        .order('agent_name');
+      // Use RPC get_agents_list instead of agents_safe view to avoid JWT claim issues
+      const { data: allAgents, error: agentsError } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false
+      });
+      
       if (agentsError) throw agentsError;
 
-      if (!groupId) return allAgents || [];
+      // Map to expected format
+      const mappedAgents = (allAgents || []).map((agent: any) => ({
+        id: agent.id,
+        agent_name: agent.agent_name,
+        display_name: agent.display_name || agent.agent_name,
+        hostname: agent.hostname,
+        status: agent.status,
+      }));
+
+      if (!groupId) return mappedAgents;
 
       // Get agents already in this group
       const { data: groupMembers, error: membersError } = await supabase
@@ -229,7 +237,7 @@ export function useAvailableAgents(groupId: string | null) {
       if (membersError) throw membersError;
 
       const memberIds = new Set(groupMembers?.map(m => m.agent_id) || []);
-      return (allAgents || []).filter(agent => !memberIds.has(agent.id));
+      return mappedAgents.filter((agent: any) => !memberIds.has(agent.id));
     },
     enabled: !loading && !!tenant?.id,
   });
