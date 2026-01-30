@@ -46,13 +46,26 @@ export function isWithinBusinessHours(config: BusinessHoursConfig | null | undef
 
     // Mapear weekday string para número (0-6)
     const weekdayMap: Record<string, number> = {
-      'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6
+      'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6,
+      // Versões lowercase para compatibilidade com dados existentes
+      'sun': 0, 'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6,
+      // Nomes completos
+      'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6
     };
     const currentDay = weekdayMap[weekdayPart.value] ?? new Date().getDay();
     
     // Verificar se é um dia de expediente
     const workDays = config.days || [1, 2, 3, 4, 5]; // Default: segunda a sexta
-    if (!workDays.includes(currentDay)) {
+    
+    // CORREÇÃO: Normalizar workDays para números (aceita strings ou números)
+    const normalizedWorkDays = (workDays as (number | string)[]).map((day) => {
+      if (typeof day === 'number') return day;
+      // Converter string para número usando o mapa
+      const normalized = weekdayMap[day.toLowerCase()];
+      return normalized !== undefined ? normalized : -1;
+    }).filter((d): d is number => d >= 0 && d <= 6);
+
+    if (!normalizedWorkDays.includes(currentDay)) {
       return false;
     }
 
