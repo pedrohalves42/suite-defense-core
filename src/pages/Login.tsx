@@ -455,6 +455,14 @@ export default function Login() {
                       Cadastre-se
                     </Link>
                   </div>
+                  <div className="pt-2 border-t border-border/30 mt-2">
+                    <Link 
+                      to="/" 
+                      className="text-muted-foreground/70 hover:text-primary/80 transition-colors duration-200 text-xs"
+                    >
+                      ← Voltar para página inicial
+                    </Link>
+                  </div>
                 </div>
                 
                 <SecurityFooter />
@@ -515,14 +523,24 @@ export default function Login() {
                     'Enviar Link Mágico'
                   )}
                 </Button>
-                <div className="text-sm text-center text-muted-foreground/60">
-                  Não tem uma conta?{' '}
-                  <Link 
-                    to="/signup" 
-                    className="text-primary/80 hover:text-primary font-medium transition-colors duration-200"
-                  >
-                    Cadastre-se
-                  </Link>
+                <div className="text-sm text-center text-muted-foreground/60 space-y-2">
+                  <div>
+                    Não tem uma conta?{' '}
+                    <Link 
+                      to="/signup" 
+                      className="text-primary/80 hover:text-primary font-medium transition-colors duration-200"
+                    >
+                      Cadastre-se
+                    </Link>
+                  </div>
+                  <div className="pt-2 border-t border-border/30 mt-2">
+                    <Link 
+                      to="/" 
+                      className="text-muted-foreground/70 hover:text-primary/80 transition-colors duration-200 text-xs"
+                    >
+                      ← Voltar para página inicial
+                    </Link>
+                  </div>
                 </div>
                 
                 <SecurityFooter />
