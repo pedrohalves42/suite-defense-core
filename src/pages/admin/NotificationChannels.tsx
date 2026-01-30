@@ -79,10 +79,18 @@ export default function NotificationChannels() {
   // Create channel mutation
   const createChannelMutation = useMutation({
     mutationFn: async (channel: typeof newChannel) => {
+      // Verificar se tenant está carregado
+      if (!tenant?.id) {
+        throw new Error('Empresa não selecionada');
+      }
+
+      // Forçar refresh do session para garantir JWT atualizado com active_tenant_id
+      await supabase.auth.refreshSession();
+
       const { data, error } = await supabase
         .from('notification_channels')
         .insert({
-          tenant_id: tenant!.id,
+          tenant_id: tenant.id,
           channel_type: channel.type,
           name: channel.name,
           config: channel.config,

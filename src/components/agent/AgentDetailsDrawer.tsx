@@ -25,7 +25,7 @@ import { useAgentCausality } from '@/hooks/useAgentCausality';
 import { useAntivirusStatus } from '@/hooks/useAntivirusStatus';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SectionDivider } from '@/components/ui/section-divider';
-import { 
+import {
   Stethoscope, 
   ExternalLink, 
   CheckCircle, 
@@ -36,7 +36,9 @@ import {
   ShieldOff,
   Eye,
   Activity,
-  Zap
+  Zap,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -91,7 +93,7 @@ export function AgentDetailsDrawer({
   onAgentDeleted
 }: AgentDetailsDrawerProps) {
   const navigate = useNavigate();
-  const { data: causality, isLoading } = useAgentCausality(agentId);
+  const { data: causality, isLoading, isError, refetch } = useAgentCausality(agentId);
   const { data: antivirusStatus } = useAntivirusStatus(agentId || '', !!agentId);
 
   const handleAgentDeleted = () => {
@@ -151,6 +153,18 @@ export function AgentDetailsDrawer({
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-24 w-full" />
               <Skeleton className="h-16 w-full" />
+            </div>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <AlertCircle className="h-10 w-10 text-destructive mb-3" />
+              <p className="font-medium text-destructive">Erro ao carregar dados</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Não foi possível obter informações deste computador
+              </p>
+              <Button variant="outline" onClick={() => refetch()}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Tentar Novamente
+              </Button>
             </div>
           ) : (
             <Tabs defaultValue="overview" className="w-full">
