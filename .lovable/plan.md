@@ -1,190 +1,116 @@
 
+# Plano: Liberar Signup para Todos os IPs e Corrigir Validação
 
-# Plano: Corrigir Detecção de Agentes Offline
+## Diagnóstico Completo
 
-## 🔍 Diagnóstico Completo
+### IPs Já Estão Liberados
+A tabela `admin_ip_whitelist` já contém entradas que permitem TODOS os IPs:
+- `0.0.0.0/0` - Permitir todos os IPs IPv4
+- `::/0` - Permitir todos os IPs IPv6
 
-### Problema Principal
-Os agentes estão sendo reportados como offline, mas o sistema **não está marcando nem alertando** porque há um **bug na verificação de horário de expediente**.
+Não há IPs na blocklist (`ip_blocklist` está vazia).
 
-### Bug Identificado: Formato de `days` Inconsistente
-- **Genial Cred** e **Pedro Alves** têm: `days: ["mon", "tue", "wed", "thu", "fri"]` (strings)
-- **Outros tenants** têm: `days: [1, 2, 3, 4, 5]` (números)
-- O código `business-hours.ts` linha 55 compara `currentDay` (número 0-6) com o array de `workDays`
-- **Resultado**: strings nunca batem com números, então retorna `outside_business_hours` SEMPRE
+### Problema Real Identificado: Validação de Nome no Frontend
 
-### Evidência
-Logs do `monitor-agent-health`:
-```
-[Monitor] Skipping offline check for Pc-Dani-Planalto - outside_business_hours
-[Monitor] Skipping offline check for Pc-Yasmin-Tocantins - outside_business_hours
+O arquivo `src/pages/Signup.tsx` (linha 32) tem uma regex que **bloqueia nomes com acentos**:
+
+```typescript
+.regex(/^[a-zA-Z\s]+$/, 'Nome deve conter apenas letras e espacos')
 ```
 
-Dados do banco:
-- Pc-Yasmin-Tocantins: **1257 minutos** (21h) sem heartbeat, ainda `status: active`
-- Pc-Vidro-Planalto: **3788 minutos** (2.6 dias) sem heartbeat, ainda `status: active`
+Essa regex **NÃO aceita**:
+- João, José, André, Antônio, Cláudia, Lucélia
+- Qualquer nome com ç, ã, é, ô, etc.
 
-### Estado Atual dos Agentes Genial Cred
-| Agente | Último Heartbeat | Status Atual | Deveria Ser |
-|--------|------------------|--------------|-------------|
-| PC-Amanda | < 1 min | active ✅ | active |
-| Pc-Anna-Tibery | < 1 min | active ✅ | active |
-| PC-Servidor-Planalto | < 1 min | active ✅ | active |
-| pcteste1 | < 1 min | active ✅ | active |
-| Pc-Julianna1-Planalto | < 1 min | active ✅ | active |
-| MIT-SERVIDOR | < 1 min | active ✅ | active |
-| Pc-Yasmin-Tocantins | 21h | active ❌ | **offline** |
-| Pc-Dani-Planalto | 22h | active ❌ | **offline** |
-| Pc-Davi-Tibery | 22h | active ❌ | **offline** |
-| Pc-Adm-Tibery | 22h | active ❌ | **offline** |
-| Pc-Vidro-Planalto | 2.6 dias | active ❌ | **offline** |
-| Pc-Thais-Tocantins | 22h | active ❌ | **offline** |
-| Pc-Meio-Planalto | 24h | active ❌ | **offline** |
+O nome "ANDRE LUIZ HENRIQUE ALVES DE OLIVEIRA" da imagem **não tem acentos**, então deveria passar. Mas o erro genérico "Erro ao processar seu cadastro" pode indicar que houve falha em outra parte.
 
 ---
 
-## 🔧 Correções Necessárias
+## Correções Necessárias
 
-### Fase A: Corrigir Bug de Horário de Expediente (P0 - CRÍTICO)
+### Fase A: Corrigir Validação de Nome (P0)
 
-**Arquivo**: `supabase/functions/_shared/business-hours.ts`
+**Arquivo**: `src/pages/Signup.tsx`
 
-O código precisa aceitar AMBOS os formatos de `days`:
-- Números: `[1, 2, 3, 4, 5]`
-- Strings: `["mon", "tue", "wed", "thu", "fri"]`
-
-**Mudança na função `isWithinBusinessHours`** (linhas 48-57):
+**Problema**: Linha 32 usa regex que rejeita acentos
+**Solução**: Usar regex que aceite caracteres Unicode/acentuados
 
 ```typescript
-// Mapear weekday string para número (0-6)
-const weekdayMap: Record<string, number> = {
-  'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6,
-  // CORREÇÃO: Adicionar versões lowercase para compatibilidade
-  'sun': 0, 'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6,
-  // CORREÇÃO: Adicionar nomes completos
-  'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6
-};
+// ANTES:
+.regex(/^[a-zA-Z\s]+$/, 'Nome deve conter apenas letras e espacos')
 
-const currentDay = weekdayMap[weekdayPart.value] ?? new Date().getDay();
+// DEPOIS:
+.regex(/^[\p{L}\s'-]+$/u, 'Nome deve conter apenas letras, espacos, hifens ou apostrofos')
+```
 
-// Verificar se é um dia de expediente
-const workDays = config.days || [1, 2, 3, 4, 5];
+Explicação da nova regex:
+- `\p{L}` = Qualquer letra Unicode (inclui acentos)
+- `\s` = Espaços
+- `'-` = Hífens e apóstrofos (para nomes como "O'Brien" ou "Jean-Pierre")
+- `u` flag = Habilita suporte Unicode
 
-// CORREÇÃO: Normalizar workDays para números
-const normalizedWorkDays = workDays.map((day: number | string) => {
-  if (typeof day === 'number') return day;
-  // Converter string para número
-  const normalized = weekdayMap[day.toLowerCase()];
-  return normalized !== undefined ? normalized : -1;
-}).filter((d: number) => d >= 0 && d <= 6);
+### Fase B: Adicionar Logging no Frontend (P1)
 
-if (!normalizedWorkDays.includes(currentDay)) {
-  return false;
+Para diagnosticar erros futuros, adicionar console.log detalhado no signup:
+
+```typescript
+if (error) {
+  console.error('[Signup Error]', {
+    message: error.message,
+    status: error.status,
+    code: error.code,
+    details: error
+  });
+  // ... toast existente
 }
 ```
 
----
+### Fase C: Verificar Trigger handle_new_user (P1)
 
-### Fase B: Corrigir Dados de Configuração no Banco (P0)
-
-**Migration SQL**: Normalizar os valores de `days` para formato numérico:
+O trigger está correto, mas para garantir, adicionar log de debug:
 
 ```sql
--- Corrigir tenant_settings com days como strings
-UPDATE tenant_settings
-SET business_hours = jsonb_set(
-  business_hours,
-  '{days}',
-  '[1, 2, 3, 4, 5]'::jsonb
-)
-WHERE business_hours->>'days' LIKE '%"mon"%'
-   OR business_hours->>'days' LIKE '%"tue"%';
+-- No início do trigger:
+RAISE LOG 'handle_new_user: Iniciando para email % (ID: %)', NEW.email, NEW.id;
+
+-- Após cada etapa crítica:
+RAISE LOG 'handle_new_user: Tenant % criado', new_tenant_id;
+RAISE LOG 'handle_new_user: Features provisionadas para tenant %', new_tenant_id;
 ```
 
 ---
 
-### Fase C: Atualizar Status para Offline Imediatamente (P1)
-
-**Migration SQL**: Marcar agentes como offline baseado em heartbeat:
-
-```sql
--- Marcar agentes sem heartbeat há mais de 30 minutos como offline
-UPDATE agents
-SET 
-  status = 'offline',
-  offline_detected_at = NOW(),
-  offline_reason = 'heartbeat_timeout'
-WHERE status = 'active'
-  AND archived_at IS NULL
-  AND last_heartbeat IS NOT NULL
-  AND last_heartbeat < NOW() - INTERVAL '30 minutes';
-```
-
----
-
-### Fase D: Atualizar Monitor para Marcar Status Diretamente (P1)
-
-**Arquivo**: `supabase/functions/monitor-agent-health/index.ts`
-
-O código atual (linhas 76-78) diz explicitamente para NÃO mudar `status`:
-```typescript
-// CRITICAL FIX: NÃO alterar agents.status para 'offline'
-```
-
-Isso precisa ser reconsiderado. A abordagem correta é:
-1. Manter `status = 'active'` para agentes que podem voltar (mantém na listagem)
-2. Usar `offline_detected_at` + `offline_reason` para indicar estado offline
-3. O frontend deve considerar `offline_detected_at IS NOT NULL` como "visualmente offline"
-
-Entretanto, para compatibilidade com dashboards que filtram por `status`, podemos criar um novo status `offline` que ainda aparece nas listas.
-
-**Alternativa**: Não mudar o código do monitor, mas garantir que:
-1. O bug de horário seja corrigido (Fase A/B)
-2. Os campos `offline_detected_at` sejam preenchidos
-3. O frontend use esses campos para mostrar status visual
-
----
-
-## 📋 Resumo de Entregáveis
+## Resumo de Entregáveis
 
 | Prioridade | Tarefa | Tipo | Impacto |
 |------------|--------|------|---------|
-| **P0** | Corrigir normalização de `days` em `business-hours.ts` | Edge Function | Desbloqueia alertas |
-| **P0** | Normalizar dados de `business_hours` no banco | SQL Migration | Corrige config existente |
-| **P1** | Marcar agentes stale como offline no banco | SQL Migration | Atualiza status imediato |
-| **P1** | Garantir que monitor preenche `offline_detected_at` | Já implementado | - |
+| **P0** | Corrigir regex de validação de nome para aceitar acentos | Frontend | Desbloqueia brasileiros |
+| **P1** | Adicionar logging de erro no signup | Frontend | Melhora debug |
+| **P1** | Verificar logs do Supabase Auth | Diagnóstico | Identifica erros backend |
 
 ---
 
-## ✅ Validação
+## Validação Pós-Correção
 
-Após implementação:
+1. **Teste de Signup**:
+   - Tentar criar conta com nome "João da Silva" (com acento)
+   - Tentar criar conta com nome "ANDRE LUIZ" (sem acento)
+   - Ambos devem funcionar
 
-1. **Logs do Monitor**:
-   - NÃO deve mais mostrar `outside_business_hours` durante expediente (08:00-18:00)
-   - Deve mostrar `Agent X marked as offline` para agentes sem heartbeat
-
-2. **Banco de Dados**:
+2. **Verificar Criação no Banco**:
    ```sql
-   SELECT agent_name, status, offline_detected_at, offline_reason 
-   FROM agents 
-   WHERE last_heartbeat < NOW() - INTERVAL '30 minutes';
+   SELECT id, email, created_at FROM auth.users ORDER BY created_at DESC LIMIT 5;
+   SELECT id, name, owner_user_id FROM tenants ORDER BY created_at DESC LIMIT 5;
    ```
-   - Todos devem ter `offline_detected_at` preenchido
 
-3. **Dashboard**:
-   - Computadores sem heartbeat devem aparecer como "Offline"
-   - Contagem deve refletir realidade (6 online, 7+ offline para Genial Cred)
+3. **Console do Browser**:
+   - Não deve haver erros no console após signup bem-sucedido
+   - Se houver erro, o log detalhado ajudará a diagnosticar
 
 ---
 
-## ⚠️ Causa Raiz do Serviço Parando
+## Nota sobre Rate Limiting
 
-O serviço Windows está parando nos computadores afetados. As correções acima **detectam e alertam** sobre o problema, mas a **causa raiz** precisa ser investigada:
+O sistema tem rate limiting para endpoints de agente (heartbeat, metrics), mas **não há rate limit para signup**. A tabela `rate_limits` mostra apenas registros de agentes, não de usuários tentando criar conta.
 
-1. **Verificar Event Viewer** nos PCs afetados
-2. **Ativar logging detalhado** no agente
-3. **Configurar recovery do serviço** (já implementado no script v4)
-
-Os computadores afetados provavelmente têm versão antiga do agente sem recovery automático. Uma reinstalação com o script v4 atualizado deve resolver.
-
+O bloqueio de IP (`ip_blocklist`) é aplicado apenas para tentativas de login falhas repetidas, não para signup.
