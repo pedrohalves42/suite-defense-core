@@ -1,165 +1,181 @@
 
-# Plano: Script de Reinstalação Limpa Preservando Credenciais
+# Plano: Correção de Múltiplos Problemas Operacionais
 
-## 📋 Objetivo
-Criar um script PowerShell de reinstalação que:
-1. **Lê o nome exato do agente** a partir do script `.ps1` existente ou do banco de dados
-2. **Preserva as credenciais originais** (AgentToken, HmacSecret) sem precisar gerar novas
-3. **Reinstala limpamente** sem excluir/arquivar o agente no dashboard
-4. **Baixa a última versão** do script do servidor
+## Diagnóstico Completo
 
----
+### Problema 1: Erro no "Investigar anomalia"
 
-## 🔍 Diagnóstico do Problema
+**Status**: O erro não está sendo exibido nos logs recentes do `action-center-feed`. O componente `InsightInvestigationDrawer` abre um drawer, mas se o `item.agent_id` estiver ausente (para anomalias de sistema), mostra "Agente não identificado" e bloqueia ações.
 
-### Situação Atual
-- O usuário tem agentes "offline" que precisam ser reinstalados
-- O método atual exige gerar nova enrollment key e recriar o agente
-- Isso perde o histórico e métricas do agente existente
+**Causa raiz**: Anomalias detectadas automaticamente do tipo `ai_insight` podem não ter `agent_id` associado, causando o erro "Agente não identificado" quando o usuário tenta executar ações.
 
-### Solução
-Criar um script que:
-1. Detecta automaticamente o nome do agente instalado
-2. Extrai as credenciais do script existente (ou recebe como parâmetro)
-3. Baixa o script atualizado do servidor usando as credenciais existentes
-4. Reinstala preservando a identidade do agente
+**Correção**: Modificar `InsightInvestigationDrawer.tsx` para tratar corretamente insights sem `agent_id`, mostrando ações alternativas e mensagens informativas.
 
 ---
 
-## 🛠️ Implementação
+### Problema 2: Jobs "queued" não sendo processados (CRÍTICO)
 
-### Arquivo: `public/scripts/reinstall-agent-preserve.ps1`
+**Status**: Erro `ILLEGAL_STATE_TRANSITION` no `poll-jobs` ao tentar fazer transição de status.
 
-Script PowerShell com 6 fases:
+**Causa raiz**: O trigger `enforce_job_state_transitions` permite transições:
+- `pending` → `queued`, `cancelled`, `failed`
+- `queued` → `delivered`, `failed`, `cancelled`
 
-```text
-FASE 1: Detectar Agente Existente
-- Localiza script em C:\CyberShield\cybershield-agent-*.ps1
-- Extrai nome do agente do nome do arquivo
-- Extrai AgentToken, HmacSecret, ServerUrl do conteúdo do script
+Mas a RPC `claim_jobs_for_agent` filtra por `status IN ('queued', 'pending')` e tenta mudar para `delivered`. O problema é que alguns jobs estão com status `pending` e a RPC tenta ir direto para `delivered`, mas a transição `pending` → `delivered` **não é permitida**.
 
-FASE 2: Parar Serviços
-- Para Scheduled Task "CyberShieldAgent*"
-- Mata processos PowerShell do agente
+**Solução**: A RPC precisa primeiro transicionar `pending` → `queued` antes de ir para `delivered`, ou o trigger precisa permitir `pending` → `delivered`.
 
-FASE 3: Backup (Opcional)
-- Cria backup do script atual em C:\CyberShield\backup\
+---
 
-FASE 4: Baixar Script Atualizado
-- Chama Edge Function /serve-agent-update
-- Valida SHA256 do script baixado
-- Usa credenciais preservadas
+### Problema 3: Navegação - Sem atalho para página inicial após logout
 
-FASE 5: Reinstalar
-- Remove scripts antigos
-- Instala novo script com nome correto
-- Recria Scheduled Task
+**Status**: Após logout, usuário não consegue voltar à página inicial.
 
-FASE 6: Iniciar Agente
-- Inicia Scheduled Task
-- Verifica heartbeat
+**Causa raiz**: O `AppSidebar.tsx` não tem link direto para `/` (Landing page). Após logout, o usuário fica na página de login sem acesso claro ao site público.
+
+**Correção**: 
+1. Adicionar link no header da página de Login para voltar à Landing page
+2. O logo no Navbar já linka para `/`, então é questão de visibilidade
+
+---
+
+## Correções Propostas
+
+### Fase A: Corrigir Transição de Estado de Jobs (P0 - CRÍTICO)
+
+**Arquivo**: SQL Migration
+
+Alterar o trigger `enforce_job_state_transitions` para permitir a transição `pending` → `delivered`:
+
+```sql
+-- Atualizar as transições válidas
+CREATE OR REPLACE FUNCTION enforce_job_state_transitions()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_valid_transitions jsonb := '{
+    "pending": ["queued", "delivered", "cancelled", "failed"],
+    "queued": ["delivered", "failed", "cancelled"],
+    "delivered": ["completed", "failed", "cancelled"],
+    "completed": ["archived"],
+    "failed": ["archived"],
+    "cancelled": ["archived"]
+  }'::jsonb;
+  v_allowed_states jsonb;
+BEGIN
+  IF OLD.status = NEW.status THEN
+    RETURN NEW;
+  END IF;
+  
+  v_allowed_states := v_valid_transitions->OLD.status;
+  
+  IF v_allowed_states IS NULL OR NOT v_allowed_states ? NEW.status THEN
+    RAISE EXCEPTION 'ILLEGAL_STATE_TRANSITION: Cannot transition from % to %. Allowed: %',
+      OLD.status, NEW.status, COALESCE(v_allowed_states, '[]'::jsonb)
+    USING ERRCODE = '23514';
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 ```
 
-### Arquivo: `supabase/functions/_shared/reinstall-preserve-script-content.ts`
+### Fase B: Melhorar Tratamento de Insights sem Agent (P1)
 
-Conteúdo do script embutido para Edge Function.
+**Arquivo**: `src/components/action-center/InsightInvestigationDrawer.tsx`
 
-### Arquivo: `supabase/functions/get-reinstall-preserve-script/index.ts`
+Modificar o `handleAction` para tratar insights de sistema (sem agent_id):
 
-Edge Function que serve o script via:
-```
-GET /functions/v1/get-reinstall-preserve-script
-```
-
----
-
-## 📝 Exemplo de Uso
-
-### Método 1: Automático (detecta credenciais do script existente)
-```powershell
-# Baixar e executar (irá detectar credenciais automaticamente)
-irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/get-reinstall-preserve-script | iex
-```
-
-### Método 2: Manual (fornece credenciais explicitamente)
-```powershell
-# Se souber as credenciais
-.\reinstall-agent-preserve.ps1 `
-    -AgentName "pcteste1" `
-    -AgentToken "uuid-do-token" `
-    -HmacSecret "hex-64-chars"
+```typescript
+const handleAction = async (action: string) => {
+  // Para insights de sistema (sem agente), redirecionar ou mostrar alternativa
+  if (!item.agent_id) {
+    if (action === 'navigate_agent') {
+      toast.info('Este insight é de sistema e não está vinculado a um agente específico');
+      return;
+    }
+    // Permitir ações que não requerem agent_id
+    if (['mark_resolved', 'ignore'].includes(action)) {
+      handleResolve();
+      return;
+    }
+    toast.info('Ações específicas de agente não disponíveis para insights de sistema');
+    return;
+  }
+  // ... resto do código
+};
 ```
 
-### Método 3: Um comando (para máquinas com script instalado)
-```powershell
-# One-liner que detecta tudo automaticamente
-powershell -ExecutionPolicy Bypass -Command "irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/get-reinstall-preserve-script | iex"
+### Fase C: Adicionar Navegação para Landing (P1)
+
+**Arquivo**: `src/pages/Login.tsx`
+
+Adicionar link visível para voltar à página inicial:
+
+```tsx
+// No header ou abaixo do form de login
+<div className="text-center mt-4">
+  <Link to="/" className="text-sm text-muted-foreground hover:text-primary">
+    ← Voltar para página inicial
+  </Link>
+</div>
+```
+
+### Fase D: Criar Função para Criar Jobs em Massa (P2)
+
+**Arquivo**: Nova RPC e botão no dashboard
+
+Criar uma RPC `create_jobs_for_all_agents` que cria um job específico para todos os agentes online de um tenant:
+
+```sql
+CREATE OR REPLACE FUNCTION create_jobs_for_all_agents(
+  p_tenant_id uuid,
+  p_job_type text,
+  p_payload jsonb DEFAULT '{}'
+)
+RETURNS integer AS $$
+DECLARE
+  v_count integer := 0;
+  v_agent RECORD;
+BEGIN
+  FOR v_agent IN
+    SELECT id, agent_name 
+    FROM agents 
+    WHERE tenant_id = p_tenant_id 
+      AND archived_at IS NULL
+      AND status = 'active'
+      AND last_heartbeat > NOW() - INTERVAL '5 minutes'
+  LOOP
+    INSERT INTO jobs (tenant_id, agent_id, agent_name, type, payload, status, approved)
+    VALUES (p_tenant_id, v_agent.id, v_agent.agent_name, p_job_type, p_payload, 'queued', true);
+    v_count := v_count + 1;
+  END LOOP;
+  
+  RETURN v_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 ---
 
-## 🔒 Segurança
+## Resumo de Entregáveis
 
-### Credenciais Preservadas
-- O script extrai credenciais do arquivo `.ps1` existente
-- Não precisa de enrollment key ou acesso ao dashboard
-- Credenciais nunca são expostas em logs (apenas prefixos)
-
-### Validações
-- SHA256 do script baixado é verificado
-- Sintaxe PowerShell validada antes de instalar
-- Backup do script anterior é mantido
+| Prioridade | Problema | Solução | Tipo |
+|------------|----------|---------|------|
+| **P0** | Jobs não processando (ILLEGAL_STATE_TRANSITION) | Alterar trigger para permitir `pending` → `delivered` | SQL Migration |
+| **P1** | Erro "Investigar anomalia" sem agent | Tratar insights de sistema no drawer | Frontend |
+| **P1** | Sem atalho para Landing após logout | Adicionar link "Voltar" no Login | Frontend |
+| **P2** | Criar jobs em massa | Nova RPC + botão no dashboard | SQL + Frontend |
 
 ---
 
-## 📂 Arquivos a Criar
+## Validação Pós-Correção
 
-| Arquivo | Tipo | Descrição |
-|---------|------|-----------|
-| `public/scripts/reinstall-agent-preserve.ps1` | PowerShell | Script standalone |
-| `supabase/functions/_shared/reinstall-preserve-script-content.ts` | TypeScript | Conteúdo embutido |
-| `supabase/functions/get-reinstall-preserve-script/index.ts` | Edge Function | Endpoint HTTP |
+1. **Jobs**: Verificar que agentes online estão recebendo e executando jobs:
+   - Logs do `poll-jobs` sem erros `ILLEGAL_STATE_TRANSITION`
+   - Jobs transitando para `delivered` → `completed`
 
----
+2. **Investigar anomalia**: Testar clicar em "Investigar anomalia" para insights com e sem agente
 
-## ✅ Validação Pós-Implementação
+3. **Navegação**: Fazer logout e verificar presença do link para Landing
 
-1. **Teste em máquina com agente instalado**:
-   ```powershell
-   irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/get-reinstall-preserve-script | iex
-   ```
-
-2. **Verificar no dashboard**:
-   - Agente deve aparecer como "online"
-   - Versão deve ser a mais recente (v4.4.0)
-   - Nome preservado exatamente igual
-
-3. **Verificar logs**:
-   ```powershell
-   Get-Content C:\CyberShield\logs\agent.log -Tail 20
-   ```
-
----
-
-## 📊 Comparação com Método Atual
-
-| Aspecto | Método Atual | Novo Script |
-|---------|--------------|-------------|
-| Requer dashboard | ✅ Sim | ❌ Não |
-| Preserva histórico | ❌ Não (exclui agente) | ✅ Sim |
-| Preserva métricas | ❌ Não | ✅ Sim |
-| Gera nova enrollment key | ✅ Sim | ❌ Não |
-| Detecta credenciais | ❌ Não | ✅ Automático |
-| Valida SHA256 | ❓ Depende | ✅ Sempre |
-
----
-
-## 🎯 Resumo Técnico
-
-O script resolve o problema de reinstalação lendo as credenciais diretamente do arquivo `C:\CyberShield\cybershield-agent-{nome}.ps1` existente, preservando:
-- `$AgentName` (ex: "Pcteste1-3")
-- `$AgentToken` (UUID)
-- `$HmacSecret` (64 hex chars)
-- `$ServerUrl` (URL do Supabase)
-
-Isso permite reinstalar o agente na mesma identidade, mantendo todo o histórico e métricas no dashboard.
+4. **Jobs em massa**: Testar criação de jobs para todos agentes via dashboard
