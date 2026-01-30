@@ -246,9 +246,9 @@ serve(async (req) => {
       .select(`
         id,
         insight_id,
-        handler,
+        action_type,
         executed_at,
-        action_result,
+        result,
         ai_insights!inner (
           id,
           insight_type,
