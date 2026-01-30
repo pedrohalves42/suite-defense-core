@@ -29,7 +29,7 @@ const signupSchema = z.object({
     .trim()
     .min(2, 'Nome deve ter pelo menos 2 caracteres')
     .max(100, 'Nome muito longo')
-    .regex(/^[a-zA-Z\s]+$/, 'Nome deve conter apenas letras e espacos'),
+    .regex(/^[\p{L}\s'-]+$/u, 'Nome deve conter apenas letras, espacos, hifens ou apostrofos'),
   deviceCount: z.string().optional(),
 });
 
@@ -102,6 +102,15 @@ export default function Signup() {
     }
 
     if (error) {
+      // Log detailed error for debugging (P1 - improved diagnostics)
+      console.error('[Signup Error]', {
+        message: error.message,
+        status: (error as any).status,
+        code: (error as any).code,
+        details: error
+      });
+      logger.error('Signup failed', { email: validation.data.email, error: error.message });
+      
       // Generic error messages to prevent account enumeration
       const message = error.message.includes('already registered') || error.message.includes('already exists')
         ? 'Ja existe uma conta com este email'
