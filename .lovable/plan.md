@@ -1,177 +1,190 @@
 
-## Plano: Resolver Problemas de Computadores Offline e Saúde do Pipeline
 
-### 📊 Diagnóstico Completo
+# Plano: Corrigir Detecção de Agentes Offline
 
-**Problema Central: Agentes Windows parando de enviar heartbeat após algumas horas**
+## 🔍 Diagnóstico Completo
 
-Baseado na análise dos dados:
+### Problema Principal
+Os agentes estão sendo reportados como offline, mas o sistema **não está marcando nem alertando** porque há um **bug na verificação de horário de expediente**.
 
-| Agente | Último Heartbeat | Status Real |
-|--------|------------------|-------------|
-| PC-Amanda, Pc-Julianna1, pcteste1, PC-Servidor | < 1 min | ✅ Online |
-| Pc-Yasmin-Tocantins | ~21 horas | ❌ Serviço parou |
-| Pc-Dani, Pc-Davi, Pc-Adm-Tibery | ~22 horas | ❌ Serviço parou |
-| Pc-Vidro-Planalto | ~2.6 dias | ❌ Serviço parou |
+### Bug Identificado: Formato de `days` Inconsistente
+- **Genial Cred** e **Pedro Alves** têm: `days: ["mon", "tue", "wed", "thu", "fri"]` (strings)
+- **Outros tenants** têm: `days: [1, 2, 3, 4, 5]` (números)
+- O código `business-hours.ts` linha 55 compara `currentDay` (número 0-6) com o array de `workDays`
+- **Resultado**: strings nunca batem com números, então retorna `outside_business_hours` SEMPRE
 
-**O Dashboard mostra "7 computadores offline" corretamente** - isso NÃO é um bug do frontend. Os agentes realmente pararam de enviar heartbeat porque o serviço Windows (CyberShield Agent Service) parou de funcionar nesses computadores.
+### Evidência
+Logs do `monitor-agent-health`:
+```
+[Monitor] Skipping offline check for Pc-Dani-Planalto - outside_business_hours
+[Monitor] Skipping offline check for Pc-Yasmin-Tocantins - outside_business_hours
+```
 
-**Causas Prováveis do Serviço Parar:**
-1. **Crash do serviço Windows** - O processo pode estar morrendo sem ser reiniciado
-2. **Falta de recovery automático** - O serviço não está configurado para reiniciar após falha
-3. **Problemas de rede/firewall** - Bloqueio intermitente das requisições HTTPS
-4. **Timeout/Hang do processo** - O agente pode estar travando em alguma operação
+Dados do banco:
+- Pc-Yasmin-Tocantins: **1257 minutos** (21h) sem heartbeat, ainda `status: active`
+- Pc-Vidro-Planalto: **3788 minutos** (2.6 dias) sem heartbeat, ainda `status: active`
+
+### Estado Atual dos Agentes Genial Cred
+| Agente | Último Heartbeat | Status Atual | Deveria Ser |
+|--------|------------------|--------------|-------------|
+| PC-Amanda | < 1 min | active ✅ | active |
+| Pc-Anna-Tibery | < 1 min | active ✅ | active |
+| PC-Servidor-Planalto | < 1 min | active ✅ | active |
+| pcteste1 | < 1 min | active ✅ | active |
+| Pc-Julianna1-Planalto | < 1 min | active ✅ | active |
+| MIT-SERVIDOR | < 1 min | active ✅ | active |
+| Pc-Yasmin-Tocantins | 21h | active ❌ | **offline** |
+| Pc-Dani-Planalto | 22h | active ❌ | **offline** |
+| Pc-Davi-Tibery | 22h | active ❌ | **offline** |
+| Pc-Adm-Tibery | 22h | active ❌ | **offline** |
+| Pc-Vidro-Planalto | 2.6 dias | active ❌ | **offline** |
+| Pc-Thais-Tocantins | 22h | active ❌ | **offline** |
+| Pc-Meio-Planalto | 24h | active ❌ | **offline** |
 
 ---
 
-### 🔧 Correções Necessárias
+## 🔧 Correções Necessárias
 
-#### Fase A: Frontend - Corrigir Heartbeat Pipeline Health (P0)
+### Fase A: Corrigir Bug de Horário de Expediente (P0 - CRÍTICO)
 
-O `usePipelineHealth.ts` usa `agents_safe` view que pode falhar sem JWT claims.
+**Arquivo**: `supabase/functions/_shared/business-hours.ts`
 
-**Arquivo**: `src/hooks/usePipelineHealth.ts`
+O código precisa aceitar AMBOS os formatos de `days`:
+- Números: `[1, 2, 3, 4, 5]`
+- Strings: `["mon", "tue", "wed", "thu", "fri"]`
 
-**Correção**: Migrar de `agents_safe` para query direta em `agents` com filtro explícito de tenant_id:
+**Mudança na função `isWithinBusinessHours`** (linhas 48-57):
 
 ```typescript
-// ANTES (linha 74-81):
-supabase
-  .from('agents_safe')
-  .select('last_heartbeat')
-  .eq('tenant_id', tenantId)
-  ...
+// Mapear weekday string para número (0-6)
+const weekdayMap: Record<string, number> = {
+  'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6,
+  // CORREÇÃO: Adicionar versões lowercase para compatibilidade
+  'sun': 0, 'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6,
+  // CORREÇÃO: Adicionar nomes completos
+  'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6
+};
 
-// DEPOIS:
-supabase
-  .from('agents')  // Query direta
-  .select('last_heartbeat')
-  .eq('tenant_id', tenantId)
-  .is('archived_at', null)
-  .order('last_heartbeat', { ascending: false, nullsFirst: false })
-  .limit(1)
-  .maybeSingle(),
+const currentDay = weekdayMap[weekdayPart.value] ?? new Date().getDay();
+
+// Verificar se é um dia de expediente
+const workDays = config.days || [1, 2, 3, 4, 5];
+
+// CORREÇÃO: Normalizar workDays para números
+const normalizedWorkDays = workDays.map((day: number | string) => {
+  if (typeof day === 'number') return day;
+  // Converter string para número
+  const normalized = weekdayMap[day.toLowerCase()];
+  return normalized !== undefined ? normalized : -1;
+}).filter((d: number) => d >= 0 && d <= 6);
+
+if (!normalizedWorkDays.includes(currentDay)) {
+  return false;
+}
 ```
-
-**Nota**: A tabela `agents` é acessível via RLS existente para usuários autenticados com tenant.
 
 ---
 
-#### Fase B: Criar Job de "Verificação de Serviço" (P1)
+### Fase B: Corrigir Dados de Configuração no Banco (P0)
 
-Para detectar e resolver automaticamente agentes que param de funcionar, criar um sistema de verificação.
-
-**1. Nova RPC para detectar agentes que pararam:**
+**Migration SQL**: Normalizar os valores de `days` para formato numérico:
 
 ```sql
-CREATE OR REPLACE FUNCTION get_stale_agents(
-  p_tenant_id uuid,
-  p_threshold_minutes int DEFAULT 30
+-- Corrigir tenant_settings com days como strings
+UPDATE tenant_settings
+SET business_hours = jsonb_set(
+  business_hours,
+  '{days}',
+  '[1, 2, 3, 4, 5]'::jsonb
 )
-RETURNS TABLE (
-  agent_id uuid,
-  agent_name text,
-  last_heartbeat timestamptz,
-  minutes_since_heartbeat numeric,
-  agent_version text
-)
-LANGUAGE sql
-SECURITY DEFINER
-AS $$
-  SELECT 
-    id,
-    agent_name,
-    last_heartbeat,
-    EXTRACT(EPOCH FROM (NOW() - last_heartbeat))/60 as minutes_since_heartbeat,
-    agent_version
-  FROM agents
-  WHERE tenant_id = p_tenant_id
-    AND archived_at IS NULL
-    AND status = 'active'
-    AND last_heartbeat < NOW() - (p_threshold_minutes || ' minutes')::interval
-  ORDER BY last_heartbeat ASC;
-$$;
+WHERE business_hours->>'days' LIKE '%"mon"%'
+   OR business_hours->>'days' LIKE '%"tue"%';
 ```
-
-**2. Novo job type: `service_health_check`**
-
-Os agentes já suportam esse tipo de job (vi no banco). O problema é que os agentes offline não conseguem receber o job porque não estão fazendo polling.
 
 ---
 
-#### Fase C: Ajustar Instalação do Agente Windows (P2)
+### Fase C: Atualizar Status para Offline Imediatamente (P1)
 
-**Problema**: O serviço Windows não está configurado para reiniciar automaticamente após crash.
-
-**Solução**: Atualizar o script de instalação do agente para configurar:
-
-```powershell
-# Configurar recovery do serviço
-sc.exe failure "CyberShield Agent" reset= 86400 actions= restart/5000/restart/10000/restart/30000
-
-# Isso configura:
-# - 1ª falha: reinicia em 5 segundos
-# - 2ª falha: reinicia em 10 segundos  
-# - 3ª falha: reinicia em 30 segundos
-# - Reset do contador após 24h
-```
-
-**Onde**: No script `setup-agent-script` ou no instalador PowerShell.
-
----
-
-#### Fase D: Atualizar Status do Agente no Banco (P1)
-
-Atualmente o status fica `active` mesmo quando o agente para de enviar heartbeat. Criar um cron job para atualizar automaticamente:
+**Migration SQL**: Marcar agentes como offline baseado em heartbeat:
 
 ```sql
--- Atualizar status para 'offline' quando heartbeat > 30 min
+-- Marcar agentes sem heartbeat há mais de 30 minutos como offline
 UPDATE agents
 SET 
   status = 'offline',
-  status_updated_at = NOW()
+  offline_detected_at = NOW(),
+  offline_reason = 'heartbeat_timeout'
 WHERE status = 'active'
-  AND last_heartbeat < NOW() - INTERVAL '30 minutes'
-  AND archived_at IS NULL;
+  AND archived_at IS NULL
+  AND last_heartbeat IS NOT NULL
+  AND last_heartbeat < NOW() - INTERVAL '30 minutes';
 ```
 
-Isso pode ser executado pelo `cron-sentinel` ou `monitor-agent-health` Edge Function.
+---
+
+### Fase D: Atualizar Monitor para Marcar Status Diretamente (P1)
+
+**Arquivo**: `supabase/functions/monitor-agent-health/index.ts`
+
+O código atual (linhas 76-78) diz explicitamente para NÃO mudar `status`:
+```typescript
+// CRITICAL FIX: NÃO alterar agents.status para 'offline'
+```
+
+Isso precisa ser reconsiderado. A abordagem correta é:
+1. Manter `status = 'active'` para agentes que podem voltar (mantém na listagem)
+2. Usar `offline_detected_at` + `offline_reason` para indicar estado offline
+3. O frontend deve considerar `offline_detected_at IS NOT NULL` como "visualmente offline"
+
+Entretanto, para compatibilidade com dashboards que filtram por `status`, podemos criar um novo status `offline` que ainda aparece nas listas.
+
+**Alternativa**: Não mudar o código do monitor, mas garantir que:
+1. O bug de horário seja corrigido (Fase A/B)
+2. Os campos `offline_detected_at` sejam preenchidos
+3. O frontend use esses campos para mostrar status visual
 
 ---
 
-### 📋 Resumo de Entregáveis
+## 📋 Resumo de Entregáveis
 
-| Prioridade | Tarefa | Tipo |
-|------------|--------|------|
-| P0 | Migrar `usePipelineHealth.ts` de `agents_safe` para `agents` | Frontend |
-| P1 | Criar RPC `get_stale_agents` para detectar agentes offline | SQL |
-| P1 | Atualizar `monitor-agent-health` para marcar agentes como offline | Edge Function |
-| P2 | Configurar recovery automático do serviço Windows | Script instalação |
-
----
-
-### ✅ Validação
-
-1. **Pipeline Health Card**:
-   - Após correção, "Heartbeats" deve mostrar status correto (Fresh se há agentes online)
-   - Não deve mostrar "Indeterminado" se há heartbeats recentes
-
-2. **Lista de Computadores**:
-   - Agentes sem heartbeat > 30 min devem aparecer como "Offline" (já funciona)
-   - O número "7 computadores offline" está correto
-
-3. **Serviço Windows**:
-   - Após atualização do script, serviços devem reiniciar automaticamente após crash
+| Prioridade | Tarefa | Tipo | Impacto |
+|------------|--------|------|---------|
+| **P0** | Corrigir normalização de `days` em `business-hours.ts` | Edge Function | Desbloqueia alertas |
+| **P0** | Normalizar dados de `business_hours` no banco | SQL Migration | Corrige config existente |
+| **P1** | Marcar agentes stale como offline no banco | SQL Migration | Atualiza status imediato |
+| **P1** | Garantir que monitor preenche `offline_detected_at` | Já implementado | - |
 
 ---
 
-### 🎯 Ação Imediata Recomendada
+## ✅ Validação
 
-Para resolver os 7 computadores offline agora, você precisa:
+Após implementação:
 
-1. **Acessar cada computador afetado remotamente**
-2. **Verificar status do serviço**: `Get-Service "CyberShield Agent"`
-3. **Se parado, reiniciar**: `Start-Service "CyberShield Agent"`
-4. **Verificar logs**: Consultar Event Viewer > Windows Logs > Application
+1. **Logs do Monitor**:
+   - NÃO deve mais mostrar `outside_business_hours` durante expediente (08:00-18:00)
+   - Deve mostrar `Agent X marked as offline` para agentes sem heartbeat
 
-Os computadores que estão online (PC-Amanda, Pc-Julianna1, etc.) estão funcionando normalmente e enviando heartbeats a cada ~60 segundos.
+2. **Banco de Dados**:
+   ```sql
+   SELECT agent_name, status, offline_detected_at, offline_reason 
+   FROM agents 
+   WHERE last_heartbeat < NOW() - INTERVAL '30 minutes';
+   ```
+   - Todos devem ter `offline_detected_at` preenchido
+
+3. **Dashboard**:
+   - Computadores sem heartbeat devem aparecer como "Offline"
+   - Contagem deve refletir realidade (6 online, 7+ offline para Genial Cred)
+
+---
+
+## ⚠️ Causa Raiz do Serviço Parando
+
+O serviço Windows está parando nos computadores afetados. As correções acima **detectam e alertam** sobre o problema, mas a **causa raiz** precisa ser investigada:
+
+1. **Verificar Event Viewer** nos PCs afetados
+2. **Ativar logging detalhado** no agente
+3. **Configurar recovery do serviço** (já implementado no script v4)
+
+Os computadores afetados provavelmente têm versão antiga do agente sem recovery automático. Uma reinstalação com o script v4 atualizado deve resolver.
+
