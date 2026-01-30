@@ -1,175 +1,199 @@
 
 ## Objetivo
-Resolver todos os problemas identificados nas screenshots:
-1. Dashboard mostrando "0 computadores monitorados" para Genial Cred (11 agentes no banco)
-2. Erro 500 na RPC `get_audit_raw_metrics` ("more than one row returned by a subquery")
-3. Erros 403 em múltiplas tabelas (agent_tokens, agent_releases)
-4. IntegrityScoreCard mostrando erro
+Resolver todos os erros identificados nas screenshots:
+1. **"o.eq is not a function"** na página de Atualizações de Segurança (VulnerabilityFindings)
+2. **"Jobs: Crítico"** - Status crítico no pipeline mesmo com jobs funcionando
+3. **Modal "Adicionar Computadores"** mostrando vazio quando tem agentes disponíveis
+4. **Erros 403** em `agent_tokens` e `agent_releases` (já corrigidos parcialmente)
+5. **Erro "column started_at does not exist"** em `scheduled_job_runs`
 
 ---
 
 ## Diagnóstico Final
 
-### Problema 1: Dashboard Principal (ServerDashboard) mostra 0 computadores
-**Causa**: `src/pages/ServerDashboard.tsx` linha 212 ainda usa `agents_safe` view:
+### Problema 1: "o.eq is not a function" na Vulnerabilities
+**Causa**: O `tenantQuery()` helper retorna um objeto query com `.eq()` já aplicado. Quando você chama `.eq()` novamente sobre o resultado, está chamando em um tipo diferente.
+
+**Arquivo**: `src/lib/tenantQuery.ts` linha 98 retorna `query.eq('tenant_id', tenantId)`, e depois `src/hooks/useVulnFindings.tsx` linha 8-11 chama `.eq('agent_id', agentId)` **sobre** esse resultado.
+
+O problema é que `tenantQuery()` retorna o resultado de `.eq()`, que é um `PostgrestFilterBuilder`, não um `PostgrestQueryBuilder`. Isso deveria funcionar, MAS há um bug quando a tabela está na lista `MULTI_TENANT_TABLES` e o cast `as any` na linha 98 pode perder a tipagem correta.
+
+**Solução**: Verificar se o retorno de `tenantQuery` está encadeando corretamente. O erro "o.eq is not a function" indica que `tenantQuery()` está retornando algo que não é o builder esperado.
+
+### Problema 2: "Jobs: Crítico" no Pipeline
+**Causa**: O `usePipelineHealth.ts` considera "crítico" qualquer signal que não teve atividade nos últimos 30 minutos. Os jobs em `queued` status nunca foram entregues/completados, então `last_seen_at` para jobs está mostrando dados antigos.
+
+**Análise do banco**:
+- 19 jobs em status `queued` (não processados)
+- 2 jobs em status `pending` 
+- Último job completado: `2026-01-30 11:22:18` (antes do critério de frescor)
+
+Os agentes estão online (heartbeat < 1 min atrás) mas não estão processando jobs. Isso é um problema operacional, não de código.
+
+### Problema 3: Modal "Adicionar Computadores" Vazio
+**Causa**: O `useAvailableAgents` hook em `src/hooks/useAgentGroups.tsx` linha 214-219 ainda usa `agents_safe` view:
 ```typescript
-supabase.from("agents_safe").select("*").eq("tenant_id", tenant.id)
+const { data: allAgents, error: agentsError } = await supabase
+  .from('agents_safe')
+  .select('id, agent_name, display_name, hostname, status')
+  .eq('tenant_id', tenant.id)
 ```
-Essa view depende de `get_active_tenant_id()` que retorna NULL quando JWT não tem o claim.
 
-**Nota**: O admin Dashboard (`src/pages/admin/Dashboard.tsx`) já foi corrigido e usa RPC corretamente.
+Quando o JWT não tem o claim `active_tenant_id`, a view retorna vazio mesmo com filtro explícito.
 
-### Problema 2: RPC `get_audit_raw_metrics` retorna 500
-**Causa**: A função tenta ler de views (`v_tenant_isolation_metrics`, `v_rbac_metrics`, `v_enforcement_compliance`) que:
-- Retornam 0 linhas quando `get_active_tenant_id()` = NULL
-- Mas podem retornar múltiplas linhas em outros cenários, causando erro "more than one row returned by a subquery"
+**Tenant afetado**: O grupo "Funcionarios_Bmg" pertence ao tenant "Genial Cred" (11 agentes), mas a query retorna 0.
 
-Logs do banco mostram erros recentes:
-- `more than one row returned by a subquery used as an expression`
-- `column audit_confidence_gaps.calculated_at does not exist`
-- `column ai_actions.handler does not exist`
+### Problema 4: Erro "column started_at does not exist" em scheduled_job_runs
+**Causa identificada nos logs**: Algum código tenta acessar `started_at` na tabela `scheduled_job_runs`, mas essa coluna não existe. A tabela tem apenas: `id, job_key, ran_at, duration_ms, success, error, result, processed_count, tenant_id, created_at, job_source`.
 
-### Problema 3: Erros 403 (Permission Denied)
-**Causa**: Tabelas `agent_tokens` e `agent_releases` não têm RLS policies para SELECT/UPDATE para usuários autenticados.
+**Possível fonte**: Uma view ou RPC está referenciando `started_at` erroneamente.
+
+### Problema 5: Erros 403 em agent_tokens/agent_releases
+**Status**: Parcialmente corrigido. As policies de SELECT já existem:
+- `agent_tokens`: Policy "Users can view tokens for agents in their tenant" existe
+- `agent_releases`: Policy "Authenticated users can view active releases" existe
+
+Mas a policy de `agent_tokens` usa `get_active_tenant_id()` que pode ser NULL, causando falha.
 
 ---
 
-## Implementação (Passo a Passo)
+## Implementação
 
-### Fase A: Frontend - Migrar ServerDashboard para RPC (P0)
+### Fase A: Corrigir "o.eq is not a function" (P0)
 
-**Arquivo**: `src/pages/ServerDashboard.tsx`
+O problema está no `tenantQuery()` que retorna `(query as any).eq('tenant_id', tenantId)`. O cast `as any` perde tipagem e pode causar problemas em runtime.
 
-**Mudança** (linha 212): Trocar query de `agents_safe` por RPC `get_agents_list`:
+**Correção** em `src/lib/tenantQuery.ts`:
 
 ```typescript
-// ANTES:
-supabase.from("agents_safe").select("*").eq("tenant_id", tenant.id)
+export function tenantQuery<T extends TableName>(
+  table: T,
+  tenantId: string | undefined
+) {
+  const isMultiTenant = MULTI_TENANT_TABLES.has(table);
 
-// DEPOIS:
-supabase.rpc('get_agents_list', { p_tenant_id: tenant.id, p_include_archived: false })
-```
+  if (isMultiTenant && !tenantId) {
+    throw new Error(
+      `[tenantQuery] tenant_id obrigatório para tabela "${table}".`
+    );
+  }
 
-**Mapeamento** (após linha 221):
-```typescript
-if (agentsRes.data) {
-  // Mapear retorno da RPC para formato esperado
-  const mappedAgents = (agentsRes.data || []).map((agent: any) => ({
-    id: agent.id,
-    agent_name: agent.agent_name,
-    status: agent.status,
-    enrolled_at: agent.enrolled_at,
-    last_heartbeat: agent.last_heartbeat,
-    tenant_id: agent.tenant_id,
-  }));
-  setAgents(mappedAgents);
-  // ... resto do código existente
+  const query = supabase.from(table);
+
+  // CORREÇÃO: Retornar query builder diretamente, deixar o .eq para o chamador
+  // Isso mantém a tipagem correta e evita "o.eq is not a function"
+  if (isMultiTenant && tenantId) {
+    // Retorna o builder com o filtro aplicado corretamente
+    return query.eq('tenant_id', tenantId);
+  }
+
+  return query;
 }
 ```
 
----
+**OU** alternativa mais segura - usar `supabase.from()` diretamente no `useVulnFindings.tsx`:
 
-### Fase B: Banco - Corrigir RPC `get_audit_raw_metrics` (P0)
+```typescript
+async function fetchVulnFindings(agentId: string, tenantId: string): Promise<VulnFinding[]> {
+  // CORREÇÃO: Usar supabase.from() diretamente ao invés de tenantQuery
+  const { data, error } = await supabase
+    .from('vuln_findings')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('agent_id', agentId)
+    .order('severity', { ascending: false })
+    .order('first_seen_at', { ascending: false });
 
-**Problema**: Subqueries para views podem retornar múltiplas linhas ou zero.
+  if (error) {
+    throw new Error(`Failed to fetch vulnerability findings: ${error.message}`);
+  }
 
-**Solução**: Usar LIMIT 1 nas subqueries e garantir fallback:
-
-```sql
-DROP FUNCTION IF EXISTS public.get_audit_raw_metrics(uuid);
-
-CREATE OR REPLACE FUNCTION public.get_audit_raw_metrics(p_tenant_id uuid)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = 'public'
-AS $$
-DECLARE
-  result jsonb;
-BEGIN
-  SELECT jsonb_build_object(
-    -- AGENTS (consulta direta - seguro)
-    'agents', jsonb_build_object(
-      'total', (SELECT COUNT(*) FROM agents WHERE tenant_id = p_tenant_id AND archived_at IS NULL),
-      'online', (SELECT COUNT(*) FROM agents WHERE tenant_id = p_tenant_id AND archived_at IS NULL AND status = 'active'),
-      'offline', (SELECT COUNT(*) FROM agents WHERE tenant_id = p_tenant_id AND archived_at IS NULL AND status != 'active'),
-      'in_safe_mode', (SELECT COUNT(*) FROM agent_safe_mode_events WHERE tenant_id = p_tenant_id AND resolved_at IS NULL)
-    ),
-    
-    -- DECISION EVENTS
-    'decision_events', jsonb_build_object(
-      'total', COALESCE((SELECT COUNT(*) FROM decision_events WHERE tenant_id = p_tenant_id), 0),
-      'by_human', COALESCE((SELECT COUNT(*) FROM decision_events WHERE tenant_id = p_tenant_id AND actor_type = 'human'), 0),
-      'by_system', COALESCE((SELECT COUNT(*) FROM decision_events WHERE tenant_id = p_tenant_id AND actor_type = 'system'), 0)
-    ),
-    
-    -- AI ACTIONS
-    'ai_actions', jsonb_build_object(
-      'total', COALESCE((SELECT COUNT(*) FROM ai_actions WHERE tenant_id = p_tenant_id), 0),
-      'human_reviewed', COALESCE((SELECT COUNT(*) FROM ai_actions WHERE tenant_id = p_tenant_id AND human_reviewed = true), 0),
-      'approved', COALESCE((SELECT COUNT(*) FROM ai_actions WHERE tenant_id = p_tenant_id AND review_decision = 'approved'), 0),
-      'pending', COALESCE((SELECT COUNT(*) FROM ai_actions WHERE tenant_id = p_tenant_id AND review_decision IS NULL), 0)
-    ),
-    
-    -- DLQ
-    'dlq', jsonb_build_object(
-      'current', COALESCE((SELECT COUNT(*) FROM failed_jobs_dlq WHERE tenant_id = p_tenant_id AND status = 'pending'), 0),
-      'total', COALESCE((SELECT COUNT(*) FROM failed_jobs_dlq WHERE tenant_id = p_tenant_id), 0)
-    ),
-    
-    -- ROLLBACKS
-    'rollbacks', jsonb_build_object(
-      'total', COALESCE((SELECT COUNT(*) FROM agent_rollback_events WHERE tenant_id = p_tenant_id), 0),
-      'last_30d', COALESCE((SELECT COUNT(*) FROM agent_rollback_events WHERE tenant_id = p_tenant_id AND created_at > NOW() - INTERVAL '30 days'), 0)
-    ),
-    
-    -- ALERTS
-    'alerts', jsonb_build_object(
-      'open', (SELECT COUNT(*) FROM system_alerts WHERE tenant_id = p_tenant_id AND resolved = false),
-      'critical_open', (SELECT COUNT(*) FROM system_alerts WHERE tenant_id = p_tenant_id AND resolved = false AND severity = 'critical')
-    ),
-    
-    -- USERS
-    'users', jsonb_build_object(
-      'count', (SELECT COUNT(DISTINCT user_id) FROM user_roles WHERE tenant_id = p_tenant_id)
-    ),
-    
-    -- POLICIES
-    'policies', jsonb_build_object(
-      'total', (SELECT COUNT(*) FROM security_policies WHERE tenant_id = p_tenant_id),
-      'active', (SELECT COUNT(*) FROM security_policies WHERE tenant_id = p_tenant_id AND is_active = true)
-    ),
-    
-    -- REMOVIDO: tenant_isolation, rbac, enforcement (views problemáticas)
-    -- Substituído por queries diretas simples
-    
-    -- TENANT STATS (substituindo v_tenant_isolation_metrics)
-    'tenant_stats', jsonb_build_object(
-      'agent_count', (SELECT COUNT(*) FROM agents WHERE tenant_id = p_tenant_id AND archived_at IS NULL),
-      'job_count', (SELECT COUNT(*) FROM jobs WHERE tenant_id = p_tenant_id),
-      'user_count', (SELECT COUNT(DISTINCT user_id) FROM user_roles WHERE tenant_id = p_tenant_id)
-    ),
-    
-    -- METADATA
-    'collected_at', NOW(),
-    'version', '3.0.0'
-  ) INTO result;
-
-  RETURN result;
-END;
-$$;
+  return data || [];
+}
 ```
 
----
+### Fase B: Corrigir Modal "Adicionar Computadores" (P0)
 
-### Fase C: Banco - Adicionar RLS para agent_tokens e agent_releases (P1)
+**Arquivo**: `src/hooks/useAgentGroups.tsx` linhas 204-238
+
+**Correção**: Migrar de `agents_safe` para RPC `get_agents_list`:
+
+```typescript
+export function useAvailableAgents(groupId: string | null) {
+  const { tenant, loading } = useTenant();
+
+  const { data: agents = [], isLoading } = useQuery({
+    queryKey: ['available-agents-for-group', tenant?.id, groupId],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      
+      // CORREÇÃO: Usar RPC get_agents_list ao invés de agents_safe
+      const { data: allAgents, error: agentsError } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false
+      });
+      
+      if (agentsError) throw agentsError;
+
+      // Mapear para formato esperado
+      const mappedAgents = (allAgents || []).map((agent: any) => ({
+        id: agent.id,
+        agent_name: agent.agent_name,
+        display_name: agent.display_name || agent.agent_name,
+        hostname: agent.hostname,
+        status: agent.status,
+      }));
+
+      if (!groupId) return mappedAgents;
+
+      // Get agents already in this group
+      const { data: groupMembers, error: membersError } = await supabase
+        .from('agents_groups')
+        .select('agent_id')
+        .eq('group_id', groupId);
+      if (membersError) throw membersError;
+
+      const memberIds = new Set(groupMembers?.map(m => m.agent_id) || []);
+      return mappedAgents.filter(agent => !memberIds.has(agent.id));
+    },
+    enabled: !loading && !!tenant?.id,
+  });
+
+  return { agents, isLoading };
+}
+```
+
+### Fase C: Corrigir Jobs Pipeline Status (P1)
+
+O status "Jobs: Crítico" está correto - indica que os jobs não estão sendo processados. Os agentes estão online mas não estão consumindo jobs.
+
+**Causa provável**: Os agentes não estão chamando `poll-jobs` ou há um problema no ciclo de polling.
+
+**Diagnóstico adicional necessário**:
+- Verificar se os agentes estão fazendo polling corretamente
+- Verificar logs do Edge Function `poll-jobs`
+- Verificar se há erros no agente que impedem o processamento
+
+**Ação imediata (UI)**: Não é erro de código frontend. O indicador está correto.
+
+### Fase D: Corrigir Erro 403 em agent_tokens (P1)
+
+A policy atual usa `get_active_tenant_id()` que pode ser NULL:
 
 ```sql
--- agent_tokens RLS
-ALTER TABLE agent_tokens ENABLE ROW LEVEL SECURITY;
+-- Política atual problemática
+USING (((get_active_tenant_id() IS NOT NULL) AND (...)))
+```
 
-CREATE POLICY "Users can view tokens for agents in their tenant"
+**Correção SQL**:
+
+```sql
+-- Remover policy problemática e criar nova usando user_roles
+DROP POLICY IF EXISTS "agent_tokens_select_active_tenant" ON agent_tokens;
+
+CREATE POLICY "agent_tokens_select_via_user_roles"
 ON agent_tokens FOR SELECT
+TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM agents a
@@ -178,40 +202,48 @@ USING (
     AND ur.user_id = auth.uid()
   )
 );
-
--- agent_releases RLS (já pode ter)
--- Verificar se existe e adicionar policy de SELECT
 ```
+
+### Fase E: Investigar Erro started_at (P2)
+
+O erro "column scheduled_job_runs.started_at does not exist" apareceu nos logs do banco. Precisa encontrar qual código está fazendo essa query.
+
+**Busca realizada**: Não encontrei referências diretas a `scheduled_job_runs.started_at` no código. Pode ser:
+1. Uma view desatualizada
+2. Uma RPC que não foi migrada
+3. Cache de types desatualizado
+
+**Ação**: Verificar a view `v_job_health` e outras views/RPCs que usam `scheduled_job_runs`.
 
 ---
 
-## Entregáveis
+## Resumo de Entregáveis
 
-| Arquivo | Tipo | Prioridade |
-|---------|------|------------|
-| `src/pages/ServerDashboard.tsx` | Frontend | P0 |
-| `get_audit_raw_metrics` migration | Banco SQL | P0 |
-| RLS policies para agent_tokens | Banco SQL | P1 |
-| RLS policies para agent_releases | Banco SQL | P1 |
+| Arquivo | Mudança | Prioridade |
+|---------|---------|------------|
+| `src/hooks/useVulnFindings.tsx` | Usar `supabase.from()` ao invés de `tenantQuery()` | P0 |
+| `src/hooks/useAgentGroups.tsx` | Migrar `useAvailableAgents` para RPC `get_agents_list` | P0 |
+| SQL Migration | Corrigir RLS de `agent_tokens` | P1 |
+| Diagnóstico | Verificar por que agentes não processam jobs | P1 |
 
 ---
 
 ## Validação
 
-1. **Dashboard Principal** (`/dashboard`):
-   - Selecionar "Genial Cred" → Deve mostrar "11 computadores monitorados"
-   - Selecionar "Pedro Alves" → Deve mostrar "3 computadores monitorados"
+1. **VulnerabilityFindings**:
+   - Navegar para `/admin/vulnerability-findings`
+   - Selecionar um computador
+   - Confirmar que não aparece "o.eq is not a function"
 
-2. **Console do Browser**:
-   - Não deve mais mostrar erro 500 em `get_audit_raw_metrics`
+2. **Grupos de Computadores**:
+   - Navegar para `/admin/agent-groups`
+   - Selecionar grupo "Funcionarios_Bmg"
+   - Clicar "Adicionar Computadores"
+   - Confirmar que lista os 11 agentes do Genial Cred
+
+3. **Pipeline Health**:
+   - O status "Jobs: Crítico" deve mudar para "Fresh" quando os agentes voltarem a processar jobs
+   - Isso requer investigação operacional nos agentes
+
+4. **Console**:
    - Não deve mostrar erro 403 para `agent_tokens`
-
-3. **IntegrityScoreCard**:
-   - Não deve mais exibir erro de carregamento
-
----
-
-## Riscos e Cuidados
-
-- A RPC `get_agents_list` retorna campos diferentes do que `agents_safe`. Verificar que o mapeamento está correto.
-- Ao remover dependência de views problemáticas em `get_audit_raw_metrics`, algumas métricas avançadas (RLS coverage, RBAC stats) ficam temporariamente indisponíveis - podem ser restauradas depois com queries diretas.
