@@ -20580,6 +20580,10 @@ export type Database = {
         }
         Returns: Json
       }
+      create_jobs_for_all_agents: {
+        Args: { p_job_type: string; p_payload?: Json; p_tenant_id: string }
+        Returns: number
+      }
       create_metrics_partition_if_needed: { Args: never; Returns: undefined }
       create_retroactive_execution: {
         Args: { p_job_id: string }

@@ -75,9 +75,23 @@ export function InsightInvestigationDrawer({
     }
   }
 
+  // Detecta se é um insight de sistema (sem agente vinculado)
+  const isSystemInsight = !item.agent_id;
+
   const handleAction = async (action: string) => {
-    if (!item.agent_id || !tenant?.id) {
-      toast.error('Agente não identificado');
+    // Para insights de sistema (sem agente), tratar de forma especial
+    if (isSystemInsight) {
+      if (action === 'navigate_agent') {
+        toast.info('Este insight é de sistema e não está vinculado a um agente específico');
+        return;
+      }
+      // Permitir apenas resolução para insights de sistema
+      toast.info('Ações específicas de agente não disponíveis para insights de sistema. Use "Marcar como Resolvido".');
+      return;
+    }
+
+    if (!tenant?.id) {
+      toast.error('Tenant não identificado');
       return;
     }
 
@@ -92,7 +106,7 @@ export function InsightInvestigationDrawer({
     try {
       const result = await executeInsightAction(
         action,
-        item.agent_id,
+        item.agent_id!,
         item.agent_name || 'Agent',
         tenant.id,
         item.item_id
@@ -287,9 +301,13 @@ export function InsightInvestigationDrawer({
                 />
               ) : (
                 <Alert>
-                  <AlertTriangle className="h-4 w-4" />
+                  <Sparkles className="h-4 w-4 text-purple-500" />
                   <AlertDescription>
-                    Não foi possível identificar o agente para este insight.
+                    Este é um insight de sistema. Diagnósticos específicos de agente não estão disponíveis.
+                    <br />
+                    <span className="text-muted-foreground text-xs">
+                      Utilize a aba "Ações" para marcar como resolvido ou ignorar.
+                    </span>
                   </AlertDescription>
                 </Alert>
               )}
