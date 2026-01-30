@@ -1,180 +1,155 @@
 
 # Plano: Correção de Agentes Sem Polling e Limpeza da DLQ
 
-## 📋 Diagnóstico Confirmado
+## Diagnóstico Atualizado
 
-### Problema 1: Apenas PC-Amanda faz polling (CRÍTICO)
-| Evidência | Valor |
-|-----------|-------|
-| Logs de `/poll-jobs` | Apenas PC-Amanda nos logs das últimas horas |
-| Versão no banco | Todos mostram `v4.4.0` |
-| Causa raiz | **Scripts locais desatualizados** - o campo `agent_version` é atualizado via heartbeat mas não reflete o script instalado |
+### Estado Atual do Sistema
 
-### Problema 2: DLQ com 2.255 itens pendentes
-| Bucket de Idade | Quantidade |
-|-----------------|------------|
-| Antigos (>7 dias) | 1.659 |
-| Médios (3-7 dias) | 388 |
-| Recentes (<3 dias) | 208 |
+| Métrica | Valor | Status |
+|---------|-------|--------|
+| Agentes fazendo polling | 1 (apenas Pc-Vidro-Planalto) | CRÍTICO |
+| Agentes online (heartbeat < 1 min) | 2 (PC-Amanda, Pc-Vidro-Planalto) | OK |
+| Agentes "dormindo" (heartbeat 18+ min) | 9 agentes | Desligados/Standby |
+| DLQ pendente total | 601 itens | Melhorou (era 2.255) |
+| DLQ antiga (>7 dias) | 0 | LIMPA |
+| DLQ recente (<1 dia) | 165 | Precisa atenção |
+
+### Por Que Apenas Pc-Vidro-Planalto Faz Polling?
+
+A investigação revelou que:
+
+1. **Force-update foi aplicado** e depois limpo (campos `force_update_*` estão `nil`)
+2. **Apenas 2 agentes estão verdadeiramente online** (heartbeat < 1 min)
+3. **Pc-Vidro-Planalto** está fazendo polling corretamente (24 execuções/hora)
+4. **PC-Amanda** está online mas com 0 execuções - script ainda antigo
+5. **Os outros 9 agentes** têm heartbeat de ~18 minutos atrás - provavelmente desligados ou em standby
+
+**Causa Raiz**: Os scripts antigos não processam o campo `force_update` do response do heartbeat. Eles simplesmente ignoram e continuam rodando o código antigo sem polling.
 
 ---
 
-## 🔧 Fase A: Forçar Atualização dos Agentes via Force-Update (P0 - CRÍTICO)
+## Ações Necessárias
 
-### Ação
-O mecanismo de force-update já existe e funciona. Quando o agente envia heartbeat, o backend verifica se `force_update_version` está definido e envia o novo script na resposta.
+### Fase A: Reinstalar Agentes que Não Estão Fazendo Polling (P0 - CRÍTICO)
 
-### SQL a Executar
-Execute no Lovable Cloud → Run SQL:
+O mecanismo de force-update **não funciona** para agentes com scripts muito antigos porque eles não têm o código para processar o `force_update` no response.
+
+**Solução**: Usar o script de reinstalação preservando credenciais diretamente nos computadores afetados.
+
+#### Para PC-Amanda (online mas sem polling)
+
+Execute **no computador do PC-Amanda** como Administrador:
+
+```text
+powershell
+irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/get-reinstall-preserve-script | iex
+```
+
+O script irá:
+1. Detectar automaticamente AgentName, AgentToken, HmacSecret do script existente
+2. Fazer backup do script atual
+3. Baixar a versão mais recente via `/serve-agent-update`
+4. Reinstalar e iniciar o agente
+5. Preservar toda a identidade e histórico no dashboard
+
+#### Para Agentes Offline (quando ligarem)
+
+Os 9 agentes com heartbeat antigo estão offline/desligados. Quando voltarem:
+1. Executar o mesmo script de reinstalação
+2. Ou aguardar um novo force-update quando tiverem script capaz de processar
+
+---
+
+### Fase B: Forçar Update Quando Agentes Reconectarem (P1)
+
+Para garantir que agentes offline recebam update quando reconectarem:
+
+**SQL para definir force-update para todos os agentes exceto Pc-Vidro-Planalto:**
 
 ```sql
--- Forçar atualização de todos os agentes online (exceto PC-Amanda que já funciona)
+-- Forçar atualização quando agentes reconectarem
 UPDATE agents 
 SET 
   force_update_version = 'v4.4.0',
-  force_update_reason = 'Script local desatualizado - não está fazendo polling de jobs',
+  force_update_reason = 'Reinstalação forçada - script sem loop de polling',
   force_update_at = NOW()
 WHERE archived_at IS NULL
   AND status = 'active'
-  AND last_heartbeat > NOW() - INTERVAL '10 minutes'
-  AND agent_name != 'PC-Amanda';
+  AND agent_name NOT IN ('Pc-Vidro-Planalto');
 ```
 
-### Como Funciona
-1. No próximo heartbeat (dentro de ~60 segundos), cada agente receberá:
-   ```json
-   {
-     "force_update": true,
-     "target_version": "v4.4.0",
-     "script_content_base64": "...",
-     "sha256": "...",
-     "reason": "Script local desatualizado..."
-   }
-   ```
-2. O agente executa `Apply-ForcedUpdate`:
-   - Decodifica Base64
-   - Valida SHA256
-   - Substitui script local
-   - Reinicia Scheduled Task
-3. Após reinício, o agente terá o script correto e começará a fazer polling
-
-### Validação
-- Aguardar 2-3 minutos após executar SQL
-- Verificar logs de `poll-jobs` - devem aparecer novos agentes
-- Query para confirmar:
-  ```sql
-  SELECT agent_name, COUNT(*) 
-  FROM job_executions 
-  WHERE created_at > NOW() - INTERVAL '5 minutes'
-  GROUP BY agent_name;
-  ```
+**NOTA**: Isso só funcionará se o agente tiver um script que processa force_update. Caso contrário, será necessária reinstalação manual.
 
 ---
 
-## 🔧 Fase B: Limpar DLQ Antiga (P1)
+### Fase C: Limpar DLQ Restante (P2)
 
-### Ação
-Resolver automaticamente itens da DLQ com mais de 7 dias (são obsoletos).
+A DLQ foi reduzida de 2.255 para 601 itens. Para limpar o restante:
 
-### SQL a Executar
 ```sql
--- Limpar DLQ antiga (>7 dias)
+-- Opção 1: Marcar DLQ média (3-7 dias) como resolvida
 UPDATE failed_jobs_dlq
 SET 
   status = 'resolved',
   resolution_source = 'auto_cleanup',
-  resolution_notes = 'Limpeza automática de itens antigos (>7 dias sem processar)',
+  resolution_notes = 'Limpeza automática - DLQ pendente há mais de 3 dias',
   resolved_at = NOW()
 WHERE status = 'pending'
-  AND created_at < NOW() - INTERVAL '7 days';
+  AND created_at < NOW() - INTERVAL '3 days';
 
--- Verificar resultado
-SELECT status, COUNT(*) FROM failed_jobs_dlq GROUP BY status;
-```
-
-### Resultado Esperado
-- ~1.659 itens resolvidos automaticamente
-- DLQ pendente reduzida de 2.255 para ~596
-
----
-
-## 🔧 Fase C: Limpar Jobs Expirados (P2)
-
-### Ação
-Jobs muito antigos em `queued` devem ser cancelados para evitar acúmulo.
-
-### SQL a Executar
-```sql
--- Cancelar jobs queued há mais de 24 horas (expirados)
-UPDATE jobs
-SET 
-  status = 'cancelled',
-  error_message = 'Job expirado - não entregue em 24 horas'
-WHERE status = 'queued'
-  AND created_at < NOW() - INTERVAL '24 hours';
-
--- Verificar jobs queued restantes
+-- Opção 2: Verificar DLQ recente antes de resolver
 SELECT 
-  a.agent_name,
-  COUNT(j.id) as jobs_queued
-FROM jobs j
-JOIN agents a ON j.agent_id = a.id
-WHERE j.status = 'queued'
-GROUP BY a.agent_name
-ORDER BY jobs_queued DESC;
+  job_type,
+  COUNT(*) as count,
+  MIN(created_at) as oldest
+FROM failed_jobs_dlq
+WHERE status = 'pending'
+  AND created_at > NOW() - INTERVAL '3 days'
+GROUP BY job_type
+ORDER BY count DESC;
 ```
 
 ---
 
-## 📊 Resumo de Entregáveis
+## Validação Pós-Correção
 
-| Prioridade | Ação | Tipo | Impacto |
-|------------|------|------|---------|
-| **P0** | Force-update em agentes problemáticos | SQL UPDATE | 10 agentes atualizados |
-| **P1** | Limpar DLQ >7 dias | SQL UPDATE | ~1.659 itens resolvidos |
-| **P2** | Cancelar jobs expirados | SQL UPDATE | Reduz backlog |
+### Imediata (após reinstalar PC-Amanda)
+1. Verificar logs de `/poll-jobs` - deve aparecer "PC-Amanda"
+2. Verificar `job_executions` - deve ter novas execuções de PC-Amanda
+3. Verificar jobs queued - devem ser entregues
 
----
+### Em 24-48 horas (quando outros agentes ligarem)
+1. Monitorar heartbeats dos 9 agentes offline
+2. Verificar se recebem force-update ou precisam reinstalação manual
+3. Confirmar polling funcionando para todos
 
-## ✅ Validação Pós-Correção
-
-### Em 5 minutos
-1. **Logs de poll-jobs**: Devem mostrar TODOS os agentes online
-2. **job_executions**: Novas execuções de múltiplos agentes
-3. **Jobs queued**: Devem começar a ser entregues
-
-### Em 30 minutos
-1. **DLQ pendente**: < 600 itens
-2. **Ciclos de saúde**: Melhoria no dashboard
+### DLQ
+1. Query: `SELECT status, COUNT(*) FROM failed_jobs_dlq GROUP BY status`
+2. Pendente deve ser < 200 após limpeza
 
 ---
 
-## 🔍 Por que PC-Amanda Funciona e os Outros Não?
+## Resumo de Entregáveis
 
-PC-Amanda provavelmente:
-1. Foi reinstalado manualmente mais recentemente
-2. Ou teve o force-update aplicado com sucesso anteriormente
-3. Ou é um computador que não estava ligado durante períodos de problemas anteriores
-
-Os outros agentes podem ter recebido o heartbeat de atualização de versão (que atualiza `agent_version` no banco) mas **nunca aplicaram o script atualizado** por:
-- Erros durante `Apply-ForcedUpdate`
-- Scheduled Task não reiniciou corretamente
-- Script antigo continuou rodando na memória
-
-O force-update forçará uma nova tentativa de atualização.
+| Prioridade | Ação | Responsável | Tipo |
+|------------|------|-------------|------|
+| **P0** | Reinstalar PC-Amanda via script | Usuário | Script no computador |
+| **P1** | Definir force-update para outros agentes | SQL no dashboard | SQL UPDATE |
+| **P2** | Limpar DLQ média (3-7 dias) | SQL no dashboard | SQL UPDATE |
+| **P3** | Reinstalar agentes offline quando ligarem | Usuário | Script no computador |
 
 ---
 
-## Arquivos Modificados
-Nenhum arquivo precisa ser modificado. Todas as ações são via SQL no dashboard.
+## Comando de Reinstalação (Copiar e Colar)
 
----
+Para qualquer agente que não esteja fazendo polling, executar **no computador do agente** como Administrador:
 
-## Alternativa: Reinstalação Manual
-
-Se o force-update não funcionar em algum agente específico, usar o script de reinstalação preservando credenciais:
-
-```powershell
-# Executar no computador do agente como Administrador
-irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/get-reinstall-preserve-script | iex
+```text
+powershell -ExecutionPolicy Bypass -Command "irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/get-reinstall-preserve-script | iex"
 ```
+
+Este comando:
+- Detecta credenciais automaticamente do script existente
+- Baixa a versão v4.4.0 com loop de polling funcionando
+- Preserva identidade no dashboard
+- Cria backup do script antigo
