@@ -151,8 +151,8 @@ Deno.serve(async (req) => {
         id, insight_type, title, severity, status, 
         auto_action_executed, resolved_at, evidence,
         ai_actions(
-          id, action_type, handler, status, executed_at,
-          effectiveness_status, effectiveness_evidence
+          id, action_type, status, executed_at,
+          effectiveness_status, effectiveness_evidence, result
         )
       `)
       .eq('tenant_id', tenant_id)
