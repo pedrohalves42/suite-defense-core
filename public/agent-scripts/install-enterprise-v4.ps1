@@ -392,14 +392,19 @@ function Install-ScheduledTask {
     
     $triggers = @($startupTrigger, $repetitionTrigger)
     
+    # ENHANCED RECOVERY: Configurações robustas para auto-recuperação
     $settings = New-ScheduledTaskSettingsSet `
         -AllowStartIfOnBatteries `
         -DontStopIfGoingOnBatteries `
         -StartWhenAvailable `
-        -RestartCount 5 `
-        -RestartInterval (New-TimeSpan -Minutes 1) `
+        -RestartCount 10 `
+        -RestartInterval (New-TimeSpan -Seconds 30) `
         -ExecutionTimeLimit (New-TimeSpan -Days 365) `
-        -MultipleInstances IgnoreNew
+        -MultipleInstances IgnoreNew `
+        -RunOnlyIfNetworkAvailable $false
+    
+    # Habilitar reinício em caso de falha (RunOnlyIfIdle = false implícito)
+    Write-InstallLog "Recovery: RestartCount=10, RestartInterval=30s, RepetitionInterval=5min" "INFO" "Task"
     
     $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
     

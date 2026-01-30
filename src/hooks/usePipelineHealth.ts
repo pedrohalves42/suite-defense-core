@@ -71,14 +71,16 @@ export function usePipelineHealth(
         webRes,
         dnsRes,
       ] = await Promise.all([
-        supabase
-          .from('agents_safe')
-          .select('last_heartbeat')
-          .eq('tenant_id', tenantId)
-          .is('archived_at', null)
-          .order('last_heartbeat', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
+      // CORREÇÃO: Usar tabela 'agents' diretamente ao invés de 'agents_safe' view
+      // para evitar problemas quando JWT não tem claim active_tenant_id
+      supabase
+        .from('agents')
+        .select('last_heartbeat')
+        .eq('tenant_id', tenantId)
+        .is('archived_at', null)
+        .order('last_heartbeat', { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle(),
         supabase
           .from('jobs')
           .select('created_at, completed_at')

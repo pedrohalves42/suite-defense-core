@@ -21043,6 +21043,19 @@ export type Database = {
           risk_level: string
         }[]
       }
+      get_stale_agents: {
+        Args: { p_tenant_id: string; p_threshold_minutes?: number }
+        Returns: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          display_name: string
+          hostname: string
+          last_heartbeat: string
+          minutes_since_heartbeat: number
+          status: string
+        }[]
+      }
       get_system_mode: {
         Args: never
         Returns: Database["public"]["Enums"]["system_operational_mode"]
