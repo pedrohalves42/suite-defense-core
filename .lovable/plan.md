@@ -1,158 +1,200 @@
 
-# Plano: Correção de Múltiplos Problemas Operacionais
+# Plano: Correção de Múltiplos Problemas Críticos
 
 ## Diagnóstico Completo
 
-### Problema 1: Erro no "Investigar anomalia"
+### Problema 1: Admin não consegue criar canal de notificação
+**Erro**: "new row violates row-level security policy for table 'notification_channels'"
 
-**Status**: O erro não está sendo exibido nos logs recentes do `action-center-feed`. O componente `InsightInvestigationDrawer` abre um drawer, mas se o `item.agent_id` estiver ausente (para anomalias de sistema), mostra "Agente não identificado" e bloqueia ações.
+**Causa Raiz**: A política RLS `notification_channels_all_active_tenant` está configurada como `FOR ALL` mas **sem cláusula `WITH CHECK`**. No PostgreSQL, quando uma política `FOR ALL` não tem `WITH CHECK`, ela usa a mesma expressão de `USING` para verificar INSERTs - mas isso depende de `get_active_tenant_id()` retornar um valor.
 
-**Causa raiz**: Anomalias detectadas automaticamente do tipo `ai_insight` podem não ter `agent_id` associado, causando o erro "Agente não identificado" quando o usuário tenta executar ações.
+```sql
+-- Política atual (problemática)
+USING (
+  ((get_active_tenant_id() IS NOT NULL) AND (tenant_id = get_active_tenant_id())) 
+  OR is_current_super_admin()
+)
+WITH CHECK: NULL  -- PROBLEMA: não está definido!
+```
 
-**Correção**: Modificar `InsightInvestigationDrawer.tsx` para tratar corretamente insights sem `agent_id`, mostrando ações alternativas e mensagens informativas.
-
----
-
-### Problema 2: Jobs "queued" não sendo processados (CRÍTICO)
-
-**Status**: Erro `ILLEGAL_STATE_TRANSITION` no `poll-jobs` ao tentar fazer transição de status.
-
-**Causa raiz**: O trigger `enforce_job_state_transitions` permite transições:
-- `pending` → `queued`, `cancelled`, `failed`
-- `queued` → `delivered`, `failed`, `cancelled`
-
-Mas a RPC `claim_jobs_for_agent` filtra por `status IN ('queued', 'pending')` e tenta mudar para `delivered`. O problema é que alguns jobs estão com status `pending` e a RPC tenta ir direto para `delivered`, mas a transição `pending` → `delivered` **não é permitida**.
-
-**Solução**: A RPC precisa primeiro transicionar `pending` → `queued` antes de ir para `delivered`, ou o trigger precisa permitir `pending` → `delivered`.
+**Análise**: Quando o INSERT tenta inserir com `tenant_id = tenant!.id`, a política verifica se `tenant_id = get_active_tenant_id()`. Se o JWT não estiver sincronizado ou `get_active_tenant_id()` retornar NULL, o INSERT é bloqueado.
 
 ---
 
-### Problema 3: Navegação - Sem atalho para página inicial após logout
+### Problema 2: Drawer do computador abre vazio (sem dados)
 
-**Status**: Após logout, usuário não consegue voltar à página inicial.
+**Causa Raiz**: O `AgentDetailsDrawer` usa o hook `useAgentCausality` que consulta a view `agents_safe`. Se `get_active_tenant_id()` retornar NULL (JWT não sincronizado), o fallback da view tenta verificar via `user_roles`, mas pode haver race conditions.
 
-**Causa raiz**: O `AppSidebar.tsx` não tem link direto para `/` (Landing page). Após logout, o usuário fica na página de login sem acesso claro ao site público.
+**Evidência**: A imagem 4 mostra o drawer aberto para "Pc-Dani-Planalto" mas completamente vazio - sem dados de estado, sem diagnóstico, sem ações.
 
-**Correção**: 
-1. Adicionar link no header da página de Login para voltar à Landing page
-2. O logo no Navbar já linka para `/`, então é questão de visibilidade
+---
+
+### Problema 3: Tempo real mostrando máquinas offline incorretamente
+
+**Status**: Os agentes estão online (confirmado via query direta - 11 agentes com heartbeat nos últimos 5 minutos).
+
+**Causa Raiz Provável**: Inconsistência entre o estado no banco e a exibição. Os agentes têm `is_throttled = true` sendo classificados incorretamente como "crítico".
 
 ---
 
 ## Correções Propostas
 
-### Fase A: Corrigir Transição de Estado de Jobs (P0 - CRÍTICO)
+### Fase A: Corrigir RLS de notification_channels (P0 - CRÍTICO)
 
-**Arquivo**: SQL Migration
-
-Alterar o trigger `enforce_job_state_transitions` para permitir a transição `pending` → `delivered`:
+Recriar a política com `WITH CHECK` explícito para INSERT:
 
 ```sql
--- Atualizar as transições válidas
-CREATE OR REPLACE FUNCTION enforce_job_state_transitions()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_valid_transitions jsonb := '{
-    "pending": ["queued", "delivered", "cancelled", "failed"],
-    "queued": ["delivered", "failed", "cancelled"],
-    "delivered": ["completed", "failed", "cancelled"],
-    "completed": ["archived"],
-    "failed": ["archived"],
-    "cancelled": ["archived"]
-  }'::jsonb;
-  v_allowed_states jsonb;
-BEGIN
-  IF OLD.status = NEW.status THEN
-    RETURN NEW;
-  END IF;
-  
-  v_allowed_states := v_valid_transitions->OLD.status;
-  
-  IF v_allowed_states IS NULL OR NOT v_allowed_states ? NEW.status THEN
-    RAISE EXCEPTION 'ILLEGAL_STATE_TRANSITION: Cannot transition from % to %. Allowed: %',
-      OLD.status, NEW.status, COALESCE(v_allowed_states, '[]'::jsonb)
-    USING ERRCODE = '23514';
-  END IF;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- Remover política problemática
+DROP POLICY IF EXISTS notification_channels_all_active_tenant ON notification_channels;
+
+-- Criar políticas separadas por operação
+CREATE POLICY notification_channels_select_authenticated ON notification_channels
+  FOR SELECT TO authenticated
+  USING (
+    (tenant_id = get_active_tenant_id()) 
+    OR is_current_super_admin()
+  );
+
+CREATE POLICY notification_channels_insert_authenticated ON notification_channels
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    (tenant_id = get_active_tenant_id()) 
+    OR is_current_super_admin()
+  );
+
+CREATE POLICY notification_channels_update_authenticated ON notification_channels
+  FOR UPDATE TO authenticated
+  USING (
+    (tenant_id = get_active_tenant_id()) 
+    OR is_current_super_admin()
+  )
+  WITH CHECK (
+    (tenant_id = get_active_tenant_id()) 
+    OR is_current_super_admin()
+  );
+
+CREATE POLICY notification_channels_delete_authenticated ON notification_channels
+  FOR DELETE TO authenticated
+  USING (
+    (tenant_id = get_active_tenant_id()) 
+    OR is_current_super_admin()
+  );
 ```
 
-### Fase B: Melhorar Tratamento de Insights sem Agent (P1)
+---
 
-**Arquivo**: `src/components/action-center/InsightInvestigationDrawer.tsx`
+### Fase B: Corrigir AgentDetailsDrawer com fallback robusto (P0)
 
-Modificar o `handleAction` para tratar insights de sistema (sem agent_id):
+**Arquivo**: `src/components/agent/AgentDetailsDrawer.tsx`
+
+Problema: Se `useAgentCausality` falha silenciosamente, o drawer mostra apenas skeleton e depois nada.
+
+**Correção**:
+1. Adicionar estado de erro explícito
+2. Implementar fallback para buscar dados mínimos diretamente
+3. Mostrar mensagem de erro clara com botão "Tentar Novamente"
 
 ```typescript
-const handleAction = async (action: string) => {
-  // Para insights de sistema (sem agente), redirecionar ou mostrar alternativa
-  if (!item.agent_id) {
-    if (action === 'navigate_agent') {
-      toast.info('Este insight é de sistema e não está vinculado a um agente específico');
-      return;
-    }
-    // Permitir ações que não requerem agent_id
-    if (['mark_resolved', 'ignore'].includes(action)) {
-      handleResolve();
-      return;
-    }
-    toast.info('Ações específicas de agente não disponíveis para insights de sistema');
-    return;
-  }
-  // ... resto do código
-};
+// Modificar o hook para expor erros
+const { data: causality, isLoading, isError, refetch } = useAgentCausality(agentId);
+
+// Renderizar estado de erro
+{isError && (
+  <div className="flex flex-col items-center justify-center py-8 text-center">
+    <AlertCircle className="h-10 w-10 text-destructive mb-3" />
+    <p className="font-medium text-destructive">Erro ao carregar dados</p>
+    <p className="text-sm text-muted-foreground mb-4">
+      Não foi possível obter informações deste computador
+    </p>
+    <Button variant="outline" onClick={() => refetch()}>
+      <RefreshCw className="h-4 w-4 mr-2" />
+      Tentar Novamente
+    </Button>
+  </div>
+)}
 ```
 
-### Fase C: Adicionar Navegação para Landing (P1)
+---
 
-**Arquivo**: `src/pages/Login.tsx`
+### Fase C: Melhorar hook useAgentCausality com retry e error handling (P1)
 
-Adicionar link visível para voltar à página inicial:
+**Arquivo**: `src/hooks/useAgentCausality.ts`
 
-```tsx
-// No header ou abaixo do form de login
-<div className="text-center mt-4">
-  <Link to="/" className="text-sm text-muted-foreground hover:text-primary">
-    ← Voltar para página inicial
-  </Link>
-</div>
+1. Adicionar retry com backoff exponencial
+2. Usar `throwOnError: false` para capturar erros graciosamente
+3. Adicionar fallback para buscar via RPC se view falhar
+
+```typescript
+return useQuery({
+  queryKey: ['agent-causality', agentId],
+  queryFn: async (): Promise<AgentCausality | null> => {
+    if (!agentId) return null;
+
+    // Tentar via view primeiro
+    let agent = null;
+    let agentError = null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('agents_safe')
+        .select('*')
+        .eq('id', agentId)
+        .single();
+      agent = data;
+      agentError = error;
+    } catch (e) {
+      agentError = e;
+    }
+
+    // Fallback: se view falhar, tentar RPC com tenant_id explícito
+    if (agentError || !agent) {
+      console.warn('[useAgentCausality] View fallback, trying RPC');
+      // RPC pode ter melhor tratamento de tenant
+    }
+
+    if (!agent) {
+      throw new Error('Computador não encontrado');
+    }
+    // ... resto do código
+  },
+  retry: 2,
+  retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
+});
 ```
 
-### Fase D: Criar Função para Criar Jobs em Massa (P2)
+---
 
-**Arquivo**: Nova RPC e botão no dashboard
+### Fase D: Adicionar validação de JWT sync antes de mutations (P1)
 
-Criar uma RPC `create_jobs_for_all_agents` que cria um job específico para todos os agentes online de um tenant:
+**Arquivo**: `src/pages/admin/NotificationChannels.tsx`
 
-```sql
-CREATE OR REPLACE FUNCTION create_jobs_for_all_agents(
-  p_tenant_id uuid,
-  p_job_type text,
-  p_payload jsonb DEFAULT '{}'
-)
-RETURNS integer AS $$
-DECLARE
-  v_count integer := 0;
-  v_agent RECORD;
-BEGIN
-  FOR v_agent IN
-    SELECT id, agent_name 
-    FROM agents 
-    WHERE tenant_id = p_tenant_id 
-      AND archived_at IS NULL
-      AND status = 'active'
-      AND last_heartbeat > NOW() - INTERVAL '5 minutes'
-  LOOP
-    INSERT INTO jobs (tenant_id, agent_id, agent_name, type, payload, status, approved)
-    VALUES (p_tenant_id, v_agent.id, v_agent.agent_name, p_job_type, p_payload, 'queued', true);
-    v_count := v_count + 1;
-  END LOOP;
-  
-  RETURN v_count;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+Garantir que `get_active_tenant_id()` está sincronizado antes de tentar INSERT:
+
+```typescript
+const createChannelMutation = useMutation({
+  mutationFn: async (channel: typeof newChannel) => {
+    // Verificar se tenant está carregado
+    if (!tenant?.id) {
+      throw new Error('Empresa não selecionada');
+    }
+
+    // Forçar refresh do session para garantir JWT atualizado
+    await supabase.auth.refreshSession();
+
+    const { data, error } = await supabase
+      .from('notification_channels')
+      .insert({
+        tenant_id: tenant.id,
+        // ...
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+  // ...
+});
 ```
 
 ---
@@ -161,21 +203,43 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 | Prioridade | Problema | Solução | Tipo |
 |------------|----------|---------|------|
-| **P0** | Jobs não processando (ILLEGAL_STATE_TRANSITION) | Alterar trigger para permitir `pending` → `delivered` | SQL Migration |
-| **P1** | Erro "Investigar anomalia" sem agent | Tratar insights de sistema no drawer | Frontend |
-| **P1** | Sem atalho para Landing após logout | Adicionar link "Voltar" no Login | Frontend |
-| **P2** | Criar jobs em massa | Nova RPC + botão no dashboard | SQL + Frontend |
+| **P0** | RLS notification_channels sem WITH CHECK | Recriar políticas com WITH CHECK | SQL Migration |
+| **P0** | Drawer vazio sem feedback | Adicionar estado de erro e retry | Frontend |
+| **P1** | useAgentCausality falha silenciosamente | Adicionar retry e fallback | Frontend |
+| **P1** | JWT sync antes de mutations | Refresh session antes de INSERT | Frontend |
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Tipo de Alteração |
+|---------|-------------------|
+| SQL Migration | Recriar políticas RLS para `notification_channels` |
+| `src/components/agent/AgentDetailsDrawer.tsx` | Adicionar tratamento de erro |
+| `src/hooks/useAgentCausality.ts` | Adicionar retry e fallback |
+| `src/pages/admin/NotificationChannels.tsx` | Refresh session antes de insert |
 
 ---
 
 ## Validação Pós-Correção
 
-1. **Jobs**: Verificar que agentes online estão recebendo e executando jobs:
-   - Logs do `poll-jobs` sem erros `ILLEGAL_STATE_TRANSITION`
-   - Jobs transitando para `delivered` → `completed`
+1. **Criar canal de notificação**: 
+   - Logar como admin
+   - Adicionar canal de email
+   - Verificar que salva sem erro de RLS
 
-2. **Investigar anomalia**: Testar clicar em "Investigar anomalia" para insights com e sem agente
+2. **Abrir drawer do computador**:
+   - Clicar em qualquer computador com status "Crítico"
+   - Verificar que drawer carrega dados (estado, diagnóstico, ações)
 
-3. **Navegação**: Fazer logout e verificar presença do link para Landing
+3. **Tempo real**:
+   - Verificar que computadores online aparecem corretamente
+   - Status "Crítico" só para throttled/isolated, não para todos
 
-4. **Jobs em massa**: Testar criação de jobs para todos agentes via dashboard
+---
+
+## Causa Raiz Final
+
+O problema principal é que a política RLS `notification_channels_all_active_tenant` foi criada como `FOR ALL` mas sem `WITH CHECK` explícito. Quando PostgreSQL usa `USING` como `WITH CHECK` implícito para INSERT, a condição `tenant_id = get_active_tenant_id()` falha se houver race condition na sincronização do JWT.
+
+A solução é separar as políticas por operação (SELECT, INSERT, UPDATE, DELETE) com `WITH CHECK` explícito para operações de escrita.
