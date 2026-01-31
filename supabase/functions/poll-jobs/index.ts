@@ -168,11 +168,12 @@ Deno.serve(async (req) => {
     }
 
     // Atualizar heartbeat e last_used_at do token (usando hash)
+    // V-607 FIX: Usar ID único em vez de agent_name para evitar conflitos cross-tenant
     await Promise.all([
       supabase
         .from('agents')
         .update({ last_heartbeat: now.toISOString() })
-        .eq('agent_name', agent.agent_name),
+        .eq('id', token.agent_id),
       supabase
         .from('agent_tokens')
         .update({ last_used_at: now.toISOString() })
