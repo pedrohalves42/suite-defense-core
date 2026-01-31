@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tech-tooltip";
 import { GeneratedReportsList } from "@/components/admin/GeneratedReportsList";
 import { ComplianceReportGenerator } from "@/components/admin/ComplianceReportGenerator";
+import { SecurityAuditReport } from "@/components/security/SecurityAuditReport";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { useTenant } from "@/hooks/useTenant";
 // jsPDF and autoTable imported dynamically to avoid test/build issues
@@ -1314,6 +1315,10 @@ export default function Reports() {
             <History className="h-4 w-4" />
             Laudos Gerados
           </TabsTrigger>
+          <TabsTrigger value="security-audit" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Auditoria
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="compliance" className="space-y-4">
@@ -1322,6 +1327,10 @@ export default function Reports() {
 
         <TabsContent value="history" className="space-y-4">
           <GeneratedReportsList />
+        </TabsContent>
+
+        <TabsContent value="security-audit" className="space-y-4">
+          <SecurityAuditReport />
         </TabsContent>
 
         <TabsContent value="generate" className="space-y-4">

@@ -24,6 +24,24 @@ Um breaking change ocorre quando:
 
 ## Histórico de Versões
 
+### [1.4.0] - 2026-01-31
+
+#### Added
+- **Histórico de Remediações Vellum** (V-601 a V-610)
+  - Documentação completa de todas as correções de auditoria
+  - Rastreabilidade de severidade e resolução
+
+#### Fixed
+- **V-609**: View `v_risk_debt_summary` corrigida com filtro explícito `tenant_id = get_active_tenant_id()`
+- **V-610**: Trigger DLQ corrigido com `RETURNING id INTO v_event_id` para `decision_event_id`
+  - 100% dos novos registros resolvidos têm rastreabilidade
+  - Backfill de 2.047 registros históricos
+
+#### Changed
+- **INV-005**: Atualizada evidência de conformidade para incluir DLQ audit trail
+  - Trigger V-610 funcional com RETURNING clause
+  - Coverage de hash em audit_logs mantida em 100%
+
 ### [1.1.0] - 2025-12-17
 
 #### Added
@@ -144,6 +162,7 @@ Um breaking change ocorre quando:
 
 | Versão | Autor | Aprovador | Data |
 |--------|-------|-----------|------|
+| 1.4.0 | Lovable AI | Security Lead | 2026-01-31 |
 | 1.1.0 | Lovable AI | Security Lead | 2025-12-17 |
 | 1.0.0 | Lovable AI | Security Lead | 2025-12-17 |
 
