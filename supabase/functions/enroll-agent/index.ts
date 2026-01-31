@@ -270,9 +270,56 @@ Deno.serve(async (req) => {
       }
 
       if (reviveError) {
-        logger.warn(`[${requestId}] Failed to revive agent via RPC, falling back to direct update`, reviveError);
+        logger.warn(`[${requestId}] Failed to revive agent via RPC, falling back with cross-tenant validation`, reviveError);
         
-        // P2 MED-02: Audit log for RPC fallback path
+        // V-606 FIX: Validar tenant ANTES do fallback para prevenir cross-tenant attack
+        const { data: existingAgentFull, error: fetchError } = await supabase
+          .from('agents')
+          .select('id, tenant_id')
+          .eq('id', existingAgent.id)
+          .single();
+        
+        if (fetchError || !existingAgentFull) {
+          logger.error(`[${requestId}] Failed to fetch agent for fallback validation`);
+          return new Response(
+            JSON.stringify({ error: 'Agent not found during fallback', code: 'AGENT_NOT_FOUND' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // V-606 FIX: Cross-tenant validation
+        if (existingAgentFull.tenant_id !== keyData.tenant_id) {
+          logger.error(`[${requestId}] SECURITY: Cross-tenant attack blocked in fallback path!`, {
+            agent_id: existingAgent.id,
+            agent_tenant: existingAgentFull.tenant_id,
+            key_tenant: keyData.tenant_id
+          });
+          
+          await createAuditLog({
+            supabase,
+            tenantId: keyData.tenant_id,
+            action: 'agent_reenroll_cross_tenant_blocked',
+            resourceType: 'agent',
+            resourceId: existingAgent.id,
+            details: { 
+              reason: 'cross_tenant_attack_blocked_fallback',
+              agent_name: agentName,
+              expected_tenant_id: keyData.tenant_id
+            },
+            request: req,
+            success: false,
+          });
+          
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Unauthorized: Agent belongs to different tenant' 
+            }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // Audit log for fallback path (now safe)
         await createAuditLog({
           supabase,
           tenantId: keyData.tenant_id,
@@ -283,13 +330,13 @@ Deno.serve(async (req) => {
             reason: 'rpc_revive_failed', 
             error: reviveError.message,
             agent_id: existingAgent.id,
-            fallback_method: 'direct_update'
+            fallback_method: 'direct_update_validated'
           },
           request: req,
-          success: true, // Fallback succeeded
+          success: true,
         });
         
-        // Fallback: update direto se RPC falhar
+        // Fallback seguro: tenant validado acima
         await supabase
           .from('agents')
           .update({ 
