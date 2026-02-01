@@ -1,156 +1,194 @@
 
+# Plano: Corrigir Erro "Não foi possível obter informações deste computador" no Agent Health
 
-# Plano: Finalizar Registro v4.5.0 para Linux e macOS no Banco de Dados
+## Problema Identificado
 
-## Status do Sistema
+O drawer de detalhes do agente exibe "Erro ao carregar dados" com a mensagem "Não foi possível obter informações deste computador" porque:
 
-### ✅ Já Completo
+1. **Hook `useAgentCausality` usa `.single()`**: Este método lança erro `PGRST116` quando a query retorna 0 linhas
+2. **Falta loading guard de tenant**: O hook não aguarda a sincronização do JWT antes de executar a query
+3. **View `agents_safe` filtra por `get_active_tenant_id()`**: Quando o JWT ainda não tem o claim `active_tenant_id`, a função retorna NULL e a view não encontra o agente
 
-| Componente | Status |
-|------------|--------|
-| Script Windows v4.5.0 | ✅ Implementado + Registrado no banco |
-| Script Linux v4.5.0 | ✅ Implementado (2420 linhas) |
-| Script macOS v4.5.0 | ✅ Implementado (2387 linhas) |
-| Backend webhook-utils.ts | ✅ Implementado |
-| Backend heartbeat-self-test | ✅ Implementado |
-| Backend monitor-agent-health | ✅ Atualizado com webhooks |
+## Evidência do Erro
 
-### ✅ Completo
+```
+[useAgentCausality] Failed to fetch agent, error: {
+  "code": "PGRST116",
+  "details": "The result contains 0 rows",
+  "hint": null,
+  "message": "Cannot coerce the result to a single JSON object"
+}
+```
 
-| Componente | Status |
-|------------|--------|
-| Linux v4.5.0 no agent_versions | ✅ Registrado como latest |
-| macOS v4.5.0 no agent_versions | ✅ Registrado como latest |
+## Solução
+
+Modificar o hook `useAgentCausality` para seguir o padrão arquitetural do projeto:
+
+### 1. Adicionar Loading Guard de Tenant
+```typescript
+import { useActiveTenant } from '@/hooks/useActiveTenant';
+
+export function useAgentCausality(agentId: string | null) {
+  const { activeTenant, loading: tenantLoading } = useActiveTenant();
+  
+  return useQuery({
+    // ...
+    enabled: !!agentId && !tenantLoading && !!activeTenant?.id,
+    // ...
+  });
+}
+```
+
+### 2. Substituir `.single()` por `.maybeSingle()`
+```typescript
+const { data: agent, error: agentError } = await supabase
+  .from('agents_safe')
+  .select('*')
+  .eq('id', agentId)
+  .eq('tenant_id', activeTenant.id)  // Filtro explícito
+  .maybeSingle();  // Não lança erro se retornar 0 linhas
+
+if (!agent) {
+  return null;  // Retorna null graciosamente em vez de lançar erro
+}
+```
+
+### 3. Atualizar Tratamento de Erro no Componente
+
+O `AgentDetailsDrawer` já trata `isError` corretamente, mas quando o hook retorna `null` (agente não encontrado), deve mostrar uma mensagem mais específica.
 
 ---
 
-## Funcionalidades Verificadas nos Scripts
+## Arquivos a Modificar
 
-Confirmei que ambos os scripts (Linux e macOS) possuem:
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/hooks/useAgentCausality.ts` | Adicionar loading guard, usar `.maybeSingle()`, passar tenant_id explícito |
 
-```text
-Linha 3:  # CyberShield Agent - Linux/macOS v4.5.0
-Linha 49: AGENT_VERSION="v4.5.0"
+---
 
-Funções de Resiliência:
-- test_network_connectivity() - linha ~630
-- invoke_network_watchdog() - linha ~639
-- assert_task_health() - linha ~669
-- start_power_event_monitor() - linha ~697
-- invoke_heartbeat_selftest() - linha ~726
+## Implementacao
 
-Main Loop (v4.5.0):
-- Network Watchdog a cada 30s - linha ~2316
-- Force Reconnect check - linha ~2323
-- Task Health Assert a cada 5min - linha ~2335
+### Mudancas no useAgentCausality.ts
+
+```typescript
+// Antes (linha 50-77)
+export function useAgentCausality(agentId: string | null) {
+  return useQuery({
+    queryKey: ['agent-causality', agentId],
+    queryFn: async (): Promise<AgentCausality | null> => {
+      if (!agentId) return null;
+
+      let agent = null;
+      let agentError = null;
+      
+      try {
+        const { data, error } = await supabase
+          .from('agents_safe')
+          .select('*')
+          .eq('id', agentId)
+          .single();  // <- Problema aqui
+        agent = data;
+        agentError = error;
+      } catch (e) {
+        console.error('[useAgentCausality] Error fetching agent:', e);
+        agentError = e;
+      }
+
+      if (agentError || !agent) {
+        console.warn('[useAgentCausality] Failed to fetch agent, error:', agentError);
+        throw new Error('Computador não encontrado');
+      }
+      // ...
+    },
+    enabled: !!agentId,
+    // ...
+  });
+}
+
+// Depois
+import { useActiveTenant } from '@/hooks/useActiveTenant';
+
+export function useAgentCausality(agentId: string | null) {
+  const { activeTenant, loading: tenantLoading } = useActiveTenant();
+  
+  return useQuery({
+    queryKey: ['agent-causality', activeTenant?.id, agentId],
+    queryFn: async (): Promise<AgentCausality | null> => {
+      if (!agentId || !activeTenant?.id) return null;
+
+      // Buscar via RPC com tenant explícito (mais seguro)
+      // ou via query direta com filtros explícitos
+      const { data: agent, error: agentError } = await supabase
+        .from('agents_safe')
+        .select('*')
+        .eq('id', agentId)
+        .eq('tenant_id', activeTenant.id)  // Filtro explícito de tenant
+        .maybeSingle();  // Não lança erro se retornar 0 linhas
+
+      if (agentError) {
+        console.warn('[useAgentCausality] Query error:', agentError);
+        throw new Error('Erro ao buscar computador');
+      }
+
+      if (!agent) {
+        // Agente não encontrado - retornar null graciosamente
+        console.info('[useAgentCausality] Agent not found:', agentId);
+        return null;
+      }
+      
+      // ... resto do código permanece igual ...
+    },
+    // Loading guard: não executa query até tenant estar sincronizado
+    enabled: !!agentId && !tenantLoading && !!activeTenant?.id,
+    refetchInterval: 30000,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
+  });
+}
 ```
 
 ---
 
-## Ação Necessária
+## Validação Pós-Implementação
 
-Para completar o rollout da v4.5.0 para Linux e macOS, é necessário executar o SQL de registro no banco:
-
-```sql
--- Desmarcar versões anteriores como latest
-UPDATE agent_versions SET is_latest = false 
-WHERE platform IN ('linux', 'macos') AND is_latest = true;
-
--- Registrar v4.5.0 como latest
-INSERT INTO agent_versions (platform, version, is_latest, release_notes)
-VALUES 
-  ('linux', 'v4.5.0', true, 'Total Resilience: Network Watchdog, Task Health Assert (systemd), Power Event Detection (dbus), Heartbeat Self-Test, FSM State Persistence'),
-  ('macos', 'v4.5.0', true, 'Total Resilience: Network Watchdog, Task Health Assert (launchd), Power Event Detection (pmset), Heartbeat Self-Test, FSM State Persistence')
-ON CONFLICT (platform, version) 
-DO UPDATE SET is_latest = true, release_notes = EXCLUDED.release_notes;
-```
-
----
-
-## Sincronização de Scripts
-
-O script `sync-all-agents.js` já existe e pode ser usado para sincronizar os scripts com as Edge Functions:
-
-```bash
-node scripts/sync-all-agents.js --all
-```
-
-Isso irá:
-1. Ler os scripts de `public/agent-scripts/`
-2. Escapar caracteres especiais para template literals TypeScript
-3. Gerar arquivos em `supabase/functions/_shared/agent-script-*-content.ts`
-
----
-
-## Validação Pós-Registro
-
-Após registrar no banco, verificar:
-
-```sql
-SELECT platform, version, is_latest 
-FROM agent_versions 
-WHERE is_latest = true 
-ORDER BY platform;
-```
-
-Resultado esperado:
-| platform | version | is_latest |
-|----------|---------|-----------|
-| linux | v4.5.0 | true |
-| macos | v4.5.0 | true |
-| windows | v4.5.0 | true |
+1. **Navegar para `/admin/agent-health`**
+2. **Clicar em qualquer agente (ex: pcteste1)**
+3. **Verificar que o drawer abre corretamente** sem erro
+4. **Verificar console**: Não deve haver erro `PGRST116`
 
 ---
 
 ## Seção Técnica
 
-### Arquitetura de Resiliência (Paridade Total)
+### Padrão Arquitetural Aplicado
+
+Este fix segue os padrões documentados nas memórias do projeto:
+
+- **`frontend/padrao-query-resiliente-explicit-tenant`**: Usar filtros explícitos `.eq('tenant_id', tenantId)` em vez de depender apenas de views
+- **`frontend/tenant-synchronization-loading-guard-standard`**: Guardar queries com `enabled: !loading && !!tenantId`
+- **`supabase-single-query-errors`**: Usar `.maybeSingle()` quando há risco de 0 linhas
+
+### Fluxo Corrigido
 
 ```text
-┌────────────────────────────────────────────────────────────────┐
-│                 AGENTES v4.5.0 - TODAS AS PLATAFORMAS          │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│  ┌─────────────────┬─────────────────┬─────────────────┐       │
-│  │    WINDOWS      │     LINUX       │     macOS       │       │
-│  │    (PowerShell) │     (Bash)      │     (Bash)      │       │
-│  └────────┬────────┴────────┬────────┴────────┬────────┘       │
-│           │                 │                 │                │
-│  Network  │ Test-NetConn    │ nc -z           │ nc -z          │
-│  Watchdog │ TCP 443         │ TCP 443         │ TCP 443        │
-│           │                 │                 │                │
-│  Task     │ Get-Scheduled   │ systemctl       │ launchctl      │
-│  Health   │ Task            │ is-active       │ list           │
-│           │                 │                 │                │
-│  Power    │ WMI Event       │ dbus-monitor    │ log stream     │
-│  Events   │ Type 7/18       │ PrepareForSleep │ Wake reason    │
-│           │                 │                 │                │
-│  Self-    │ /heartbeat-     │ /heartbeat-     │ /heartbeat-    │
-│  Test     │ self-test       │ self-test       │ self-test      │
-│           │                 │                 │                │
-│  TLS 1.2  │ ServicePoint    │ curl --tlsv1.2  │ curl --tlsv1.2 │
-│           │ Manager         │                 │                │
-│           │                 │                 │                │
-└───────────┴─────────────────┴─────────────────┴────────────────┘
-```
-
-### Fluxo de Auto-Update
-
-```text
-Agente v4.4.0 (atual no banco)
+AgentDetailsDrawer abre
     │
-    ├─► Heartbeat → Backend retorna latest_version = v4.5.0
+    ├─► useAgentCausality(agentId)
     │       │
-    │       ├─► Agente detecta: v4.4.0 < v4.5.0
+    │       ├─► tenantLoading = true? → Query DESABILITADA
     │       │
-    │       └─► Trigger force_update
-    │               │
-    │               ├─► Download script v4.5.0
-    │               ├─► Validar SHA256
-    │               ├─► Backup versão atual
-    │               ├─► Aplicar nova versão
-    │               └─► Restart serviço
+    │       ├─► activeTenant.id disponível
+    │       │       │
+    │       │       └─► Query com .maybeSingle() + tenant_id explícito
+    │       │               │
+    │       │               ├─► Agente encontrado → Retorna dados
+    │       │               │
+    │       │               └─► Agente não encontrado → Retorna null
+    │       │                       │
+    │       │                       └─► UI mostra mensagem apropriada
+    │       │
+    │       └─► Erro de rede → isError = true → UI mostra retry
     │
-    └─► Próximo heartbeat: versão = v4.5.0 ✅
+    └─► Drawer renderiza corretamente
 ```
-
