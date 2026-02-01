@@ -1,324 +1,813 @@
 
-# Plano: Melhorar a Criação do EXE para Instalação do Agente
+# Plano Completo: Fechamento de Ciclos e GAPs do Sistema
 
-## Análise do Sistema Atual
+## Resumo Executivo
 
-### Arquitetura Atual
-O processo de build do EXE é **assíncrono** e funciona assim:
+Este plano aborda **6 ciclos críticos abertos** identificados na auditoria do sistema:
 
-```text
-Frontend (AgentInstaller.tsx)
-    │
-    ├─► POST /build-agent-exe
-    │       │
-    │       ├─► Valida enrollment key
-    │       ├─► Busca script do agente do Storage
-    │       ├─► Gera instalador PS1 com credenciais embarcadas
-    │       ├─► Codifica em Base64
-    │       ├─► Triggera GitHub Actions via repository_dispatch
-    │       └─► Retorna build_id (status: 202 Accepted)
-    │
-    ├─► Frontend faz polling em agent_builds
-    │
-    ├─► GitHub Actions executa ps2exe
-    │       │
-    │       └─► POST /build-callback com EXE base64
-    │               │
-    │               ├─► Upload do EXE para Storage
-    │               └─► Atualiza build_status = 'completed'
-    │
-    └─► Frontend detecta build_status = 'completed'
-            │
-            └─► Download disponível
-```
-
-### Pontos Fortes Identificados
-- Arquitetura assíncrona robusta
-- Retry com exponential backoff no dispatch
-- Build watchdog para detectar builds travados
-- Validação SHA256 no frontend
-- Telemetria detalhada
-- Pipeline de validação (`validate-build-pipeline`)
-
-### Problemas e Oportunidades de Melhoria
-
-| Problema | Impacto | Solução Proposta |
-|----------|---------|------------------|
-| Dependência de GitHub Actions externo | Latência de 2-3 min, ponto único de falha | Build local via Deno + alternativas |
-| Template PS1 embarcado na Edge Function (~600 linhas) | Difícil manutenção | Separar template para arquivo dedicado |
-| Polling contínuo no frontend | UX ruim, requests desnecessários | Usar Realtime para notificar build completo |
-| Sem cache de builds repetidos | Rebuild desnecessário para mesmo agente | Implementar cache de builds por hash |
-| Falta de download resume | Downloads grandes podem falhar | Implementar download com chunking |
-| Erro silencioso em ps2exe | Usuário não sabe causa da falha | Melhorar error reporting |
-| Sem opção de instalação silenciosa corporativa | Empresas precisam de GPO/SCCM | Adicionar flags de instalação silenciosa |
+| # | GAP | Impacto | Prioridade |
+|---|-----|---------|------------|
+| 1 | Crons falhando (125+ falhas/24h) | Sistema de monitoramento inoperante | CRÍTICO |
+| 2 | RLS desabilitado em partições | Vazamento de dados cross-tenant | CRÍTICO |
+| 3 | Cleanup bloqueado por trigger | Crescimento descontrolado do banco | ALTO |
+| 4 | Cron evaluate-software-risk com coluna errada | Avaliação de risco não funciona | MÉDIO |
+| 5 | DLQ com 251 items pendentes | Falhas não processadas | MÉDIO |
+| 6 | 6.651 tasks abertas acumuladas | Backlog operacional | MÉDIO |
 
 ---
 
-## Melhorias Propostas
+## Fase 1: Correção dos Crons Críticos
 
-### 1. Build Cache Inteligente
-Evitar rebuild quando os parâmetros são idênticos (mesmo tenant, mesma versão do script).
+### 1.1 Corrigir JSON Escaping nos Crons
 
+**Problema:** Os crons `integrity-sentinel-15min` e `rls-automated-tests-6h` falham porque o JSON está malformado.
+
+**Solução SQL:**
 ```sql
--- Adicionar coluna de cache key
-ALTER TABLE agent_builds 
-ADD COLUMN cache_key TEXT GENERATED ALWAYS AS (
-  md5(tenant_id::text || agent_script_hash || version)
-) STORED;
+-- ============================================================
+-- CORREÇÃO: Crons com JSON malformado
+-- ============================================================
 
--- Índice para lookup rápido
-CREATE INDEX idx_agent_builds_cache_key ON agent_builds(cache_key, build_status);
-```
+-- Corrigir integrity-sentinel-15min (Job 67)
+SELECT cron.unschedule('integrity-sentinel-15min');
 
-**Lógica na Edge Function:**
-```typescript
-// Verificar se existe build completo com mesmo cache_key
-const { data: cachedBuild } = await supabase
-  .from('agent_builds')
-  .select('id, download_url, sha256_hash, file_size_bytes')
-  .eq('cache_key', cacheKey)
-  .eq('build_status', 'completed')
-  .order('build_completed_at', { ascending: false })
-  .limit(1)
-  .maybeSingle();
-
-if (cachedBuild && cachedBuild.download_url) {
-  // Retornar build cacheado
-  return new Response(JSON.stringify({
-    success: true,
-    build_id: cachedBuild.id,
-    status: 'cached',
-    download_url: cachedBuild.download_url,
-    sha256_hash: cachedBuild.sha256_hash,
-    cached: true
-  }), { status: 200 });
-}
-```
-
-### 2. Notificação Realtime em vez de Polling
-
-**Habilitar Realtime na tabela agent_builds:**
-```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE agent_builds;
-```
-
-**Frontend com Realtime:**
-```typescript
-useEffect(() => {
-  if (!exeBuildId) return;
-  
-  const channel = supabase
-    .channel(`build-${exeBuildId}`)
-    .on('postgres_changes', 
-      { event: 'UPDATE', schema: 'public', table: 'agent_builds', filter: `id=eq.${exeBuildId}` },
-      (payload) => {
-        const newStatus = payload.new.build_status;
-        if (newStatus === 'completed') {
-          setExeBuildStatus('completed');
-          setExeDownloadUrl(payload.new.download_url);
-          toast.success('EXE pronto para download!');
-        } else if (newStatus === 'failed') {
-          setExeBuildStatus('failed');
-          toast.error(payload.new.error_message);
-        }
-      }
-    )
-    .subscribe();
-    
-  return () => { channel.unsubscribe(); };
-}, [exeBuildId]);
-```
-
-### 3. Template PS1 Separado e Versionado
-
-Mover o template de ~600 linhas embarcado na Edge Function para arquivo dedicado:
-
-**Estrutura:**
-```
-supabase/functions/_shared/
-├── installer-templates/
-│   ├── windows-installer-v3.0.0.ps1.template
-│   ├── windows-installer-v4.0.0.ps1.template  (nova versão)
-│   └── installer-template-loader.ts
-```
-
-**Loader:**
-```typescript
-// installer-template-loader.ts
-export const INSTALLER_TEMPLATES: Record<string, string> = {
-  'v3.0.0': /* import from file */,
-  'v4.0.0': /* nova versão */
-};
-
-export function getInstallerTemplate(version: string): string {
-  return INSTALLER_TEMPLATES[version] ?? INSTALLER_TEMPLATES['v3.0.0'];
-}
-```
-
-### 4. Instalação Silenciosa para Deploy Corporativo
-
-Adicionar suporte a flags de instalação silenciosa para GPO/SCCM/Intune:
-
-**Parâmetros adicionais no instalador:**
-```powershell
-param(
-    [switch]$Silent,        # Instalação sem UI
-    [switch]$NoRestart,     # Não reiniciar serviço após install
-    [string]$LogPath,       # Path customizado para logs
-    [switch]$Force          # Sobrescrever instalação existente
-)
-
-if ($Silent) {
-    $ErrorActionPreference = "SilentlyContinue"
-    # Redirecionar output para log apenas
-}
-```
-
-**Exemplo de uso via GPO:**
-```powershell
-CyberShield-Agent-Installer.exe /Silent /NoRestart /LogPath "\\server\logs"
-```
-
-### 5. Download com Verificação e Resume
-
-Implementar download robusto com verificação de integridade:
-
-```typescript
-// Função de download com retry e verificação
-const downloadWithVerification = async (url: string, expectedSha256: string) => {
-  const MAX_RETRIES = 3;
-  
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
-      const blob = await response.blob();
-      
-      // Verificar SHA256
-      const isValid = await validateInstallerIntegrity(blob, expectedSha256);
-      if (!isValid) {
-        if (attempt < MAX_RETRIES) {
-          toast.warn(`Verificação falhou, tentando novamente (${attempt}/${MAX_RETRIES})`);
-          continue;
-        }
-        throw new Error('Verificação SHA256 falhou após todas as tentativas');
-      }
-      
-      return blob;
-    } catch (error) {
-      if (attempt === MAX_RETRIES) throw error;
-      await new Promise(r => setTimeout(r, 2000 * attempt));
-    }
-  }
-};
-```
-
-### 6. Fallback para Build Local (Opcional - Complexo)
-
-Para eliminar dependência do GitHub Actions, seria possível usar Deno para compilar:
-
-```typescript
-// Alternativa: Build local usando Deno + ps2exe via WASM
-// NOTA: Isso é experimental e requer ps2exe compilado para WASM
-
-// A abordagem mais prática seria manter múltiplos runners:
-// 1. GitHub Actions (primário)
-// 2. Self-hosted runner como backup
-// 3. Pre-built installers para versões estáveis
-```
-
-### 7. Pre-built Installers por Versão
-
-Manter EXEs pré-compilados para versões estáveis:
-
-```sql
--- Tabela de instaladores pré-compilados
-CREATE TABLE prebuilt_installers (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  version TEXT NOT NULL,
-  platform TEXT NOT NULL DEFAULT 'windows',
-  download_url TEXT NOT NULL,
-  sha256_hash TEXT NOT NULL,
-  file_size_bytes INTEGER NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
+SELECT cron.schedule(
+  'integrity-sentinel-15min',
+  '*/15 * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/integrity-sentinel',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ***REMOVED***'
+    ),
+    body := jsonb_build_object('source', 'cron')
+  ) AS request_id;
+  $$
 );
 
--- Quando usuário solicita, apenas personalizar o instalador pré-compilado
--- em vez de compilar do zero
+-- Corrigir rls-automated-tests-6h (Job 66)
+SELECT cron.unschedule('rls-automated-tests-6h');
+
+SELECT cron.schedule(
+  'rls-automated-tests-6h',
+  '0 */6 * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/run-rls-tests',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ***REMOVED***'
+    ),
+    body := jsonb_build_object('source', 'cron', 'run_type', 'scheduled')
+  ) AS request_id;
+  $$
+);
+```
+
+### 1.2 Corrigir Trigger que Bloqueia Cleanup
+
+**Problema:** O trigger `prevent_execution_deletion()` bloqueia a limpeza de dados antigos.
+
+**Solução:** Modificar o trigger para permitir deleção de registros > 90 dias.
+
+```sql
+-- ============================================================
+-- CORREÇÃO: Trigger prevent_execution_deletion
+-- Permite deleção de registros antigos (> 90 dias)
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION prevent_execution_deletion()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO public
+AS $$
+BEGIN
+  -- Permitir deleção de registros antigos (> 90 dias) para cleanup
+  IF OLD.created_at < NOW() - INTERVAL '90 days' THEN
+    RETURN OLD;
+  END IF;
+  
+  -- Bloquear deleção de registros recentes
+  RAISE EXCEPTION 'Cannot delete job execution records within 90 days retention period'
+    USING ERRCODE = '23514';
+END;
+$$;
+
+-- Recriar trigger
+DROP TRIGGER IF EXISTS tr_prevent_execution_deletion ON job_executions;
+
+CREATE TRIGGER tr_prevent_execution_deletion
+  BEFORE DELETE ON job_executions
+  FOR EACH ROW
+  EXECUTE FUNCTION prevent_execution_deletion();
+```
+
+### 1.3 Corrigir Coluna no evaluate-software-risk
+
+**Problema:** O cron referencia `last_heartbeat_at` mas a coluna real é `last_heartbeat`.
+
+```sql
+-- ============================================================
+-- CORREÇÃO: Cron evaluate-software-risk-daily (Job 72)
+-- ============================================================
+
+SELECT cron.unschedule('evaluate-software-risk-daily');
+
+SELECT cron.schedule(
+  'evaluate-software-risk-daily',
+  '0 3 * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/evaluate-software-risk',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ***REMOVED***'
+    ),
+    body := jsonb_build_object('source', 'cron')
+  ) AS request_id;
+  $$
+);
 ```
 
 ---
 
-## Arquivos a Modificar
+## Fase 2: Habilitar RLS nas Partições
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `supabase/functions/build-agent-exe/index.ts` | Adicionar cache lookup, separar template |
-| `supabase/functions/_shared/installer-template-loader.ts` | NOVO: Loader de templates versionados |
-| `src/pages/AgentInstaller.tsx` | Substituir polling por Realtime |
-| SQL Migration | Adicionar `cache_key` + Realtime + RLS |
+### 2.1 Partições de agent_system_metrics
 
----
+```sql
+-- ============================================================
+-- RLS: Partições de agent_system_metrics
+-- ============================================================
 
-## Priorização Recomendada
+-- Habilitar RLS na partição 2026_03
+ALTER TABLE agent_system_metrics_2026_03 ENABLE ROW LEVEL SECURITY;
 
-| Fase | Melhoria | Esforço | Impacto |
-|------|----------|---------|---------|
-| 1 | Realtime em vez de polling | Médio | Alto (UX) |
-| 2 | Build cache inteligente | Médio | Alto (Performance) |
-| 3 | Template separado e versionado | Baixo | Médio (Manutenção) |
-| 4 | Download com verificação | Baixo | Médio (Confiabilidade) |
-| 5 | Instalação silenciosa | Médio | Alto (Enterprise) |
-| 6 | Pre-built installers | Alto | Alto (Performance) |
+-- Criar policy de isolamento multi-tenant
+CREATE POLICY "tenant_isolation_select" ON agent_system_metrics_2026_03
+  FOR SELECT TO authenticated
+  USING (
+    tenant_id = get_active_tenant_id() 
+    OR is_current_super_admin()
+  );
 
----
+CREATE POLICY "tenant_isolation_insert" ON agent_system_metrics_2026_03
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    tenant_id = get_active_tenant_id()
+  );
 
-## Seção Técnica
-
-### Arquitetura Proposta
-
-```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         BUILD PIPELINE v2.0                              │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  Frontend                   Edge Function                                │
-│  ┌──────────┐              ┌──────────────┐                             │
-│  │ Request  │─────────────►│ Check Cache  │                             │
-│  │ Build    │              └──────┬───────┘                             │
-│  └──────────┘                     │                                     │
-│       │                    ┌──────┴───────┐                             │
-│       │             HIT    │ Cache Key    │   MISS                      │
-│       │            ◄───────┤ Lookup       ├───────►                     │
-│       │                    └──────────────┘         │                   │
-│       │                           │                 │                   │
-│       │                    ┌──────┴───────┐  ┌──────┴───────┐           │
-│       │                    │ Return       │  │ GitHub       │           │
-│       │                    │ Cached EXE   │  │ Actions      │           │
-│       │                    └──────────────┘  └──────┬───────┘           │
-│       │                                             │                   │
-│       │                                      ┌──────┴───────┐           │
-│  ┌────┴─────┐                                │ Callback     │           │
-│  │ Realtime │◄───────────────────────────────┤ Update DB    │           │
-│  │ Subscribe│                                └──────────────┘           │
-│  └────┬─────┘                                                           │
-│       │                                                                 │
-│  ┌────┴─────┐                                                           │
-│  │ Download │                                                           │
-│  │ + SHA256 │                                                           │
-│  └──────────┘                                                           │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
+-- Policy para service_role (Edge Functions)
+CREATE POLICY "service_role_all" ON agent_system_metrics_2026_03
+  FOR ALL TO service_role
+  USING (true)
+  WITH CHECK (true);
 ```
 
-### Métricas Esperadas
+### 2.2 Partições de hmac_signatures
 
-| Métrica | Atual | Com Melhorias |
-|---------|-------|---------------|
-| Tempo médio de build (novo) | 2-3 min | 2-3 min |
-| Tempo médio de build (cache hit) | 2-3 min | **~5 seg** |
-| Requests de polling | ~20-40 | **0** (Realtime) |
-| Taxa de falha por timeout | ~5% | **<1%** |
-| Downloads corrompidos | Ocasional | **0** (SHA256 + retry) |
+```sql
+-- ============================================================
+-- RLS: Partições de hmac_signatures (Fev-Jun 2026)
+-- ============================================================
+
+DO $$
+DECLARE
+  partition_name TEXT;
+  partitions TEXT[] := ARRAY[
+    'hmac_signatures_2026_02',
+    'hmac_signatures_2026_03',
+    'hmac_signatures_2026_04',
+    'hmac_signatures_2026_05',
+    'hmac_signatures_2026_06'
+  ];
+BEGIN
+  FOREACH partition_name IN ARRAY partitions
+  LOOP
+    -- Habilitar RLS
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', partition_name);
+    
+    -- Drop policies existentes (se houver)
+    EXECUTE format('DROP POLICY IF EXISTS "service_role_all" ON %I', partition_name);
+    
+    -- Criar policy para service_role (única que precisa acessar)
+    EXECUTE format(
+      'CREATE POLICY "service_role_all" ON %I FOR ALL TO service_role USING (true) WITH CHECK (true)',
+      partition_name
+    );
+    
+    RAISE NOTICE 'RLS habilitado em: %', partition_name;
+  END LOOP;
+END $$;
+```
+
+---
+
+## Fase 3: Limpeza de DLQ e Tasks
+
+### 3.1 RPC para Processar DLQ em Batch
+
+```sql
+-- ============================================================
+-- RPC: Processar DLQ em lote
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION process_dlq_batch(
+  p_tenant_id UUID,
+  p_batch_size INTEGER DEFAULT 50,
+  p_action TEXT DEFAULT 'resolve' -- 'resolve' ou 'retry'
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO public
+AS $$
+DECLARE
+  v_processed INTEGER := 0;
+  v_retried INTEGER := 0;
+  v_resolved INTEGER := 0;
+  v_item RECORD;
+BEGIN
+  -- Processar itens da DLQ
+  FOR v_item IN
+    SELECT d.id, d.job_id, d.retry_count, j.job_type
+    FROM failed_jobs_dlq d
+    JOIN jobs j ON j.id = d.job_id
+    WHERE j.tenant_id = p_tenant_id
+      AND d.resolved_at IS NULL
+    ORDER BY d.failed_at ASC
+    LIMIT p_batch_size
+  LOOP
+    v_processed := v_processed + 1;
+    
+    IF p_action = 'retry' AND v_item.retry_count < 3 THEN
+      -- Re-enfileirar o job
+      UPDATE jobs 
+      SET status = 'queued', 
+          updated_at = NOW()
+      WHERE id = v_item.job_id;
+      
+      -- Incrementar retry count
+      UPDATE failed_jobs_dlq 
+      SET retry_count = retry_count + 1,
+          last_retry_at = NOW()
+      WHERE id = v_item.id;
+      
+      v_retried := v_retried + 1;
+    ELSE
+      -- Marcar como resolvido (sem retry)
+      UPDATE failed_jobs_dlq 
+      SET resolved_at = NOW(),
+          resolution_notes = 'Resolved via batch cleanup'
+      WHERE id = v_item.id;
+      
+      v_resolved := v_resolved + 1;
+    END IF;
+  END LOOP;
+  
+  RETURN jsonb_build_object(
+    'processed', v_processed,
+    'retried', v_retried,
+    'resolved', v_resolved,
+    'tenant_id', p_tenant_id
+  );
+END;
+$$;
+```
+
+### 3.2 RPC para Limpar Tasks Órfãs
+
+```sql
+-- ============================================================
+-- RPC: Limpar tasks abertas antigas
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION cleanup_stale_tasks(
+  p_tenant_id UUID,
+  p_days_old INTEGER DEFAULT 30,
+  p_batch_size INTEGER DEFAULT 500
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO public
+AS $$
+DECLARE
+  v_cancelled INTEGER := 0;
+  v_archived INTEGER := 0;
+BEGIN
+  -- Cancelar tasks abertas sem fingerprint (órfãs)
+  WITH orphan_tasks AS (
+    SELECT id FROM tasks
+    WHERE tenant_id = p_tenant_id
+      AND status = 'open'
+      AND fingerprint_id IS NULL
+      AND created_at < NOW() - (p_days_old || ' days')::INTERVAL
+    LIMIT p_batch_size
+  )
+  UPDATE tasks t
+  SET status = 'cancelled',
+      closed_at = NOW(),
+      resolution_notes = 'Auto-cancelled: orphan task without fingerprint'
+  FROM orphan_tasks o
+  WHERE t.id = o.id;
+  
+  GET DIAGNOSTICS v_cancelled = ROW_COUNT;
+  
+  -- Arquivar tasks antigas já resolvidas (> 90 dias)
+  WITH old_resolved AS (
+    SELECT id FROM tasks
+    WHERE tenant_id = p_tenant_id
+      AND status IN ('resolved', 'cancelled', 'wont_fix')
+      AND closed_at < NOW() - INTERVAL '90 days'
+      AND archived_at IS NULL
+    LIMIT p_batch_size
+  )
+  UPDATE tasks t
+  SET archived_at = NOW()
+  FROM old_resolved o
+  WHERE t.id = o.id;
+  
+  GET DIAGNOSTICS v_archived = ROW_COUNT;
+  
+  RETURN jsonb_build_object(
+    'cancelled_orphans', v_cancelled,
+    'archived_old', v_archived,
+    'tenant_id', p_tenant_id
+  );
+END;
+$$;
+```
+
+---
+
+## Fase 4: Correção do Rollout v4.5.0
+
+### 4.1 Diagnóstico e Força de Atualização
+
+```sql
+-- ============================================================
+-- Forçar atualização para v4.5.0 nos agentes ativos
+-- ============================================================
+
+-- Verificar agentes que precisam atualizar
+SELECT 
+  id,
+  hostname,
+  agent_version,
+  last_heartbeat,
+  CASE 
+    WHEN last_heartbeat > NOW() - INTERVAL '10 minutes' THEN 'online'
+    WHEN last_heartbeat > NOW() - INTERVAL '1 hour' THEN 'recent'
+    ELSE 'offline'
+  END as connectivity_status
+FROM agents
+WHERE status = 'active'
+  AND (agent_version IS NULL OR agent_version != 'v4.5.0')
+ORDER BY last_heartbeat DESC;
+
+-- Forçar atualização nos agentes online
+UPDATE agents
+SET 
+  force_update_version = 'v4.5.0',
+  force_update_reason = 'Scheduled rollout v4.5.0 - batch update',
+  force_update_at = NOW()
+WHERE status = 'active'
+  AND (agent_version IS NULL OR agent_version != 'v4.5.0')
+  AND last_heartbeat > NOW() - INTERVAL '10 minutes';
+```
+
+---
+
+## Fase 5: Migração SQL Consolidada
+
+### Arquivo: `supabase/migrations/20260201_close_all_gaps.sql`
+
+```sql
+-- ============================================================
+-- MIGRAÇÃO CONSOLIDADA: Fechamento de Todos os GAPs
+-- Data: 2026-02-01
+-- Autor: Sistema
+-- ============================================================
+
+BEGIN;
+
+-- ============================================================
+-- PARTE 1: Corrigir Trigger de Proteção de Execuções
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION prevent_execution_deletion()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO public
+AS $$
+BEGIN
+  -- Permitir deleção de registros antigos (> 90 dias) para cleanup
+  IF OLD.created_at < NOW() - INTERVAL '90 days' THEN
+    RETURN OLD;
+  END IF;
+  
+  -- Bloquear deleção de registros recentes
+  RAISE EXCEPTION 'Cannot delete job execution records within 90 days retention period'
+    USING ERRCODE = '23514';
+END;
+$$;
+
+-- ============================================================
+-- PARTE 2: Habilitar RLS nas Partições
+-- ============================================================
+
+-- agent_system_metrics_2026_03
+ALTER TABLE IF EXISTS agent_system_metrics_2026_03 ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "tenant_isolation_select" ON agent_system_metrics_2026_03;
+DROP POLICY IF EXISTS "tenant_isolation_insert" ON agent_system_metrics_2026_03;
+DROP POLICY IF EXISTS "service_role_all" ON agent_system_metrics_2026_03;
+
+CREATE POLICY "tenant_isolation_select" ON agent_system_metrics_2026_03
+  FOR SELECT TO authenticated
+  USING (tenant_id = get_active_tenant_id() OR is_current_super_admin());
+
+CREATE POLICY "tenant_isolation_insert" ON agent_system_metrics_2026_03
+  FOR INSERT TO authenticated
+  WITH CHECK (tenant_id = get_active_tenant_id());
+
+CREATE POLICY "service_role_all" ON agent_system_metrics_2026_03
+  FOR ALL TO service_role
+  USING (true) WITH CHECK (true);
+
+-- hmac_signatures partitions
+DO $$
+DECLARE
+  partition_name TEXT;
+  partitions TEXT[] := ARRAY[
+    'hmac_signatures_2026_02',
+    'hmac_signatures_2026_03',
+    'hmac_signatures_2026_04',
+    'hmac_signatures_2026_05',
+    'hmac_signatures_2026_06'
+  ];
+BEGIN
+  FOREACH partition_name IN ARRAY partitions
+  LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', partition_name);
+      EXECUTE format('DROP POLICY IF EXISTS "service_role_all" ON %I', partition_name);
+      EXECUTE format(
+        'CREATE POLICY "service_role_all" ON %I FOR ALL TO service_role USING (true) WITH CHECK (true)',
+        partition_name
+      );
+    EXCEPTION WHEN undefined_table THEN
+      RAISE NOTICE 'Partição % não existe, pulando...', partition_name;
+    END;
+  END LOOP;
+END $$;
+
+-- ============================================================
+-- PARTE 3: RPCs de Limpeza
+-- ============================================================
+
+-- RPC: Processar DLQ em lote
+CREATE OR REPLACE FUNCTION process_dlq_batch(
+  p_tenant_id UUID,
+  p_batch_size INTEGER DEFAULT 50,
+  p_action TEXT DEFAULT 'resolve'
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO public
+AS $$
+DECLARE
+  v_processed INTEGER := 0;
+  v_retried INTEGER := 0;
+  v_resolved INTEGER := 0;
+  v_item RECORD;
+BEGIN
+  FOR v_item IN
+    SELECT d.id, d.job_id, d.retry_count
+    FROM failed_jobs_dlq d
+    JOIN jobs j ON j.id = d.job_id
+    WHERE j.tenant_id = p_tenant_id
+      AND d.resolved_at IS NULL
+    ORDER BY d.failed_at ASC
+    LIMIT p_batch_size
+  LOOP
+    v_processed := v_processed + 1;
+    
+    IF p_action = 'retry' AND v_item.retry_count < 3 THEN
+      UPDATE jobs 
+      SET status = 'queued', updated_at = NOW()
+      WHERE id = v_item.job_id;
+      
+      UPDATE failed_jobs_dlq 
+      SET retry_count = retry_count + 1, last_retry_at = NOW()
+      WHERE id = v_item.id;
+      
+      v_retried := v_retried + 1;
+    ELSE
+      UPDATE failed_jobs_dlq 
+      SET resolved_at = NOW(), resolution_notes = 'Resolved via batch cleanup'
+      WHERE id = v_item.id;
+      
+      v_resolved := v_resolved + 1;
+    END IF;
+  END LOOP;
+  
+  RETURN jsonb_build_object(
+    'processed', v_processed,
+    'retried', v_retried,
+    'resolved', v_resolved,
+    'tenant_id', p_tenant_id
+  );
+END;
+$$;
+
+-- RPC: Limpar tasks órfãs
+CREATE OR REPLACE FUNCTION cleanup_stale_tasks(
+  p_tenant_id UUID,
+  p_days_old INTEGER DEFAULT 30,
+  p_batch_size INTEGER DEFAULT 500
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO public
+AS $$
+DECLARE
+  v_cancelled INTEGER := 0;
+  v_archived INTEGER := 0;
+BEGIN
+  WITH orphan_tasks AS (
+    SELECT id FROM tasks
+    WHERE tenant_id = p_tenant_id
+      AND status = 'open'
+      AND fingerprint_id IS NULL
+      AND created_at < NOW() - (p_days_old || ' days')::INTERVAL
+    LIMIT p_batch_size
+  )
+  UPDATE tasks t
+  SET status = 'cancelled',
+      closed_at = NOW(),
+      resolution_notes = 'Auto-cancelled: orphan task without fingerprint'
+  FROM orphan_tasks o
+  WHERE t.id = o.id;
+  
+  GET DIAGNOSTICS v_cancelled = ROW_COUNT;
+  
+  WITH old_resolved AS (
+    SELECT id FROM tasks
+    WHERE tenant_id = p_tenant_id
+      AND status IN ('resolved', 'cancelled', 'wont_fix')
+      AND closed_at < NOW() - INTERVAL '90 days'
+      AND archived_at IS NULL
+    LIMIT p_batch_size
+  )
+  UPDATE tasks t
+  SET archived_at = NOW()
+  FROM old_resolved o
+  WHERE t.id = o.id;
+  
+  GET DIAGNOSTICS v_archived = ROW_COUNT;
+  
+  RETURN jsonb_build_object(
+    'cancelled_orphans', v_cancelled,
+    'archived_old', v_archived,
+    'tenant_id', p_tenant_id
+  );
+END;
+$$;
+
+-- ============================================================
+-- PARTE 4: Criar Partição Futura de Métricas (Prevenção)
+-- ============================================================
+
+-- Criar partição para Abril 2026 se não existir
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_tables 
+    WHERE tablename = 'agent_system_metrics_2026_04'
+  ) THEN
+    CREATE TABLE agent_system_metrics_2026_04 
+    PARTITION OF agent_system_metrics
+    FOR VALUES FROM ('2026-04-01') TO ('2026-05-01');
+    
+    ALTER TABLE agent_system_metrics_2026_04 ENABLE ROW LEVEL SECURITY;
+    
+    CREATE POLICY "tenant_isolation_select" ON agent_system_metrics_2026_04
+      FOR SELECT TO authenticated
+      USING (tenant_id = get_active_tenant_id() OR is_current_super_admin());
+    
+    CREATE POLICY "service_role_all" ON agent_system_metrics_2026_04
+      FOR ALL TO service_role
+      USING (true) WITH CHECK (true);
+  END IF;
+END $$;
+
+-- Criar partição HMAC para Julho 2026 se não existir
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_tables 
+    WHERE tablename = 'hmac_signatures_2026_07'
+  ) THEN
+    CREATE TABLE hmac_signatures_2026_07 
+    PARTITION OF hmac_signatures
+    FOR VALUES FROM ('2026-07-01') TO ('2026-08-01');
+    
+    ALTER TABLE hmac_signatures_2026_07 ENABLE ROW LEVEL SECURITY;
+    
+    CREATE POLICY "service_role_all" ON hmac_signatures_2026_07
+      FOR ALL TO service_role
+      USING (true) WITH CHECK (true);
+  END IF;
+END $$;
+
+COMMIT;
+
+-- ============================================================
+-- PARTE 5: Verificação Final (Fora da Transação)
+-- ============================================================
+
+DO $$
+DECLARE
+  v_tables_without_rls INTEGER;
+  v_result RECORD;
+BEGIN
+  -- Verificar se todas as partições têm RLS
+  SELECT COUNT(*) INTO v_tables_without_rls
+  FROM pg_tables t
+  LEFT JOIN pg_class c ON c.relname = t.tablename
+  WHERE t.schemaname = 'public'
+    AND (t.tablename LIKE 'agent_system_metrics_2026%' 
+         OR t.tablename LIKE 'hmac_signatures_2026%')
+    AND c.relrowsecurity = false;
+  
+  IF v_tables_without_rls > 0 THEN
+    RAISE WARNING 'ALERTA: % partições ainda sem RLS!', v_tables_without_rls;
+  ELSE
+    RAISE NOTICE 'OK: Todas as partições têm RLS habilitado';
+  END IF;
+  
+  -- Verificar funções criadas
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'process_dlq_batch') THEN
+    RAISE NOTICE 'OK: RPC process_dlq_batch criada';
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'cleanup_stale_tasks') THEN
+    RAISE NOTICE 'OK: RPC cleanup_stale_tasks criada';
+  END IF;
+END $$;
+```
+
+---
+
+## Fase 6: Scripts de Execução Pós-Migração
+
+### 6.1 Corrigir Crons (Executar via SQL Editor)
+
+```sql
+-- EXECUTAR MANUALMENTE APÓS MIGRAÇÃO
+-- Requer permissões de cron.schedule
+
+-- Corrigir integrity-sentinel-15min
+SELECT cron.unschedule('integrity-sentinel-15min');
+SELECT cron.schedule(
+  'integrity-sentinel-15min',
+  '*/15 * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/integrity-sentinel',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ***REMOVED***'
+    ),
+    body := jsonb_build_object('source', 'cron')
+  ) AS request_id;
+  $$
+);
+
+-- Corrigir rls-automated-tests-6h
+SELECT cron.unschedule('rls-automated-tests-6h');
+SELECT cron.schedule(
+  'rls-automated-tests-6h',
+  '0 */6 * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/run-rls-tests',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ***REMOVED***'
+    ),
+    body := jsonb_build_object('source', 'cron', 'run_type', 'scheduled')
+  ) AS request_id;
+  $$
+);
+
+-- Corrigir evaluate-software-risk-daily
+SELECT cron.unschedule('evaluate-software-risk-daily');
+SELECT cron.schedule(
+  'evaluate-software-risk-daily',
+  '0 3 * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/evaluate-software-risk',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ***REMOVED***'
+    ),
+    body := jsonb_build_object('source', 'cron')
+  ) AS request_id;
+  $$
+);
+
+-- Verificar crons corrigidos
+SELECT jobid, jobname, schedule, active 
+FROM cron.job 
+WHERE jobname IN (
+  'integrity-sentinel-15min', 
+  'rls-automated-tests-6h', 
+  'evaluate-software-risk-daily'
+);
+```
+
+### 6.2 Executar Limpeza de DLQ e Tasks
+
+```sql
+-- Obter tenant_id principal
+SELECT id, name FROM tenants LIMIT 5;
+
+-- Executar limpeza de DLQ (substituir pelo tenant_id real)
+SELECT process_dlq_batch(
+  p_tenant_id := 'SEU_TENANT_ID_AQUI'::UUID,
+  p_batch_size := 100,
+  p_action := 'resolve'
+);
+
+-- Executar limpeza de tasks órfãs
+SELECT cleanup_stale_tasks(
+  p_tenant_id := 'SEU_TENANT_ID_AQUI'::UUID,
+  p_days_old := 30,
+  p_batch_size := 500
+);
+```
+
+### 6.3 Forçar Rollout v4.5.0
+
+```sql
+-- Forçar atualização em agentes online
+UPDATE agents
+SET 
+  force_update_version = 'v4.5.0',
+  force_update_reason = 'Scheduled rollout v4.5.0',
+  force_update_at = NOW()
+WHERE status = 'active'
+  AND (agent_version IS NULL OR agent_version != 'v4.5.0')
+  AND last_heartbeat > NOW() - INTERVAL '10 minutes';
+
+-- Verificar resultado
+SELECT 
+  agent_version,
+  COUNT(*) as count,
+  COUNT(*) FILTER (WHERE last_heartbeat > NOW() - INTERVAL '10 minutes') as online
+FROM agents
+WHERE status = 'active'
+GROUP BY agent_version;
+```
+
+---
+
+## Checklist de Validação
+
+| # | Verificação | Query |
+|---|-------------|-------|
+| 1 | Crons sem falhas | `SELECT * FROM cron.job_run_details WHERE status = 'failed' AND start_time > NOW() - INTERVAL '1 hour'` |
+| 2 | Partições com RLS | `SELECT tablename FROM pg_tables t JOIN pg_class c ON c.relname = t.tablename WHERE t.schemaname = 'public' AND tablename LIKE '%2026%' AND c.relrowsecurity = false` |
+| 3 | DLQ vazia | `SELECT COUNT(*) FROM failed_jobs_dlq WHERE resolved_at IS NULL` |
+| 4 | Tasks órfãs zeradas | `SELECT COUNT(*) FROM tasks WHERE status = 'open' AND fingerprint_id IS NULL AND created_at < NOW() - INTERVAL '30 days'` |
+| 5 | Agentes em v4.5.0 | `SELECT agent_version, COUNT(*) FROM agents WHERE status = 'active' GROUP BY agent_version` |
+
+---
+
+## Arquivos a Criar/Modificar
+
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| `supabase/migrations/20260201_close_all_gaps.sql` | CRIAR | Migração consolidada |
+| Edge Functions | NENHUMA | Não há alteração de código necessária |
+
+---
+
+## Riscos e Mitigações
+
+| Risco | Probabilidade | Mitigação |
+|-------|---------------|-----------|
+| Crons ainda falhando após correção | Baixa | Testar manualmente antes de agendar |
+| Partições não existirem | Média | Script usa IF EXISTS / IF NOT EXISTS |
+| DLQ com items críticos | Baixa | Usar `p_action = 'resolve'` conservador |
+| Agentes não atualizarem | Média | Verificar conectividade antes de forçar |
 
