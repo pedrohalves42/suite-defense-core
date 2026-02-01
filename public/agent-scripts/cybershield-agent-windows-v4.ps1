@@ -1,19 +1,21 @@
 <#
-    CyberShield Agent - Windows v4.4.0
+    CyberShield Agent - Windows v4.5.0
+    
+    v4.5.0: TOTAL RESILIENCE - Agente NUNCA fica offline com PC ligado
+    - NEW: Network Watchdog - detecta reconexão de rede e força heartbeat imediato
+    - NEW: Task Health Assert - verifica integridade da Scheduled Task a cada 5 min
+    - NEW: Power Event Detection - detecta wake from sleep/hibernate via WMI
+    - NEW: Test-NetworkConnectivity - teste rápido de TCP na porta 443
+    - NEW: Invoke-NetworkWatchdog - loop de monitoramento de conectividade
+    - NEW: Assert-TaskHealth - auto-repair de task desabilitada
+    - NEW: Register-PowerEventWatcher - listener de Win32_PowerManagementEvent
+    - IMPROVED: Bootstrap registra power events automaticamente
+    - IMPROVED: Features array inclui novos monitores
+    - IMPROVED: Logging inclui status de power events
     
     v4.4.0: FSM ENTERPRISE - Máquina de Estados Formal
     - NEW: Estado SHUTDOWN adicionado à FSM
     - NEW: Test-StateInvariants bloqueia ENFORCING com componentes falhados
-    - NEW: FailurePolicy com hard stop após MaxConsecutiveFailures (10)
-    - NEW: Add-ComponentFailure/Reset-ComponentFailure para contagem por componente
-    - NEW: Write-LogDedup evita logs duplicados em 30s
-    - NEW: Write-HealthSnapshot gera 1 snapshot por ciclo (não por evento)
-    - NEW: Write-IncidentSummary ao entrar em SAFE_MODE/ERROR
-    - NEW: CorrelationId em todos os eventos para rastreabilidade forense
-    - NEW: Tipos de evento: health_snapshot, recovery_exhausted, incident_summary
-    - IMPROVED: DNS health check com hard stop integrado
-    - IMPROVED: Auto-recovery não entra em loop infinito
-    - SECURITY: Estados mentirosos eliminados via invariantes
     
     v4.3.0: WATCHDOG INTERNO - Auto-recovery robusto com retry loop
     - NEW: Wrapper de watchdog envolvendo todo o script principal
@@ -128,7 +130,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.4.0"
+    [string]$AgentVersion = "v4.5.0"
 )
 
 # CRITICAL: Forçar TLS 1.2 para compatibilidade com Windows Server 2012/2016
@@ -261,6 +263,18 @@ $Global:LogDeduplicationTTLSeconds = 30
 
 # Último health snapshot (1 por ciclo)
 $Global:LastHealthSnapshotTime = $null
+
+# ============================================
+#  FSM ENTERPRISE v2.1: RESILIENCE MONITORS
+# ============================================
+# Variáveis globais para Network Watchdog e Task Health
+$Global:LastNetworkState = $true              # Estado anterior da rede
+$Global:NetworkCheckIntervalSeconds = 30      # Intervalo de verificação de rede
+$Global:ForceReconnect = $false               # Flag para forçar reconexão
+$Global:LastNetworkCheck = $null              # Último check de rede
+$Global:LastTaskHealthCheck = $null           # Último check de task health
+$Global:TaskHealthCheckIntervalSeconds = 300  # Verifica task a cada 5 min
+$Global:PowerEventRegistered = $false         # Flag para evitar registro duplicado
 
 # ============================================
 #  PHASE 1: PROTECTED TARGETS (DEFENSE IN DEPTH)
@@ -817,7 +831,325 @@ function Invoke-AgentSelfTest {
 }
 
 # ============================================
-#  FASE 2.6: ED25519 SIGNATURE VERIFICATION
+#  FSM ENTERPRISE v2.1: RESILIENCE FUNCTIONS
+# ============================================
+# Funções de resiliência para garantir que o agente nunca fique offline
+# com o PC ligado e conectado à internet
+
+function Test-NetworkConnectivity {
+    <#
+    .SYNOPSIS
+        Testa conectividade com o servidor Supabase
+    .DESCRIPTION
+        Verifica se consegue alcançar o endpoint do servidor.
+        Usa TLS 1.2 e timeout curto para detecção rápida.
+    #>
+    try {
+        # Forçar TLS 1.2 (critical para Windows Server antigos)
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        
+        # Extrair hostname do ServerUrl
+        $uri = [System.Uri]$Global:ServerUrl
+        $hostname = $uri.Host
+        
+        # Tentar conexão TCP na porta 443 (mais rápido que HTTP request)
+        $tcpClient = New-Object System.Net.Sockets.TcpClient
+        $connectTask = $tcpClient.ConnectAsync($hostname, 443)
+        $connected = $connectTask.Wait(5000)  # 5 segundos timeout
+        
+        if ($tcpClient.Connected) {
+            $tcpClient.Close()
+            return $true
+        }
+        
+        $tcpClient.Close()
+        return $false
+    }
+    catch {
+        return $false
+    }
+}
+
+function Invoke-NetworkWatchdog {
+    <#
+    .SYNOPSIS
+        Network Watchdog - monitora conectividade e força reconexão
+    .DESCRIPTION
+        Detecta quando a rede volta após desconexão e força heartbeat imediato.
+        Chamado a cada ciclo do main loop.
+    #>
+    try {
+        $now = Get-Date
+        
+        # Inicializar timestamps se necessário
+        if ($null -eq $Global:LastNetworkCheck) {
+            $Global:LastNetworkCheck = $now
+            $Global:LastNetworkState = Test-NetworkConnectivity
+            return @{ 
+                checked = $false
+                reason = "initialized"
+            }
+        }
+        
+        # Verificar a cada N segundos
+        if (($now - $Global:LastNetworkCheck).TotalSeconds -lt $Global:NetworkCheckIntervalSeconds) {
+            # Se ForceReconnect flag está ativo (ex: wake from sleep), processar imediatamente
+            if (-not $Global:ForceReconnect) {
+                return @{
+                    checked = $false
+                    reason = "interval_not_reached"
+                }
+            }
+        }
+        
+        $Global:LastNetworkCheck = $now
+        $currentState = Test-NetworkConnectivity
+        
+        # Detectar transição de offline para online
+        if (-not $Global:LastNetworkState -and $currentState) {
+            Write-Log "[NETWORK-WATCHDOG] Rede restaurada! Forcando heartbeat imediato..." "INFO"
+            
+            Add-EvidenceEntry -Type "state_change" -Data @{
+                event = "network_restored"
+                was_offline = $true
+                force_reconnect = $Global:ForceReconnect
+                agent_version = $Global:AgentVersion
+            } -Severity "info"
+            
+            # Reset flag
+            $Global:ForceReconnect = $false
+            $Global:LastNetworkState = $currentState
+            
+            # Forçar heartbeat imediato
+            $success = Send-Heartbeat
+            
+            if ($success) {
+                Write-Log "[NETWORK-WATCHDOG] Heartbeat imediato enviado com sucesso!" "SUCCESS"
+                return @{
+                    checked = $true
+                    network_restored = $true
+                    heartbeat_sent = $true
+                    heartbeat_success = $true
+                }
+            } else {
+                Write-Log "[NETWORK-WATCHDOG] Heartbeat imediato falhou, sera retentado" "WARN"
+                return @{
+                    checked = $true
+                    network_restored = $true
+                    heartbeat_sent = $true
+                    heartbeat_success = $false
+                }
+            }
+        }
+        
+        # Processar ForceReconnect mesmo se rede já estava online
+        if ($Global:ForceReconnect -and $currentState) {
+            Write-Log "[NETWORK-WATCHDOG] ForceReconnect ativo com rede disponivel. Heartbeat imediato..." "INFO"
+            $Global:ForceReconnect = $false
+            Send-Heartbeat | Out-Null
+        }
+        
+        # Se estava online e ficou offline
+        if ($Global:LastNetworkState -and -not $currentState) {
+            Write-Log "[NETWORK-WATCHDOG] Rede perdida. Aguardando reconexao..." "WARN"
+            
+            Add-EvidenceEntry -Type "state_change" -Data @{
+                event = "network_lost"
+                agent_version = $Global:AgentVersion
+            } -Severity "warning"
+        }
+        
+        $Global:LastNetworkState = $currentState
+        
+        return @{
+            checked = $true
+            network_state = $currentState
+            network_restored = $false
+        }
+    }
+    catch {
+        Write-Log "[NETWORK-WATCHDOG] Erro: $($_.Exception.Message)" "WARN"
+        return @{
+            checked = $false
+            error = $_.Exception.Message
+        }
+    }
+}
+
+function Assert-TaskHealth {
+    <#
+    .SYNOPSIS
+        Verifica se a Scheduled Task do agente está saudável
+    .DESCRIPTION
+        Verifica se a task existe, está configurada corretamente e está Running.
+        Se encontrar problemas, tenta auto-repair.
+    #>
+    try {
+        $now = Get-Date
+        
+        # Inicializar timestamp se necessário
+        if ($null -eq $Global:LastTaskHealthCheck) {
+            $Global:LastTaskHealthCheck = $now
+            return @{
+                checked = $false
+                reason = "initialized"
+            }
+        }
+        
+        # Verificar a cada N segundos
+        if (($now - $Global:LastTaskHealthCheck).TotalSeconds -lt $Global:TaskHealthCheckIntervalSeconds) {
+            return @{
+                checked = $false
+                reason = "interval_not_reached"
+            }
+        }
+        
+        $Global:LastTaskHealthCheck = $now
+        
+        # Tentar encontrar a task
+        $taskName = "CyberShieldAgent-$($Global:AgentName)"
+        $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+        
+        # Tentar nome alternativo
+        if (-not $task) {
+            $task = Get-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
+        }
+        
+        if (-not $task) {
+            Write-Log "[TASK-HEALTH] CRITICO: Scheduled Task nao encontrada!" "ERROR"
+            
+            Add-EvidenceEntry -Type "security_event" -Data @{
+                event = "task_missing"
+                task_name_tried = @($taskName, "CyberShield Agent")
+                agent_version = $Global:AgentVersion
+            } -Severity "critical"
+            
+            # Não podemos re-registrar a task de dentro do script porque 
+            # não temos os parâmetros originais. Apenas logar.
+            return @{
+                checked = $true
+                healthy = $false
+                reason = "task_not_found"
+            }
+        }
+        
+        # Verificar se está habilitada
+        if ($task.State -eq "Disabled") {
+            Write-Log "[TASK-HEALTH] Task desabilitada! Tentando reabilitar..." "WARN"
+            try {
+                Enable-ScheduledTask -TaskName $task.TaskName -ErrorAction Stop
+                Write-Log "[TASK-HEALTH] Task reabilitada com sucesso!" "SUCCESS"
+                
+                Add-EvidenceEntry -Type "state_change" -Data @{
+                    event = "task_reenabled"
+                    task_name = $task.TaskName
+                    agent_version = $Global:AgentVersion
+                } -Severity "info"
+                
+                return @{
+                    checked = $true
+                    healthy = $true
+                    repaired = $true
+                    repair_action = "reenabled"
+                }
+            }
+            catch {
+                Write-Log "[TASK-HEALTH] Falha ao reabilitar task: $($_.Exception.Message)" "ERROR"
+                return @{
+                    checked = $true
+                    healthy = $false
+                    reason = "reenable_failed"
+                    error = $_.Exception.Message
+                }
+            }
+        }
+        
+        # Verificar se executa como SYSTEM
+        $principal = $task.Principal
+        if ($principal.UserId -and $principal.UserId -notlike "*SYSTEM*" -and $principal.UserId -ne "S-1-5-18") {
+            Write-Log "[TASK-HEALTH] AVISO: Task nao executa como SYSTEM (atual: $($principal.UserId))" "WARN"
+            # Não corrigir automaticamente, apenas alertar
+        }
+        
+        # Task saudável
+        return @{
+            checked = $true
+            healthy = $true
+            task_name = $task.TaskName
+            state = $task.State.ToString()
+            run_as = $principal.UserId
+        }
+    }
+    catch {
+        Write-Log "[TASK-HEALTH] Erro ao verificar task: $($_.Exception.Message)" "WARN"
+        return @{
+            checked = $false
+            error = $_.Exception.Message
+        }
+    }
+}
+
+function Register-PowerEventWatcher {
+    <#
+    .SYNOPSIS
+        Registra listener para eventos de power (wake from sleep/hibernate)
+    .DESCRIPTION
+        Usa WMI para detectar quando o PC volta de hibernação/sleep e 
+        define ForceReconnect flag para forçar heartbeat imediato.
+    #>
+    if ($Global:PowerEventRegistered) {
+        return @{ registered = $true; reason = "already_registered" }
+    }
+    
+    try {
+        # Registrar evento WMI para power management
+        # EventType 7 = Resume from suspend (sleep/hibernate)
+        $query = "SELECT * FROM Win32_PowerManagementEvent"
+        
+        $action = {
+            $eventType = $EventArgs.NewEvent.EventType
+            
+            # EventType 7 = Resume from suspend
+            # EventType 4 = Entering suspend
+            # EventType 10 = Power status change (AC/battery)
+            # EventType 11 = OEM event
+            # EventType 18 = Resume automatic
+            
+            if ($eventType -eq 7 -or $eventType -eq 18) {
+                $Global:ForceReconnect = $true
+                
+                $logPath = "C:\CyberShield\logs\cybershield-agent-v4.log"
+                $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                "$ts [POWER] Sistema retornou de hibernacao/sleep. ForceReconnect=true (EventType=$eventType)" | 
+                    Out-File -FilePath $logPath -Append -Encoding UTF8 -ErrorAction SilentlyContinue
+            }
+        }
+        
+        # Registrar evento
+        Register-WmiEvent -Query $query -Action $action -SourceIdentifier "CyberShield_PowerEvent" -ErrorAction Stop
+        
+        $Global:PowerEventRegistered = $true
+        Write-Log "[POWER-EVENTS] Listener de eventos de power registrado com sucesso" "SUCCESS"
+        
+        Add-EvidenceEntry -Type "state_change" -Data @{
+            event = "power_event_watcher_registered"
+            agent_version = $Global:AgentVersion
+        } -Severity "info"
+        
+        return @{
+            registered = $true
+            reason = "success"
+        }
+    }
+    catch {
+        # Em alguns sistemas (containers, VMs), WMI events podem não funcionar
+        Write-Log "[POWER-EVENTS] Nao foi possivel registrar eventos de power: $($_.Exception.Message)" "WARN"
+        return @{
+            registered = $false
+            reason = $_.Exception.Message
+        }
+    }
+}
 # ============================================
 # IMPORTANT: This is the Ed25519 PUBLIC KEY for verifying agent updates
 # The corresponding PRIVATE KEY must NEVER be stored in the agent or repository
@@ -5432,6 +5764,18 @@ if ($signingKeyInitialized) {
 }
 
 # ============================================
+#  FSM ENTERPRISE v2.1: RESILIENCE BOOTSTRAP
+# ============================================
+# Registrar Power Event Watcher para detectar wake from sleep/hibernate
+Write-Host "[BOOTSTRAP] Registering power event watcher for resilience..." -ForegroundColor Cyan
+$powerEventResult = Register-PowerEventWatcher
+if ($powerEventResult.registered) {
+    Write-Host "[BOOTSTRAP] Power event watcher registered successfully" -ForegroundColor Green
+} else {
+    Write-Host "[BOOTSTRAP] WARNING: Power events not available - $($powerEventResult.reason)" -ForegroundColor Yellow
+}
+
+# ============================================
 #  LOOP PRINCIPAL
 # ============================================
 Write-Log "============================================" "INFO"
@@ -5441,6 +5785,7 @@ Write-Log "[INFO] AgentName: $Global:AgentName" "DEBUG"
 Write-Log "[INFO] Ed25519 Supported: $($Global:Ed25519Supported)" "DEBUG"
 Write-Log "[INFO] Signature Mode: $(if ($Global:StrictSignatureMode) { 'strict' } else { 'audit_only' })" "DEBUG"
 Write-Log "[INFO] Signing Key: $(if ($Global:SigningKeyPair) { $Global:SigningKeyPair.Fingerprint.Substring(0, 16) + '...' } else { 'NOT AVAILABLE' })" "DEBUG"
+Write-Log "[INFO] Power Events: $(if ($Global:PowerEventRegistered) { 'ACTIVE' } else { 'NOT AVAILABLE' })" "DEBUG"
 Write-Log "============================================" "INFO"
 
 # Registrar inicio no Evidence Journal
@@ -5448,8 +5793,9 @@ Add-EvidenceEntry -Type "state_change" -Data @{
     event = "agent_started"
     version = $Global:AgentVersion
     hostname = $env:COMPUTERNAME
-    features = @("state_machine", "evidence_journal", "dns_filter", "policy_contract", "poe_signing")
+    features = @("state_machine", "evidence_journal", "dns_filter", "policy_contract", "poe_signing", "network_watchdog", "task_health", "power_events")
     signing_key_available = ($null -ne $Global:SigningKeyPair)
+    power_events_available = $Global:PowerEventRegistered
 } -StateBefore $null -StateAfter "BOOTSTRAP" -Severity "info"
 
 try {
@@ -5688,6 +6034,37 @@ try {
             } catch {
                 # NUNCA derrubar o loop por causa de snapshot
                 Write-Log "[WARN] Erro ao gerar health snapshot: $($_.Exception.Message)" "WARN"
+            }
+
+            # ============================================
+            #  FSM ENTERPRISE v2.1: NETWORK WATCHDOG
+            # ============================================
+            # Verifica conectividade e força heartbeat quando rede volta
+            try {
+                $networkResult = Invoke-NetworkWatchdog
+                
+                # Se a rede foi restaurada e heartbeat foi enviado, atualizar timestamp
+                if ($networkResult.network_restored -and $networkResult.heartbeat_success) {
+                    $lastHeartbeat = Get-Date
+                }
+            } catch {
+                # NUNCA derrubar o loop por causa do network watchdog
+                Write-Log "[WARN] Erro no Network Watchdog: $($_.Exception.Message)" "WARN"
+            }
+
+            # ============================================
+            #  FSM ENTERPRISE v2.1: TASK HEALTH ASSERT
+            # ============================================
+            # Verifica integridade da Scheduled Task
+            try {
+                $taskHealth = Assert-TaskHealth
+                
+                if ($taskHealth.checked -and -not $taskHealth.healthy) {
+                    Write-Log "[TASK-HEALTH] Problema detectado: $($taskHealth.reason)" "WARN"
+                }
+            } catch {
+                # NUNCA derrubar o loop por causa do task health
+                Write-Log "[WARN] Erro no Task Health Assert: $($_.Exception.Message)" "WARN"
             }
 
             # Rotacao de logs/evidence a cada hora
