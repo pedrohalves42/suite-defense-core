@@ -7825,6 +7825,27 @@ export type Database = {
         }
         Relationships: []
       }
+      hmac_signatures_2026_07: {
+        Row: {
+          agent_name: string
+          id: string
+          signature: string
+          used_at: string
+        }
+        Insert: {
+          agent_name: string
+          id?: string
+          signature: string
+          used_at?: string
+        }
+        Update: {
+          agent_name?: string
+          id?: string
+          signature?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
       incident_slo_state: {
         Row: {
           budget_consumed: number
@@ -20775,6 +20796,14 @@ export type Database = {
           job_ids: string[]
         }[]
       }
+      cleanup_stale_tasks: {
+        Args: {
+          p_batch_size?: number
+          p_days_old?: number
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       cleanup_stuck_builds: {
         Args: never
         Returns: {
@@ -21417,6 +21446,10 @@ export type Database = {
       parse_version_code: { Args: { version_text: string }; Returns: number }
       persist_chain_breaks: { Args: never; Returns: number }
       process_autonomous_safe_mode: { Args: never; Returns: Json }
+      process_dlq_batch: {
+        Args: { p_action?: string; p_batch_size?: number; p_tenant_id: string }
+        Returns: Json
+      }
       process_safe_mode_entry: {
         Args: {
           p_agent_id: string
