@@ -7714,6 +7714,111 @@ export type Database = {
         }
         Relationships: []
       }
+      hmac_signatures_2026_02: {
+        Row: {
+          agent_name: string
+          id: string
+          signature: string
+          used_at: string
+        }
+        Insert: {
+          agent_name: string
+          id?: string
+          signature: string
+          used_at?: string
+        }
+        Update: {
+          agent_name?: string
+          id?: string
+          signature?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
+      hmac_signatures_2026_03: {
+        Row: {
+          agent_name: string
+          id: string
+          signature: string
+          used_at: string
+        }
+        Insert: {
+          agent_name: string
+          id?: string
+          signature: string
+          used_at?: string
+        }
+        Update: {
+          agent_name?: string
+          id?: string
+          signature?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
+      hmac_signatures_2026_04: {
+        Row: {
+          agent_name: string
+          id: string
+          signature: string
+          used_at: string
+        }
+        Insert: {
+          agent_name: string
+          id?: string
+          signature: string
+          used_at?: string
+        }
+        Update: {
+          agent_name?: string
+          id?: string
+          signature?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
+      hmac_signatures_2026_05: {
+        Row: {
+          agent_name: string
+          id: string
+          signature: string
+          used_at: string
+        }
+        Insert: {
+          agent_name: string
+          id?: string
+          signature: string
+          used_at?: string
+        }
+        Update: {
+          agent_name?: string
+          id?: string
+          signature?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
+      hmac_signatures_2026_06: {
+        Row: {
+          agent_name: string
+          id: string
+          signature: string
+          used_at: string
+        }
+        Insert: {
+          agent_name: string
+          id?: string
+          signature: string
+          used_at?: string
+        }
+        Update: {
+          agent_name?: string
+          id?: string
+          signature?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
       incident_slo_state: {
         Row: {
           budget_consumed: number
