@@ -21956,6 +21956,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      mark_cron_failure: {
+        Args: { p_cron_name: string; p_error: string }
+        Returns: undefined
+      }
       must_change_password: { Args: never; Returns: boolean }
       normalize_job_failure: {
         Args: { job_record: Database["public"]["Tables"]["jobs"]["Row"] }
