@@ -296,6 +296,7 @@ export type Database = {
           build_log: Json | null
           build_started_at: string | null
           build_status: string
+          cache_key: string | null
           created_at: string
           created_by: string | null
           download_expires_at: string | null
@@ -310,6 +311,7 @@ export type Database = {
           id: string
           ps1_version: string | null
           ps2exe_version: string | null
+          script_hash: string | null
           sha256_hash: string | null
           tenant_id: string
         }
@@ -320,6 +322,7 @@ export type Database = {
           build_log?: Json | null
           build_started_at?: string | null
           build_status?: string
+          cache_key?: string | null
           created_at?: string
           created_by?: string | null
           download_expires_at?: string | null
@@ -334,6 +337,7 @@ export type Database = {
           id?: string
           ps1_version?: string | null
           ps2exe_version?: string | null
+          script_hash?: string | null
           sha256_hash?: string | null
           tenant_id: string
         }
@@ -344,6 +348,7 @@ export type Database = {
           build_log?: Json | null
           build_started_at?: string | null
           build_status?: string
+          cache_key?: string | null
           created_at?: string
           created_by?: string | null
           download_expires_at?: string | null
@@ -358,6 +363,7 @@ export type Database = {
           id?: string
           ps1_version?: string | null
           ps2exe_version?: string | null
+          script_hash?: string | null
           sha256_hash?: string | null
           tenant_id?: string
         }

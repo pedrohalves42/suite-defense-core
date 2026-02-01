@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Package, Download, Terminal, CheckCircle2, Loader2, Copy, AlertTriangle, Shield, Clock, FileCheck, BookOpen, HelpCircle, Zap, ExternalLink, RefreshCw, Upload } from "lucide-react";
 import { BuildProgressIndicator } from "@/components/BuildProgressIndicator";
@@ -19,6 +19,7 @@ import { logger } from "@/lib/logger";
 import { CircuitBreaker, CircuitState } from "@/lib/circuit-breaker";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useRetryFetch } from "@/hooks/useRetryFetch";
+import { useBuildRealtime, BuildStatus } from "@/hooks/useBuildRealtime";
 import { storage } from "@/lib/storage";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -164,15 +165,91 @@ const AgentInstaller = () => {
   } | null>(null);
   
   // Step 3: EXE Build states
-  const [exeBuildStatus, setExeBuildStatus] = useState<'idle' | 'building' | 'completed' | 'failed'>('idle');
+  const [exeBuildStatus, setExeBuildStatus] = useState<'idle' | 'building' | 'completed' | 'failed' | 'cached'>('idle');
   const [exeBuildId, setExeBuildId] = useState<string | null>(null);
   const [exeDownloadUrl, setExeDownloadUrl] = useState<string | null>(null);
   const [exeSha256, setExeSha256] = useState<string | null>(null);
   const [exeFileSize, setExeFileSize] = useState<number | null>(null);
   const [githubActionsUrl, setGithubActionsUrl] = useState<string | null>(null);
-  const [pollAttempts, setPollAttempts] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 2;
+
+  // FASE 2: Realtime hook para monitorar build
+  const handleBuildStatusChange = useCallback((status: BuildStatus) => {
+    logger.info('[Realtime] Build status changed', status);
+
+    if (status.github_run_url && !githubActionsUrl) {
+      setGithubActionsUrl(status.github_run_url);
+    }
+
+    if (status.build_status === 'completed') {
+      setExeBuildStatus('completed');
+      setExeDownloadUrl(status.download_url);
+      setExeSha256(status.sha256_hash);
+      setExeFileSize(status.file_size_bytes);
+      setRetryCount(0);
+      storage.remove('current-build');
+      
+      setBuildProgress({
+        currentStep: 'completed',
+        status: 'completed',
+        message: 'Build concluído com sucesso!',
+        githubRunUrl: status.github_run_url || undefined
+      });
+      
+      const duration = status.build_duration_seconds || 0;
+      toast.success(`✅ EXE gerado em ${duration}s!`, {
+        description: 'Clique em Download para baixar'
+      });
+    } else if (status.build_status === 'failed') {
+      storage.remove('current-build');
+      
+      if (retryCount < MAX_RETRIES) {
+        toast.warning('⚠️ Build falhou', {
+          description: `Tentando novamente (${retryCount + 1}/${MAX_RETRIES}) em 30s...`,
+          duration: 5000,
+        });
+        
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          handleBuildExe();
+        }, 30000);
+      } else {
+        setExeBuildStatus('failed');
+        toast.error(`Falha: ${status.error_message || 'Erro desconhecido'} após múltiplas tentativas`);
+        setRetryCount(0);
+      }
+    }
+  }, [githubActionsUrl, retryCount]);
+
+  const { fetchStatus: fetchBuildStatus, cleanup: cleanupRealtime } = useBuildRealtime({
+    buildId: exeBuildId,
+    onStatusChange: handleBuildStatusChange,
+    onError: (error) => {
+      logger.warn('[Realtime] Subscription error, will fallback to polling', error);
+      // Fallback para polling se Realtime falhar
+      startPollingFallback();
+    }
+  });
+
+  // Fallback polling (apenas se Realtime falhar)
+  const startPollingFallback = useCallback(() => {
+    if (!exeBuildId || exeBuildStatus !== 'building') return;
+    
+    logger.info('[Polling Fallback] Starting fallback polling');
+    const pollInterval = setInterval(async () => {
+      const status = await fetchBuildStatus();
+      if (status) {
+        handleBuildStatusChange(status);
+        if (status.build_status === 'completed' || status.build_status === 'failed') {
+          clearInterval(pollInterval);
+        }
+      }
+    }, 10000); // Poll a cada 10s como fallback
+    
+    // Limpar após 5 minutos
+    setTimeout(() => clearInterval(pollInterval), 300000);
+  }, [exeBuildId, exeBuildStatus, fetchBuildStatus, handleBuildStatusChange]);
   
   // FASE 4: PS1 SHA256 validation states
   const [ps1Sha256, setPs1Sha256] = useState<string | null>(null);
@@ -854,9 +931,8 @@ const AgentInstaller = () => {
     setExeSha256(null);
     setExeFileSize(null);
     setGithubActionsUrl(null);
-    setPollAttempts(0);
     
-    toast.info('? Iniciando build do EXE... Aguarde 2-3 minutos');
+    toast.info('🔧 Iniciando build do EXE... Aguarde 2-3 minutos');
 
     try {
       // FASE 2.2: Update progress to dispatching
@@ -885,6 +961,29 @@ const AgentInstaller = () => {
         }
       });
 
+      // FASE 2: Verificar se foi cache hit
+      if (buildResult.cached) {
+        logger.info('Build cache hit!', buildResult);
+        setExeBuildId(buildResult.build_id);
+        setExeBuildStatus('cached');
+        setExeDownloadUrl(buildResult.download_url);
+        setExeSha256(buildResult.sha256_hash);
+        setExeFileSize(buildResult.file_size_bytes);
+        
+        setBuildProgress({
+          currentStep: 'completed',
+          status: 'completed',
+          message: '✅ Instalador recuperado do cache!'
+        });
+        
+        toast.success('⚡ Instalador recuperado do cache!', {
+          description: 'Mesmo tenant/script - download instantâneo'
+        });
+        
+        storage.remove('current-build');
+        return;
+      }
+
       const { build_id, github_actions_url } = buildResult;
       setExeBuildId(build_id);
       setGithubActionsUrl(github_actions_url || null);
@@ -893,7 +992,7 @@ const AgentInstaller = () => {
       setBuildProgress({
         currentStep: 'compiling',
         status: 'active',
-        message: 'Compilando PS1 ? EXE (aguarde 2-3 minutos)...',
+        message: 'Compilando PS1 → EXE (aguarde 2-3 minutos)...',
         githubRunUrl: github_actions_url
       });
 
@@ -904,111 +1003,40 @@ const AgentInstaller = () => {
         started_at: Date.now() 
       }, 30 * 60 * 1000); // 30min expiry
 
-      logger.info('Build initiated', { build_id, agent_name: agentName.trim(), github_actions_url });
+      logger.info('Build initiated with Realtime monitoring', { 
+        build_id, 
+        agent_name: agentName.trim(), 
+        github_actions_url 
+      });
 
-      // Poll for build status with offline awareness
-      let attempts = 0;
-      const maxAttempts = 60; // 5 min timeout
+      // FASE 2: Realtime subscription é configurado automaticamente via useBuildRealtime
+      // O hook monitora exeBuildId e recebe updates via handleBuildStatusChange
       
-      const pollInterval = setInterval(async () => {
-        // Pause polling if offline
-        if (!isOnline) {
-          logger.warn('Pausing build polling - offline');
-          return;
-        }
-
-        attempts++;
-        setPollAttempts(attempts);
-        
-        if (attempts > maxAttempts) {
-          clearInterval(pollInterval);
-          
-          // Retry automatico
+      // Setup build timeout (5 min)
+      const buildTimeoutId = setTimeout(() => {
+        if (exeBuildStatus === 'building') {
+          logger.warn('Build timeout reached');
           if (retryCount < MAX_RETRIES) {
-            toast.warning('[WARN] ? Build timeout', {
+            toast.warning('⚠️ Build timeout', {
               description: `Tentando novamente (${retryCount + 1}/${MAX_RETRIES}) em 30s...`,
               duration: 5000,
             });
             
-            setTimeout(async () => {
+            setTimeout(() => {
               setRetryCount(prev => prev + 1);
-              setPollAttempts(0);
-              await handleBuildExe();
+              handleBuildExe();
             }, 30000);
           } else {
             setExeBuildStatus('failed');
-            toast.error('Timeout: Build demorou mais de 5 minutos apos multiplas tentativas');
+            toast.error('Timeout: Build demorou mais de 5 minutos após múltiplas tentativas');
             setRetryCount(0);
             storage.remove('current-build');
           }
-          return;
         }
+      }, 300000); // 5 min timeout
 
-        try {
-          const { data: buildData, error: pollError } = await supabase
-            .from('agent_builds')
-            .select('build_status, download_url, sha256_hash, file_size_bytes, error_message, build_duration_seconds, github_run_url')
-            .eq('id', build_id)
-            .single();
-
-          if (pollError) {
-            logger.error('Polling error', pollError);
-            return;
-          }
-
-          if (buildData.github_run_url && !githubActionsUrl) {
-            setGithubActionsUrl(buildData.github_run_url);
-          }
-
-          logger.info('Poll attempt', { attempt: attempts, status: buildData.build_status });
-
-          if (buildData.build_status === 'completed') {
-            clearInterval(pollInterval);
-            setExeBuildStatus('completed');
-            setExeDownloadUrl(buildData.download_url);
-            setExeSha256(buildData.sha256_hash);
-            setExeFileSize(buildData.file_size_bytes);
-            setRetryCount(0);
-            storage.remove('current-build');
-            
-            // FASE 2.2: Final progress state
-            setBuildProgress({
-              currentStep: 'completed',
-              status: 'completed',
-              message: 'Build concluido com sucesso!',
-              githubRunUrl: buildData.github_run_url || githubActionsUrl || undefined
-            });
-            
-            const duration = buildData.build_duration_seconds || 0;
-            toast.success(`[OK]  EXE gerado em ${duration}s!`, {
-              description: 'Clique em Download para baixar'
-            });
-          } else if (buildData.build_status === 'failed') {
-            clearInterval(pollInterval);
-            storage.remove('current-build');
-            
-            // Retry automatico
-            if (retryCount < MAX_RETRIES) {
-              toast.warning('[WARN] ? Build falhou', {
-                description: `Tentando novamente (${retryCount + 1}/${MAX_RETRIES}) em 30s...`,
-                duration: 5000,
-              });
-              
-              setTimeout(async () => {
-                setRetryCount(prev => prev + 1);
-                setPollAttempts(0);
-                await handleBuildExe();
-              }, 30000);
-            } else {
-              setExeBuildStatus('failed');
-              toast.error(`Falha: ${buildData.error_message || 'Erro desconhecido'} apos multiplas tentativas`);
-              setRetryCount(0);
-            }
-          }
-        } catch (pollErr) {
-          logger.error('Poll exception', pollErr);
-        }
-      }, 5000);
+      // Cleanup on unmount
+      return () => clearTimeout(buildTimeoutId);
 
     } catch (error: any) {
       logger.error('Build EXE failed', error);
@@ -1486,7 +1514,12 @@ const AgentInstaller = () => {
                 {exeBuildStatus === 'building' ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Compilando... ({pollAttempts}/60)
+                    Compilando...
+                  </>
+                ) : exeBuildStatus === 'cached' ? (
+                  <>
+                    <Zap className="h-5 w-5 mr-2" />
+                    ⚡ Cache Hit - Download Pronto!
                   </>
                 ) : (
                   <>
@@ -1540,7 +1573,7 @@ const AgentInstaller = () => {
                 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
-                    Timeout em {Math.max(0, 5 - Math.floor(pollAttempts / 12))} min
+                    Monitorando via Realtime...
                   </span>
                   <Button onClick={refreshBuildStatus} variant="ghost" size="sm">
                     <RefreshCw className="h-4 w-4 mr-2" />
@@ -1548,12 +1581,12 @@ const AgentInstaller = () => {
                   </Button>
                 </div>
 
-                {pollAttempts > 20 && (
-                  <Alert variant="destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Build Demorando Mais Que o Esperado</AlertTitle>
+                {buildProgress.currentStep === 'compiling' && (
+                  <Alert>
+                    <Clock className="h-4 w-4" />
+                    <AlertTitle>Build em Andamento</AlertTitle>
                     <AlertDescription>
-                      O build geralmente leva 2-3 minutos. Verifique os logs do GitHub Actions para detalhes.
+                      O build geralmente leva 2-3 minutos. Você será notificado quando concluir.
                     </AlertDescription>
               </Alert>
             )}
@@ -1676,7 +1709,6 @@ const AgentInstaller = () => {
                   <Button
                     onClick={() => {
                       setRetryCount(0);
-                      setPollAttempts(0);
                       handleBuildExe();
                     }}
                     variant="outline"

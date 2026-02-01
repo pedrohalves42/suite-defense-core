@@ -177,6 +177,68 @@ Deno.serve(async (req) => {
     
     logger.success(`Agent script validated: ${agentScriptContent.length} bytes, hash: ${agentScriptHash}`);
 
+    // ========================================
+    // FASE 2: BUILD CACHE - Verificar se existe build recente
+    // ========================================
+    const cacheKey = await (async () => {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(enrollmentData.tenant_id + agentScriptHash + 'v3.0.0');
+      const hashBuffer = await crypto.subtle.digest('MD5', data).catch(() => null);
+      if (!hashBuffer) {
+        // Fallback se MD5 não disponível
+        return `${enrollmentData.tenant_id}-${agentScriptHash.slice(0, 16)}-v3.0.0`;
+      }
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    })();
+
+    logger.info(`[${requestId}] Checking build cache`, { cacheKey });
+
+    // Buscar build cacheado (completado nos últimos 24h com mesmo cache_key)
+    const { data: cachedBuild } = await serviceRoleClient
+      .from('agent_builds')
+      .select('id, download_url, sha256_hash, file_size_bytes, download_expires_at')
+      .eq('tenant_id', enrollmentData.tenant_id)
+      .eq('build_status', 'completed')
+      .eq('script_hash', agentScriptHash)
+      .order('build_completed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Verificar se o cache é válido (URL não expirada)
+    if (cachedBuild?.download_url && cachedBuild.download_expires_at) {
+      const expiresAt = new Date(cachedBuild.download_expires_at);
+      const now = new Date();
+      const hoursUntilExpiry = (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+      if (hoursUntilExpiry > 1) { // Ainda válido por mais de 1 hora
+        logger.info(`[${requestId}] ✅ BUILD CACHE HIT - Returning cached build`, {
+          build_id: cachedBuild.id,
+          expires_in_hours: hoursUntilExpiry.toFixed(1)
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          build_id: cachedBuild.id,
+          status: 'cached',
+          download_url: cachedBuild.download_url,
+          sha256_hash: cachedBuild.sha256_hash,
+          file_size_bytes: cachedBuild.file_size_bytes,
+          cached: true,
+          message: 'Build recuperado do cache (mesmo tenant/script/versão)'
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else {
+        logger.info(`[${requestId}] Cache expired or expiring soon, triggering new build`, {
+          hours_until_expiry: hoursUntilExpiry.toFixed(1)
+        });
+      }
+    } else {
+      logger.info(`[${requestId}] No valid cached build found, triggering new build`);
+    }
+
     // [OK]  FASE 1: Windows Installer Template APEX v3.0.0 (FULL SYNC with install-windows-template.ps1)
     const WINDOWS_INSTALLER_TEMPLATE = `# CyberShield Agent - Windows Installation Script v3.0.0-APEX
 # Auto-generated: {{TIMESTAMP}}
@@ -575,7 +637,7 @@ try {
       .replace(/\{\{AGENT_NAME\}\}/g, agent_name)
       .replace(/\{\{TIMESTAMP\}\}/g, new Date().toISOString());
 
-    // 7. Create build record
+    // 7. Create build record (with script_hash for cache key)
     const { data: buildRecord, error: buildError } = await serviceRoleClient
       .from('agent_builds')
       .insert({
@@ -584,7 +646,9 @@ try {
         enrollment_key_id: enrollmentData.id,
         build_status: 'building',
         build_started_at: new Date().toISOString(),
-        created_by: user.id
+        created_by: user.id,
+        script_hash: agentScriptHash,  // FASE 2: Para cache lookup
+        ps1_version: 'v3.0.0'
       })
       .select()
       .single();
