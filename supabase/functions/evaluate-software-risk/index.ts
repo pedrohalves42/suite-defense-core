@@ -314,6 +314,16 @@ Deno.serve(async (req) => {
       }
     }
     
+    // If called by cron, update health check
+    const isCronCall = req.headers.get('x-cron-source') === 'true';
+    if (isCronCall) {
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'evaluate-software-risk-daily',
+        p_success: true,
+        p_error: null
+      });
+    }
+
     return new Response(
       JSON.stringify(summary),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -321,6 +331,22 @@ Deno.serve(async (req) => {
     
   } catch (error) {
     logger.error('Software risk evaluation failed', error);
+    
+    // If called by cron, register failure
+    const isCronCall = req.headers.get('x-cron-source') === 'true';
+    if (isCronCall) {
+      try {
+        const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+        await supabase.rpc('update_cron_health', {
+          p_cron_name: 'evaluate-software-risk-daily',
+          p_success: false,
+          p_error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      } catch {
+        logger.error('Failed to update cron health');
+      }
+    }
+    
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

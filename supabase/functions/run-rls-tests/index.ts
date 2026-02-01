@@ -186,6 +186,15 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Update cron health check (closes monitoring loop)
+    await supabase.rpc('update_cron_health', {
+      p_cron_name: 'rls-automated-tests-6h',
+      p_success: failedTests.length === 0,
+      p_error: failedTests.length > 0 
+        ? `${failedTests.length} tests failed: ${failedTests.map(t => t.test_name).join(', ')}`
+        : null
+    });
+
     // Create alerts for failures
     if (failedTests.length > 0) {
       await supabase.from('system_alerts').insert({
@@ -226,6 +235,19 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`[${requestId}] Error:`, error);
+    
+    // Register failure in cron health check
+    try {
+      const supabaseForError = createClient(supabaseUrl, serviceRoleKey);
+      await supabaseForError.rpc('update_cron_health', {
+        p_cron_name: 'rls-automated-tests-6h',
+        p_success: false,
+        p_error: errorMessage
+      });
+    } catch {
+      console.error(`[${requestId}] Failed to update cron health`);
+    }
+    
     return secureErrorResponse(
       'RLS tests failed',
       500,

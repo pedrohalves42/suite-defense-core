@@ -229,6 +229,13 @@ Deno.serve(async (req) => {
       p_job_source: 'cron'
     });
 
+    // Update cron health check (closes monitoring loop)
+    await supabase.rpc('update_cron_health', {
+      p_cron_name: 'integrity-sentinel-15min',
+      p_success: true,
+      p_error: null
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -242,6 +249,17 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     console.error('[integrity-sentinel] Unhandled error:', err)
+    
+    // Register failure in cron health check
+    try {
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'integrity-sentinel-15min',
+        p_success: false,
+        p_error: err instanceof Error ? err.message : 'Unknown error'
+      });
+    } catch {
+      console.error('[integrity-sentinel] Failed to update cron health');
+    }
     
     // Try to log failure
     try {
