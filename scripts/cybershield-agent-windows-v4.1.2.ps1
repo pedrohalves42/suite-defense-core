@@ -773,7 +773,9 @@ $Global:StateTransitions = @{
 }
 
 # Estados que permitem execucao de jobs
-$Global:JobExecutionStates = @("ENFORCING", "DEGRADED")
+# P1 Fix: Adicionado SYNCING para permitir poll-jobs durante bootstrap
+# Isso resolve o problema de agentes ficando presos em SYNCING quando evidence_logs falha
+$Global:JobExecutionStates = @("ENFORCING", "DEGRADED", "SYNCING")
 
 function Set-AgentState {
     param(
