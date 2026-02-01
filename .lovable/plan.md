@@ -15,12 +15,12 @@
 | Backend heartbeat-self-test | ✅ Implementado |
 | Backend monitor-agent-health | ✅ Atualizado com webhooks |
 
-### ❌ Pendente
+### ✅ Completo
 
 | Componente | Status |
 |------------|--------|
-| Linux v4.5.0 no agent_versions | ❌ Banco mostra v4.4.0 como latest |
-| macOS v4.5.0 no agent_versions | ❌ Banco mostra v4.4.0 como latest |
+| Linux v4.5.0 no agent_versions | ✅ Registrado como latest |
+| macOS v4.5.0 no agent_versions | ✅ Registrado como latest |
 
 ---
 
