@@ -1,177 +1,331 @@
 
-# Plano: Completar Sistema de Resiliência Total - Webhooks e Self-Test
+# Plano: Atualizar Agentes Linux e macOS para v4.5.0 - Resiliência Total
 
-## ✅ IMPLEMENTADO
+## Resumo Executivo
 
-O agente v4.5.0 já possui as funcionalidades P0 de resiliência (Network Watchdog, Task Health Assert, Power Event Detection). Este plano completa a implementação adicionando os itens que faltam para fechar o ciclo de resiliência total.
+O backend já está completo com webhooks e heartbeat self-test. Falta atualizar os agentes **Linux** e **macOS** de v4.4.0 para v4.5.0 com as mesmas funcionalidades de resiliência total implementadas no Windows.
 
 ---
 
 ## Estado Atual
 
-### Já Implementado no Agente v4.5.0
-- Network Watchdog com `Test-NetworkConnectivity` e `Invoke-NetworkWatchdog`
-- Task Health Assert com `Assert-TaskHealth`
-- Power Event Detection com `Register-PowerEventWatcher`
-- TLS 1.2 forçado para compatibilidade com Windows Server 2012/2016
+### Já Completo
+- Windows v4.5.0 com todas as funcionalidades de resiliência
+- Backend com webhook alerts (Slack, Teams, genérico)
+- Endpoint `/heartbeat-self-test` operacional
+- Monitor de saúde com integração de webhooks
 
-### Já Implementado no Backend
-- UI de configuração de webhooks em `Settings.tsx`
-- Edge Function `test-webhook` para testar conectividade
-- Campos `alert_webhook_url` e `enable_webhook_alerts` em `tenant_settings`
-- Monitor de saúde de agentes com alertas por email
-
----
-
-## O Que Falta Implementar
-
-### 1. Webhook Alerts no Monitor de Saúde
-O `monitor-agent-health` atualmente só envia alertas por email. Precisa também enviar para webhooks configurados (Slack, Teams, etc).
-
-### 2. Endpoint Heartbeat Self-Test
-O agente precisa de um endpoint para verificar se o backend realmente recebeu seus heartbeats. Isso permite detectar falhas de comunicação silenciosas.
-
-### 3. Sincronizar Script v4.5.0
-Garantir que o script em `supabase/functions/_shared/agent-scripts/` está sincronizado com a versão em `public/agent-scripts/`.
-
-### 4. Registrar v4.5.0 no Banco
-Atualizar a tabela `agent_versions` para que o sistema de auto-update reconheça a v4.5.0 como versão mais recente.
+### Falta Implementar
+- Linux v4.4.0 → v4.5.0
+- macOS v4.4.0 → v4.5.0
+- Registrar v4.5.0 no banco para Linux/macOS
 
 ---
 
-## Implementação Detalhada
-
-### Tarefa 1: Adicionar Webhooks ao monitor-agent-health
-
-Modificar `supabase/functions/monitor-agent-health/index.ts` para:
-1. Verificar se tenant tem `enable_webhook_alerts = true`
-2. Enviar POST para `alert_webhook_url` com payload formatado
-3. Suportar formatos Slack e Teams (detectar pelo URL)
-
-```typescript
-// Função para enviar webhook
-async function sendWebhookAlert(webhookUrl: string, agent: any, alertType: 'offline' | 'online') {
-  const isSlack = webhookUrl.includes('hooks.slack.com');
-  const isTeams = webhookUrl.includes('webhook.office.com');
-  
-  const payload = isSlack ? {
-    text: `Agent ${agent.agent_name} is ${alertType}`,
-    blocks: [/* Slack blocks */]
-  } : isTeams ? {
-    "@type": "MessageCard",
-    // Teams format
-  } : {
-    // Generic JSON
-    agent_name: agent.agent_name,
-    status: alertType,
-    timestamp: new Date().toISOString()
-  };
-  
-  await fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-}
-```
-
-### Tarefa 2: Criar Edge Function heartbeat-self-test
-
-Nova edge function em `supabase/functions/heartbeat-self-test/index.ts`:
-- Aceita GET com header `X-Agent-Token`
-- Retorna `last_heartbeat` do agente
-- Agente compara com hora local para detectar desync
-
-```typescript
-// GET /heartbeat-self-test
-// Headers: X-Agent-Token
-// Response: { agent_id, agent_name, last_heartbeat, server_time }
-```
-
-### Tarefa 3: Sincronizar Script v4.5.0
-
-Copiar conteúdo de `public/agent-scripts/cybershield-agent-windows-v4.ps1` para:
-- `supabase/functions/_shared/agent-scripts/cybershield-agent-windows-v4.ps1`
-
-### Tarefa 4: Registrar v4.5.0 no Banco
-
-Executar SQL para registrar nova versão:
-```sql
-INSERT INTO agent_versions (platform, version, is_latest, release_notes)
-VALUES ('windows', 'v4.5.0', true, 'Total Resilience: Network Watchdog, Task Health Assert, Power Event Detection');
-
-UPDATE agent_versions SET is_latest = false WHERE platform = 'windows' AND version != 'v4.5.0';
-```
-
----
-
-## Arquivos a Modificar/Criar
+## Arquivos a Modificar
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/functions/monitor-agent-health/index.ts` | Modificar - Adicionar webhook alerts |
-| `supabase/functions/heartbeat-self-test/index.ts` | Criar - Novo endpoint de self-test |
-| `supabase/functions/_shared/agent-scripts/cybershield-agent-windows-v4.ps1` | Sincronizar com public |
-| Migração SQL | Registrar v4.5.0 |
+| `public/agent-scripts/cybershield-agent-linux-v4.sh` | Atualizar para v4.5.0 com resiliência |
+| `public/agent-scripts/cybershield-agent-macos-v4.sh` | Atualizar para v4.5.0 com resiliência |
+| SQL Migration | Registrar v4.5.0 como latest para Linux/macOS |
+
+---
+
+## Funcionalidades a Adicionar (Bash)
+
+### 1. Network Watchdog
+Monitorar conectividade de rede e forçar heartbeat imediato após reconexão.
+
+```bash
+# Variáveis globais de resiliência
+NETWORK_LAST_STATE=true
+NETWORK_CHECK_INTERVAL=30
+NETWORK_TEST_HOST="iavbnmduxpxhwubqrzzn.supabase.co"
+NETWORK_TEST_PORT=443
+FORCE_RECONNECT=false
+
+# Teste de conectividade TCP
+test_network_connectivity() {
+    if nc -z -w5 "$NETWORK_TEST_HOST" "$NETWORK_TEST_PORT" 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+# Invocar watchdog de rede
+invoke_network_watchdog() {
+    local current_state
+    if test_network_connectivity; then
+        current_state=true
+    else
+        current_state=false
+    fi
+    
+    # Detectar transição offline → online
+    if [[ "$NETWORK_LAST_STATE" == "false" && "$current_state" == "true" ]]; then
+        log_message "INFO" "[NETWORK] Rede restaurada. Forçando heartbeat imediato."
+        send_heartbeat
+    fi
+    
+    NETWORK_LAST_STATE="$current_state"
+}
+```
+
+### 2. Task Health Assert
+
+**Linux (systemd):**
+```bash
+assert_task_health() {
+    local service_name="cybershield-agent.service"
+    
+    if ! systemctl is-active --quiet "$service_name" 2>/dev/null; then
+        log_message "WARN" "[TASK] Serviço não está ativo. Tentando reiniciar..."
+        sudo systemctl restart "$service_name" 2>/dev/null || true
+    fi
+    
+    if ! systemctl is-enabled --quiet "$service_name" 2>/dev/null; then
+        log_message "WARN" "[TASK] Serviço não está habilitado. Habilitando..."
+        sudo systemctl enable "$service_name" 2>/dev/null || true
+    fi
+}
+```
+
+**macOS (launchd):**
+```bash
+assert_task_health() {
+    local plist_name="com.cybershield.agent"
+    
+    if ! launchctl list | grep -q "$plist_name" 2>/dev/null; then
+        log_message "WARN" "[TASK] Serviço launchd não encontrado. Recarregando..."
+        launchctl load "/Library/LaunchDaemons/${plist_name}.plist" 2>/dev/null || true
+    fi
+}
+```
+
+### 3. Power Event Detection
+
+**Linux (systemd-logind via dbus-monitor):**
+```bash
+start_power_event_monitor() {
+    # Monitor em background para eventos de power
+    (
+        dbus-monitor --system "type='signal',interface='org.freedesktop.login1.Manager'" 2>/dev/null | while read -r line; do
+            if echo "$line" | grep -q "PrepareForSleep"; then
+                # Próxima linha contém boolean - false = wake
+                read -r next_line
+                if echo "$next_line" | grep -q "false"; then
+                    log_message "INFO" "[POWER] Wake from sleep detectado. Forçando heartbeat."
+                    FORCE_RECONNECT=true
+                fi
+            fi
+        done
+    ) &
+    POWER_MONITOR_PID=$!
+}
+```
+
+**macOS (pmset log parsing):**
+```bash
+start_power_event_monitor() {
+    # Monitor em background para eventos de power
+    (
+        log stream --predicate 'eventMessage contains "Wake"' 2>/dev/null | while read -r line; do
+            if echo "$line" | grep -q "Wake reason"; then
+                log_message "INFO" "[POWER] Wake from sleep detectado. Forçando heartbeat."
+                FORCE_RECONNECT=true
+            fi
+        done
+    ) &
+    POWER_MONITOR_PID=$!
+}
+```
+
+### 4. Heartbeat Self-Test Integration
+
+```bash
+HEARTBEAT_COUNTER=0
+HEARTBEAT_SELFTEST_INTERVAL=10
+
+send_heartbeat() {
+    # ... código existente de heartbeat ...
+    
+    # Self-test a cada 10 heartbeats
+    HEARTBEAT_COUNTER=$((HEARTBEAT_COUNTER + 1))
+    
+    if (( HEARTBEAT_COUNTER % HEARTBEAT_SELFTEST_INTERVAL == 0 )); then
+        log_message "DEBUG" "[SELFTEST] Executando self-test (contador: $HEARTBEAT_COUNTER)"
+        
+        local response
+        response=$(curl -s -H "X-Agent-Token: $AGENT_TOKEN" \
+                        --tlsv1.2 \
+                        "${API_BASE}/heartbeat-self-test" 2>/dev/null)
+        
+        if [[ -n "$response" ]]; then
+            local status
+            status=$(echo "$response" | jq -r '.status // "unknown"')
+            
+            if [[ "$status" == "critical" || "$status" == "stale" ]]; then
+                log_message "WARN" "[SELFTEST] Backend reportou status: $status. Forçando reconexão."
+                FORCE_RECONNECT=true
+            else
+                log_message "DEBUG" "[SELFTEST] OK - status: $status"
+            fi
+        fi
+    fi
+}
+```
+
+---
+
+## Integração no Main Loop
+
+```bash
+# Variáveis de controle
+LAST_TASK_CHECK=$(date +%s)
+TASK_CHECK_INTERVAL=300  # 5 minutos
+
+# No loop principal
+main_loop() {
+    while true; do
+        # Network Watchdog
+        invoke_network_watchdog
+        
+        # Force reconnect se necessário
+        if [[ "$FORCE_RECONNECT" == "true" ]]; then
+            log_message "INFO" "[RESILIENCE] Force reconnect ativado. Enviando heartbeat."
+            send_heartbeat
+            FORCE_RECONNECT=false
+        fi
+        
+        # Task Health Assert a cada 5 minutos
+        local current_time=$(date +%s)
+        if (( current_time - LAST_TASK_CHECK > TASK_CHECK_INTERVAL )); then
+            assert_task_health
+            LAST_TASK_CHECK=$current_time
+        fi
+        
+        # ... resto do loop ...
+        
+        sleep "$POLL_INTERVAL"
+    done
+}
+```
+
+---
+
+## SQL Migration - Registrar v4.5.0
+
+```sql
+-- Desmarcar versões anteriores
+UPDATE agent_versions SET is_latest = false 
+WHERE platform IN ('linux', 'macos') AND is_latest = true;
+
+-- Registrar v4.5.0 para Linux
+INSERT INTO agent_versions (platform, version, is_latest, release_notes)
+VALUES ('linux', 'v4.5.0', true, 
+  'Total Resilience: Network Watchdog, Task Health Assert (systemd), Power Event Detection (dbus), Heartbeat Self-Test. Agente nunca fica offline se máquina estiver ligada.')
+ON CONFLICT (platform, version) 
+DO UPDATE SET is_latest = true, release_notes = EXCLUDED.release_notes;
+
+-- Registrar v4.5.0 para macOS
+INSERT INTO agent_versions (platform, version, is_latest, release_notes)
+VALUES ('macos', 'v4.5.0', true, 
+  'Total Resilience: Network Watchdog, Task Health Assert (launchd), Power Event Detection (pmset), Heartbeat Self-Test. Agente nunca fica offline se máquina estiver ligada.')
+ON CONFLICT (platform, version) 
+DO UPDATE SET is_latest = true, release_notes = EXCLUDED.release_notes;
+```
 
 ---
 
 ## Validação Pós-Implementação
 
-1. **Testar Webhook**: Configurar URL de webhook no Settings e disparar alerta de teste
-2. **Verificar Self-Test**: Agente v4.5.0 deve logar resultado do self-test a cada 10 heartbeats
-3. **Verificar Auto-Update**: Agentes antigos devem receber oferta de update para v4.5.0
+1. **Verificar versões registradas:**
+   ```sql
+   SELECT platform, version, is_latest FROM agent_versions WHERE is_latest = true;
+   -- Esperado: windows v4.5.0, linux v4.5.0, macos v4.5.0
+   ```
 
----
+2. **Testar Network Watchdog:**
+   - Desconectar rede por 1 minuto
+   - Reconectar
+   - Verificar log: `[NETWORK] Rede restaurada. Forçando heartbeat.`
 
-## Benefícios
+3. **Testar Task Health Assert:**
+   - `systemctl stop cybershield-agent` (Linux)
+   - Aguardar 5 minutos
+   - Verificar se serviço foi reiniciado automaticamente
 
-- **Notificações em tempo real** via Slack/Teams quando agente fica offline
-- **Detecção proativa de falhas** via heartbeat self-test
-- **Rollout automático** da v4.5.0 para toda a frota
+4. **Testar Heartbeat Self-Test:**
+   - Verificar log a cada ~10 minutos: `[SELFTEST] OK - status: ok`
 
 ---
 
 ## Seção Técnica
 
-### Fluxo de Webhook Alert
+### Arquitetura de Resiliência (Bash)
+
 ```text
-Monitor Cron (cada 5min)
-    │
-    ├─► Detecta agente offline > 10min
-    │       │
-    │       ├─► Verifica enable_webhook_alerts
-    │       │       │
-    │       │       └─► POST para alert_webhook_url
-    │       │               │
-    │       │               ├─► Slack (hooks.slack.com)
-    │       │               ├─► Teams (webhook.office.com)
-    │       │               └─► Generic JSON
-    │       │
-    │       └─► Verifica enable_email_alerts
-    │               │
-    │               └─► Invoke send-alert-email
-    │
-    └─► Detecta agente online novamente
-            │
-            └─► Webhook "agent_online" (opcional)
+┌─────────────────────────────────────────────────────────────┐
+│                  AGENTE LINUX/MACOS v4.5.0                  │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────┐  ┌─────────────────┐                  │
+│  │  systemd/launchd │  │   TLS 1.2       │                  │
+│  │  (auto-restart)  │  │  (curl --tlsv1.2)│                 │
+│  └────────┬────────┘  └────────┬────────┘                  │
+│           │                    │                            │
+│           └────────────────────┤                            │
+│                                ▼                            │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                   MAIN LOOP                          │   │
+│  │                                                      │   │
+│  │  ┌───────────────┐  ┌───────────────┐               │   │
+│  │  │   Network     │  │    Power      │               │   │
+│  │  │   Watchdog    │  │   Events      │               │   │
+│  │  │  (nc -z 443)  │  │ (dbus/pmset)  │               │   │
+│  │  └───────┬───────┘  └───────┬───────┘               │   │
+│  │          │                  │                        │   │
+│  │          └──────────┬───────┘                        │   │
+│  │                     ▼                                │   │
+│  │          ┌───────────────────┐                       │   │
+│  │          │  FORCE_RECONNECT  │                       │   │
+│  │          │     = true        │                       │   │
+│  │          └─────────┬─────────┘                       │   │
+│  │                    ▼                                 │   │
+│  │          ┌───────────────────┐                       │   │
+│  │          │  send_heartbeat() │                       │   │
+│  │          │  + Self-Test      │                       │   │
+│  │          └─────────┬─────────┘                       │   │
+│  │                    ▼                                 │   │
+│  │          ┌───────────────────┐                       │   │
+│  │          │ assert_task_health│                       │   │
+│  │          │   (cada 5 min)    │                       │   │
+│  │          └───────────────────┘                       │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Fluxo de Heartbeat Self-Test
-```text
-Agente v4.5.0
-    │
-    ├─► Heartbeat counter++
-    │
-    ├─► (counter % 10 == 0)?
-    │       │
-    │       └─► GET /heartbeat-self-test
-    │               │
-    │               ├─► Response: { last_heartbeat: "2025-02-01T14:30:00Z" }
-    │               │
-    │               └─► Compara: (now - last_heartbeat) > 5min?
-    │                       │
-    │                       ├─► SIM: Log ERROR, força reconnect
-    │                       │
-    │                       └─► NÃO: Log DEBUG "Self-test OK"
-```
+### Diferenças Entre Plataformas
+
+| Feature | Linux | macOS |
+|---------|-------|-------|
+| Service Manager | systemd | launchd |
+| Task Health Check | `systemctl is-active` | `launchctl list` |
+| Power Events | dbus-monitor (logind) | `log stream` (pmset) |
+| Network Test | `nc -z` | `nc -z` |
+| TLS Enforcement | `curl --tlsv1.2` | `curl --tlsv1.2` |
+
+---
+
+## Benefícios Esperados
+
+Após implementação, todas as 3 plataformas terão:
+
+1. **Detecção de reconexão de rede** - Heartbeat imediato após restaurar conectividade
+2. **Auto-repair de serviço** - Serviço reiniciado automaticamente se parar
+3. **Detecção de wake** - Heartbeat imediato após acordar de hibernação
+4. **Validação proativa** - Self-test detecta falhas de comunicação silenciosas
+5. **Paridade de versão** - Windows, Linux e macOS todos em v4.5.0
+
