@@ -176,14 +176,27 @@ export async function verifyHmacSignature(
     };
   }
 
-  // Armazenar assinatura usada
-  await supabase.from('hmac_signatures').insert({
+  // Armazenar assinatura usada para replay protection (A-001 Nullmann)
+  const { error: insertError } = await supabase.from('hmac_signatures').insert({
     signature,
     agent_name: agentName,
   });
 
+  if (insertError) {
+    // A-001 FIX: Log explicito para diagnostico de falhas de insert
+    console.error(`[HMAC] CRITICAL: Failed to store signature for agent ${agentName}:`, {
+      error: insertError.message,
+      code: insertError.code,
+      details: insertError.details,
+      hint: insertError.hint
+    });
+    // Nao bloquear autenticacao se apenas o replay tracking falhar
+    // mas logar para investigacao posterior
+  } else {
+    console.log(`[HMAC] Signature stored successfully for agent ${agentName}`);
+  }
+
   // SEC-01 FIX: Cleanup probabilistico sincrono (evita race conditions com setTimeout em Deno)
-  // 1% das requests executam cleanup - distribui carga sem depender de timers
   await probabilisticCleanup(supabase);
 
   return { valid: true, rawBody: body };
