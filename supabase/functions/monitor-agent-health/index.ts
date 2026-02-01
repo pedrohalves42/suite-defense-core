@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { shouldProcessAlertsForTenant } from '../_shared/business-hours.ts';
+import { sendWebhookAlert, type WebhookPayload } from '../_shared/webhook-utils.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -116,6 +117,7 @@ Deno.serve(async (req) => {
           .limit(1)
           .maybeSingle();
 
+        // Send email alert if enabled
         if (settings?.enable_email_alerts && settings?.alert_email) {
           await supabase.functions.invoke('send-alert-email', {
             headers: {
@@ -132,6 +134,28 @@ Deno.serve(async (req) => {
               }
             }
           });
+        }
+
+        // Send webhook alert if enabled (Slack, Teams, or generic)
+        if (settings?.enable_webhook_alerts && settings?.alert_webhook_url) {
+          const webhookPayload: WebhookPayload = {
+            tenantId: agent.tenant_id,
+            alertType: 'agent_offline',
+            agentName: agent.agent_name,
+            timestamp: new Date().toISOString(),
+            data: {
+              minutesOffline: agent.minutesOffline,
+              lastHeartbeat: agent.last_heartbeat
+            }
+          };
+
+          const webhookResult = await sendWebhookAlert(settings.alert_webhook_url, webhookPayload);
+          
+          if (webhookResult.success) {
+            console.log(`[Monitor] Webhook alert sent for ${agent.agent_name} - ${webhookResult.statusCode}`);
+          } else {
+            console.error(`[Monitor] Webhook alert failed for ${agent.agent_name}: ${webhookResult.error}`);
+          }
         }
       }
     }
@@ -175,6 +199,7 @@ Deno.serve(async (req) => {
           .limit(1)
           .maybeSingle();
 
+        // Send email alert if enabled
         if (settings?.enable_email_alerts && settings?.alert_email) {
           await supabase.functions.invoke('send-alert-email', {
             headers: {
@@ -195,6 +220,31 @@ Deno.serve(async (req) => {
               }
             }
           });
+        }
+
+        // Send webhook alert if enabled (Slack, Teams, or generic)
+        if (settings?.enable_webhook_alerts && settings?.alert_webhook_url) {
+          const webhookPayload: WebhookPayload = {
+            tenantId,
+            alertType: 'jobs_failed',
+            timestamp: new Date().toISOString(),
+            data: {
+              failedCount: jobs.length,
+              jobs: jobs.map((j: any) => ({
+                id: j.id,
+                type: j.type,
+                agentName: j.agent_name
+              }))
+            }
+          };
+
+          const webhookResult = await sendWebhookAlert(settings.alert_webhook_url, webhookPayload);
+          
+          if (webhookResult.success) {
+            console.log(`[Monitor] Webhook alert sent for failed jobs (tenant: ${tenantId}) - ${webhookResult.statusCode}`);
+          } else {
+            console.error(`[Monitor] Webhook alert failed for tenant ${tenantId}: ${webhookResult.error}`);
+          }
         }
       }
     }
