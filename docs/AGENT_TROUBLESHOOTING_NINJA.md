@@ -94,20 +94,38 @@ Write-Log "Bytes do payload: $([System.Text.Encoding]::UTF8.GetBytes($dataToSign
 **Sintoma:**
 - Conexão funciona localmente, falha em produção
 - Erro genérico "Could not establish trust relationship"
+- Erro SSL/TLS: "Não foi possível criar um canal seguro para SSL/TLS"
 - Resposta HTML em vez de JSON (captive portal)
 
 **Causa:**
+- **Windows Server 2012/2016:** PowerShell usa TLS 1.0 por padrão, mas Supabase requer TLS 1.2+
 - TLS 1.0/1.1 desabilitado no servidor
 - Proxy corporativo interceptando SSL
 - Deep Packet Inspection modificando requisições
 - Captive portal bloqueando saída
 
-**Solução:**
+**Diagnóstico:**
 ```powershell
-# Forçar TLS 1.2+
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+# Verificar protocolo TLS atual
+[Net.ServicePointManager]::SecurityProtocol
+# Se retornar "Ssl3, Tls" - problema confirmado (falta TLS 1.2)
 
-# Detectar resposta não-JSON
+# Testar conexão com TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Invoke-RestMethod -Uri "https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/agent-health-check" -Method GET
+```
+
+**Solução Imediata (one-liner para MIT-SERVIDOR e similares):**
+```powershell
+# Forçar TLS 1.2 e executar reinstalação preservando credenciais
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/get-reinstall-preserve-script | iex
+```
+
+**Solução Permanente:**
+O agente v4.4.0+ já inclui `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12` no início do script.
+
+**Detectar resposta não-JSON (proxy/captive portal):**
+```powershell
 try {
     $response | ConvertFrom-Json
 } catch {

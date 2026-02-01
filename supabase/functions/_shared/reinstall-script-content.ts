@@ -13,6 +13,10 @@ param(
     [string]\$ServerUrl
 )
 
+# CRITICAL: Forçar TLS 1.2 para compatibilidade com Windows Server 2012/2016
+# PowerShell usa TLS 1.0 por padrão, mas Supabase requer TLS 1.2+
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 \$ErrorActionPreference = "Stop"
 
 Write-Host "========================================" -ForegroundColor Cyan
