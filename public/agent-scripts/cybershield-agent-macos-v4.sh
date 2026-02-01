@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - macOS v4.4.0
+# CyberShield Agent - macOS v4.5.0
+#
+# v4.5.0: Total Resilience Framework
+# - NEW: Network Watchdog - detecta reconexao e forca heartbeat imediato
+# - NEW: Task Health Assert - verifica/repara servico launchd
+# - NEW: Power Event Detection - detecta wake from sleep via pmset
+# - NEW: Heartbeat Self-Test - valida se backend esta recebendo heartbeats
+# - NEW: FSM State Persistence - persiste estado entre reinicializacoes
 #
 # v4.4.0: FSM Enterprise v2.0 - Full Parity
 # - NEW: Coleta de historico de navegadores (Chrome, Firefox, Safari, Opera, Opera GX, Edge)
@@ -40,7 +47,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTES E VARIAVEIS GLOBAIS
 # ============================================
-AGENT_VERSION="v4.4.0"
+AGENT_VERSION="v4.5.0"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -111,6 +118,32 @@ EVIDENCE_FLUSH_THRESHOLD=10
 # SSA-004: Ed25519 Public Key for job signature verification
 ED25519_PUBLIC_KEY="MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZih0iggaoI="
 REQUIRE_JOB_SIGNATURES=true
+
+# ============================================
+#  v4.5.0: TOTAL RESILIENCE FRAMEWORK
+# ============================================
+# Network Watchdog
+NETWORK_LAST_STATE=true
+NETWORK_CHECK_INTERVAL=30
+NETWORK_TEST_HOST="iavbnmduxpxhwubqrzzn.supabase.co"
+NETWORK_TEST_PORT=443
+FORCE_RECONNECT=false
+
+# Task Health Assert
+PLIST_NAME="com.cybershield.agent"
+PLIST_PATH="/Library/LaunchDaemons/${PLIST_NAME}.plist"
+LAST_TASK_CHECK=0
+TASK_CHECK_INTERVAL=300  # 5 minutes
+
+# Power Event Detection
+POWER_MONITOR_PID=""
+
+# Heartbeat Self-Test
+HEARTBEAT_COUNTER=0
+HEARTBEAT_SELFTEST_INTERVAL=10
+
+# FSM State Persistence
+FSM_STATE_FILE="${CONFIG_DIR}/fsm_state.json"
 
 # ============================================
 #  FSM ENTERPRISE v2.0: FAILURE POLICY + OBSERVABILITY
@@ -558,6 +591,182 @@ invoke_auto_recovery() {
     
     log "WARN" "[RECOVERY] Failed for $failed_component on attempt $attempt"
     set_state "DEGRADED" "Recovery attempt $attempt failed: $failed_component"
+    return 1
+}
+
+# ============================================
+#  v4.5.0: TOTAL RESILIENCE FUNCTIONS
+# ============================================
+
+# Test network connectivity to backend
+test_network_connectivity() {
+    if nc -z -w5 "$NETWORK_TEST_HOST" "$NETWORK_TEST_PORT" 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+# Network Watchdog - detects network state changes
+invoke_network_watchdog() {
+    local current_state
+    if test_network_connectivity; then
+        current_state=true
+    else
+        current_state=false
+    fi
+    
+    # Detect offline → online transition
+    if [[ "$NETWORK_LAST_STATE" == "false" && "$current_state" == "true" ]]; then
+        log "INFO" "[NETWORK] Rede restaurada apos desconexao. Forcando heartbeat imediato."
+        add_evidence "network_restored" "{\"previous_state\":\"offline\",\"new_state\":\"online\"}" "" "" "info"
+        FORCE_RECONNECT=true
+    fi
+    
+    # Log state changes
+    if [[ "$NETWORK_LAST_STATE" != "$current_state" ]]; then
+        local state_text
+        if [[ "$current_state" == "true" ]]; then
+            state_text="ONLINE"
+        else
+            state_text="OFFLINE"
+            log "WARN" "[NETWORK] Conexao perdida com backend"
+        fi
+    fi
+    
+    NETWORK_LAST_STATE="$current_state"
+}
+
+# Task Health Assert - verifies launchd service health
+assert_task_health() {
+    log "DEBUG" "[TASK] Verificando saude do servico launchd..."
+    
+    # Check if service is loaded
+    if ! launchctl list | grep -q "$PLIST_NAME" 2>/dev/null; then
+        log "WARN" "[TASK] Servico launchd nao encontrado. Recarregando..."
+        add_evidence "task_health" "{\"service\":\"$PLIST_NAME\",\"status\":\"not_found\",\"action\":\"reload\"}" "" "" "warning"
+        
+        if launchctl load "$PLIST_PATH" 2>/dev/null; then
+            log "INFO" "[TASK] Servico launchd carregado com sucesso"
+            return 0
+        else
+            log "ERROR" "[TASK] Falha ao carregar servico launchd"
+            return 1
+        fi
+    fi
+    
+    log "DEBUG" "[TASK] Servico launchd saudavel"
+    return 0
+}
+
+# Power Event Detection - monitors wake from sleep
+start_power_event_monitor() {
+    log "INFO" "[POWER] Iniciando Power Event Monitor (pmset/log)..."
+    
+    # Check if log command is available (macOS 10.12+)
+    if ! command -v log &>/dev/null; then
+        log "WARN" "[POWER] Comando 'log' nao disponivel. Power events desabilitado."
+        return 1
+    fi
+    
+    # Start background monitor for wake events
+    (
+        log stream --predicate 'eventMessage contains "Wake reason"' 2>/dev/null | while read -r line; do
+            if echo "$line" | grep -q "Wake reason"; then
+                log "INFO" "[POWER] Wake from sleep detectado. Forcando heartbeat."
+                FORCE_RECONNECT=true
+            fi
+        done
+    ) &
+    POWER_MONITOR_PID=$!
+    
+    log "INFO" "[POWER] Power Event Monitor iniciado (PID: $POWER_MONITOR_PID)"
+    return 0
+}
+
+# Heartbeat Self-Test - validates backend is receiving heartbeats
+invoke_heartbeat_selftest() {
+    HEARTBEAT_COUNTER=$((HEARTBEAT_COUNTER + 1))
+    
+    if (( HEARTBEAT_COUNTER % HEARTBEAT_SELFTEST_INTERVAL != 0 )); then
+        return 0
+    fi
+    
+    log "DEBUG" "[SELFTEST] Executando self-test (contador: $HEARTBEAT_COUNTER)"
+    
+    local response
+    response=$(curl -s -H "X-Agent-Token: $AGENT_TOKEN" \
+                    --tlsv1.2 --connect-timeout 10 --max-time 15 \
+                    "${SERVER_URL}/functions/v1/heartbeat-self-test" 2>/dev/null)
+    
+    if [[ -z "$response" ]]; then
+        log "WARN" "[SELFTEST] Sem resposta do endpoint de self-test"
+        return 1
+    fi
+    
+    local status
+    status=$(echo "$response" | jq -r '.status // "unknown"' 2>/dev/null)
+    local seconds_since
+    seconds_since=$(echo "$response" | jq -r '.seconds_since_heartbeat // "null"' 2>/dev/null)
+    
+    case "$status" in
+        "ok")
+            log "DEBUG" "[SELFTEST] OK - Backend recebendo heartbeats (${seconds_since}s)"
+            reset_component_failure "selftest"
+            ;;
+        "stale")
+            log "WARN" "[SELFTEST] STALE - Heartbeat atrasado (${seconds_since}s). Forcando reconexao."
+            add_evidence "selftest_stale" "{\"status\":\"stale\",\"seconds_since\":$seconds_since}" "" "" "warning"
+            FORCE_RECONNECT=true
+            ;;
+        "critical")
+            log "ERROR" "[SELFTEST] CRITICAL - Backend nao recebe heartbeats (${seconds_since}s)"
+            add_evidence "selftest_critical" "{\"status\":\"critical\",\"seconds_since\":$seconds_since}" "" "" "error"
+            FORCE_RECONNECT=true
+            add_component_failure "selftest" "Backend not receiving heartbeats"
+            ;;
+        *)
+            log "WARN" "[SELFTEST] Status desconhecido: $status"
+            ;;
+    esac
+    
+    return 0
+}
+
+# FSM State Persistence - save state to file
+save_fsm_state() {
+    local state_json
+    state_json=$(cat <<EOF
+{
+    "current": "${AGENT_STATE[current]}",
+    "previous": "${AGENT_STATE[previous]}",
+    "error_count": ${AGENT_STATE[error_count]},
+    "recovery_attempts": ${AGENT_STATE[recovery_attempts]},
+    "last_state_change": "${AGENT_STATE[last_state_change]}",
+    "agent_version": "$AGENT_VERSION",
+    "saved_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+}
+EOF
+)
+    echo "$state_json" > "$FSM_STATE_FILE"
+}
+
+# FSM State Persistence - load state from file
+load_fsm_state() {
+    if [[ -f "$FSM_STATE_FILE" ]]; then
+        local saved_version
+        saved_version=$(jq -r '.agent_version // "unknown"' "$FSM_STATE_FILE" 2>/dev/null)
+        
+        if [[ "$saved_version" == "$AGENT_VERSION" ]]; then
+            local saved_state
+            saved_state=$(jq -r '.current // "BOOTSTRAP"' "$FSM_STATE_FILE" 2>/dev/null)
+            
+            if [[ " ${VALID_STATES[*]} " =~ " $saved_state " ]]; then
+                log "INFO" "[FSM] Estado restaurado: $saved_state"
+                AGENT_STATE[current]="$saved_state"
+                return 0
+            fi
+        fi
+    fi
     return 1
 }
 
@@ -2015,10 +2224,10 @@ log "INFO" "============================================"
 log "INFO" "[START] CyberShield Agent $AGENT_VERSION - macOS"
 log "INFO" "[INFO] ServerUrl: $SERVER_URL"
 log "INFO" "[INFO] AgentName: $AGENT_NAME"
-log "INFO" "[FEATURES] PoE, Auto-Update, Browser History, Site Blocking"
+log "INFO" "[FEATURES] PoE, Auto-Update, Browser History, Site Blocking, Total Resilience"
 log "INFO" "============================================"
 
-add_evidence "state_change" "{\"event\":\"agent_started\",\"version\":\"$AGENT_VERSION\",\"hostname\":\"$(hostname)\",\"features\":[\"poe\",\"auto_update\",\"browser_history\",\"site_blocking\",\"state_machine\",\"evidence_journal\"]}" "" "BOOTSTRAP" "info"
+add_evidence "state_change" "{\"event\":\"agent_started\",\"version\":\"$AGENT_VERSION\",\"hostname\":\"$(hostname)\",\"features\":[\"poe\",\"auto_update\",\"browser_history\",\"site_blocking\",\"state_machine\",\"evidence_journal\",\"network_watchdog\",\"task_health\",\"power_events\",\"selftest\"]}" "" "BOOTSTRAP" "info"
 
 # Bootstrap
 set_state "SYNCING" "Starting initial sync"
@@ -2034,6 +2243,12 @@ if [[ "$DNS_FILTER_ENABLED" == "true" && -f "$DNS_FILTER_BINARY" ]]; then
     log "INFO" "[BOOTSTRAP] Initializing DNS Filter..."
     start_dns_service || true
 fi
+
+# v4.5.0: Start Power Event Monitor
+start_power_event_monitor || true
+
+# v4.5.0: Initial Task Health Check
+assert_task_health || true
 
 # First heartbeat
 if send_heartbeat; then
@@ -2057,11 +2272,38 @@ last_policy_check=$(date +%s)
 last_policy_sync=$(date +%s)
 last_metrics=$(date +%s)
 last_web_activity=$(date +%s)
+last_network_check=$(date +%s)
+LAST_TASK_CHECK=$(date +%s)
 
 # Main loop
 while true; do
     now=$(date +%s)
     state=$(get_state)
+    
+    # v4.5.0: Network Watchdog (every 30s)
+    if [[ $((now - last_network_check)) -ge $NETWORK_CHECK_INTERVAL ]]; then
+        invoke_network_watchdog
+        last_network_check=$now
+    fi
+    
+    # v4.5.0: Force Reconnect if flagged
+    if [[ "$FORCE_RECONNECT" == "true" ]]; then
+        log "INFO" "[RESILIENCE] Force reconnect ativado. Enviando heartbeat imediato."
+        if send_heartbeat; then
+            invoke_heartbeat_selftest
+            if [[ "$state" == "DEGRADED" ]]; then
+                set_state "ENFORCING" "Force reconnect successful"
+            fi
+        fi
+        FORCE_RECONNECT=false
+        last_heartbeat=$now
+    fi
+    
+    # v4.5.0: Task Health Assert (every 5 minutes)
+    if [[ $((now - LAST_TASK_CHECK)) -ge $TASK_CHECK_INTERVAL ]]; then
+        assert_task_health || true
+        LAST_TASK_CHECK=$now
+    fi
     
     # Heartbeat
     if [[ $((now - last_heartbeat)) -ge $POLL_INTERVAL ]]; then
@@ -2069,8 +2311,11 @@ while true; do
             if [[ "$state" == "ENFORCING" ]]; then
                 invoke_auto_recovery "heartbeat" "Heartbeat failed"
             fi
-        elif [[ "$state" == "DEGRADED" ]]; then
-            set_state "ENFORCING" "Heartbeat recovered"
+        else
+            invoke_heartbeat_selftest
+            if [[ "$state" == "DEGRADED" ]]; then
+                set_state "ENFORCING" "Heartbeat recovered"
+            fi
         fi
         last_heartbeat=$now
     fi
