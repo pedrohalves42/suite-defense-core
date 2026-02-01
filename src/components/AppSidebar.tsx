@@ -293,18 +293,16 @@ export const AppSidebar = () => {
         {/* Logo CyberShield Cloud */}
         <div className="h-14 flex items-center justify-between px-3 border-b border-border/30">
           {!collapsed && (
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg shadow-inner">
-                <Shield className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-semibold text-foreground text-sm tracking-tight">CyberShield</span>
-                <span className="text-[10px] text-muted-foreground/60 tracking-wider uppercase">Cloud</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <img 
+                src="/logo-cybshield.png" 
+                alt="CybShield Logo" 
+                className="h-8 w-auto object-contain"
+              />
             </div>
           )}
           {collapsed && (
-            <div className="p-2 bg-primary/10 rounded-lg mx-auto">
+            <div className="p-1.5 bg-primary/10 rounded-lg mx-auto">
               <Shield className="h-5 w-5 text-primary" />
             </div>
           )}
