@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AgentState, deriveAgentState, getStateDescription } from '@/lib/agent-state-machine';
 import { formatRelativeTime, formatDuration } from '@/lib/date-utils';
-
+import { useActiveTenant } from '@/hooks/useActiveTenant';
 
 export interface CausalEvent {
   id: string;
@@ -48,32 +48,30 @@ export interface AgentCausality {
 }
 
 export function useAgentCausality(agentId: string | null) {
+  const { activeTenant, loading: tenantLoading } = useActiveTenant();
+  
   return useQuery({
-    queryKey: ['agent-causality', agentId],
+    queryKey: ['agent-causality', activeTenant?.id, agentId],
     queryFn: async (): Promise<AgentCausality | null> => {
-      if (!agentId) return null;
+      if (!agentId || !activeTenant?.id) return null;
 
-      // Buscar dados do agente (via agents_safe view to protect hmac_secret - ADR-026)
-      let agent = null;
-      let agentError = null;
-      
-      try {
-        const { data, error } = await supabase
-          .from('agents_safe')
-          .select('*')
-          .eq('id', agentId)
-          .single();
-        agent = data;
-        agentError = error;
-      } catch (e) {
-        console.error('[useAgentCausality] Error fetching agent:', e);
-        agentError = e;
+      // Buscar dados do agente com tenant explícito e maybeSingle (ADR-026 + loading guard)
+      const { data: agent, error: agentError } = await supabase
+        .from('agents_safe')
+        .select('*')
+        .eq('id', agentId)
+        .eq('tenant_id', activeTenant.id)
+        .maybeSingle();
+
+      if (agentError) {
+        console.warn('[useAgentCausality] Query error:', agentError);
+        throw new Error('Erro ao buscar computador');
       }
 
-      // Se falhou, lançar erro para retry
-      if (agentError || !agent) {
-        console.warn('[useAgentCausality] Failed to fetch agent, error:', agentError);
-        throw new Error('Computador não encontrado');
+      if (!agent) {
+        // Agente não encontrado - retornar null graciosamente
+        console.info('[useAgentCausality] Agent not found:', agentId);
+        return null;
       }
 
       // Buscar últimos decision_events
@@ -216,7 +214,7 @@ export function useAgentCausality(agentId: string | null) {
         timeInCurrentState
       };
     },
-    enabled: !!agentId,
+    enabled: !!agentId && !tenantLoading && !!activeTenant?.id,
     refetchInterval: 30000, // Atualizar a cada 30 segundos
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
