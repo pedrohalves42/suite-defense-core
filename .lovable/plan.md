@@ -1,163 +1,131 @@
 
 
-# Implementacao das Acoes Obrigatorias Prof. Nullmann (A-001 a A-004)
+# Plano de Correcao: Criar Particao HMAC Fevereiro 2026
 
-## Status da Investigacao
+## Problema Identificado
 
-A investigacao revelou informacoes criticas antes da implementacao:
+A tabela `hmac_signatures` e particionada por mes, mas **falta a particao de Fevereiro 2026**:
 
-### A-001: HMAC Signatures
-
-**Descoberta**: As policies de INSERT/SELECT para `service_role` JA EXISTEM:
-- `Service role can insert signatures` (INSERT)
-- `Service role can select signatures` (SELECT)  
-- `Service role can delete old signatures` (DELETE)
-
-**Problema Real**: A tabela tem **0 registros** apesar das policies estarem corretas. O insert silencioso nao esta logando erros. Precisa de logging melhorado para diagnostico.
-
-### A-002: Jobs com output=NULL
-
-**Confirmado**: 3 jobs identificados para correcao:
-- `b25bac21-5d65-43a2-b47a-1ed5ef52af0e` (sync_blocked_websites, 2026-01-12)
-- `5cb3aa61-2215-4009-98ad-c098d408561b` (sync_blocked_websites, 2026-01-02)
-- `861b288e-dcdb-437f-a95e-ea84d04ea54e` (sync_blocked_websites, 2025-12-29)
-
-### A-003: RLS Test Runner
-
-**Descoberta**: A edge function `run-rls-tests` JA salva resultados em `rls_test_results`. Falta apenas componente UI para execucao e visualizacao.
-
-### A-004: Metodologia Nullmann
-
-**Status**: Documento a ser criado em `docs/NULLMANN_METHODOLOGY.md`
-
----
-
-## Plano de Implementacao
-
-### Arquivo 1: supabase/functions/_shared/hmac.ts
-
-**Alteracao**: Linhas 179-189 - Adicionar logging explicito no insert
-
-```typescript
-// ANTES (linhas 179-189):
-  // Armazenar assinatura usada
-  await supabase.from('hmac_signatures').insert({
-    signature,
-    agent_name: agentName,
-  });
-
-  // SEC-01 FIX: Cleanup probabilistico sincrono
-  await probabilisticCleanup(supabase);
-
-  return { valid: true, rawBody: body };
-
-// DEPOIS:
-  // Armazenar assinatura usada para replay protection (A-001 Nullmann)
-  const { error: insertError } = await supabase.from('hmac_signatures').insert({
-    signature,
-    agent_name: agentName,
-  });
-
-  if (insertError) {
-    // A-001 FIX: Log explicito para diagnostico de falhas de insert
-    console.error(`[HMAC] CRITICAL: Failed to store signature for agent ${agentName}:`, {
-      error: insertError.message,
-      code: insertError.code,
-      details: insertError.details,
-      hint: insertError.hint
-    });
-    // Nao bloquear autenticacao se apenas o replay tracking falhar
-    // mas logar para investigacao posterior
-  } else {
-    console.log(`[HMAC] Signature stored successfully for agent ${agentName}`);
-  }
-
-  // SEC-01 FIX: Cleanup probabilistico sincrono
-  await probabilisticCleanup(supabase);
-
-  return { valid: true, rawBody: body };
+```text
+Particoes Existentes:
++---------------------------+----------------------------------------+
+| Particao                  | Range                                  |
++---------------------------+----------------------------------------+
+| hmac_signatures_2025_12   | 2025-12-01 ate 2026-01-01              |
+| hmac_signatures_2026_01   | 2026-01-01 ate 2026-02-01              |
+| hmac_signatures_2026_02   | NAO EXISTE (FALTANDO!)                 |
++---------------------------+----------------------------------------+
 ```
 
----
+## Evidencia do Problema
 
-### Arquivo 2: src/components/security/RLSTestRunner.tsx (NOVO)
+Logs de edge functions mostram erro critico:
 
-Componente React para executar e visualizar testes RLS com as seguintes funcionalidades:
+```text
+[HMAC] CRITICAL: Failed to store signature for agent PC-Servidor-Planalto: {
+  error: 'no partition of relation "hmac_signatures" found for row',
+  code: "23514",
+  details: "Partition key of the failing row contains (used_at) = (2026-02-01 13:23:09.687407+00).",
+  hint: null
+}
+```
 
-- Botao para executar testes via edge function `run-rls-tests`
-- Exibicao de resultados da ultima execucao
-- Historico de testes recentes do banco
-- Metricas de aprovacao/reprovacao
-- Nota sobre metodologia Nullmann
-
-**Dependencias**: Button, Card, Badge, supabase client, react-query
-
----
-
-### Arquivo 3: docs/NULLMANN_METHODOLOGY.md (NOVO)
-
-Documento completo com:
-
-1. **Principio Fundamental**: Nada funciona por padrao
-2. **Fundamentos Epistemologicos**: Axioma Zero e Cadeia de Prova
-3. **Classificacao de Estados**: NAO PROVADO, REFUTADO, PARCIAL, PROVADO
-4. **Processo de Auditoria**: 4 fases
-5. **Taxonomia de Falhas**: 4 tipos por severidade
-6. **Exemplos de Provas**: SQL queries para cada invariante
-7. **Checklist de Auditoria**: Template reproduzivel
-8. **Aplicacao no CyberShield**: 10 invariantes documentadas
+**Impacto**: Replay protection NAO OPERACIONAL desde 2026-02-01 00:00:00 UTC.
 
 ---
 
-### SQL: Correcao dos 3 Jobs (A-002)
+## Correcao Proposta
 
-Executar via ferramenta de data update:
+### Migration SQL
+
+Criar particao de Fevereiro 2026 e particoes futuras para prevenir recorrencia:
 
 ```sql
-UPDATE jobs 
-SET output = '{
-  "migrated": true,
-  "reason": "nullmann_audit_a002",
-  "fixed_at": "2026-02-01T00:00:00.000Z",
-  "side_effects_applied": true
-}'::jsonb
-WHERE id IN (
-  'b25bac21-5d65-43a2-b47a-1ed5ef52af0e',
-  '5cb3aa61-2215-4009-98ad-c098d408561b',
-  '861b288e-dcdb-437f-a95e-ea84d04ea54e'
-)
-AND status = 'completed'
-AND output IS NULL;
+-- Criar particao Fevereiro 2026 (URGENTE)
+CREATE TABLE IF NOT EXISTS public.hmac_signatures_2026_02 
+  PARTITION OF public.hmac_signatures
+  FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
+
+-- Criar particoes futuras para prevenir recorrencia
+CREATE TABLE IF NOT EXISTS public.hmac_signatures_2026_03 
+  PARTITION OF public.hmac_signatures
+  FOR VALUES FROM ('2026-03-01') TO ('2026-04-01');
+
+CREATE TABLE IF NOT EXISTS public.hmac_signatures_2026_04 
+  PARTITION OF public.hmac_signatures
+  FOR VALUES FROM ('2026-04-01') TO ('2026-05-01');
+
+CREATE TABLE IF NOT EXISTS public.hmac_signatures_2026_05 
+  PARTITION OF public.hmac_signatures
+  FOR VALUES FROM ('2026-05-01') TO ('2026-06-01');
+
+CREATE TABLE IF NOT EXISTS public.hmac_signatures_2026_06 
+  PARTITION OF public.hmac_signatures
+  FOR VALUES FROM ('2026-06-01') TO ('2026-07-01');
+
+-- Criar indices nas novas particoes
+CREATE INDEX IF NOT EXISTS idx_hmac_signatures_2026_02_signature 
+  ON public.hmac_signatures_2026_02(signature);
+CREATE INDEX IF NOT EXISTS idx_hmac_signatures_2026_02_used_at 
+  ON public.hmac_signatures_2026_02(used_at);
+
+CREATE INDEX IF NOT EXISTS idx_hmac_signatures_2026_03_signature 
+  ON public.hmac_signatures_2026_03(signature);
+CREATE INDEX IF NOT EXISTS idx_hmac_signatures_2026_03_used_at 
+  ON public.hmac_signatures_2026_03(used_at);
+
+CREATE INDEX IF NOT EXISTS idx_hmac_signatures_2026_04_signature 
+  ON public.hmac_signatures_2026_04(signature);
+CREATE INDEX IF NOT EXISTS idx_hmac_signatures_2026_04_used_at 
+  ON public.hmac_signatures_2026_04(used_at);
+
+CREATE INDEX IF NOT EXISTS idx_hmac_signatures_2026_05_signature 
+  ON public.hmac_signatures_2026_05(signature);
+CREATE INDEX IF NOT EXISTS idx_hmac_signatures_2026_05_used_at 
+  ON public.hmac_signatures_2026_05(used_at);
+
+CREATE INDEX IF NOT EXISTS idx_hmac_signatures_2026_06_signature 
+  ON public.hmac_signatures_2026_06(signature);
+CREATE INDEX IF NOT EXISTS idx_hmac_signatures_2026_06_used_at 
+  ON public.hmac_signatures_2026_06(used_at);
 ```
 
 ---
 
-## Ordem de Execucao
+## Secao Tecnica
 
-1. **A-001**: Modificar `hmac.ts` com logging melhorado
-2. **A-002**: Executar UPDATE SQL nos 3 jobs
-3. **A-003**: Criar `RLSTestRunner.tsx`
-4. **A-004**: Criar `NULLMANN_METHODOLOGY.md`
+### O Que Foi Descoberto
 
-## Validacoes Pos-Implementacao
+1. A tabela `hmac_signatures` e particionada por mes usando `RANGE` em `used_at`
+2. A migration `20251209180420` criou particoes ate `2026_03`, mas elas nao existem no banco atual
+3. A migration `20260109171719` renomeou `hmac_signatures_partitioned` para `hmac_signatures`
+4. As particoes originais nao foram migradas corretamente
+
+### Validacao Pos-Correcao
 
 ```sql
--- A-002: Confirmar correcao
-SELECT COUNT(*) FROM jobs WHERE status='completed' AND output IS NULL;
--- ESPERADO: 0
+-- Verificar particoes criadas
+SELECT 
+  inhrelid::regclass as partition_name,
+  pg_get_expr(c.relpartbound, c.oid) as partition_range
+FROM pg_inherits i
+JOIN pg_class c ON c.oid = inhrelid
+WHERE inhparent = 'hmac_signatures'::regclass
+ORDER BY partition_name;
+-- ESPERADO: 2025_12, 2026_01, 2026_02, 2026_03, 2026_04, 2026_05, 2026_06
 
--- A-003: Confirmar testes executados (apos usar componente)
-SELECT COUNT(*) FROM rls_test_results WHERE tested_at > NOW() - INTERVAL '1 hour';
--- ESPERADO: > 0
+-- Aguardar proximo heartbeat de agente e verificar
+SELECT COUNT(*) FROM hmac_signatures WHERE used_at > NOW() - INTERVAL '10 minutes';
+-- ESPERADO: > 0 (apos agentes fazerem polling)
 ```
 
-## Arquivos a Modificar/Criar
+---
 
-| Arquivo | Acao | Descricao |
-|---------|------|-----------|
-| `supabase/functions/_shared/hmac.ts` | EDITAR | Logging melhorado linhas 179-189 |
-| `src/components/security/RLSTestRunner.tsx` | CRIAR | Componente UI para testes RLS |
-| `docs/NULLMANN_METHODOLOGY.md` | CRIAR | Framework de auditoria |
+## Resumo de Acoes
+
+| Acao | Arquivo | Descricao |
+|------|---------|-----------|
+| Criar migration | SQL | Adicionar particoes 2026_02 ate 2026_06 |
 
 ## Resultado Esperado
 
@@ -165,8 +133,5 @@ Apos implementacao:
 
 | Invariante | Estado Atual | Estado Esperado |
 |------------|--------------|-----------------|
-| INV-002 (HMAC) | REFUTADO | EM INVESTIGACAO (logs ativos) |
-| INV-008 (Side Effects) | REFUTADO | PROVADO (0 violacoes) |
-| INV-001 (Isolamento) | PARCIAL | PROVADO (testes executados) |
-| Metodologia | INEXISTENTE | DOCUMENTADA |
+| INV-002 (HMAC/Replay) | REFUTADO | PROVADO (signatures armazenadas) |
 
