@@ -21356,6 +21356,10 @@ export type Database = {
         Args: { tenant_uuid: string; week_start?: string }
         Returns: Json
       }
+      count_policies_for_table: {
+        Args: { p_table_name: string }
+        Returns: number
+      }
       create_approval_request: {
         Args: {
           p_action_payload: Json

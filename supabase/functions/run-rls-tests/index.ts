@@ -82,20 +82,19 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Test 2: Verify policies exist for key tables
+    // Test 2: Verify policies exist for key tables (using RPC to access pg_policies)
     const keyTables = ['agents', 'user_roles', 'tenants', 'audit_logs', 'security_logs', 'enrollment_keys'];
     for (const table of keyTables) {
       const testStart = Date.now();
-      const { count, error } = await supabase
-        .from('pg_policies')
-        .select('*', { count: 'exact', head: true })
-        .eq('tablename', table);
+      const { data: policyCount, error } = await supabase
+        .rpc('count_policies_for_table', { p_table_name: table });
 
+      const count = policyCount ?? 0;
       results.push({
         test_name: `policy_exists_${table}`,
         test_category: 'policy_coverage',
-        passed: (count || 0) > 0,
-        error_message: (count || 0) === 0 ? `No policies found for table ${table}` : null,
+        passed: count > 0,
+        error_message: count === 0 ? `No policies found for table ${table}` : (error ? error.message : null),
         execution_time_ms: Date.now() - testStart
       });
     }
