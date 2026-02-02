@@ -1,277 +1,189 @@
 
 
-# Plano: Correções Cirúrgicas Finais (6 Erros Críticos)
+# Plano: Correção dos 3 Problemas Críticos Restantes
 
 ## Resumo Executivo
 
-Este plano implementa **6 correções cirúrgicas obrigatórias** identificadas na auditoria de qualidade:
+Este plano corrige **3 problemas críticos** que estão causando falhas contínuas no sistema:
 
-| # | Erro | Impacto | Status |
-|---|------|---------|--------|
-| 1 | LIMIT em DELETE (PostgreSQL inválido) | Migração falha | CRÍTICO |
-| 2 | Trigger não recriado na tabela | Proteção de auditoria ausente | CRÍTICO |
-| 3 | View sem security_invoker | Bypass de RLS possível | ALTO |
-| 4 | Edge Functions não chamam health check | Cron monitoring morto | ALTO |
-| 5 | Colunas verificadas | OK | OK |
-| 6 | Rollout pode pegar zumbi | Risco residual | DOCUMENTAR |
+| # | Problema | Solução | Complexidade |
+|---|----------|---------|--------------|
+| 1 | cleanup-old-data falha 24x/dia | Atualizar função para arquivar antes de deletar | ALTA |
+| 2 | RLS tests com falso positivo | Criar RPC para verificar políticas via service_role | MÉDIA |
+| 3 | DLQ com 134 itens | Resolver via batch (já temos a RPC) | BAIXA |
 
 ---
 
-## Fase 1: Correção de Schema (Migração SQL)
+## Fase 1: Corrigir cleanup_old_data_scheduled
 
-### 1.1 Corrigir DELETE com CTE em archive_old_executions
+### Problema
+A função tenta deletar `jobs` diretamente, mas a FK com `ON DELETE CASCADE` dispara delete em `job_executions`, e o trigger bloqueia.
 
-A função atual usa DELETE...WHERE sem CTE para o LIMIT:
-
-```sql
--- ERRO ATUAL:
-DELETE FROM job_executions
-WHERE archived_at < NOW() - INTERVAL '30 days';
--- Sem LIMIT! Pode deletar milhões de linhas de uma vez
-```
-
-**Correção:**
+### Solução
+Reescrever a função para:
+1. Primeiro arquivar `job_executions` dos jobs a serem deletados
+2. Depois deletar apenas jobs cujas execuções já foram arquivadas há 30+ dias
 
 ```sql
-CREATE OR REPLACE FUNCTION archive_old_executions(
-  p_older_than_days INTEGER DEFAULT 90,
-  p_batch_size INTEGER DEFAULT 1000
-)
+CREATE OR REPLACE FUNCTION cleanup_old_data_scheduled()
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO public
 AS $$
 DECLARE
-  v_archived INTEGER := 0;
-  v_deleted INTEGER := 0;
+  v_hmac_deleted INTEGER := 0;
+  v_rate_limits_deleted INTEGER := 0;
+  v_failed_logins_deleted INTEGER := 0;
+  v_efm_deleted INTEGER := 0;
+  v_executions_archived INTEGER := 0;
+  v_old_jobs_deleted INTEGER := 0;
 BEGIN
-  IF NOT is_current_super_admin() THEN
-    RAISE EXCEPTION 'Only super_admin can archive executions';
-  END IF;
-
-  -- Etapa 1: Arquivar execuções antigas (CTE correto)
-  WITH to_archive AS (
-    SELECT id FROM job_executions
-    WHERE created_at < NOW() - (p_older_than_days || ' days')::INTERVAL
-      AND archived_at IS NULL
-    LIMIT p_batch_size
+  -- Limpar HMAC signatures antigas (>6 horas)
+  DELETE FROM public.hmac_signatures WHERE used_at < now() - interval '6 hours';
+  GET DIAGNOSTICS v_hmac_deleted = ROW_COUNT;
+  
+  -- Limpar rate limits antigos (>30 minutos)
+  DELETE FROM public.rate_limits WHERE window_start < now() - interval '30 minutes';
+  GET DIAGNOSTICS v_rate_limits_deleted = ROW_COUNT;
+  
+  -- Limpar failed login attempts antigos (>24 horas)
+  DELETE FROM public.failed_login_attempts WHERE created_at < now() - interval '24 hours';
+  GET DIAGNOSTICS v_failed_logins_deleted = ROW_COUNT;
+  
+  -- Limpar edge function metrics antigas (>7 dias)
+  DELETE FROM public.edge_function_metrics WHERE created_at < now() - interval '7 days';
+  GET DIAGNOSTICS v_efm_deleted = ROW_COUNT;
+  
+  -- ETAPA 1: Arquivar job_executions de jobs antigos (>30 dias)
+  WITH old_jobs AS (
+    SELECT id FROM public.jobs
+    WHERE status IN ('completed', 'failed')
+      AND created_at < now() - interval '30 days'
+    LIMIT 1000
+  ),
+  executions_to_archive AS (
+    SELECT je.id FROM job_executions je
+    INNER JOIN old_jobs oj ON je.job_id = oj.id
+    WHERE je.archived_at IS NULL
+    LIMIT 1000
   )
-  UPDATE job_executions je
+  UPDATE job_executions
   SET archived_at = NOW()
-  FROM to_archive ta
-  WHERE je.id = ta.id;
+  FROM executions_to_archive eta
+  WHERE job_executions.id = eta.id;
   
-  GET DIAGNOSTICS v_archived = ROW_COUNT;
+  GET DIAGNOSTICS v_executions_archived = ROW_COUNT;
   
-  -- Etapa 2: Deletar com CTE (CORREÇÃO CRÍTICA)
-  WITH to_delete AS (
-    SELECT id FROM job_executions
-    WHERE archived_at < NOW() - INTERVAL '30 days'
-    LIMIT p_batch_size
+  -- ETAPA 2: Deletar jobs apenas se TODAS as execuções já foram arquivadas há 30+ dias
+  WITH deletable_jobs AS (
+    SELECT j.id 
+    FROM public.jobs j
+    WHERE j.status IN ('completed', 'failed')
+      AND j.created_at < now() - interval '30 days'
+      AND NOT EXISTS (
+        -- Não deletar se houver execuções não arquivadas
+        SELECT 1 FROM job_executions je 
+        WHERE je.job_id = j.id AND je.archived_at IS NULL
+      )
+      AND NOT EXISTS (
+        -- Não deletar se houver execuções arquivadas recentemente (< 30 dias)
+        SELECT 1 FROM job_executions je 
+        WHERE je.job_id = j.id AND je.archived_at > NOW() - INTERVAL '30 days'
+      )
+    LIMIT 500
   )
-  DELETE FROM job_executions je
-  USING to_delete td
-  WHERE je.id = td.id;
+  DELETE FROM public.jobs
+  USING deletable_jobs dj
+  WHERE jobs.id = dj.id;
   
-  GET DIAGNOSTICS v_deleted = ROW_COUNT;
+  GET DIAGNOSTICS v_old_jobs_deleted = ROW_COUNT;
   
   RETURN jsonb_build_object(
-    'archived', v_archived,
-    'deleted', v_deleted,
-    'older_than_days', p_older_than_days
+    'success', true,
+    'hmac_deleted', v_hmac_deleted,
+    'rate_limits_deleted', v_rate_limits_deleted,
+    'failed_logins_deleted', v_failed_logins_deleted,
+    'edge_function_metrics_deleted', v_efm_deleted,
+    'job_executions_archived', v_executions_archived,
+    'old_jobs_deleted', v_old_jobs_deleted,
+    'executed_at', now()
   );
 END;
 $$;
 ```
 
-### 1.2 Criar Trigger na Tabela (CRÍTICO)
+---
 
-O trigger `tr_prevent_execution_deletion` **não existe**. A função está definida mas não aplicada:
+## Fase 2: Corrigir run-rls-tests (Falso Positivo)
 
-```sql
--- Garantir que o trigger existe
-DROP TRIGGER IF EXISTS tr_prevent_execution_deletion ON job_executions;
+### Problema
+O teste consulta `pg_policies` via Supabase client, mas essa tabela do sistema não é acessível.
 
-CREATE TRIGGER tr_prevent_execution_deletion
-  BEFORE DELETE ON job_executions
-  FOR EACH ROW
-  EXECUTE FUNCTION prevent_execution_deletion();
-
-COMMENT ON TRIGGER tr_prevent_execution_deletion ON job_executions IS 
-'ADR: Proteção de imutabilidade. Permite delete apenas de registros arquivados há 30+ dias.';
-```
-
-### 1.3 Recriar View com security_invoker
-
-A view atual foi criada **sem** `security_invoker = on`:
+### Solução
+Criar uma RPC que verifica políticas usando `service_role`:
 
 ```sql
-DROP VIEW IF EXISTS v_agent_state;
-
-CREATE VIEW v_agent_state 
-WITH (security_invoker = on) AS
-SELECT
-  a.id AS agent_id,
-  a.tenant_id,
-  a.hostname,
-  a.agent_name,
-  a.display_name,
-  a.last_heartbeat,
-  a.agent_version,
-  a.agent_state,
-  a.agent_state_reason,
-  a.is_isolated,
-  a.is_throttled,
-  CASE
-    WHEN a.archived_at IS NOT NULL THEN 'archived'
-    WHEN a.is_isolated THEN 'isolated'
-    WHEN a.agent_state = 'safe_mode' THEN 'safe_mode'
-    WHEN a.last_heartbeat < NOW() - INTERVAL '30 minutes' THEN 'offline'
-    WHEN a.last_heartbeat < NOW() - INTERVAL '5 minutes' THEN 'warning'
-    ELSE 'healthy'
-  END AS canonical_state,
-  EXTRACT(EPOCH FROM (NOW() - a.last_heartbeat)) AS heartbeat_lag_seconds,
-  NOW() AS snapshot_at
-FROM agents a
-WHERE a.status = 'active'
-  AND a.archived_at IS NULL
-  AND (a.tenant_id = get_active_tenant_id() OR is_current_super_admin());
-
-COMMENT ON VIEW v_agent_state IS 
-'ADR: View canônica para estado do agente. security_invoker=on garante RLS do caller. Toda UI deve ler estado APENAS desta view.';
-
--- Controle de acesso explícito
-REVOKE ALL ON v_agent_state FROM PUBLIC;
-GRANT SELECT ON v_agent_state TO authenticated;
-GRANT SELECT ON v_agent_state TO service_role;
-```
-
-### 1.4 Criar RPC mark_cron_failure (Alternativa Simplificada)
-
-A função `update_cron_health` já existe mas precisa de wrapper para falhas:
-
-```sql
-CREATE OR REPLACE FUNCTION mark_cron_failure(
-  p_cron_name TEXT,
-  p_error TEXT
-)
-RETURNS VOID
+CREATE OR REPLACE FUNCTION count_policies_for_table(p_table_name TEXT)
+RETURNS INTEGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO public
 AS $$
+DECLARE
+  v_count INTEGER;
 BEGIN
-  PERFORM update_cron_health(p_cron_name, false, p_error);
+  SELECT COUNT(*) INTO v_count
+  FROM pg_policies
+  WHERE schemaname = 'public' AND tablename = p_table_name;
+  
+  RETURN v_count;
 END;
 $$;
 
-COMMENT ON FUNCTION mark_cron_failure IS 
-'Wrapper simplificado para registrar falha de cron. Chama update_cron_health internamente.';
+COMMENT ON FUNCTION count_policies_for_table IS 
+'Retorna o número de políticas RLS para uma tabela. Usado por run-rls-tests.';
+```
+
+### Atualizar Edge Function
+
+Modificar `run-rls-tests/index.ts` para usar a nova RPC:
+
+```typescript
+// ANTES (não funciona):
+const { count, error } = await supabase
+  .from('pg_policies')
+  .select('*', { count: 'exact', head: true })
+  .eq('tablename', table);
+
+// DEPOIS (funciona):
+const { data: policyCount, error } = await supabase
+  .rpc('count_policies_for_table', { p_table_name: table });
 ```
 
 ---
 
-## Fase 2: Atualizar Edge Functions (Health Check Callback)
+## Fase 3: Resolver DLQ Pendente
 
-### 2.1 integrity-sentinel
+### Problema
+134 itens na DLQ sem resolução.
 
-Adicionar chamada a `update_cron_health` após sucesso/erro:
+### Solução
+Executar a RPC `process_dlq_batch` para cada tenant com itens pendentes:
 
-**Linhas 217-230 (sucesso):**
-```typescript
-// Log success with observability
-await supabase.rpc('log_scheduled_job_run', { ... });
-
-// ADICIONAR: Atualizar health check
-await supabase.rpc('update_cron_health', {
-  p_cron_name: 'integrity-sentinel-15min',
-  p_success: true,
-  p_error: null
-});
-```
-
-**Linhas 243-259 (erro):**
-```typescript
-} catch (err) {
-  console.error('[integrity-sentinel] Unhandled error:', err)
-  
-  // ADICIONAR: Registrar falha no health check
-  try {
-    await supabase.rpc('update_cron_health', {
-      p_cron_name: 'integrity-sentinel-15min',
-      p_success: false,
-      p_error: err instanceof Error ? err.message : 'Unknown error'
-    });
-  } catch {}
-  
-  // Try to log failure
-  try {
-    await supabase.rpc('log_scheduled_job_run', { ... });
-  } catch {}
-```
-
-### 2.2 run-rls-tests
-
-Adicionar chamada após resultado:
-
-**Após linha 224:**
-```typescript
-// ADICIONAR: Atualizar health check
-await supabase.rpc('update_cron_health', {
-  p_cron_name: 'rls-automated-tests-6h',
-  p_success: failedTests.length === 0,
-  p_error: failedTests.length > 0 
-    ? `${failedTests.length} tests failed` 
-    : null
-});
-```
-
-### 2.3 evaluate-software-risk
-
-Adicionar chamada (quando chamado por cron):
-
-**Após linha 317:**
-```typescript
-// Se chamado por cron, atualizar health check
-const isCronCall = req.headers.get('x-cron-source') === 'true';
-if (isCronCall) {
-  await supabase.rpc('update_cron_health', {
-    p_cron_name: 'evaluate-software-risk-daily',
-    p_success: true,
-    p_error: null
-  });
-}
-```
-
----
-
-## Fase 3: Documentar Risco Residual do Rollout
-
-A tabela `agents` não possui colunas `last_seen_task_at` ou `last_error_at`. 
-
-**Risco Residual:** O rollout pode atualizar agentes que:
-- Têm heartbeat recente mas estão em loop de erro
-- Estão processando tasks críticas
-
-**Mitigação Documentada:**
 ```sql
--- Rollout SEGURO (campos existentes)
-UPDATE agents
-SET
-  force_update_version = 'v4.5.0',
-  force_update_reason = 'Controlled rollout v4.5.0 - safe batch',
-  force_update_at = NOW()
-WHERE status = 'active'
-  AND archived_at IS NULL
-  AND (agent_version IS NULL OR agent_version != 'v4.5.0')
-  AND last_heartbeat > NOW() - INTERVAL '10 minutes'
-  AND agent_state NOT IN ('safe_mode', 'isolated', 'quarantined')
-  AND is_isolated IS NOT TRUE
-  AND is_throttled IS NOT TRUE;
+-- Identificar tenants com DLQ pendente
+SELECT tenant_id, COUNT(*) as pending
+FROM failed_jobs_dlq
+WHERE resolved_at IS NULL
+GROUP BY tenant_id;
 
--- NOTA: Não há proteção contra agentes em loop de erro.
--- Monitorar v_agent_state após rollout para detectar problemas.
+-- Executar resolução em batch
+SELECT process_dlq_batch(
+  p_tenant_id := 'TENANT_ID'::UUID,
+  p_batch_size := 200,
+  p_action := 'resolve'
+);
 ```
 
 ---
@@ -280,32 +192,25 @@ WHERE status = 'active'
 
 | Arquivo | Ação | Descrição |
 |---------|------|-----------|
-| SQL Migration | CRIAR | Correções de schema |
-| `integrity-sentinel/index.ts` | EDITAR | Adicionar health check callback |
-| `run-rls-tests/index.ts` | EDITAR | Adicionar health check callback |
-| `evaluate-software-risk/index.ts` | EDITAR | Adicionar health check callback |
+| SQL Migration | CRIAR | Corrigir `cleanup_old_data_scheduled` + criar RPC `count_policies_for_table` |
+| `run-rls-tests/index.ts` | EDITAR | Usar RPC em vez de consulta direta |
 
 ---
 
-## Checklist de Validação Pós-Migração
+## Checklist de Validação
 
 ```sql
--- 1. Verificar trigger existe
-SELECT trigger_name FROM information_schema.triggers 
-WHERE trigger_name = 'tr_prevent_execution_deletion';
+-- 1. Verificar cleanup não falha mais
+SELECT status, COUNT(*) 
+FROM cron.job_run_details 
+WHERE jobid = 34 AND start_time > NOW() - INTERVAL '2 hours'
+GROUP BY status;
 
--- 2. Verificar view tem security_invoker
-SELECT reloptions FROM pg_class 
-WHERE relname = 'v_agent_state' AND relkind = 'v';
+-- 2. Verificar RLS tests passam
+SELECT * FROM v_cron_health WHERE cron_name = 'rls-automated-tests-6h';
 
--- 3. Verificar mark_cron_failure existe
-SELECT proname FROM pg_proc WHERE proname = 'mark_cron_failure';
-
--- 4. Testar delete bloqueado (deve falhar)
-DELETE FROM job_executions WHERE id = gen_random_uuid();
-
--- 5. Verificar health check atualizado (após crons rodarem)
-SELECT * FROM v_cron_health;
+-- 3. Verificar DLQ zerada
+SELECT COUNT(*) FROM failed_jobs_dlq WHERE resolved_at IS NULL;
 ```
 
 ---
@@ -314,128 +219,120 @@ SELECT * FROM v_cron_health;
 
 ```sql
 -- ============================================================
--- MIGRAÇÃO: Correções Cirúrgicas Finais
+-- MIGRAÇÃO: Correção dos 3 Problemas Críticos Restantes
 -- ============================================================
 
 BEGIN;
 
--- 1. Corrigir archive_old_executions (DELETE com CTE)
-CREATE OR REPLACE FUNCTION archive_old_executions(
-  p_older_than_days INTEGER DEFAULT 90,
-  p_batch_size INTEGER DEFAULT 1000
-)
+-- 1. Corrigir cleanup_old_data_scheduled
+CREATE OR REPLACE FUNCTION cleanup_old_data_scheduled()
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO public
 AS $$
 DECLARE
-  v_archived INTEGER := 0;
-  v_deleted INTEGER := 0;
+  v_hmac_deleted INTEGER := 0;
+  v_rate_limits_deleted INTEGER := 0;
+  v_failed_logins_deleted INTEGER := 0;
+  v_efm_deleted INTEGER := 0;
+  v_executions_archived INTEGER := 0;
+  v_old_jobs_deleted INTEGER := 0;
 BEGIN
-  IF NOT is_current_super_admin() THEN
-    RAISE EXCEPTION 'Only super_admin can archive executions';
-  END IF;
-
-  WITH to_archive AS (
-    SELECT id FROM job_executions
-    WHERE created_at < NOW() - (p_older_than_days || ' days')::INTERVAL
-      AND archived_at IS NULL
-    LIMIT p_batch_size
+  DELETE FROM public.hmac_signatures WHERE used_at < now() - interval '6 hours';
+  GET DIAGNOSTICS v_hmac_deleted = ROW_COUNT;
+  
+  DELETE FROM public.rate_limits WHERE window_start < now() - interval '30 minutes';
+  GET DIAGNOSTICS v_rate_limits_deleted = ROW_COUNT;
+  
+  DELETE FROM public.failed_login_attempts WHERE created_at < now() - interval '24 hours';
+  GET DIAGNOSTICS v_failed_logins_deleted = ROW_COUNT;
+  
+  DELETE FROM public.edge_function_metrics WHERE created_at < now() - interval '7 days';
+  GET DIAGNOSTICS v_efm_deleted = ROW_COUNT;
+  
+  -- ETAPA 1: Arquivar job_executions de jobs antigos
+  WITH old_jobs AS (
+    SELECT id FROM public.jobs
+    WHERE status IN ('completed', 'failed')
+      AND created_at < now() - interval '30 days'
+    LIMIT 1000
+  ),
+  executions_to_archive AS (
+    SELECT je.id FROM job_executions je
+    INNER JOIN old_jobs oj ON je.job_id = oj.id
+    WHERE je.archived_at IS NULL
+    LIMIT 1000
   )
-  UPDATE job_executions je
+  UPDATE job_executions
   SET archived_at = NOW()
-  FROM to_archive ta
-  WHERE je.id = ta.id;
+  FROM executions_to_archive eta
+  WHERE job_executions.id = eta.id;
   
-  GET DIAGNOSTICS v_archived = ROW_COUNT;
+  GET DIAGNOSTICS v_executions_archived = ROW_COUNT;
   
-  WITH to_delete AS (
-    SELECT id FROM job_executions
-    WHERE archived_at < NOW() - INTERVAL '30 days'
-    LIMIT p_batch_size
+  -- ETAPA 2: Deletar jobs cujas execuções já foram arquivadas há 30+ dias
+  WITH deletable_jobs AS (
+    SELECT j.id 
+    FROM public.jobs j
+    WHERE j.status IN ('completed', 'failed')
+      AND j.created_at < now() - interval '30 days'
+      AND NOT EXISTS (
+        SELECT 1 FROM job_executions je 
+        WHERE je.job_id = j.id AND je.archived_at IS NULL
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM job_executions je 
+        WHERE je.job_id = j.id AND je.archived_at > NOW() - INTERVAL '30 days'
+      )
+    LIMIT 500
   )
-  DELETE FROM job_executions je
-  USING to_delete td
-  WHERE je.id = td.id;
+  DELETE FROM public.jobs
+  USING deletable_jobs dj
+  WHERE jobs.id = dj.id;
   
-  GET DIAGNOSTICS v_deleted = ROW_COUNT;
+  GET DIAGNOSTICS v_old_jobs_deleted = ROW_COUNT;
   
   RETURN jsonb_build_object(
-    'archived', v_archived,
-    'deleted', v_deleted,
-    'older_than_days', p_older_than_days
+    'success', true,
+    'hmac_deleted', v_hmac_deleted,
+    'rate_limits_deleted', v_rate_limits_deleted,
+    'failed_logins_deleted', v_failed_logins_deleted,
+    'edge_function_metrics_deleted', v_efm_deleted,
+    'job_executions_archived', v_executions_archived,
+    'old_jobs_deleted', v_old_jobs_deleted,
+    'executed_at', now()
   );
 END;
 $$;
 
--- 2. Criar trigger (CRÍTICO)
-DROP TRIGGER IF EXISTS tr_prevent_execution_deletion ON job_executions;
-
-CREATE TRIGGER tr_prevent_execution_deletion
-  BEFORE DELETE ON job_executions
-  FOR EACH ROW
-  EXECUTE FUNCTION prevent_execution_deletion();
-
-COMMENT ON TRIGGER tr_prevent_execution_deletion ON job_executions IS 
-'ADR: Proteção de imutabilidade. Permite delete apenas de registros arquivados há 30+ dias.';
-
--- 3. Recriar view com security_invoker
-DROP VIEW IF EXISTS v_agent_state;
-
-CREATE VIEW v_agent_state 
-WITH (security_invoker = on) AS
-SELECT
-  a.id AS agent_id,
-  a.tenant_id,
-  a.hostname,
-  a.agent_name,
-  a.display_name,
-  a.last_heartbeat,
-  a.agent_version,
-  a.agent_state,
-  a.agent_state_reason,
-  a.is_isolated,
-  a.is_throttled,
-  CASE
-    WHEN a.archived_at IS NOT NULL THEN 'archived'
-    WHEN a.is_isolated THEN 'isolated'
-    WHEN a.agent_state = 'safe_mode' THEN 'safe_mode'
-    WHEN a.last_heartbeat < NOW() - INTERVAL '30 minutes' THEN 'offline'
-    WHEN a.last_heartbeat < NOW() - INTERVAL '5 minutes' THEN 'warning'
-    ELSE 'healthy'
-  END AS canonical_state,
-  EXTRACT(EPOCH FROM (NOW() - a.last_heartbeat)) AS heartbeat_lag_seconds,
-  NOW() AS snapshot_at
-FROM agents a
-WHERE a.status = 'active'
-  AND a.archived_at IS NULL
-  AND (a.tenant_id = get_active_tenant_id() OR is_current_super_admin());
-
-COMMENT ON VIEW v_agent_state IS 
-'ADR: View canônica com security_invoker=on. Toda UI deve ler estado APENAS desta view.';
-
-REVOKE ALL ON v_agent_state FROM PUBLIC;
-GRANT SELECT ON v_agent_state TO authenticated;
-GRANT SELECT ON v_agent_state TO service_role;
-
--- 4. Criar wrapper mark_cron_failure
-CREATE OR REPLACE FUNCTION mark_cron_failure(
-  p_cron_name TEXT,
-  p_error TEXT
-)
-RETURNS VOID
+-- 2. Criar RPC para verificar políticas
+CREATE OR REPLACE FUNCTION count_policies_for_table(p_table_name TEXT)
+RETURNS INTEGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO public
 AS $$
+DECLARE
+  v_count INTEGER;
 BEGIN
-  PERFORM update_cron_health(p_cron_name, false, p_error);
+  SELECT COUNT(*) INTO v_count
+  FROM pg_policies
+  WHERE schemaname = 'public' AND tablename = p_table_name;
+  
+  RETURN v_count;
 END;
 $$;
 
-COMMENT ON FUNCTION mark_cron_failure IS 
-'Wrapper simplificado para registrar falha de cron.';
+COMMENT ON FUNCTION count_policies_for_table IS 
+'Retorna número de políticas RLS para uma tabela. Usado por run-rls-tests.';
+
+-- 3. Atualizar cron_health_checks para resetar falhas
+UPDATE cron_health_checks
+SET consecutive_failures = 0,
+    last_error = NULL,
+    updated_at = NOW()
+WHERE cron_name = 'rls-automated-tests-6h';
 
 COMMIT;
 ```
@@ -444,8 +341,9 @@ COMMIT;
 
 ## Ordem de Execução
 
-1. Executar migração SQL consolidada
-2. Validar com checklist
-3. Editar 3 Edge Functions (adicionar health check callbacks)
-4. Deploy das Edge Functions
-5. Aguardar próximo ciclo de crons e verificar `v_cron_health`
+1. Executar migração SQL
+2. Editar `run-rls-tests/index.ts` para usar nova RPC
+3. Deploy da Edge Function
+4. Executar resolução de DLQ
+5. Monitorar próximo ciclo de crons
+
