@@ -4938,11 +4938,16 @@ function Get-BrowserHistorySQLite {
 
 # ============================================
 #  SSA-009: FULL WEB ACTIVITY COLLECTION
+#  V4-FIX: Added internal timeout + optimizations
 # ============================================
 function Invoke-CollectWebActivityJob {
     param($Job)
 
-    Write-Log "[WEB-ACTIVITY-V3] Iniciando coleta de atividade web com timestamps reais..." "INFO"
+    Write-Log "[WEB-ACTIVITY-V4] Iniciando coleta de atividade web com timeout seguro..." "INFO"
+
+    # V4-FIX: TIMEOUT INTERNO PARA EVITAR TRAVAMENTO
+    $collectionTimeout = 45  # segundos maximo para toda a coleta
+    $startTime = [DateTime]::UtcNow
 
     try {
         $payload = $null
@@ -4954,21 +4959,28 @@ function Invoke-CollectWebActivityJob {
                     $payload = $Job.payload
                 }
             } catch {
-                Write-Log "[WEB-ACTIVITY-V3] Payload invalido, usando defaults" "WARN"
+                Write-Log "[WEB-ACTIVITY-V4] Payload invalido, usando defaults" "WARN"
             }
         }
 
-        $maxDomains = 500
+        # V4-FIX: Reduzir maxDomains para acelerar processamento
+        $maxDomains = 200
         if ($payload -and $payload.max_domains) {
-            $maxDomains = [int]$payload.max_domains
+            $maxDomains = [Math]::Min([int]$payload.max_domains, 300)
         }
 
         $nowUtc = [DateTime]::UtcNow
         # Usar ArrayList para performance O(n)
         $items = New-Object System.Collections.ArrayList
+        
+        # V4-FIX: Helper para verificar timeout
+        function Test-CollectionTimeout {
+            $elapsed = ([DateTime]::UtcNow - $startTime).TotalSeconds
+            return ($elapsed -ge $collectionTimeout)
+        }
 
         # 1. Coletar DNS Cache (sem timestamps reais - usa hora atual)
-        Write-Log "[WEB-ACTIVITY-V3] Coletando cache DNS..." "INFO"
+        Write-Log "[WEB-ACTIVITY-V4] Coletando cache DNS..." "INFO"
         try {
             $dnsEntries = Get-DnsClientCache -ErrorAction SilentlyContinue
             if ($dnsEntries) {
@@ -4989,32 +5001,40 @@ function Invoke-CollectWebActivityJob {
                         visit_count = 1  # DNS nao tem contagem real
                     })
                 }
-                Write-Log "[WEB-ACTIVITY-V3] Cache DNS: $($dnsEntries.Count) dominios" "INFO"
+                Write-Log "[WEB-ACTIVITY-V4] Cache DNS: $($dnsEntries.Count) dominios" "INFO"
             }
         } catch {
-            Write-Log "[WEB-ACTIVITY-V3] Erro ao ler cache DNS: $($_.Exception.Message)" "WARN"
+            Write-Log "[WEB-ACTIVITY-V4] Erro ao ler cache DNS: $($_.Exception.Message)" "WARN"
         }
 
         # 2. Coletar historico de TODOS OS PERFIS DE USUARIO
-        Write-Log "[WEB-ACTIVITY-V3] Coletando historico de todos os perfis de usuario..." "INFO"
+        Write-Log "[WEB-ACTIVITY-V4] Coletando historico de todos os perfis de usuario..." "INFO"
         
         $userProfiles = @()
         try {
             $userProfiles = Get-ChildItem -Path "C:\Users" -Directory -ErrorAction SilentlyContinue | 
-                Where-Object { $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') }
-            Write-Log "[WEB-ACTIVITY-V3] Encontrados $($userProfiles.Count) perfis de usuario" "INFO"
+                Where-Object { $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') } |
+                Select-Object -First 5  # V4-FIX: Limitar a 5 perfis para evitar timeout
+            Write-Log "[WEB-ACTIVITY-V4] Encontrados $($userProfiles.Count) perfis de usuario (max 5)" "INFO"
         } catch {
-            Write-Log "[WEB-ACTIVITY-V3] Erro ao listar perfis de usuario: $($_.Exception.Message)" "WARN"
+            Write-Log "[WEB-ACTIVITY-V4] Erro ao listar perfis de usuario: $($_.Exception.Message)" "WARN"
         }
         
         foreach ($userProfile in $userProfiles) {
+            # V4-FIX: Verificar timeout antes de cada perfil
+            if (Test-CollectionTimeout) {
+                Write-Log "[WEB-ACTIVITY-V4] Timeout atingido ($collectionTimeout s), finalizando coleta antecipadamente" "WARN"
+                break
+            }
+            
             $userName = $userProfile.Name
             $userPath = $userProfile.FullName
             
-            Write-Log "[WEB-ACTIVITY-V3] Processando perfil: $userName" "DEBUG"
+            Write-Log "[WEB-ACTIVITY-V4] Processando perfil: $userName" "DEBUG"
             
             # 2a. Chrome History - SQLITE COM TIMESTAMPS REAIS
             try {
+                if (Test-CollectionTimeout) { break }  # V4-FIX: Check timeout
                 $chromeHistoryPath = Join-Path $userPath "AppData\Local\Google\Chrome\User Data\Default\History"
                 if (Test-Path $chromeHistoryPath) {
                     $tempHistoryPath = "$env:TEMP\chrome_history_temp_$(Get-Random).db"
@@ -5097,6 +5117,7 @@ function Invoke-CollectWebActivityJob {
             
             # 2b. Firefox History - SQLITE COM TIMESTAMPS REAIS
             try {
+                if (Test-CollectionTimeout) { break }  # V4-FIX: Check timeout
                 $firefoxProfilesPath = Join-Path $userPath "AppData\Roaming\Mozilla\Firefox\Profiles"
                 if (Test-Path $firefoxProfilesPath) {
                     $profiles = Get-ChildItem -Path $firefoxProfilesPath -Directory -ErrorAction SilentlyContinue
@@ -5185,6 +5206,7 @@ function Invoke-CollectWebActivityJob {
             
             # 2c. Edge History - SQLITE COM TIMESTAMPS REAIS
             try {
+                if (Test-CollectionTimeout) { break }  # V4-FIX: Check timeout
                 $edgeHistoryPath = Join-Path $userPath "AppData\Local\Microsoft\Edge\User Data\Default\History"
                 if (Test-Path $edgeHistoryPath) {
                     $tempHistoryPath = "$env:TEMP\edge_history_temp_$(Get-Random).db"
@@ -5265,6 +5287,7 @@ function Invoke-CollectWebActivityJob {
             
             # 2d. Opera History - SQLITE COM TIMESTAMPS REAIS (Chromium-based, mesmo formato do Chrome)
             try {
+                if (Test-CollectionTimeout) { break }  # V4-FIX: Check timeout
                 $operaHistoryPath = Join-Path $userPath "AppData\Roaming\Opera Software\Opera Stable\History"
                 if (Test-Path $operaHistoryPath) {
                     $tempHistoryPath = "$env:TEMP\opera_history_temp_$(Get-Random).db"
@@ -5345,6 +5368,7 @@ function Invoke-CollectWebActivityJob {
             
             # 2e. Opera GX History (mesmo formato, path diferente)
             try {
+                if (Test-CollectionTimeout) { break }  # V4-FIX: Check timeout
                 $operaGxHistoryPath = Join-Path $userPath "AppData\Roaming\Opera Software\Opera GX Stable\History"
                 if (Test-Path $operaGxHistoryPath) {
                     $tempHistoryPath = "$env:TEMP\operagx_history_temp_$(Get-Random).db"
@@ -5387,7 +5411,8 @@ function Invoke-CollectWebActivityJob {
         }
 
         # AGREGACAO POR DOMINIO: soma visit_count, usa ultimo visited_at
-        Write-Log "[WEB-ACTIVITY-V3] Agregando por dominio..." "INFO"
+        $elapsedMs = ([DateTime]::UtcNow - $startTime).TotalMilliseconds
+        Write-Log "[WEB-ACTIVITY-V4] Agregando por dominio... (tempo decorrido: ${elapsedMs}ms)" "INFO"
         $aggregated = @{}
         foreach ($item in $items) {
             $key = $item.domain
@@ -5410,23 +5435,25 @@ function Invoke-CollectWebActivityJob {
         
         $uniqueItems = @($aggregated.Values) | Select-Object -First $maxDomains
         
-        Write-Log "[WEB-ACTIVITY-V3] Agregacao: $($items.Count) items -> $($uniqueItems.Count) dominios unicos" "INFO"
+        Write-Log "[WEB-ACTIVITY-V4] Agregacao: $($items.Count) items -> $($uniqueItems.Count) dominios unicos" "INFO"
 
         if (-not $uniqueItems.Count) {
-            Write-Log "[WEB-ACTIVITY-V3] Nenhum dominio encontrado em nenhuma fonte" "INFO"
+            Write-Log "[WEB-ACTIVITY-V4] Nenhum dominio encontrado em nenhuma fonte" "INFO"
             return @{
                 success = $true
                 output  = "Nenhum dominio encontrado"
             }
         }
 
-        Write-Log "[WEB-ACTIVITY-V3] Total de dominios unicos: $($uniqueItems.Count)" "INFO"
+        Write-Log "[WEB-ACTIVITY-V4] Total de dominios unicos: $($uniqueItems.Count)" "INFO"
 
-        # FEATURE FLAG: web_activity_version v3 para rastreabilidade
+        # FEATURE FLAG: web_activity_version v4 para rastreabilidade
+        $totalElapsedSec = ([DateTime]::UtcNow - $startTime).TotalSeconds
         $body = @{
             agent_id = $Job.agent_id
             items    = $uniqueItems
-            web_activity_version = "v3"  # Feature flag para identificar dados SSA-009
+            web_activity_version = "v4"  # Feature flag V4-FIX
+            collection_time_seconds = [Math]::Round($totalElapsedSec, 2)
         }
 
         $result = Invoke-SecureRequest `
@@ -5439,15 +5466,16 @@ function Invoke-CollectWebActivityJob {
             throw "Falha ao enviar atividade web (HTTP $($result.StatusCode))"
         }
 
-        Write-Log "[WEB-ACTIVITY-V3] Atividade enviada com sucesso. Dominios: $($uniqueItems.Count)" "SUCCESS"
+        Write-Log "[WEB-ACTIVITY-V4] Atividade enviada com sucesso. Dominios: $($uniqueItems.Count), Tempo: ${totalElapsedSec}s" "SUCCESS"
 
         return @{
             success = $true
-            output  = "Atividade web v3 enviada. Dominios: $($uniqueItems.Count)"
+            output  = "Atividade web v4 enviada. Dominios: $($uniqueItems.Count) em ${totalElapsedSec}s"
         }
     }
     catch {
-        $errorMsg = "Erro em Invoke-CollectWebActivityJob: $($_.Exception.Message)"
+        $totalElapsedSec = ([DateTime]::UtcNow - $startTime).TotalSeconds
+        $errorMsg = "Erro em Invoke-CollectWebActivityJob (${totalElapsedSec}s): $($_.Exception.Message)"
         Write-Log "[ERROR] $errorMsg" "ERROR"
         return @{
             success = $false
