@@ -1,190 +1,151 @@
 
 
-# Plano: Correção dos 3 Problemas Críticos Restantes
+# Plano: Correção dos 5 Findings do Security Scanner
 
 ## Resumo Executivo
 
-Este plano corrige **3 problemas críticos** que estão causando falhas contínuas no sistema:
+O scanner detectou **5 erros** que precisam ser analisados. Após investigação, identificamos:
 
-| # | Problema | Solução | Complexidade |
-|---|----------|---------|--------------|
-| 1 | cleanup-old-data falha 24x/dia | Atualizar função para arquivar antes de deletar | ALTA |
-| 2 | RLS tests com falso positivo | Criar RPC para verificar políticas via service_role | MÉDIA |
-| 3 | DLQ com 134 itens | Resolver via batch (já temos a RPC) | BAIXA |
-
----
-
-## Fase 1: Corrigir cleanup_old_data_scheduled
-
-### Problema
-A função tenta deletar `jobs` diretamente, mas a FK com `ON DELETE CASCADE` dispara delete em `job_executions`, e o trigger bloqueia.
-
-### Solução
-Reescrever a função para:
-1. Primeiro arquivar `job_executions` dos jobs a serem deletados
-2. Depois deletar apenas jobs cujas execuções já foram arquivadas há 30+ dias
-
-```sql
-CREATE OR REPLACE FUNCTION cleanup_old_data_scheduled()
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO public
-AS $$
-DECLARE
-  v_hmac_deleted INTEGER := 0;
-  v_rate_limits_deleted INTEGER := 0;
-  v_failed_logins_deleted INTEGER := 0;
-  v_efm_deleted INTEGER := 0;
-  v_executions_archived INTEGER := 0;
-  v_old_jobs_deleted INTEGER := 0;
-BEGIN
-  -- Limpar HMAC signatures antigas (>6 horas)
-  DELETE FROM public.hmac_signatures WHERE used_at < now() - interval '6 hours';
-  GET DIAGNOSTICS v_hmac_deleted = ROW_COUNT;
-  
-  -- Limpar rate limits antigos (>30 minutos)
-  DELETE FROM public.rate_limits WHERE window_start < now() - interval '30 minutes';
-  GET DIAGNOSTICS v_rate_limits_deleted = ROW_COUNT;
-  
-  -- Limpar failed login attempts antigos (>24 horas)
-  DELETE FROM public.failed_login_attempts WHERE created_at < now() - interval '24 hours';
-  GET DIAGNOSTICS v_failed_logins_deleted = ROW_COUNT;
-  
-  -- Limpar edge function metrics antigas (>7 dias)
-  DELETE FROM public.edge_function_metrics WHERE created_at < now() - interval '7 days';
-  GET DIAGNOSTICS v_efm_deleted = ROW_COUNT;
-  
-  -- ETAPA 1: Arquivar job_executions de jobs antigos (>30 dias)
-  WITH old_jobs AS (
-    SELECT id FROM public.jobs
-    WHERE status IN ('completed', 'failed')
-      AND created_at < now() - interval '30 days'
-    LIMIT 1000
-  ),
-  executions_to_archive AS (
-    SELECT je.id FROM job_executions je
-    INNER JOIN old_jobs oj ON je.job_id = oj.id
-    WHERE je.archived_at IS NULL
-    LIMIT 1000
-  )
-  UPDATE job_executions
-  SET archived_at = NOW()
-  FROM executions_to_archive eta
-  WHERE job_executions.id = eta.id;
-  
-  GET DIAGNOSTICS v_executions_archived = ROW_COUNT;
-  
-  -- ETAPA 2: Deletar jobs apenas se TODAS as execuções já foram arquivadas há 30+ dias
-  WITH deletable_jobs AS (
-    SELECT j.id 
-    FROM public.jobs j
-    WHERE j.status IN ('completed', 'failed')
-      AND j.created_at < now() - interval '30 days'
-      AND NOT EXISTS (
-        -- Não deletar se houver execuções não arquivadas
-        SELECT 1 FROM job_executions je 
-        WHERE je.job_id = j.id AND je.archived_at IS NULL
-      )
-      AND NOT EXISTS (
-        -- Não deletar se houver execuções arquivadas recentemente (< 30 dias)
-        SELECT 1 FROM job_executions je 
-        WHERE je.job_id = j.id AND je.archived_at > NOW() - INTERVAL '30 days'
-      )
-    LIMIT 500
-  )
-  DELETE FROM public.jobs
-  USING deletable_jobs dj
-  WHERE jobs.id = dj.id;
-  
-  GET DIAGNOSTICS v_old_jobs_deleted = ROW_COUNT;
-  
-  RETURN jsonb_build_object(
-    'success', true,
-    'hmac_deleted', v_hmac_deleted,
-    'rate_limits_deleted', v_rate_limits_deleted,
-    'failed_logins_deleted', v_failed_logins_deleted,
-    'edge_function_metrics_deleted', v_efm_deleted,
-    'job_executions_archived', v_executions_archived,
-    'old_jobs_deleted', v_old_jobs_deleted,
-    'executed_at', now()
-  );
-END;
-$$;
-```
+| Finding | Status | Ação Necessária |
+|---------|--------|-----------------|
+| profiles_public exposta | **FALSO POSITIVO** | Documentar - view já tem filtro de tenant |
+| agents_public exposta | **FALSO POSITIVO** | Documentar - view já tem filtro de tenant |
+| active_agents sem RLS | **REAL** | Revogar grant para `anon` |
+| RLS Disabled in Public | **REAL** | Habilitar RLS na partição `agent_system_metrics_2026_03` |
+| Security Definer View | **PARCIALMENTE REAL** | Adicionar `security_invoker=on` em `v_cron_health` |
 
 ---
 
-## Fase 2: Corrigir run-rls-tests (Falso Positivo)
+## Análise Detalhada
 
-### Problema
-O teste consulta `pg_policies` via Supabase client, mas essa tabela do sistema não é acessível.
+### Finding 1: profiles_public exposta
 
-### Solução
-Criar uma RPC que verifica políticas usando `service_role`:
+**Diagnóstico:** O scanner alerta que a view expõe dados de perfil. Porém, a definição da view mostra:
 
 ```sql
-CREATE OR REPLACE FUNCTION count_policies_for_table(p_table_name TEXT)
-RETURNS INTEGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO public
-AS $$
-DECLARE
-  v_count INTEGER;
-BEGIN
-  SELECT COUNT(*) INTO v_count
-  FROM pg_policies
-  WHERE schemaname = 'public' AND tablename = p_table_name;
-  
-  RETURN v_count;
-END;
-$$;
-
-COMMENT ON FUNCTION count_policies_for_table IS 
-'Retorna o número de políticas RLS para uma tabela. Usado por run-rls-tests.';
-```
-
-### Atualizar Edge Function
-
-Modificar `run-rls-tests/index.ts` para usar a nova RPC:
-
-```typescript
-// ANTES (não funciona):
-const { count, error } = await supabase
-  .from('pg_policies')
-  .select('*', { count: 'exact', head: true })
-  .eq('tablename', table);
-
-// DEPOIS (funciona):
-const { data: policyCount, error } = await supabase
-  .rpc('count_policies_for_table', { p_table_name: table });
-```
-
----
-
-## Fase 3: Resolver DLQ Pendente
-
-### Problema
-134 itens na DLQ sem resolução.
-
-### Solução
-Executar a RPC `process_dlq_batch` para cada tenant com itens pendentes:
-
-```sql
--- Identificar tenants com DLQ pendente
-SELECT tenant_id, COUNT(*) as pending
-FROM failed_jobs_dlq
-WHERE resolved_at IS NULL
-GROUP BY tenant_id;
-
--- Executar resolução em batch
-SELECT process_dlq_batch(
-  p_tenant_id := 'TENANT_ID'::UUID,
-  p_batch_size := 200,
-  p_action := 'resolve'
+SELECT id, user_id, username, full_name, created_at
+FROM profiles p
+WHERE EXISTS (
+  SELECT 1 FROM user_roles ur
+  WHERE ur.user_id = p.user_id 
+    AND (ur.tenant_id = get_active_tenant_id() OR is_current_super_admin())
 );
 ```
+
+**Proteções existentes:**
+- `security_invoker=on` - RLS do caller é aplicado
+- Filtro por `get_active_tenant_id()` - Isolamento de tenant
+- SEM grant para `anon` - Apenas `authenticated` pode acessar
+
+**Veredicto:** FALSO POSITIVO. A view é segura.
+
+---
+
+### Finding 2: agents_public exposta
+
+**Diagnóstico:** Similar ao anterior. A view tem:
+
+```sql
+WHERE (tenant_id = get_active_tenant_id()) OR is_current_super_admin();
+```
+
+**Proteções existentes:**
+- `security_invoker=on`
+- Filtro de tenant
+- SEM grant para `anon`
+
+**Veredicto:** FALSO POSITIVO. A view é segura.
+
+---
+
+### Finding 3: active_agents sem RLS (REAL)
+
+**Diagnóstico:** A view `active_agents` tem:
+- `security_invoker=on`
+- Filtro de tenant na definição
+- **MAS** tem grant para `anon`
+
+**Problema:** Usuários não autenticados poderiam tentar acessar a view. O `security_invoker` protege, mas o grant é desnecessário.
+
+**Correção:**
+
+```sql
+REVOKE ALL ON active_agents FROM anon;
+```
+
+---
+
+### Finding 4: RLS Disabled in Public (REAL)
+
+**Diagnóstico:** A tabela particionada `agent_system_metrics_2026_03` não tem RLS habilitado.
+
+**Correção:**
+
+```sql
+ALTER TABLE agent_system_metrics_2026_03 ENABLE ROW LEVEL SECURITY;
+
+-- Política para service_role (já existe na tabela pai, mas precisa na partição)
+CREATE POLICY "service_role_full_access" ON agent_system_metrics_2026_03
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Política para authenticated (leitura do próprio tenant)
+CREATE POLICY "authenticated_read_own_tenant" ON agent_system_metrics_2026_03
+  FOR SELECT TO authenticated
+  USING (tenant_id = get_active_tenant_id() OR is_current_super_admin());
+```
+
+---
+
+### Finding 5: Security Definer View (PARCIALMENTE REAL)
+
+**Diagnóstico:** O linter detectou views sem `security_invoker=on`. Após verificação:
+
+| View | Status |
+|------|--------|
+| `v_cron_health` | SEM security_invoker - **PRECISA CORRIGIR** |
+| Outras views | Já têm `security_invoker=true` |
+
+**Correção:**
+
+```sql
+DROP VIEW IF EXISTS v_cron_health;
+
+CREATE VIEW v_cron_health 
+WITH (security_invoker = on) AS
+SELECT 
+  cron_name,
+  last_success_at,
+  consecutive_failures,
+  CASE
+    WHEN last_success_at IS NULL THEN 'never_run'
+    WHEN consecutive_failures >= 3 THEN 'critical'
+    WHEN consecutive_failures >= 1 THEN 'warning'
+    WHEN last_success_at < NOW() - INTERVAL '2 hours' 
+      AND cron_name LIKE '%15min%' THEN 'stale'
+    WHEN last_success_at < NOW() - INTERVAL '12 hours' 
+      AND cron_name LIKE '%6h%' THEN 'stale'
+    WHEN last_success_at < NOW() - INTERVAL '48 hours' 
+      AND cron_name LIKE '%daily%' THEN 'stale'
+    ELSE 'healthy'
+  END AS status
+FROM cron_health_checks;
+
+GRANT SELECT ON v_cron_health TO authenticated;
+GRANT SELECT ON v_cron_health TO service_role;
+```
+
+---
+
+### Finding 6 (Warnings): RLS Policy Always True
+
+**Diagnóstico:** Políticas com `USING(true)` detectadas. Todas são para `service_role`:
+
+- `hmac_signatures_2026_*` - service_role only
+- `network_anomalies` - service_role INSERT
+- `cron_health_checks` - service_role only
+- etc.
+
+**Veredicto:** ESPERADO E SEGURO (ADR-023). O service_role só é usado por Edge Functions no backend.
 
 ---
 
@@ -192,26 +153,7 @@ SELECT process_dlq_batch(
 
 | Arquivo | Ação | Descrição |
 |---------|------|-----------|
-| SQL Migration | CRIAR | Corrigir `cleanup_old_data_scheduled` + criar RPC `count_policies_for_table` |
-| `run-rls-tests/index.ts` | EDITAR | Usar RPC em vez de consulta direta |
-
----
-
-## Checklist de Validação
-
-```sql
--- 1. Verificar cleanup não falha mais
-SELECT status, COUNT(*) 
-FROM cron.job_run_details 
-WHERE jobid = 34 AND start_time > NOW() - INTERVAL '2 hours'
-GROUP BY status;
-
--- 2. Verificar RLS tests passam
-SELECT * FROM v_cron_health WHERE cron_name = 'rls-automated-tests-6h';
-
--- 3. Verificar DLQ zerada
-SELECT COUNT(*) FROM failed_jobs_dlq WHERE resolved_at IS NULL;
-```
+| SQL Migration | CRIAR | Correções de grants e RLS |
 
 ---
 
@@ -219,131 +161,111 @@ SELECT COUNT(*) FROM failed_jobs_dlq WHERE resolved_at IS NULL;
 
 ```sql
 -- ============================================================
--- MIGRAÇÃO: Correção dos 3 Problemas Críticos Restantes
+-- MIGRAÇÃO: Correção dos Findings do Security Scanner
 -- ============================================================
 
 BEGIN;
 
--- 1. Corrigir cleanup_old_data_scheduled
-CREATE OR REPLACE FUNCTION cleanup_old_data_scheduled()
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO public
-AS $$
-DECLARE
-  v_hmac_deleted INTEGER := 0;
-  v_rate_limits_deleted INTEGER := 0;
-  v_failed_logins_deleted INTEGER := 0;
-  v_efm_deleted INTEGER := 0;
-  v_executions_archived INTEGER := 0;
-  v_old_jobs_deleted INTEGER := 0;
-BEGIN
-  DELETE FROM public.hmac_signatures WHERE used_at < now() - interval '6 hours';
-  GET DIAGNOSTICS v_hmac_deleted = ROW_COUNT;
-  
-  DELETE FROM public.rate_limits WHERE window_start < now() - interval '30 minutes';
-  GET DIAGNOSTICS v_rate_limits_deleted = ROW_COUNT;
-  
-  DELETE FROM public.failed_login_attempts WHERE created_at < now() - interval '24 hours';
-  GET DIAGNOSTICS v_failed_logins_deleted = ROW_COUNT;
-  
-  DELETE FROM public.edge_function_metrics WHERE created_at < now() - interval '7 days';
-  GET DIAGNOSTICS v_efm_deleted = ROW_COUNT;
-  
-  -- ETAPA 1: Arquivar job_executions de jobs antigos
-  WITH old_jobs AS (
-    SELECT id FROM public.jobs
-    WHERE status IN ('completed', 'failed')
-      AND created_at < now() - interval '30 days'
-    LIMIT 1000
-  ),
-  executions_to_archive AS (
-    SELECT je.id FROM job_executions je
-    INNER JOIN old_jobs oj ON je.job_id = oj.id
-    WHERE je.archived_at IS NULL
-    LIMIT 1000
-  )
-  UPDATE job_executions
-  SET archived_at = NOW()
-  FROM executions_to_archive eta
-  WHERE job_executions.id = eta.id;
-  
-  GET DIAGNOSTICS v_executions_archived = ROW_COUNT;
-  
-  -- ETAPA 2: Deletar jobs cujas execuções já foram arquivadas há 30+ dias
-  WITH deletable_jobs AS (
-    SELECT j.id 
-    FROM public.jobs j
-    WHERE j.status IN ('completed', 'failed')
-      AND j.created_at < now() - interval '30 days'
-      AND NOT EXISTS (
-        SELECT 1 FROM job_executions je 
-        WHERE je.job_id = j.id AND je.archived_at IS NULL
-      )
-      AND NOT EXISTS (
-        SELECT 1 FROM job_executions je 
-        WHERE je.job_id = j.id AND je.archived_at > NOW() - INTERVAL '30 days'
-      )
-    LIMIT 500
-  )
-  DELETE FROM public.jobs
-  USING deletable_jobs dj
-  WHERE jobs.id = dj.id;
-  
-  GET DIAGNOSTICS v_old_jobs_deleted = ROW_COUNT;
-  
-  RETURN jsonb_build_object(
-    'success', true,
-    'hmac_deleted', v_hmac_deleted,
-    'rate_limits_deleted', v_rate_limits_deleted,
-    'failed_logins_deleted', v_failed_logins_deleted,
-    'edge_function_metrics_deleted', v_efm_deleted,
-    'job_executions_archived', v_executions_archived,
-    'old_jobs_deleted', v_old_jobs_deleted,
-    'executed_at', now()
-  );
-END;
-$$;
+-- 1. Revogar grant de anon em active_agents
+REVOKE ALL ON active_agents FROM anon;
+REVOKE ALL ON active_agents FROM PUBLIC;
 
--- 2. Criar RPC para verificar políticas
-CREATE OR REPLACE FUNCTION count_policies_for_table(p_table_name TEXT)
-RETURNS INTEGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO public
-AS $$
-DECLARE
-  v_count INTEGER;
-BEGIN
-  SELECT COUNT(*) INTO v_count
-  FROM pg_policies
-  WHERE schemaname = 'public' AND tablename = p_table_name;
-  
-  RETURN v_count;
-END;
-$$;
+-- Garantir que apenas authenticated e service_role têm acesso
+GRANT SELECT ON active_agents TO authenticated;
+GRANT SELECT ON active_agents TO service_role;
 
-COMMENT ON FUNCTION count_policies_for_table IS 
-'Retorna número de políticas RLS para uma tabela. Usado por run-rls-tests.';
+-- 2. Habilitar RLS na partição de métricas
+ALTER TABLE agent_system_metrics_2026_03 ENABLE ROW LEVEL SECURITY;
 
--- 3. Atualizar cron_health_checks para resetar falhas
-UPDATE cron_health_checks
-SET consecutive_failures = 0,
-    last_error = NULL,
-    updated_at = NOW()
-WHERE cron_name = 'rls-automated-tests-6h';
+-- Política para service_role (backend)
+CREATE POLICY "service_role_full_access" ON agent_system_metrics_2026_03
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Política para leitura autenticada
+CREATE POLICY "authenticated_read_own_tenant" ON agent_system_metrics_2026_03
+  FOR SELECT TO authenticated
+  USING (tenant_id = get_active_tenant_id() OR is_current_super_admin());
+
+-- 3. Recriar v_cron_health com security_invoker
+DROP VIEW IF EXISTS v_cron_health;
+
+CREATE VIEW v_cron_health 
+WITH (security_invoker = on) AS
+SELECT 
+  cron_name,
+  last_success_at,
+  consecutive_failures,
+  CASE
+    WHEN last_success_at IS NULL THEN 'never_run'
+    WHEN consecutive_failures >= 3 THEN 'critical'
+    WHEN consecutive_failures >= 1 THEN 'warning'
+    WHEN last_success_at < NOW() - INTERVAL '2 hours' 
+      AND cron_name LIKE '%15min%' THEN 'stale'
+    WHEN last_success_at < NOW() - INTERVAL '12 hours' 
+      AND cron_name LIKE '%6h%' THEN 'stale'
+    WHEN last_success_at < NOW() - INTERVAL '48 hours' 
+      AND cron_name LIKE '%daily%' THEN 'stale'
+    ELSE 'healthy'
+  END AS status
+FROM cron_health_checks;
+
+GRANT SELECT ON v_cron_health TO authenticated;
+GRANT SELECT ON v_cron_health TO service_role;
+
+COMMENT ON VIEW v_cron_health IS 
+'View de saúde dos crons com security_invoker=on. Usada para monitoramento.';
 
 COMMIT;
 ```
 
 ---
 
-## Ordem de Execução
+## Ações Pós-Migração
 
-1. Executar migração SQL
-2. Editar `run-rls-tests/index.ts` para usar nova RPC
-3. Deploy da Edge Function
-4. Executar resolução de DLQ
-5. Monitorar próximo ciclo de crons
+### Documentar Falsos Positivos
+
+Após a migração, os seguintes findings devem ser marcados como "Ignorar" no scanner com justificativa:
+
+1. **profiles_public**: "View tem security_invoker=on e filtro de tenant via get_active_tenant_id(). Sem grant para anon."
+
+2. **agents_public**: "View tem security_invoker=on e filtro de tenant. Sem grant para anon. Conforme ADR-023."
+
+3. **RLS Policy Always True (warnings)**: "Políticas com USING(true) são exclusivas para service_role, conforme ADR-023. Acesso controlado via backend."
+
+---
+
+## Checklist de Validação
+
+```sql
+-- 1. Verificar active_agents sem grant para anon
+SELECT 
+  a.grantee::regrole::text
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+JOIN aclexplode(c.relacl) a ON true
+WHERE n.nspname = 'public' AND c.relname = 'active_agents'
+  AND a.grantee::regrole::text = 'anon';
+-- Deve retornar vazio
+
+-- 2. Verificar RLS habilitado na partição
+SELECT relrowsecurity FROM pg_class 
+WHERE relname = 'agent_system_metrics_2026_03';
+-- Deve retornar true
+
+-- 3. Verificar v_cron_health tem security_invoker
+SELECT reloptions FROM pg_class 
+WHERE relname = 'v_cron_health' AND relkind = 'v';
+-- Deve conter 'security_invoker=on'
+```
+
+---
+
+## Resumo Final
+
+| Ação | Impacto |
+|------|---------|
+| Revogar anon de active_agents | Elimina erro no scanner |
+| Habilitar RLS na partição | Elimina erro de RLS disabled |
+| Adicionar security_invoker em v_cron_health | Elimina warning de security definer |
+| Documentar falsos positivos | Limpa alertas restantes |
 
