@@ -21671,6 +21671,17 @@ export type Database = {
         Args: { p_days?: number; p_tenant_id: string }
         Returns: Json
       }
+      get_balanced_pending_actions: {
+        Args: { p_limit?: number }
+        Returns: {
+          action_payload: Json
+          action_type: string
+          ai_insights: Json
+          id: string
+          insight_id: string
+          tenant_id: string
+        }[]
+      }
       get_critical_insights_count: {
         Args: { p_tenant_id: string }
         Returns: number
