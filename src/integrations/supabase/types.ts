@@ -18947,29 +18947,20 @@ export type Database = {
         Row: {
           consecutive_failures: number | null
           cron_name: string | null
-          last_error: string | null
-          last_failure_at: string | null
           last_success_at: string | null
           status: string | null
-          updated_at: string | null
         }
         Insert: {
           consecutive_failures?: number | null
           cron_name?: string | null
-          last_error?: string | null
-          last_failure_at?: string | null
           last_success_at?: string | null
           status?: never
-          updated_at?: string | null
         }
         Update: {
           consecutive_failures?: number | null
           cron_name?: string | null
-          last_error?: string | null
-          last_failure_at?: string | null
           last_success_at?: string | null
           status?: never
-          updated_at?: string | null
         }
         Relationships: []
       }
