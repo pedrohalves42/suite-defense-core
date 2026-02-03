@@ -71,6 +71,13 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
 
+      // NULLMANN-FIX: Adicionar update_cron_health para fechar loop de monitoramento
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'cron-sentinel',
+        p_success: true,
+        p_error: null
+      });
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -179,6 +186,13 @@ Deno.serve(async (req) => {
       p_job_source: 'cron'
     });
 
+    // NULLMANN-FIX: Adicionar update_cron_health para fechar loop de monitoramento
+    await supabase.rpc('update_cron_health', {
+      p_cron_name: 'cron-sentinel',
+      p_success: true,
+      p_error: null
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -208,6 +222,13 @@ Deno.serve(async (req) => {
         p_result: null,
         p_processed_count: 0,
         p_job_source: 'cron'
+      });
+
+      // NULLMANN-FIX: Registrar falha no cron health
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'cron-sentinel',
+        p_success: false,
+        p_error: error instanceof Error ? error.message : 'Unknown error'
       });
     } catch {}
 
