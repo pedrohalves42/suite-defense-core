@@ -20514,10 +20514,29 @@ export type Database = {
       }
       v_security_invariants: {
         Row: {
-          description: string | null
-          invariant_type: string | null
-          object_name: unknown
-          status: string | null
+          health_active_agents: number | null
+          health_executed_actions_24h: number | null
+          health_jobs_completed_24h: number | null
+          health_pending_actions: number | null
+          inv001_tables_with_policies: number | null
+          inv001_tables_with_rls: number | null
+          inv001_total_tables: number | null
+          inv002_last_verification: string | null
+          inv002_signatures_1h: number | null
+          inv002_signatures_24h: number | null
+          inv002_unique_agents_24h: number | null
+          inv003_active_tenants: number | null
+          inv003_rls_tests_failed_7d: number | null
+          inv003_rls_tests_passed_7d: number | null
+          inv004_no_secrets_in_views: boolean | null
+          inv004_safe_agent_views: number | null
+          inv005_audit_entries_1h: number | null
+          inv005_audit_entries_24h: number | null
+          inv005_evidence_logs_24h: number | null
+          inv005_unique_actions_24h: number | null
+          inv006_no_anon_write: boolean | null
+          inv006_service_role_policies: number | null
+          snapshot_at: string | null
         }
         Relationships: []
       }
