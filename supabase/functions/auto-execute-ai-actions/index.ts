@@ -89,22 +89,31 @@ Deno.serve(async (req) => {
     }
 
     // Buscar ações pendentes que não requerem aprovação
-    const { data: pendingActions, error: actionsError } = await supabase
-      .from('ai_actions')
-      .select(`
-        id,
-        tenant_id,
-        action_type,
-        action_payload,
-        insight_id,
-        ai_insights(id, confidence_score, insight_type, status)
-      `)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: true })
-      .limit(50)
-
-    if (actionsError) {
-      throw actionsError
+    // P0 FIX: Buscar ações de cada tenant separadamente para garantir balanceamento justo
+    // Usa query que distribui ações entre tenants (round-robin)
+    const { data: pendingActionsRaw, error: actionsError } = await supabase
+      .rpc('get_balanced_pending_actions', { p_limit: 50 })
+    
+    // Fallback para query direta se RPC não existir
+    let pendingActions = pendingActionsRaw
+    if (actionsError || !pendingActionsRaw) {
+      console.log(`[${requestId}] Using fallback query (RPC not available)`)
+      const { data, error } = await supabase
+        .from('ai_actions')
+        .select(`
+          id,
+          tenant_id,
+          action_type,
+          action_payload,
+          insight_id,
+          ai_insights(id, confidence_score, insight_type, status)
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
+        .limit(50)
+      
+      if (error) throw error
+      pendingActions = data
     }
 
     if (!pendingActions || pendingActions.length === 0) {
