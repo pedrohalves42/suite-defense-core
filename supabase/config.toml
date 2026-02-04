@@ -682,8 +682,9 @@ verify_jwt = false
 schedule = "*/10 * * * *"
 
 # === Security Operations Framework ===
+# V-002 Fix: Allow cron calls without JWT (function validates internally via x-cron-source header)
 [functions.run-rls-tests]
-verify_jwt = true
+verify_jwt = false
 
 # === Security Hardening Edge Functions (Phase 3) ===
 [functions.delete-invite]
