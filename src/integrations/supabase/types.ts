@@ -16230,58 +16230,40 @@ export type Database = {
       }
       agent_snapshots: {
         Row: {
-          active_issues: number | null
           agent_id: string | null
-          agent_state: string | null
+          agent_mode: string | null
+          agent_name: string | null
+          agent_version: string | null
+          created_at: string | null
+          display_name: string | null
           hostname: string | null
-          is_isolated: boolean | null
-          is_throttled: boolean | null
           last_heartbeat: string | null
-          latency_ms: number | null
-          online: boolean | null
-          os_type: string | null
-          safe_mode: boolean | null
-          safe_mode_reason: string | null
-          snapshot_at: string | null
+          status: string | null
           tenant_id: string | null
-          unresolved_insights: number | null
-          version: string | null
         }
         Insert: {
-          active_issues?: never
           agent_id?: string | null
-          agent_state?: string | null
+          agent_mode?: string | null
+          agent_name?: string | null
+          agent_version?: string | null
+          created_at?: string | null
+          display_name?: string | null
           hostname?: string | null
-          is_isolated?: never
-          is_throttled?: never
           last_heartbeat?: string | null
-          latency_ms?: never
-          online?: never
-          os_type?: string | null
-          safe_mode?: never
-          safe_mode_reason?: string | null
-          snapshot_at?: never
+          status?: string | null
           tenant_id?: string | null
-          unresolved_insights?: never
-          version?: string | null
         }
         Update: {
-          active_issues?: never
           agent_id?: string | null
-          agent_state?: string | null
+          agent_mode?: string | null
+          agent_name?: string | null
+          agent_version?: string | null
+          created_at?: string | null
+          display_name?: string | null
           hostname?: string | null
-          is_isolated?: never
-          is_throttled?: never
           last_heartbeat?: string | null
-          latency_ms?: never
-          online?: never
-          os_type?: string | null
-          safe_mode?: never
-          safe_mode_reason?: string | null
-          snapshot_at?: never
+          status?: string | null
           tenant_id?: string | null
-          unresolved_insights?: never
-          version?: string | null
         }
         Relationships: [
           {
