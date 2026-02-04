@@ -2,6 +2,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import NotificationChannels from "@/pages/admin/NotificationChannels";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -139,6 +140,7 @@ const App = () => (
       <TooltipProvider>
       <Toaster />
       <Sonner />
+      <PWAInstallPrompt />
         <BrowserRouter
           future={{
             v7_startTransition: true,
