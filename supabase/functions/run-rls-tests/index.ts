@@ -23,10 +23,9 @@ const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 interface RlsTestResult {
   test_name: string;
-  test_category: string;
+  table_name: string | null;
   passed: boolean;
-  error_message: string | null;
-  execution_time_ms: number;
+  failure_reason: string | null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -40,7 +39,6 @@ Deno.serve(async (req: Request) => {
   try {
     // Security: Allow cron/internal calls OR authenticated service_role
     const authHeader = req.headers.get('Authorization');
-    const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
     const isCronCall = req.headers.get('x-cron-source') === 'true';
     
     // Validate: either cron with internal secret, or valid JWT
@@ -60,87 +58,80 @@ Deno.serve(async (req: Request) => {
 
     const results: RlsTestResult[] = [];
     const startTime = Date.now();
+    
+    // Generate a test_run_id for this batch
+    const testRunId = crypto.randomUUID();
 
     // Test 1: Verify all tables have RLS enabled
-    const test1Start = Date.now();
     const { data: tablesWithoutRls, error: test1Error } = await supabase.rpc('get_tables_without_rls');
     
     if (test1Error) {
       // Fallback query if RPC doesn't exist
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('v_rls_continuous_check')
         .select('*')
         .eq('rls_enabled', false);
       
       results.push({
         test_name: 'all_tables_have_rls',
-        test_category: 'rls_coverage',
+        table_name: null,
         passed: !data || data.length === 0,
-        error_message: data && data.length > 0 
+        failure_reason: data && data.length > 0 
           ? `Tables without RLS: ${data.map((t: any) => t.table_name).join(', ')}`
-          : null,
-        execution_time_ms: Date.now() - test1Start
+          : null
       });
     } else {
       results.push({
         test_name: 'all_tables_have_rls',
-        test_category: 'rls_coverage',
+        table_name: null,
         passed: !tablesWithoutRls || tablesWithoutRls.length === 0,
-        error_message: tablesWithoutRls && tablesWithoutRls.length > 0
+        failure_reason: tablesWithoutRls && tablesWithoutRls.length > 0
           ? `Tables without RLS: ${tablesWithoutRls.map((t: any) => t.table_name).join(', ')}`
-          : null,
-        execution_time_ms: Date.now() - test1Start
+          : null
       });
     }
 
     // Test 2: Verify policies exist for key tables (using RPC to access pg_policies)
     const keyTables = ['agents', 'user_roles', 'tenants', 'audit_logs', 'security_logs', 'enrollment_keys'];
     for (const table of keyTables) {
-      const testStart = Date.now();
       const { data: policyCount, error } = await supabase
         .rpc('count_policies_for_table', { p_table_name: table });
 
       const count = policyCount ?? 0;
       results.push({
         test_name: `policy_exists_${table}`,
-        test_category: 'policy_coverage',
+        table_name: table,
         passed: count > 0,
-        error_message: count === 0 ? `No policies found for table ${table}` : (error ? error.message : null),
-        execution_time_ms: Date.now() - testStart
+        failure_reason: count === 0 ? `No policies found for table ${table}` : (error ? error.message : null)
       });
     }
 
     // Test 3: Verify views have security_invoker (check via database function)
-    const test3Start = Date.now();
     try {
       const { data: viewsData, error: viewsError } = await supabase
         .rpc('count_views_without_security_invoker');
       
       results.push({
         test_name: 'views_have_security_invoker',
-        test_category: 'view_security',
+        table_name: null,
         passed: viewsError ? true : (viewsData === 0),
-        error_message: viewsError 
+        failure_reason: viewsError 
           ? null 
-          : (viewsData > 0 ? `${viewsData} views without security_invoker` : null),
-        execution_time_ms: Date.now() - test3Start
+          : (viewsData > 0 ? `${viewsData} views without security_invoker` : null)
       });
     } catch {
       // Skip if function doesn't exist
       results.push({
         test_name: 'views_have_security_invoker',
-        test_category: 'view_security',
+        table_name: null,
         passed: true,
-        error_message: null,
-        execution_time_ms: Date.now() - test3Start
+        failure_reason: null
       });
     }
 
     // Test 4: Verify critical tables are protected
     const criticalTables = ['enrollment_keys', 'api_keys', 'agent_signing_keys'];
     for (const table of criticalTables) {
-      const testStart = Date.now();
-      
       // Try to read without auth (should fail or return empty)
       const anonClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!);
       const { data, error } = await anonClient
@@ -150,18 +141,16 @@ Deno.serve(async (req: Request) => {
 
       results.push({
         test_name: `anon_blocked_${table}`,
-        test_category: 'access_control',
+        table_name: table,
         passed: error !== null || (data?.length === 0),
-        error_message: !error && data && data.length > 0 
+        failure_reason: !error && data && data.length > 0 
           ? `Anonymous access allowed to ${table}` 
-          : null,
-        execution_time_ms: Date.now() - testStart
+          : null
       });
     }
 
     // Test 5: Verify security_logs is append-only for anon
     // Strategy: Get a real record ID and try to delete it - RLS should block
-    const test5Start = Date.now();
     const anonClient2 = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!);
     
     // First, get a real security_log ID using service role
@@ -182,24 +171,18 @@ Deno.serve(async (req: Request) => {
         .eq('id', sampleLog.id);
       
       // RLS blocking = error OR count = 0 with no error means RLS filtered out
-      // But if count is null and no error, it could mean RLS blocked (returning 0)
-      // Supabase with RLS USING(false) returns no error but deletes 0 rows
       deleteBlocked = deleteError !== null || count === 0 || count === null;
       
       if (!deleteBlocked) {
         deleteErrorMsg = 'Anonymous delete allowed on security_logs';
       }
-    } else {
-      // No logs exist to test, assume pass (can't verify)
-      deleteBlocked = true;
     }
 
     results.push({
       test_name: 'security_logs_append_only',
-      test_category: 'audit_integrity',
+      table_name: 'security_logs',
       passed: deleteBlocked,
-      error_message: deleteErrorMsg,
-      execution_time_ms: Date.now() - test5Start
+      failure_reason: deleteErrorMsg
     });
 
     // Calculate summary
@@ -210,17 +193,22 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[${requestId}] Tests complete: ${passedTests}/${totalTests} passed in ${totalTime}ms`);
 
-    // Record results in database
+    // Record results in database - aligned with rls_test_results schema
     const now = new Date().toISOString();
     for (const result of results) {
-      await supabase.from('rls_test_results').insert({
+      const { error: insertError } = await supabase.from('rls_test_results').insert({
+        test_run_id: testRunId,
         test_name: result.test_name,
-        test_category: result.test_category,
+        table_name: result.table_name,
         passed: result.passed,
-        error_message: result.error_message,
-        execution_time_ms: result.execution_time_ms,
-        tested_at: now
+        failure_reason: result.failure_reason,
+        tested_at: now,
+        details: { request_id: requestId }
       });
+      
+      if (insertError) {
+        console.error(`[${requestId}] Failed to insert test result:`, insertError);
+      }
     }
 
     // Update cron health check (closes monitoring loop)
@@ -249,6 +237,7 @@ Deno.serve(async (req: Request) => {
         endpoint: '/functions/v1/run-rls-tests',
         details: {
           request_id: requestId,
+          test_run_id: testRunId,
           failed_tests: failedTests,
           total_tests: totalTests,
           passed_tests: passedTests
@@ -260,6 +249,7 @@ Deno.serve(async (req: Request) => {
     return secureJsonResponse({
       success: true,
       request_id: requestId,
+      test_run_id: testRunId,
       timestamp: now,
       total: totalTests,
       passed: passedTests,
