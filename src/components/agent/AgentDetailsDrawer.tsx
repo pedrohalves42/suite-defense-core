@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AgentStateExplainer } from '@/components/agent/AgentStateExplainer';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { DiagnosticPanel } from '@/components/agent/DiagnosticPanel';
+import { AgentProcessesPanel } from '@/components/agent/AgentProcessesPanel';
 import { useAgentCausality } from '@/hooks/useAgentCausality';
 import { useAntivirusStatus } from '@/hooks/useAntivirusStatus';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -168,13 +169,17 @@ export function AgentDetailsDrawer({
             </div>
           ) : (
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="overview" className="text-xs sm:text-sm">
                   <Eye className="h-3.5 w-3.5 mr-1.5" />
-                  Visão Geral
+                  Geral
+                </TabsTrigger>
+                <TabsTrigger value="processes" className="text-xs sm:text-sm">
+                  <Activity className="h-3.5 w-3.5 mr-1.5" />
+                  Processos
                 </TabsTrigger>
                 <TabsTrigger value="diagnostic" className="text-xs sm:text-sm">
-                  <Activity className="h-3.5 w-3.5 mr-1.5" />
+                  <Stethoscope className="h-3.5 w-3.5 mr-1.5" />
                   Diagnóstico
                 </TabsTrigger>
                 <TabsTrigger value="actions" className="text-xs sm:text-sm">
@@ -232,6 +237,18 @@ export function AgentDetailsDrawer({
                     </Button>
                   )}
                 </div>
+              </TabsContent>
+
+              {/* Tab: Processos (v5.0+) */}
+              <TabsContent value="processes" className="mt-4">
+                {agentId && tenantId ? (
+                  <AgentProcessesPanel agentId={agentId} tenantId={tenantId} />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Selecione um computador para ver processos</p>
+                  </div>
+                )}
               </TabsContent>
 
               {/* Tab: Diagnóstico */}
