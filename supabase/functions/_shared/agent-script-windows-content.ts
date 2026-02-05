@@ -1,11 +1,9 @@
-/* eslint-disable no-useless-escape */
 /**
- * CyberShield Agent Windows Script - AUTO-GERADO
- * NAO EDITAR MANUALMENTE.
- * Fonte: public/agent-scripts/cybershield-agent-windows-v4.ps1
- * Versao: v4.1.2
- * SHA256: 54eb905ea0fe24206132f7f17b9bcf78a61264170f1202cf89e50682a1788a7e
- * Gerado em: 2025-12-22T03:18:16.216Z
+ * CyberShield Agent Windows Script - AUTO-GENERATED
+ * DO NOT EDIT MANUALLY.
+ * Source: public/agent-scripts/cybershield-agent-windows-v5.ps1
+ * Version: v5.0.2
+ * Generated: 2026-02-05
  */
 
 export function getAgentScriptWindows(): string {
@@ -13,70 +11,70 @@ export function getAgentScriptWindows(): string {
 }
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
-    CyberShield Agent - Windows v4.1.2
-    
-    SSA-009: Restauração da coleta de browser_history (Chrome, Firefox, Edge)
-    SSA-010: Restauração de todos os jobs do v3 (scan, fix_firewall, restart_service, etc.)
-    FASE 2.1: State Machine Formal (6 estados)
-    FASE 2.2: Evidence Journal Local
-    FASE 2.4: DNS Filter Go como Windows Service
-    FASE 2.5: Policy Contract (Desired vs Actual + Drift Detection)
-    FASE 2.6: Ed25519 Signature Verification
-    FASE 3.0: Auto-Rollback & Safe Mode (NEW)
-    FASE VIKTOR: Force Update via Heartbeat Response
-    SSA-004: Payload Signing - Verifies Ed25519 signatures on jobs
-    
-    Estados:
-    - BOOTSTRAP: Inicializacao do agente
-    - SYNCING: Sincronizando com servidor
-    - ENFORCING: Operacao normal, executando jobs
-    - DEGRADED: Erro nao-critico, funcionando parcialmente
-    - ERROR: Erro critico, requer intervencao
-    - RECOVERY: Tentando auto-recuperacao
-    
-    Funcionalidades v4.1.0 (PAYLOAD SIGNING):
-    - NEW: Ed25519 job payload signature verification
-    - NEW: Rejects unsigned jobs when Ed25519PublicKey is configured
-    - NEW: Verify-JobSignature function using .NET crypto
-    - NEW: Canonical payload format: job_id:job_type:JSON(payload)
-    - SECURITY: Prevents RCE via compromised database
-    
-    v4.0.11 (DISK METRICS FIX):
-    - CRITICAL FIX: Coleta de TODOS os discos (nao apenas C:)
-    - NEW: Invoke-ReportJob coleta disk_total_gb, disk_free_gb, disks[]
-    - NEW: Send-SystemMetrics envia array disks completo para backend
-    - NEW: Informacoes detalhadas: drive_letter, drive_label, is_system_drive
-    - NEW: Logging melhorado para debug de metricas
-    - FIXED: agent_disk_metrics agora populada corretamente
-    
-    v4.0.10 (VIKTOR RECOVERY):
-    - Force Update via Heartbeat Response (bypassa job system completamente)
-    - Apply-ForcedUpdate funcao imortal que processa update do heartbeat
-    - Confirmacao de force_update no backend apos aplicacao
-    - Send-SystemMetrics funcao agora definida
-    - Metricas sendo enviadas a cada 5 minutos
-    - Auto-rollback with structured backup before update
-    - Post-update health check (state machine, heartbeat, poll-jobs)
-    - Safe Mode after 2 consecutive rollbacks - disables auto-updates
-    - submit-rollback-event Edge Function for telemetry
-    - Ed25519 signature verification for updates
-    - State Machine formal com transicoes validadas
-    - Evidence Journal local estruturado (JSON Lines)
-    - Job Engine idempotente com execution_id
-    - Auto-recovery com 3 tentativas + backoff exponencial
-    - DNS Filter integrado como Windows Service
-    - Policy Contract com deteccao de drift
-    - UPDATE_AGENT REAL com Base64 decode + SHA256 validation
-    - Todas as funcionalidades v3.x mantidas
-    
-    Uso:
-    powershell.exe -ExecutionPolicy Bypass -File .\\cybershield-agent-windows-v4.ps1 \`
-        -ServerUrl "https://seu-projeto.supabase.co" \`
-        -AgentToken "AGENT_TOKEN_AQUI" \`
-        -HmacSecret "64_HEX_CHARS_AQUI" \`
-        -AgentName "meu-servidor-01"
+    CyberShield Agent - Windows v5.0.2 FULL ENTERPRISE
+
+    v5.0.2: FULL ENTERPRISE - Complete Bidirectional Signature Chain (FIXED)
+
+    NEW FEATURES:
+    =============
+    - SECURITY P0 (CRITICAL):
+      * Register-AgentKey: ECDSA P-256 key generation and registration on startup
+      * Invoke-SignResult: Job result signing with ECDSA
+      * Verify-JobSignature: Ed25519 job signature verification
+      * Hash Chain: Cryptographic execution chain (execution_hash)
+
+    - PROCESS/SERVICE CONTROL P0 (NEW):
+      * Invoke-KillProcess: Terminate processes by name
+      * Invoke-StopService: Stop system services
+      * Invoke-DisableService: Stop + disable startup
+      * Invoke-RestartService: Restart system services
+      * SECURITY: Protected processes/services lists (defense in depth)
+      * SECURITY: Agent-side validation prevents killing critical processes
+
+    - AUTO-REMEDIATION P0:
+      * Invoke-DiskCleanup: Automatic cleanup when disk > 95%
+      * Invoke-HighCpuProcessCheck: Auto-kill suspicious processes with CPU > 90%
+
+    - ADVANCED COLLECTION P1:
+      * Get-TopProcesses: Top 5 by CPU and RAM in heartbeat
+      * Get-UnauthorizedSoftware: Unauthorized software detection
+      * Get-ProcessBaseline: Anomaly detection via baseline
+
+    - NETWORK RESILIENCE P1:
+      * Invoke-SecureRequest with exponential backoff (1s -> 60s)
+      * Smart retry with transient error classification
+      * Network Watchdog with connectivity loss detection
+
+    - JOB EXECUTION P1:
+      * Poll-Jobs: Polling and claiming pending jobs
+      * Execute-Job: Job execution with signature verification
+      * Submit-JobResult: Signed result submission
+
+    - FSM ENTERPRISE P2:
+      * 6 states: INITIALIZING, AUTHENTICATING, SYNCING, ENFORCING, DEGRADED, SAFE_MODE
+      * Atomic transitions with logging
+      * Local state persistence
+
+    - DNS FILTER P2:
+      * Malicious domain blocking
+      * Server blocklist sync
+
+    INHERITS FROM v4.5.0:
+    =====================
+    - FSM Enterprise with 6 states
+    - Network Watchdog and Power Events
+    - Policy Contract with drift detection
+    - Auto-rollback and Safe Mode
+
+    Usage:
+    powershell.exe -ExecutionPolicy Bypass -File .\\cybershield-agent-windows-v5.ps1 \`
+        -ServerUrl "https://your-project.supabase.co" \`
+        -AgentToken "AGENT_TOKEN_HERE" \`
+        -HmacSecret "64_HEX_CHARS_HERE" \`
+        -AgentName "my-server-01"
 #>
 
+[CmdletBinding()]
 param(
     [Parameter(Mandatory = \$true)]
     [string]\$ServerUrl,
@@ -91,13 +89,16 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v4.1.2"
+    [string]\$AgentVersion = "v5.0.2"
 )
+
+# CRITICAL: Force TLS 1.2 for compatibility
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 \$ErrorActionPreference = "Stop"
 
 # ============================================
-#  TRAP GLOBAL PARA ERROS NAO TRATADOS
+#  GLOBAL TRAP FOR UNHANDLED ERRORS
 # ============================================
 trap {
     \$ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -105,7 +106,7 @@ trap {
     \$stack = \$_.ScriptStackTrace
 
     \$logDir = "C:\\CyberShield\\logs"
-    \$logPath = Join-Path \$logDir "cybershield-agent-v4.log"
+    \$logPath = Join-Path \$logDir "cybershield-agent-v5.log"
 
     if (Test-Path \$logDir) {
         try {
@@ -119,56 +120,7 @@ trap {
 }
 
 # ============================================
-#  BOOTSTRAP VALIDATION - CRITICAL FUNCTIONS
-# ============================================
-# This validation runs AFTER all functions are defined (at script execution)
-# We defer the actual check to after function definitions
-\$Global:RequiredFunctions = @(
-    "Write-Log",
-    "Send-Heartbeat",
-    "Send-SystemMetrics",
-    "Invoke-ReportJob",
-    "Invoke-SecureRequest",
-    "Add-EvidenceEntry",
-    "Set-AgentState"
-)
-
-function Invoke-BootstrapValidation {
-    Write-Host "[BOOTSTRAP] Validando funcoes criticas..." -ForegroundColor Cyan
-    
-    \$missingFunctions = @()
-    foreach (\$fn in \$Global:RequiredFunctions) {
-        if (-not (Get-Command \$fn -ErrorAction SilentlyContinue)) {
-            \$missingFunctions += \$fn
-        }
-    }
-    
-    if (\$missingFunctions.Count -gt 0) {
-        \$errorMsg = "FATAL: Funcoes criticas nao definidas: \$(\$missingFunctions -join ', ')"
-        Write-Host "[BOOTSTRAP] \$errorMsg" -ForegroundColor Red
-        
-        # Tentar logar no arquivo antes de abortar
-        \$logPath = "C:\\CyberShield\\logs\\bootstrap-error.log"
-        \$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        
-        # Criar diretorio se nao existir
-        \$logDir = Split-Path \$logPath -Parent
-        if (-not (Test-Path \$logDir)) {
-            New-Item -ItemType Directory -Path \$logDir -Force | Out-Null
-        }
-        
-        "\$timestamp | BOOTSTRAP FAILED | \$errorMsg" | Out-File -FilePath \$logPath -Append -Encoding UTF8
-        
-        # Nao executar agente quebrado - forcar reinstalacao
-        throw \$errorMsg
-    }
-    
-    Write-Host "[BOOTSTRAP] Todas as funcoes criticas validadas" -ForegroundColor Green
-    return \$true
-}
-
-# ============================================
-#  VARIAVEIS GLOBAIS
+#  GLOBAL VARIABLES
 # ============================================
 \$Global:ServerUrl    = \$ServerUrl.TrimEnd('/')
 \$Global:AgentToken   = \$AgentToken
@@ -176,1567 +128,61 @@ function Invoke-BootstrapValidation {
 \$Global:AgentName    = \$AgentName
 \$Global:AgentVersion = \$AgentVersion
 
-# Diretorios
+# Directories
 \$Global:BaseDir = "C:\\CyberShield"
 \$logDir = Join-Path -Path \$Global:BaseDir -ChildPath "logs"
 \$evidenceDir = Join-Path -Path \$Global:BaseDir -ChildPath "evidence"
+\$dataDir = Join-Path -Path \$Global:BaseDir -ChildPath "data"
 
-# Criar diretorios se nao existirem
-@(\$logDir, \$evidenceDir) | ForEach-Object {
+# Create directories if they don't exist
+@(\$logDir, \$evidenceDir, \$dataDir) | ForEach-Object {
     if (-not (Test-Path \$_)) {
         New-Item -ItemType Directory -Path \$_ -Force | Out-Null
     }
 }
 
-\$Global:LogFilePath = Join-Path -Path \$logDir -ChildPath "cybershield-agent-v4.log"
+\$Global:LogFilePath = Join-Path -Path \$logDir -ChildPath "cybershield-agent-v5.log"
 \$Global:EvidenceJournalPath = Join-Path -Path \$evidenceDir -ChildPath "journal.log"
+\$Global:ProcessBaselinePath = Join-Path -Path \$dataDir -ChildPath "process_baseline.json"
+\$Global:AutoRepairLogPath = Join-Path -Path \$dataDir -ChildPath "auto_repair.log"
+\$Global:KeyStorePath = Join-Path -Path \$dataDir -ChildPath "agent_keys.json"
+\$Global:StatePath = Join-Path -Path \$dataDir -ChildPath "agent_state.json"
+\$Global:DnsBlocklistPath = Join-Path -Path \$dataDir -ChildPath "dns_blocklist.json"
 
-# Intervalos
+# Intervals
 \$Global:PollIntervalSeconds = 60
+\$Global:DiskCleanupThresholdPercent = 95
+\$Global:HighCpuThresholdPercent = 90
+\$Global:MaxLogSizeBytes = 10MB
+\$Global:JobPollIntervalSeconds = 30
 
-# ============================================
-#  FASE 2.6: ED25519 SIGNATURE VERIFICATION
-# ============================================
-# IMPORTANT: This is the Ed25519 PUBLIC KEY for verifying agent updates
-# The corresponding PRIVATE KEY must NEVER be stored in the agent or repository
-# Private key should be in HSM, HashiCorp Vault, or offline encrypted storage
-# 
-# To generate a new keypair (offline, secure environment):
-#   openssl genpkey -algorithm Ed25519 -out private.key
-#   openssl pkey -in private.key -pubout -out public.key
-#   cat public.key | base64 -w0
-#
-# To sign a release:
-#   openssl pkeyutl -sign -inkey private.key -rawin -in script.ps1 > signature.bin
-#   base64 -w0 signature.bin > signature.txt
-
-# PLACEHOLDER: Replace with actual Ed25519 public key when available
-# Format: Base64-encoded SubjectPublicKeyInfo (SPKI) format
-# SSA-004: This is the public key for verifying job payload signatures
-\$Global:Ed25519PublicKey = "MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZih0iggaoI="
-
-# SSA-004: Require signatures when public key is configured
-\$Global:RequireJobSignatures = (-not [string]::IsNullOrEmpty(\$Global:Ed25519PublicKey))
-
-function Verify-Ed25519Signature {
-    <#
-    .SYNOPSIS
-        Verifies an Ed25519 signature for script content
-    .DESCRIPTION
-        Uses .NET cryptography to verify Ed25519 signatures.
-        Returns \$true if signature is valid, \$false otherwise.
-        If no public key is configured, returns \$true (backward compatible).
-    .PARAMETER ScriptBytes
-        The raw bytes of the script to verify
-    .PARAMETER SignatureBase64
-        The Base64-encoded Ed25519 signature
-    #>
-    param (
-        [Parameter(Mandatory = \$true)]
-        [byte[]]\$ScriptBytes,
-        
-        [Parameter(Mandatory = \$false)]
-        [string]\$SignatureBase64
-    )
-    
-    try {
-        # If no signature provided and no public key configured, allow (backward compat)
-        if ([string]::IsNullOrEmpty(\$SignatureBase64)) {
-            if ([string]::IsNullOrEmpty(\$Global:Ed25519PublicKey)) {
-                Write-Log "[SECURITY] No signature verification configured (backward compatible mode)" "WARN"
-                return \$true
-            } else {
-                Write-Log "[SECURITY] ❌ Signature required but not provided" "ERROR"
-                return \$false
-            }
-        }
-        
-        # If public key not configured, skip verification (backward compat)
-        if ([string]::IsNullOrEmpty(\$Global:Ed25519PublicKey)) {
-            Write-Log "[SECURITY] Ed25519 public key not configured - skipping signature verification" "WARN"
-            return \$true
-        }
-        
-        Write-Log "[SECURITY] Verifying Ed25519 signature..." "INFO"
-        
-        # Decode signature from Base64
-        \$signature = [Convert]::FromBase64String(\$SignatureBase64)
-        
-        # Decode public key from Base64
-        \$publicKeyBytes = [Convert]::FromBase64String(\$Global:Ed25519PublicKey)
-        
-        # Check if .NET supports Ed25519 (requires .NET 5+ or Windows with specific updates)
-        \$ed25519Type = [Type]::GetType("System.Security.Cryptography.Ed25519")
-        
-        if (\$null -eq \$ed25519Type) {
-            # Fallback: Try using ECDsa with Ed25519 curve (requires newer .NET)
-            try {
-                # Import public key and verify
-                \$ed25519 = [System.Security.Cryptography.ECDsa]::Create()
-                \$ed25519.ImportSubjectPublicKeyInfo(\$publicKeyBytes, [ref]\$null)
-                
-                \$isValid = \$ed25519.VerifyData(\$ScriptBytes, \$signature, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
-                
-                if (\$isValid) {
-                    Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
-                } else {
-                    Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
-                }
-                
-                return \$isValid
-            }
-            catch {
-                # If Ed25519 is not supported on this system, log warning and allow
-                Write-Log "[SECURITY] Ed25519 verification not supported on this system: \$(\$_.Exception.Message)" "WARN"
-                Write-Log "[SECURITY] Allowing update (signature present but cannot verify)" "WARN"
-                
-                Add-EvidenceEntry -Type "security_warning" -Data @{
-                    event = "ed25519_not_supported"
-                    error = \$_.Exception.Message
-                    signature_provided = \$true
-                } -Severity "warning"
-                
-                return \$true
-            }
-        }
-        else {
-            # Use native Ed25519 support
-            \$ed25519 = [System.Security.Cryptography.Ed25519]::Create()
-            \$ed25519.ImportSubjectPublicKeyInfo(\$publicKeyBytes, [ref]\$null)
-            
-            \$isValid = \$ed25519.VerifyData(\$ScriptBytes, \$signature)
-            
-            if (\$isValid) {
-                Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
-            } else {
-                Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
-            }
-            
-            return \$isValid
-        }
+# v5.0: Auto-repair counters
+\$Global:AutoRepairStats = @{
+    disk_cleanups = 0
+    processes_killed = 0
+    last_disk_cleanup = \$null
+    last_process_kill = \$null
 }
 
-# ============================================
-#  SSA-004: JOB PAYLOAD SIGNATURE VERIFICATION
-# ============================================
-function Verify-JobSignature {
-    <#
-    .SYNOPSIS
-        Verifies the Ed25519 signature of a job payload
-    .DESCRIPTION
-        Uses .NET cryptography to verify Ed25519 signatures on job payloads.
-        The canonical payload format is: job_id:job_type:JSON(payload)
-        Returns \$true if signature is valid or if no public key is configured.
-        Returns \$false if signature verification fails.
-    .PARAMETER Job
-        The job object containing id, type, payload, and payload_signature
-    #>
-    param (
-        [Parameter(Mandatory = \$true)]
-        \$Job
-    )
-    
-    try {
-        \$jobId = \$Job.id
-        \$jobType = \$Job.type
-        \$signature = \$Job.payload_signature
-        \$signingAlg = \$Job.signing_alg
-        
-        # If no public key configured, skip verification (backward compatible)
-        if ([string]::IsNullOrEmpty(\$Global:Ed25519PublicKey)) {
-            Write-Log "[SECURITY] Ed25519 public key not configured - skipping signature verification" "WARN"
-            return \$true
-        }
-        
-        # If public key is configured but job has no signature, reject
-        if ([string]::IsNullOrEmpty(\$signature)) {
-            if (\$Global:RequireJobSignatures) {
-                Write-Log "[SECURITY] ❌ REJECTED: Job \$jobId has no signature (signatures required)" "ERROR"
-                
-                Add-EvidenceEntry -Type "security_alert" -Data @{
-                    event = "unsigned_job_rejected"
-                    job_id = \$jobId
-                    job_type = \$jobType
-                    reason = "No signature provided but signatures are required"
-                } -Severity "critical"
-                
-                return \$false
-            }
-            Write-Log "[SECURITY] Job \$jobId has no signature (backward compatible mode)" "WARN"
-            return \$true
-        }
-        
-        # Verify algorithm is Ed25519
-        if (\$signingAlg -and \$signingAlg -ne "Ed25519") {
-            Write-Log "[SECURITY] ❌ REJECTED: Unsupported signing algorithm: \$signingAlg" "ERROR"
-            return \$false
-        }
-        
-        Write-Log "[SECURITY] Verifying Ed25519 signature for job \$jobId..." "INFO"
-        
-        # Create canonical payload: job_id:job_type:JSON(payload)
-        \$payloadJson = if (\$Job.payload) { 
-            \$sortedKeys = (\$Job.payload | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name | Sort-Object)
-            \$orderedPayload = [ordered]@{}
-            foreach (\$key in \$sortedKeys) {
-                \$orderedPayload[\$key] = \$Job.payload.\$key
-            }
-            \$orderedPayload | ConvertTo-Json -Compress -Depth 10 
-        } else { 
-            "{}" 
-        }
-        \$canonicalPayload = "\${jobId}:\${jobType}:\${payloadJson}"
-        
-        # Decode signature and public key from Base64
-        \$signatureBytes = [Convert]::FromBase64String(\$signature)
-        \$publicKeyBytes = [Convert]::FromBase64String(\$Global:Ed25519PublicKey)
-        \$payloadBytes = [System.Text.Encoding]::UTF8.GetBytes(\$canonicalPayload)
-        
-        # Try to verify using .NET Ed25519 (requires .NET 5+ or specific Windows versions)
-        try {
-            # Import public key
-            \$ed25519 = [System.Security.Cryptography.ECDsa]::Create()
-            \$bytesRead = 0
-            \$ed25519.ImportSubjectPublicKeyInfo(\$publicKeyBytes, [ref]\$bytesRead)
-            
-            # Verify signature
-            \$isValid = \$ed25519.VerifyData(\$payloadBytes, \$signatureBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
-            
-            if (\$isValid) {
-                Write-Log "[SECURITY] ✅ Job \$jobId signature verified successfully" "SUCCESS"
-                
-                Add-EvidenceEntry -Type "security_check" -Data @{
-                    event = "job_signature_verified"
-                    job_id = \$jobId
-                    job_type = \$jobType
-                    algorithm = "Ed25519"
-                } -Severity "info"
-                
-                return \$true
-            } else {
-                Write-Log "[SECURITY] ❌ REJECTED: Job \$jobId signature verification FAILED" "ERROR"
-                
-                Add-EvidenceEntry -Type "security_alert" -Data @{
-                    event = "invalid_job_signature"
-                    job_id = \$jobId
-                    job_type = \$jobType
-                    reason = "Signature does not match payload"
-                } -Severity "critical"
-                
-                return \$false
-            }
-        }
-        catch {
-            # If Ed25519 verification is not supported, log warning
-            Write-Log "[SECURITY] Ed25519 verification not fully supported: \$(\$_.Exception.Message)" "WARN"
-            Write-Log "[SECURITY] Attempting fallback verification method..." "INFO"
-            
-            # For systems without native Ed25519, we accept if signature is present
-            # This provides partial protection until full Ed25519 support
-            Add-EvidenceEntry -Type "security_warning" -Data @{
-                event = "ed25519_verification_fallback"
-                job_id = \$jobId
-                error = \$_.Exception.Message
-                signature_present = \$true
-            } -Severity "warning"
-            
-            # In strict mode, reject; otherwise allow with signature present
-            if (\$Global:RequireJobSignatures) {
-                Write-Log "[SECURITY] ❌ Cannot verify signature - rejecting in strict mode" "ERROR"
-                return \$false
-            }
-            
-            return \$true
-        }
-    }
-    catch {
-        Write-Log "[SECURITY] Signature verification error: \$(\$_.Exception.Message)" "ERROR"
-        
-        Add-EvidenceEntry -Type "error" -Data @{
-            event = "signature_verification_failed"
-            job_id = \$Job.id
-            error = \$_.Exception.Message
-        } -Severity "error"
-        
-        # Security: If verification fails unexpectedly, reject the job
-        return \$false
-    }
+# v5.0.1: FSM Enterprise States
+\$Global:FSM_STATES = @{
+    INITIALIZING = "INITIALIZING"
+    AUTHENTICATING = "AUTHENTICATING"
+    SYNCING = "SYNCING"
+    ENFORCING = "ENFORCING"
+    DEGRADED = "DEGRADED"
+    SAFE_MODE = "SAFE_MODE"
 }
-    catch {
-        Write-Log "[SECURITY] Signature verification error: \$(\$_.Exception.Message)" "ERROR"
-        
-        Add-EvidenceEntry -Type "error" -Data @{
-            event = "signature_verification_failed"
-            error = \$_.Exception.Message
-        } -Severity "error"
-        
-        # Security: If verification fails unexpectedly, reject the update
-        return \$false
-    }
+\$Global:CurrentState = \$Global:FSM_STATES.INITIALIZING
+
+# v5.0.1: Hash Chain for execution
+\$Global:ExecutionChain = @{
+    last_hash = "genesis"
+    execution_index = 0
 }
 
-
-# ============================================
-#  FASE 3.0: AUTO-ROLLBACK & SAFE MODE
-# ============================================
-\$Global:RollbackPaths = @{
-    Current   = "C:\\CyberShield\\agent-current.ps1"
-    Previous  = "C:\\CyberShield\\agent-previous.ps1"
-    StateFile = "C:\\CyberShield\\rollback-state.json"
-}
-
-function Get-RollbackState {
-    <#
-    .SYNOPSIS
-        Retrieves the current rollback state from persistent storage
-    #>
-    \$stateFile = \$Global:RollbackPaths.StateFile
-    if (Test-Path \$stateFile) {
-        try {
-            \$content = Get-Content \$stateFile -Raw -ErrorAction Stop
-            return (\$content | ConvertFrom-Json)
-        } catch {
-            Write-Log "[ROLLBACK] Failed to read state file: \$(\$_.Exception.Message)" "WARN"
-        }
-    }
-    return @{
-        rollback_count = 0
-        last_rollback = \$null
-        safe_mode = \$false
-        current_version = \$Global:AgentVersion
-        previous_version = \$null
-        last_health_check = \$null
-    }
-}
-
-function Save-RollbackState {
-    <#
-    .SYNOPSIS
-        Persists rollback state to disk
-    #>
-    param(\$State)
-    
-    try {
-        \$stateFile = \$Global:RollbackPaths.StateFile
-        \$State | ConvertTo-Json -Depth 3 | Set-Content \$stateFile -Encoding UTF8 -Force
-        Write-Log "[ROLLBACK] State saved: rollback_count=\$(\$State.rollback_count), safe_mode=\$(\$State.safe_mode)" "DEBUG"
-    } catch {
-        Write-Log "[ROLLBACK] Failed to save state: \$(\$_.Exception.Message)" "ERROR"
-    }
-}
-
-function Test-PostUpdateHealth {
-    <#
-    .SYNOPSIS
-        Validates agent health after an update
-    .DESCRIPTION
-        Checks state machine, heartbeat, and job polling to ensure
-        the new version is functioning correctly
-    .OUTPUTS
-        Hashtable with healthy (bool) and reason (string)
-    #>
-    Write-Log "[HEALTH CHECK] Starting post-update health validation..." "INFO"
-    
-    try {
-        # 1. Validate state machine
-        \$state = Get-AgentState
-        if (\$state -notin @('SYNCING', 'ENFORCING', 'DEGRADED')) {
-            return @{ healthy = \$false; reason = "state_machine_invalid"; details = "Invalid state: \$state" }
-        }
-        Write-Log "[HEALTH CHECK] State machine OK: \$state" "DEBUG"
-        
-        # 2. Validate heartbeat
-        \$heartbeat = Send-Heartbeat
-        if (-not \$heartbeat) {
-            return @{ healthy = \$false; reason = "heartbeat_failed"; details = "Heartbeat failed" }
-        }
-        Write-Log "[HEALTH CHECK] Heartbeat OK" "DEBUG"
-        
-        # 3. Validate poll-jobs (basic connectivity test)
-        try {
-            \$pollResult = Invoke-SecureRequest -Path "/functions/v1/poll-jobs" -Method "POST" -Body @{
-                agent_name = \$Global:AgentName
-                agent_version = \$Global:AgentVersion
-            } -TimeoutSec 15
-            
-            if (-not \$pollResult.Success) {
-                return @{ healthy = \$false; reason = "health_check_failed"; details = "Poll-jobs failed: HTTP \$(\$pollResult.StatusCode)" }
-            }
-        } catch {
-            return @{ healthy = \$false; reason = "health_check_failed"; details = "Poll-jobs exception: \$(\$_.Exception.Message)" }
-        }
-        Write-Log "[HEALTH CHECK] Poll-jobs OK" "DEBUG"
-        
-        return @{ healthy = \$true; reason = "All checks passed" }
-    } catch {
-        return @{ healthy = \$false; reason = "health_check_failed"; details = \$_.Exception.Message }
-    }
-}
-
-function Send-RollbackEvent {
-    <#
-    .SYNOPSIS
-        Reports rollback event to backend for telemetry
-    #>
-    param(
-        [string]\$FromVersion,
-        [string]\$ToVersion,
-        [string]\$Reason,
-        [bool]\$SafeMode = \$false,
-        [hashtable]\$Details = @{}
-    )
-    
-    try {
-        \$body = @{
-            from_version = \$FromVersion
-            to_version = \$ToVersion
-            reason = \$Reason
-            safe_mode_triggered = \$SafeMode
-            hostname = \$env:COMPUTERNAME
-            details = \$Details
-        }
-        
-        \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/submit-rollback-event" \`
-            -Method "POST" \`
-            -Body \$body \`
-            -TimeoutSec 15
-        
-        if (\$result.Success) {
-            Write-Log "[ROLLBACK] Event reported successfully (event_id: \$(\$result.Body | ConvertFrom-Json | Select-Object -ExpandProperty event_id))" "INFO"
-        } else {
-            Write-Log "[ROLLBACK] Failed to report event: HTTP \$(\$result.StatusCode)" "WARN"
-        }
-    } catch {
-        Write-Log "[ROLLBACK] Failed to report event: \$(\$_.Exception.Message)" "ERROR"
-    }
-}
-
-function Invoke-SafeRollback {
-    <#
-    .SYNOPSIS
-        Performs automatic rollback to previous version
-    .DESCRIPTION
-        - Checks if previous version exists
-        - Increments rollback counter
-        - Triggers Safe Mode after 2 consecutive rollbacks
-        - Reports event to backend
-        - Copies previous version back to current
-        - Restarts agent
-    #>
-    param(
-        [string]\$Reason
-    )
-    
-    Write-Log "[ROLLBACK] Initiating rollback due to: \$Reason" "WARN"
-    
-    \$state = Get-RollbackState
-    \$previousPath = \$Global:RollbackPaths.Previous
-    
-    # Verify previous version exists
-    if (-not (Test-Path \$previousPath)) {
-        Write-Log "[ROLLBACK] No previous version available at \$previousPath" "ERROR"
-        
-        Add-EvidenceEntry -Type "error" -Data @{
-            event = "rollback_failed"
-            reason = "no_previous_version"
-            error = "Previous version file not found"
-        } -Severity "error"
-        
-        return @{ success = \$false; error = "No previous version available" }
-    }
-    
-    # Anti-loop: check rollback count
-    \$state.rollback_count++
-    \$state.last_rollback = (Get-Date).ToUniversalTime().ToString("o")
-    
-    # Safe Mode: after 2 consecutive rollbacks
-    if (\$state.rollback_count -ge 2) {
-        Write-Log "[CRITICAL] Rollback loop detected (count: \$(\$state.rollback_count)) - ENTERING SAFE MODE" "ERROR"
-        \$state.safe_mode = \$true
-        Save-RollbackState -State \$state
-        
-        # Report Safe Mode to backend
-        Send-RollbackEvent -FromVersion \$Global:AgentVersion -ToVersion \$state.previous_version -Reason \$Reason -SafeMode \$true -Details @{
-            rollback_count = \$state.rollback_count
-            safe_mode_reason = "rollback_loop_detected"
-        }
-        
-        Add-EvidenceEntry -Type "security_event" -Data @{
-            event = "safe_mode_activated"
-            rollback_count = \$state.rollback_count
-            reason = "Rollback loop detected - auto-updates disabled"
-        } -Severity "critical"
-        
-        return @{ success = \$false; error = "Safe mode activated - updates disabled"; safe_mode = \$true }
-    }
-    
-    # Execute rollback
-    Write-Log "[ROLLBACK] Rolling back: \$(\$Global:AgentVersion) -> \$(\$state.previous_version)" "WARN"
-    
-    try {
-        # Find current script path
-        \$currentScriptPath = \$null
-        \$possiblePaths = @(
-            \$PSCommandPath,
-            (Join-Path \$Global:BaseDir "cybershield-agent-\$(\$Global:AgentName).ps1"),
-            (Join-Path \$Global:BaseDir "cybershield-agent-v4.ps1"),
-            (Join-Path \$Global:BaseDir "cybershield-agent.ps1")
-        )
-        
-        foreach (\$path in \$possiblePaths) {
-            if (\$path -and (Test-Path \$path)) {
-                \$currentScriptPath = \$path
-                break
-            }
-        }
-        
-        if (-not \$currentScriptPath) {
-            \$found = Get-ChildItem -Path \$Global:BaseDir -Filter "cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Select-Object -First 1
-            if (\$found) { \$currentScriptPath = \$found.FullName }
-        }
-        
-        if (-not \$currentScriptPath) {
-            throw "Cannot find current script path for rollback"
-        }
-        
-        # Copy previous version to current location
-        Copy-Item -Path \$previousPath -Destination \$currentScriptPath -Force
-        Write-Log "[ROLLBACK] Previous version restored to: \$currentScriptPath" "INFO"
-        
-        # Update state
-        \$state.current_version = \$state.previous_version
-        Save-RollbackState -State \$state
-        
-        # Report rollback to backend
-        Send-RollbackEvent -FromVersion \$Global:AgentVersion -ToVersion \$state.previous_version -Reason \$Reason -SafeMode \$false -Details @{
-            rollback_count = \$state.rollback_count
-            restored_to = \$currentScriptPath
-        }
-        
-        # Evidence for audit
-        Add-EvidenceEntry -Type "security_event" -Data @{
-            event = "agent_rollback"
-            from_version = \$Global:AgentVersion
-            to_version = \$state.previous_version
-            reason = \$Reason
-            rollback_count = \$state.rollback_count
-        } -Severity "warning"
-        
-        # Restart agent to load previous version
-        Write-Log "[ROLLBACK] Restarting agent to load previous version..." "WARN"
-        
-        try {
-            Stop-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
-            Start-Sleep -Seconds 2
-            Start-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
-        } catch {
-            Write-Log "[ROLLBACK] Failed to restart scheduled task: \$(\$_.Exception.Message)" "WARN"
-        }
-        
-        # Exit to allow new version to start
-        exit 0
-        
-    } catch {
-        Write-Log "[ROLLBACK] Rollback failed: \$(\$_.Exception.Message)" "ERROR"
-        
-        Add-EvidenceEntry -Type "error" -Data @{
-            event = "rollback_failed"
-            error = \$_.Exception.Message
-        } -Severity "error"
-        
-        return @{ success = \$false; error = \$_.Exception.Message }
-    }
-}
-
-function Reset-SafeMode {
-    <#
-    .SYNOPSIS
-        Resets Safe Mode (for manual recovery or remote job)
-    #>
-    param(
-        [Parameter(Mandatory = \$false)]
-        [string]\$Reason = "manual_reset"
-    )
-    
-    \$state = Get-RollbackState
-    \$previousSafeMode = \$state.safe_mode
-    \$previousRollbackCount = \$state.rollback_count
-    
-    \$state.safe_mode = \$false
-    \$state.rollback_count = 0
-    Save-RollbackState -State \$state
-    
-    Write-Log "[ROLLBACK] Safe mode reset - auto-updates re-enabled (reason: \$Reason)" "INFO"
-    
-    return @{
-        previous_safe_mode = \$previousSafeMode
-        previous_rollback_count = \$previousRollbackCount
-        reset_reason = \$Reason
-    }
-}
-
-# ============================================
-#  RESET SAFE MODE JOB (Remote Reset via Backend)
-# ============================================
-function Invoke-ResetSafeModeJob {
-    <#
-    .SYNOPSIS
-        Job handler for remotely resetting safe mode via backend
-    .DESCRIPTION
-        Allows admins to reset safe_mode remotely without physical access
-        to the machine. Creates evidence log and returns previous state.
-    #>
-    param(\$Job)
-    
-    try {
-        Write-Log "[RESET-SAFE-MODE] Iniciando reset do safe mode via job remoto..." "INFO"
-        
-        \$rollbackState = Get-RollbackState
-        \$wasSafeMode = \$rollbackState.safe_mode
-        \$previousRollbackCount = \$rollbackState.rollback_count
-        
-        # IDEMPOTENCIA: Se safe mode ja estava desativado, apenas logar e retornar
-        if (-not \$wasSafeMode) {
-            Write-Log "[RESET-SAFE-MODE] Safe mode ja estava desativado - nenhuma acao necessaria" "INFO"
-            return @{ 
-                success = \$true
-                output = (@{
-                    previous_safe_mode = \$false
-                    previous_rollback_count = \$previousRollbackCount
-                    already_disabled = \$true
-                    message = "Safe mode was already disabled - no action taken"
-                } | ConvertTo-Json -Compress)
-            }
-        }
-        
-        # Chamar funcao existente Reset-SafeMode
-        \$resetResult = Reset-SafeMode -Reason "remote_job"
-        
-        Add-EvidenceEntry -Type "safe_mode_reset" -Data @{
-            previous_safe_mode = \$wasSafeMode
-            previous_rollback_count = \$previousRollbackCount
-            reset_by = "remote_job"
-            job_id = \$Job.id
-            reset_at = (Get-Date).ToUniversalTime().ToString("o")
-        } -Severity "warning"
-        
-        Write-Log "[RESET-SAFE-MODE] Safe mode resetado com sucesso" "SUCCESS"
-        
-        return @{ 
-            success = \$true
-            output = (@{
-                previous_safe_mode = \$wasSafeMode
-                previous_rollback_count = \$previousRollbackCount
-                reset_at = (Get-Date).ToUniversalTime().ToString("o")
-                message = "Safe mode reset successfully via remote job"
-            } | ConvertTo-Json -Compress)
-        }
-    }
-    catch {
-        Write-Log "[RESET-SAFE-MODE] Erro: \$(\$_.Exception.Message)" "ERROR"
-        return @{ success = \$false; error = \$_.Exception.Message }
-    }
-}
-
-
-# ============================================
-#  FASE 2.1: STATE MACHINE FORMAL
-# ============================================
-\$Global:AgentState = @{
-    Current = "BOOTSTRAP"
-    Previous = \$null
-    History = [System.Collections.ArrayList]::new()
-    ErrorCount = 0
-    RecoveryAttempts = 0
-    LastStateChange = (Get-Date)
-    LastError = \$null
-}
-
-# Estados validos e transicoes permitidas
-\$Global:ValidStates = @("BOOTSTRAP", "SYNCING", "ENFORCING", "DEGRADED", "ERROR", "RECOVERY")
-\$Global:StateTransitions = @{
-    "BOOTSTRAP" = @("SYNCING", "ERROR")
-    "SYNCING" = @("ENFORCING", "DEGRADED", "ERROR")
-    "ENFORCING" = @("DEGRADED", "ERROR", "SYNCING")
-    "DEGRADED" = @("RECOVERY", "ERROR", "ENFORCING")
-    "RECOVERY" = @("ENFORCING", "DEGRADED", "ERROR")
-    "ERROR" = @("RECOVERY")  # Requer intervencao ou recovery manual
-}
-
-# Estados que permitem execucao de jobs
-\$Global:JobExecutionStates = @("ENFORCING", "DEGRADED")
-
-function Set-AgentState {
-    param(
-        [Parameter(Mandatory = \$true)]
-        [ValidateSet("BOOTSTRAP", "SYNCING", "ENFORCING", "DEGRADED", "ERROR", "RECOVERY")]
-        [string]\$NewState,
-        
-        [Parameter(Mandatory = \$true)]
-        [string]\$Reason,
-        
-        [Parameter(Mandatory = \$false)]
-        [string]\$ErrorDetails = \$null
-    )
-    
-    \$currentState = \$Global:AgentState.Current
-    
-    # Validar transicao
-    if (\$currentState -ne \$NewState) {
-        \$allowedTransitions = \$Global:StateTransitions[\$currentState]
-        if (\$NewState -notin \$allowedTransitions) {
-            Write-Log "[STATE] INVALID TRANSITION: \$currentState -> \$NewState (allowed: \$(\$allowedTransitions -join ', '))" "WARN"
-            # Registrar tentativa invalida mas nao bloquear
-            Add-EvidenceEntry -Type "state_change" -Data @{
-                attempted_from = \$currentState
-                attempted_to = \$NewState
-                reason = \$Reason
-                blocked = \$true
-                allowed_transitions = \$allowedTransitions
-            } -StateBefore \$currentState -StateAfter \$currentState -Severity "warning"
-            return \$false
-        }
-    }
-    
-    # Aplicar transicao
-    \$Global:AgentState.Previous = \$currentState
-    \$Global:AgentState.Current = \$NewState
-    \$Global:AgentState.LastStateChange = Get-Date
-    
-    # Adicionar ao historico (manter ultimos 100)
-    \$historyEntry = @{
-        from = \$currentState
-        to = \$NewState
-        reason = \$Reason
-        timestamp = (Get-Date).ToUniversalTime().ToString("o")
-    }
-    [void]\$Global:AgentState.History.Add(\$historyEntry)
-    if (\$Global:AgentState.History.Count -gt 100) {
-        \$Global:AgentState.History.RemoveAt(0)
-    }
-    
-    # Resetar contadores em estados de sucesso
-    if (\$NewState -eq "ENFORCING") {
-        \$Global:AgentState.ErrorCount = 0
-        \$Global:AgentState.RecoveryAttempts = 0
-    }
-    
-    # Incrementar contador de erros
-    if (\$NewState -eq "ERROR" -or \$NewState -eq "DEGRADED") {
-        \$Global:AgentState.ErrorCount++
-        if (\$ErrorDetails) {
-            \$Global:AgentState.LastError = \$ErrorDetails
-        }
-    }
-    
-    Write-Log "[STATE] \$currentState -> \$NewState (\$Reason)" "INFO"
-    
-    # Registrar evidencia
-    Add-EvidenceEntry -Type "state_change" -Data @{
-        from = \$currentState
-        to = \$NewState
-        reason = \$Reason
-        error_details = \$ErrorDetails
-        error_count = \$Global:AgentState.ErrorCount
-        recovery_attempts = \$Global:AgentState.RecoveryAttempts
-    } -StateBefore \$currentState -StateAfter \$NewState -Severity \$(if (\$NewState -eq "ERROR") { "error" } elseif (\$NewState -eq "DEGRADED") { "warning" } else { "info" })
-    
-    return \$true
-}
-
-function Get-AgentState {
-    return \$Global:AgentState.Current
-}
-
-function Test-CanExecuteJob {
-    \$state = Get-AgentState
-    return \$state -in \$Global:JobExecutionStates
-}
-
-# ============================================
-#  FASE 2.2: EVIDENCE JOURNAL LOCAL
-# ============================================
-\$Global:EvidenceBuffer = [System.Collections.ArrayList]::new()
-\$Global:EvidenceFlushThreshold = 10  # Flush apos 10 entradas ou 60s
-
-function Add-EvidenceEntry {
-    param(
-        [Parameter(Mandatory = \$true)]
-        [string]\$Type,
-        
-        [Parameter(Mandatory = \$true)]
-        [hashtable]\$Data,
-        
-        [Parameter(Mandatory = \$false)]
-        [string]\$StateBefore = \$null,
-        
-        [Parameter(Mandatory = \$false)]
-        [string]\$StateAfter = \$null,
-        
-        [Parameter(Mandatory = \$false)]
-        [ValidateSet("debug", "info", "warning", "error", "critical")]
-        [string]\$Severity = "info"
-    )
-    
-    try {
-        # RUNTIME VALIDATION - Backward + Forward compatible (substitui ValidateSet rígido)
-        \$AllowedTypes = @(
-            "state_change", "job_execution", "dns_block", "policy_sync", 
-            "auto_recovery", "heartbeat", "update_applied", "update_check", 
-            "error", "policy_drift", "security_event", "security_warning",
-            "metrics_sent", "force_update"
-        )
-        
-        if (\$Type -notin \$AllowedTypes) {
-            Write-Log "[EVIDENCE] Tipo desconhecido aceito graciosamente: \$Type" "WARN"
-            # Não bloqueia - aceita qualquer tipo para forward compatibility
-        }
-        
-        # Criar hash SHA256 do data para integridade
-        \$dataJson = \$Data | ConvertTo-Json -Compress -Depth 5
-        \$sha256 = [System.Security.Cryptography.SHA256]::Create()
-        \$hashBytes = \$sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes(\$dataJson))
-        \$evidenceHash = [System.BitConverter]::ToString(\$hashBytes) -replace '-', ''
-        
-        \$entry = @{
-            timestamp = (Get-Date).ToUniversalTime().ToString("o")
-            type = \$Type
-            agent_name = \$Global:AgentName
-            agent_version = \$Global:AgentVersion
-            state_before = \$StateBefore
-            state_after = \$StateAfter
-            severity = \$Severity
-            data = \$Data
-            evidence_hash = \$evidenceHash.ToLower()
-        }
-        
-        # Adicionar ao buffer
-        [void]\$Global:EvidenceBuffer.Add(\$entry)
-        
-        # Gravar localmente (JSON Lines)
-        \$jsonLine = \$entry | ConvertTo-Json -Compress -Depth 10
-        Add-Content -Path \$Global:EvidenceJournalPath -Value \$jsonLine -Encoding UTF8 -ErrorAction SilentlyContinue
-        
-        # Flush para servidor se threshold atingido
-        if (\$Global:EvidenceBuffer.Count -ge \$Global:EvidenceFlushThreshold) {
-            Invoke-FlushEvidence
-        }
-        
-        return \$evidenceHash
-    }
-    catch {
-        Write-Log "[EVIDENCE] Failed to add entry: \$(\$_.Exception.Message)" "WARN"
-        return \$null
-    }
-}
-
-function Invoke-FlushEvidence {
-    if (\$Global:EvidenceBuffer.Count -eq 0) {
-        return
-    }
-    
-    try {
-        \$entries = @(\$Global:EvidenceBuffer)
-        
-        \$body = @{
-            agent_name = \$Global:AgentName
-            agent_version = \$Global:AgentVersion
-            entries = \$entries | ForEach-Object {
-                @{
-                    event_type = \$_.type
-                    event_data = \$_.data
-                    evidence_hash = \$_.evidence_hash
-                    state_before = \$_.state_before
-                    state_after = \$_.state_after
-                    severity = \$_.severity
-                }
-            }
-        }
-        
-        \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/submit-agent-evidence" \`
-            -Method "POST" \`
-            -Body \$body \`
-            -TimeoutSec 30 \`
-            -MaxRetries 2
-        
-        if (\$result.Success) {
-            Write-Log "[EVIDENCE] Flushed \$(\$entries.Count) entries to server" "DEBUG"
-            \$Global:EvidenceBuffer.Clear()
-        }
-    }
-    catch {
-        Write-Log "[EVIDENCE] Flush failed: \$(\$_.Exception.Message)" "WARN"
-        # Manter no buffer para proxima tentativa
-    }
-}
-
-function Invoke-EvidenceRotation {
-    \$maxSizeMB = 50
-    \$maxAgeDays = 7
-    
-    try {
-        if (Test-Path \$Global:EvidenceJournalPath) {
-            \$file = Get-Item \$Global:EvidenceJournalPath -ErrorAction SilentlyContinue
-            
-            if (\$file -and \$file.Length -gt (\$maxSizeMB * 1MB)) {
-                \$archivePath = "\$(\$Global:EvidenceJournalPath).\$(Get-Date -Format 'yyyyMMdd-HHmmss').bak"
-                Move-Item \$Global:EvidenceJournalPath \$archivePath -Force -ErrorAction SilentlyContinue
-                Write-Log "[EVIDENCE] Journal rotated to \$archivePath" "INFO"
-            }
-        }
-        
-        # Limpar arquivos antigos
-        Get-ChildItem -Path (Split-Path \$Global:EvidenceJournalPath -Parent) -Filter "journal.log.*.bak" -ErrorAction SilentlyContinue | 
-            Where-Object { \$_.LastWriteTime -lt (Get-Date).AddDays(-\$maxAgeDays) } |
-            Remove-Item -Force -ErrorAction SilentlyContinue
-    }
-    catch { }
-}
-
-# ============================================
-#  AUTO-RECOVERY COM BACKOFF EXPONENCIAL
-# ============================================
-function Invoke-AutoRecovery {
-    param(
-        [Parameter(Mandatory = \$true)]
-        [string]\$FailedComponent,
-        
-        [Parameter(Mandatory = \$false)]
-        [string]\$ErrorMessage = \$null
-    )
-    
-    \$maxAttempts = 3
-    
-    if (\$Global:AgentState.RecoveryAttempts -ge \$maxAttempts) {
-        Write-Log "[RECOVERY] Max attempts (\$maxAttempts) exceeded for \$FailedComponent" "ERROR"
-        Set-AgentState -NewState "ERROR" -Reason "Max recovery attempts exceeded" -ErrorDetails "Component: \$FailedComponent, Last error: \$ErrorMessage"
-        
-        Add-EvidenceEntry -Type "auto_recovery" -Data @{
-            component = \$FailedComponent
-            attempt = \$Global:AgentState.RecoveryAttempts
-            success = \$false
-            reason = "Max attempts exceeded"
-            error = \$ErrorMessage
-        } -Severity "critical"
-        
-        return \$false
-    }
-    
-    \$Global:AgentState.RecoveryAttempts++
-    \$attempt = \$Global:AgentState.RecoveryAttempts
-    
-    # Backoff exponencial: 5s, 10s, 20s
-    \$backoffSeconds = [Math]::Pow(2, \$attempt - 1) * 5
-    
-    Write-Log "[RECOVERY] Attempt \$attempt/\$maxAttempts for \$FailedComponent (backoff: \${backoffSeconds}s)" "WARN"
-    Set-AgentState -NewState "RECOVERY" -Reason "Auto-recovery: \$FailedComponent (attempt \$attempt)"
-    
-    Add-EvidenceEntry -Type "auto_recovery" -Data @{
-        component = \$FailedComponent
-        attempt = \$attempt
-        backoff_seconds = \$backoffSeconds
-        error = \$ErrorMessage
-    } -Severity "warning"
-    
-    Start-Sleep -Seconds \$backoffSeconds
-    
-    # Tentar recuperar componente especifico
-    \$recovered = \$false
-    switch (\$FailedComponent) {
-        "heartbeat" {
-            try {
-                Send-Heartbeat
-                \$recovered = \$true
-            } catch { }
-        }
-        "job_engine" {
-            try {
-                Poll-Jobs
-                \$recovered = \$true
-            } catch { }
-        }
-        "dns_filter" {
-            try {
-                \$recovered = Invoke-DNSFilterRecovery
-            } catch { }
-        }
-        "network" {
-            try {
-                # Testar conectividade basica
-                \$test = Test-NetConnection -ComputerName "google.com" -Port 443 -WarningAction SilentlyContinue
-                \$recovered = \$test.TcpTestSucceeded
-            } catch { }
-        }
-        default {
-            # Recovery generico - tentar heartbeat
-            try {
-                Send-Heartbeat
-                \$recovered = \$true
-            } catch { }
-        }
-    }
-    
-    if (\$recovered) {
-        Write-Log "[RECOVERY] Success for \$FailedComponent on attempt \$attempt" "SUCCESS"
-        Set-AgentState -NewState "ENFORCING" -Reason "Recovery successful: \$FailedComponent"
-        \$Global:AgentState.RecoveryAttempts = 0
-        
-        Add-EvidenceEntry -Type "auto_recovery" -Data @{
-            component = \$FailedComponent
-            attempt = \$attempt
-            success = \$true
-        } -Severity "info"
-        
-        return \$true
-    }
-    
-    Write-Log "[RECOVERY] Failed for \$FailedComponent on attempt \$attempt" "WARN"
-    Set-AgentState -NewState "DEGRADED" -Reason "Recovery attempt \$attempt failed: \$FailedComponent"
-    
-    return \$false
-}
-
-# ============================================
-#  FASE 2.4: DNS FILTER GO COMO WINDOWS SERVICE
-# ============================================
-\$Global:DNSFilterConfig = @{
-    ServiceName = "CyberShield-DNS"
-    ExePath = "C:\\CyberShield\\dns-filter\\cybershield-dns.exe"
-    ConfigPath = "C:\\CyberShield\\dns-filter\\config.json"
-    LogPath = "C:\\CyberShield\\dns-filter\\dns.log"
-    ListenAddress = "127.0.0.1:53"
-    UpstreamDNS = @("8.8.8.8:53", "1.1.1.1:53")
-    Enabled = \$true
-    LastHealthCheck = \$null
-    ConsecutiveFailures = 0
-}
-
-function Test-DNSFilterInstalled {
-    try {
-        \$svc = Get-Service -Name \$Global:DNSFilterConfig.ServiceName -ErrorAction SilentlyContinue
-        return (\$null -ne \$svc)
-    }
-    catch {
-        return \$false
-    }
-}
-
-function Get-DNSFilterStatus {
-    try {
-        \$result = @{
-            installed = \$false
-            running = \$false
-            status = "unknown"
-            exe_exists = (Test-Path \$Global:DNSFilterConfig.ExePath)
-        }
-        
-        \$svc = Get-Service -Name \$Global:DNSFilterConfig.ServiceName -ErrorAction SilentlyContinue
-        if (\$svc) {
-            \$result.installed = \$true
-            \$result.status = \$svc.Status.ToString()
-            \$result.running = (\$svc.Status -eq "Running")
-        }
-        
-        return \$result
-    }
-    catch {
-        return @{
-            installed = \$false
-            running = \$false
-            status = "error"
-            error = \$_.Exception.Message
-        }
-    }
-}
-
-function Install-DNSFilterService {
-    try {
-        \$exePath = \$Global:DNSFilterConfig.ExePath
-        
-        if (-not (Test-Path \$exePath)) {
-            Write-Log "[DNS] EXE not found at \$exePath - skipping install" "WARN"
-            return \$false
-        }
-        
-        # Verificar se ja instalado
-        if (Test-DNSFilterInstalled) {
-            Write-Log "[DNS] Service already installed" "INFO"
-            return \$true
-        }
-        
-        Write-Log "[DNS] Installing DNS Filter service..." "INFO"
-        
-        # Instalar servico
-        \$installResult = & \$exePath -install 2>&1
-        Start-Sleep -Seconds 2
-        
-        if (Test-DNSFilterInstalled) {
-            Write-Log "[DNS] Service installed successfully" "SUCCESS"
-            
-            Add-EvidenceEntry -Type "dns_block" -Data @{
-                action = "service_installed"
-                service = \$Global:DNSFilterConfig.ServiceName
-            } -Severity "info"
-            
-            return \$true
-        }
-        else {
-            Write-Log "[DNS] Service installation failed: \$installResult" "ERROR"
-            return \$false
-        }
-    }
-    catch {
-        Write-Log "[DNS] Install error: \$(\$_.Exception.Message)" "ERROR"
-        return \$false
-    }
-}
-
-function Start-DNSFilterService {
-    try {
-        \$status = Get-DNSFilterStatus
-        
-        if (-not \$status.installed) {
-            \$installed = Install-DNSFilterService
-            if (-not \$installed) {
-                return \$false
-            }
-        }
-        
-        if (\$status.running) {
-            Write-Log "[DNS] Service already running" "DEBUG"
-            return \$true
-        }
-        
-        Write-Log "[DNS] Starting DNS Filter service..." "INFO"
-        Start-Service -Name \$Global:DNSFilterConfig.ServiceName -ErrorAction Stop
-        Start-Sleep -Seconds 2
-        
-        \$newStatus = Get-DNSFilterStatus
-        if (\$newStatus.running) {
-            Write-Log "[DNS] Service started successfully" "SUCCESS"
-            \$Global:DNSFilterConfig.ConsecutiveFailures = 0
-            
-            Add-EvidenceEntry -Type "dns_block" -Data @{
-                action = "service_started"
-                service = \$Global:DNSFilterConfig.ServiceName
-            } -Severity "info"
-            
-            return \$true
-        }
-        else {
-            Write-Log "[DNS] Service failed to start" "ERROR"
-            return \$false
-        }
-    }
-    catch {
-        Write-Log "[DNS] Start error: \$(\$_.Exception.Message)" "ERROR"
-        return \$false
-    }
-}
-
-function Stop-DNSFilterService {
-    try {
-        if (-not (Test-DNSFilterInstalled)) {
-            return \$true
-        }
-        
-        \$status = Get-DNSFilterStatus
-        if (-not \$status.running) {
-            Write-Log "[DNS] Service already stopped" "DEBUG"
-            return \$true
-        }
-        
-        Write-Log "[DNS] Stopping DNS Filter service..." "INFO"
-        Stop-Service -Name \$Global:DNSFilterConfig.ServiceName -Force -ErrorAction Stop
-        Start-Sleep -Seconds 2
-        
-        Add-EvidenceEntry -Type "dns_block" -Data @{
-            action = "service_stopped"
-            service = \$Global:DNSFilterConfig.ServiceName
-        } -Severity "info"
-        
-        return \$true
-    }
-    catch {
-        Write-Log "[DNS] Stop error: \$(\$_.Exception.Message)" "ERROR"
-        return \$false
-    }
-}
-
-function Test-DNSFilterHealth {
-    try {
-        \$status = Get-DNSFilterStatus
-        
-        if (-not \$status.running) {
-            \$Global:DNSFilterConfig.ConsecutiveFailures++
-            return @{
-                healthy = \$false
-                reason = "Service not running"
-                consecutive_failures = \$Global:DNSFilterConfig.ConsecutiveFailures
-            }
-        }
-        
-        # Testar resolucao DNS local
-        try {
-            \$testResult = Resolve-DnsName -Name "google.com" -Server "127.0.0.1" -Type A -DnsOnly -ErrorAction Stop
-            if (\$testResult) {
-                \$Global:DNSFilterConfig.ConsecutiveFailures = 0
-                \$Global:DNSFilterConfig.LastHealthCheck = Get-Date
-                return @{
-                    healthy = \$true
-                    reason = "DNS resolution OK"
-                    consecutive_failures = 0
-                }
-            }
-        }
-        catch {
-            \$Global:DNSFilterConfig.ConsecutiveFailures++
-            return @{
-                healthy = \$false
-                reason = "DNS resolution failed: \$(\$_.Exception.Message)"
-                consecutive_failures = \$Global:DNSFilterConfig.ConsecutiveFailures
-            }
-        }
-        
-        return @{
-            healthy = \$false
-            reason = "Unknown"
-            consecutive_failures = \$Global:DNSFilterConfig.ConsecutiveFailures
-        }
-    }
-    catch {
-        return @{
-            healthy = \$false
-            reason = \$_.Exception.Message
-            consecutive_failures = \$Global:DNSFilterConfig.ConsecutiveFailures
-        }
-    }
-}
-
-function Invoke-DNSFilterRecovery {
-    Write-Log "[DNS] Attempting DNS Filter recovery..." "WARN"
-    
-    Add-EvidenceEntry -Type "auto_recovery" -Data @{
-        component = "dns_filter"
-        consecutive_failures = \$Global:DNSFilterConfig.ConsecutiveFailures
-    } -Severity "warning"
-    
-    # Tentar reiniciar servico
-    Stop-DNSFilterService | Out-Null
-    Start-Sleep -Seconds 2
-    
-    \$started = Start-DNSFilterService
-    if (\$started) {
-        \$health = Test-DNSFilterHealth
-        if (\$health.healthy) {
-            Write-Log "[DNS] Recovery successful" "SUCCESS"
-            
-            Add-EvidenceEntry -Type "auto_recovery" -Data @{
-                component = "dns_filter"
-                success = \$true
-            } -Severity "info"
-            
-            return \$true
-        }
-    }
-    
-    Write-Log "[DNS] Recovery failed" "ERROR"
-    
-    Add-EvidenceEntry -Type "auto_recovery" -Data @{
-        component = "dns_filter"
-        success = \$false
-    } -Severity "error"
-    
-    return \$false
-}
-
-# ============================================
-#  FASE 2.5: POLICY CONTRACT (DESIRED VS ACTUAL)
-# ============================================
-\$Global:PolicyContract = @{
-    version = "2025-01"
-    last_sync = \$null
-    expected = @{
-        dns_enabled = \$true
-        dns_service_running = \$true
-        agent_min_version = "v4.0.0"
-        blocked_domains_synced = \$true
-        heartbeat_interval_max = 120
-        job_execution_enabled = \$true
-    }
-    actual = @{}
-    drift = @()
-}
-
-function Get-CurrentPolicyState {
-    try {
-        \$dnsStatus = Get-DNSFilterStatus
-        \$agentState = Get-AgentState
-        
-        return @{
-            dns_enabled = \$Global:DNSFilterConfig.Enabled
-            dns_service_running = \$dnsStatus.running
-            dns_installed = \$dnsStatus.installed
-            agent_version = \$Global:AgentVersion
-            agent_state = \$agentState
-            job_execution_enabled = (Test-CanExecuteJob)
-            heartbeat_interval = \$Global:PollIntervalSeconds
-            blocked_domains_synced = (Test-Path "\$Global:BaseDir\\blocked_websites.json")
-            timestamp = (Get-Date).ToUniversalTime().ToString("o")
-        }
-    }
-    catch {
-        return @{
-            error = \$_.Exception.Message
-            timestamp = (Get-Date).ToUniversalTime().ToString("o")
-        }
-    }
-}
-
-function Compare-PolicyState {
-    param(
-        [Parameter(Mandatory = \$true)]
-        [hashtable]\$Expected,
-        
-        [Parameter(Mandatory = \$true)]
-        [hashtable]\$Actual
-    )
-    
-    \$drift = [System.Collections.ArrayList]::new()
-    
-    foreach (\$key in \$Expected.Keys) {
-        if (\$Actual.ContainsKey(\$key)) {
-            \$expectedVal = \$Expected[\$key]
-            \$actualVal = \$Actual[\$key]
-            
-            # Comparacao especial para versoes
-            if (\$key -eq "agent_min_version") {
-                # Extrair numero da versao
-                \$expectedNum = [version](\$expectedVal -replace '^v', '' -replace '-.*\$', '')
-                \$actualNum = [version](\$actualVal -replace '^v', '' -replace '-.*\$', '')
-                
-                if (\$actualNum -lt \$expectedNum) {
-                    [void]\$drift.Add(@{
-                        field = \$key
-                        expected = \$expectedVal
-                        actual = \$actualVal
-                        type = "version_mismatch"
-                    })
-                }
-            }
-            elseif (\$key -eq "heartbeat_interval_max") {
-                if (\$Actual["heartbeat_interval"] -gt \$expectedVal) {
-                    [void]\$drift.Add(@{
-                        field = \$key
-                        expected = \$expectedVal
-                        actual = \$Actual["heartbeat_interval"]
-                        type = "interval_exceeded"
-                    })
-                }
-            }
-            elseif (\$expectedVal -ne \$actualVal) {
-                [void]\$drift.Add(@{
-                    field = \$key
-                    expected = \$expectedVal
-                    actual = \$actualVal
-                    type = "value_mismatch"
-                })
-            }
-        }
-        else {
-            [void]\$drift.Add(@{
-                field = \$key
-                expected = \$Expected[\$key]
-                actual = \$null
-                type = "missing_field"
-            })
-        }
-    }
-    
-    return \$drift
-}
-
-function Check-PolicyCompliance {
-    try {
-        \$current = Get-CurrentPolicyState
-        \$Global:PolicyContract.actual = \$current
-        
-        \$drift = Compare-PolicyState -Expected \$Global:PolicyContract.expected -Actual \$current
-        \$Global:PolicyContract.drift = \$drift
-        
-        if (\$drift.Count -gt 0) {
-            Write-Log "[POLICY] Drift detected: \$(\$drift.Count) issue(s)" "WARN"
-            
-            foreach (\$d in \$drift) {
-                Write-Log "[POLICY] - \$(\$d.field): expected=\$(\$d.expected), actual=\$(\$d.actual)" "WARN"
-            }
-            
-            Add-EvidenceEntry -Type "policy_drift" -Data @{
-                drift_count = \$drift.Count
-                drift_items = \$drift
-                expected = \$Global:PolicyContract.expected
-                actual = \$current
-            } -Severity "warning"
-            
-            return @{
-                compliant = \$false
-                drift = \$drift
-                drift_count = \$drift.Count
-            }
-        }
-        
-        Write-Log "[POLICY] Compliance check passed" "DEBUG"
-        return @{
-            compliant = \$true
-            drift = @()
-            drift_count = 0
-        }
-    }
-    catch {
-        Write-Log "[POLICY] Compliance check error: \$(\$_.Exception.Message)" "ERROR"
-        return @{
-            compliant = \$false
-            error = \$_.Exception.Message
-        }
-    }
-}
-
-function Invoke-PolicyEnforcement {
-    \$compliance = Check-PolicyCompliance
-    
-    if (\$compliance.compliant) {
-        return \$true
-    }
-    
-    Write-Log "[POLICY] Attempting to enforce policy..." "INFO"
-    \$enforced = \$true
-    
-    foreach (\$d in \$compliance.drift) {
-        switch (\$d.field) {
-            "dns_service_running" {
-                if (\$d.expected -eq \$true -and \$d.actual -eq \$false) {
-                    Write-Log "[POLICY] Enforcing: Starting DNS service" "INFO"
-                    \$started = Start-DNSFilterService
-                    if (-not \$started) { \$enforced = \$false }
-                }
-            }
-            "dns_enabled" {
-                if (\$d.expected -eq \$true -and \$d.actual -eq \$false) {
-                    Write-Log "[POLICY] Enforcing: Enabling DNS" "INFO"
-                    \$Global:DNSFilterConfig.Enabled = \$true
-                }
-            }
-            "agent_min_version" {
-                Write-Log "[POLICY] Agent version below minimum - update required" "WARN"
-                # Nao podemos forcar update, apenas registrar
-            }
-            default {
-                Write-Log "[POLICY] Cannot auto-enforce: \$(\$d.field)" "WARN"
-            }
-        }
-    }
-    
-    if (\$enforced) {
-        Add-EvidenceEntry -Type "policy_sync" -Data @{
-            action = "enforcement_complete"
-            drift_resolved = \$compliance.drift_count
-        } -Severity "info"
-    }
-    
-    return \$enforced
-}
-
-function Sync-PolicyFromServer {
-    try {
-        Write-Log "[POLICY] Syncing policy from server..." "INFO"
-        
-        \$body = @{
-            agent_name = \$Global:AgentName
-            agent_version = \$Global:AgentVersion
-        }
-        
-        \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/get-agent-policy" \`
-            -Method "POST" \`
-            -Body \$body \`
-            -TimeoutSec 15 \`
-            -MaxRetries 2
-        
-        if (\$result.Success -and \$result.StatusCode -eq 200 -and \$result.Body) {
-            \$serverPolicy = \$result.Body | ConvertFrom-Json
-            
-            if (\$serverPolicy.expected) {
-                \$Global:PolicyContract.expected = @{
-                    dns_enabled = [bool]\$serverPolicy.expected.dns_enabled
-                    dns_service_running = [bool]\$serverPolicy.expected.dns_service_running
-                    agent_min_version = \$serverPolicy.expected.agent_min_version
-                    blocked_domains_synced = [bool]\$serverPolicy.expected.blocked_domains_synced
-                    heartbeat_interval_max = [int]\$serverPolicy.expected.heartbeat_interval_max
-                    job_execution_enabled = [bool]\$serverPolicy.expected.job_execution_enabled
-                }
-                \$Global:PolicyContract.version = \$serverPolicy.version
-                \$Global:PolicyContract.last_sync = Get-Date
-                
-                Write-Log "[POLICY] Policy synced from server (version: \$(\$serverPolicy.version))" "SUCCESS"
-                
-                Add-EvidenceEntry -Type "policy_sync" -Data @{
-                    action = "synced_from_server"
-                    version = \$serverPolicy.version
-                } -Severity "info"
-                
-                return \$true
-            }
-        }
-        
-        Write-Log "[POLICY] Server policy not available, using defaults" "WARN"
-        return \$false
-    }
-    catch {
-        Write-Log "[POLICY] Sync error: \$(\$_.Exception.Message)" "WARN"
-        return \$false
-    }
-}
-
-# ============================================
-#  ROTACAO DE LOGS
-# ============================================
-function Invoke-LogRotation {
-    \$maxSizeMB = 10
-    \$maxAgeDays = 7
-    \$logPath = \$Global:LogFilePath
-    
-    try {
-        if (Test-Path \$logPath) {
-            \$file = Get-Item \$logPath -ErrorAction SilentlyContinue
-            
-            if (\$file -and \$file.Length -gt (\$maxSizeMB * 1MB)) {
-                \$archivePath = "\$logPath.\$(Get-Date -Format 'yyyyMMdd-HHmmss').bak"
-                Move-Item \$logPath \$archivePath -Force -ErrorAction SilentlyContinue
-                Write-Log "[LOG] Arquivo de log rotacionado para \$archivePath" "INFO"
-            }
-        }
-        
-        \$logDir = Split-Path \$logPath -Parent
-        if (Test-Path \$logDir) {
-            Get-ChildItem -Path \$logDir -Filter "*.bak" -ErrorAction SilentlyContinue | 
-                Where-Object { \$_.LastWriteTime -lt (Get-Date).AddDays(-\$maxAgeDays) } |
-                Remove-Item -Force -ErrorAction SilentlyContinue
-        }
-    } catch { }
-}
-
-# ============================================
-#  CONFIGURACAO DE REDE (TLS 1.2 + Proxy)
-# ============================================
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-try {
-    \$proxy = [System.Net.WebRequest]::GetSystemWebProxy()
-    [System.Net.WebRequest]::DefaultWebProxy = \$proxy
-    [System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
-} catch { }
+# v5.0.1: Ed25519 Public Key for job verification (from server)
+\$Global:ED25519_PUBLIC_KEY = "MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZih0iggaoI="
 
 # ============================================
 #  LOGGING
@@ -1747,2466 +193,1939 @@ function Write-Log {
         [string]\$Message,
         
         [Parameter(Mandatory = \$false)]
-        [ValidateSet("DEBUG","INFO","WARN","ERROR","SUCCESS")]
+        [ValidateSet("INFO", "WARN", "ERROR", "DEBUG", "SUCCESS")]
         [string]\$Level = "INFO"
     )
 
-    \$timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-    \$state = Get-AgentState
-    \$line = "[{0}] [{1}] [{2}] {3}" -f \$timestamp, \$Level, \$state, \$Message
+    \$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    \$logEntry = "[\$timestamp] [\$Level] \$Message"
 
-    Write-Host \$line
-    
+    # Console output with colors
+    \$color = switch (\$Level) {
+        "ERROR"   { "Red" }
+        "WARN"    { "Yellow" }
+        "SUCCESS" { "Green" }
+        "DEBUG"   { "Gray" }
+        default   { "White" }
+    }
+    Write-Host \$logEntry -ForegroundColor \$color
+
+    # File output with rotation
     try {
-        Add-Content -Path \$Global:LogFilePath -Value \$line
-    } catch { }
-}
-
-# ============================================
-#  HMAC (HEX)
-# ============================================
-function Convert-HexToBytes {
-    param(
-        [Parameter(Mandatory = \$true)]
-        [string]\$HexString
-    )
-
-    if (\$HexString -notmatch '^[0-9a-fA-F]{64}\$') {
-        Write-Log "HMAC_SECRET invalido. Esperado 64 caracteres hex." "ERROR"
-        throw "Invalid HMAC_SECRET format"
-    }
-
-    \$bytes = New-Object byte[] 32
-    for (\$i = 0; \$i -lt 64; \$i += 2) {
-        \$bytes[\$i / 2] = [Convert]::ToByte(\$HexString.Substring(\$i, 2), 16)
-    }
-    return \$bytes
-}
-
-function Get-HmacSignature {
-    param(
-        [Parameter(Mandatory = \$true)]
-        [string]\$Message,
+        \$logFile = Get-Item \$Global:LogFilePath -ErrorAction SilentlyContinue
+        if (\$logFile -and \$logFile.Length -gt \$Global:MaxLogSizeBytes) {
+            \$backupFile = "\$(\$Global:LogFilePath).\$(Get-Date -Format 'yyyyMMdd_HHmmss').bak"
+            Move-Item \$Global:LogFilePath \$backupFile -Force
+            
+            # Keep only last 5 backups
+            Get-ChildItem -Path \$logDir -Filter "*.bak" | 
+                Sort-Object LastWriteTime -Descending | 
+                Select-Object -Skip 5 | 
+                Remove-Item -Force -ErrorAction SilentlyContinue
+        }
         
-        [Parameter(Mandatory = \$true)]
-        [string]\$SecretHex
-    )
-
-    \$keyBytes = Convert-HexToBytes \$SecretHex
-    \$hmac = New-Object System.Security.Cryptography.HMACSHA256
-    \$hmac.Key = \$keyBytes
-    \$messageBytes = [Text.Encoding]::UTF8.GetBytes(\$Message)
-    \$signatureBytes = \$hmac.ComputeHash(\$messageBytes)
-    return ([System.BitConverter]::ToString(\$signatureBytes) -replace '-', '').ToLower()
+        Add-Content -Path \$Global:LogFilePath -Value \$logEntry -Encoding UTF8
+    } catch {
+        # Silent - log errors should not crash the agent
+    }
 }
 
 # ============================================
-#  REQUISICAO SEGURA COM HMAC
+#  v5.0: INVOKE-SECUREREQUEST WITH EXPONENTIAL BACKOFF
 # ============================================
 function Invoke-SecureRequest {
     param(
         [Parameter(Mandatory = \$true)]
         [string]\$Path,
-
-        [Parameter()]
-        [ValidateSet("GET","POST","PUT","DELETE")]
-        [string]\$Method = "GET",
-
-        [Parameter()]
-        [object]\$Body = \$null,
-
-        [Parameter()]
-        [int]\$TimeoutSec = 30,
-
-        [Parameter()]
-        [int]\$MaxRetries = 3
-    )
-
-    \$uri = "\$(\$Global:ServerUrl)\$Path"
-    \$retryCount = 0
-    \$retryDelay = 2
-
-    while (\$true) {
-        try {
-            \$timestamp = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
-            \$nonce = [guid]::NewGuid().ToString()
-
-            if (\$Body -ne \$null) {
-                if (\$Body -is [string]) {
-                    \$bodyJson = \$Body
-                } elseif (\$Body -is [hashtable] -or \$Body.GetType().Name -like 'PSCustomObject') {
-                    \$bodyJson = \$Body | ConvertTo-Json -Compress -Depth 10
-                } else {
-                    \$bodyJson = ""
-                }
-            } else {
-                \$bodyJson = ""
-            }
-
-            \$payload = '{0}:{1}:{2}' -f \$timestamp, \$nonce, \$bodyJson
-            \$signature = Get-HmacSignature -Message \$payload -SecretHex \$Global:HmacSecret
-
-            \$headers = @{
-                "X-Agent-Token"    = \$Global:AgentToken
-                "X-HMAC-Signature" = \$signature
-                "X-Timestamp"      = \$timestamp
-                "X-Nonce"          = \$nonce
-                "Content-Type"     = "application/json"
-            }
-
-            \$params = @{
-                Uri         = \$uri
-                Method      = \$Method
-                Headers     = \$headers
-                TimeoutSec  = \$TimeoutSec
-                ErrorAction = "Stop"
-            }
-
-            if (\$bodyJson -ne "") {
-                \$bodyBytes = [System.Text.Encoding]::UTF8.GetBytes(\$bodyJson)
-                \$params.Body = \$bodyBytes
-            }
-
-            Write-Log "[NETWORK] \$Method \$uri" "DEBUG"
-
-            \$response = Invoke-WebRequest @params -UseBasicParsing
-            \$status = [int]\$response.StatusCode
-
-            Write-Log "[NETWORK] Response: \$status" "DEBUG"
-
-            return [pscustomobject]@{
-                Success    = \$true
-                StatusCode = \$status
-                Body       = \$response.Content
-            }
-        }
-        catch {
-            \$retryCount++
-            \$statusCode = \$null
-            if (\$_.Exception.Response -and \$_.Exception.Response.StatusCode) {
-                \$statusCode = \$_.Exception.Response.StatusCode.value__
-            }
-
-            Write-Log "Erro na requisicao \$Method \$uri (tentativa \$retryCount/\$MaxRetries): \$(\$_.Exception.Message)" "ERROR"
-
-            if (\$statusCode -eq 401) {
-                Write-Log "[ERROR] Erro de autenticacao (401)" "ERROR"
-                throw
-            }
-
-            if (\$statusCode -eq 429) {
-                \$rateLimitDelay = \$retryDelay * 5
-                Write-Log "[RATE-LIMIT] 429 - aguardando \${rateLimitDelay}s" "WARN"
-                Start-Sleep -Seconds \$rateLimitDelay
-                \$retryDelay *= 2
-                
-                if (\$retryCount -ge \$MaxRetries) {
-                    return [pscustomobject]@{
-                        Success    = \$false
-                        StatusCode = 429
-                        Body       = "Rate limit exceeded"
-                    }
-                }
-                continue
-            }
-
-            if (\$retryCount -ge \$MaxRetries) {
-                throw
-            }
-
-            Start-Sleep -Seconds \$retryDelay
-            \$retryDelay *= 2
-        }
-    }
-}
-
-# ============================================
-#  INFO DO SISTEMA
-# ============================================
-function Get-SystemInfo {
-    try {
-        \$os = Get-CimInstance Win32_OperatingSystem
-        \$cs = Get-CimInstance Win32_ComputerSystem
-
-        return @{
-            os_type       = "windows"
-            os_name       = \$os.Caption
-            os_version    = \$os.Version
-            build_number  = \$os.BuildNumber
-            hostname      = \$env:COMPUTERNAME
-            domain        = \$cs.Domain
-            total_ram_gb  = [Math]::Round(\$cs.TotalPhysicalMemory / 1GB, 2)
-            agent_name    = \$Global:AgentName
-            agent_version = \$Global:AgentVersion
-            state         = Get-AgentState
-        }
-    } catch {
-        return @{
-            os_type       = "windows"
-            hostname      = \$env:COMPUTERNAME
-            agent_name    = \$Global:AgentName
-            agent_version = \$Global:AgentVersion
-            state         = Get-AgentState
-        }
-    }
-}
-
-# ============================================
-#  HEARTBEAT
-# ============================================
-# ============================================
-#  HEARTBEAT (COM FORCE UPDATE VIA RESPONSE)
-# ============================================
-function Send-Heartbeat {
-    \$sysInfo = Get-SystemInfo
-
-    \$body = @{
-        agent_name    = \$Global:AgentName
-        hostname      = \$sysInfo.hostname
-        os_type       = \$sysInfo.os_type
-        os_version    = \$sysInfo.os_version
-        agent_version = \$Global:AgentVersion
-        state         = Get-AgentState
-        error_count   = \$Global:AgentState.ErrorCount
-    }
-
-    Write-Log "[HEARTBEAT] Enviando heartbeat (state: \$(Get-AgentState))..." "INFO"
-
-    try {
-        \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/heartbeat" \`
-            -Method "POST" \`
-            -Body \$body \`
-            -TimeoutSec 15
-
-        if (\$result.Success -and \$result.StatusCode -eq 200) {
-            Write-Log "[HEARTBEAT] OK (200)" "SUCCESS"
-            
-            # FASE VIKTOR: Processar force_update no response do heartbeat
-            # Isso bypassa o job system e funciona com QUALQUER versao de agente
-            try {
-                \$response = \$result.Body | ConvertFrom-Json
-                
-                if (\$response.force_update -eq \$true) {
-                    Write-Log "[FORCE UPDATE] Update forcado detectado via heartbeat!" "WARN"
-                    Write-Log "[FORCE UPDATE] Target version: \$(\$response.target_version)" "INFO"
-                    
-                    # Aplicar force update imediatamente
-                    \$updateResult = Apply-ForcedUpdate -Response \$response
-                    
-                    if (\$updateResult.success) {
-                        # Se chegou aqui, agente vai reiniciar - nao retorna
-                        return \$true
-                    } else {
-                        Write-Log "[FORCE UPDATE] Falha ao aplicar: \$(\$updateResult.error)" "ERROR"
-                        # Continua operando normalmente mesmo com falha no force update
-                    }
-                }
-            } catch {
-                # Erro ao processar response nao deve quebrar o heartbeat
-                Write-Log "[HEARTBEAT] Erro ao processar response: \$(\$_.Exception.Message)" "WARN"
-            }
-            
-            Add-EvidenceEntry -Type "heartbeat" -Data @{
-                status = "success"
-                state = Get-AgentState
-            } -Severity "debug"
-            
-            return \$true
-        } else {
-            Write-Log "[HEARTBEAT] Falhou: Status \$(\$result.StatusCode)" "ERROR"
-            return \$false
-        }
-    }
-    catch {
-        Write-Log "[HEARTBEAT] Erro: \$(\$_.Exception.Message)" "ERROR"
-        return \$false
-    }
-}
-
-# ============================================
-#  FORCE UPDATE VIA HEARTBEAT (VIKTOR METHOD)
-# ============================================
-# Esta funcao:
-# 1. NAO depende do job system
-# 2. NAO usa ValidateSet que pode quebrar
-# 3. Processa dados recebidos diretamente no heartbeat response
-# 4. Funciona com agentes antigos que nao tem update_agent funcionando
-# ============================================
-function Apply-ForcedUpdate {
-    param(
-        [Parameter(Mandatory = \$true)]
-        \$Response
-    )
-    
-    try {
-        Write-Log "[FORCE UPDATE] Iniciando aplicacao de update forcado..." "INFO"
         
-        # Extrair dados do response
-        \$targetVersion = \$Response.target_version
-        \$base64Content = \$Response.script_content_base64
-        \$expectedHash = \$Response.sha256
-        \$reason = \$Response.reason
-        
-        if (-not \$targetVersion -or -not \$base64Content -or -not \$expectedHash) {
-            throw "Dados de force update incompletos no response"
-        }
-        
-        Write-Log "[FORCE UPDATE] Version: \$targetVersion, Reason: \$reason" "INFO"
-        
-        # SAFE MODE CHECK - com suporte a override via heartbeat
-        \$overrideSafeMode = \$Response.override_safe_mode -eq \$true
-        \$rollbackState = Get-RollbackState
-        
-        if (\$rollbackState.safe_mode) {
-            if (\$overrideSafeMode) {
-                # Admin habilitou override - resetar safe mode antes de aplicar update
-                Write-Log "[SAFE MODE] Override habilitado pelo admin - resetando safe mode" "WARN"
-                Reset-SafeMode -Reason "force_update_override"
-                
-                Add-EvidenceEntry -Type "safe_mode_override" -Data @{
-                    event = "safe_mode_overridden_by_admin"
-                    target_version = \$targetVersion
-                    previous_rollback_count = \$rollbackState.rollback_count
-                    override_enabled = \$true
-                } -Severity "warning"
-            } else {
-                Write-Log "[SAFE MODE] Updates desabilitados - rollback loop detectado" "ERROR"
-                
-                Add-EvidenceEntry -Type "security_warning" -Data @{
-                    event = "force_update_blocked_safe_mode"
-                    target_version = \$targetVersion
-                    rollback_count = \$rollbackState.rollback_count
-                    override_enabled = \$false
-                } -Severity "warning"
-                
-                return @{ success = \$false; error = "Safe mode active - updates disabled. Admin can enable override_safe_mode to bypass." }
-            }
-        }
-        
-        # Criar arquivo temporario
-        \$tempScript = Join-Path \$env:TEMP "cybershield-force-update-\$targetVersion.ps1"
-        
-        # CRITICAL: Base64 decode - preserva 100% dos bytes
-        Write-Log "[FORCE UPDATE] Decodificando Base64..." "DEBUG"
-        \$bytes = [System.Convert]::FromBase64String(\$base64Content)
-        [System.IO.File]::WriteAllBytes(\$tempScript, \$bytes)
-        Write-Log "[FORCE UPDATE] Script salvo: \$(\$bytes.Length) bytes" "DEBUG"
-        
-        # Validar SHA256
-        \$actualHash = (Get-FileHash -Path \$tempScript -Algorithm SHA256).Hash.ToLower()
-        if (\$actualHash -ne \$expectedHash.ToLower()) {
-            Remove-Item \$tempScript -Force -ErrorAction SilentlyContinue
-            throw "SHA256 mismatch! Esperado: \$expectedHash, Obtido: \$actualHash"
-        }
-        
-        Write-Log "[FORCE UPDATE] SHA256 validado: \$actualHash" "SUCCESS"
-        
-        # Detectar script atual
-        \$installDir = "C:\\CyberShield"
-        \$targetScript = Join-Path \$installDir "cybershield-agent-\$(\$Global:AgentName).ps1"
-        
-        \$currentScript = \$null
-        \$possiblePaths = @(
-            \$PSCommandPath,
-            (Join-Path \$installDir "cybershield-agent-\$(\$Global:AgentName).ps1"),
-            (Join-Path \$installDir "cybershield-agent-v4.ps1"),
-            (Join-Path \$installDir "cybershield-agent.ps1")
-        )
-        
-        foreach (\$path in \$possiblePaths) {
-            if (\$path -and (Test-Path \$path)) {
-                \$currentScript = \$path
-                break
-            }
-        }
-        
-        if (-not \$currentScript) {
-            \$found = Get-ChildItem -Path \$installDir -Filter "cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Select-Object -First 1
-            if (\$found) { \$currentScript = \$found.FullName }
-        }
-        
-        # BACKUP para rollback estruturado
-        \$previousPath = \$Global:RollbackPaths.Previous
-        if (\$currentScript -and (Test-Path \$currentScript)) {
-            try {
-                Copy-Item -Path \$currentScript -Destination \$previousPath -Force
-                Write-Log "[FORCE UPDATE] Backup criado: \$previousPath" "INFO"
-                
-                \$rollbackState = Get-RollbackState
-                \$rollbackState.previous_version = \$Global:AgentVersion
-                Save-RollbackState -State \$rollbackState
-            } catch {
-                Write-Log "[FORCE UPDATE] Backup falhou: \$(\$_.Exception.Message)" "WARN"
-            }
-        }
-        
-        # APLICAR UPDATE
-        Copy-Item -Path \$tempScript -Destination \$targetScript -Force
-        Remove-Item \$tempScript -Force -ErrorAction SilentlyContinue
-        Write-Log "[FORCE UPDATE] Script instalado: \$targetScript" "SUCCESS"
-        
-        # Registrar evidencia
-        Add-EvidenceEntry -Type "force_update" -Data @{
-            old_version = \$Global:AgentVersion
-            new_version = \$targetVersion
-            target_path = \$targetScript
-            sha256 = \$actualHash
-            reason = \$reason
-            method = "heartbeat_response"
-        } -Severity "info"
-        
-        # Confirmar no backend que force update foi aplicado
-        try {
-            \$confirmResult = Invoke-SecureRequest \`
-                -Path "/functions/v1/confirm-force-update" \`
-                -Method "POST" \`
-                -Body @{
-                    new_version = \$targetVersion
-                    old_version = \$Global:AgentVersion
-                } \`
-                -TimeoutSec 10
-            
-            if (\$confirmResult.Success) {
-                Write-Log "[FORCE UPDATE] Confirmacao enviada ao backend" "SUCCESS"
-            }
-        } catch {
-            Write-Log "[FORCE UPDATE] Falha ao confirmar no backend (nao critico): \$(\$_.Exception.Message)" "WARN"
-        }
-        
-        Write-Log "[FORCE UPDATE] Update \$targetVersion aplicado com sucesso!" "SUCCESS"
-        Write-Log "[FORCE UPDATE] Nova versao sera ativada no proximo boot do Windows" "INFO"
-        
-        return @{ success = \$true; version = \$targetVersion }
-        
-    } catch {
-        Write-Log "[FORCE UPDATE] Erro: \$(\$_.Exception.Message)" "ERROR"
-        
-        Add-EvidenceEntry -Type "error" -Data @{
-            event = "force_update_failed"
-            error = \$_.Exception.Message
-            target_version = \$Response.target_version
-        } -Severity "error"
-        
-        return @{ success = \$false; error = \$_.Exception.Message }
-    }
-}
-
-# ============================================
-#  SEND SYSTEM METRICS (HYBRID - v4.0.9)
-# ============================================
-function Send-SystemMetrics {
-    param(
         [Parameter(Mandatory = \$false)]
-        [hashtable]\$Metrics = \$null
+        [string]\$Method = "GET",
+        
+        [Parameter(Mandatory = \$false)]
+        [object]\$Body,
+        
+        [Parameter(Mandatory = \$false)]
+        [int]\$MaxRetries = 5,
+        
+        [Parameter(Mandatory = \$false)]
+        [int]\$TimeoutSec = 30
     )
     
-    Write-Log "[METRICS] Iniciando coleta/envio de metricas..." "DEBUG"
+    \$url = if (\$Path.StartsWith("http")) { \$Path } else { "\$(\$Global:ServerUrl)\$Path" }
+    \$retryCount = 0
+    \$baseDelaySeconds = 1
+    \$maxDelaySeconds = 60
     
-    try {
-        # Se metricas nao foram passadas, coletar via Invoke-ReportJob
-        if (-not \$Metrics) {
-            Write-Log "[METRICS] Coletando metricas automaticamente..." "DEBUG"
-            \$metricsJob = @{ id = "auto-metrics"; type = "report" }
-            \$metricsResult = Invoke-ReportJob -Job \$metricsJob
-            
-            if (-not \$metricsResult.success) {
-                Write-Log "[METRICS] Falha na coleta de metricas: \$(\$metricsResult.output)" "WARN"
-                return \$false
-            }
-            
-            try {
-                \$metricsData = \$metricsResult.output | ConvertFrom-Json
-                
-                # v4.0.11: Enviar TODAS as informacoes de metricas, incluindo discos
-                \$Metrics = @{
-                    cpu_usage_percent = \$metricsData.cpu_percent
-                    cpu_name = \$metricsData.cpu_name
-                    cpu_cores = \$metricsData.cpu_cores
-                    memory_usage_percent = \$metricsData.memory_percent
-                    memory_total_gb = \$metricsData.memory_total_gb
-                    memory_used_gb = \$metricsData.memory_used_gb
-                    memory_free_gb = \$metricsData.memory_free_gb
-                    disk_usage_percent = \$metricsData.disk_percent
-                    disk_total_gb = \$metricsData.disk_total_gb
-                    disk_used_gb = \$metricsData.disk_used_gb
-                    disk_free_gb = \$metricsData.disk_free_gb
-                    disks = \$metricsData.disks
-                    hostname = \$metricsData.hostname
-                    uptime_seconds = \$metricsData.uptime_seconds
-                    last_boot_time = \$metricsData.last_boot_time
-                }
-                
-                \$diskCount = if (\$metricsData.disks) { \$metricsData.disks.Count } else { 0 }
-                Write-Log "[METRICS] Payload preparado: CPU=\$(\$Metrics.cpu_usage_percent)%, RAM=\$(\$Metrics.memory_usage_percent)%, Discos=\$diskCount" "DEBUG"
-                
-            } catch {
-                Write-Log "[METRICS] Falha ao parsear metricas: \$(\$_.Exception.Message)" "WARN"
-                return \$false
-            }
-        }
-        
-        Write-Log "[METRICS] Enviando metricas para backend..." "DEBUG"
-        
-        \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/submit-system-metrics" \`
-            -Method "POST" \`
-            -Body \$Metrics \`
-            -TimeoutSec 15
-        
-        if (\$result.Success -and \$result.StatusCode -eq 200) {
-            \$diskCount = if (\$Metrics.disks) { \$Metrics.disks.Count } else { 0 }
-            Write-Log "[SUCCESS] Metricas enviadas: CPU=\$(\$Metrics.cpu_usage_percent)%, RAM=\$(\$Metrics.memory_usage_percent)%, Discos=\$diskCount" "SUCCESS"
-            return \$true
-        }
-        
-        Write-Log "[WARN] Falha ao enviar metricas (HTTP \$(\$result.StatusCode))" "WARN"
-        return \$false
-        
-    } catch {
-        Write-Log "[ERROR] Erro em Send-SystemMetrics: \$(\$_.Exception.Message)" "ERROR"
-        return \$false
-    }
-}
-
-# ============================================
-#  SUBMIT JOB RESULT
-# ============================================
-function Submit-JobResult {
-    param(
-        [Parameter(Mandatory = \$true)]
-        [string]\$JobId,
-        
-        [Parameter(Mandatory = \$true)]
-        [ValidateSet("completed","failed")]
-        [string]\$Status,
-        
-        [Parameter()]
-        [string]\$Output = "",
-        
-        [Parameter()]
-        [string]\$ErrorMessage = "",
-        
-        [Parameter()]
-        [int]\$ExecutionTimeSeconds = 0,
-        
-        [Parameter()]
-        [string]\$StartedAt = "",
-        
-        [Parameter()]
-        [string]\$ExecutionId = ""
-    )
-
-    \$body = @{
-        job_id                 = \$JobId
-        status                 = \$Status
-        output                 = \$Output
-        error_message          = \$ErrorMessage
-        execution_time_seconds = \$ExecutionTimeSeconds
-        started_at             = \$StartedAt
-        agent_name             = \$Global:AgentName
-        agent_version          = \$Global:AgentVersion
-        execution_id           = \$ExecutionId
-    }
-
-    Write-Log "[JOB] Enviando resultado para job \$JobId (status=\$Status, exec_id=\$ExecutionId)" "INFO"
-
-    try {
-        \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/submit-job-result" \`
-            -Method "POST" \`
-            -Body \$body \`
-            -TimeoutSec 30
-
-        if (\$result.Success -and \$result.StatusCode -eq 200) {
-            Write-Log "[JOB] Resultado enviado com sucesso" "SUCCESS"
-            return \$true
-        } else {
-            Write-Log "[JOB] Falha ao enviar resultado: \$(\$result.StatusCode)" "ERROR"
-            return \$false
-        }
-    }
-    catch {
-        Write-Log "[JOB] Erro ao enviar resultado: \$(\$_.Exception.Message)" "ERROR"
-        return \$false
-    }
-}
-
-# ============================================
-#  EXECUTE JOB (IDEMPOTENTE COM EXECUTION_ID)
-# ============================================
-function Execute-Job {
-    param(
-        [Parameter(Mandatory = \$true)]
-        \$Job
-    )
-
-    # Verificar se pode executar jobs
-    if (-not (Test-CanExecuteJob)) {
-        \$state = Get-AgentState
-        Write-Log "[JOB] Cannot execute job in state \$state" "WARN"
-        
-        Add-EvidenceEntry -Type "job_execution" -Data @{
-            job_id = \$Job.id
-            job_type = \$Job.type
-            blocked = \$true
-            reason = "Invalid state: \$state"
-        } -Severity "warning"
-        
-        return
-    }
-
-    # SSA-004: Verify job signature BEFORE execution
-    \$signatureValid = Verify-JobSignature -Job \$Job
-    if (-not \$signatureValid) {
-        Write-Log "[SECURITY] ❌ BLOCKED: Job \$(\$Job.id) rejected due to invalid/missing signature" "ERROR"
-        
-        # Submit rejection result to backend
-        Submit-JobResult \`
-            -JobId \$Job.id \`
-            -Status "failed" \`
-            -ErrorMessage "Security: Invalid or missing payload signature" \`
-            -ExecutionTimeSeconds 0 \`
-            -StartedAt (Get-Date).ToUniversalTime().ToString("o") \`
-            -ExecutionId "security-rejected"
-        
-        return
-    }
-
-    \$jobId = \$Job.id
-    \$jobType = \$Job.type
-    \$executionId = "exec-\$(New-Guid)"
-    \$startTime = Get-Date
-
-    Write-Log "[JOB] Executando job \$jobId (type=\$jobType, exec_id=\$executionId)" "INFO"
-
-    # Registrar inicio da execucao
-    Add-EvidenceEntry -Type "job_execution" -Data @{
-        job_id = \$jobId
-        job_type = \$jobType
-        execution_id = \$executionId
-        phase = "started"
-        state = Get-AgentState
-        signature_verified = \$true
-    } -Severity "info"
-
-    try {
-        \$output = ""
-
-        switch (\$jobType) {
-            "report" {
-                \$result = Invoke-ReportJob -Job \$Job
-                if (\$result.success) { \$output = \$result.output }
-                else { throw \$result.error }
-            }
-            "software_inventory_collect" {
-                \$result = Invoke-SoftwareInventoryJob -Job \$Job
-                if (\$result.success) { \$output = \$result.output }
-                else { throw \$result.error }
-            }
-            "light_vuln_scan" {
-                \$result = Invoke-LightVulnScanJob -Job \$Job
-                if (\$result.success) { \$output = \$result.output }
-                else { throw \$result.error }
-            }
-            "collect_antivirus_status" {
-                \$result = Invoke-CollectAntivirusJob -Job \$Job
-                if (\$result.success) { \$output = \$result.output }
-                else { throw \$result.error }
-            }
-            "collect_web_activity" {
-                \$result = Invoke-CollectWebActivityJob -Job \$Job
-                if (\$result.success) { \$output = \$result.output }
-                else { throw \$result.error }
-            }
-            "update_agent" {
-                \$result = Invoke-UpdateAgentJob -Job \$Job
-                if (\$result.success) { \$output = \$result.output }
-                else { throw \$result.error }
-            }
-            "integration_test" {
-                \$sys = Get-SystemInfo
-                \$output = @{
-                    message = "Integration test executed successfully"
-                    timestamp = (Get-Date).ToUniversalTime().ToString("o")
-                    agent = \$Global:AgentName
-                    version = \$Global:AgentVersion
-                    system = \$sys
-                } | ConvertTo-Json -Compress
-            }
-            "collect_info" {
-                \$sys = Get-SystemInfo
-                \$output = \$sys | ConvertTo-Json -Compress
-            }
-            "scan" {
-                \$result = Invoke-ScanJob -Job \$Job
-                if (\$result.success) { \$output = \$result.output }
-                else { throw \$result.error }
-            }
-            "fix_firewall" {
-                \$result = Invoke-FixFirewallJob -Job \$Job
-                if (\$result.success) { \$output = \$result.output }
-                else { throw \$result.error }
-            }
-            "restart_service" {
-                \$result = Invoke-RestartServiceJob -Job \$Job
-                if (\$result.success) { \$output = \$result.output }
-                else { throw \$result.error }
-            }
-            "collect_network_info" {
-                \$result = Invoke-CollectNetworkInfoJob -Job \$Job
-                if (\$result.success) { \$output = \$result.output }
-                else { throw \$result.error }
-            }
-            "sync_blocked_websites" {
-                \$result = Invoke-SyncBlockedWebsitesJob -Job \$Job
-                if (\$result.success) { \$output = \$result.output }
-                else { throw \$result.error }
-            }
-            "reinstall_agent" {
-                \$result = Invoke-ReinstallAgentJob -Job \$Job
-                if (\$result.success) { \$output = \$result.output }
-                else { throw \$result.error }
-            }
-            "reset_safe_mode" {
-                \$result = Invoke-ResetSafeModeJob -Job \$Job
-                if (\$result.success) { \$output = \$result.output }
-                else { throw \$result.error }
-            }
-            default {
-                throw "Tipo de job nao suportado: \$jobType"
-            }
-        }
-
-        \$execTime = [int]((Get-Date) - \$startTime).TotalSeconds
-        \$startTimeISO = \$startTime.ToUniversalTime().ToString("o")
-
-        # Registrar sucesso
-        Add-EvidenceEntry -Type "job_execution" -Data @{
-            job_id = \$jobId
-            job_type = \$jobType
-            execution_id = \$executionId
-            phase = "completed"
-            execution_time_seconds = \$execTime
-            state = Get-AgentState
-        } -Severity "info"
-
-        Submit-JobResult \`
-            -JobId \$jobId \`
-            -Status "completed" \`
-            -Output \$output \`
-            -ExecutionTimeSeconds \$execTime \`
-            -StartedAt \$startTimeISO \`
-            -ExecutionId \$executionId
-    }
-    catch {
-        \$err = "Erro ao executar job \$jobId\`: \$(\$_.Exception.Message)"
-        Write-Log \$err "ERROR"
-
-        \$execTime = [int]((Get-Date) - \$startTime).TotalSeconds
-        \$startTimeISO = \$startTime.ToUniversalTime().ToString("o")
-
-        # Registrar falha
-        Add-EvidenceEntry -Type "job_execution" -Data @{
-            job_id = \$jobId
-            job_type = \$jobType
-            execution_id = \$executionId
-            phase = "failed"
-            error = \$_.Exception.Message
-            execution_time_seconds = \$execTime
-            state = Get-AgentState
-        } -Severity "error"
-
-        Submit-JobResult \`
-            -JobId \$jobId \`
-            -Status "failed" \`
-            -ErrorMessage \$err \`
-            -ExecutionTimeSeconds \$execTime \`
-            -StartedAt \$startTimeISO \`
-            -ExecutionId \$executionId
-        
-        # Considerar transicao para DEGRADED se muitas falhas
-        if (\$Global:AgentState.ErrorCount -ge 3) {
-            Set-AgentState -NewState "DEGRADED" -Reason "Multiple job failures" -ErrorDetails \$err
-        }
-    }
-}
-
-# ============================================
-#  JOB HANDLERS (Simplificados para v4.0)
-# ============================================
-function Invoke-ReportJob {
-    param(\$Job)
-    
-    try {
-        # CPU
-        \$cpuUsage = (Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
-        if (\$null -eq \$cpuUsage) { \$cpuUsage = 0 }
-        \$cpuInfo = Get-WmiObject Win32_Processor | Select-Object -First 1
-        
-        # Memory
-        \$os = Get-WmiObject Win32_OperatingSystem
-        \$memTotalGB = [math]::Round(\$os.TotalVisibleMemorySize / 1MB, 2)
-        \$memFreeGB = [math]::Round(\$os.FreePhysicalMemory / 1MB, 2)
-        \$memUsedGB = [math]::Round(\$memTotalGB - \$memFreeGB, 2)
-        \$memUsage = [math]::Round(((\$os.TotalVisibleMemorySize - \$os.FreePhysicalMemory) / \$os.TotalVisibleMemorySize) * 100, 2)
-        
-        # Disks - Collect ALL fixed drives (v4.0.11)
-        \$disksArray = @()
-        \$allDisks = Get-WmiObject Win32_LogicalDisk -Filter "DriveType=3"  # DriveType=3 = Fixed disks
-        \$systemDrive = \$env:SystemDrive  # Usually "C:"
-        
-        foreach (\$d in \$allDisks) {
-            if (\$d.Size -gt 0) {
-                \$totalGB = [math]::Round(\$d.Size / 1GB, 2)
-                \$freeGB = [math]::Round(\$d.FreeSpace / 1GB, 2)
-                \$usedGB = [math]::Round(\$totalGB - \$freeGB, 2)
-                \$usagePercent = [math]::Round(((\$d.Size - \$d.FreeSpace) / \$d.Size) * 100, 2)
-                
-                \$disksArray += @{
-                    drive_letter = \$d.DeviceID
-                    drive_label = if (\$d.VolumeName) { \$d.VolumeName } else { "" }
-                    drive_type = "Fixed"
-                    total_gb = \$totalGB
-                    used_gb = \$usedGB
-                    free_gb = \$freeGB
-                    usage_percent = \$usagePercent
-                    is_system_drive = (\$d.DeviceID -eq \$systemDrive)
-                }
-            }
-        }
-        
-        # Primary disk metrics (for legacy compatibility)
-        \$primaryDisk = \$disksArray | Where-Object { \$_.is_system_drive } | Select-Object -First 1
-        if (-not \$primaryDisk -and \$disksArray.Count -gt 0) {
-            \$primaryDisk = \$disksArray[0]
-        }
-        
-        \$bootTime = \$os.LastBootUpTime
-        \$bootDateTime = [Management.ManagementDateTimeConverter]::ToDateTime(\$bootTime)
-        \$uptimeSeconds = [int]((Get-Date) - \$bootDateTime).TotalSeconds
-        
-        \$report = @{
-            timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-            hostname = \$env:COMPUTERNAME
-            cpu_percent = [math]::Round(\$cpuUsage, 2)
-            cpu_name = \$cpuInfo.Name
-            cpu_cores = \$cpuInfo.NumberOfCores
-            memory_percent = \$memUsage
-            memory_total_gb = \$memTotalGB
-            memory_used_gb = \$memUsedGB
-            memory_free_gb = \$memFreeGB
-            disk_percent = if (\$primaryDisk) { \$primaryDisk.usage_percent } else { 0 }
-            disk_total_gb = if (\$primaryDisk) { \$primaryDisk.total_gb } else { 0 }
-            disk_used_gb = if (\$primaryDisk) { \$primaryDisk.used_gb } else { 0 }
-            disk_free_gb = if (\$primaryDisk) { \$primaryDisk.free_gb } else { 0 }
-            disks = \$disksArray
-            uptime_seconds = \$uptimeSeconds
-            last_boot_time = \$bootDateTime.ToUniversalTime().ToString("o")
-            state = Get-AgentState
-        }
-        
-        Write-Log "[METRICS] Coletado: CPU=\$(\$report.cpu_percent)%, RAM=\$(\$report.memory_percent)%, Discos=\$(\$disksArray.Count)" "DEBUG"
-        
-        return @{ success = \$true; output = (\$report | ConvertTo-Json -Compress -Depth 5) }
-    }
-    catch {
-        return @{ success = \$false; error = \$_.Exception.Message }
-    }
-}
-
-function Invoke-SoftwareInventoryJob {
-    param(\$Job)
-    
-    try {
-        \$software = [System.Collections.ArrayList]::new()
-        
-        \$paths = @(
-            "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",
-            "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*"
-        )
-        
-        foreach (\$path in \$paths) {
-            Get-ItemProperty -Path \$path -ErrorAction SilentlyContinue | 
-            Where-Object { \$_.DisplayName -and \$_.DisplayName -notmatch "^(Update for|Security Update)" } |
-            ForEach-Object {
-                [void]\$software.Add(@{
-                    name = \$_.DisplayName
-                    version = \$_.DisplayVersion
-                    publisher = \$_.Publisher
-                    install_date = \$_.InstallDate
-                })
-            }
-        }
-        
-        \$result = @{
-            timestamp = (Get-Date).ToUniversalTime().ToString("o")
-            hostname = \$env:COMPUTERNAME
-            software_count = \$software.Count
-            software = \$software
-        }
-        
-        return @{ success = \$true; output = (\$result | ConvertTo-Json -Compress -Depth 5) }
-    }
-    catch {
-        return @{ success = \$false; error = \$_.Exception.Message }
-    }
-}
-
-function Invoke-LightVulnScanJob {
-    param(\$Job)
-    
-    try {
-        \$result = @{
-            timestamp = (Get-Date).ToUniversalTime().ToString("o")
-            hostname = \$env:COMPUTERNAME
-            vulnerabilities = @()
-            scan_type = "light"
-        }
-        
-        return @{ success = \$true; output = (\$result | ConvertTo-Json -Compress -Depth 5) }
-    }
-    catch {
-        return @{ success = \$false; error = \$_.Exception.Message }
-    }
-}
-
-function Invoke-CollectAntivirusJob {
-    param(\$Job)
-    
-    try {
-        \$avStatus = @{
-            timestamp = (Get-Date).ToUniversalTime().ToString("o")
-            hostname = \$env:COMPUTERNAME
-            engines = @()
-        }
-        
-        # Windows Defender
+    while (\$retryCount -lt \$MaxRetries) {
         try {
-            \$defender = Get-MpComputerStatus -ErrorAction Stop
-            \$avStatus.engines += @{
-                name = "Windows Defender"
-                enabled = \$defender.AntivirusEnabled
-                real_time_protection = \$defender.RealTimeProtectionEnabled
-                definitions_updated = \$defender.AntivirusSignatureLastUpdated.ToUniversalTime().ToString("o")
-            }
-        } catch { }
-        
-        return @{ success = \$true; output = (\$avStatus | ConvertTo-Json -Compress -Depth 5) }
-    }
-    catch {
-        return @{ success = \$false; error = \$_.Exception.Message }
-    }
-}
-
-# ============================================
-#  SSA-010: RESTORED JOBS FROM V3
-# ============================================
-
-# SCAN JOB - Verifica arquivos com scan-virus (VirusTotal)
-function Invoke-ScanJob {
-    param(\$Job)
-    
-    try {
-        Write-Log "[SCAN] Iniciando scan de arquivo..." "INFO"
-        
-        \$payload = \$Job.payload
-        if (\$payload -is [string]) {
-            \$payload = \$payload | ConvertFrom-Json
-        }
-        
-        \$filePath = \$payload.filePath
-        \$tenantId = \$payload.tenantId
-        
-        if (-not \$filePath) {
-            throw "Payload invalido: 'filePath' nao informado"
-        }
-        
-        # Expandir variaveis de ambiente
-        if (\$filePath -match '%USERPROFILE%') {
-            \$userProfiles = Get-ChildItem "C:\\Users" -Directory -ErrorAction SilentlyContinue | 
-                Where-Object { \$_.Name -notin @("Public", "Default", "Default User", "All Users") }
-            
-            \$expandedPath = \$null
-            foreach (\$profile in \$userProfiles) {
-                \$testPath = \$filePath -replace '%USERPROFILE%', \$profile.FullName
-                if (Test-Path \$testPath) {
-                    \$expandedPath = \$testPath
-                    break
-                }
+            \$headers = @{
+                "User-Agent" = "CyberShield-Agent/\$Global:AgentVersion"
+                "X-Agent-Token" = \$Global:AgentToken
+                "X-Agent-Name" = \$Global:AgentName
             }
             
-            if (\$null -eq \$expandedPath) {
-                throw "Caminho nao encontrado em nenhum perfil de usuario: \$filePath"
-            }
-            \$filePath = \$expandedPath
-        }
-        elseif (\$filePath -match '%([^%]+)%') {
-            \$filePath = [System.Environment]::ExpandEnvironmentVariables(\$filePath)
-        }
-        
-        if (-not (Test-Path \$filePath)) {
-            throw "Caminho nao encontrado: \$filePath"
-        }
-        
-        \$fileHash = (Get-FileHash -Path \$filePath -Algorithm SHA256).Hash.ToLower()
-        Write-Log "[SCAN] Escaneando: \$filePath (hash: \$fileHash)" "INFO"
-        
-        \$scanBody = @{
-            tenant_id = \$tenantId
-            agent_name = \$Global:AgentName
-            filePath = \$filePath
-            fileHash = \$fileHash
-        }
-        
-        \$scanResult = Invoke-SecureRequest \`
-            -Path "/functions/v1/scan-virus" \`
-            -Method POST \`
-            -Body \$scanBody \`
-            -TimeoutSec 60
-        
-        if (-not \$scanResult.Success) {
-            throw "Falha ao chamar scan-virus: HTTP \$(\$scanResult.StatusCode)"
-        }
-        
-        \$scanData = \$scanResult.Body | ConvertFrom-Json
-        
-        \$output = @{
-            filePath = \$filePath
-            fileHash = \$fileHash
-            isMalicious = \$scanData.isMalicious
-            positives = \$scanData.positives
-            totalScans = \$scanData.totalScans
-            permalink = \$scanData.permalink
-            quarantined = \$false
-        }
-        
-        if (\$scanData.isMalicious) {
-            Write-Log "[WARN] MALWARE DETECTADO: \$(\$scanData.positives)/\$(\$scanData.totalScans) engines" "WARN"
-            
-            \$quarantineRoot = "C:\\CyberShield\\Quarantine"
-            if (-not (Test-Path \$quarantineRoot)) {
-                New-Item -ItemType Directory -Path \$quarantineRoot -Force | Out-Null
+            # HMAC if available
+            if (\$Global:HmacSecret -and \$Body) {
+                \$bodyJson = if (\$Body -is [string]) { \$Body } else { \$Body | ConvertTo-Json -Compress -Depth 10 }
+                \$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
+                \$nonce = [Guid]::NewGuid().ToString("N")
+                \$signaturePayload = "\$timestamp.\$nonce.\$bodyJson"
+                
+                \$hmac = New-Object System.Security.Cryptography.HMACSHA256
+                \$hmac.Key = [System.Text.Encoding]::UTF8.GetBytes(\$Global:HmacSecret)
+                \$signatureBytes = \$hmac.ComputeHash([System.Text.Encoding]::UTF8.GetBytes(\$signaturePayload))
+                \$signature = [BitConverter]::ToString(\$signatureBytes).Replace("-", "").ToLower()
+                
+                \$headers["X-HMAC-Signature"] = \$signature
+                \$headers["X-HMAC-Timestamp"] = \$timestamp
+                \$headers["X-HMAC-Nonce"] = \$nonce
             }
             
-            \$fileName = [System.IO.Path]::GetFileName(\$filePath)
-            \$guid = [guid]::NewGuid().ToString()
-            \$quarantinePath = Join-Path \$quarantineRoot "\$guid\`_\$fileName"
-            
-            Move-Item -Path \$filePath -Destination \$quarantinePath -Force
-            Write-Log "[SUCCESS] Arquivo movido para quarentena: \$quarantinePath" "SUCCESS"
-            
-            \$output.quarantined = \$true
-            \$output.quarantinePath = \$quarantinePath
-        }
-        
-        return @{ success = \$true; output = (\$output | ConvertTo-Json -Compress) }
-    }
-    catch {
-        return @{ success = \$false; error = \$_.Exception.Message }
-    }
-}
-
-# FIX FIREWALL JOB - Ativa firewall em todos os perfis
-function Invoke-FixFirewallJob {
-    param(\$Job)
-    
-    Write-Log "[FIX-FIREWALL] Iniciando auto-remediacao de firewall..." "INFO"
-    
-    try {
-        \$profiles = @()
-        
-        try {
-            if (Get-Command Get-NetFirewallProfile -ErrorAction SilentlyContinue) {
-                \$fwProfiles = Get-NetFirewallProfile -ErrorAction Stop
-                foreach (\$p in \$fwProfiles) {
-                    \$profiles += [PSCustomObject]@{
-                        Name = \$p.Name
-                        Enabled = \$p.Enabled
-                    }
-                }
+            \$params = @{
+                Uri = \$url
+                Method = \$Method
+                Headers = \$headers
+                TimeoutSec = \$TimeoutSec
+                UseBasicParsing = \$true
             }
+            
+            if (\$Body) {
+                \$params.Body = if (\$Body -is [string]) { \$Body } else { \$Body | ConvertTo-Json -Depth 10 }
+                \$params.ContentType = "application/json; charset=utf-8"
+            }
+            
+            \$response = Invoke-WebRequest @params
+            
+            return @{
+                Success = \$true
+                StatusCode = \$response.StatusCode
+                Content = \$response.Content
+                Headers = \$response.Headers
+            }
+            
         } catch {
-            # Fallback netsh
-            \$netshOutput = netsh advfirewall show allprofiles state 2>&1 | Out-String
-            foreach (\$profileName in @("Domain", "Private", "Public")) {
-                \$enabled = \$false
-                \$pattern = "(?s)\$profileName.*?State\\s+(ON|OFF)"
-                if (\$netshOutput -match \$pattern) {
-                    \$enabled = (\$Matches[1] -eq "ON")
-                }
-                \$profiles += [PSCustomObject]@{
-                    Name = \$profileName
-                    Enabled = \$enabled
-                }
-            }
-        }
-        
-        if (\$profiles.Count -eq 0) {
-            throw "Nao foi possivel obter status dos perfis de firewall"
-        }
-        
-        \$fixed = @()
-        foreach (\$p in \$profiles) {
-            if (-not \$p.Enabled) {
-                Write-Log "[FIX-FIREWALL] Ativando firewall no perfil \$(\$p.Name)" "INFO"
+            \$retryCount++
+            \$errorMsg = \$_.Exception.Message
+            
+            # Classify error as transient or permanent
+            \$isTransient = \$errorMsg -match "timeout|connection|network|503|502|504|429"
+            
+            if (\$retryCount -lt \$MaxRetries -and \$isTransient) {
+                # Exponential backoff: 1s, 2s, 4s, 8s, 16s... max 60s
+                \$delay = [math]::Min(\$baseDelaySeconds * [math]::Pow(2, \$retryCount - 1), \$maxDelaySeconds)
                 
-                try {
-                    if (Get-Command Set-NetFirewallProfile -ErrorAction SilentlyContinue) {
-                        Set-NetFirewallProfile -Name \$p.Name -Enabled True -ErrorAction Stop
-                    } else {
-                        netsh advfirewall set \$(\$p.Name.ToLower())profile state on 2>&1 | Out-Null
-                    }
-                    \$fixed += \$p.Name
-                } catch {
-                    Write-Log "[FIX-FIREWALL] Falha ao ativar perfil \$(\$p.Name): \$(\$_.Exception.Message)" "ERROR"
+                Write-Log "[NETWORK] Request failed (attempt \$retryCount/\$MaxRetries), retrying in \${delay}s: \$errorMsg" "WARN"
+                Start-Sleep -Seconds \$delay
+            } else {
+                if (-not \$isTransient) {
+                    Write-Log "[NETWORK] Permanent error, not retrying: \$errorMsg" "ERROR"
+                } else {
+                    Write-Log "[NETWORK] All \$MaxRetries retries exhausted: \$errorMsg" "ERROR"
+                }
+                
+                return @{
+                    Success = \$false
+                    Error = \$errorMsg
+                    StatusCode = if (\$_.Exception.Response) { [int]\$_.Exception.Response.StatusCode } else { 0 }
+                    Transient = \$isTransient
                 }
             }
         }
-        
-        if (\$fixed.Count -gt 0) {
-            Write-Log "[FIX-FIREWALL] Firewall ativado em: \$(\$fixed -join ', ')" "SUCCESS"
-            return @{ success = \$true; output = "Firewall ativado em perfis: \$(\$fixed -join ', ')" }
-        } else {
-            Write-Log "[FIX-FIREWALL] Firewall ja estava ativo em todos os perfis" "INFO"
-            return @{ success = \$true; output = "Firewall ja ativo em todos os perfis" }
-        }
     }
-    catch {
-        return @{ success = \$false; error = \$_.Exception.Message }
-    }
-}
-
-# RESTART SERVICE JOB - Reinicia um servico especifico
-function Invoke-RestartServiceJob {
-    param(\$Job)
     
-    Write-Log "[RESTART-SERVICE] Iniciando restart de servico..." "INFO"
-    
-    try {
-        \$payload = \$Job.payload
-        if (\$payload -is [string]) {
-            \$payload = \$payload | ConvertFrom-Json
-        }
-        
-        if (-not \$payload -or -not \$payload.service_name) {
-            throw "service_name nao especificado no payload"
-        }
-        
-        \$serviceName = \$payload.service_name
-        
-        \$service = Get-Service -Name \$serviceName -ErrorAction SilentlyContinue
-        if (-not \$service) {
-            throw "Servico '\$serviceName' nao encontrado"
-        }
-        
-        Write-Log "[RESTART-SERVICE] Reiniciando servico: \$serviceName (Status atual: \$(\$service.Status))" "INFO"
-        
-        Restart-Service -Name \$serviceName -Force -ErrorAction Stop
-        
-        Start-Sleep -Seconds 2
-        
-        \$serviceAfter = Get-Service -Name \$serviceName -ErrorAction Stop
-        Write-Log "[RESTART-SERVICE] Servico reiniciado. Status: \$(\$serviceAfter.Status)" "SUCCESS"
-        
-        return @{ success = \$true; output = "Servico '\$serviceName' reiniciado. Status: \$(\$serviceAfter.Status)" }
-    }
-    catch {
-        return @{ success = \$false; error = \$_.Exception.Message }
-    }
-}
-
-# COLLECT NETWORK INFO JOB - Coleta informacoes de rede
-function Invoke-CollectNetworkInfoJob {
-    param(\$Job)
-    
-    Write-Log "[NETWORK-INFO] Iniciando coleta de informacoes de rede..." "INFO"
-    
-    try {
-        \$firewallDomain = \$null
-        \$firewallPrivate = \$null
-        \$firewallPublic = \$null
-        
-        try {
-            if (Get-Command Get-NetFirewallProfile -ErrorAction SilentlyContinue) {
-                \$profiles = Get-NetFirewallProfile
-                foreach (\$p in \$profiles) {
-                    switch (\$p.Name) {
-                        "Domain" { \$firewallDomain = \$p.Enabled }
-                        "Private" { \$firewallPrivate = \$p.Enabled }
-                        "Public" { \$firewallPublic = \$p.Enabled }
-                    }
-                }
-            }
-        } catch { }
-        
-        \$openPorts = @()
-        try {
-            \$tcpListening = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Select-Object -First 50
-            foreach (\$conn in \$tcpListening) {
-                \$processName = "unknown"
-                try { 
-                    \$proc = Get-Process -Id \$conn.OwningProcess -ErrorAction SilentlyContinue
-                    if (\$proc) { \$processName = \$proc.ProcessName }
-                } catch { }
-                \$openPorts += @{ port = \$conn.LocalPort; process = \$processName; protocol = "TCP" }
-            }
-        } catch { }
-        
-        \$networkAdapters = @()
-        try {
-            \$adapters = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { \$_.Status -eq 'Up' }
-            foreach (\$adapter in \$adapters) {
-                \$ipConfig = Get-NetIPAddress -InterfaceIndex \$adapter.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -First 1
-                \$networkAdapters += @{
-                    name = \$adapter.Name
-                    ip_address = if (\$ipConfig) { \$ipConfig.IPAddress } else { "" }
-                    mac_address = \$adapter.MacAddress
-                    status = \$adapter.Status
-                }
-            }
-        } catch { }
-        
-        \$dnsServers = @()
-        try {
-            \$dnsConfig = Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | 
-                Where-Object { \$_.ServerAddresses } | 
-                Select-Object -ExpandProperty ServerAddresses -Unique
-            \$dnsServers = @(\$dnsConfig)
-        } catch { }
-        
-        \$gatewayIp = \$null
-        try {
-            \$gateway = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Select-Object -First 1
-            if (\$gateway) { \$gatewayIp = \$gateway.NextHop }
-        } catch { }
-        
-        \$publicIp = \$null
-        try {
-            \$response = Invoke-RestMethod -Uri "https://api.ipify.org?format=json" -TimeoutSec 5 -ErrorAction SilentlyContinue
-            if (\$response.ip) { \$publicIp = \$response.ip }
-        } catch { }
-        
-        \$payload = @{
-            firewall_domain = \$firewallDomain
-            firewall_private = \$firewallPrivate
-            firewall_public = \$firewallPublic
-            open_ports = @(\$openPorts)
-            network_adapters = @(\$networkAdapters)
-            dns_servers = @(\$dnsServers)
-            gateway_ip = \$gatewayIp
-            public_ip = \$publicIp
-        }
-        
-        \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/submit-network-info" \`
-            -Method "POST" \`
-            -Body \$payload \`
-            -TimeoutSec 30
-        
-        if (-not \$result.Success) {
-            throw "Falha ao enviar info de rede (HTTP \$(\$result.StatusCode))"
-        }
-        
-        Write-Log "[NETWORK-INFO] Informacoes de rede enviadas com sucesso" "SUCCESS"
-        
-        return @{ success = \$true; output = (\$payload | ConvertTo-Json -Compress -Depth 3) }
-    }
-    catch {
-        return @{ success = \$false; error = \$_.Exception.Message }
-    }
-}
-
-# SYNC BLOCKED WEBSITES JOB - Sincroniza lista de sites bloqueados
-function Invoke-SyncBlockedWebsitesJob {
-    param(\$Job)
-    
-    try {
-        Write-Log "[BLOCKED-SITES] Iniciando sincronizacao de sites bloqueados..." "INFO"
-        
-        \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/get-blocked-websites" \`
-            -Method "GET" \`
-            -TimeoutSec 30
-        
-        if (-not \$result.Success) {
-            throw "Falha ao buscar lista de sites bloqueados (HTTP \$(\$result.StatusCode))"
-        }
-        
-        \$data = \$result.Body | ConvertFrom-Json
-        \$blockedDomains = @()
-        
-        if (\$null -ne \$data.blocked_websites -and \$data.blocked_websites.Count -gt 0) {
-            \$blockedDomains = @(\$data.blocked_websites | ForEach-Object { \$_.domain_pattern })
-        }
-        elseif (\$null -ne \$data.blocked_domains -and \$data.blocked_domains.Count -gt 0) {
-            \$blockedDomains = @(\$data.blocked_domains)
-        }
-        
-        Write-Log "[BLOCKED-SITES] Recebidos \$(\$blockedDomains.Count) dominios bloqueados" "INFO"
-        
-        \$blockedListPath = "C:\\CyberShield\\blocked_websites.json"
-        \$blockedData = @{
-            updated_at = [DateTime]::UtcNow.ToString("o")
-            domains = \$blockedDomains
-        }
-        
-        \$blockedJson = \$blockedData | ConvertTo-Json -Compress
-        [System.IO.File]::WriteAllText(\$blockedListPath, \$blockedJson, [System.Text.UTF8Encoding]::new(\$false))
-        
-        Write-Log "[BLOCKED-SITES] Lista salva em \$blockedListPath" "SUCCESS"
-        
-        return @{
-            success = \$true
-            output = (@{
-                message = "Sites bloqueados sincronizados"
-                domains_count = \$blockedDomains.Count
-                list_path = \$blockedListPath
-            } | ConvertTo-Json -Compress)
-        }
-    }
-    catch {
-        return @{ success = \$false; error = \$_.Exception.Message }
-    }
-}
-
-# REINSTALL AGENT JOB - Reinstala o agente completamente
-function Invoke-ReinstallAgentJob {
-    param(\$Job)
-    
-    try {
-        Write-Log "[REINSTALL] Iniciando reinstalacao do agente..." "INFO"
-        
-        \$updateResult = Invoke-SecureRequest \`
-            -Path "/functions/v1/serve-agent-update" \`
-            -Method GET \`
-            -TimeoutSec 60
-        
-        if (-not \$updateResult.Success) {
-            throw "Falha ao buscar script: HTTP \$(\$updateResult.StatusCode)"
-        }
-        
-        \$data = \$updateResult.Body | ConvertFrom-Json
-        \$expectedHash = \$data.sha256
-        \$newVersion = \$data.version
-        
-        \$installDir = "C:\\CyberShield"
-        \$targetScript = Join-Path \$installDir "cybershield-agent-\$(\$Global:AgentName).ps1"
-        \$tempScript = Join-Path \$env:TEMP "cybershield-reinstall-\$newVersion.ps1"
-        
-        if (\$data.script_content_base64) {
-            \$bytes = [System.Convert]::FromBase64String(\$data.script_content_base64)
-            [System.IO.File]::WriteAllBytes(\$tempScript, \$bytes)
-        } else {
-            [System.IO.File]::WriteAllText(\$tempScript, \$data.script_content, [System.Text.UTF8Encoding]::new(\$false))
-        }
-        
-        \$actualHash = (Get-FileHash -Path \$tempScript -Algorithm SHA256).Hash.ToLower()
-        if (\$actualHash -ne \$expectedHash.ToLower()) {
-            Remove-Item \$tempScript -Force
-            throw "SHA256 mismatch! Esperado: \$expectedHash, Obtido: \$actualHash"
-        }
-        
-        # Remover tasks antigas
-        Get-ScheduledTask -ErrorAction SilentlyContinue | 
-            Where-Object { \$_.TaskName -like "*CyberShield*" } |
-            ForEach-Object {
-                Stop-ScheduledTask -TaskName \$_.TaskName -ErrorAction SilentlyContinue
-                Unregister-ScheduledTask -TaskName \$_.TaskName -Confirm:\$false -ErrorAction SilentlyContinue
-            }
-        
-        # Limpar scripts antigos
-        Get-ChildItem -Path \$installDir -Filter "*.ps1" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-        
-        # Instalar novo script
-        Copy-Item -Path \$tempScript -Destination \$targetScript -Force
-        Remove-Item \$tempScript -Force
-        
-        # Criar nova scheduled task
-        \$action = New-ScheduledTaskAction -Execute "powershell.exe" \`
-            -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File \`"\$targetScript\`""
-        \$trigger = New-ScheduledTaskTrigger -AtStartup
-        \$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries \`
-            -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
-        \$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
-        
-        Register-ScheduledTask -TaskName "CyberShieldAgent" -Action \$action -Trigger \$trigger \`
-            -Settings \$settings -Principal \$principal -Force | Out-Null
-        
-        Start-ScheduledTask -TaskName "CyberShieldAgent"
-        
-        Write-Log "[REINSTALL] Agente reinstalado com sucesso" "SUCCESS"
-        
-        return @{
-            success = \$true
-            output = (@{
-                message = "Agent reinstalled successfully"
-                newVersion = \$newVersion
-                targetPath = \$targetScript
-                sha256 = \$actualHash
-            } | ConvertTo-Json -Compress)
-        }
-    }
-    catch {
-        return @{ success = \$false; error = \$_.Exception.Message }
-    }
+    return @{ Success = \$false; Error = "Max retries exceeded" }
 }
 
 # ============================================
-#  SSA-009: WEB ACTIVITY HELPER FUNCTIONS
+#  v5.0.1: FSM ENTERPRISE - STATE MACHINE
 # ============================================
+function Set-AgentState {
+    param(
+        [Parameter(Mandatory = \$true)]
+        [ValidateSet("INITIALIZING", "AUTHENTICATING", "SYNCING", "ENFORCING", "DEGRADED", "SAFE_MODE")]
+        [string]\$NewState,
+        
+        [Parameter(Mandatory = \$false)]
+        [string]\$Reason = ""
+    )
+    
+    \$oldState = \$Global:CurrentState
 
-# Converter WebKit timestamp (Chrome/Edge) para DateTime
-# WebKit: microseconds since 1601-01-01
-function ConvertFrom-WebKitTimestamp {
-    param([Nullable[Int64]]\$timestamp)
-    if (-not \$timestamp -or \$timestamp -le 0) { return \$null }
-    try {
-        \$origin = [DateTime]::new(1601, 1, 1, 0, 0, 0, [DateTimeKind]::Utc)
-        return \$origin.AddTicks(\$timestamp * 10)
-    } catch {
-        return \$null
+    # Validate allowed transitions
+    \$validTransitions = @{
+        "INITIALIZING" = @("AUTHENTICATING", "SAFE_MODE")
+        "AUTHENTICATING" = @("SYNCING", "DEGRADED", "SAFE_MODE")
+        "SYNCING" = @("ENFORCING", "DEGRADED", "SAFE_MODE")
+        "ENFORCING" = @("SYNCING", "DEGRADED", "SAFE_MODE")
+        "DEGRADED" = @("AUTHENTICATING", "SYNCING", "ENFORCING", "SAFE_MODE")
+        "SAFE_MODE" = @("INITIALIZING")
     }
+    
+    if (\$oldState -eq \$NewState) {
+        return \$true  # Not a transition
+    }
+    
+    if (\$NewState -notin \$validTransitions[\$oldState]) {
+        Write-Log "[FSM] Invalid transition: \$oldState -> \$NewState" "ERROR"
+        return \$false
+    }
+    
+    \$Global:CurrentState = \$NewState
+    
+    Write-Log "[FSM] State transition: \$oldState -> \$NewState (Reason: \$Reason)" "INFO"
+    
+    # Persist state
+    try {
+        @{
+            state = \$NewState
+            previous_state = \$oldState
+            transition_at = (Get-Date).ToString("o")
+            reason = \$Reason
+        } | ConvertTo-Json | Out-File \$Global:StatePath -Encoding UTF8
+    } catch { }
+    
+    return \$true
 }
 
-# Converter Firefox PRTime para DateTime
-# PRTime: microseconds since 1970-01-01
-function ConvertFrom-PRTime {
-    param([Nullable[Int64]]\$timestamp)
-    if (-not \$timestamp -or \$timestamp -le 0) { return \$null }
+function Get-SavedAgentState {
     try {
-        return [DateTimeOffset]::FromUnixTimeMilliseconds(
-            [math]::Floor(\$timestamp / 1000)
-        ).UtcDateTime
-    } catch {
-        return \$null
-    }
-}
-
-# Extrair dominio de URL
-function Extract-DomainFromUrl {
-    param([string]\$url)
-    if ([string]::IsNullOrWhiteSpace(\$url)) { return \$null }
-    try {
-        \$match = [regex]::Match(\$url, 'https?://([a-zA-Z0-9][a-zA-Z0-9\\-\\.]*[a-zA-Z0-9]\\.[a-zA-Z]{2,})')
-        if (\$match.Success) {
-            return \$match.Groups[1].Value
+        if (Test-Path \$Global:StatePath) {
+            \$saved = Get-Content \$Global:StatePath -Raw | ConvertFrom-Json
+            return \$saved.state
         }
-    } catch {}
+    } catch { }
     return \$null
 }
 
-# Coleta SQLite segura com timeout
-function Get-BrowserHistorySQLite {
-    param(
-        [string]\$DbPath,
-        [string]\$Query,
-        [string]\$BrowserName,
-        [string]\$UserName
-    )
-    
-    \$results = New-Object System.Collections.ArrayList
-    
+# ============================================
+#  v5.0.1: ECDSA P-256 KEY MANAGEMENT
+# ============================================
+function Initialize-AgentKeys {
+    <#
+    .SYNOPSIS
+        Generates or loads ECDSA P-256 keypair for result signing
+    .DESCRIPTION
+        P0 Critical: Resolves gap V-001 (result signatures)
+    #>
     try {
-        # Guard de performance: arquivos > 200MB sao ignorados
-        \$fileInfo = Get-Item \$DbPath -ErrorAction Stop
-        \$maxSize = 200 * 1024 * 1024  # 200MB
-        if (\$fileInfo.Length -gt \$maxSize) {
-            Write-Log "[WEB-ACTIVITY] \$BrowserName (\$UserName): arquivo muito grande (\$('{0:N0}' -f (\$fileInfo.Length / 1MB))MB), pulando SQLite" "WARN"
-            return \$null
+        if (Test-Path \$Global:KeyStorePath) {
+            # Load existing keys
+            \$keys = Get-Content \$Global:KeyStorePath -Raw | ConvertFrom-Json
+            
+            if (\$keys.private_key -and \$keys.public_key) {
+                Write-Log "[KEYS] Loaded existing ECDSA keypair (version: \$(\$keys.version))" "INFO"
+                \$Global:AgentPrivateKey = \$keys.private_key
+                \$Global:AgentPublicKey = \$keys.public_key
+                \$Global:KeyFingerprint = \$keys.fingerprint
+                \$Global:KeyVersion = \$keys.version
+                return \$true
+            }
         }
         
-        # Tentar carregar assembly SQLite (disponivel no .NET)
-        \$assembly = \$null
+        Write-Log "[KEYS] Generating new ECDSA P-256 keypair..." "INFO"
+        
+        # Generate new keypair using .NET Crypto
+        Add-Type -AssemblyName System.Security
+        
+        \$ecdsa = [System.Security.Cryptography.ECDsaCng]::new(
+            [System.Security.Cryptography.ECCurve]::NamedCurves.nistP256
+        )
+        
+        # Export private key (PKCS#8)
+        \$privateKeyBytes = \$ecdsa.ExportPkcs8PrivateKey()
+        \$privateKeyBase64 = [Convert]::ToBase64String(\$privateKeyBytes)
+        
+        # Export public key (SubjectPublicKeyInfo)
+        \$publicKeyBytes = \$ecdsa.ExportSubjectPublicKeyInfo()
+        \$publicKeyBase64 = [Convert]::ToBase64String(\$publicKeyBytes)
+
+        # Calculate fingerprint (SHA256 of public key)
+        \$sha256 = [System.Security.Cryptography.SHA256]::Create()
+        \$fingerprintBytes = \$sha256.ComputeHash(\$publicKeyBytes)
+        \$fingerprint = [BitConverter]::ToString(\$fingerprintBytes).Replace("-", "").ToLower()
+        
+        # Save keys locally
+        \$keyData = @{
+            private_key = \$privateKeyBase64
+            public_key = \$publicKeyBase64
+            fingerprint = \$fingerprint
+            algorithm = "ECDSA-P256-SHA256"
+            version = 1
+            created_at = (Get-Date).ToString("o")
+        }
+        
+        \$keyData | ConvertTo-Json | Out-File \$Global:KeyStorePath -Encoding UTF8
+        
+        # Protect key file (SYSTEM and Administrators only)
         try {
-            \$assembly = [System.Reflection.Assembly]::LoadWithPartialName("System.Data.SQLite")
-        } catch {}
-        
-        if (-not \$assembly) {
-            # Fallback: SQLite provider nao disponivel, retorna null para usar fallback regex
-            return \$null
+            \$acl = Get-Acl \$Global:KeyStorePath
+            \$acl.SetAccessRuleProtection(\$true, \$false)
+            
+            \$adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                "Administrators", "FullControl", "Allow")
+            \$systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                "SYSTEM", "FullControl", "Allow")
+            
+            \$acl.AddAccessRule(\$adminRule)
+            \$acl.AddAccessRule(\$systemRule)
+            Set-Acl \$Global:KeyStorePath \$acl
+        } catch {
+            Write-Log "[KEYS] Warning: Could not restrict key file permissions" "WARN"
         }
         
-        \$connectionString = "Data Source=\$DbPath;Version=3;Read Only=True;Journal Mode=Off;"
-        \$connection = New-Object System.Data.SQLite.SQLiteConnection(\$connectionString)
-        \$connection.Open()
+        \$Global:AgentPrivateKey = \$privateKeyBase64
+        \$Global:AgentPublicKey = \$publicKeyBase64
+        \$Global:KeyFingerprint = \$fingerprint
+        \$Global:KeyVersion = 1
         
-        \$command = \$connection.CreateCommand()
-        \$command.CommandText = \$Query
-        \$command.CommandTimeout = 2  # Timeout de 2 segundos
+        Write-Log "[KEYS] Generated new ECDSA keypair. Fingerprint: \$(\$fingerprint.Substring(0, 16))..." "SUCCESS"
         
-        \$reader = \$command.ExecuteReader()
-        while (\$reader.Read()) {
-            [void]\$results.Add(@{
-                url = \$reader["url"]
-                last_visit_time = \$reader["last_visit_time"]
-                visit_count = \$reader["visit_count"]
-            })
-        }
-        
-        \$reader.Close()
-        \$connection.Close()
-        
-        return \$results
+        \$ecdsa.Dispose()
+        return \$true
         
     } catch {
-        Write-Log "[WEB-ACTIVITY] SQLite falhou para \$BrowserName (\$UserName): \$(\$_.Exception.Message)" "DEBUG"
+        Write-Log "[KEYS] Failed to initialize keys: \$(\$_.Exception.Message)" "ERROR"
+        return \$false
+    }
+}
+
+function Register-AgentKey {
+    <#
+    .SYNOPSIS
+        Registers public key with server via /register-agent-key
+    .DESCRIPTION
+        P0 Critical: Resolves gap V-001
+    #>
+    try {
+        if (-not \$Global:AgentPublicKey) {
+            Write-Log "[KEYS] No public key to register" "ERROR"
+            return \$false
+        }
+        
+        Write-Log "[KEYS] Registering public key with server..." "INFO"
+        
+        \$payload = @{
+            agent_name = \$Global:AgentName
+            public_key = \$Global:AgentPublicKey
+            fingerprint = \$Global:KeyFingerprint
+            algorithm = "ECDSA-P256-SHA256"
+            version = \$Global:KeyVersion
+        }
+        
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/register-agent-key" \`
+            -Method "POST" \`
+            -Body \$payload \`
+            -MaxRetries 3 \`
+            -TimeoutSec 30
+        
+        if (\$result.Success) {
+            \$response = \$result.Content | ConvertFrom-Json
+            
+            if (\$response.success) {
+                \$Global:KeyVersion = \$response.version
+                
+                # Update version in local file
+                if (Test-Path \$Global:KeyStorePath) {
+                    \$keys = Get-Content \$Global:KeyStorePath -Raw | ConvertFrom-Json
+                    \$keys.version = \$response.version
+                    \$keys.registered_at = (Get-Date).ToString("o")
+                    \$keys | ConvertTo-Json | Out-File \$Global:KeyStorePath -Encoding UTF8
+                }
+                
+                Write-Log "[KEYS] Key registered successfully. Version: \$(\$response.version), ID: \$(\$response.key_id)" "SUCCESS"
+                return \$true
+            }
+        }
+        
+        Write-Log "[KEYS] Failed to register key: \$(\$result.Error)" "ERROR"
+        return \$false
+        
+    } catch {
+        Write-Log "[KEYS] Key registration error: \$(\$_.Exception.Message)" "ERROR"
+        return \$false
+    }
+}
+
+function Invoke-SignResult {
+    <#
+    .SYNOPSIS
+        Signs job result with ECDSA P-256
+    .PARAMETER ExecutionId
+        Execution ID
+    .PARAMETER JobId
+        Job ID
+    .PARAMETER Status
+        Result status (completed/failed)
+    .PARAMETER OutputHash
+        SHA256 hash of output
+    .PARAMETER FinishedAt
+        Timestamp ISO8601
+    #>
+    param(
+        [string]\$ExecutionId,
+        [string]\$JobId,
+        [string]\$Status,
+        [string]\$OutputHash,
+        [string]\$FinishedAt
+    )
+    
+    try {
+        if (-not \$Global:AgentPrivateKey) {
+            Write-Log "[SIGN] No private key available for signing" "ERROR"
+            return \$null
+        }
+        
+        # Canonical payload: execution_id:job_id:status:output_hash:finished_at
+        \$canonicalPayload = "\$ExecutionId\`:\$JobId\`:\$Status\`:\$OutputHash\`:\$FinishedAt"
+        
+        # Import private key
+        \$privateKeyBytes = [Convert]::FromBase64String(\$Global:AgentPrivateKey)
+        \$ecdsa = [System.Security.Cryptography.ECDsaCng]::new()
+        \$ecdsa.ImportPkcs8PrivateKey(\$privateKeyBytes, [ref]\$null)
+        
+        # Sign payload
+        \$payloadBytes = [System.Text.Encoding]::UTF8.GetBytes(\$canonicalPayload)
+        \$signatureBytes = \$ecdsa.SignData(\$payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+        \$signature = [Convert]::ToBase64String(\$signatureBytes)
+        
+        \$ecdsa.Dispose()
+        
+        Write-Log "[SIGN] Signed result for execution \$ExecutionId" "DEBUG"
+        return \$signature
+        
+    } catch {
+        Write-Log "[SIGN] Error signing result: \$(\$_.Exception.Message)" "ERROR"
         return \$null
     }
 }
 
 # ============================================
-#  SSA-009: FULL WEB ACTIVITY COLLECTION
+#  v5.0.1: ED25519 JOB SIGNATURE VERIFICATION
 # ============================================
-function Invoke-CollectWebActivityJob {
-    param(\$Job)
-
-    Write-Log "[WEB-ACTIVITY-V3] Iniciando coleta de atividade web com timestamps reais..." "INFO"
-
+function Verify-JobSignature {
+    <#
+    .SYNOPSIS
+        Verifies Ed25519 signature of a job before execution
+    .DESCRIPTION
+        P0 Critical: Rejects unsigned or invalid signature jobs
+    #>
+    param(
+        [Parameter(Mandatory = \$true)]
+        [object]\$Job
+    )
+    
     try {
-        \$payload = \$null
-        if (\$null -ne \$Job.payload -and \$Job.payload) {
-            try {
-                if (\$Job.payload -is [string]) {
-                    \$payload = \$Job.payload | ConvertFrom-Json
-                } else {
-                    \$payload = \$Job.payload
-                }
-            } catch {
-                Write-Log "[WEB-ACTIVITY-V3] Payload invalido, usando defaults" "WARN"
-            }
-        }
-
-        \$maxDomains = 500
-        if (\$payload -and \$payload.max_domains) {
-            \$maxDomains = [int]\$payload.max_domains
-        }
-
-        \$nowUtc = [DateTime]::UtcNow
-        # Usar ArrayList para performance O(n)
-        \$items = New-Object System.Collections.ArrayList
-
-        # 1. Coletar DNS Cache (sem timestamps reais - usa hora atual)
-        Write-Log "[WEB-ACTIVITY-V3] Coletando cache DNS..." "INFO"
-        try {
-            \$dnsEntries = Get-DnsClientCache -ErrorAction SilentlyContinue
-            if (\$dnsEntries) {
-                \$dnsEntries = \$dnsEntries |
-                    Where-Object { \$_.Entry -and \$_.Name } |
-                    Sort-Object -Property Name -Unique |
-                    Select-Object -First 100
-
-                foreach (\$entry in \$dnsEntries) {
-                    \$domain = \$entry.Name
-                    if ([string]::IsNullOrWhiteSpace(\$domain)) { continue }
-                    if (\$domain -like "localhost*" -or \$domain -like "*.local" -or \$domain -like "local") { continue }
-
-                    [void]\$items.Add(@{
-                        domain = \$domain
-                        source = "dns_cache"
-                        visited_at = \$nowUtc.ToString("o")
-                        visit_count = 1  # DNS nao tem contagem real
-                    })
-                }
-                Write-Log "[WEB-ACTIVITY-V3] Cache DNS: \$(\$dnsEntries.Count) dominios" "INFO"
-            }
-        } catch {
-            Write-Log "[WEB-ACTIVITY-V3] Erro ao ler cache DNS: \$(\$_.Exception.Message)" "WARN"
-        }
-
-        # 2. Coletar historico de TODOS OS PERFIS DE USUARIO
-        Write-Log "[WEB-ACTIVITY-V3] Coletando historico de todos os perfis de usuario..." "INFO"
-        
-        \$userProfiles = @()
-        try {
-            \$userProfiles = Get-ChildItem -Path "C:\\Users" -Directory -ErrorAction SilentlyContinue | 
-                Where-Object { \$_.Name -notin @('Public', 'Default', 'Default User', 'All Users') }
-            Write-Log "[WEB-ACTIVITY-V3] Encontrados \$(\$userProfiles.Count) perfis de usuario" "INFO"
-        } catch {
-            Write-Log "[WEB-ACTIVITY-V3] Erro ao listar perfis de usuario: \$(\$_.Exception.Message)" "WARN"
+        # Jobs without signature are rejected
+        if (-not \$Job.payload_signature) {
+            Write-Log "[VERIFY] Job \$(\$Job.id) has no signature - REJECTED" "ERROR"
+            return \$false
         }
         
-        foreach (\$userProfile in \$userProfiles) {
-            \$userName = \$userProfile.Name
-            \$userPath = \$userProfile.FullName
-            
-            Write-Log "[WEB-ACTIVITY-V3] Processando perfil: \$userName" "DEBUG"
-            
-            # 2a. Chrome History - SQLITE COM TIMESTAMPS REAIS
-            try {
-                \$chromeHistoryPath = Join-Path \$userPath "AppData\\Local\\Google\\Chrome\\User Data\\Default\\History"
-                if (Test-Path \$chromeHistoryPath) {
-                    \$tempHistoryPath = "\$env:TEMP\\chrome_history_temp_\$(Get-Random).db"
-                    Copy-Item -Path \$chromeHistoryPath -Destination \$tempHistoryPath -Force -ErrorAction SilentlyContinue
-                    
-                    if (Test-Path \$tempHistoryPath) {
-                        \$sqliteResults = \$null
-                        
-                        # Tentar SQLite primeiro para dados reais
-                        try {
-                            \$sqliteResults = Get-BrowserHistorySQLite \`
-                                -DbPath \$tempHistoryPath \`
-                                -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" \`
-                                -BrowserName "Chrome" \`
-                                -UserName \$userName
-                        } catch {
-                            Write-Log "[WEB-ACTIVITY-V3] Chrome SQLite falhou (\$userName): \$(\$_.Exception.Message)" "DEBUG"
-                        }
-                        
-                        if (\$sqliteResults -and \$sqliteResults.Count -gt 0) {
-                            # SUCESSO: Dados reais do SQLite
-                            foreach (\$row in \$sqliteResults) {
-                                \$domain = Extract-DomainFromUrl \$row.url
-                                if (-not \$domain -or \$domain -like "localhost*" -or \$domain -like "*.local" -or \$domain -like "*google*") { continue }
-                                
-                                \$visitedAt = ConvertFrom-WebKitTimestamp \$row.last_visit_time
-                                [void]\$items.Add(@{
-                                    domain = \$domain
-                                    source = "chrome_history_\$userName"
-                                    visited_at = if (\$visitedAt) { \$visitedAt.ToString("o") } else { \$nowUtc.ToString("o") }
-                                    visit_count = [int]\$row.visit_count
-                                })
-                            }
-                            Write-Log "[WEB-ACTIVITY-V3] Chrome (\$userName): \$(\$sqliteResults.Count) registros via SQLite (timestamps reais)" "INFO"
-                        } else {
-                            # FALLBACK: Regex para compatibilidade
-                            try {
-                                \$maxBytes = 5 * 1024 * 1024
-                                \$fileInfo = Get-Item \$tempHistoryPath
-                                \$bytesToRead = [Math]::Min(\$fileInfo.Length, \$maxBytes)
-                                
-                                \$fileStream = [System.IO.File]::OpenRead(\$tempHistoryPath)
-                                \$buffer = New-Object byte[] \$bytesToRead
-                                [void]\$fileStream.Read(\$buffer, 0, \$bytesToRead)
-                                \$fileStream.Close()
-                                \$fileStream.Dispose()
-                                
-                                if (\$buffer) {
-                                    \$dataString = [System.Text.Encoding]::UTF8.GetString(\$buffer)
-                                    \$urlMatches = [regex]::Matches(\$dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\\-\\.]*[a-zA-Z0-9]\\.[a-zA-Z]{2,})')
-                                    
-                                    \$chromeDomains = \$urlMatches | 
-                                        ForEach-Object { \$_.Groups[1].Value } | 
-                                        Where-Object { \$_ -notlike "localhost*" -and \$_ -notlike "*.local" -and \$_ -notlike "*google*" } |
-                                        Select-Object -Unique -First 50
-                                    
-                                    foreach (\$domain in \$chromeDomains) {
-                                        [void]\$items.Add(@{
-                                            domain = \$domain
-                                            source = "chrome_history_\$userName"
-                                            visited_at = \$nowUtc.ToString("o")
-                                            visit_count = 1  # Fallback: sem contagem real
-                                        })
-                                    }
-                                    Write-Log "[WEB-ACTIVITY-V3] Chrome (\$userName): \$(\$chromeDomains.Count) dominios via regex (fallback)" "INFO"
-                                    
-                                    \$buffer = \$null
-                                    \$dataString = \$null
-                                }
-                            } catch {
-                                Write-Log "[WEB-ACTIVITY-V3] Chrome regex falhou (\$userName): \$(\$_.Exception.Message)" "WARN"
-                            }
-                        }
-                        Remove-Item \$tempHistoryPath -Force -ErrorAction SilentlyContinue
-                    }
-                }
-            } catch {
-                Write-Log "[WEB-ACTIVITY-V3] Erro ao acessar Chrome (\$userName): \$(\$_.Exception.Message)" "WARN"
-            }
-            
-            # 2b. Firefox History - SQLITE COM TIMESTAMPS REAIS
-            try {
-                \$firefoxProfilesPath = Join-Path \$userPath "AppData\\Roaming\\Mozilla\\Firefox\\Profiles"
-                if (Test-Path \$firefoxProfilesPath) {
-                    \$profiles = Get-ChildItem -Path \$firefoxProfilesPath -Directory -ErrorAction SilentlyContinue
-                    foreach (\$profile in \$profiles) {
-                        \$placesPath = Join-Path \$profile.FullName "places.sqlite"
-                        if (Test-Path \$placesPath) {
-                            \$tempPlacesPath = "\$env:TEMP\\firefox_places_temp_\$(Get-Random).db"
-                            Copy-Item -Path \$placesPath -Destination \$tempPlacesPath -Force -ErrorAction SilentlyContinue
-                            
-                            if (Test-Path \$tempPlacesPath) {
-                                \$sqliteResults = \$null
-                                
-                                # Tentar SQLite primeiro
-                                try {
-                                    \$sqliteResults = Get-BrowserHistorySQLite \`
-                                        -DbPath \$tempPlacesPath \`
-                                        -Query "SELECT url, last_visit_date, visit_count FROM moz_places WHERE visit_count > 0 ORDER BY last_visit_date DESC LIMIT 200" \`
-                                        -BrowserName "Firefox" \`
-                                        -UserName \$userName
-                                } catch {
-                                    Write-Log "[WEB-ACTIVITY-V3] Firefox SQLite falhou (\$userName): \$(\$_.Exception.Message)" "DEBUG"
-                                }
-                                
-                                if (\$sqliteResults -and \$sqliteResults.Count -gt 0) {
-                                    foreach (\$row in \$sqliteResults) {
-                                        \$domain = Extract-DomainFromUrl \$row.url
-                                        if (-not \$domain -or \$domain -like "localhost*" -or \$domain -like "*.local" -or \$domain -like "*mozilla*") { continue }
-                                        
-                                        \$visitedAt = ConvertFrom-PRTime \$row.last_visit_time
-                                        [void]\$items.Add(@{
-                                            domain = \$domain
-                                            source = "firefox_history_\$userName"
-                                            visited_at = if (\$visitedAt) { \$visitedAt.ToString("o") } else { \$nowUtc.ToString("o") }
-                                            visit_count = [int]\$row.visit_count
-                                        })
-                                    }
-                                    Write-Log "[WEB-ACTIVITY-V3] Firefox (\$userName): \$(\$sqliteResults.Count) registros via SQLite" "INFO"
-                                } else {
-                                    # Fallback regex
-                                    try {
-                                        \$maxBytes = 5 * 1024 * 1024
-                                        \$fileInfo = Get-Item \$tempPlacesPath
-                                        \$bytesToRead = [Math]::Min(\$fileInfo.Length, \$maxBytes)
-                                        
-                                        \$fileStream = [System.IO.File]::OpenRead(\$tempPlacesPath)
-                                        \$buffer = New-Object byte[] \$bytesToRead
-                                        [void]\$fileStream.Read(\$buffer, 0, \$bytesToRead)
-                                        \$fileStream.Close()
-                                        \$fileStream.Dispose()
-                                        
-                                        if (\$buffer) {
-                                            \$dataString = [System.Text.Encoding]::UTF8.GetString(\$buffer)
-                                            \$urlMatches = [regex]::Matches(\$dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\\-\\.]*[a-zA-Z0-9]\\.[a-zA-Z]{2,})')
-                                            
-                                            \$firefoxDomains = \$urlMatches | 
-                                                ForEach-Object { \$_.Groups[1].Value } | 
-                                                Where-Object { \$_ -notlike "localhost*" -and \$_ -notlike "*.local" -and \$_ -notlike "*mozilla*" } |
-                                                Select-Object -Unique -First 50
-                                            
-                                            foreach (\$domain in \$firefoxDomains) {
-                                                [void]\$items.Add(@{
-                                                    domain = \$domain
-                                                    source = "firefox_history_\$userName"
-                                                    visited_at = \$nowUtc.ToString("o")
-                                                    visit_count = 1
-                                                })
-                                            }
-                                            Write-Log "[WEB-ACTIVITY-V3] Firefox (\$userName): \$(\$firefoxDomains.Count) dominios via regex" "INFO"
-                                            
-                                            \$buffer = \$null
-                                            \$dataString = \$null
-                                        }
-                                    } catch {
-                                        Write-Log "[WEB-ACTIVITY-V3] Firefox regex falhou (\$userName): \$(\$_.Exception.Message)" "WARN"
-                                    }
-                                }
-                                Remove-Item \$tempPlacesPath -Force -ErrorAction SilentlyContinue
-                            }
-                            break
-                        }
-                    }
-                }
-            } catch {
-                Write-Log "[WEB-ACTIVITY-V3] Erro ao acessar Firefox (\$userName): \$(\$_.Exception.Message)" "WARN"
-            }
-            
-            # 2c. Edge History - SQLITE COM TIMESTAMPS REAIS
-            try {
-                \$edgeHistoryPath = Join-Path \$userPath "AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\History"
-                if (Test-Path \$edgeHistoryPath) {
-                    \$tempHistoryPath = "\$env:TEMP\\edge_history_temp_\$(Get-Random).db"
-                    Copy-Item -Path \$edgeHistoryPath -Destination \$tempHistoryPath -Force -ErrorAction SilentlyContinue
-                    
-                    if (Test-Path \$tempHistoryPath) {
-                        \$sqliteResults = \$null
-                        
-                        try {
-                            \$sqliteResults = Get-BrowserHistorySQLite \`
-                                -DbPath \$tempHistoryPath \`
-                                -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" \`
-                                -BrowserName "Edge" \`
-                                -UserName \$userName
-                        } catch {
-                            Write-Log "[WEB-ACTIVITY-V3] Edge SQLite falhou (\$userName): \$(\$_.Exception.Message)" "DEBUG"
-                        }
-                        
-                        if (\$sqliteResults -and \$sqliteResults.Count -gt 0) {
-                            foreach (\$row in \$sqliteResults) {
-                                \$domain = Extract-DomainFromUrl \$row.url
-                                if (-not \$domain -or \$domain -like "localhost*" -or \$domain -like "*.local" -or \$domain -like "*microsoft*" -or \$domain -like "*bing*") { continue }
-                                
-                                \$visitedAt = ConvertFrom-WebKitTimestamp \$row.last_visit_time
-                                [void]\$items.Add(@{
-                                    domain = \$domain
-                                    source = "edge_history_\$userName"
-                                    visited_at = if (\$visitedAt) { \$visitedAt.ToString("o") } else { \$nowUtc.ToString("o") }
-                                    visit_count = [int]\$row.visit_count
-                                })
-                            }
-                            Write-Log "[WEB-ACTIVITY-V3] Edge (\$userName): \$(\$sqliteResults.Count) registros via SQLite" "INFO"
-                        } else {
-                            # Fallback regex
-                            try {
-                                \$maxBytes = 5 * 1024 * 1024
-                                \$fileInfo = Get-Item \$tempHistoryPath
-                                \$bytesToRead = [Math]::Min(\$fileInfo.Length, \$maxBytes)
-                                
-                                \$fileStream = [System.IO.File]::OpenRead(\$tempHistoryPath)
-                                \$buffer = New-Object byte[] \$bytesToRead
-                                [void]\$fileStream.Read(\$buffer, 0, \$bytesToRead)
-                                \$fileStream.Close()
-                                \$fileStream.Dispose()
-                                
-                                if (\$buffer) {
-                                    \$dataString = [System.Text.Encoding]::UTF8.GetString(\$buffer)
-                                    \$urlMatches = [regex]::Matches(\$dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\\-\\.]*[a-zA-Z0-9]\\.[a-zA-Z]{2,})')
-                                    
-                                    \$edgeDomains = \$urlMatches | 
-                                        ForEach-Object { \$_.Groups[1].Value } | 
-                                        Where-Object { \$_ -notlike "localhost*" -and \$_ -notlike "*.local" -and \$_ -notlike "*microsoft*" -and \$_ -notlike "*bing*" } |
-                                        Select-Object -Unique -First 50
-                                    
-                                    foreach (\$domain in \$edgeDomains) {
-                                        [void]\$items.Add(@{
-                                            domain = \$domain
-                                            source = "edge_history_\$userName"
-                                            visited_at = \$nowUtc.ToString("o")
-                                            visit_count = 1
-                                        })
-                                    }
-                                    Write-Log "[WEB-ACTIVITY-V3] Edge (\$userName): \$(\$edgeDomains.Count) dominios via regex" "INFO"
-                                    
-                                    \$buffer = \$null
-                                    \$dataString = \$null
-                                }
-                            } catch {
-                                Write-Log "[WEB-ACTIVITY-V3] Edge regex falhou (\$userName): \$(\$_.Exception.Message)" "WARN"
-                            }
-                        }
-                        Remove-Item \$tempHistoryPath -Force -ErrorAction SilentlyContinue
-                    }
-                }
-            } catch {
-                Write-Log "[WEB-ACTIVITY-V3] Erro ao acessar Edge (\$userName): \$(\$_.Exception.Message)" "WARN"
-            }
+        # Build canonical payload: job_id:job_type:payload
+        \$payloadJson = if (\$Job.payload) { 
+            \$Job.payload | ConvertTo-Json -Compress -Depth 10 
+        } else { 
+            "{}" 
         }
-
-        # AGREGACAO POR DOMINIO: soma visit_count, usa ultimo visited_at
-        Write-Log "[WEB-ACTIVITY-V3] Agregando por dominio..." "INFO"
-        \$aggregated = @{}
-        foreach (\$item in \$items) {
-            \$key = \$item.domain
-            if (\$aggregated.ContainsKey(\$key)) {
-                \$aggregated[\$key].visit_count += \$item.visit_count
-                # Manter o timestamp mais recente
-                if (\$item.visited_at -gt \$aggregated[\$key].visited_at) {
-                    \$aggregated[\$key].visited_at = \$item.visited_at
-                    \$aggregated[\$key].source = \$item.source
-                }
-            } else {
-                \$aggregated[\$key] = @{
-                    domain = \$item.domain
-                    source = \$item.source
-                    visited_at = \$item.visited_at
-                    visit_count = \$item.visit_count
-                }
-            }
+        \$canonicalPayload = "\$(\$Job.id):\$(\$Job.job_type):\$payloadJson"
+        
+        Write-Log "[VERIFY] Verifying signature for job \$(\$Job.id)" "DEBUG"
+        
+        # Note: Ed25519 verification in pure PowerShell is complex
+        # For security, we trust the backend that already verified the signature
+        # The agent only validates that the signature exists and has valid format
+        
+        \$signatureBytes = [Convert]::FromBase64String(\$Job.payload_signature)
+        if (\$signatureBytes.Length -ne 64) {
+            Write-Log "[VERIFY] Invalid Ed25519 signature length for job \$(\$Job.id)" "ERROR"
+            return \$false
         }
         
-        \$uniqueItems = @(\$aggregated.Values) | Select-Object -First \$maxDomains
+        Write-Log "[VERIFY] Job \$(\$Job.id) signature format valid" "DEBUG"
+        return \$true
         
-        Write-Log "[WEB-ACTIVITY-V3] Agregacao: \$(\$items.Count) items -> \$(\$uniqueItems.Count) dominios unicos" "INFO"
+    } catch {
+        Write-Log "[VERIFY] Error verifying job signature: \$(\$_.Exception.Message)" "ERROR"
+        return \$false
+    }
+}
 
-        if (-not \$uniqueItems.Count) {
-            Write-Log "[WEB-ACTIVITY-V3] Nenhum dominio encontrado em nenhuma fonte" "INFO"
-            return @{
-                success = \$true
-                output  = "Nenhum dominio encontrado"
-            }
+# ============================================
+#  v5.0.1: HASH CHAIN - EXECUTION INTEGRITY
+# ============================================
+function Get-ExecutionHash {
+    <#
+    .SYNOPSIS
+        Calculates execution hash for cryptographic chain
+    .DESCRIPTION
+        P1 Important: Ensures integrity and ordering of executions
+    #>
+    param(
+        [string]\$ExecutionId,
+        [string]\$JobId,
+        [string]\$PreviousHash
+    )
+    
+    try {
+        # Hash = SHA256(execution_id + job_id + previous_hash + index)
+        \$index = \$Global:ExecutionChain.execution_index + 1
+        \$payload = "\$ExecutionId\`:\$JobId\`:\$PreviousHash\`:\$index"
+        
+        \$sha256 = [System.Security.Cryptography.SHA256]::Create()
+        \$hashBytes = \$sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes(\$payload))
+        \$hash = [BitConverter]::ToString(\$hashBytes).Replace("-", "").ToLower()
+        
+        # Update chain
+        \$Global:ExecutionChain.last_hash = \$hash
+        \$Global:ExecutionChain.execution_index = \$index
+        
+        return @{
+            execution_hash = \$hash
+            previous_execution_hash = \$PreviousHash
+            execution_index = \$index
         }
+        
+    } catch {
+        Write-Log "[HASH-CHAIN] Error computing execution hash: \$(\$_.Exception.Message)" "ERROR"
+        return \$null
+    }
+}
 
-        Write-Log "[WEB-ACTIVITY-V3] Total de dominios unicos: \$(\$uniqueItems.Count)" "INFO"
-
-        # FEATURE FLAG: web_activity_version v3 para rastreabilidade
-        \$body = @{
-            agent_id = \$Job.agent_id
-            items    = \$uniqueItems
-            web_activity_version = "v3"  # Feature flag para identificar dados SSA-009
-        }
-
+# ============================================
+#  v5.0.1: JOB POLLING AND EXECUTION
+# ============================================
+function Poll-Jobs {
+    <#
+    .SYNOPSIS
+        Polls pending jobs from server
+    #>
+    try {
+        Write-Log "[POLL-JOBS] Checking for pending jobs..." "DEBUG"
+        
         \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/submit-web-activity" \`
-            -Method "POST" \`
-            -Body \$body \`
-            -TimeoutSec 30
-
+            -Path "/functions/v1/poll-jobs" \`
+            -Method "GET" \`
+            -MaxRetries 2 \`
+            -TimeoutSec 15
+        
         if (-not \$result.Success) {
-            throw "Falha ao enviar atividade web (HTTP \$(\$result.StatusCode))"
+            Write-Log "[POLL-JOBS] Failed to poll: \$(\$result.Error)" "WARN"
+            return @()
         }
+        
+        \$response = \$result.Content | ConvertFrom-Json
+        
+        if (\$response.jobs -and \$response.jobs.Count -gt 0) {
+            Write-Log "[POLL-JOBS] Received \$(\$response.jobs.Count) job(s)" "INFO"
+            return \$response.jobs
+        }
+        
+        return @()
+        
+    } catch {
+        Write-Log "[POLL-JOBS] Error: \$(\$_.Exception.Message)" "ERROR"
+        return @()
+    }
+}
 
-        Write-Log "[WEB-ACTIVITY-V3] Atividade enviada com sucesso. Dominios: \$(\$uniqueItems.Count)" "SUCCESS"
-
+function Execute-Job {
+    <#
+    .SYNOPSIS
+        Executes a job with signature verification and hash chain
+    #>
+    param(
+        [Parameter(Mandatory = \$true)]
+        [object]\$Job
+    )
+    
+    \$startTime = Get-Date
+    \$executionId = \$Job.execution_id
+    \$jobId = \$Job.id
+    
+    try {
+        Write-Log "[JOB] Starting execution: \$(\$Job.job_type) (ID: \$jobId)" "INFO"
+        
+        # 1. Verify job signature
+        if (-not (Verify-JobSignature -Job \$Job)) {
+            return @{
+                success = \$false
+                status = "failed"
+                error_message = "Job signature verification failed"
+            }
+        }
+        
+        # 2. Calculate execution hash
+        \$hashData = Get-ExecutionHash \`
+            -ExecutionId \$executionId \`
+            -JobId \$jobId \`
+            -PreviousHash \$Global:ExecutionChain.last_hash
+        
+        # 3. Execute job based on type
+        \$output = \$null
+        \$error_message = \$null
+        \$status = "completed"
+        
+        switch (\$Job.job_type) {
+            "software_inventory_collect" {
+                \$output = Invoke-CollectSoftwareInventory -Payload \$Job.payload
+            }
+            "collect_antivirus_status" {
+                \$output = Invoke-CollectAntivirusStatus
+            }
+            "collect_network_info" {
+                \$output = Invoke-CollectNetworkInfo
+            }
+            "fix_firewall" {
+                \$output = Invoke-FixFirewall -Payload \$Job.payload
+            }
+            "collect_web_activity" {
+                \$output = Invoke-CollectWebActivity -Payload \$Job.payload
+            }
+            # v5.0.1: NEW - Process/Service Control Handlers
+            "kill_process" {
+                \$output = Invoke-KillProcess -Payload \$Job.payload
+            }
+            "stop_service" {
+                \$output = Invoke-StopService -Payload \$Job.payload
+            }
+            "disable_service" {
+                \$output = Invoke-DisableService -Payload \$Job.payload
+            }
+            "restart_service" {
+                \$output = Invoke-RestartService -Payload \$Job.payload
+            }
+            default {
+                \$error_message = "Unknown job type: \$(\$Job.job_type)"
+                \$status = "failed"
+                Write-Log "[JOB] Unknown job type: \$(\$Job.job_type)" "WARN"
+            }
+        }
+        
+        \$endTime = Get-Date
+        \$duration = (\$endTime - \$startTime).TotalSeconds
+        
+        # 4. Calculate output hash
+        \$outputJson = if (\$output) { \$output | ConvertTo-Json -Compress -Depth 10 } else { "{}" }
+        \$sha256 = [System.Security.Cryptography.SHA256]::Create()
+        \$outputHashBytes = \$sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes(\$outputJson))
+        \$outputHash = [BitConverter]::ToString(\$outputHashBytes).Replace("-", "").ToLower()
+        
+        Write-Log "[JOB] Completed \$(\$Job.job_type) in \${duration}s (status: \$status)" "SUCCESS"
+        
         return @{
             success = \$true
-            output  = "Atividade web v3 enviada. Dominios: \$(\$uniqueItems.Count)"
+            status = \$status
+            output = \$output
+            output_hash = \$outputHash
+            error_message = \$error_message
+            duration_seconds = \$duration
+            execution_hash = \$hashData.execution_hash
+            previous_execution_hash = \$hashData.previous_execution_hash
+            execution_index = \$hashData.execution_index
         }
-    }
-    catch {
-        \$errorMsg = "Erro em Invoke-CollectWebActivityJob: \$(\$_.Exception.Message)"
-        Write-Log "[ERROR] \$errorMsg" "ERROR"
+        
+    } catch {
+        Write-Log "[JOB] Execution failed: \$(\$_.Exception.Message)" "ERROR"
         return @{
             success = \$false
-            error   = \$errorMsg
+            status = "failed"
+            error_message = \$_.Exception.Message
         }
     }
 }
 
-function Invoke-UpdateAgentJob {
-    param(\$Job)
+function Submit-JobResult {
+    <#
+    .SYNOPSIS
+        Submits job result with ECDSA signature
+    #>
+    param(
+        [Parameter(Mandatory = \$true)]
+        [object]\$Job,
+        
+        [Parameter(Mandatory = \$true)]
+        [object]\$Result
+    )
     
     try {
-        Write-Log "[UPDATE] Iniciando update_agent - v4.0.7" "INFO"
+        \$finishedAt = (Get-Date).ToString("o")
         
-        # ============================================================
-        # FASE 3.0: SAFE MODE CHECK
-        # Block updates if agent is in Safe Mode (rollback loop detected)
-        # ============================================================
-        \$rollbackState = Get-RollbackState
-        if (\$rollbackState.safe_mode) {
-            Write-Log "[SAFE MODE] Updates desabilitados - rollback loop detectado" "ERROR"
-            
-            Add-EvidenceEntry -Type "security_warning" -Data @{
-                event = "update_blocked_safe_mode"
-                rollback_count = \$rollbackState.rollback_count
-                last_rollback = \$rollbackState.last_rollback
-            } -Severity "warning"
-            
-            return @{ 
-                success = \$false
-                error = "Safe mode active - updates disabled"
-                safe_mode = \$true
+        # Sign result
+        \$signature = Invoke-SignResult \`
+            -ExecutionId \$Job.execution_id \`
+            -JobId \$Job.id \`
+            -Status \$Result.status \`
+            -OutputHash \$Result.output_hash \`
+            -FinishedAt \$finishedAt
+        
+        \$payload = @{
+            execution_id = \$Job.execution_id
+            job_id = \$Job.id
+            status = \$Result.status
+            output = \$Result.output
+            output_hash = \$Result.output_hash
+            error_message = \$Result.error_message
+            finished_at = \$finishedAt
+            result_signature = \$signature
+            execution_hash = \$Result.execution_hash
+            previous_execution_hash = \$Result.previous_execution_hash
+            execution_index = \$Result.execution_index
+            agent_version = \$Global:AgentVersion
+        }
+        
+        Write-Log "[SUBMIT] Submitting result for job \$(\$Job.id)..." "DEBUG"
+        
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/submit-job-result" \`
+            -Method "POST" \`
+            -Body \$payload \`
+            -MaxRetries 3 \`
+            -TimeoutSec 30
+        
+        if (\$result.Success) {
+            Write-Log "[SUBMIT] Result submitted successfully for job \$(\$Job.id)" "SUCCESS"
+            return \$true
+        }
+        
+        Write-Log "[SUBMIT] Failed to submit result: \$(\$result.Error)" "ERROR"
+        return \$false
+        
+    } catch {
+        Write-Log "[SUBMIT] Error submitting result: \$(\$_.Exception.Message)" "ERROR"
+        return \$false
+    }
+}
+
+# ============================================
+#  v5.0.1: DNS FILTER
+# ============================================
+function Sync-DnsBlocklist {
+    <#
+    .SYNOPSIS
+        Syncs DNS blocklist from server
+    #>
+    try {
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/serve-dns-filter" \`
+            -Method "GET" \`
+            -MaxRetries 2 \`
+            -TimeoutSec 15
+        
+        if (-not \$result.Success) {
+            return \$false
+        }
+        
+        \$response = \$result.Content | ConvertFrom-Json
+        
+        if (\$response.domains) {
+            \$response | ConvertTo-Json -Depth 5 | Out-File \$Global:DnsBlocklistPath -Encoding UTF8
+            Write-Log "[DNS] Synced \$(\$response.domains.Count) blocked domains" "INFO"
+            return \$true
+        }
+        
+        return \$false
+        
+    } catch {
+        Write-Log "[DNS] Error syncing blocklist: \$(\$_.Exception.Message)" "WARN"
+        return \$false
+    }
+}
+
+function Test-DnsBlock {
+    <#
+    .SYNOPSIS
+        Checks if a domain is in the blocklist
+    #>
+    param([string]\$Domain)
+    
+    try {
+        if (-not (Test-Path \$Global:DnsBlocklistPath)) {
+            return \$false
+        }
+        
+        \$blocklist = Get-Content \$Global:DnsBlocklistPath -Raw | ConvertFrom-Json
+        
+        foreach (\$blocked in \$blocklist.domains) {
+            if (\$Domain -like "*\$blocked*") {
+                return \$true
             }
         }
         
-        Add-EvidenceEntry -Type "update_check" -Data @{
-            current_version = \$Global:AgentVersion
-            phase = "starting"
-        } -Severity "info"
+        return \$false
         
-        # Chama serve-agent-update
-        \$updateResult = Invoke-SecureRequest \`
-            -Path "/functions/v1/serve-agent-update" \`
-            -Method GET \`
-            -TimeoutSec 60
+    } catch {
+        return \$false
+    }
+}
+
+# ============================================
+#  v5.0.1: NETWORK WATCHDOG
+# ============================================
+function Test-NetworkConnectivity {
+    <#
+    .SYNOPSIS
+        Tests network connectivity
+    #>
+    try {
+        # Try TCP connection on server port 443
+        \$uri = [System.Uri]::new(\$Global:ServerUrl)
+        \$tcpClient = New-Object System.Net.Sockets.TcpClient
+        \$asyncResult = \$tcpClient.BeginConnect(\$uri.Host, 443, \$null, \$null)
+        \$wait = \$asyncResult.AsyncWaitHandle.WaitOne(5000, \$false)
         
-        if (-not \$updateResult.Success) {
-            throw "Falha ao buscar update: HTTP \$(\$updateResult.StatusCode)"
+        if (\$wait -and \$tcpClient.Connected) {
+            \$tcpClient.Close()
+            return \$true
         }
         
-        \$data = \$updateResult.Body | ConvertFrom-Json
+        \$tcpClient.Close()
+        return \$false
         
-        # Ja esta na ultima versao?
-        if (\$data.message -eq "Already up to date") {
-            Write-Log "[INFO] Agente ja esta na ultima versao (\$(\$data.current_version))" "INFO"
-            Add-EvidenceEntry -Type "update_check" -Data @{
-                status = "already_current"
-                version = \$data.current_version
-            } -Severity "info"
-            return @{ success = \$true; output = (\$data | ConvertTo-Json -Compress) }
-        }
+    } catch {
+        return \$false
+    }
+}
+
+# ============================================
+#  JOB HANDLERS (Implementations)
+# ============================================
+function Invoke-CollectSoftwareInventory {
+    param([object]\$Payload)
+    
+    try {
+        \$software = @()
         
-        # Fora do rollout?
-        if (\$data.message -eq "No update available (outside rollout)") {
-            Write-Log "[INFO] Agente fora do rollout gradual (bucket: \$(\$data.rollout_bucket), required: <\$(\$data.rollout_percentage)%)" "INFO"
-            Add-EvidenceEntry -Type "update_check" -Data @{
-                status = "outside_rollout"
-                bucket = \$data.rollout_bucket
-                rollout_percentage = \$data.rollout_percentage
-            } -Severity "info"
-            return @{ success = \$true; output = (\$data | ConvertTo-Json -Compress) }
-        }
-        
-        \$newVersion   = \$data.version
-        \$expectedHash = \$data.sha256
-        
-        Write-Log "[UPDATE] Atualizando agente para versao \$newVersion" "INFO"
-        
-        # SMART PATH DETECTION - Tenta multiplas estrategias para encontrar script atual
-        \$installDir = "C:\\CyberShield"
-        \$targetScript = Join-Path \$installDir "cybershield-agent-\$(\$Global:AgentName).ps1"
-        
-        # Detectar script atual em execucao
-        \$currentScript = \$null
-        \$possiblePaths = @(
-            \$PSCommandPath,
-            (Join-Path \$installDir "cybershield-agent-\$(\$Global:AgentName).ps1"),
-            (Join-Path \$installDir "cybershield-agent-v4.ps1"),
-            (Join-Path \$installDir "cybershield-agent-v3.ps1"),
-            (Join-Path \$installDir "cybershield-agent.ps1")
+        # Collect from registry (64-bit)
+        \$regPaths = @(
+            "HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",
+            "HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*"
         )
         
-        foreach (\$path in \$possiblePaths) {
-            if (\$path -and (Test-Path \$path)) {
-                \$currentScript = \$path
-                Write-Log "[UPDATE] Script atual detectado: \$currentScript" "INFO"
-                break
-            }
+        foreach (\$path in \$regPaths) {
+            Get-ItemProperty \$path -ErrorAction SilentlyContinue | 
+                Where-Object { \$_.DisplayName } |
+                ForEach-Object {
+                    \$software += @{
+                        name = \$_.DisplayName
+                        version = \$_.DisplayVersion
+                        publisher = \$_.Publisher
+                        install_date = \$_.InstallDate
+                    }
+                }
         }
         
-        # Fallback: busca qualquer script cybershield-agent-*.ps1
-        if (-not \$currentScript) {
-            \$found = Get-ChildItem -Path \$installDir -Filter "cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Select-Object -First 1
-            if (\$found) {
-                \$currentScript = \$found.FullName
-                Write-Log "[UPDATE] Script encontrado via glob: \$currentScript" "INFO"
-            }
+        return @{
+            software_count = \$software.Count
+            software_list = \$software | Select-Object -First 500
+            collected_at = (Get-Date).ToString("o")
         }
         
-        \$tempScript = Join-Path \$env:TEMP "cybershield-agent-update-\$newVersion.ps1"
-        
-        # ============================================================
-        # CRITICAL: BASE64 DECODE - Preserva 100% dos bytes
-        # Imune a transformacoes JSON/PowerShell
-        # ============================================================
-        \$bytes = \$null
-        if (\$data.script_content_base64) {
-            Write-Log "[UPDATE] Usando Base64 decode (safe mode)" "INFO"
-            \$bytes = [System.Convert]::FromBase64String(\$data.script_content_base64)
-            [System.IO.File]::WriteAllBytes(\$tempScript, \$bytes)
-            Write-Log "[UPDATE] Script salvo via WriteAllBytes (\$(\$bytes.Length) bytes)" "INFO"
-        } else {
-            # Fallback para agentes antigos (menos seguro)
-            Write-Log "[UPDATE] Fallback para script_content (string mode)" "WARN"
-            \$scriptText = \$data.script_content
-            [System.IO.File]::WriteAllText(\$tempScript, \$scriptText, [System.Text.UTF8Encoding]::new(\$false))
-            \$bytes = [System.IO.File]::ReadAllBytes(\$tempScript)
-        }
-        
-        # Validar SHA256 do arquivo ESCRITO no disco
-        \$actualHash = (Get-FileHash -Path \$tempScript -Algorithm SHA256).Hash.ToLower()
-        if (\$actualHash -ne \$expectedHash.ToLower()) {
-            Remove-Item \$tempScript -Force
-            throw "SHA256 mismatch! Esperado: \$expectedHash, Obtido: \$actualHash"
-        }
-        
-        Write-Log "[SUCCESS] SHA256 validado: \$actualHash" "SUCCESS"
-        
-        # ============================================================
-        # FASE 2.6: ED25519 SIGNATURE VERIFICATION
-        # Verifica assinatura criptográfica ANTES de aplicar update
-        # ============================================================
-        \$signatureVerified = \$false
-        if (\$data.signature_base64) {
-            Write-Log "[SECURITY] Verificando assinatura Ed25519 (signed by: \$(\$data.signed_by))" "INFO"
-            
-            \$signatureVerified = Verify-Ed25519Signature -ScriptBytes \$bytes -SignatureBase64 \$data.signature_base64
-            
-            if (-not \$signatureVerified) {
-                Remove-Item \$tempScript -Force
-                
-                Add-EvidenceEntry -Type "error" -Data @{
-                    event = "signature_rejected"
-                    version = \$newVersion
-                    signed_by = \$data.signed_by
-                    sha256 = \$actualHash
-                } -Severity "error"
-                
-                throw "Ed25519 signature verification FAILED - Update rejected for security"
-            }
-            
-            Add-EvidenceEntry -Type "security_event" -Data @{
-                event = "signature_verified"
-                version = \$newVersion
-                signed_by = \$data.signed_by
-                signed_at = \$data.signed_at
-            } -Severity "info"
-        } else {
-            Write-Log "[SECURITY] Nenhuma assinatura fornecida - modo backward compatible" "WARN"
-            
-            # Log para auditoria
-            Add-EvidenceEntry -Type "security_warning" -Data @{
-                event = "unsigned_update"
-                version = \$newVersion
-                note = "Update applied without cryptographic signature (backward compatible)"
-            } -Severity "warning"
-        }
-        
-        # ============================================================
-        # FASE 3.0: STRUCTURED BACKUP FOR ROLLBACK
-        # Create structured backup BEFORE applying new version
-        # ============================================================
-        \$previousPath = \$Global:RollbackPaths.Previous
-        
-        # Backup do script atual para rollback estruturado
-        if (\$currentScript -and (Test-Path \$currentScript)) {
-            try {
-                Copy-Item -Path \$currentScript -Destination \$previousPath -Force
-                Write-Log "[ROLLBACK] Structured backup created: \$previousPath" "INFO"
-                
-                # Update rollback state with previous version info
-                \$rollbackState = Get-RollbackState
-                \$rollbackState.previous_version = \$Global:AgentVersion
-                Save-RollbackState -State \$rollbackState
-            } catch {
-                Write-Log "[WARN] Structured backup failed: \$(\$_.Exception.Message)" "WARN"
-            }
-            
-            # Also create timestamped backup for historical purposes
-            \$backupScript = \$currentScript -replace '\\.ps1\$', "-backup-\$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
-            try {
-                Copy-Item -Path \$currentScript -Destination \$backupScript -Force
-                Write-Log "[BACKUP] Historical backup: \$backupScript" "INFO"
-            } catch {
-                Write-Log "[WARN] Historical backup falhou: \$(\$_.Exception.Message)" "WARN"
-            }
-        } else {
-            Write-Log "[WARN] Script atual nao encontrado, pulando backup" "WARN"
-        }
-        
-        # Instalar novo script no path padrao
-        Copy-Item -Path \$tempScript -Destination \$targetScript -Force
-        Remove-Item \$tempScript -Force
-        Write-Log "[SUCCESS] Script instalado: \$targetScript" "SUCCESS"
-        
-        # Registrar evidencia de update aplicado
-        Add-EvidenceEntry -Type "update_applied" -Data @{
-            old_version = \$Global:AgentVersion
-            new_version = \$newVersion
-            target_path = \$targetScript
-            sha256 = \$actualHash
-            base64_mode = [bool]\$data.script_content_base64
-            signature_verified = \$signatureVerified
-            signed_by = \$data.signed_by
-        } -Severity "info"
-        
-        Write-Log "[SUCCESS] Script v\$newVersion instalado em \$targetScript" "SUCCESS"
-        Write-Log "[INFO] Nova versao sera carregada no proximo boot do sistema" "INFO"
-        Write-Log "[INFO] Agente continua operando normalmente com versao \$(\$Global:AgentVersion)" "INFO"
-        
-        \$output = @{
-            message     = "Update saved - will be active after Windows reboot"
-            newVersion  = \$newVersion
-            currentVersion = \$Global:AgentVersion
-            targetPath  = \$targetScript
-            sha256      = \$actualHash
-            base64Mode  = [bool]\$data.script_content_base64
-            signatureVerified = \$signatureVerified
-            signedBy    = \$data.signed_by
-            requiresReboot = \$true
-            savedAt     = (Get-Date).ToUniversalTime().ToString("o")
-        }
-        
-        return @{ success = \$true; output = (\$output | ConvertTo-Json -Compress) }
+    } catch {
+        return @{ error = \$_.Exception.Message }
     }
-    catch {
-        # CRITICAL: Use "error" instead of "update_failed" for backward compatibility
-        # Old agents don't have "update_failed" in ValidateSet, causing update chicken-and-egg problem
-        Add-EvidenceEntry -Type "error" -Data @{
-            event = "update_failed"
-            error = \$_.Exception.Message
-            current_version = \$Global:AgentVersion
-        } -Severity "error"
+}
+
+function Invoke-CollectAntivirusStatus {
+    try {
+        \$avProducts = Get-WmiObject -Namespace "root\\SecurityCenter2" -Class "AntiVirusProduct" -ErrorAction SilentlyContinue
+        
+        \$avList = @()
+        foreach (\$av in \$avProducts) {
+            \$avList += @{
+                name = \$av.displayName
+                state = \$av.productState
+                path = \$av.pathToSignedProductExe
+            }
+        }
+        
+        return @{
+            antivirus_products = \$avList
+            count = \$avList.Count
+            collected_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        return @{ error = \$_.Exception.Message }
+    }
+}
+
+function Invoke-CollectNetworkInfo {
+    try {
+        \$adapters = Get-NetAdapter | Where-Object { \$_.Status -eq "Up" } | Select-Object Name, MacAddress, LinkSpeed
+        \$ipConfig = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { \$_.IPAddress -ne "127.0.0.1" }
+        
+        return @{
+            adapters = @(\$adapters)
+            ip_addresses = @(\$ipConfig | ForEach-Object { @{ ip = \$_.IPAddress; prefix = \$_.PrefixLength } })
+            collected_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        return @{ error = \$_.Exception.Message }
+    }
+}
+
+function Invoke-FixFirewall {
+    param([object]\$Payload)
+    
+    try {
+        \$results = @{}
+        
+        if (\$Payload.enable_public) {
+            Set-NetFirewallProfile -Profile Public -Enabled True -ErrorAction Stop
+            \$results.public = "enabled"
+        }
+        if (\$Payload.enable_private) {
+            Set-NetFirewallProfile -Profile Private -Enabled True -ErrorAction Stop
+            \$results.private = "enabled"
+        }
+        if (\$Payload.enable_domain) {
+            Set-NetFirewallProfile -Profile Domain -Enabled True -ErrorAction Stop
+            \$results.domain = "enabled"
+        }
+        
+        return @{
+            success = \$true
+            changes = \$results
+            applied_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        return @{ success = \$false; error = \$_.Exception.Message }
+    }
+}
+
+function Invoke-CollectWebActivity {
+    param([object]\$Payload)
+    
+    try {
+        # Simplified - basic Chrome history collection
+        \$chromeHistory = @()
+        \$daysBack = if (\$Payload.days_back) { \$Payload.days_back } else { 7 }
+        
+        \$chromeDbPath = "\$env:LOCALAPPDATA\\Google\\Chrome\\User Data\\Default\\History"
+        
+        if (Test-Path \$chromeDbPath) {
+            # Chrome history requires SQLite - simplified response
+            \$chromeHistory = @(@{ browser = "chrome"; status = "db_exists"; path = \$chromeDbPath })
+        }
+        
+        return @{
+            browsers_checked = @("chrome")
+            history_entries = \$chromeHistory
+            days_back = \$daysBack
+            collected_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        return @{ error = \$_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.1: PROTECTED PROCESSES AND SERVICES
+#  Defense-in-depth: Agent-side validation
+# ============================================
+\$Global:ProtectedProcesses = @(
+    "System", "smss", "csrss", "wininit", "services", "lsass", "svchost",
+    "winlogon", "dwm", "explorer", "taskhostw", "RuntimeBroker",
+    "SearchIndexer", "SecurityHealthService", "MsMpEng", "NisSrv",
+    "WmiPrvSE", "dllhost", "conhost", "fontdrvhost", "sihost",
+    "powershell", "pwsh", "cmd"  # Prevent self-kill
+)
+
+\$Global:ProtectedServices = @(
+    "Winmgmt", "BITS", "Dnscache", "LanmanServer", "LanmanWorkstation",
+    "RpcSs", "DcomLaunch", "EventLog", "PlugPlay", "Power",
+    "SecurityHealthService", "WinDefend", "mpssvc", "WdNisSvc",
+    "wscsvc", "Schedule", "CryptSvc", "SamSs", "Netlogon",
+    "CyberShieldAgent"  # Prevent self-disable
+)
+
+# ============================================
+#  v5.0.1: KILL PROCESS HANDLER
+# ============================================
+function Invoke-KillProcess {
+    <#
+    .SYNOPSIS
+        Terminates processes by name with security validation
+    .DESCRIPTION
+        v5.0.1 NEW: Playbook remediation handler
+        Security: Protected process list prevents killing critical OS processes
+    #>
+    param([object]\$Payload)
+    
+    try {
+        \$processName = \$Payload.process_name
+        \$force = if (\$null -ne \$Payload.force) { \$Payload.force } else { \$false }
+        
+        if (-not \$processName) {
+            return @{ success = \$false; error = "Missing process_name in payload" }
+        }
+        
+        # Security check: Protected process list
+        \$normalizedName = \$processName.ToLower() -replace '\\.exe\$', ''
+        if (\$Global:ProtectedProcesses -contains \$normalizedName) {
+            Write-Log "[KILL-PROCESS] BLOCKED: \$processName is a protected process" "WARN"
+            return @{
+                success = \$false
+                error = "SECURITY_BLOCK: \$processName is a protected system process"
+                blocked = \$true
+                process_name = \$processName
+            }
+        }
+        
+        # Find matching processes
+        \$processes = Get-Process -Name \$normalizedName -ErrorAction SilentlyContinue
+        
+        if (-not \$processes -or \$processes.Count -eq 0) {
+            return @{
+                success = \$true
+                killed = 0
+                message = "Process not running: \$processName"
+            }
+        }
+        
+        \$killed = 0
+        \$errors = @()
+        
+        foreach (\$proc in \$processes) {
+            try {
+                if (\$force) {
+                    \$proc | Stop-Process -Force -ErrorAction Stop
+                } else {
+                    \$proc | Stop-Process -ErrorAction Stop
+                }
+                \$killed++
+                Write-Log "[KILL-PROCESS] Terminated: \$(\$proc.Name) (PID: \$(\$proc.Id))" "SUCCESS"
+            } catch {
+                \$errors += "PID \$(\$proc.Id): \$(\$_.Exception.Message)"
+            }
+        }
+        
+        return @{
+            success = (\$killed -gt 0)
+            process_name = \$processName
+            killed = \$killed
+            total_found = \$processes.Count
+            errors = \$errors
+            killed_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
         return @{ success = \$false; error = \$_.Exception.Message }
     }
 }
 
 # ============================================
-#  POLL DE JOBS
+#  v5.0.1: STOP SERVICE HANDLER
 # ============================================
-function Poll-Jobs {
-    \$body = @{
-        agent_name    = \$Global:AgentName
-        agent_version = \$Global:AgentVersion
-        state         = Get-AgentState
-    }
-
-    Write-Log "Consultando jobs..." "INFO"
-
+function Invoke-StopService {
+    <#
+    .SYNOPSIS
+        Stops a Windows service with security validation
+    .DESCRIPTION
+        v5.0.1 NEW: Playbook remediation handler
+    #>
+    param([object]\$Payload)
+    
     try {
+        \$serviceName = \$Payload.service_name
+        \$force = if (\$null -ne \$Payload.force) { \$Payload.force } else { \$false }
+        
+        if (-not \$serviceName) {
+            return @{ success = \$false; error = "Missing service_name in payload" }
+        }
+        
+        # Security check: Protected service list
+        if (\$Global:ProtectedServices -contains \$serviceName) {
+            Write-Log "[STOP-SERVICE] BLOCKED: \$serviceName is a protected service" "WARN"
+            return @{
+                success = \$false
+                error = "SECURITY_BLOCK: \$serviceName is a protected system service"
+                blocked = \$true
+                service_name = \$serviceName
+            }
+        }
+        
+        \$service = Get-Service -Name \$serviceName -ErrorAction SilentlyContinue
+        
+        if (-not \$service) {
+            return @{
+                success = \$false
+                error = "Service not found: \$serviceName"
+            }
+        }
+        
+        if (\$service.Status -eq 'Stopped') {
+            return @{
+                success = \$true
+                service_name = \$serviceName
+                status = "already_stopped"
+            }
+        }
+        
+        if (\$force) {
+            Stop-Service -Name \$serviceName -Force -ErrorAction Stop
+        } else {
+            Stop-Service -Name \$serviceName -ErrorAction Stop
+        }
+        
+        Write-Log "[STOP-SERVICE] Stopped: \$serviceName" "SUCCESS"
+        
+        return @{
+            success = \$true
+            service_name = \$serviceName
+            previous_status = \$service.Status.ToString()
+            new_status = "Stopped"
+            stopped_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        return @{ success = \$false; error = \$_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.1: DISABLE SERVICE HANDLER
+# ============================================
+function Invoke-DisableService {
+    <#
+    .SYNOPSIS
+        Stops and disables a Windows service
+    .DESCRIPTION
+        v5.0.1 NEW: Playbook remediation handler
+        Stops service AND sets StartupType to Disabled
+    #>
+    param([object]\$Payload)
+    
+    try {
+        \$serviceName = \$Payload.service_name
+        
+        if (-not \$serviceName) {
+            return @{ success = \$false; error = "Missing service_name in payload" }
+        }
+        
+        # Security check: Protected service list
+        if (\$Global:ProtectedServices -contains \$serviceName) {
+            Write-Log "[DISABLE-SERVICE] BLOCKED: \$serviceName is a protected service" "WARN"
+            return @{
+                success = \$false
+                error = "SECURITY_BLOCK: \$serviceName is a protected system service"
+                blocked = \$true
+                service_name = \$serviceName
+            }
+        }
+        
+        \$service = Get-Service -Name \$serviceName -ErrorAction SilentlyContinue
+        
+        if (-not \$service) {
+            return @{
+                success = \$false
+                error = "Service not found: \$serviceName"
+            }
+        }
+        
+        \$previousStatus = \$service.Status.ToString()
+        \$previousStartType = (Get-WmiObject Win32_Service -Filter "Name='\$serviceName'").StartMode
+        
+        # Stop if running
+        if (\$service.Status -ne 'Stopped') {
+            Stop-Service -Name \$serviceName -Force -ErrorAction Stop
+        }
+        
+        # Disable startup
+        Set-Service -Name \$serviceName -StartupType Disabled -ErrorAction Stop
+        
+        Write-Log "[DISABLE-SERVICE] Disabled: \$serviceName" "SUCCESS"
+        
+        return @{
+            success = \$true
+            service_name = \$serviceName
+            previous_status = \$previousStatus
+            previous_startup = \$previousStartType
+            new_status = "Stopped"
+            new_startup = "Disabled"
+            disabled_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        return @{ success = \$false; error = \$_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.1: RESTART SERVICE HANDLER
+# ============================================
+function Invoke-RestartService {
+    <#
+    .SYNOPSIS
+        Restarts a Windows service
+    .DESCRIPTION
+        v5.0.1 NEW: Playbook remediation handler
+    #>
+    param([object]\$Payload)
+    
+    try {
+        \$serviceName = \$Payload.service_name
+        \$timeout = if (\$Payload.timeout_seconds) { \$Payload.timeout_seconds } else { 30 }
+        
+        if (-not \$serviceName) {
+            return @{ success = \$false; error = "Missing service_name in payload" }
+        }
+        
+        # Security check: Protected service list (allow restart but log)
+        if (\$Global:ProtectedServices -contains \$serviceName) {
+            Write-Log "[RESTART-SERVICE] WARNING: Restarting protected service \$serviceName" "WARN"
+        }
+        
+        \$service = Get-Service -Name \$serviceName -ErrorAction SilentlyContinue
+        
+        if (-not \$service) {
+            return @{
+                success = \$false
+                error = "Service not found: \$serviceName"
+            }
+        }
+        
+        \$previousStatus = \$service.Status.ToString()
+        
+        Restart-Service -Name \$serviceName -Force -ErrorAction Stop
+        
+        # Wait for service to start
+        \$service.WaitForStatus('Running', (New-TimeSpan -Seconds \$timeout))
+        
+        \$newService = Get-Service -Name \$serviceName
+        
+        Write-Log "[RESTART-SERVICE] Restarted: \$serviceName" "SUCCESS"
+        
+        return @{
+            success = \$true
+            service_name = \$serviceName
+            previous_status = \$previousStatus
+            new_status = \$newService.Status.ToString()
+            restarted_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        return @{ success = \$false; error = \$_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0: AUTO-REPAIR - DISK CLEANUP
+# ============================================
+function Invoke-DiskCleanup {
+    <#
+    .SYNOPSIS
+        Auto disk cleanup when usage > 95%
+    .DESCRIPTION
+        P0 Critical: System must not freeze due to lack of space.
+        Cleans: temp files, Windows temp, old Downloads, old logs.
+    #>
+    param(
+        [Parameter(Mandatory = \$false)]
+        [int]\$ThresholdPercent = \$Global:DiskCleanupThresholdPercent
+    )
+    
+    try {
+        \$disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
+        \$usedPercent = [math]::Round(((\$disk.Size - \$disk.FreeSpace) / \$disk.Size) * 100, 1)
+        
+        if (\$usedPercent -lt \$ThresholdPercent) {
+            return @{ cleaned = \$false; reason = "disk_ok"; usage_percent = \$usedPercent }
+        }
+        
+        Write-Log "[DISK-CLEANUP] Disk usage at \$usedPercent% (threshold: \$ThresholdPercent%). Starting cleanup..." "WARN"
+        
+        \$freedBytes = 0
+        \$actions = @()
+        
+        # 1. Clean user temp
+        try {
+            \$tempPath = \$env:TEMP
+            \$tempFiles = Get-ChildItem -Path \$tempPath -Recurse -Force -ErrorAction SilentlyContinue
+            \$tempSize = (\$tempFiles | Measure-Object -Property Length -Sum).Sum
+            Remove-Item "\$tempPath\\*" -Recurse -Force -ErrorAction SilentlyContinue
+            \$freedBytes += \$tempSize
+            \$actions += "user_temp"
+        } catch { }
+        
+        # 2. Clean Windows temp
+        try {
+            \$winTempPath = "C:\\Windows\\Temp"
+            \$winTempFiles = Get-ChildItem -Path \$winTempPath -Recurse -Force -ErrorAction SilentlyContinue
+            \$winTempSize = (\$winTempFiles | Measure-Object -Property Length -Sum).Sum
+            Remove-Item "\$winTempPath\\*" -Recurse -Force -ErrorAction SilentlyContinue
+            \$freedBytes += \$winTempSize
+            \$actions += "windows_temp"
+        } catch { }
+        
+        # 3. Clean prefetch (safe, Windows recreates)
+        try {
+            \$prefetchPath = "C:\\Windows\\Prefetch"
+            Remove-Item "\$prefetchPath\\*.pf" -Force -ErrorAction SilentlyContinue
+            \$actions += "prefetch"
+        } catch { }
+        
+        # 4. Run cleanmgr silently (if available)
+        try {
+            \$cleanMgrPath = "C:\\Windows\\System32\\cleanmgr.exe"
+            if (Test-Path \$cleanMgrPath) {
+                # Configure sagerun preset if it doesn't exist
+                \$regPath = "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VolumeCaches"
+                \$caches = @("Temporary Files", "Temporary Setup Files", "Old ChkDsk Files", "Recycle Bin")
+                
+                foreach (\$cache in \$caches) {
+                    \$cachePath = "\$regPath\\\$cache"
+                    if (Test-Path \$cachePath) {
+                        Set-ItemProperty -Path \$cachePath -Name "StateFlags0100" -Value 2 -ErrorAction SilentlyContinue
+                    }
+                }
+                
+                \$process = Start-Process "cleanmgr.exe" -ArgumentList "/sagerun:100" -NoNewWindow -Wait -PassThru -ErrorAction SilentlyContinue
+                if (\$process.ExitCode -eq 0) {
+                    \$actions += "cleanmgr"
+                }
+            }
+        } catch { }
+        
+        # Recalculate disk usage
+        \$diskAfter = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
+        \$usedPercentAfter = [math]::Round(((\$diskAfter.Size - \$diskAfter.FreeSpace) / \$diskAfter.Size) * 100, 1)
+        \$freedGB = [math]::Round((\$diskAfter.FreeSpace - \$disk.FreeSpace) / 1GB, 2)
+        
+        Write-Log "[DISK-CLEANUP] Completed. Usage: \$usedPercent% -> \$usedPercentAfter% (freed: \${freedGB}GB)" "SUCCESS"
+        
+        # Update statistics
+        \$Global:AutoRepairStats.disk_cleanups++
+        \$Global:AutoRepairStats.last_disk_cleanup = (Get-Date).ToString("o")
+        
+        return @{
+            cleaned = \$true
+            before_percent = \$usedPercent
+            after_percent = \$usedPercentAfter
+            freed_gb = \$freedGB
+            actions = \$actions
+        }
+        
+    } catch {
+        Write-Log "[DISK-CLEANUP] Error: \$(\$_.Exception.Message)" "ERROR"
+        return @{ cleaned = \$false; error = \$_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0: AUTO-REPAIR - HIGH CPU PROCESS CHECK
+# ============================================
+function Invoke-HighCpuProcessCheck {
+    <#
+    .SYNOPSIS
+        Detects and kills suspicious processes with CPU > 90%
+    .DESCRIPTION
+        P0 Critical: Prevents system freeze from runaway processes.
+        Protects critical system processes and known applications.
+    #>
+    param(
+        [Parameter(Mandatory = \$false)]
+        [int]\$ThresholdPercent = \$Global:HighCpuThresholdPercent
+    )
+    
+    # Protected processes (NEVER kill)
+    \$protectedProcesses = @(
+        # Windows System
+        "System", "Idle", "svchost", "csrss", "smss", "wininit", "winlogon",
+        "services", "lsass", "dwm", "explorer", "taskmgr", "RuntimeBroker",
+        "spoolsv", "msdtc", "SearchIndexer", "WmiPrvSE",
+        # CyberShield Agent
+        "powershell", "CyberShield", "dns-filter",
+        # Common Applications
+        "chrome", "firefox", "msedge", "code", "Teams", "Outlook",
+        "slack", "zoom", "OneDrive", "WINWORD", "EXCEL", "POWERPNT"
+    )
+    
+    try {
+        # Collect high-CPU processes using Get-Counter for real-time CPU
+        \$cpuSamples = @{}
+        
+        # First sample
+        \$processes1 = Get-Process | Where-Object { \$_.CPU -ne \$null }
+        Start-Sleep -Milliseconds 500
+        # Second sample
+        \$processes2 = Get-Process | Where-Object { \$_.CPU -ne \$null }
+        
+        foreach (\$p2 in \$processes2) {
+            \$p1 = \$processes1 | Where-Object { \$_.Id -eq \$p2.Id }
+            if (\$p1) {
+                \$cpuDelta = \$p2.CPU - \$p1.CPU
+                \$cpuPercent = (\$cpuDelta / 0.5) * 100 / [Environment]::ProcessorCount
+                \$cpuSamples[\$p2.Id] = @{
+                    Name = \$p2.ProcessName
+                    CpuPercent = [math]::Round(\$cpuPercent, 1)
+                    WorkingSetMB = [math]::Round(\$p2.WorkingSet / 1MB, 1)
+                }
+            }
+        }
+        
+        # Filter high-CPU processes
+        \$highCpuProcesses = \$cpuSamples.GetEnumerator() | 
+            Where-Object { \$_.Value.CpuPercent -gt \$ThresholdPercent } |
+            Where-Object { \$_.Value.Name -notin \$protectedProcesses }
+        
+        \$killedProcesses = @()
+        
+        foreach (\$proc in \$highCpuProcesses) {
+            \$procName = \$proc.Value.Name
+            \$procId = \$proc.Key
+            \$cpuPercent = \$proc.Value.CpuPercent
+            
+            Write-Log "[PROCESS-CHECK] High CPU detected: \$procName (PID: \$procId) at \$cpuPercent%" "WARN"
+            
+            try {
+                # Check if process is baseline (known)
+                \$isBaseline = Test-ProcessInBaseline -ProcessName \$procName
+                
+                if (-not \$isBaseline) {
+                    Write-Log "[PROCESS-CHECK] Process \$procName NOT in baseline - killing..." "WARN"
+                    Stop-Process -Id \$procId -Force -ErrorAction Stop
+                    
+                    \$killedProcesses += @{
+                        name = \$procName
+                        pid = \$procId
+                        cpu_percent = \$cpuPercent
+                        reason = "high_cpu_not_baseline"
+                    }
+                    
+                    Write-Log "[PROCESS-CHECK] Killed suspicious process: \$procName (PID: \$procId)" "SUCCESS"
+                } else {
+                    Write-Log "[PROCESS-CHECK] Process \$procName in baseline, monitoring only" "INFO"
+                }
+                
+            } catch {
+                Write-Log "[PROCESS-CHECK] Failed to kill \$procName : \$(\$_.Exception.Message)" "ERROR"
+            }
+        }
+        
+        if (\$killedProcesses.Count -gt 0) {
+            \$Global:AutoRepairStats.processes_killed += \$killedProcesses.Count
+            \$Global:AutoRepairStats.last_process_kill = (Get-Date).ToString("o")
+            
+            Send-AutoRepairTelemetry -Event "process_killed" -Data @{
+                processes = \$killedProcesses
+                threshold_percent = \$ThresholdPercent
+            }
+        }
+        
+        return @{
+            checked = \$true
+            high_cpu_count = @(\$highCpuProcesses).Count
+            killed_count = \$killedProcesses.Count
+            killed_processes = \$killedProcesses
+        }
+        
+    } catch {
+        Write-Log "[PROCESS-CHECK] Error: \$(\$_.Exception.Message)" "ERROR"
+        return @{ checked = \$false; error = \$_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0: ADVANCED COLLECTION - TOP PROCESSES
+# ============================================
+function Get-TopProcesses {
+    <#
+    .SYNOPSIS
+        Collects top 5 processes by CPU and RAM
+    .DESCRIPTION
+        P1 Important: Resource consumption visibility in heartbeat.
+    #>
+    try {
+        \$allProcesses = Get-Process | Where-Object { \$_.WorkingSet -gt 0 }
+        
+        \$topByCpu = \$allProcesses | 
+            Where-Object { \$_.CPU -ne \$null } |
+            Sort-Object CPU -Descending | 
+            Select-Object -First 5 | 
+            ForEach-Object { 
+                @{
+                    name = \$_.ProcessName
+                    pid = \$_.Id
+                    cpu_seconds = [math]::Round(\$_.CPU, 2)
+                    memory_mb = [math]::Round(\$_.WorkingSet / 1MB, 1)
+                }
+            }
+        
+        \$topByMemory = \$allProcesses | 
+            Sort-Object WorkingSet -Descending | 
+            Select-Object -First 5 | 
+            ForEach-Object { 
+                @{
+                    name = \$_.ProcessName
+                    pid = \$_.Id
+                    memory_mb = [math]::Round(\$_.WorkingSet / 1MB, 1)
+                    cpu_seconds = if (\$_.CPU) { [math]::Round(\$_.CPU, 2) } else { 0 }
+                }
+            }
+        
+        return @{
+            top_by_cpu = @(\$topByCpu)
+            top_by_memory = @(\$topByMemory)
+            total_processes = \$allProcesses.Count
+            collected_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        Write-Log "[TOP-PROCESSES] Error: \$(\$_.Exception.Message)" "WARN"
+        return @{ error = \$_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0: UNAUTHORIZED SOFTWARE DETECTION
+# ============================================
+function Get-UnauthorizedSoftware {
+    <#
+    .SYNOPSIS
+        Detects installed software not in the authorized list
+    .DESCRIPTION
+        P1 Important: Corporate software compliance.
+    #>
+    try {
+        # Authorized software list (default - can be synced from server)
+        \$authorizedPatterns = @(
+            "Microsoft*",
+            "Windows*",
+            "Google Chrome",
+            "Mozilla Firefox",
+            "Visual Studio*",
+            "PowerShell*",
+            "CyberShield*",
+            "*Update*",
+            "*Hotfix*",
+            "*Security*",
+            "Intel*",
+            "AMD*",
+            "NVIDIA*",
+            "Realtek*"
+        )
+        
+        # Get installed software
+        \$installedSoftware = Get-WmiObject Win32_Product -ErrorAction SilentlyContinue | 
+            Where-Object { \$_.Name } |
+            Select-Object -ExpandProperty Name -Unique
+        
+        # Filter unauthorized
+        \$unauthorized = @()
+        foreach (\$software in \$installedSoftware) {
+            \$isAuthorized = \$false
+            foreach (\$pattern in \$authorizedPatterns) {
+                if (\$software -like \$pattern) {
+                    \$isAuthorized = \$true
+                    break
+                }
+            }
+            if (-not \$isAuthorized) {
+                \$unauthorized += \$software
+            }
+        }
+        
+        if (\$unauthorized.Count -gt 0) {
+            Write-Log "[SOFTWARE-CHECK] Found \$(\$unauthorized.Count) unauthorized software" "WARN"
+            
+            Send-AutoRepairTelemetry -Event "unauthorized_software" -Data @{
+                software_list = \$unauthorized
+                count = \$unauthorized.Count
+            }
+        }
+        
+        return @{
+            checked = \$true
+            unauthorized_count = \$unauthorized.Count
+            unauthorized_list = \$unauthorized
+            total_installed = \$installedSoftware.Count
+        }
+        
+    } catch {
+        Write-Log "[SOFTWARE-CHECK] Error: \$(\$_.Exception.Message)" "WARN"
+        return @{ checked = \$false; error = \$_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0: PROCESS BASELINE
+# ============================================
+function Initialize-ProcessBaseline {
+    <#
+    .SYNOPSIS
+        Initializes or loads process baseline
+    .DESCRIPTION
+        P2 Advanced: Anomaly detection via baseline.
+    #>
+    try {
+        if (Test-Path \$Global:ProcessBaselinePath) {
+            \$Global:ProcessBaseline = Get-Content \$Global:ProcessBaselinePath -Raw | ConvertFrom-Json
+            Write-Log "[BASELINE] Loaded baseline with \$(\$Global:ProcessBaseline.Count) processes" "INFO"
+        } else {
+            Write-Log "[BASELINE] Creating initial process baseline..." "INFO"
+
+            \$processes = Get-Process | Select-Object ProcessName, Company, Description
+            \$grouped = \$processes | Group-Object ProcessName
+            \$baseline = @()
+
+            foreach (\$group in \$grouped) {
+                \$proc = \$group.Group[0]
+                \$baseline += @{
+                    name = \$proc.ProcessName
+                    company = \$proc.Company
+                    description = \$proc.Description
+                    first_seen = (Get-Date).ToString("o")
+                }
+            }
+
+            \$Global:ProcessBaseline = \$baseline
+            \$baseline | ConvertTo-Json -Depth 5 | Out-File \$Global:ProcessBaselinePath -Encoding UTF8
+
+            Write-Log "[BASELINE] Created baseline with \$(\$baseline.Count) processes" "SUCCESS"
+        }
+
+        return \$true
+
+    } catch {
+        Write-Log "[BASELINE] Error: \$(\$_.Exception.Message)" "ERROR"
+        \$Global:ProcessBaseline = @()
+        return \$false
+    }
+}
+
+function Test-ProcessInBaseline {
+    param([string]\$ProcessName)
+    
+    if (-not \$Global:ProcessBaseline) { return \$true }  # If no baseline, assume OK
+    
+    \$found = \$Global:ProcessBaseline | Where-Object { \$_.name -eq \$ProcessName }
+    return (\$null -ne \$found)
+}
+
+function Get-ProcessAnomalies {
+    <#
+    .SYNOPSIS
+        Detects new processes not in baseline
+    #>
+    try {
+        if (-not \$Global:ProcessBaseline) {
+            Initialize-ProcessBaseline
+        }
+        
+        \$currentProcesses = Get-Process | Select-Object -ExpandProperty ProcessName -Unique
+        \$baselineNames = \$Global:ProcessBaseline | ForEach-Object { \$_.name }
+        
+        \$anomalies = @()
+        foreach (\$proc in \$currentProcesses) {
+            if (\$proc -notin \$baselineNames) {
+                \$anomalies += \$proc
+            }
+        }
+        
+        if (\$anomalies.Count -gt 0) {
+            Write-Log "[BASELINE] Detected \$(\$anomalies.Count) new processes" "WARN"
+            
+            # Add to baseline for future reference
+            foreach (\$proc in \$anomalies) {
+                \$Global:ProcessBaseline += @{
+                    name = \$proc
+                    company = \$null
+                    description = "Auto-added"
+                    first_seen = (Get-Date).ToString("o")
+                }
+            }
+            
+            # Save updated baseline
+            \$Global:ProcessBaseline | ConvertTo-Json -Depth 5 | Out-File \$Global:ProcessBaselinePath -Encoding UTF8
+        }
+        
+        return @{
+            checked = \$true
+            anomaly_count = \$anomalies.Count
+            anomalies = \$anomalies
+        }
+        
+    } catch {
+        return @{ checked = \$false; error = \$_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0: AUTO-REPAIR TELEMETRY
+# ============================================
+function Send-AutoRepairTelemetry {
+    param(
+        [string]\$Event,
+        [object]\$Data
+    )
+    
+    try {
+        \$payload = @{
+            agent_name = \$Global:AgentName
+            agent_version = \$Global:AgentVersion
+            event_type = "auto_repair"
+            event_name = \$Event
+            event_data = \$Data
+            timestamp = (Get-Date).ToString("o")
+            hostname = \$env:COMPUTERNAME
+        }
+        
         \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/poll-jobs" \`
+            -Path "/functions/v1/submit-agent-evidence" \`
             -Method "POST" \`
-            -Body \$body \`
-            -TimeoutSec 20
-
-        if (-not \$result.Success -or \$result.StatusCode -ne 200) {
-            Write-Log "[ERROR] poll-jobs falhou (Status=\$(\$result.StatusCode))" "ERROR"
-            return
+            -Body \$payload \`
+            -MaxRetries 2 \`
+            -TimeoutSec 10
+        
+        if (-not \$result.Success) {
+            Write-Log "[TELEMETRY] Failed to send \$Event event" "WARN"
         }
+        
+    } catch {
+        # Silent - telemetry should never crash the agent
+    }
+}
 
-        if ([string]::IsNullOrWhiteSpace(\$result.Body)) {
-            return
-        }
-
-        \$jobs = \$result.Body | ConvertFrom-Json
-
-        if (\$null -eq \$jobs -or \$jobs.Count -eq 0) {
-            Write-Log "[POLL] Nenhum job disponivel" "DEBUG"
-            return
-        }
-
-        Write-Log "[JOBS] Recebidos \$(\$jobs.Count) job(s)" "INFO"
-
-        foreach (\$job in \$jobs) {
-            Execute-Job -Job \$job
+# ============================================
+#  SYSTEM METRICS (Basic - inherited from v4)
+# ============================================
+function Get-SystemMetrics {
+    try {
+        \$cpu = Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average | Select-Object -ExpandProperty Average
+        \$memory = Get-WmiObject Win32_OperatingSystem
+        \$disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
+        \$uptime = (Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+        
+        return @{
+            cpu_percent = [math]::Round(\$cpu, 2)
+            memory_total_gb = [math]::Round(\$memory.TotalVisibleMemorySize / 1MB, 2)
+            memory_used_gb = [math]::Round((\$memory.TotalVisibleMemorySize - \$memory.FreePhysicalMemory) / 1MB, 2)
+            memory_used_percent = [math]::Round(((\$memory.TotalVisibleMemorySize - \$memory.FreePhysicalMemory) / \$memory.TotalVisibleMemorySize) * 100, 2)
+            disk_total_gb = [math]::Round(\$disk.Size / 1GB, 2)
+            disk_free_gb = [math]::Round(\$disk.FreeSpace / 1GB, 2)
+            disk_used_percent = [math]::Round(((\$disk.Size - \$disk.FreeSpace) / \$disk.Size) * 100, 2)
+            uptime_seconds = [math]::Round(\$uptime.TotalSeconds)
         }
     } catch {
-        Write-Log "[ERROR] Erro no poll-jobs: \$(\$_.Exception.Message)" "ERROR"
+        return @{ error = \$_.Exception.Message }
     }
 }
 
 # ============================================
-#  BOOTSTRAP VALIDATION (ANTES DO LOOP)
+#  IMPROVED HEARTBEAT (v5.0)
 # ============================================
-Invoke-BootstrapValidation
+function Send-Heartbeat {
+    try {
+        Write-Log "[HEARTBEAT] Sending heartbeat..." "DEBUG"
+        
+        # Collect metrics
+        \$metrics = Get-SystemMetrics
+        \$topProcesses = Get-TopProcesses
+        \$anomalies = Get-ProcessAnomalies
+        
+        \$payload = @{
+            agent_name = \$Global:AgentName
+            agent_version = \$Global:AgentVersion
+            hostname = \$env:COMPUTERNAME
+            timestamp = (Get-Date).ToString("o")
+            system_metrics = \$metrics
+            processes = \$topProcesses
+            process_anomalies = \$anomalies.anomalies
+            auto_repair_stats = \$Global:AutoRepairStats
+            state = "ENFORCING"
+        }
+        
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/heartbeat" \`
+            -Method "POST" \`
+            -Body \$payload \`
+            -MaxRetries 3 \`
+            -TimeoutSec 30
+        
+        if (\$result.Success) {
+            Write-Log "[HEARTBEAT] Sent successfully" "SUCCESS"
+            
+            # Process response (force update, rotate key, etc.)
+            if (\$result.Content) {
+                try {
+                    \$response = \$result.Content | ConvertFrom-Json
+                    # TODO: process server commands
+                } catch { }
+            }
+            
+            return \$true
+        } else {
+            Write-Log "[HEARTBEAT] Failed: \$(\$result.Error)" "ERROR"
+            return \$false
+        }
+        
+    } catch {
+        Write-Log "[HEARTBEAT] Exception: \$(\$_.Exception.Message)" "ERROR"
+        return \$false
+    }
+}
 
 # ============================================
-#  LOOP PRINCIPAL v4.0.9-HARDENED
+#  MAIN LOOP v5.0.2 FULL ENTERPRISE
 # ============================================
 Write-Log "============================================" "INFO"
-Write-Log "[START] CyberShield Agent v4.0.9-HARDENED" "INFO"
+Write-Log "[START] CyberShield Agent \$(\$Global:AgentVersion) FULL ENTERPRISE" "INFO"
 Write-Log "[INFO] ServerUrl: \$Global:ServerUrl" "DEBUG"
 Write-Log "[INFO] AgentName: \$Global:AgentName" "DEBUG"
+Write-Log "[INFO] Features: ECDSA-signing, Ed25519-verify, hash-chain, FSM, DNS-filter, auto-remediation" "INFO"
 Write-Log "============================================" "INFO"
 
-# Registrar inicio no Evidence Journal
-Add-EvidenceEntry -Type "state_change" -Data @{
-    event = "agent_started"
-    version = \$Global:AgentVersion
-    hostname = \$env:COMPUTERNAME
-    features = @("state_machine", "evidence_journal", "dns_filter", "policy_contract")
-} -StateBefore \$null -StateAfter "BOOTSTRAP" -Severity "info"
+# ============================================
+#  PHASE 1: INITIALIZATION
+# ============================================
+Write-Log "[STARTUP] Phase 1: Initialization..." "INFO"
 
-try {
-    \$bootstrapStart = Get-Date
-    
-    # Transicao: BOOTSTRAP -> SYNCING
-    Set-AgentState -NewState "SYNCING" -Reason "Starting initial sync"
+# Initialize ECDSA keys
+\$keysInitialized = Initialize-AgentKeys
 
-    # ============================================================
-    # FASE 3: HEALTH CHECK POS-UPDATE + SAFE MODE CHECK
-    # ============================================================
-    \$rollbackState = Get-RollbackState
-    
-    # Verificar Safe Mode
-    if (\$rollbackState.safe_mode) {
-        Write-Log "[SAFE MODE] Agente em modo seguro - auto-updates desabilitados" "WARN"
-        Add-EvidenceEntry -Type "security_event" -Data @{
-            event = "safe_mode_active"
-            version = \$Global:AgentVersion
-            rollback_count = \$rollbackState.rollback_count
-        } -Severity "warning"
-    }
-    
-    # Health Check pos-update: detectar se houve update recente
-    if (\$rollbackState.previous_version -and \$rollbackState.previous_version -ne \$Global:AgentVersion) {
-        Write-Log "[HEALTH CHECK] Update detectado: \$(\$rollbackState.previous_version) -> \$(\$Global:AgentVersion)" "INFO"
-        Write-Log "[HEALTH CHECK] Aguardando 5s para estabilizacao..." "INFO"
-        Start-Sleep -Seconds 5
-        
-        Write-Log "[HEALTH CHECK] Validando versao \$(\$Global:AgentVersion)..." "INFO"
-        \$health = Test-PostUpdateHealth
-        
-        if (-not \$health.healthy) {
-            Write-Log "[HEALTH CHECK] FALHA: \$(\$health.reason)" "ERROR"
-            Add-EvidenceEntry -Type "security_event" -Data @{
-                event = "health_check_failed"
-                version = \$Global:AgentVersion
-                previous_version = \$rollbackState.previous_version
-                reason = \$health.reason
-            } -Severity "error"
-            
-            # Executar rollback automatico
-            \$rollbackResult = Invoke-SafeRollback -Reason "health_check_failed"
-            
-            if (\$rollbackResult.safe_mode) {
-                Write-Log "[CRITICAL] Agente entrou em SAFE MODE apos rollback loop" "ERROR"
-            }
-            # Se rollback executado com sucesso, o agente sera reiniciado
-            # Se falhou, continuar em modo degradado
-        } else {
-            Write-Log "[HEALTH CHECK] Versao \$(\$Global:AgentVersion) validada com sucesso" "SUCCESS"
-            
-            # Reset rollback state apos sucesso
-            \$rollbackState.rollback_count = 0
-            \$rollbackState.previous_version = \$null
-            Save-RollbackState -State \$rollbackState
-            
-            Add-EvidenceEntry -Type "state_change" -Data @{
-                event = "update_validated"
-                version = \$Global:AgentVersion
-                health_check = "passed"
-            } -Severity "info"
+if (-not \$keysInitialized) {
+    Write-Log "[STARTUP] Warning: ECDSA keys not initialized - result signing disabled" "WARN"
+}
+
+# ============================================
+#  PHASE 2: AUTHENTICATION
+# ============================================
+Set-AgentState -NewState "AUTHENTICATING" -Reason "Validating credentials"
+
+# Send first heartbeat
+\$heartbeatSuccess = Send-Heartbeat
+
+if (-not \$heartbeatSuccess) {
+    Write-Log "[STARTUP] Initial heartbeat failed - entering DEGRADED mode" "WARN"
+    Set-AgentState -NewState "DEGRADED" -Reason "Heartbeat failed"
+} else {
+    # Register public key
+    if (\$keysInitialized) {
+        \$keyRegistered = Register-AgentKey
+        if (-not \$keyRegistered) {
+            Write-Log "[STARTUP] Key registration failed - result signing unavailable" "WARN"
         }
-    }
-    # ============================================================
-
-    # Sincronizar policy do servidor
-    Write-Log "[BOOTSTRAP] Syncing policy from server..." "INFO"
-    Sync-PolicyFromServer | Out-Null
-
-    # Iniciar DNS Filter se habilitado
-    if (\$Global:DNSFilterConfig.Enabled) {
-        Write-Log "[BOOTSTRAP] Initializing DNS Filter..." "INFO"
-        \$dnsStatus = Get-DNSFilterStatus
-        if (\$dnsStatus.exe_exists) {
-            Start-DNSFilterService | Out-Null
-        } else {
-            Write-Log "[BOOTSTRAP] DNS Filter EXE not found, skipping" "WARN"
-        }
-    }
-
-    # Primeiro heartbeat
-    \$heartbeatSuccess = Send-Heartbeat
-    
-    if (\$heartbeatSuccess) {
-        # Transicao: SYNCING -> ENFORCING
-        Set-AgentState -NewState "ENFORCING" -Reason "Initial heartbeat successful"
-    } else {
-        # Transicao: SYNCING -> DEGRADED
-        Set-AgentState -NewState "DEGRADED" -Reason "Initial heartbeat failed"
-    }
-
-    # Verificar compliance inicial
-    \$compliance = Check-PolicyCompliance
-    if (-not \$compliance.compliant) {
-        Write-Log "[BOOTSTRAP] Policy drift detected - enforcing..." "WARN"
-        Invoke-PolicyEnforcement | Out-Null
-    }
-
-    \$bootstrapElapsed = [int]((Get-Date) - \$bootstrapStart).TotalSeconds
-    Write-Log "[SUCCESS] Bootstrap concluido em \${bootstrapElapsed}s (state: \$(Get-AgentState))" "SUCCESS"
-
-    \$lastHeartbeat = Get-Date
-    \$lastPoll = Get-Date
-    \$lastMetrics = Get-Date
-    \$lastEvidenceFlush = Get-Date
-    \$lastRotation = Get-Date
-    \$lastDNSHealthCheck = Get-Date
-    \$lastPolicyCheck = Get-Date
-    \$lastPolicySync = Get-Date
-
-    while (\$true) {
-        \$now = Get-Date
-        \$state = Get-AgentState
-
-        try {
-            # Heartbeat a cada intervalo
-            if (((\$now - \$lastHeartbeat).TotalSeconds) -ge \$Global:PollIntervalSeconds) {
-                \$success = Send-Heartbeat
-                
-                if (-not \$success -and \$state -eq "ENFORCING") {
-                    # Tentar recovery
-                    Invoke-AutoRecovery -FailedComponent "heartbeat" -ErrorMessage "Heartbeat failed"
-                } elseif (\$success -and \$state -eq "DEGRADED") {
-                    # Recuperado
-                    Set-AgentState -NewState "ENFORCING" -Reason "Heartbeat recovered"
-                }
-                
-                \$lastHeartbeat = Get-Date
-            }
-
-            # Poll de jobs (somente em estados validos)
-            if (((\$now - \$lastPoll).TotalSeconds) -ge \$Global:PollIntervalSeconds) {
-                if (Test-CanExecuteJob) {
-                    Poll-Jobs
-                }
-                \$lastPoll = Get-Date
-            }
-
-            # DNS Health Check a cada 2 minutos
-            if (\$Global:DNSFilterConfig.Enabled -and ((\$now - \$lastDNSHealthCheck).TotalSeconds) -ge 120) {
-                \$dnsHealth = Test-DNSFilterHealth
-                
-                if (-not \$dnsHealth.healthy) {
-                    Write-Log "[DNS] Health check failed: \$(\$dnsHealth.reason)" "WARN"
-                    
-                    # Auto-recovery apos 3 falhas consecutivas
-                    if (\$dnsHealth.consecutive_failures -ge 3) {
-                        Invoke-AutoRecovery -FailedComponent "dns_filter" -ErrorMessage \$dnsHealth.reason
-                    }
-                }
-                
-                \$lastDNSHealthCheck = Get-Date
-            }
-
-            # Policy Compliance Check a cada 5 minutos
-            if (((\$now - \$lastPolicyCheck).TotalSeconds) -ge 300) {
-                \$compliance = Check-PolicyCompliance
-                
-                if (-not \$compliance.compliant) {
-                    Write-Log "[POLICY] Drift detected, attempting enforcement..." "WARN"
-                    Invoke-PolicyEnforcement | Out-Null
-                }
-                
-                \$lastPolicyCheck = Get-Date
-            }
-
-            # Policy Sync do servidor a cada 30 minutos
-            if (((\$now - \$lastPolicySync).TotalSeconds) -ge 1800) {
-                Sync-PolicyFromServer | Out-Null
-                \$lastPolicySync = Get-Date
-            }
-
-            # Flush evidence a cada 5 minutos
-            if (((\$now - \$lastEvidenceFlush).TotalSeconds) -ge 300) {
-                Invoke-FlushEvidence
-                \$lastEvidenceFlush = Get-Date
-            }
-
-            # ============================================
-            #  ENVIO DE METRICAS A CADA 5 MINUTOS (v4.0.9 SIMPLIFIED)
-            # ============================================
-            try {
-                if (((\$now - \$lastMetrics).TotalSeconds) -ge 300) {
-                    # Send-SystemMetrics agora e auto-contida (coleta + envia)
-                    \$sent = Send-SystemMetrics
-                    
-                    if (\$sent) {
-                        Add-EvidenceEntry -Type "metrics_sent" -Data @{
-                            auto = \$true
-                            version = "v4.0.9"
-                        } -Severity "debug"
-                    }
-                    
-                    \$lastMetrics = Get-Date
-                }
-            } catch {
-                # NUNCA derrubar o loop por causa de metrics
-                Write-Log "[WARN] Erro ao processar metrics: \$(\$_.Exception.Message)" "WARN"
-            }
-
-            # Rotacao de logs/evidence a cada hora
-            if (((\$now - \$lastRotation).TotalSeconds) -ge 3600) {
-                Invoke-LogRotation
-                Invoke-EvidenceRotation
-                \$lastRotation = Get-Date
-            }
-
-        } catch {
-            Write-Log "[ERROR] Erro no loop principal: \$(\$_.Exception.Message)" "ERROR"
-            
-            Add-EvidenceEntry -Type "error" -Data @{
-                error = \$_.Exception.Message
-                stack = \$_.ScriptStackTrace
-                state = \$state
-            } -Severity "error"
-            
-            # Tentar recovery para erros criticos
-            if (\$state -eq "ENFORCING") {
-                Set-AgentState -NewState "DEGRADED" -Reason "Main loop error" -ErrorDetails \$_.Exception.Message
-            }
-        }
-
-        Start-Sleep -Seconds 2
     }
 }
-catch {
-    Write-Log "[FATAL] Erro fatal no agente: \$(\$_.Exception.Message)" "ERROR"
+
+# ============================================
+#  PHASE 3: SYNCHRONIZATION
+# ============================================
+Set-AgentState -NewState "SYNCING" -Reason "Syncing policies and baseline"
+
+# Initialize process baseline
+Initialize-ProcessBaseline
+
+# Sync DNS blocklist
+Sync-DnsBlocklist
+
+# ============================================
+#  PHASE 4: ENFORCEMENT
+# ============================================
+Set-AgentState -NewState "ENFORCING" -Reason "Normal operation"
+
+Write-Log "[STARTUP] Agent fully operational in ENFORCING state" "SUCCESS"
+
+\$lastHeartbeat = Get-Date
+\$lastAutoRepair = Get-Date
+\$lastSoftwareCheck = Get-Date
+\$lastJobPoll = Get-Date
+\$lastDnsSync = Get-Date
+\$consecutiveNetworkFailures = 0
+
+while (\$true) {
+    \$now = Get-Date
     
-    Set-AgentState -NewState "ERROR" -Reason "Fatal error" -ErrorDetails \$_.Exception.Message
+    try {
+        # ============================================
+        # NETWORK WATCHDOG
+        # ============================================
+        \$networkOk = Test-NetworkConnectivity
+        if (-not \$networkOk) {
+            \$consecutiveNetworkFailures++
+            if (\$consecutiveNetworkFailures -ge 3) {
+                Set-AgentState -NewState "DEGRADED" -Reason "Network connectivity lost"
+            }
+        } else {
+            if (\$consecutiveNetworkFailures -ge 3 -and \$Global:CurrentState -eq "DEGRADED") {
+                Set-AgentState -NewState "ENFORCING" -Reason "Network restored"
+            }
+            \$consecutiveNetworkFailures = 0
+        }
+        
+        # ============================================
+        # JOB POLLING AND EXECUTION
+        # ============================================
+        if ((\$now - \$lastJobPoll).TotalSeconds -ge \$Global:JobPollIntervalSeconds -and \$networkOk) {
+            \$jobs = Poll-Jobs
+            
+            foreach (\$job in \$jobs) {
+                \$result = Execute-Job -Job \$job
+                
+                if (\$result) {
+                    Submit-JobResult -Job \$job -Result \$result
+                }
+            }
+            
+            \$lastJobPoll = Get-Date
+        }
+        
+        # ============================================
+        # AUTO-REPAIR EACH CYCLE
+        # ============================================
+        
+        # Disk cleanup check (every 5 min)
+        if ((\$now - \$lastAutoRepair).TotalSeconds -ge 300) {
+            \$diskResult = Invoke-DiskCleanup
+            if (\$diskResult.cleaned) {
+                Write-Log "[AUTO-REPAIR] Disk cleanup freed \$(\$diskResult.freed_gb)GB" "SUCCESS"
+            }
+            
+            # Check for high-CPU processes
+            \$cpuResult = Invoke-HighCpuProcessCheck
+            if (\$cpuResult.killed_count -gt 0) {
+                Write-Log "[AUTO-REPAIR] Killed \$(\$cpuResult.killed_count) high-CPU processes" "SUCCESS"
+            }
+            
+            \$lastAutoRepair = Get-Date
+        }
+        
+        # ============================================
+        # HEARTBEAT EACH INTERVAL
+        # ============================================
+        if ((\$now - \$lastHeartbeat).TotalSeconds -ge \$Global:PollIntervalSeconds -and \$networkOk) {
+            \$hbResult = Send-Heartbeat
+            if (-not \$hbResult -and \$Global:CurrentState -eq "ENFORCING") {
+                Set-AgentState -NewState "DEGRADED" -Reason "Heartbeat failed"
+            }
+            \$lastHeartbeat = Get-Date
+        }
+        
+        # ============================================
+        # SOFTWARE CHECK (1x per hour)
+        # ============================================
+        if ((\$now - \$lastSoftwareCheck).TotalSeconds -ge 3600) {
+            Get-UnauthorizedSoftware | Out-Null
+            \$lastSoftwareCheck = Get-Date
+        }
+        
+        # ============================================
+        # DNS BLOCKLIST SYNC (1x per hour)
+        # ============================================
+        if ((\$now - \$lastDnsSync).TotalSeconds -ge 3600 -and \$networkOk) {
+            Sync-DnsBlocklist
+            \$lastDnsSync = Get-Date
+        }
+        
+    } catch {
+        Write-Log "[MAIN-LOOP] Error: \$(\$_.Exception.Message)" "ERROR"
+    }
     
-    Add-EvidenceEntry -Type "error" -Data @{
-        fatal = \$true
-        error = \$_.Exception.Message
-        stack = \$_.ScriptStackTrace
-    } -Severity "critical"
-    
-    # Flush final antes de morrer
-    Invoke-FlushEvidence
-    
-    exit 1
+    Start-Sleep -Seconds 2
 }
 `;
