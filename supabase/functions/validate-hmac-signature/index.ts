@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const ValidateHmacSchema = {
   parse: (data: any) => {
@@ -35,6 +37,40 @@ serve(async (req) => {
   const requestId = crypto.randomUUID();
   
   try {
+    // V-003 FIX: Add rate limiting to prevent brute-force attacks
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
+      || req.headers.get('cf-connecting-ip') 
+      || 'unknown';
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    const rateLimitResult = await checkRateLimit(
+      supabase,
+      clientIP,
+      'validate-hmac-signature',
+      { maxRequests: 10, windowMinutes: 1, blockMinutes: 15 } // Strict limit: 10 req/min
+    );
+    
+    if (!rateLimitResult.allowed) {
+      console.warn(`[${requestId}] Rate limit exceeded for IP: ${clientIP}`);
+      return new Response(JSON.stringify({
+        valid: false,
+        error: "Rate limit exceeded",
+        error_code: "RATE_LIMITED",
+        retry_after: rateLimitResult.resetAt?.toISOString(),
+        request_id: requestId
+      }), { 
+        status: 429, 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Retry-After': Math.ceil((rateLimitResult.resetAt!.getTime() - Date.now()) / 1000).toString()
+        } 
+      });
+    }
+    
     const body = await req.json();
     
     let validatedData;

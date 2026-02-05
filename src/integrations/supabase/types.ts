@@ -22066,8 +22066,8 @@ export type Database = {
         Returns: Json
       }
       revoke_agent_signing_key: {
-        Args: { p_key_id: string; p_reason?: string }
-        Returns: boolean
+        Args: { p_agent_id: string; p_reason?: string }
+        Returns: Json
       }
       run_all_health_checks: {
         Args: never
