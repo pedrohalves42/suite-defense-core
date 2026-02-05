@@ -1,146 +1,97 @@
 
-
-# Plano de Correção: Erros no Drawer de Detalhes do Agente
-
-## Visão Geral do Problema
-
-Foram identificados dois problemas principais no drawer de detalhes do agente "pcteste1":
-
-### Problema 1: Aba "Geral" - "Erro ao carregar estado"
-O sistema não consegue determinar o estado do computador porque a consulta ao banco de dados não retorna dados.
-
-### Problema 2: Aba "Diagnóstico" - Issues sem descrição
-As issues críticas aparecem apenas com o badge "Crítico", mas sem texto descritivo.
+## Objetivo
+Eliminar o alerta **“Erro ao carregar estado / Não foi possível determinar o estado deste computador”** no drawer do computador (aba **Geral**) em **/admin/agent-health**.
 
 ---
 
-## Análise Técnica
+## Diagnóstico do que está acontecendo (com base no código atual)
+### Sintoma na UI
+O componente `AgentStateExplainer` mostra erro quando:
+- `useAgentCausality()` retorna `null` (sem erro “fatal”), ou
+- o hook falha (erro de query).
 
-### Causa do Problema 1
-A view `agents_safe` usa a função `get_active_tenant_id()` que depende do claim JWT. Se o tenant não estiver sincronizado no JWT, a query retorna vazio.
+Hoje ele cai no erro porque o hook retorna `null`/vazio para o agente.
 
-O hook `useAgentCausality` já tem guard de loading mas ainda depende da sincronização JWT:
+### Causa raiz mais provável
+O hook `useAgentCausality` foi alterado para buscar o agente direto na tabela **`agents`**:
 
-```text
-agents_safe (view)
-     │
-     └── WHERE tenant_id = get_active_tenant_id()
-                               │
-                               └── Lê de request.jwt.claims->>'active_tenant_id'
-```
+- Em ambientes com RLS mais restritivo, a tabela `agents` pode **não ser visível** para usuários comuns (ou até para alguns admins), justamente porque ela pode conter campos sensíveis.
+- Quando a query não tem permissão/visibilidade de linha, com `.maybeSingle()` é comum a resposta vir como “sem dados” (sem necessariamente estourar erro), e o hook retorna `null`.  
+- O projeto já tem a view **`agents_safe`** (com `security_invoker=on`, fallback por `user_roles` e suporte a `super_admin`) exatamente para esse caso.
 
-**Solução**: Alterar `useAgentCausality` para usar query direta com `tenant_id` explícito (padrão ADR-026) ao invés de depender da view RLS.
-
-### Causa do Problema 2
-A função `diagnose_agent_issues` retorna `event_data->>'message'` como descrição, mas os logs não têm campo `message`. Os campos disponíveis são:
-- `reason` (mudanças de estado)
-- `error_message` (erros de componentes)
-- `event` (eventos gerais)
-
-**Solução**: Atualizar a função SQL para gerar descrições amigáveis baseadas no `event_type` e campos disponíveis.
+Resultado: a aba “Geral” abre, mas o estado não consegue ser determinado porque o hook não encontra o agente.
 
 ---
 
-## Plano de Implementação
+## Mudanças propostas (frontend)
+### 1) Voltar a usar a view `agents_safe` no `useAgentCausality`
+**Arquivo:** `src/hooks/useAgentCausality.ts`
 
-### Etapa 1: Corrigir useAgentCausality (Alta Prioridade)
+- Trocar:
+  - `from('agents')`  
+  por:
+  - `from('agents_safe')`
 
-Modificar o hook para:
-1. Usar query direta à tabela `agents` com filtro explícito de `tenant_id`
-2. Evitar dependência da view `agents_safe` que requer JWT sincronizado
-3. Manter consistência com o padrão de outros hooks (ex: `useWebActivity`)
+- Selecionar apenas os campos necessários (ex.: `tenant_id`, `last_heartbeat`, `agent_state`, `agent_state_reason`, `is_isolated`, `is_throttled`, `safe_mode_reason`, `safe_mode_entered_at`, `isolated_at`, `isolation_reason`, `throttled_at`, `throttle_reason`, `force_update_*`, `offline_reason`, etc.).  
+  Isso mantém o hook compatível com a lógica atual (`deriveAgentState` + mensagens/razões).
 
-**Arquivo**: `src/hooks/useAgentCausality.ts`
-
-### Etapa 2: Atualizar diagnose_agent_issues (Alta Prioridade)
-
-Modificar a função SQL para:
-1. Gerar mensagens descritivas baseadas em `event_type`
-2. Usar campos `reason`, `error_message`, ou construir mensagem a partir dos dados
-3. Traduzir tipos de eventos para português amigável
-
-**Migração SQL necessária**
-
-### Etapa 3: Melhorar DiagnosticIssuesList (Média Prioridade)
-
-Adicionar fallback no frontend para quando `description` estiver vazio:
-1. Usar `issue_type` traduzido como fallback
-2. Mostrar resumo dos detalhes se disponíveis
-
-**Arquivo**: `src/components/agent/DiagnosticIssuesList.tsx`
+**Por que isso resolve:** `agents_safe` foi desenhada para ser consultável pela UI com as proteções e fallbacks corretos, evitando retornos vazios por restrição da tabela base.
 
 ---
 
-## Detalhes Técnicos
+### 2) Tornar o hook resistente a mismatch de tenant (opcional, mas recomendado)
+Mesmo no `/admin/agent-health`, o drawer já recebe `tenantId` via props.
 
-### Mudanças em useAgentCausality.ts
+**Ajuste proposto:**
+- Mudar a assinatura do hook para aceitar também `tenantId` (opcional):
+  - `useAgentCausality(agentId: string | null, tenantId?: string | null)`
+- Quando `tenantId` vier preenchido, aplicar `.eq('tenant_id', tenantId)` além do `.eq('id', agentId)`.
 
-```typescript
-// DE: Query via view agents_safe
-const { data: agent } = await supabase
-  .from('agents_safe')
-  .select('*')
-  .eq('id', agentId)
-  .eq('tenant_id', activeTenant.id)
-  .maybeSingle();
-
-// PARA: Query direta à tabela agents
-const { data: agent } = await supabase
-  .from('agents')
-  .select('*')
-  .eq('id', agentId)
-  .eq('tenant_id', activeTenant.id)
-  .is('archived_at', null)
-  .maybeSingle();
-```
-
-### Migração SQL - diagnose_agent_issues
-
-```sql
--- Lógica para gerar mensagens descritivas
-CASE e.event_type
-  WHEN 'security_event' THEN 
-    COALESCE(
-      e.event_data->>'error_message',
-      e.event_data->>'reason',
-      'Evento de segurança: ' || COALESCE(e.event_data->>'component', 'sistema')
-    )
-  WHEN 'state_change' THEN
-    'Mudança de estado: ' || COALESCE(e.event_data->>'from', '?') 
-    || ' → ' || COALESCE(e.event_data->>'to', '?')
-  WHEN 'policy_drift' THEN
-    'Desvio de política detectado (' || COALESCE(e.event_data->>'drift_count', '0') || ' itens)'
-  -- ... outros tipos
-END AS message
-```
-
-### Fallback no Frontend
-
-```typescript
-// DiagnosticIssueItem
-const displayDescription = issue.description 
-  || translateIssueType(issue.issue_type)
-  || 'Problema detectado';
-```
+**Por que isso ajuda:** evita casos em que o estado do drawer falha por “contexto de empresa” divergente (especialmente em cenários multi-tenant/super-admin).
 
 ---
 
-## Resultado Esperado
+### 3) Melhorar a mensagem quando não houver dados (sem quebrar a UX)
+**Arquivo:** `src/components/agent/AgentStateExplainer.tsx`
 
-Após as correções:
+Hoje ele mostra a mesma mensagem genérica para `error` e para `!causality`.
 
-1. **Aba Geral**: Mostrará o estado do agente corretamente ("Saudável", "Offline", etc.)
-2. **Aba Diagnóstico**: Issues aparecerão com descrições legíveis como:
-   - "Mudança de estado: DEGRADED → ERROR"
-   - "Serviço DNS não está executando"
-   - "Desvio de política detectado (5 itens)"
+**Melhoria:**
+- Diferenciar:
+  - `error` (falha técnica)
+  - `causality === null` (agente não encontrado/sem visibilidade)
+- Exibir uma descrição mais acionável quando `causality` vier `null`, por exemplo:
+  - “Este computador não está visível no contexto atual. Verifique se você está na empresa correta e atualize a página.”
+
+Opcional:
+- Expor `refetch` do `useAgentCausality` e colocar um botão “Tentar novamente” também nesse estado.
 
 ---
 
-## Verificação
+## Validação (passo a passo)
+1. Abrir **/admin/agent-health**
+2. Clicar no computador **pcteste1** para abrir o drawer
+3. Confirmar na aba **Geral**:
+   - O erro “Erro ao carregar estado” não aparece
+   - O estado e explicação renderizam normalmente
+4. Repetir com:
+   - 1 computador saudável
+   - 1 offline
+   - 1 em estado crítico/alertas
+5. Confirmar que:
+   - A aba “Diagnóstico” não volta a disparar warning de “state ausente”
+   - Não há regressão de permissões (usuários não-super-admin conseguem ver o estado via `agents_safe`)
 
-1. Abrir drawer do agente "pcteste1"
-2. Verificar se aba "Geral" mostra estado corretamente
-3. Verificar se aba "Diagnóstico" mostra descrições nas issues
-4. Testar com outro agente para confirmar consistência
+---
 
+## Observações técnicas (para manter o padrão arquitetural do projeto)
+- O projeto tem a view canônica `v_agent_state`, mas hoje o drawer depende do `useAgentCausality` (que também usa razões específicas como `safe_mode_reason`, `isolation_reason`).  
+- Esta correção é a opção mais curta e segura porque reaproveita a view `agents_safe` (já existente e “feita para UI”), resolvendo o bug sem abrir acesso direto à tabela sensível `agents`.
+
+---
+
+## Escopo
+Inclui apenas mudanças de frontend (sem mudanças no backend), focadas em:
+- `useAgentCausality`
+- `AgentStateExplainer`
+- (opcional) passar `tenantId` explícito para o hook a partir do drawer
