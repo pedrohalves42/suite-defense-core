@@ -22,6 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { SidebarTenantSelector } from '@/components/SidebarTenantSelector';
+import logoImage from '@/assets/logo-cybshield.png';
 
 interface MenuItem {
   icon: any;
@@ -295,16 +296,18 @@ export const AppSidebar = () => {
           {!collapsed && (
             <div className="flex items-center gap-2">
               <img 
-                src="/logo-cybshield.png" 
-                alt="CybShield Logo" 
+                src={logoImage} 
+                alt="CyberShield Logo" 
                 className="h-8 w-auto object-contain"
               />
             </div>
           )}
           {collapsed && (
-            <div className="p-1.5 bg-primary/10 rounded-lg mx-auto">
-              <Shield className="h-5 w-5 text-primary" />
-            </div>
+            <img 
+              src={logoImage} 
+              alt="CyberShield Logo" 
+              className="h-6 w-auto object-contain mx-auto"
+            />
           )}
           <Button
             variant="ghost"

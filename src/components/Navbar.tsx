@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { CONTACT } from "@/constants/config";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import logoImage from '@/assets/logo-cybshield.png';
 
 const NAV_SECTIONS = [
   { id: "inicio", label: "Início" },
@@ -77,7 +78,7 @@ export const Navbar = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 group">
               <img 
-                src="/logo-cybshield.png?v=2" 
+                src={logoImage} 
                 alt="CyberShield Logo" 
                 className="h-9 w-auto object-contain group-hover:scale-105 transition-transform"
               />
