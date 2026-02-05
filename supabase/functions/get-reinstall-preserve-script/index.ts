@@ -42,13 +42,13 @@ Deno.serve(async (req) => {
     const requestId = crypto.randomUUID();
     console.log(`[get-reinstall-preserve-script] Serving script | requestId=${requestId}`);
 
-    // Return the embedded script as a downloadable PowerShell file
+    // Return the embedded script as plain text for irm | iex pipeline
+    // IMPORTANT: Do NOT use Content-Disposition: attachment as it breaks iex execution
     return new Response(REINSTALL_PRESERVE_SCRIPT_CONTENT, {
       status: 200,
       headers: {
         ...corsHeaders,
         'Content-Type': 'text/plain; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="reinstall-agent-preserve.ps1"',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0',
