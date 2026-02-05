@@ -65,6 +65,50 @@ const FIELD_LABELS: Record<string, string> = {
   expected: 'Esperado',
 };
 
+// Mapeamento de issue_type para descrições em português
+const ISSUE_TYPE_LABELS: Record<string, string> = {
+  // Estado e conectividade
+  state_change: 'Mudança de estado do agente',
+  heartbeat_missing: 'Sem comunicação recente',
+  offline: 'Agente offline',
+  connection_lost: 'Conexão perdida',
+  
+  // Segurança
+  security_event: 'Evento de segurança detectado',
+  malware_detected: 'Malware detectado',
+  suspicious_activity: 'Atividade suspeita',
+  policy_violation: 'Violação de política',
+  unauthorized_access: 'Acesso não autorizado',
+  
+  // Componentes e serviços
+  component_error: 'Erro em componente',
+  service_stopped: 'Serviço parado',
+  service_degraded: 'Serviço degradado',
+  update_failed: 'Falha na atualização',
+  
+  // Políticas
+  policy_drift: 'Desvio de política detectado',
+  config_mismatch: 'Configuração divergente',
+  
+  // Sistema
+  resource_warning: 'Alerta de recursos',
+  disk_full: 'Disco cheio',
+  memory_high: 'Memória alta',
+  cpu_high: 'CPU alta',
+  
+  // Fallbacks
+  agent_not_found: 'Agente não encontrado',
+  agent_archived: 'Agente arquivado',
+};
+
+/**
+ * Retorna uma descrição legível para o tipo de issue
+ */
+function getIssueTypeLabel(issueType: string): string {
+  return ISSUE_TYPE_LABELS[issueType] || 
+    issueType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
 function formatValue(key: string, value: unknown): string {
   if (value === null || value === undefined) return '—';
   if (typeof value === 'boolean') return value ? 'Sim' : 'Não';
@@ -145,7 +189,9 @@ function DiagnosticIssueItem({ issue, compact, showActions = true, onAction }: D
         }`} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-sm">{issue.description}</span>
+            <span className="font-medium text-sm">
+              {issue.description || getIssueTypeLabel(issue.issue_type)}
+            </span>
             <Badge className={`${getSeverityColor(issue.severity)} text-xs`}>
               {getSeverityLabel(issue.severity)}
             </Badge>

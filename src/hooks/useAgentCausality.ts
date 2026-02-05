@@ -55,12 +55,13 @@ export function useAgentCausality(agentId: string | null) {
     queryFn: async (): Promise<AgentCausality | null> => {
       if (!agentId || !activeTenant?.id) return null;
 
-      // Buscar dados do agente com tenant explícito e maybeSingle (ADR-026 + loading guard)
+      // Buscar dados do agente diretamente (ADR-026) - evita dependência de JWT sincronizado
       const { data: agent, error: agentError } = await supabase
-        .from('agents_safe')
+        .from('agents')
         .select('*')
         .eq('id', agentId)
         .eq('tenant_id', activeTenant.id)
+        .is('archived_at', null)
         .maybeSingle();
 
       if (agentError) {
