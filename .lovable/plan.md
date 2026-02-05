@@ -1,139 +1,152 @@
 
-# Plano: Padronização do Logo CyberShield em Todo o Projeto
 
-## Resumo Executivo
-O novo logo CyberShield será implementado de forma consistente em todas as páginas e componentes da aplicação, substituindo ícones genéricos de escudo (`Shield`) onde o logo oficial deve aparecer.
+## Plano: Atualizar Script de Reinstalação com Credenciais Automáticas para v5.0.2
 
----
+### Resumo da Análise
 
-## Análise Atual
+Após validação completa do script `cybershield-agent-windows-v5.ps1` (v5.0.2, 2133 linhas), identifiquei:
 
-### Locais com Logo Correto
-| Componente | Status | Método |
-|------------|--------|--------|
-| `Login.tsx` | OK | Import ES6 (`@/assets/logo-cybshield.png`) |
-| `Navbar.tsx` | Parcial | URL direta (`/logo-cybshield.png?v=2`) |
-| `AppSidebar.tsx` | Parcial | URL direta (`/logo-cybshield.png`) |
+**Problemas encontrados:**
 
-### Locais que Precisam do Logo (Usando Shield Genérico)
-| Componente | Linha | Descrição |
-|------------|-------|-----------|
-| `Signup.tsx` | ~150 | Header do card de cadastro |
-| `ForgotPassword.tsx` | ~73 | Header do card de recuperação |
-| `UpdatePassword.tsx` | ~119 | Header do card de nova senha |
-| `ClientLayout.tsx` | ~40, ~97 | Header do sidebar e mobile |
-| `HeroSection.tsx` | ~22 | Badge no hero da landing |
-| `ContactForm.tsx` | ~158 | Header do formulário de contato |
+1. **Comentários em português restantes** (5 ocorrências) que devem ser traduzidos para inglês para garantir compatibilidade ASCII total:
+   - Linha 111: `VARIAVEIS GLOBAIS` → `GLOBAL VARIABLES`
+   - Linha 298: `Classificar erro como transiente ou permanente` → `Classify error as transient or permanent`
+   - Linha 365: `Persistir estado` → `Persist state`
+   - Linha 794: `Calcular hash do output` → `Calculate output hash`
+   - Linha 840: `Assinar resultado` → `Sign result`
+   - Linha 1491: `Registrar evento` → `Register event`
+   - Linha 1403: `LIMPEZA DE DISCO` → `DISK CLEANUP`
+   - Linha 1753: `BASELINE DE PROCESSOS` → `PROCESS BASELINE`
+   - Linha 2082: `AUTO-REPARO A CADA CICLO` → `AUTO-REPAIR EACH CYCLE`
+   - Linha 2102: `HEARTBEAT A CADA INTERVALO` → `HEARTBEAT EACH INTERVAL`
 
-### Arquivos de Ícone PWA (Precisam Atualização Separada)
-- `public/pwa-icon-192.png`
-- `public/pwa-icon-512.png`
-- `public/favicon.ico`
+2. **Script de reinstalação desatualizado** (`reinstall-preserve-script-content.ts`):
+   - Referencia `v5.0.1` como versão padrão (linha 231)
+   - Deve ser atualizado para `v5.0.2`
 
----
+**Validações confirmadas como OK:**
 
-## Plano de Implementação
-
-### Fase 1: Copiar Imagem para Assets
-Copiar o logo enviado para `src/assets/logo-cybshield.png`, substituindo o arquivo existente com a versão mais recente.
-
-### Fase 2: Páginas de Autenticação
-
-#### 2.1 Signup.tsx
-```text
-Antes: <Shield className="h-8 w-8 text-primary/80" />
-Depois: <img src={logoImage} alt="CyberShield" className="h-12 w-12 object-contain" />
-```
-- Adicionar import do logo
-- Substituir ícone Shield pelo logo com glassmorphism similar ao Login
-
-#### 2.2 ForgotPassword.tsx
-```text
-Antes: <Shield className="h-8 w-8 text-primary/80" />
-Depois: <img src={logoImage} alt="CyberShield" className="h-12 w-12 object-contain" />
-```
-- Mesma abordagem do Signup
-
-#### 2.3 UpdatePassword.tsx
-```text
-Antes: <Shield className="h-8 w-8 text-primary/80" />
-Depois: <img src={logoImage} alt="CyberShield" className="h-12 w-12 object-contain" />
-```
-- Mesma abordagem consistente
-
-### Fase 3: Layouts de Aplicação
-
-#### 3.1 ClientLayout.tsx
-```text
-Desktop Sidebar:
-  Antes: <h1>CyberShield</h1>
-  Depois: <img src={logoImage} className="h-8" /> + <span>CyberShield</span>
-
-Mobile Header:
-  Antes: <h1>CyberShield</h1>
-  Depois: <img src={logoImage} className="h-7" /> + <span>CyberShield</span>
-```
-
-#### 3.2 AppSidebar.tsx (Melhorar Método)
-```text
-Antes: src="/logo-cybshield.png" (URL direta)
-Depois: import logoImage + src={logoImage}
-```
-- Migrar para import ES6 para consistência
-
-#### 3.3 Navbar.tsx (Melhorar Método)
-```text
-Antes: src="/logo-cybshield.png?v=2" (URL com cache bust)
-Depois: import logoImage + src={logoImage}
-```
-
-### Fase 4: Componentes de Landing
-
-#### 4.1 HeroSection.tsx
-O ícone `Shield` no badge é decorativo e pode permanecer como está, pois não representa a identidade da marca diretamente.
-
-#### 4.2 ContactForm.tsx
-```text
-Antes: <Shield className="w-8 h-8 text-primary" />
-Depois: <img src={logoImage} className="h-10 w-10 object-contain" />
-```
+- Sintaxe PowerShell 5.1: ✅ Todas funções fechadas corretamente
+- TLS 1.2: ✅ Forçado na linha 84
+- Global trap: ✅ Implementado corretamente (linhas 91-108)
+- FSM: ✅ 6 estados validados com transições corretas
+- ECDSA P-256: ✅ Geração e registro de chaves
+- HMAC-SHA256: ✅ Assinatura de requisições
+- Invoke-SecureRequest: ✅ Backoff exponencial (1s → 60s)
+- Job handlers: ✅ kill_process, stop_service, disable_service, restart_service
+- Protected processes/services lists: ✅ Defense-in-depth implementado
+- Write-Log: ✅ Bug da linha 192 corrigido (v5.0.1 tinha erro de sintaxe)
 
 ---
 
-## Estrutura Final de Imports
+### Ações Planejadas
 
-Todos os componentes que exibem o logo usarão:
-```typescript
-import logoImage from '@/assets/logo-cybshield.png';
+#### 1. Corrigir comentários em português no script v5.0.2
+
+Traduzir todos os comentários restantes para inglês:
+
+| Linha | Antes | Depois |
+|-------|-------|--------|
+| 111 | `VARIAVEIS GLOBAIS` | `GLOBAL VARIABLES` |
+| 298 | `Classificar erro como transiente ou permanente` | `Classify error as transient or permanent` |
+| 365 | `Persistir estado` | `Persist state` |
+| 794 | `Calcular hash do output` | `Calculate output hash` |
+| 840 | `Assinar resultado` | `Sign result` |
+| 1403 | `LIMPEZA DE DISCO` | `DISK CLEANUP` |
+| 1491 | `Registrar evento` | `Register event` |
+| 1533-1542 | Vários comentários PT | Traduzir para EN |
+| 1753 | `BASELINE DE PROCESSOS` | `PROCESS BASELINE` |
+| 2082 | `AUTO-REPARO A CADA CICLO` | `AUTO-REPAIR EACH CYCLE` |
+| 2102 | `HEARTBEAT A CADA INTERVALO` | `HEARTBEAT EACH INTERVAL` |
+
+#### 2. Atualizar script de reinstalação
+
+Modificar `supabase/functions/_shared/reinstall-preserve-script-content.ts`:
+- Linha 231: Mudar `$newVersion = "v5.0.1"` para `$newVersion = "v5.0.2"`
+
+#### 3. Sincronizar script embarcado
+
+Atualizar `supabase/functions/_shared/agent-script-windows-content.ts` com a versão corrigida do v5.0.2 (se existir) para garantir que o endpoint `serve-agent-update` entregue a versão correta.
+
+---
+
+### Seção Técnica
+
+**Estrutura do script v5.0.2 validada:**
+
+```text
+┌─────────────────────────────────────────────────────┐
+│ HEADER (Linhas 1-81)                                │
+│  - Documentação, param(), TLS 1.2                   │
+├─────────────────────────────────────────────────────┤
+│ GLOBAL TRAP (Linhas 88-108)                         │
+│  - Captura erros fatais, persiste em log            │
+├─────────────────────────────────────────────────────┤
+│ GLOBAL VARIABLES (Linhas 110-173)                   │
+│  - ServerUrl, AgentToken, HmacSecret, FSM states    │
+├─────────────────────────────────────────────────────┤
+│ LOGGING (Linhas 175-219)                            │
+│  - Write-Log com rotação e cores                    │
+├─────────────────────────────────────────────────────┤
+│ NETWORK (Linhas 222-325)                            │
+│  - Invoke-SecureRequest com backoff exponencial     │
+├─────────────────────────────────────────────────────┤
+│ FSM (Linhas 328-386)                                │
+│  - Set-AgentState, Get-SavedAgentState              │
+├─────────────────────────────────────────────────────┤
+│ ECDSA (Linhas 388-587)                              │
+│  - Initialize-AgentKeys, Register-AgentKey          │
+│  - Invoke-SignResult                                │
+├─────────────────────────────────────────────────────┤
+│ ED25519 (Linhas 589-638)                            │
+│  - Verify-JobSignature                              │
+├─────────────────────────────────────────────────────┤
+│ HASH CHAIN (Linhas 640-679)                         │
+│  - Get-ExecutionHash                                │
+├─────────────────────────────────────────────────────┤
+│ JOBS (Linhas 681-884)                               │
+│  - Poll-Jobs, Execute-Job, Submit-JobResult         │
+├─────────────────────────────────────────────────────┤
+│ DNS FILTER (Linhas 886-946)                         │
+│  - Sync-DnsBlocklist, Test-DnsBlock                 │
+├─────────────────────────────────────────────────────┤
+│ NETWORK WATCHDOG (Linhas 948-974)                   │
+│  - Test-NetworkConnectivity                         │
+├─────────────────────────────────────────────────────┤
+│ JOB HANDLERS (Linhas 976-1400)                      │
+│  - Software, AV, Network, Firewall, Web Activity    │
+│  - kill_process, stop_service, disable_service      │
+│  - restart_service                                  │
+├─────────────────────────────────────────────────────┤
+│ AUTO-REPAIR (Linhas 1402-1627)                      │
+│  - Invoke-DiskCleanup, Invoke-HighCpuProcessCheck   │
+├─────────────────────────────────────────────────────┤
+│ ADVANCED COLLECTION (Linhas 1629-1853)              │
+│  - Get-TopProcesses, Get-UnauthorizedSoftware       │
+│  - Initialize-ProcessBaseline                       │
+├─────────────────────────────────────────────────────┤
+│ TELEMETRY (Linhas 1855-1889)                        │
+│  - Send-AutoRepairTelemetry                         │
+├─────────────────────────────────────────────────────┤
+│ HEARTBEAT (Linhas 1916-1967)                        │
+│  - Send-Heartbeat com métricas completas            │
+├─────────────────────────────────────────────────────┤
+│ MAIN LOOP (Linhas 1969-2133)                        │
+│  - Inicialização FSM, loop infinito com watchdogs   │
+└─────────────────────────────────────────────────────┘
+```
+
+**Comando de teste após implementação:**
+
+```powershell
+# Reinstalar agente com credenciais automáticas preservadas
+irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/get-reinstall-preserve-script | iex
 ```
 
 ---
 
-## Arquivos que Serão Modificados
+### Arquivos a serem modificados
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/assets/logo-cybshield.png` | Substituído pela nova imagem |
-| `src/pages/Signup.tsx` | Adicionar logo no header |
-| `src/pages/ForgotPassword.tsx` | Adicionar logo no header |
-| `src/pages/UpdatePassword.tsx` | Adicionar logo no header |
-| `src/components/client/ClientLayout.tsx` | Adicionar logo no sidebar/header |
-| `src/components/AppSidebar.tsx` | Migrar para import ES6 |
-| `src/components/Navbar.tsx` | Migrar para import ES6 |
-| `src/components/ContactForm.tsx` | Adicionar logo no formulário |
+1. `public/agent-scripts/cybershield-agent-windows-v5.ps1` - Tradução de comentários PT→EN
+2. `supabase/functions/_shared/reinstall-preserve-script-content.ts` - Atualizar versão para v5.0.2
 
----
-
-## Notas Técnicas
-
-1. **Import ES6 vs URL Direta**: Usar imports garante que o Vite processe corretamente os assets, aplique hash de cache e otimize as imagens.
-
-2. **Ícones PWA**: Os arquivos `pwa-icon-192.png` e `pwa-icon-512.png` precisarão ser atualizados separadamente para manter consistência no PWA. Isso pode ser feito em um passo adicional se desejado.
-
-3. **Favicon**: O `favicon.ico` atualmente aponta para `pwa-icon-192.png`. Pode ser atualizado para o novo logo em formato .ico se necessário.
-
-4. **Tamanhos Consistentes**:
-   - Páginas de Auth: `h-12 w-12` a `h-16 w-16`
-   - Sidebars: `h-8`
-   - Navbar: `h-9`
-   - Formulários: `h-10 w-10`
