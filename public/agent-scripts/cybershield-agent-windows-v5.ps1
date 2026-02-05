@@ -11,6 +11,14 @@
       * Verify-JobSignature: Ed25519 job signature verification
       * Hash Chain: Cryptographic execution chain (execution_hash)
 
+    - PROCESS/SERVICE CONTROL P0 (NEW):
+      * Invoke-KillProcess: Terminate processes by name
+      * Invoke-StopService: Stop system services
+      * Invoke-DisableService: Stop + disable startup
+      * Invoke-RestartService: Restart system services
+      * SECURITY: Protected processes/services lists (defense in depth)
+      * SECURITY: Agent-side validation prevents killing critical processes
+
     - AUTO-REMEDIATION P0:
       * Invoke-DiskCleanup: Automatic cleanup when disk > 95%
       * Invoke-HighCpuProcessCheck: Auto-kill suspicious processes with CPU > 90%
@@ -761,6 +769,19 @@ function Execute-Job {
             "collect_web_activity" {
                 $output = Invoke-CollectWebActivity -Payload $Job.payload
             }
+            # v5.0.1: NEW - Process/Service Control Handlers
+            "kill_process" {
+                $output = Invoke-KillProcess -Payload $Job.payload
+            }
+            "stop_service" {
+                $output = Invoke-StopService -Payload $Job.payload
+            }
+            "disable_service" {
+                $output = Invoke-DisableService -Payload $Job.payload
+            }
+            "restart_service" {
+                $output = Invoke-RestartService -Payload $Job.payload
+            }
             default {
                 $error_message = "Unknown job type: $($Job.job_type)"
                 $status = "failed"
@@ -1086,6 +1107,296 @@ function Invoke-CollectWebActivity {
         
     } catch {
         return @{ error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.1: PROTECTED PROCESSES AND SERVICES
+#  Defense-in-depth: Agent-side validation
+# ============================================
+$Global:ProtectedProcesses = @(
+    "System", "smss", "csrss", "wininit", "services", "lsass", "svchost",
+    "winlogon", "dwm", "explorer", "taskhostw", "RuntimeBroker",
+    "SearchIndexer", "SecurityHealthService", "MsMpEng", "NisSrv",
+    "WmiPrvSE", "dllhost", "conhost", "fontdrvhost", "sihost",
+    "powershell", "pwsh", "cmd"  # Prevent self-kill
+)
+
+$Global:ProtectedServices = @(
+    "Winmgmt", "BITS", "Dnscache", "LanmanServer", "LanmanWorkstation",
+    "RpcSs", "DcomLaunch", "EventLog", "PlugPlay", "Power",
+    "SecurityHealthService", "WinDefend", "mpssvc", "WdNisSvc",
+    "wscsvc", "Schedule", "CryptSvc", "SamSs", "Netlogon",
+    "CyberShieldAgent"  # Prevent self-disable
+)
+
+# ============================================
+#  v5.0.1: KILL PROCESS HANDLER
+# ============================================
+function Invoke-KillProcess {
+    <#
+    .SYNOPSIS
+        Terminates processes by name with security validation
+    .DESCRIPTION
+        v5.0.1 NEW: Playbook remediation handler
+        Security: Protected process list prevents killing critical OS processes
+    #>
+    param([object]$Payload)
+    
+    try {
+        $processName = $Payload.process_name
+        $force = if ($null -ne $Payload.force) { $Payload.force } else { $false }
+        
+        if (-not $processName) {
+            return @{ success = $false; error = "Missing process_name in payload" }
+        }
+        
+        # Security check: Protected process list
+        $normalizedName = $processName.ToLower() -replace '\.exe$', ''
+        if ($Global:ProtectedProcesses -contains $normalizedName) {
+            Write-Log "[KILL-PROCESS] BLOCKED: $processName is a protected process" "WARN"
+            return @{
+                success = $false
+                error = "SECURITY_BLOCK: $processName is a protected system process"
+                blocked = $true
+                process_name = $processName
+            }
+        }
+        
+        # Find matching processes
+        $processes = Get-Process -Name $normalizedName -ErrorAction SilentlyContinue
+        
+        if (-not $processes -or $processes.Count -eq 0) {
+            return @{
+                success = $true
+                killed = 0
+                message = "Process not running: $processName"
+            }
+        }
+        
+        $killed = 0
+        $errors = @()
+        
+        foreach ($proc in $processes) {
+            try {
+                if ($force) {
+                    $proc | Stop-Process -Force -ErrorAction Stop
+                } else {
+                    $proc | Stop-Process -ErrorAction Stop
+                }
+                $killed++
+                Write-Log "[KILL-PROCESS] Terminated: $($proc.Name) (PID: $($proc.Id))" "SUCCESS"
+            } catch {
+                $errors += "PID $($proc.Id): $($_.Exception.Message)"
+            }
+        }
+        
+        return @{
+            success = ($killed -gt 0)
+            process_name = $processName
+            killed = $killed
+            total_found = $processes.Count
+            errors = $errors
+            killed_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.1: STOP SERVICE HANDLER
+# ============================================
+function Invoke-StopService {
+    <#
+    .SYNOPSIS
+        Stops a Windows service with security validation
+    .DESCRIPTION
+        v5.0.1 NEW: Playbook remediation handler
+    #>
+    param([object]$Payload)
+    
+    try {
+        $serviceName = $Payload.service_name
+        $force = if ($null -ne $Payload.force) { $Payload.force } else { $false }
+        
+        if (-not $serviceName) {
+            return @{ success = $false; error = "Missing service_name in payload" }
+        }
+        
+        # Security check: Protected service list
+        if ($Global:ProtectedServices -contains $serviceName) {
+            Write-Log "[STOP-SERVICE] BLOCKED: $serviceName is a protected service" "WARN"
+            return @{
+                success = $false
+                error = "SECURITY_BLOCK: $serviceName is a protected system service"
+                blocked = $true
+                service_name = $serviceName
+            }
+        }
+        
+        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+        
+        if (-not $service) {
+            return @{
+                success = $false
+                error = "Service not found: $serviceName"
+            }
+        }
+        
+        if ($service.Status -eq 'Stopped') {
+            return @{
+                success = $true
+                service_name = $serviceName
+                status = "already_stopped"
+            }
+        }
+        
+        if ($force) {
+            Stop-Service -Name $serviceName -Force -ErrorAction Stop
+        } else {
+            Stop-Service -Name $serviceName -ErrorAction Stop
+        }
+        
+        Write-Log "[STOP-SERVICE] Stopped: $serviceName" "SUCCESS"
+        
+        return @{
+            success = $true
+            service_name = $serviceName
+            previous_status = $service.Status.ToString()
+            new_status = "Stopped"
+            stopped_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.1: DISABLE SERVICE HANDLER
+# ============================================
+function Invoke-DisableService {
+    <#
+    .SYNOPSIS
+        Stops and disables a Windows service
+    .DESCRIPTION
+        v5.0.1 NEW: Playbook remediation handler
+        Stops service AND sets StartupType to Disabled
+    #>
+    param([object]$Payload)
+    
+    try {
+        $serviceName = $Payload.service_name
+        
+        if (-not $serviceName) {
+            return @{ success = $false; error = "Missing service_name in payload" }
+        }
+        
+        # Security check: Protected service list
+        if ($Global:ProtectedServices -contains $serviceName) {
+            Write-Log "[DISABLE-SERVICE] BLOCKED: $serviceName is a protected service" "WARN"
+            return @{
+                success = $false
+                error = "SECURITY_BLOCK: $serviceName is a protected system service"
+                blocked = $true
+                service_name = $serviceName
+            }
+        }
+        
+        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+        
+        if (-not $service) {
+            return @{
+                success = $false
+                error = "Service not found: $serviceName"
+            }
+        }
+        
+        $previousStatus = $service.Status.ToString()
+        $previousStartType = (Get-WmiObject Win32_Service -Filter "Name='$serviceName'").StartMode
+        
+        # Stop if running
+        if ($service.Status -ne 'Stopped') {
+            Stop-Service -Name $serviceName -Force -ErrorAction Stop
+        }
+        
+        # Disable startup
+        Set-Service -Name $serviceName -StartupType Disabled -ErrorAction Stop
+        
+        Write-Log "[DISABLE-SERVICE] Disabled: $serviceName" "SUCCESS"
+        
+        return @{
+            success = $true
+            service_name = $serviceName
+            previous_status = $previousStatus
+            previous_startup = $previousStartType
+            new_status = "Stopped"
+            new_startup = "Disabled"
+            disabled_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.1: RESTART SERVICE HANDLER
+# ============================================
+function Invoke-RestartService {
+    <#
+    .SYNOPSIS
+        Restarts a Windows service
+    .DESCRIPTION
+        v5.0.1 NEW: Playbook remediation handler
+    #>
+    param([object]$Payload)
+    
+    try {
+        $serviceName = $Payload.service_name
+        $timeout = if ($Payload.timeout_seconds) { $Payload.timeout_seconds } else { 30 }
+        
+        if (-not $serviceName) {
+            return @{ success = $false; error = "Missing service_name in payload" }
+        }
+        
+        # Security check: Protected service list (allow restart but log)
+        if ($Global:ProtectedServices -contains $serviceName) {
+            Write-Log "[RESTART-SERVICE] WARNING: Restarting protected service $serviceName" "WARN"
+        }
+        
+        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+        
+        if (-not $service) {
+            return @{
+                success = $false
+                error = "Service not found: $serviceName"
+            }
+        }
+        
+        $previousStatus = $service.Status.ToString()
+        
+        Restart-Service -Name $serviceName -Force -ErrorAction Stop
+        
+        # Wait for service to start
+        $service.WaitForStatus('Running', (New-TimeSpan -Seconds $timeout))
+        
+        $newService = Get-Service -Name $serviceName
+        
+        Write-Log "[RESTART-SERVICE] Restarted: $serviceName" "SUCCESS"
+        
+        return @{
+            success = $true
+            service_name = $serviceName
+            previous_status = $previousStatus
+            new_status = $newService.Status.ToString()
+            restarted_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        return @{ success = $false; error = $_.Exception.Message }
     }
 }
 
