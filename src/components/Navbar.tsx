@@ -77,7 +77,7 @@ export const Navbar = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 group">
               <img 
-                src="/logo-cybshield.png" 
+                src="/logo-cybshield.png?v=2" 
                 alt="CyberShield Logo" 
                 className="h-9 w-auto object-contain group-hover:scale-105 transition-transform"
               />
