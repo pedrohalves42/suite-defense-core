@@ -3013,6 +3013,9 @@ export type Database = {
           tenant_id: string
           throttle_reason: string | null
           throttled_at: string | null
+          web_activity_consent_at: string | null
+          web_activity_consent_by: string | null
+          web_activity_consent_enabled: boolean | null
         }
         Insert: {
           agent_mode?: string | null
@@ -3061,6 +3064,9 @@ export type Database = {
           tenant_id: string
           throttle_reason?: string | null
           throttled_at?: string | null
+          web_activity_consent_at?: string | null
+          web_activity_consent_by?: string | null
+          web_activity_consent_enabled?: boolean | null
         }
         Update: {
           agent_mode?: string | null
@@ -3109,6 +3115,9 @@ export type Database = {
           tenant_id?: string
           throttle_reason?: string | null
           throttled_at?: string | null
+          web_activity_consent_at?: string | null
+          web_activity_consent_by?: string | null
+          web_activity_consent_enabled?: boolean | null
         }
         Relationships: [
           {
@@ -22127,6 +22136,10 @@ export type Database = {
           isolation_valid: boolean
           table_name: string
         }[]
+      }
+      update_agent_web_consent: {
+        Args: { p_agent_id: string; p_enabled: boolean; p_user_id: string }
+        Returns: undefined
       }
       update_cron_health: {
         Args: { p_cron_name: string; p_error?: string; p_success: boolean }

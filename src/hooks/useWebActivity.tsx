@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { WebActivityItem } from '@/types/security';
 import { useActiveTenant } from './useActiveTenant';
-import { tenantQuery } from '@/lib/tenantQuery';
+// Removed unused import: tenantQuery
 
 interface WebActivityRow {
   domain: string;
@@ -15,23 +15,26 @@ async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebA
   // Fetch raw data and aggregate manually - expanded to 7 days for better visibility
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   
-  console.log('[useWebActivity] Fetching activity for:', { agentId, tenantId, since: sevenDaysAgo });
+  console.log('[useWebActivity] Starting fetch:', { agentId, tenantId, since: sevenDaysAgo });
   
-  // Use explicit any to bypass type inference issues with new columns
-  const { data, error } = await tenantQuery('agent_web_activity', tenantId)
-    .select('*')
+  // ADR-026 FIX: Use direct supabase query to avoid RLS issues with JWT sync delay
+  // The RLS policy tenant_web_activity_select uses user_roles subquery which should work
+  const { data, error } = await supabase
+    .from('agent_web_activity')
+    .select('domain, visited_at, category, is_blocked, visit_count')
     .eq('agent_id', agentId)
+    .eq('tenant_id', tenantId)
     .gte('visited_at', sevenDaysAgo)
     .order('visited_at', { ascending: false })
-    .limit(5000) as { data: WebActivityRow[] | null; error: Error | null };
+    .limit(5000);
 
   if (error) {
     console.error('[useWebActivity] Error fetching activity:', error);
     throw new Error(`Failed to fetch web activity: ${error.message}`);
   }
 
-  console.log('[useWebActivity] Fetched rows:', data?.length || 0);
-  const rows = data || [];
+  console.log('[useWebActivity] Fetched rows:', data?.length || 0, 'for agent:', agentId);
+  const rows = (data || []) as WebActivityRow[];
 
   // Aggregate by domain
   const aggregated = new Map<string, { 
