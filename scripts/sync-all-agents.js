@@ -22,21 +22,21 @@ const projectRoot = path.resolve(__dirname, '..');
 // Configuração dos agentes
 const AGENTS = {
   windows: {
-    source: 'public/agent-scripts/cybershield-agent-windows-v4.ps1',
+    source: 'public/agent-scripts/cybershield-agent-windows-v5.ps1',
     target: 'supabase/functions/_shared/agent-script-windows-content.ts',
     exportName: 'AGENT_SCRIPT_WINDOWS_CONTENT',
     functionName: 'getAgentScriptWindows',
     escapeFunc: escapePowerShell
   },
   linux: {
-    source: 'public/agent-scripts/cybershield-agent-linux-v4.sh',
+    source: 'public/agent-scripts/cybershield-agent-linux-v5.sh',
     target: 'supabase/functions/_shared/agent-script-linux-content.ts',
     exportName: 'AGENT_SCRIPT_LINUX_SH',
     functionName: 'getAgentScriptLinux',
     escapeFunc: escapeBash
   },
   macos: {
-    source: 'public/agent-scripts/cybershield-agent-macos-v4.sh',
+    source: 'public/agent-scripts/cybershield-agent-macos-v5.sh',
     target: 'supabase/functions/_shared/agent-script-macos-content.ts',
     exportName: 'AGENT_SCRIPT_MACOS_SH',
     functionName: 'getAgentScriptMacos',
