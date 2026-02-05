@@ -1,57 +1,57 @@
 <#
     CyberShield Agent - Windows v5.0.1 FULL ENTERPRISE
-    
-    v5.0.1: FULL ENTERPRISE - Cadeia Completa de Assinaturas Bidirecionais
-    
-    NOVAS FUNCIONALIDADES:
-    =====================
-    - SEGURANÇA P0 (CRITICAL):
-      * Register-AgentKey: Geração e registro de chave ECDSA P-256 no startup
-      * Invoke-SignResult: Assinatura de resultados de jobs com ECDSA
-      * Verify-JobSignature: Verificação de assinaturas Ed25519 de jobs
-      * Hash Chain: Cadeia criptográfica de execução (execution_hash)
-    
+
+    v5.0.1: FULL ENTERPRISE - Complete Bidirectional Signature Chain
+
+    NEW FEATURES:
+    =============
+    - SECURITY P0 (CRITICAL):
+      * Register-AgentKey: ECDSA P-256 key generation and registration on startup
+      * Invoke-SignResult: Job result signing with ECDSA
+      * Verify-JobSignature: Ed25519 job signature verification
+      * Hash Chain: Cryptographic execution chain (execution_hash)
+
     - AUTO-REMEDIATION P0:
-      * Invoke-DiskCleanup: Limpeza automática quando disco > 95%
-      * Invoke-HighCpuProcessCheck: Auto-kill de processos suspeitos com CPU > 90%
-    
-    - COLETA AVANÇADA P1:
-      * Get-TopProcesses: Top 5 por CPU e RAM no heartbeat
-      * Get-UnauthorizedSoftware: Detecção de software não autorizado
-      * Get-ProcessBaseline: Detecção de anomalias via baseline
-    
-    - RESILIÊNCIA DE REDE P1:
-      * Invoke-SecureRequest com backoff exponencial (1s -> 60s)
-      * Retry inteligente com classificação de erros transientes
-      * Network Watchdog com detecção de perda de conectividade
-    
-    - EXECUÇÃO DE JOBS P1:
-      * Poll-Jobs: Polling e claim de jobs pendentes
-      * Execute-Job: Execução de jobs com verificação de assinatura
-      * Submit-JobResult: Submissão de resultados assinados
-    
+      * Invoke-DiskCleanup: Automatic cleanup when disk > 95%
+      * Invoke-HighCpuProcessCheck: Auto-kill suspicious processes with CPU > 90%
+
+    - ADVANCED COLLECTION P1:
+      * Get-TopProcesses: Top 5 by CPU and RAM in heartbeat
+      * Get-UnauthorizedSoftware: Unauthorized software detection
+      * Get-ProcessBaseline: Anomaly detection via baseline
+
+    - NETWORK RESILIENCE P1:
+      * Invoke-SecureRequest with exponential backoff (1s -> 60s)
+      * Smart retry with transient error classification
+      * Network Watchdog with connectivity loss detection
+
+    - JOB EXECUTION P1:
+      * Poll-Jobs: Polling and claiming pending jobs
+      * Execute-Job: Job execution with signature verification
+      * Submit-JobResult: Signed result submission
+
     - FSM ENTERPRISE P2:
-      * 6 estados: INITIALIZING, AUTHENTICATING, SYNCING, ENFORCING, DEGRADED, SAFE_MODE
-      * Transições atômicas com logging
-      * Persistência de estado local
-    
+      * 6 states: INITIALIZING, AUTHENTICATING, SYNCING, ENFORCING, DEGRADED, SAFE_MODE
+      * Atomic transitions with logging
+      * Local state persistence
+
     - DNS FILTER P2:
-      * Bloqueio de domínios maliciosos
-      * Sync de lista de bloqueio do servidor
-    
-    HERDA DE v4.5.0:
-    ================
-    - FSM Enterprise com 6 estados
-    - Network Watchdog e Power Events
-    - Policy Contract com drift detection
-    - Auto-rollback e Safe Mode
-    
-    Uso:
+      * Malicious domain blocking
+      * Server blocklist sync
+
+    INHERITS FROM v4.5.0:
+    =====================
+    - FSM Enterprise with 6 states
+    - Network Watchdog and Power Events
+    - Policy Contract with drift detection
+    - Auto-rollback and Safe Mode
+
+    Usage:
     powershell.exe -ExecutionPolicy Bypass -File .\cybershield-agent-windows-v5.ps1 `
-        -ServerUrl "https://seu-projeto.supabase.co" `
-        -AgentToken "AGENT_TOKEN_AQUI" `
-        -HmacSecret "64_HEX_CHARS_AQUI" `
-        -AgentName "meu-servidor-01"
+        -ServerUrl "https://your-project.supabase.co" `
+        -AgentToken "AGENT_TOKEN_HERE" `
+        -HmacSecret "64_HEX_CHARS_HERE" `
+        -AgentName "my-server-01"
 #>
 
 [CmdletBinding()]
@@ -72,7 +72,7 @@ param(
     [string]$AgentVersion = "v5.0.1"
 )
 
-# CRITICAL: Forçar TLS 1.2 para compatibilidade
+# CRITICAL: Force TLS 1.2 for compatibility
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $ErrorActionPreference = "Stop"
@@ -108,13 +108,13 @@ $Global:HmacSecret   = $HmacSecret
 $Global:AgentName    = $AgentName
 $Global:AgentVersion = $AgentVersion
 
-# Diretorios
+# Directories
 $Global:BaseDir = "C:\CyberShield"
 $logDir = Join-Path -Path $Global:BaseDir -ChildPath "logs"
 $evidenceDir = Join-Path -Path $Global:BaseDir -ChildPath "evidence"
 $dataDir = Join-Path -Path $Global:BaseDir -ChildPath "data"
 
-# Criar diretorios se nao existirem
+# Create directories if they don't exist
 @($logDir, $evidenceDir, $dataDir) | ForEach-Object {
     if (-not (Test-Path $_)) {
         New-Item -ItemType Directory -Path $_ -Force | Out-Null
@@ -129,14 +129,14 @@ $Global:KeyStorePath = Join-Path -Path $dataDir -ChildPath "agent_keys.json"
 $Global:StatePath = Join-Path -Path $dataDir -ChildPath "agent_state.json"
 $Global:DnsBlocklistPath = Join-Path -Path $dataDir -ChildPath "dns_blocklist.json"
 
-# Intervalos
+# Intervals
 $Global:PollIntervalSeconds = 60
 $Global:DiskCleanupThresholdPercent = 95
 $Global:HighCpuThresholdPercent = 90
 $Global:MaxLogSizeBytes = 10MB
 $Global:JobPollIntervalSeconds = 30
 
-# v5.0: Contadores de auto-reparo
+# v5.0: Auto-repair counters
 $Global:AutoRepairStats = @{
     disk_cleanups = 0
     processes_killed = 0
@@ -155,13 +155,13 @@ $Global:FSM_STATES = @{
 }
 $Global:CurrentState = $Global:FSM_STATES.INITIALIZING
 
-# v5.0.1: Hash Chain para execução
+# v5.0.1: Hash Chain for execution
 $Global:ExecutionChain = @{
     last_hash = "genesis"
     execution_index = 0
 }
 
-# v5.0.1: Ed25519 Public Key para verificação de jobs (do servidor)
+# v5.0.1: Ed25519 Public Key for job verification (from server)
 $Global:ED25519_PUBLIC_KEY = "MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZih0iggaoI="
 
 # ============================================
@@ -181,6 +181,7 @@ function Write-Log {
     $logEntry = "[$timestamp] [$Level] $Message"
 
     # Console output com cores
+- Console output with colors
     $color = switch ($Level) {
         "ERROR"   { "Red" }
         "WARN"    { "Yellow" }
@@ -190,14 +191,14 @@ function Write-Log {
     }
     Write-Host $logEntry -ForegroundColor $color
 
-    # File output com rotação
+    # File output with rotation
     try {
         $logFile = Get-Item $Global:LogFilePath -ErrorAction SilentlyContinue
         if ($logFile -and $logFile.Length -gt $Global:MaxLogSizeBytes) {
             $backupFile = "$($Global:LogFilePath).$(Get-Date -Format 'yyyyMMdd_HHmmss').bak"
             Move-Item $Global:LogFilePath $backupFile -Force
             
-            # Manter apenas últimos 5 backups
+            # Keep only last 5 backups
             Get-ChildItem -Path $logDir -Filter "*.bak" | 
                 Sort-Object LastWriteTime -Descending | 
                 Select-Object -Skip 5 | 
@@ -244,7 +245,7 @@ function Invoke-SecureRequest {
                 "X-Agent-Name" = $Global:AgentName
             }
             
-            # HMAC se disponível
+            # HMAC if available
             if ($Global:HmacSecret -and $Body) {
                 $bodyJson = if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Compress -Depth 10 }
                 $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
@@ -317,7 +318,7 @@ function Invoke-SecureRequest {
 }
 
 # ============================================
-#  v5.0.1: FSM ENTERPRISE - MÁQUINA DE ESTADOS
+#  v5.0.1: FSM ENTERPRISE - STATE MACHINE
 # ============================================
 function Set-AgentState {
     param(
@@ -330,8 +331,8 @@ function Set-AgentState {
     )
     
     $oldState = $Global:CurrentState
-    
-    # Validar transições permitidas
+
+    # Validate allowed transitions
     $validTransitions = @{
         "INITIALIZING" = @("AUTHENTICATING", "SAFE_MODE")
         "AUTHENTICATING" = @("SYNCING", "DEGRADED", "SAFE_MODE")
@@ -342,7 +343,7 @@ function Set-AgentState {
     }
     
     if ($oldState -eq $NewState) {
-        return $true  # Não é transição
+        return $true  # Not a transition
     }
     
     if ($NewState -notin $validTransitions[$oldState]) {
@@ -383,13 +384,13 @@ function Get-SavedAgentState {
 function Initialize-AgentKeys {
     <#
     .SYNOPSIS
-        Gera ou carrega par de chaves ECDSA P-256 para assinatura de resultados
+        Generates or loads ECDSA P-256 keypair for result signing
     .DESCRIPTION
-        P0 Critical: Resolve lacuna V-001 (assinaturas de resultado)
+        P0 Critical: Resolves gap V-001 (result signatures)
     #>
     try {
         if (Test-Path $Global:KeyStorePath) {
-            # Carregar chaves existentes
+            # Load existing keys
             $keys = Get-Content $Global:KeyStorePath -Raw | ConvertFrom-Json
             
             if ($keys.private_key -and $keys.public_key) {
@@ -404,27 +405,27 @@ function Initialize-AgentKeys {
         
         Write-Log "[KEYS] Generating new ECDSA P-256 keypair..." "INFO"
         
-        # Gerar novo par de chaves usando .NET Crypto
+        # Generate new keypair using .NET Crypto
         Add-Type -AssemblyName System.Security
         
         $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(
             [System.Security.Cryptography.ECCurve]::NamedCurves.nistP256
         )
         
-        # Exportar chave privada (PKCS#8)
+        # Export private key (PKCS#8)
         $privateKeyBytes = $ecdsa.ExportPkcs8PrivateKey()
         $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
         
-        # Exportar chave pública (SubjectPublicKeyInfo)
+        # Export public key (SubjectPublicKeyInfo)
         $publicKeyBytes = $ecdsa.ExportSubjectPublicKeyInfo()
         $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
-        
-        # Calcular fingerprint (SHA256 da chave pública)
+
+        # Calculate fingerprint (SHA256 of public key)
         $sha256 = [System.Security.Cryptography.SHA256]::Create()
         $fingerprintBytes = $sha256.ComputeHash($publicKeyBytes)
         $fingerprint = [BitConverter]::ToString($fingerprintBytes).Replace("-", "").ToLower()
         
-        # Salvar chaves localmente
+        # Save keys locally
         $keyData = @{
             private_key = $privateKeyBase64
             public_key = $publicKeyBase64
@@ -436,7 +437,7 @@ function Initialize-AgentKeys {
         
         $keyData | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
         
-        # Proteger arquivo de chaves (apenas SYSTEM e Administrators)
+        # Protect key file (SYSTEM and Administrators only)
         try {
             $acl = Get-Acl $Global:KeyStorePath
             $acl.SetAccessRuleProtection($true, $false)
@@ -472,9 +473,9 @@ function Initialize-AgentKeys {
 function Register-AgentKey {
     <#
     .SYNOPSIS
-        Registra chave pública no servidor via /register-agent-key
+        Registers public key with server via /register-agent-key
     .DESCRIPTION
-        P0 Critical: Resolve lacuna V-001
+        P0 Critical: Resolves gap V-001
     #>
     try {
         if (-not $Global:AgentPublicKey) {
@@ -503,7 +504,7 @@ function Register-AgentKey {
             if ($response.success) {
                 $Global:KeyVersion = $response.version
                 
-                # Atualizar versão no arquivo local
+                # Update version in local file
                 if (Test-Path $Global:KeyStorePath) {
                     $keys = Get-Content $Global:KeyStorePath -Raw | ConvertFrom-Json
                     $keys.version = $response.version
@@ -528,15 +529,15 @@ function Register-AgentKey {
 function Invoke-SignResult {
     <#
     .SYNOPSIS
-        Assina resultado de job com ECDSA P-256
+        Signs job result with ECDSA P-256
     .PARAMETER ExecutionId
-        ID da execução
+        Execution ID
     .PARAMETER JobId
-        ID do job
+        Job ID
     .PARAMETER Status
-        Status do resultado (completed/failed)
+        Result status (completed/failed)
     .PARAMETER OutputHash
-        Hash SHA256 do output
+        SHA256 hash of output
     .PARAMETER FinishedAt
         Timestamp ISO8601
     #>
@@ -557,12 +558,12 @@ function Invoke-SignResult {
         # Canonical payload: execution_id:job_id:status:output_hash:finished_at
         $canonicalPayload = "$ExecutionId`:$JobId`:$Status`:$OutputHash`:$FinishedAt"
         
-        # Importar chave privada
+        # Import private key
         $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
         $ecdsa = [System.Security.Cryptography.ECDsaCng]::new()
         $ecdsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$null)
         
-        # Assinar payload
+        # Sign payload
         $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($canonicalPayload)
         $signatureBytes = $ecdsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
         $signature = [Convert]::ToBase64String($signatureBytes)
@@ -584,9 +585,9 @@ function Invoke-SignResult {
 function Verify-JobSignature {
     <#
     .SYNOPSIS
-        Verifica assinatura Ed25519 de um job antes de executar
+        Verifies Ed25519 signature of a job before execution
     .DESCRIPTION
-        P0 Critical: Rejeita jobs não assinados ou com assinatura inválida
+        P0 Critical: Rejects unsigned or invalid signature jobs
     #>
     param(
         [Parameter(Mandatory = $true)]
@@ -594,13 +595,13 @@ function Verify-JobSignature {
     )
     
     try {
-        # Jobs sem assinatura são rejeitados
+        # Jobs without signature are rejected
         if (-not $Job.payload_signature) {
             Write-Log "[VERIFY] Job $($Job.id) has no signature - REJECTED" "ERROR"
             return $false
         }
         
-        # Construir payload canônico: job_id:job_type:payload
+        # Build canonical payload: job_id:job_type:payload
         $payloadJson = if ($Job.payload) { 
             $Job.payload | ConvertTo-Json -Compress -Depth 10 
         } else { 
@@ -610,9 +611,9 @@ function Verify-JobSignature {
         
         Write-Log "[VERIFY] Verifying signature for job $($Job.id)" "DEBUG"
         
-        # Nota: Verificação Ed25519 em PowerShell puro é complexa
-        # Por segurança, confiamos no backend que já verificou a assinatura
-        # O agente apenas valida que a assinatura existe e tem formato válido
+        # Note: Ed25519 verification in pure PowerShell is complex
+        # For security, we trust the backend that already verified the signature
+        # The agent only validates that the signature exists and has valid format
         
         $signatureBytes = [Convert]::FromBase64String($Job.payload_signature)
         if ($signatureBytes.Length -ne 64) {
@@ -635,9 +636,9 @@ function Verify-JobSignature {
 function Get-ExecutionHash {
     <#
     .SYNOPSIS
-        Calcula hash de execução para a cadeia criptográfica
+        Calculates execution hash for cryptographic chain
     .DESCRIPTION
-        P1 Important: Garante integridade e ordenação de execuções
+        P1 Important: Ensures integrity and ordering of executions
     #>
     param(
         [string]$ExecutionId,
@@ -654,7 +655,7 @@ function Get-ExecutionHash {
         $hashBytes = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($payload))
         $hash = [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
         
-        # Atualizar chain
+        # Update chain
         $Global:ExecutionChain.last_hash = $hash
         $Global:ExecutionChain.execution_index = $index
         
@@ -671,12 +672,12 @@ function Get-ExecutionHash {
 }
 
 # ============================================
-#  v5.0.1: JOB POLLING E EXECUÇÃO
+#  v5.0.1: JOB POLLING AND EXECUTION
 # ============================================
 function Poll-Jobs {
     <#
     .SYNOPSIS
-        Polling de jobs pendentes do servidor
+        Polls pending jobs from server
     #>
     try {
         Write-Log "[POLL-JOBS] Checking for pending jobs..." "DEBUG"
@@ -710,7 +711,7 @@ function Poll-Jobs {
 function Execute-Job {
     <#
     .SYNOPSIS
-        Executa um job com verificação de assinatura e hash chain
+        Executes a job with signature verification and hash chain
     #>
     param(
         [Parameter(Mandatory = $true)]
@@ -733,7 +734,7 @@ function Execute-Job {
             }
         }
         
-        # 2. Calcular hash de execução
+        # 2. Calculate execution hash
         $hashData = Get-ExecutionHash `
             -ExecutionId $executionId `
             -JobId $jobId `
@@ -803,7 +804,7 @@ function Execute-Job {
 function Submit-JobResult {
     <#
     .SYNOPSIS
-        Submete resultado de job com assinatura ECDSA
+        Submits job result with ECDSA signature
     #>
     param(
         [Parameter(Mandatory = $true)]
@@ -868,7 +869,7 @@ function Submit-JobResult {
 function Sync-DnsBlocklist {
     <#
     .SYNOPSIS
-        Sincroniza lista de bloqueio DNS do servidor
+        Syncs DNS blocklist from server
     #>
     try {
         $result = Invoke-SecureRequest `
@@ -900,7 +901,7 @@ function Sync-DnsBlocklist {
 function Test-DnsBlock {
     <#
     .SYNOPSIS
-        Verifica se um domínio está na lista de bloqueio
+        Checks if a domain is in the blocklist
     #>
     param([string]$Domain)
     
@@ -930,10 +931,10 @@ function Test-DnsBlock {
 function Test-NetworkConnectivity {
     <#
     .SYNOPSIS
-        Testa conectividade de rede
+        Tests network connectivity
     #>
     try {
-        # Tentar conexão TCP na porta 443 do servidor
+        # Try TCP connection on server port 443
         $uri = [System.Uri]::new($Global:ServerUrl)
         $tcpClient = New-Object System.Net.Sockets.TcpClient
         $asyncResult = $tcpClient.BeginConnect($uri.Host, 443, $null, $null)
@@ -953,7 +954,7 @@ function Test-NetworkConnectivity {
 }
 
 # ============================================
-#  JOB HANDLERS (Implementações)
+#  JOB HANDLERS (Implementations)
 # ============================================
 function Invoke-CollectSoftwareInventory {
     param([object]$Payload)
@@ -1065,7 +1066,7 @@ function Invoke-CollectWebActivity {
     param([object]$Payload)
     
     try {
-        # Simplificado - coleta básica de histórico do Chrome
+        # Simplified - basic Chrome history collection
         $chromeHistory = @()
         $daysBack = if ($Payload.days_back) { $Payload.days_back } else { 7 }
         
@@ -1094,10 +1095,10 @@ function Invoke-CollectWebActivity {
 function Invoke-DiskCleanup {
     <#
     .SYNOPSIS
-        Auto-limpeza de disco quando uso > 95%
+        Auto disk cleanup when usage > 95%
     .DESCRIPTION
-        P0 Critical: Sistema não deve travar por falta de espaço.
-        Limpa: temp files, Windows temp, Downloads antigos, logs antigos.
+        P0 Critical: System must not freeze due to lack of space.
+        Cleans: temp files, Windows temp, old Downloads, old logs.
     #>
     param(
         [Parameter(Mandatory = $false)]
@@ -1117,7 +1118,7 @@ function Invoke-DiskCleanup {
         $freedBytes = 0
         $actions = @()
         
-        # 1. Limpar temp do usuário
+        # 1. Clean user temp
         try {
             $tempPath = $env:TEMP
             $tempFiles = Get-ChildItem -Path $tempPath -Recurse -Force -ErrorAction SilentlyContinue
@@ -1144,11 +1145,11 @@ function Invoke-DiskCleanup {
             $actions += "prefetch"
         } catch { }
         
-        # 4. Executar cleanmgr silenciosamente (se disponível)
+        # 4. Run cleanmgr silently (if available)
         try {
             $cleanMgrPath = "C:\Windows\System32\cleanmgr.exe"
             if (Test-Path $cleanMgrPath) {
-                # Configurar sagerun preset se não existir
+                # Configure sagerun preset if it doesn't exist
                 $regPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches"
                 $caches = @("Temporary Files", "Temporary Setup Files", "Old ChkDsk Files", "Recycle Bin")
                 
@@ -1173,7 +1174,7 @@ function Invoke-DiskCleanup {
         
         Write-Log "[DISK-CLEANUP] Completed. Usage: $usedPercent% -> $usedPercentAfter% (freed: ${freedGB}GB)" "SUCCESS"
         
-        # Atualizar estatísticas
+        # Update statistics
         $Global:AutoRepairStats.disk_cleanups++
         $Global:AutoRepairStats.last_disk_cleanup = (Get-Date).ToString("o")
         
@@ -1210,8 +1211,8 @@ function Invoke-HighCpuProcessCheck {
     .SYNOPSIS
         Detecta e mata processos suspeitos com CPU > 90%
     .DESCRIPTION
-        P0 Critical: Evita travamento do sistema por processos runaway.
-        Protege processos críticos do sistema e aplicações conhecidas.
+        P0 Critical: Prevents system freeze from runaway processes.
+        Protects critical system processes and known applications.
     #>
     param(
         [Parameter(Mandatory = $false)]
@@ -1226,7 +1227,7 @@ function Invoke-HighCpuProcessCheck {
         "spoolsv", "msdtc", "SearchIndexer", "WmiPrvSE",
         # CyberShield
         "powershell", "CyberShield", "dns-filter",
-        # Aplicações comuns
+        # Common applications
         "chrome", "firefox", "msedge", "code", "Teams", "Outlook",
         "slack", "zoom", "OneDrive", "WINWORD", "EXCEL", "POWERPNT"
     )
@@ -1269,7 +1270,7 @@ function Invoke-HighCpuProcessCheck {
             Write-Log "[PROCESS-CHECK] High CPU detected: $procName (PID: $procId) at $cpuPercent%" "WARN"
             
             try {
-                # Verificar se é processo baseline (conhecido)
+                # Check if process is baseline (known)
                 $isBaseline = Test-ProcessInBaseline -ProcessName $procName
                 
                 if (-not $isBaseline) {
@@ -1317,14 +1318,14 @@ function Invoke-HighCpuProcessCheck {
 }
 
 # ============================================
-#  v5.0: COLETA AVANÇADA - TOP PROCESSES
+#  v5.0: ADVANCED COLLECTION - TOP PROCESSES
 # ============================================
 function Get-TopProcesses {
     <#
     .SYNOPSIS
-        Coleta top 5 processos por CPU e RAM
+        Collects top 5 processes by CPU and RAM
     .DESCRIPTION
-        P1 Important: Visibilidade de consumo de recursos no heartbeat.
+        P1 Important: Resource consumption visibility in heartbeat.
     #>
     try {
         $allProcesses = Get-Process | Where-Object { $_.WorkingSet -gt 0 }
@@ -1368,17 +1369,17 @@ function Get-TopProcesses {
 }
 
 # ============================================
-#  v5.0: DETECÇÃO DE SOFTWARE NÃO AUTORIZADO
+#  v5.0: UNAUTHORIZED SOFTWARE DETECTION
 # ============================================
 function Get-UnauthorizedSoftware {
     <#
     .SYNOPSIS
-        Detecta software instalado que não está na lista autorizada
+        Detects installed software not in the authorized list
     .DESCRIPTION
-        P1 Important: Compliance de software corporativo.
+        P1 Important: Corporate software compliance.
     #>
     try {
-        # Lista de software autorizado (padrão - pode ser sincronizada do servidor)
+        # Authorized software list (default - can be synced from server)
         $authorizedPatterns = @(
             "Microsoft*",
             "Windows*",
@@ -1401,7 +1402,7 @@ function Get-UnauthorizedSoftware {
             Where-Object { $_.Name } |
             Select-Object -ExpandProperty Name -Unique
         
-        # Filtrar não autorizado
+        # Filter unauthorized
         $unauthorized = @()
         foreach ($software in $installedSoftware) {
             $isAuthorized = $false
@@ -1444,9 +1445,9 @@ function Get-UnauthorizedSoftware {
 function Initialize-ProcessBaseline {
     <#
     .SYNOPSIS
-        Inicializa ou carrega baseline de processos
+        Initializes or loads process baseline
     .DESCRIPTION
-        P2 Advanced: Detecção de anomalias via baseline.
+        P2 Advanced: Anomaly detection via baseline.
     #>
     try {
         if (Test-Path $Global:ProcessBaselinePath) {
@@ -1454,28 +1455,29 @@ function Initialize-ProcessBaseline {
             Write-Log "[BASELINE] Loaded baseline with $($Global:ProcessBaseline.Count) processes" "INFO"
         } else {
             Write-Log "[BASELINE] Creating initial process baseline..." "INFO"
-            
-            $baseline = Get-Process | 
-                Select-Object ProcessName, Company, Description |
-                Group-Object ProcessName |
-                ForEach-Object { $_.Group[0] } |
-                ForEach-Object {
-                    @{
-                        name = $_.ProcessName
-                        company = $_.Company
-                        description = $_.Description
-                        first_seen = (Get-Date).ToString("o")
-                    }
+
+            $processes = Get-Process | Select-Object ProcessName, Company, Description
+            $grouped = $processes | Group-Object ProcessName
+            $baseline = @()
+
+            foreach ($group in $grouped) {
+                $proc = $group.Group[0]
+                $baseline += @{
+                    name = $proc.ProcessName
+                    company = $proc.Company
+                    description = $proc.Description
+                    first_seen = (Get-Date).ToString("o")
                 }
-            
+            }
+
             $Global:ProcessBaseline = $baseline
             $baseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
-            
+
             Write-Log "[BASELINE] Created baseline with $($baseline.Count) processes" "SUCCESS"
         }
-        
+
         return $true
-        
+
     } catch {
         Write-Log "[BASELINE] Error: $($_.Exception.Message)" "ERROR"
         $Global:ProcessBaseline = @()
@@ -1486,7 +1488,7 @@ function Initialize-ProcessBaseline {
 function Test-ProcessInBaseline {
     param([string]$ProcessName)
     
-    if (-not $Global:ProcessBaseline) { return $true }  # Se não há baseline, assumir OK
+    if (-not $Global:ProcessBaseline) { return $true }  # If no baseline, assume OK
     
     $found = $Global:ProcessBaseline | Where-Object { $_.name -eq $ProcessName }
     return ($null -ne $found)
@@ -1495,7 +1497,7 @@ function Test-ProcessInBaseline {
 function Get-ProcessAnomalies {
     <#
     .SYNOPSIS
-        Detecta processos novos que não estão no baseline
+        Detects new processes not in baseline
     #>
     try {
         if (-not $Global:ProcessBaseline) {
@@ -1515,7 +1517,7 @@ function Get-ProcessAnomalies {
         if ($anomalies.Count -gt 0) {
             Write-Log "[BASELINE] Detected $($anomalies.Count) new processes" "WARN"
             
-            # Adicionar ao baseline para futura referência
+            # Add to baseline for future reference
             foreach ($proc in $anomalies) {
                 $Global:ProcessBaseline += @{
                     name = $proc
@@ -1577,7 +1579,7 @@ function Send-AutoRepairTelemetry {
 }
 
 # ============================================
-#  SYSTEM METRICS (Básico - herdado de v4)
+#  SYSTEM METRICS (Basic - inherited from v4)
 # ============================================
 function Get-SystemMetrics {
     try {
@@ -1608,7 +1610,7 @@ function Send-Heartbeat {
     try {
         Write-Log "[HEARTBEAT] Sending heartbeat..." "DEBUG"
         
-        # Coletar métricas
+        # Collect metrics
         $metrics = Get-SystemMetrics
         $topProcesses = Get-TopProcesses
         $anomalies = Get-ProcessAnomalies
@@ -1666,7 +1668,7 @@ Write-Log "[INFO] Features: ECDSA-signing, Ed25519-verify, hash-chain, FSM, DNS-
 Write-Log "============================================" "INFO"
 
 # ============================================
-#  FASE 1: INICIALIZAÇÃO
+#  PHASE 1: INITIALIZATION
 # ============================================
 Set-AgentState -NewState "INITIALIZING" -Reason "Agent startup"
 
@@ -1684,7 +1686,7 @@ if (-not $keysInitialized) {
 }
 
 # ============================================
-#  FASE 2: AUTENTICAÇÃO
+#  PHASE 2: AUTHENTICATION
 # ============================================
 Set-AgentState -NewState "AUTHENTICATING" -Reason "Validating credentials"
 
@@ -1695,7 +1697,7 @@ if (-not $heartbeatSuccess) {
     Write-Log "[STARTUP] Initial heartbeat failed - entering DEGRADED mode" "WARN"
     Set-AgentState -NewState "DEGRADED" -Reason "Heartbeat failed"
 } else {
-    # Registrar chave pública
+    # Register public key
     if ($keysInitialized) {
         $keyRegistered = Register-AgentKey
         if (-not $keyRegistered) {
@@ -1705,7 +1707,7 @@ if (-not $heartbeatSuccess) {
 }
 
 # ============================================
-#  FASE 3: SINCRONIZAÇÃO
+#  PHASE 3: SYNCHRONIZATION
 # ============================================
 Set-AgentState -NewState "SYNCING" -Reason "Syncing policies and baseline"
 
@@ -1716,7 +1718,7 @@ Initialize-ProcessBaseline
 Sync-DnsBlocklist
 
 # ============================================
-#  FASE 4: ENFORCEMENT
+#  PHASE 4: ENFORCEMENT
 # ============================================
 Set-AgentState -NewState "ENFORCING" -Reason "Normal operation"
 
@@ -1750,7 +1752,7 @@ while ($true) {
         }
         
         # ============================================
-        # JOB POLLING E EXECUÇÃO
+        # JOB POLLING AND EXECUTION
         # ============================================
         if (($now - $lastJobPoll).TotalSeconds -ge $Global:JobPollIntervalSeconds -and $networkOk) {
             $jobs = Poll-Jobs
@@ -1798,7 +1800,7 @@ while ($true) {
         }
         
         # ============================================
-        # VERIFICAÇÃO DE SOFTWARE (1x por hora)
+        # SOFTWARE CHECK (1x per hour)
         # ============================================
         if (($now - $lastSoftwareCheck).TotalSeconds -ge 3600) {
             Get-UnauthorizedSoftware | Out-Null
@@ -1806,7 +1808,7 @@ while ($true) {
         }
         
         # ============================================
-        # DNS BLOCKLIST SYNC (1x por hora)
+        # DNS BLOCKLIST SYNC (1x per hour)
         # ============================================
         if (($now - $lastDnsSync).TotalSeconds -ge 3600 -and $networkOk) {
             Sync-DnsBlocklist
