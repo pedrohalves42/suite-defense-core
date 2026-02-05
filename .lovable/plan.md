@@ -1,63 +1,139 @@
 
-# Plano: Atualizar Pc-Bianca-Tibery para v4.5.0
+# Plano: Padronização do Logo CyberShield em Todo o Projeto
 
-## Contexto
-O agente `Pc-Bianca-Tibery` está na versão v4.1.9, significativamente desatualizado em relação ao fleet (v4.5.0). Está temporariamente **offline**, o que significa que o job será enfileirado e executado automaticamente quando o agente reconectar.
+## Resumo Executivo
+O novo logo CyberShield será implementado de forma consistente em todas as páginas e componentes da aplicação, substituindo ícones genéricos de escudo (`Shield`) onde o logo oficial deve aparecer.
 
-## Implementação
+---
 
-### 1. Criar job de atualização
-Inserir um job `update_agent` na tabela `jobs` com:
+## Análise Atual
 
+### Locais com Logo Correto
+| Componente | Status | Método |
+|------------|--------|--------|
+| `Login.tsx` | OK | Import ES6 (`@/assets/logo-cybshield.png`) |
+| `Navbar.tsx` | Parcial | URL direta (`/logo-cybshield.png?v=2`) |
+| `AppSidebar.tsx` | Parcial | URL direta (`/logo-cybshield.png`) |
+
+### Locais que Precisam do Logo (Usando Shield Genérico)
+| Componente | Linha | Descrição |
+|------------|-------|-----------|
+| `Signup.tsx` | ~150 | Header do card de cadastro |
+| `ForgotPassword.tsx` | ~73 | Header do card de recuperação |
+| `UpdatePassword.tsx` | ~119 | Header do card de nova senha |
+| `ClientLayout.tsx` | ~40, ~97 | Header do sidebar e mobile |
+| `HeroSection.tsx` | ~22 | Badge no hero da landing |
+| `ContactForm.tsx` | ~158 | Header do formulário de contato |
+
+### Arquivos de Ícone PWA (Precisam Atualização Separada)
+- `public/pwa-icon-192.png`
+- `public/pwa-icon-512.png`
+- `public/favicon.ico`
+
+---
+
+## Plano de Implementação
+
+### Fase 1: Copiar Imagem para Assets
+Copiar o logo enviado para `src/assets/logo-cybshield.png`, substituindo o arquivo existente com a versão mais recente.
+
+### Fase 2: Páginas de Autenticação
+
+#### 2.1 Signup.tsx
+```text
+Antes: <Shield className="h-8 w-8 text-primary/80" />
+Depois: <img src={logoImage} alt="CyberShield" className="h-12 w-12 object-contain" />
+```
+- Adicionar import do logo
+- Substituir ícone Shield pelo logo com glassmorphism similar ao Login
+
+#### 2.2 ForgotPassword.tsx
+```text
+Antes: <Shield className="h-8 w-8 text-primary/80" />
+Depois: <img src={logoImage} alt="CyberShield" className="h-12 w-12 object-contain" />
+```
+- Mesma abordagem do Signup
+
+#### 2.3 UpdatePassword.tsx
+```text
+Antes: <Shield className="h-8 w-8 text-primary/80" />
+Depois: <img src={logoImage} alt="CyberShield" className="h-12 w-12 object-contain" />
+```
+- Mesma abordagem consistente
+
+### Fase 3: Layouts de Aplicação
+
+#### 3.1 ClientLayout.tsx
+```text
+Desktop Sidebar:
+  Antes: <h1>CyberShield</h1>
+  Depois: <img src={logoImage} className="h-8" /> + <span>CyberShield</span>
+
+Mobile Header:
+  Antes: <h1>CyberShield</h1>
+  Depois: <img src={logoImage} className="h-7" /> + <span>CyberShield</span>
+```
+
+#### 3.2 AppSidebar.tsx (Melhorar Método)
+```text
+Antes: src="/logo-cybshield.png" (URL direta)
+Depois: import logoImage + src={logoImage}
+```
+- Migrar para import ES6 para consistência
+
+#### 3.3 Navbar.tsx (Melhorar Método)
+```text
+Antes: src="/logo-cybshield.png?v=2" (URL com cache bust)
+Depois: import logoImage + src={logoImage}
+```
+
+### Fase 4: Componentes de Landing
+
+#### 4.1 HeroSection.tsx
+O ícone `Shield` no badge é decorativo e pode permanecer como está, pois não representa a identidade da marca diretamente.
+
+#### 4.2 ContactForm.tsx
+```text
+Antes: <Shield className="w-8 h-8 text-primary" />
+Depois: <img src={logoImage} className="h-10 w-10 object-contain" />
+```
+
+---
+
+## Estrutura Final de Imports
+
+Todos os componentes que exibem o logo usarão:
 ```typescript
-const jobData = await prepareJobForInsert({
-  tenant_id: '2584d2cd-8b99-4ca7-a8e2-b61256e82b3e',
-  agent_id: 'e6da82c9-92a8-4dc1-afc5-af3f6d66a425',
-  agent_name: 'Pc-Bianca-Tibery',
-  type: 'update_agent',
-  status: 'queued',
-  payload: {
-    target_version: 'v4.5.0',
-    platform: 'windows',
-    current_version: 'v4.1.9',
-    source: 'manual_update'
-  },
-  approved: true
-});
+import logoImage from '@/assets/logo-cybshield.png';
 ```
 
-### 2. Arquivo a modificar
-**Opção A (Preferida):** Executar via componente existente de admin ou criar função dedicada.
+---
 
-**Opção B:** Criar migration SQL one-time:
-```sql
-INSERT INTO jobs (
-  tenant_id, agent_id, agent_name, type, status, 
-  payload, approved, payload_hash
-) VALUES (
-  '2584d2cd-8b99-4ca7-a8e2-b61256e82b3e',
-  'e6da82c9-92a8-4dc1-afc5-af3f6d66a425',
-  'Pc-Bianca-Tibery',
-  'update_agent',
-  'queued',
-  '{"target_version":"v4.5.0","platform":"windows","current_version":"v4.1.9","source":"manual_update"}',
-  true,
-  encode(sha256('{"target_version":"v4.5.0","platform":"windows","current_version":"v4.1.9","source":"manual_update"}'::bytea), 'hex')
-);
-```
+## Arquivos que Serão Modificados
 
-## Comportamento Esperado
-1. Job fica em status `queued`
-2. Quando agente reconectar e fizer polling via `poll-jobs`, receberá o job
-3. Job muda para `delivered`
-4. Agente executa atualização forçada via `Apply-ForcedUpdate`
-5. Reinício imediato da scheduled task (Stop → Sleep 2s → Start)
-6. Agente volta online com v4.5.0
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/assets/logo-cybshield.png` | Substituído pela nova imagem |
+| `src/pages/Signup.tsx` | Adicionar logo no header |
+| `src/pages/ForgotPassword.tsx` | Adicionar logo no header |
+| `src/pages/UpdatePassword.tsx` | Adicionar logo no header |
+| `src/components/client/ClientLayout.tsx` | Adicionar logo no sidebar/header |
+| `src/components/AppSidebar.tsx` | Migrar para import ES6 |
+| `src/components/Navbar.tsx` | Migrar para import ES6 |
+| `src/components/ContactForm.tsx` | Adicionar logo no formulário |
 
-## Observações sobre Insights
-Os 50 alertas críticos não reconhecidos são legítimos e requerem atenção da equipe de operações:
-- 2 padrões suspeitos de navegação (Pc-Vidro/Meio-Planalto)
-- Múltiplos alertas de disco crítico (DESKTOP-UOABRHB com 97.9%)
-- Alertas de CPU/Memória (DESKTOP-NOHACIE)
+---
 
-Recomendo criar uma rotina de reconhecimento (acknowledge) para insights resolvidos.
+## Notas Técnicas
+
+1. **Import ES6 vs URL Direta**: Usar imports garante que o Vite processe corretamente os assets, aplique hash de cache e otimize as imagens.
+
+2. **Ícones PWA**: Os arquivos `pwa-icon-192.png` e `pwa-icon-512.png` precisarão ser atualizados separadamente para manter consistência no PWA. Isso pode ser feito em um passo adicional se desejado.
+
+3. **Favicon**: O `favicon.ico` atualmente aponta para `pwa-icon-192.png`. Pode ser atualizado para o novo logo em formato .ico se necessário.
+
+4. **Tamanhos Consistentes**:
+   - Páginas de Auth: `h-12 w-12` a `h-16 w-16`
+   - Sidebars: `h-8`
+   - Navbar: `h-9`
+   - Formulários: `h-10 w-10`
