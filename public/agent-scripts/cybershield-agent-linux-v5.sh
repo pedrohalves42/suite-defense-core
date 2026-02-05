@@ -473,9 +473,181 @@
      echo "{\"execution_hash\":\"$hash\",\"previous_execution_hash\":\"$previous_hash\",\"execution_index\":$index}"
  }
  
- # ============================================
- #  v5.0.1: JOB POLLING AND EXECUTION
- # ============================================
+# ============================================
+#  v5.0.1: PROTECTED PROCESSES AND SERVICES
+#  Defense-in-depth: Agent-side validation
+# ============================================
+PROTECTED_PROCESSES="init systemd journald sshd cron dbus NetworkManager systemd-logind systemd-udevd polkitd accounts-daemon"
+PROTECTED_SERVICES="sshd dbus NetworkManager systemd-journald systemd-logind systemd-udevd polkit cron rsyslog auditd firewalld iptables"
+
+# ============================================
+#  v5.0.1: KILL PROCESS HANDLER
+# ============================================
+kill_process_handler() {
+    local job="$1"
+    local process_name
+    process_name=$(echo "$job" | jq -r '.payload.process_name // empty' 2>/dev/null)
+    local force
+    force=$(echo "$job" | jq -r '.payload.force // false' 2>/dev/null)
+    
+    if [[ -z "$process_name" ]]; then
+        echo '{"success":false,"error":"Missing process_name in payload"}'
+        return
+    fi
+    
+    # Security check: Protected process list
+    local normalized_name
+    normalized_name=$(echo "$process_name" | tr '[:upper:]' '[:lower:]')
+    
+    if echo "$PROTECTED_PROCESSES" | grep -qw "$normalized_name"; then
+        log "WARN" "[KILL-PROCESS] BLOCKED: $process_name is a protected process"
+        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: $process_name is a protected system process\",\"blocked\":true}"
+        return
+    fi
+    
+    # Find and kill processes
+    local pids
+    pids=$(pgrep -x "$process_name" 2>/dev/null)
+    
+    if [[ -z "$pids" ]]; then
+        echo "{\"success\":true,\"killed\":0,\"message\":\"Process not running: $process_name\"}"
+        return
+    fi
+    
+    local killed=0
+    local total=0
+    
+    for pid in $pids; do
+        total=$((total + 1))
+        if [[ "$force" == "true" ]]; then
+            kill -9 "$pid" 2>/dev/null && killed=$((killed + 1))
+        else
+            kill "$pid" 2>/dev/null && killed=$((killed + 1))
+        fi
+    done
+    
+    log "SUCCESS" "[KILL-PROCESS] Terminated $killed/$total instances of $process_name"
+    echo "{\"success\":true,\"process_name\":\"$process_name\",\"killed\":$killed,\"total_found\":$total,\"killed_at\":\"$(date -Iseconds)\"}"
+}
+
+# ============================================
+#  v5.0.1: STOP SERVICE HANDLER
+# ============================================
+stop_service_handler() {
+    local job="$1"
+    local service_name
+    service_name=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
+    
+    if [[ -z "$service_name" ]]; then
+        echo '{"success":false,"error":"Missing service_name in payload"}'
+        return
+    fi
+    
+    # Security check: Protected service list
+    if echo "$PROTECTED_SERVICES" | grep -qw "$service_name"; then
+        log "WARN" "[STOP-SERVICE] BLOCKED: $service_name is a protected service"
+        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: $service_name is a protected system service\",\"blocked\":true}"
+        return
+    fi
+    
+    # Check if systemd or sysvinit
+    if command -v systemctl &>/dev/null; then
+        local status
+        status=$(systemctl is-active "$service_name" 2>/dev/null)
+        
+        if [[ "$status" == "inactive" ]] || [[ "$status" == "dead" ]]; then
+            echo "{\"success\":true,\"service_name\":\"$service_name\",\"status\":\"already_stopped\"}"
+            return
+        fi
+        
+        if systemctl stop "$service_name" 2>/dev/null; then
+            log "SUCCESS" "[STOP-SERVICE] Stopped: $service_name"
+            echo "{\"success\":true,\"service_name\":\"$service_name\",\"previous_status\":\"$status\",\"new_status\":\"stopped\",\"stopped_at\":\"$(date -Iseconds)\"}"
+        else
+            echo "{\"success\":false,\"error\":\"Failed to stop service: $service_name\"}"
+        fi
+    else
+        echo '{"success":false,"error":"systemctl not available"}'
+    fi
+}
+
+# ============================================
+#  v5.0.1: DISABLE SERVICE HANDLER
+# ============================================
+disable_service_handler() {
+    local job="$1"
+    local service_name
+    service_name=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
+    
+    if [[ -z "$service_name" ]]; then
+        echo '{"success":false,"error":"Missing service_name in payload"}'
+        return
+    fi
+    
+    # Security check: Protected service list
+    if echo "$PROTECTED_SERVICES" | grep -qw "$service_name"; then
+        log "WARN" "[DISABLE-SERVICE] BLOCKED: $service_name is a protected service"
+        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: $service_name is a protected system service\",\"blocked\":true}"
+        return
+    fi
+    
+    if command -v systemctl &>/dev/null; then
+        local prev_status
+        prev_status=$(systemctl is-active "$service_name" 2>/dev/null)
+        local prev_enabled
+        prev_enabled=$(systemctl is-enabled "$service_name" 2>/dev/null)
+        
+        # Stop and disable
+        systemctl stop "$service_name" 2>/dev/null
+        if systemctl disable "$service_name" 2>/dev/null; then
+            log "SUCCESS" "[DISABLE-SERVICE] Disabled: $service_name"
+            echo "{\"success\":true,\"service_name\":\"$service_name\",\"previous_status\":\"$prev_status\",\"previous_enabled\":\"$prev_enabled\",\"new_status\":\"stopped\",\"new_enabled\":\"disabled\",\"disabled_at\":\"$(date -Iseconds)\"}"
+        else
+            echo "{\"success\":false,\"error\":\"Failed to disable service: $service_name\"}"
+        fi
+    else
+        echo '{"success":false,"error":"systemctl not available"}'
+    fi
+}
+
+# ============================================
+#  v5.0.1: RESTART SERVICE HANDLER
+# ============================================
+restart_service_handler() {
+    local job="$1"
+    local service_name
+    service_name=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
+    
+    if [[ -z "$service_name" ]]; then
+        echo '{"success":false,"error":"Missing service_name in payload"}'
+        return
+    fi
+    
+    # Allow restart of protected services (but log warning)
+    if echo "$PROTECTED_SERVICES" | grep -qw "$service_name"; then
+        log "WARN" "[RESTART-SERVICE] WARNING: Restarting protected service $service_name"
+    fi
+    
+    if command -v systemctl &>/dev/null; then
+        local prev_status
+        prev_status=$(systemctl is-active "$service_name" 2>/dev/null)
+        
+        if systemctl restart "$service_name" 2>/dev/null; then
+            local new_status
+            new_status=$(systemctl is-active "$service_name" 2>/dev/null)
+            log "SUCCESS" "[RESTART-SERVICE] Restarted: $service_name"
+            echo "{\"success\":true,\"service_name\":\"$service_name\",\"previous_status\":\"$prev_status\",\"new_status\":\"$new_status\",\"restarted_at\":\"$(date -Iseconds)\"}"
+        else
+            echo "{\"success\":false,\"error\":\"Failed to restart service: $service_name\"}"
+        fi
+    else
+        echo '{"success":false,"error":"systemctl not available"}'
+    fi
+}
+
+# ============================================
+#  v5.0.1: JOB POLLING AND EXECUTION
+# ============================================
  poll_jobs() {
      log "DEBUG" "[POLL-JOBS] Checking for pending jobs..."
      
@@ -529,25 +701,38 @@
      local error_message=""
      local status="completed"
      
-     case "$job_type" in
-         "software_inventory_collect")
-             output=$(collect_software_inventory)
-             ;;
-         "collect_antivirus_status")
-             output=$(collect_antivirus_status)
-             ;;
-         "collect_network_info")
-             output=$(collect_network_info)
-             ;;
-         "fix_firewall")
-             output=$(fix_firewall "$job")
-             ;;
-         *)
-             error_message="Unknown job type: $job_type"
-             status="failed"
-             log "WARN" "[JOB] Unknown job type: $job_type"
-             ;;
-     esac
+    case "$job_type" in
+        "software_inventory_collect")
+            output=$(collect_software_inventory)
+            ;;
+        "collect_antivirus_status")
+            output=$(collect_antivirus_status)
+            ;;
+        "collect_network_info")
+            output=$(collect_network_info)
+            ;;
+        "fix_firewall")
+            output=$(fix_firewall "$job")
+            ;;
+        # v5.0.1: NEW - Process/Service Control Handlers
+        "kill_process")
+            output=$(kill_process_handler "$job")
+            ;;
+        "stop_service")
+            output=$(stop_service_handler "$job")
+            ;;
+        "disable_service")
+            output=$(disable_service_handler "$job")
+            ;;
+        "restart_service")
+            output=$(restart_service_handler "$job")
+            ;;
+        *)
+            error_message="Unknown job type: $job_type"
+            status="failed"
+            log "WARN" "[JOB] Unknown job type: $job_type"
+            ;;
+    esac
      
      local end_time
      end_time=$(date +%s)
