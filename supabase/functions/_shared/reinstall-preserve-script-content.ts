@@ -1,35 +1,31 @@
 // CyberShield Agent - Reinstall Preserve Script Content
 // Embedded version for Edge Function delivery
-// Version: 2.0.0 - Enhanced TLS and auto-credential detection
+// Version: 2.1.0 - Fixed for iex pipeline compatibility
 
 export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstalacao com Preservacao de Credenciais
-# Version: 2.0.0
+# Version: 2.1.0
 # Descricao: Reinstala o agente preservando identidade, credenciais e historico
 #
 # USO:
 #   Automatico (detecta credenciais do script existente):
 #     irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/get-reinstall-preserve-script | iex
-#
-#   Manual (fornece credenciais):
-#     .\\reinstall-agent-preserve.ps1 -AgentName "nome" -AgentToken "uuid" -HmacSecret "hex64"
-
-param(
-    [string]\$AgentName,
-    [string]\$AgentToken,
-    [string]\$HmacSecret,
-    [string]\$ServerUrl = "https://iavbnmduxpxhwubqrzzn.supabase.co"
-)
 
 # CRITICAL: Force TLS 1.2 for Windows Server 2012/2016 compatibility
 # PowerShell uses TLS 1.0 by default but Supabase requires TLS 1.2+
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+# Variables (auto-detected from existing installation)
+\$AgentName = \$null
+\$AgentToken = \$null
+\$HmacSecret = \$null
+\$ServerUrl = "https://iavbnmduxpxhwubqrzzn.supabase.co"
 
 \$ErrorActionPreference = "Stop"
 \$InstallDir = "C:\\CyberShield"
 \$LogDir = "\$InstallDir\\logs"
 \$BackupDir = "\$InstallDir\\backup"
 \$TaskName = "CyberShieldAgent"
-\$ScriptVersion = "2.0.0"
+\$ScriptVersion = "2.1.0"
 
 function Write-Status {
     param([string]\$Message, [string]\$Type = "INFO")
