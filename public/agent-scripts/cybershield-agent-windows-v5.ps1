@@ -86,7 +86,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 # ============================================
-#  TRAP GLOBAL PARA ERROS NAO TRATADOS
+#  GLOBAL TRAP FOR UNHANDLED ERRORS
 # ============================================
 trap {
     $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -1519,7 +1519,7 @@ function Invoke-DiskCleanup {
 function Invoke-HighCpuProcessCheck {
     <#
     .SYNOPSIS
-        Detecta e mata processos suspeitos com CPU > 90%
+        Detects and kills suspicious processes with CPU > 90%
     .DESCRIPTION
         P0 Critical: Prevents system freeze from runaway processes.
         Protects critical system processes and known applications.
@@ -1529,7 +1529,7 @@ function Invoke-HighCpuProcessCheck {
         [int]$ThresholdPercent = $Global:HighCpuThresholdPercent
     )
     
-    # Processos protegidos (NUNCA matar)
+    # Protected processes (NEVER kill)
     $protectedProcesses = @(
         # Sistema Windows
         "System", "Idle", "svchost", "csrss", "smss", "wininit", "winlogon",
@@ -1546,10 +1546,10 @@ function Invoke-HighCpuProcessCheck {
         # Collect high-CPU processes using Get-Counter for real-time CPU
         $cpuSamples = @{}
         
-        # Primeira amostra
+        # First sample
         $processes1 = Get-Process | Where-Object { $_.CPU -ne $null }
         Start-Sleep -Milliseconds 500
-        # Segunda amostra
+        # Second sample
         $processes2 = Get-Process | Where-Object { $_.CPU -ne $null }
         
         foreach ($p2 in $processes2) {
@@ -1565,7 +1565,7 @@ function Invoke-HighCpuProcessCheck {
             }
         }
         
-        # Filtrar processos com alta CPU
+        # Filter high-CPU processes
         $highCpuProcesses = $cpuSamples.GetEnumerator() | 
             Where-Object { $_.Value.CpuPercent -gt $ThresholdPercent } |
             Where-Object { $_.Value.Name -notin $protectedProcesses }
@@ -1707,7 +1707,7 @@ function Get-UnauthorizedSoftware {
             "Realtek*"
         )
         
-        # Buscar software instalado
+        # Get installed software
         $installedSoftware = Get-WmiObject Win32_Product -ErrorAction SilentlyContinue | 
             Where-Object { $_.Name } |
             Select-Object -ExpandProperty Name -Unique
@@ -1837,7 +1837,7 @@ function Get-ProcessAnomalies {
                 }
             }
             
-            # Salvar baseline atualizado
+            # Save updated baseline
             $Global:ProcessBaseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
         }
         
@@ -1853,7 +1853,7 @@ function Get-ProcessAnomalies {
 }
 
 # ============================================
-#  v5.0: TELEMETRIA DE AUTO-REPARO
+#  v5.0: AUTO-REPAIR TELEMETRY
 # ============================================
 function Send-AutoRepairTelemetry {
     param(
@@ -1914,7 +1914,7 @@ function Get-SystemMetrics {
 }
 
 # ============================================
-#  HEARTBEAT MELHORADO (v5.0)
+#  IMPROVED HEARTBEAT (v5.0)
 # ============================================
 function Send-Heartbeat {
     try {
@@ -1988,7 +1988,7 @@ if ($savedState -eq "SAFE_MODE") {
     Write-Log "[STARTUP] Recovering from SAFE_MODE..." "WARN"
 }
 
-# Inicializar chaves ECDSA
+# Initialize ECDSA keys
 $keysInitialized = Initialize-AgentKeys
 if (-not $keysInitialized) {
     Write-Log "[STARTUP] Failed to initialize keys - entering DEGRADED mode" "ERROR"
@@ -2000,7 +2000,7 @@ if (-not $keysInitialized) {
 # ============================================
 Set-AgentState -NewState "AUTHENTICATING" -Reason "Validating credentials"
 
-# Enviar primeiro heartbeat
+# Send first heartbeat
 $heartbeatSuccess = Send-Heartbeat
 
 if (-not $heartbeatSuccess) {
@@ -2021,10 +2021,10 @@ if (-not $heartbeatSuccess) {
 # ============================================
 Set-AgentState -NewState "SYNCING" -Reason "Syncing policies and baseline"
 
-# Inicializar baseline de processos
+# Initialize process baseline
 Initialize-ProcessBaseline
 
-# Sincronizar DNS blocklist
+# Sync DNS blocklist
 Sync-DnsBlocklist
 
 # ============================================
