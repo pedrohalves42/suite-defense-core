@@ -16,6 +16,7 @@ import { formatBrazilDateTime } from '@/lib/date-utils';
 import { SecurityFooter, BrandSignature } from '@/components/auth/SecurityFooter';
 import { SecurityCheckScreen } from '@/components/auth/SecurityCheckScreen';
 import { SessionVerifiedScreen } from '@/components/auth/SessionVerifiedScreen';
+import logoImage from '@/assets/logo-cybshield.png';
 const loginSchema = z.object({
   identifier: z.string()
     .trim()
@@ -345,7 +346,7 @@ export default function Login() {
               {/* Logo container with glassmorphism */}
               <div className="relative bg-gradient-to-br from-card/90 to-card/70 p-5 rounded-2xl border border-primary/20 shadow-[0_0_40px_rgba(45,158,140,0.15)] backdrop-blur-xl group-hover:border-primary/40 transition-all duration-300">
                 <img 
-                  src="/logo-cybshield.png?v=2" 
+                  src={logoImage} 
                   alt="CyberShield" 
                   className="h-16 w-16 object-contain drop-shadow-[0_0_8px_rgba(45,158,140,0.4)] group-hover:scale-105 transition-transform duration-300"
                 />
