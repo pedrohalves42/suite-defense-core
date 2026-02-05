@@ -1,4 +1,4 @@
-import { Shield, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -76,10 +76,12 @@ export const Navbar = () => {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                <Shield className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              <img 
+                src="/logo-cybshield.png" 
+                alt="CyberShield Logo" 
+                className="h-9 w-auto object-contain group-hover:scale-105 transition-transform"
+              />
+              <span className="text-xl font-bold text-foreground">
                 CyberShield
               </span>
             </Link>
