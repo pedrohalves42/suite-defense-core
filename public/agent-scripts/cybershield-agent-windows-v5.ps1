@@ -1,7 +1,7 @@
 <#
-    CyberShield Agent - Windows v5.0.1 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.2 FULL ENTERPRISE
 
-    v5.0.1: FULL ENTERPRISE - Complete Bidirectional Signature Chain
+    v5.0.2: FULL ENTERPRISE - Complete Bidirectional Signature Chain (FIXED)
 
     NEW FEATURES:
     =============
@@ -77,7 +77,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.1"
+    [string]$AgentVersion = "v5.0.2"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -188,8 +188,7 @@ function Write-Log {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logEntry = "[$timestamp] [$Level] $Message"
 
-    # Console output com cores
-- Console output with colors
+    # Console output with colors
     $color = switch ($Level) {
         "ERROR"   { "Red" }
         "WARN"    { "Yellow" }
@@ -215,7 +214,7 @@ function Write-Log {
         
         Add-Content -Path $Global:LogFilePath -Value $logEntry -Encoding UTF8
     } catch {
-        # Silenciar erros de log
+        # Silent - log errors should not crash the agent
     }
 }
 
@@ -733,7 +732,7 @@ function Execute-Job {
     try {
         Write-Log "[JOB] Starting execution: $($Job.job_type) (ID: $jobId)" "INFO"
         
-        # 1. Verificar assinatura do job
+        # 1. Verify job signature
         if (-not (Verify-JobSignature -Job $Job)) {
             return @{
                 success = $false
@@ -748,7 +747,7 @@ function Execute-Job {
             -JobId $jobId `
             -PreviousHash $Global:ExecutionChain.last_hash
         
-        # 3. Executar job baseado no tipo
+        # 3. Execute job based on type
         $output = $null
         $error_message = $null
         $status = "completed"
@@ -983,7 +982,7 @@ function Invoke-CollectSoftwareInventory {
     try {
         $software = @()
         
-        # Coletar do registro (64-bit)
+        # Collect from registry (64-bit)
         $regPaths = @(
             "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
             "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
@@ -1439,7 +1438,7 @@ function Invoke-DiskCleanup {
             $actions += "user_temp"
         } catch { }
         
-        # 2. Limpar Windows temp
+        # 2. Clean Windows temp
         try {
             $winTempPath = "C:\Windows\Temp"
             $winTempFiles = Get-ChildItem -Path $winTempPath -Recurse -Force -ErrorAction SilentlyContinue
@@ -1449,7 +1448,7 @@ function Invoke-DiskCleanup {
             $actions += "windows_temp"
         } catch { }
         
-        # 3. Limpar prefetch (seguro, Windows recria)
+        # 3. Clean prefetch (safe, Windows recreates)
         try {
             $prefetchPath = "C:\Windows\Prefetch"
             Remove-Item "$prefetchPath\*.pf" -Force -ErrorAction SilentlyContinue
@@ -1478,7 +1477,7 @@ function Invoke-DiskCleanup {
             }
         } catch { }
         
-        # Recalcular uso de disco
+        # Recalculate disk usage
         $diskAfter = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
         $usedPercentAfter = [math]::Round((($diskAfter.Size - $diskAfter.FreeSpace) / $diskAfter.Size) * 100, 1)
         $freedGB = [math]::Round(($diskAfter.FreeSpace - $disk.FreeSpace) / 1GB, 2)
@@ -1544,7 +1543,7 @@ function Invoke-HighCpuProcessCheck {
     )
     
     try {
-        # Coletar processos com alta CPU (usando Get-Counter para CPU real-time)
+        # Collect high-CPU processes using Get-Counter for real-time CPU
         $cpuSamples = @{}
         
         # Primeira amostra
@@ -1885,7 +1884,7 @@ function Send-AutoRepairTelemetry {
         }
         
     } catch {
-        # Silenciar - telemetria nunca deve derrubar o agente
+        # Silent - telemetry should never crash the agent
     }
 }
 
@@ -1969,7 +1968,7 @@ function Send-Heartbeat {
 }
 
 # ============================================
-#  LOOP PRINCIPAL v5.0.1 FULL ENTERPRISE
+#  MAIN LOOP v5.0.2 FULL ENTERPRISE
 # ============================================
 Write-Log "============================================" "INFO"
 Write-Log "[START] CyberShield Agent $($Global:AgentVersion) FULL ENTERPRISE" "INFO"
@@ -1983,7 +1982,7 @@ Write-Log "============================================" "INFO"
 # ============================================
 Set-AgentState -NewState "INITIALIZING" -Reason "Agent startup"
 
-# Restaurar estado anterior se existir
+# Restore previous state if exists
 $savedState = Get-SavedAgentState
 if ($savedState -eq "SAFE_MODE") {
     Write-Log "[STARTUP] Recovering from SAFE_MODE..." "WARN"
@@ -2083,14 +2082,14 @@ while ($true) {
         # AUTO-REPARO A CADA CICLO
         # ============================================
         
-        # Limpeza de disco (verificar a cada 5 min)
+        # Disk cleanup check (every 5 min)
         if (($now - $lastAutoRepair).TotalSeconds -ge 300) {
             $diskResult = Invoke-DiskCleanup
             if ($diskResult.cleaned) {
                 Write-Log "[AUTO-REPAIR] Disk cleanup freed $($diskResult.freed_gb)GB" "SUCCESS"
             }
             
-            # Verificar processos de alta CPU
+            # Check for high-CPU processes
             $cpuResult = Invoke-HighCpuProcessCheck
             if ($cpuResult.killed_count -gt 0) {
                 Write-Log "[AUTO-REPAIR] Killed $($cpuResult.killed_count) high-CPU processes" "SUCCESS"
