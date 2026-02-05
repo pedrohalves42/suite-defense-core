@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Shield, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import logoImage from '@/assets/logo-cybshield.png';
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 
@@ -155,7 +156,7 @@ export const ContactForm = () => {
       
       <div className="relative">
         <div className="flex items-center gap-3 mb-6">
-          <Shield className="w-8 h-8 text-primary" />
+          <img src={logoImage} alt="CyberShield" className="h-10 w-10 object-contain" />
           <div>
             <h3 className="text-2xl font-bold">Fale com vendas</h3>
             <p className="text-muted-foreground">Resposta em ate 24 horas</p>

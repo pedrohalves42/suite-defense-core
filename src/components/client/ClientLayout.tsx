@@ -15,6 +15,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
 import { useClientAccess } from '@/hooks/useClientAccess';
 import { useState } from 'react';
+import logoImage from '@/assets/logo-cybshield.png';
 
 const menuItems = [
   { icon: ShieldCheck, label: 'Minha Proteção', path: '/client/protection' },
@@ -37,9 +38,12 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="p-4 border-b border-border">
-        <h1 className="text-lg font-semibold text-foreground">CyberShield</h1>
+        <div className="flex items-center gap-2">
+          <img src={logoImage} alt="CyberShield" className="h-8 w-auto object-contain" />
+          <span className="text-lg font-semibold text-foreground">CyberShield</span>
+        </div>
         {tenant && (
-          <p className="text-sm text-muted-foreground truncate">{tenant.name}</p>
+          <p className="text-sm text-muted-foreground truncate mt-1">{tenant.name}</p>
         )}
       </div>
 
@@ -94,7 +98,10 @@ export const ClientLayout = () => {
       {/* Mobile Header + Sheet */}
       <div className="flex-1 flex flex-col">
         <header className="md:hidden flex items-center justify-between p-4 border-b border-border">
-          <h1 className="text-lg font-semibold">CyberShield</h1>
+          <div className="flex items-center gap-2">
+            <img src={logoImage} alt="CyberShield" className="h-7 w-auto object-contain" />
+            <span className="text-lg font-semibold">CyberShield</span>
+          </div>
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
