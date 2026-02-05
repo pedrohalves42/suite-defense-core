@@ -84,13 +84,26 @@ export function AgentStateExplainer({ agentId, compact = false }: AgentStateExpl
     );
   }
 
-  if (error || !causality) {
+  // Diferenciar erro técnico de agente não encontrado
+  if (error) {
     return (
       <Alert variant="destructive">
         <AlertOctagon className="h-4 w-4" />
         <AlertTitle>Erro ao carregar estado</AlertTitle>
         <AlertDescription>
-          Não foi possível determinar o estado deste computador.
+          Falha técnica ao consultar os dados. Tente novamente em instantes.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (!causality) {
+    return (
+      <Alert>
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Computador não visível</AlertTitle>
+        <AlertDescription>
+          Este computador não está visível no contexto atual. Verifique se você está na empresa correta e atualize a página.
         </AlertDescription>
       </Alert>
     );
