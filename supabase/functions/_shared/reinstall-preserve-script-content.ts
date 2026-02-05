@@ -228,7 +228,7 @@ Write-Status "=== PHASE 4/6: Download Updated Script ===" "INFO"
 Write-Status "Requesting updated script from server..." "INFO"
 
 \$newScriptContent = \$null
-\$newVersion = "v5.0.1"
+\$newVersion = "v5.0.2"
 
 try {
     # Force TLS 1.2 again before request

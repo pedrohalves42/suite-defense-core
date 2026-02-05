@@ -108,7 +108,7 @@ trap {
 }
 
 # ============================================
-#  VARIAVEIS GLOBAIS
+#  GLOBAL VARIABLES
 # ============================================
 $Global:ServerUrl    = $ServerUrl.TrimEnd('/')
 $Global:AgentToken   = $AgentToken
@@ -295,7 +295,7 @@ function Invoke-SecureRequest {
             $retryCount++
             $errorMsg = $_.Exception.Message
             
-            # Classificar erro como transiente ou permanente
+            # Classify error as transient or permanent
             $isTransient = $errorMsg -match "timeout|connection|network|503|502|504|429"
             
             if ($retryCount -lt $MaxRetries -and $isTransient) {
@@ -362,7 +362,7 @@ function Set-AgentState {
     
     Write-Log "[FSM] State transition: $oldState -> $NewState (Reason: $Reason)" "INFO"
     
-    # Persistir estado
+    # Persist state
     try {
         @{
             state = $NewState
@@ -791,7 +791,7 @@ function Execute-Job {
         $endTime = Get-Date
         $duration = ($endTime - $startTime).TotalSeconds
         
-        # 4. Calcular hash do output
+        # 4. Calculate output hash
         $outputJson = if ($output) { $output | ConvertTo-Json -Compress -Depth 10 } else { "{}" }
         $sha256 = [System.Security.Cryptography.SHA256]::Create()
         $outputHashBytes = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($outputJson))
@@ -837,7 +837,7 @@ function Submit-JobResult {
     try {
         $finishedAt = (Get-Date).ToString("o")
         
-        # Assinar resultado
+        # Sign result
         $signature = Invoke-SignResult `
             -ExecutionId $Job.execution_id `
             -JobId $Job.id `
@@ -1400,7 +1400,7 @@ function Invoke-RestartService {
 }
 
 # ============================================
-#  v5.0: AUTO-REPARO - LIMPEZA DE DISCO
+#  v5.0: AUTO-REPAIR - DISK CLEANUP
 # ============================================
 function Invoke-DiskCleanup {
     <#
@@ -1488,7 +1488,7 @@ function Invoke-DiskCleanup {
         $Global:AutoRepairStats.disk_cleanups++
         $Global:AutoRepairStats.last_disk_cleanup = (Get-Date).ToString("o")
         
-        # Registrar evento
+        # Register event
         $eventData = @{
             event = "disk_cleanup"
             before_percent = $usedPercent
@@ -1531,13 +1531,13 @@ function Invoke-HighCpuProcessCheck {
     
     # Protected processes (NEVER kill)
     $protectedProcesses = @(
-        # Sistema Windows
+        # Windows System
         "System", "Idle", "svchost", "csrss", "smss", "wininit", "winlogon",
         "services", "lsass", "dwm", "explorer", "taskmgr", "RuntimeBroker",
         "spoolsv", "msdtc", "SearchIndexer", "WmiPrvSE",
-        # CyberShield
+        # CyberShield Agent
         "powershell", "CyberShield", "dns-filter",
-        # Common applications
+        # Common Applications
         "chrome", "firefox", "msedge", "code", "Teams", "Outlook",
         "slack", "zoom", "OneDrive", "WINWORD", "EXCEL", "POWERPNT"
     )
@@ -1750,7 +1750,7 @@ function Get-UnauthorizedSoftware {
 }
 
 # ============================================
-#  v5.0: BASELINE DE PROCESSOS
+#  v5.0: PROCESS BASELINE
 # ============================================
 function Initialize-ProcessBaseline {
     <#
@@ -2079,7 +2079,7 @@ while ($true) {
         }
         
         # ============================================
-        # AUTO-REPARO A CADA CICLO
+        # AUTO-REPAIR EACH CYCLE
         # ============================================
         
         # Disk cleanup check (every 5 min)
@@ -2099,7 +2099,7 @@ while ($true) {
         }
         
         # ============================================
-        # HEARTBEAT A CADA INTERVALO
+        # HEARTBEAT EACH INTERVAL
         # ============================================
         if (($now - $lastHeartbeat).TotalSeconds -ge $Global:PollIntervalSeconds -and $networkOk) {
             $hbResult = Send-Heartbeat
