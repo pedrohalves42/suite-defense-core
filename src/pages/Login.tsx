@@ -317,27 +317,54 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-background">
-      {/* Enterprise Background - infraestrutura silenciosa */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(45,158,140,0.02),transparent_60%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.3)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.3)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_70%_50%_at_50%_50%,#000_60%,transparent_100%)] opacity-[0.08] pointer-events-none" />
-      {/* Vignette sutil */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,hsl(var(--background))_100%)] pointer-events-none" />
+      {/* Premium animated background */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(45,158,140,0.08),transparent_50%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_120%,rgba(45,158,140,0.05),transparent_50%)] pointer-events-none" />
       
-      <Card className="w-full max-w-[460px] backdrop-blur-xl bg-card/95 border border-white/[0.06] shadow-[0_0_0_1px_rgba(45,158,140,0.05),0_30px_80px_rgba(0,0,0,0.7)] animate-fade-in relative z-10 rounded-[14px]">
-        <CardHeader className="space-y-1 text-center pb-6 pt-8">
-          <div className="flex justify-center mb-5">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl opacity-60" />
-              <div className="relative bg-card p-4 rounded-full border border-primary/15 shadow-glow-primary">
-                <Shield className="h-10 w-10 text-primary/90" />
+      {/* Animated grid pattern */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--primary)/0.03)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--primary)/0.03)_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_50%,#000_40%,transparent_100%)] pointer-events-none" />
+      
+      {/* Floating orbs */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse pointer-events-none" style={{ animationDuration: '4s' }} />
+      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/5 rounded-full blur-3xl animate-pulse pointer-events-none" style={{ animationDuration: '6s', animationDelay: '2s' }} />
+      
+      {/* Vignette */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,hsl(var(--background))_100%)] pointer-events-none" />
+      
+      <Card className="w-full max-w-[480px] backdrop-blur-2xl bg-gradient-to-b from-card/98 to-card/90 border border-primary/10 shadow-[0_0_0_1px_rgba(45,158,140,0.08),0_8px_32px_rgba(0,0,0,0.4),0_32px_80px_rgba(0,0,0,0.6)] animate-fade-in relative z-10 rounded-2xl overflow-hidden">
+        {/* Top gradient accent line */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+        <CardHeader className="space-y-1 text-center pb-8 pt-10">
+          {/* Logo with premium glow effect */}
+          <div className="flex justify-center mb-6">
+            <div className="relative group">
+              {/* Outer glow rings */}
+              <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-accent/15 to-primary/20 rounded-full blur-2xl opacity-50 group-hover:opacity-70 transition-opacity duration-500" />
+              <div className="absolute -inset-2 bg-primary/10 rounded-full blur-xl opacity-40 animate-pulse" />
+              
+              {/* Logo container with glassmorphism */}
+              <div className="relative bg-gradient-to-br from-card/90 to-card/70 p-5 rounded-2xl border border-primary/20 shadow-[0_0_40px_rgba(45,158,140,0.15)] backdrop-blur-xl group-hover:border-primary/40 transition-all duration-300">
+                <img 
+                  src="/logo-cybshield.png?v=2" 
+                  alt="CyberShield" 
+                  className="h-16 w-16 object-contain drop-shadow-[0_0_8px_rgba(45,158,140,0.4)] group-hover:scale-105 transition-transform duration-300"
+                />
               </div>
             </div>
           </div>
-          <CardTitle className="text-2xl font-semibold text-foreground tracking-tight">
+          
+          {/* Title with gradient text */}
+          <CardTitle className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-primary/80 bg-clip-text text-transparent">
             CyberShield Cloud
           </CardTitle>
-          <CardDescription className="text-sm text-muted-foreground/70 tracking-wide">
-            Acesso seguro ao ambiente protegido
+          
+          {/* Subtitle with security badge */}
+          <CardDescription className="text-sm text-muted-foreground/80 tracking-wide flex items-center justify-center gap-2 pt-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium">
+              <Shield className="h-3 w-3" />
+              Enterprise
+            </span>
+            <span>Acesso seguro ao ambiente protegido</span>
           </CardDescription>
         </CardHeader>
 
