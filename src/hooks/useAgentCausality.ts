@@ -47,21 +47,24 @@ export interface AgentCausality {
   timeInCurrentState?: string;
 }
 
-export function useAgentCausality(agentId: string | null) {
+export function useAgentCausality(agentId: string | null, tenantId?: string | null) {
   const { activeTenant, loading: tenantLoading } = useActiveTenant();
   
+  // Usar tenantId explícito se fornecido, senão fallback para activeTenant
+  const effectiveTenantId = tenantId || activeTenant?.id;
+  
   return useQuery({
-    queryKey: ['agent-causality', activeTenant?.id, agentId],
+    queryKey: ['agent-causality', effectiveTenantId, agentId],
     queryFn: async (): Promise<AgentCausality | null> => {
-      if (!agentId || !activeTenant?.id) return null;
+      if (!agentId || !effectiveTenantId) return null;
 
-      // Buscar dados do agente diretamente (ADR-026) - evita dependência de JWT sincronizado
+      // Buscar via view agents_safe - tem fallback por user_roles e super_admin
+      // Isso evita problemas de RLS restritivo na tabela base
       const { data: agent, error: agentError } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('*')
         .eq('id', agentId)
-        .eq('tenant_id', activeTenant.id)
-        .is('archived_at', null)
+        .eq('tenant_id', effectiveTenantId)
         .maybeSingle();
 
       if (agentError) {
@@ -215,7 +218,7 @@ export function useAgentCausality(agentId: string | null) {
         timeInCurrentState
       };
     },
-    enabled: !!agentId && !tenantLoading && !!activeTenant?.id,
+    enabled: !!agentId && !tenantLoading && !!effectiveTenantId,
     refetchInterval: 30000, // Atualizar a cada 30 segundos
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
