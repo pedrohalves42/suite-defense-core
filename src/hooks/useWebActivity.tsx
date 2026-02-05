@@ -12,20 +12,25 @@ interface WebActivityRow {
 }
 
 async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebActivityItem[]> {
-  // Fetch raw data and aggregate manually
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // Fetch raw data and aggregate manually - expanded to 7 days for better visibility
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  
+  console.log('[useWebActivity] Fetching activity for:', { agentId, tenantId, since: sevenDaysAgo });
   
   // Use explicit any to bypass type inference issues with new columns
   const { data, error } = await tenantQuery('agent_web_activity', tenantId)
     .select('*')
     .eq('agent_id', agentId)
-    .gte('visited_at', oneDayAgo)
-    .order('visited_at', { ascending: false }) as { data: WebActivityRow[] | null; error: Error | null };
+    .gte('visited_at', sevenDaysAgo)
+    .order('visited_at', { ascending: false })
+    .limit(5000) as { data: WebActivityRow[] | null; error: Error | null };
 
   if (error) {
+    console.error('[useWebActivity] Error fetching activity:', error);
     throw new Error(`Failed to fetch web activity: ${error.message}`);
   }
 
+  console.log('[useWebActivity] Fetched rows:', data?.length || 0);
   const rows = data || [];
 
   // Aggregate by domain
