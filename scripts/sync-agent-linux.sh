@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-SOURCE="public/agent-scripts/cybershield-agent-linux-v4.sh"
+ SOURCE="public/agent-scripts/cybershield-agent-linux-v5.sh"
 TARGET="supabase/functions/_shared/agent-script-linux-content.ts"
 
 if [ ! -f "$SOURCE" ]; then
@@ -17,7 +17,7 @@ cat > "$TARGET" <<'EOF'
 /**
  * CyberShield Agent Linux Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
- * Fonte: public/agent-scripts/cybershield-agent-linux-v3.sh
+  * Fonte: public/agent-scripts/cybershield-agent-linux-v5.sh
  */
 
 export const AGENT_SCRIPT_LINUX_SH = `

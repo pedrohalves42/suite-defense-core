@@ -1,0 +1,1150 @@
+ #!/usr/bin/env bash
+ #
+ # CyberShield Agent - macOS v5.0.1 FULL ENTERPRISE
+ #
+ # v5.0.1: Full Enterprise (P0 + P1 + P2) - Bidirectional Signature Chain
+ #
+ # NEW FEATURES:
+ # =============
+ # - SECURITY P0 (CRITICAL):
+ #   * ECDSA P-256 keypair generation and registration on startup
+ #   * Ed25519 job signature verification (format check)
+ #   * Hash Chain: Cryptographic execution chain (execution_hash)
+ #
+ # - AUTO-REMEDIATION P0:
+ #   * Disk cleanup when usage > 95%
+ #   * Auto-kill suspicious processes with CPU > 90%
+ #
+ # - ADVANCED COLLECTION P1:
+ #   * Top 5 processes by CPU and RAM in heartbeat
+ #   * Process baseline anomaly detection
+ #
+ # - NETWORK RESILIENCE P1:
+ #   * Exponential backoff (1s -> 60s)
+ #   * Network Watchdog with connectivity detection
+ #
+ # - JOB EXECUTION P1:
+ #   * Job polling and claiming
+ #   * Signed result submission with ECDSA
+ #
+ # - FSM ENTERPRISE P2:
+ #   * 6 states: INITIALIZING, AUTHENTICATING, SYNCING, ENFORCING, DEGRADED, SAFE_MODE
+ #   * Atomic transitions with logging
+ #   * Local state persistence
+ #
+ # - DNS FILTER P2:
+ #   * Blocklist sync from server
+ #
+ # Usage:
+ #   ./cybershield-agent-macos-v5.sh \
+ #       --server-url "https://your-project.supabase.co" \
+ #       --agent-token "AGENT_TOKEN_HERE" \
+ #       --hmac-secret "64_HEX_CHARS_HERE" \
+ #       --agent-name "my-mac-01"
+ #
+ 
+ set -euo pipefail
+ 
+ # ============================================
+ #  CONSTANTS AND GLOBAL VARIABLES
+ # ============================================
+ AGENT_VERSION="v5.0.1"
+ BASE_DIR="/Library/Application Support/CyberShield"
+ LOG_DIR="${BASE_DIR}/logs"
+ EVIDENCE_DIR="${BASE_DIR}/evidence"
+ CONFIG_DIR="${BASE_DIR}/config"
+ KEYS_DIR="${BASE_DIR}/keys"
+ DATA_DIR="${BASE_DIR}/data"
+ LOG_FILE="${LOG_DIR}/agent.log"
+ EVIDENCE_FILE="${EVIDENCE_DIR}/journal.log"
+ POLL_INTERVAL=60
+ JOB_POLL_INTERVAL=30
+ 
+ # ECDSA P-256 Keys
+ PRIVATE_KEY_PATH="${KEYS_DIR}/agent.key"
+ PUBLIC_KEY_PATH="${KEYS_DIR}/agent.pub"
+ FINGERPRINT_PATH="${KEYS_DIR}/fingerprint.txt"
+ PREVIOUS_KEY_PATH="${KEYS_DIR}/agent.key.prev"
+ SIGNING_FINGERPRINT=""
+ KEY_VERSION=0
+ 
+ # State and Baseline
+ STATE_PATH="${DATA_DIR}/agent_state.json"
+ PROCESS_BASELINE_PATH="${DATA_DIR}/process_baseline.json"
+ DNS_BLOCKLIST_PATH="${DATA_DIR}/dns_blocklist.json"
+ AUTO_REPAIR_LOG="${DATA_DIR}/auto_repair.log"
+ 
+ # Auto-Update + Rollback
+ ROLLBACK_STATE_FILE="${CONFIG_DIR}/rollback_state.json"
+ PREVIOUS_SCRIPT_PATH="${CONFIG_DIR}/agent_previous.sh"
+ 
+ # Ed25519 Public Key for job signature verification
+ ED25519_PUBLIC_KEY="MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZih0iggaoI="
+ 
+ # v5.0.1: FSM Enterprise States
+ declare -A FSM_STATES=(
+     [INITIALIZING]="INITIALIZING"
+     [AUTHENTICATING]="AUTHENTICATING"
+     [SYNCING]="SYNCING"
+     [ENFORCING]="ENFORCING"
+     [DEGRADED]="DEGRADED"
+     [SAFE_MODE]="SAFE_MODE"
+ )
+ CURRENT_STATE="INITIALIZING"
+ 
+ # Valid FSM transitions
+ declare -A STATE_TRANSITIONS=(
+     ["INITIALIZING"]="AUTHENTICATING SAFE_MODE"
+     ["AUTHENTICATING"]="SYNCING DEGRADED SAFE_MODE"
+     ["SYNCING"]="ENFORCING DEGRADED SAFE_MODE"
+     ["ENFORCING"]="SYNCING DEGRADED SAFE_MODE"
+     ["DEGRADED"]="AUTHENTICATING SYNCING ENFORCING SAFE_MODE"
+     ["SAFE_MODE"]="INITIALIZING"
+ )
+ 
+ # v5.0.1: Hash Chain for execution
+ EXECUTION_CHAIN_LAST_HASH="genesis"
+ EXECUTION_CHAIN_INDEX=0
+ 
+ # Auto-repair thresholds
+ DISK_CLEANUP_THRESHOLD=95
+ HIGH_CPU_THRESHOLD=90
+ 
+ # Auto-repair stats
+ AUTO_REPAIR_DISK_CLEANUPS=0
+ AUTO_REPAIR_PROCESSES_KILLED=0
+ AUTO_REPAIR_LAST_DISK_CLEANUP=""
+ AUTO_REPAIR_LAST_PROCESS_KILL=""
+ 
+ # Network
+ NETWORK_TEST_HOST=""
+ NETWORK_TEST_PORT=443
+ CONSECUTIVE_NETWORK_FAILURES=0
+ 
+ # Process baseline array
+ declare -a PROCESS_BASELINE=()
+ 
+ # ============================================
+ #  ARGUMENT PARSING
+ # ============================================
+ while [[ $# -gt 0 ]]; do
+     case $1 in
+         --server-url)
+             SERVER_URL="$2"
+             shift 2
+             ;;
+         --agent-token)
+             AGENT_TOKEN="$2"
+             shift 2
+             ;;
+         --hmac-secret)
+             HMAC_SECRET="$2"
+             shift 2
+             ;;
+         --agent-name)
+             AGENT_NAME="$2"
+             shift 2
+             ;;
+         *)
+             echo "Unknown option: $1"
+             exit 1
+             ;;
+     esac
+ done
+ 
+ # Defaults
+ SERVER_URL="${SERVER_URL:-}"
+ AGENT_TOKEN="${AGENT_TOKEN:-}"
+ HMAC_SECRET="${HMAC_SECRET:-}"
+ AGENT_NAME="${AGENT_NAME:-$(hostname | tr '[:upper:]' '[:lower:]')}"
+ 
+ # Validate required params
+ if [[ -z "$SERVER_URL" || -z "$AGENT_TOKEN" || -z "$HMAC_SECRET" ]]; then
+     echo "ERROR: Missing required parameters"
+     echo "Usage: $0 --server-url URL --agent-token TOKEN --hmac-secret SECRET [--agent-name NAME]"
+     exit 1
+ fi
+ 
+ # Remove trailing slash from SERVER_URL
+ SERVER_URL="${SERVER_URL%/}"
+ 
+ # Extract host for network test
+ NETWORK_TEST_HOST=$(echo "$SERVER_URL" | sed -E 's|https?://||' | sed 's|/.*||')
+ 
+ # ============================================
+ #  CREATE DIRECTORIES
+ # ============================================
+ mkdir -p "$LOG_DIR" "$EVIDENCE_DIR" "$CONFIG_DIR" "$KEYS_DIR" "$DATA_DIR"
+ chmod 700 "$KEYS_DIR"
+ 
+ # ============================================
+ #  LOGGING
+ # ============================================
+ log() {
+     local level="${1:-INFO}"
+     local message="$2"
+     local timestamp
+     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+     local line="[$timestamp] [$level] [$CURRENT_STATE] $message"
+     
+     echo "$line"
+     echo "$line" >> "$LOG_FILE"
+     
+     # Log rotation (keep 10MB max)
+     local log_size
+     log_size=$(stat -f%z "$LOG_FILE" 2>/dev/null || echo 0)
+     if [[ $log_size -gt 10485760 ]]; then
+         mv "$LOG_FILE" "${LOG_FILE}.$(date +%Y%m%d_%H%M%S).bak"
+     fi
+ }
+ 
+ # ============================================
+ #  v5.0.1: FSM ENTERPRISE - STATE MACHINE
+ # ============================================
+ set_agent_state() {
+     local new_state="$1"
+     local reason="${2:-}"
+     local old_state="$CURRENT_STATE"
+     
+     if [[ "$old_state" == "$new_state" ]]; then
+         return 0
+     fi
+     
+     # Validate transition
+     local allowed="${STATE_TRANSITIONS[$old_state]}"
+     if [[ ! " $allowed " =~ " $new_state " ]]; then
+         log "ERROR" "[FSM] Invalid transition: $old_state -> $new_state (allowed: $allowed)"
+         return 1
+     fi
+     
+     CURRENT_STATE="$new_state"
+     log "INFO" "[FSM] State transition: $old_state -> $new_state (Reason: $reason)"
+     
+     # Persist state
+     cat > "$STATE_PATH" <<EOF
+ {"state":"$new_state","previous_state":"$old_state","transition_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")","reason":"$reason"}
+ EOF
+     
+     return 0
+ }
+ 
+ get_saved_state() {
+     if [[ -f "$STATE_PATH" ]]; then
+         python3 -c "import json; print(json.load(open('$STATE_PATH')).get('state', 'INITIALIZING'))" 2>/dev/null || echo "INITIALIZING"
+     else
+         echo "INITIALIZING"
+     fi
+ }
+ 
+ # ============================================
+ #  v5.0.1: SECURE REQUEST WITH EXPONENTIAL BACKOFF
+ # ============================================
+ invoke_secure_request() {
+     local method="$1"
+     local path="$2"
+     local body="${3:-}"
+     local timeout="${4:-30}"
+     local max_retries="${5:-5}"
+     
+     local url
+     if [[ "$path" == http* ]]; then
+         url="$path"
+     else
+         url="${SERVER_URL}${path}"
+     fi
+     
+     local retry_count=0
+     local base_delay=1
+     local max_delay=60
+     
+     while [[ $retry_count -lt $max_retries ]]; do
+         local headers=(
+             -H "User-Agent: CyberShield-Agent/$AGENT_VERSION"
+             -H "X-Agent-Token: $AGENT_TOKEN"
+             -H "X-Agent-Name: $AGENT_NAME"
+         )
+         
+         # HMAC signature if body present
+         if [[ -n "$body" && -n "$HMAC_SECRET" ]]; then
+             local timestamp
+             timestamp=$(date +%s)
+             local nonce
+             nonce=$(uuidgen 2>/dev/null || date +%s%N)
+             local signature_payload="${timestamp}.${nonce}.${body}"
+             local signature
+             signature=$(echo -n "$signature_payload" | openssl dgst -sha256 -hmac "$HMAC_SECRET" | awk '{print $2}')
+             
+             headers+=(
+                 -H "X-HMAC-Signature: $signature"
+                 -H "X-HMAC-Timestamp: $timestamp"
+                 -H "X-HMAC-Nonce: $nonce"
+             )
+         fi
+         
+         local result
+         local http_code
+         
+         if [[ "$method" == "GET" ]]; then
+             result=$(curl -s -w "\n%{http_code}" \
+                 --tlsv1.2 \
+                 --connect-timeout 10 \
+                 --max-time "$timeout" \
+                 "${headers[@]}" \
+                 "$url" 2>/dev/null) || true
+         else
+             result=$(curl -s -w "\n%{http_code}" \
+                 --tlsv1.2 \
+                 --connect-timeout 10 \
+                 --max-time "$timeout" \
+                 -X "$method" \
+                 -H "Content-Type: application/json" \
+                 "${headers[@]}" \
+                 -d "$body" \
+                 "$url" 2>/dev/null) || true
+         fi
+         
+         http_code=$(echo "$result" | tail -n1)
+         local response_body
+         response_body=$(echo "$result" | sed '$d')
+         
+         # Success
+         if [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
+             echo "$response_body"
+             return 0
+         fi
+         
+         # Classify error
+         local is_transient=false
+         if [[ "$http_code" =~ ^(502|503|504|429|000)$ ]]; then
+             is_transient=true
+         fi
+         
+         retry_count=$((retry_count + 1))
+         
+         if [[ "$is_transient" == "true" && $retry_count -lt $max_retries ]]; then
+             local delay=$((base_delay * (2 ** (retry_count - 1))))
+             [[ $delay -gt $max_delay ]] && delay=$max_delay
+             
+             log "WARN" "[NETWORK] Request failed (attempt $retry_count/$max_retries), retrying in ${delay}s (HTTP: $http_code)"
+             sleep "$delay"
+         else
+             log "ERROR" "[NETWORK] Request failed permanently (HTTP: $http_code)"
+             return 1
+         fi
+     done
+     
+     return 1
+ }
+ 
+ # ============================================
+ #  v5.0.1: ECDSA P-256 KEY MANAGEMENT
+ # ============================================
+ generate_signing_keypair() {
+     log "INFO" "[KEYS] Generating new ECDSA P-256 keypair..."
+     
+     # Backup previous key
+     if [[ -f "$PRIVATE_KEY_PATH" ]]; then
+         cp "$PRIVATE_KEY_PATH" "$PREVIOUS_KEY_PATH" 2>/dev/null || true
+     fi
+     
+     # Generate private key
+     openssl ecparam -genkey -name prime256v1 -noout -out "$PRIVATE_KEY_PATH" 2>/dev/null
+     chmod 600 "$PRIVATE_KEY_PATH"
+     
+     # Extract public key
+     openssl ec -in "$PRIVATE_KEY_PATH" -pubout -out "$PUBLIC_KEY_PATH" 2>/dev/null
+     
+     # Calculate fingerprint
+     local fingerprint
+     fingerprint=$(openssl dgst -sha256 "$PUBLIC_KEY_PATH" | awk '{print $2}')
+     echo "$fingerprint" > "$FINGERPRINT_PATH"
+     
+     SIGNING_FINGERPRINT="$fingerprint"
+     log "SUCCESS" "[KEYS] Keypair generated (fingerprint: ${fingerprint:0:16}...)"
+     
+     echo "$fingerprint"
+ }
+ 
+ initialize_agent_keys() {
+     if [[ -f "$PRIVATE_KEY_PATH" && -f "$PUBLIC_KEY_PATH" && -f "$FINGERPRINT_PATH" ]]; then
+         SIGNING_FINGERPRINT=$(cat "$FINGERPRINT_PATH" 2>/dev/null)
+         log "INFO" "[KEYS] Loaded existing keypair (fingerprint: ${SIGNING_FINGERPRINT:0:16}...)"
+         return 0
+     fi
+     
+     log "INFO" "[KEYS] No existing keypair found, generating new one..."
+     SIGNING_FINGERPRINT=$(generate_signing_keypair)
+     
+     if [[ -z "$SIGNING_FINGERPRINT" ]]; then
+         log "ERROR" "[KEYS] Failed to generate keypair"
+         return 1
+     fi
+     
+     return 0
+ }
+ 
+ register_agent_key() {
+     log "INFO" "[KEYS] Registering public key with server..."
+     
+     local public_key_b64
+     public_key_b64=$(base64 "$PUBLIC_KEY_PATH" 2>/dev/null | tr -d '\n')
+     
+     local body
+     body=$(cat <<EOF
+ {"public_key":"$public_key_b64","key_fingerprint":"$SIGNING_FINGERPRINT","algorithm":"ECDSA-P256-SHA256"}
+ EOF
+ )
+     
+     local result
+     result=$(invoke_secure_request "POST" "/functions/v1/register-agent-key" "$body" 30)
+     
+     if [[ $? -eq 0 ]]; then
+         KEY_VERSION=$(python3 -c "import json; print(json.loads('$result').get('version', 1))" 2>/dev/null || echo 1)
+         log "SUCCESS" "[KEYS] Public key registered successfully (version: $KEY_VERSION)"
+         return 0
+     else
+         log "WARN" "[KEYS] Failed to register public key (will retry later)"
+         return 1
+     fi
+ }
+ 
+ sign_execution_result() {
+     local execution_id="$1"
+     local job_id="$2"
+     local status="$3"
+     local output_hash="$4"
+     local finished_at="$5"
+     
+     # Canonical payload: execution_id:job_id:status:output_hash:finished_at
+     local canonical="${execution_id}:${job_id}:${status}:${output_hash}:${finished_at}"
+     
+     local signature
+     signature=$(echo -n "$canonical" | openssl dgst -sha256 -sign "$PRIVATE_KEY_PATH" 2>/dev/null | base64 2>/dev/null | tr -d '\n')
+     
+     echo "$signature"
+ }
+ 
+ # ============================================
+ #  v5.0.1: ED25519 JOB SIGNATURE VERIFICATION
+ # ============================================
+ verify_job_signature() {
+     local job="$1"
+     
+     local signature
+     signature=$(python3 -c "import json; print(json.loads('$job').get('payload_signature', ''))" 2>/dev/null)
+     
+     if [[ -z "$signature" ]]; then
+         log "ERROR" "[VERIFY] Job has no signature - REJECTED"
+         return 1
+     fi
+     
+     # Validate Ed25519 signature format (64 bytes)
+     local sig_bytes
+     sig_bytes=$(echo -n "$signature" | base64 -D 2>/dev/null | wc -c | tr -d ' ')
+     
+     if [[ "$sig_bytes" -ne 64 ]]; then
+         log "ERROR" "[VERIFY] Invalid Ed25519 signature length"
+         return 1
+     fi
+     
+     log "DEBUG" "[VERIFY] Job signature format valid"
+     return 0
+ }
+ 
+ # ============================================
+ #  v5.0.1: HASH CHAIN - EXECUTION INTEGRITY
+ # ============================================
+ get_execution_hash() {
+     local execution_id="$1"
+     local job_id="$2"
+     local previous_hash="$3"
+     
+     EXECUTION_CHAIN_INDEX=$((EXECUTION_CHAIN_INDEX + 1))
+     local index=$EXECUTION_CHAIN_INDEX
+     
+     # Hash = SHA256(execution_id + job_id + previous_hash + index)
+     local payload="${execution_id}:${job_id}:${previous_hash}:${index}"
+     
+     local hash
+     hash=$(echo -n "$payload" | shasum -a 256 | cut -d' ' -f1)
+     
+     EXECUTION_CHAIN_LAST_HASH="$hash"
+     
+     echo "{\"execution_hash\":\"$hash\",\"previous_execution_hash\":\"$previous_hash\",\"execution_index\":$index}"
+ }
+ 
+ # ============================================
+ #  v5.0.1: JOB POLLING AND EXECUTION
+ # ============================================
+ poll_jobs() {
+     log "DEBUG" "[POLL-JOBS] Checking for pending jobs..."
+     
+     local result
+     result=$(invoke_secure_request "GET" "/functions/v1/poll-jobs" "" 15 2)
+     
+     if [[ $? -ne 0 ]]; then
+         log "WARN" "[POLL-JOBS] Failed to poll"
+         echo "[]"
+         return 1
+     fi
+     
+     local jobs
+     jobs=$(python3 -c "import json; print(json.dumps(json.loads('$result').get('jobs', [])))" 2>/dev/null || echo '[]')
+     local count
+     count=$(python3 -c "import json; print(len(json.loads('$jobs')))" 2>/dev/null || echo 0)
+     
+     if [[ "$count" -gt 0 ]]; then
+         log "INFO" "[POLL-JOBS] Received $count job(s)"
+     fi
+     
+     echo "$jobs"
+ }
+ 
+ execute_job() {
+     local job="$1"
+     local start_time
+     start_time=$(date +%s)
+     
+     local execution_id
+     execution_id=$(python3 -c "import json; print(json.loads('$job').get('execution_id', ''))" 2>/dev/null)
+     local job_id
+     job_id=$(python3 -c "import json; print(json.loads('$job').get('id', ''))" 2>/dev/null)
+     local job_type
+     job_type=$(python3 -c "import json; print(json.loads('$job').get('job_type', ''))" 2>/dev/null)
+     
+     log "INFO" "[JOB] Starting execution: $job_type (ID: $job_id)"
+     
+     # 1. Verify job signature
+     if ! verify_job_signature "$job"; then
+         echo '{"success":false,"status":"failed","error_message":"Job signature verification failed"}'
+         return 1
+     fi
+     
+     # 2. Calculate execution hash
+     local hash_data
+     hash_data=$(get_execution_hash "$execution_id" "$job_id" "$EXECUTION_CHAIN_LAST_HASH")
+     
+     # 3. Execute job based on type
+     local output=""
+     local error_message=""
+     local status="completed"
+     
+     case "$job_type" in
+         "software_inventory_collect")
+             output=$(collect_software_inventory)
+             ;;
+         "collect_antivirus_status")
+             output=$(collect_antivirus_status)
+             ;;
+         "collect_network_info")
+             output=$(collect_network_info)
+             ;;
+         "fix_firewall")
+             output=$(fix_firewall "$job")
+             ;;
+         *)
+             error_message="Unknown job type: $job_type"
+             status="failed"
+             log "WARN" "[JOB] Unknown job type: $job_type"
+             ;;
+     esac
+     
+     local end_time
+     end_time=$(date +%s)
+     local duration=$((end_time - start_time))
+     
+     # 4. Calculate output hash
+     local output_hash
+     output_hash=$(echo -n "$output" | shasum -a 256 | cut -d' ' -f1)
+     
+     log "SUCCESS" "[JOB] Completed $job_type in ${duration}s (status: $status)"
+     
+     local exec_hash
+     exec_hash=$(python3 -c "import json; print(json.loads('$hash_data').get('execution_hash', ''))" 2>/dev/null)
+     local prev_hash
+     prev_hash=$(python3 -c "import json; print(json.loads('$hash_data').get('previous_execution_hash', ''))" 2>/dev/null)
+     local exec_index
+     exec_index=$(python3 -c "import json; print(json.loads('$hash_data').get('execution_index', 0))" 2>/dev/null)
+     
+     cat <<EOF
+ {"success":true,"status":"$status","output":$output,"output_hash":"$output_hash","error_message":"$error_message","duration_seconds":$duration,"execution_hash":"$exec_hash","previous_execution_hash":"$prev_hash","execution_index":$exec_index}
+ EOF
+ }
+ 
+ submit_job_result() {
+     local job="$1"
+     local result="$2"
+     
+     local execution_id
+     execution_id=$(python3 -c "import json; print(json.loads('$job').get('execution_id', ''))" 2>/dev/null)
+     local job_id
+     job_id=$(python3 -c "import json; print(json.loads('$job').get('id', ''))" 2>/dev/null)
+     local status
+     status=$(python3 -c "import json; print(json.loads('$result').get('status', ''))" 2>/dev/null)
+     local output_hash
+     output_hash=$(python3 -c "import json; print(json.loads('$result').get('output_hash', ''))" 2>/dev/null)
+     local finished_at
+     finished_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+     
+     # Sign result
+     local signature
+     signature=$(sign_execution_result "$execution_id" "$job_id" "$status" "$output_hash" "$finished_at")
+     
+     local output
+     output=$(python3 -c "import json; print(json.dumps(json.loads('$result').get('output', {})))" 2>/dev/null || echo '{}')
+     local error_message
+     error_message=$(python3 -c "import json; print(json.loads('$result').get('error_message', ''))" 2>/dev/null)
+     local exec_hash
+     exec_hash=$(python3 -c "import json; print(json.loads('$result').get('execution_hash', ''))" 2>/dev/null)
+     local prev_hash
+     prev_hash=$(python3 -c "import json; print(json.loads('$result').get('previous_execution_hash', ''))" 2>/dev/null)
+     local exec_index
+     exec_index=$(python3 -c "import json; print(json.loads('$result').get('execution_index', 0))" 2>/dev/null)
+     
+     local payload
+     payload=$(cat <<EOF
+ {"execution_id":"$execution_id","job_id":"$job_id","status":"$status","output":$output,"output_hash":"$output_hash","error_message":"$error_message","finished_at":"$finished_at","result_signature":"$signature","execution_hash":"$exec_hash","previous_execution_hash":"$prev_hash","execution_index":$exec_index,"agent_version":"$AGENT_VERSION"}
+ EOF
+ )
+     
+     log "DEBUG" "[SUBMIT] Submitting result for job $job_id..."
+     
+     local response
+     response=$(invoke_secure_request "POST" "/functions/v1/submit-job-result" "$payload" 30 3)
+     
+     if [[ $? -eq 0 ]]; then
+         log "SUCCESS" "[SUBMIT] Result submitted successfully for job $job_id"
+         return 0
+     fi
+     
+     log "ERROR" "[SUBMIT] Failed to submit result"
+     return 1
+ }
+ 
+ # ============================================
+ #  JOB HANDLERS
+ # ============================================
+ collect_software_inventory() {
+     local software_list='[]'
+     local count=0
+     
+     # Get installed applications from /Applications
+     if [[ -d "/Applications" ]]; then
+         software_list=$(ls -1 /Applications 2>/dev/null | grep "\.app$" | while read app; do
+             echo "{\"name\":\"$app\",\"version\":\"\"}"
+         done | paste -sd',' - | sed 's/^/[/' | sed 's/$/]/')
+         count=$(ls -1 /Applications 2>/dev/null | grep "\.app$" | wc -l | tr -d ' ')
+     fi
+     
+     # Also check Homebrew if available
+     if command -v brew &>/dev/null; then
+         local brew_count
+         brew_count=$(brew list 2>/dev/null | wc -l | tr -d ' ')
+         count=$((count + brew_count))
+     fi
+     
+     cat <<EOF
+ {"software_count":$count,"software_list":$software_list,"collected_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+ EOF
+ }
+ 
+ collect_antivirus_status() {
+     local av_list='[]'
+     
+     # Check for XProtect (built-in macOS protection)
+     local xprotect_version
+     xprotect_version=$(/usr/libexec/xprotect_config version 2>/dev/null | head -1 || echo "unknown")
+     av_list="[{\"name\":\"XProtect\",\"version\":\"$xprotect_version\",\"state\":\"active\"}]"
+     
+     cat <<EOF
+ {"antivirus_products":$av_list,"count":1,"collected_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+ EOF
+ }
+ 
+ collect_network_info() {
+     local adapters='[]'
+     local ip_addresses='[]'
+     
+     # Get network interfaces
+     adapters=$(ifconfig -l 2>/dev/null | tr ' ' '\n' | while read iface; do
+         local mac
+         mac=$(ifconfig "$iface" 2>/dev/null | grep ether | awk '{print $2}' || echo "")
+         if [[ -n "$mac" ]]; then
+             echo "{\"name\":\"$iface\",\"mac\":\"$mac\",\"state\":\"active\"}"
+         fi
+     done | paste -sd',' - | sed 's/^/[/' | sed 's/$/]/')
+     
+     # Get IP addresses
+     ip_addresses=$(ifconfig 2>/dev/null | grep "inet " | grep -v "127.0.0.1" | awk '{print "{\"ip\":\"" $2 "\",\"prefix\":24}"}' | paste -sd',' - | sed 's/^/[/' | sed 's/$/]/')
+     
+     cat <<EOF
+ {"adapters":$adapters,"ip_addresses":$ip_addresses,"collected_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+ EOF
+ }
+ 
+ fix_firewall() {
+     local job="$1"
+     local payload
+     payload=$(python3 -c "import json; print(json.dumps(json.loads('$job').get('payload', {})))" 2>/dev/null || echo '{}')
+     
+     local results='{}'
+     
+     # macOS Application Firewall
+     local enable
+     enable=$(python3 -c "import json; print(json.loads('$payload').get('enable', False))" 2>/dev/null)
+     
+     if [[ "$enable" == "True" || "$enable" == "true" ]]; then
+         /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on 2>/dev/null || true
+         results='{"firewall":"enabled"}'
+     fi
+     
+     cat <<EOF
+ {"success":true,"changes":$results,"applied_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+ EOF
+ }
+ 
+ # ============================================
+ #  v5.0.1: DNS BLOCKLIST SYNC
+ # ============================================
+ sync_dns_blocklist() {
+     local result
+     result=$(invoke_secure_request "GET" "/functions/v1/serve-dns-filter" "" 15 2)
+     
+     if [[ $? -ne 0 ]]; then
+         return 1
+     fi
+     
+     local count
+     count=$(python3 -c "import json; print(len(json.loads('$result').get('domains', [])))" 2>/dev/null || echo 0)
+     
+     if [[ "$count" -gt 0 ]]; then
+         echo "$result" > "$DNS_BLOCKLIST_PATH"
+         log "INFO" "[DNS] Synced $count blocked domains"
+         return 0
+     fi
+     
+     return 1
+ }
+ 
+ # ============================================
+ #  v5.0.1: NETWORK WATCHDOG
+ # ============================================
+ test_network_connectivity() {
+     if nc -z -w5 "$NETWORK_TEST_HOST" "$NETWORK_TEST_PORT" 2>/dev/null; then
+         return 0
+     fi
+     return 1
+ }
+ 
+ # ============================================
+ #  v5.0.1: AUTO-REPAIR - DISK CLEANUP
+ # ============================================
+ invoke_disk_cleanup() {
+     local disk_usage
+     disk_usage=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
+     
+     if [[ "$disk_usage" -lt "$DISK_CLEANUP_THRESHOLD" ]]; then
+         echo '{"cleaned":false,"reason":"disk_ok","usage_percent":'$disk_usage'}'
+         return 0
+     fi
+     
+     log "WARN" "[DISK-CLEANUP] Disk usage at $disk_usage% (threshold: $DISK_CLEANUP_THRESHOLD%). Starting cleanup..."
+     
+     local actions=()
+     
+     # Clean user caches
+     rm -rf ~/Library/Caches/* 2>/dev/null || true
+     actions+=("user_caches")
+     
+     # Clean system caches (requires sudo)
+     rm -rf /Library/Caches/* 2>/dev/null || true
+     actions+=("system_caches")
+     
+     # Clean old logs
+     find /var/log -type f -mtime +7 -delete 2>/dev/null || true
+     actions+=("old_logs")
+     
+     # Clean Homebrew cache if available
+     if command -v brew &>/dev/null; then
+         brew cleanup --prune=7 2>/dev/null || true
+         actions+=("brew_cleanup")
+     fi
+     
+     local disk_usage_after
+     disk_usage_after=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
+     local freed_percent=$((disk_usage - disk_usage_after))
+     
+     log "SUCCESS" "[DISK-CLEANUP] Completed. Usage: $disk_usage% -> $disk_usage_after% (freed: ${freed_percent}%)"
+     
+     AUTO_REPAIR_DISK_CLEANUPS=$((AUTO_REPAIR_DISK_CLEANUPS + 1))
+     AUTO_REPAIR_LAST_DISK_CLEANUP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+     
+     echo '{"cleaned":true,"before_percent":'$disk_usage',"after_percent":'$disk_usage_after',"freed_percent":'$freed_percent'}'
+ }
+ 
+ # ============================================
+ #  v5.0.1: AUTO-REPAIR - HIGH CPU PROCESS CHECK
+ # ============================================
+ invoke_high_cpu_process_check() {
+     # Protected processes (NEVER kill)
+     local protected_processes=(
+         "launchd" "kernel_task" "WindowServer" "loginwindow"
+         "syslogd" "mds_stores" "securityd" "opendirectoryd"
+         "diskarbitrationd" "configd" "coreaudiod"
+         "bash" "zsh" "cybershield"
+     )
+     
+     local killed_count=0
+     
+     # Get processes using more than threshold CPU
+     local high_cpu_procs
+     high_cpu_procs=$(ps aux | awk -v threshold="$HIGH_CPU_THRESHOLD" 'NR>1 && $3 > threshold {print $2 ":" $11 ":" $3}' | head -5)
+     
+     for proc_info in $high_cpu_procs; do
+         local pid
+         pid=$(echo "$proc_info" | cut -d: -f1)
+         local name
+         name=$(echo "$proc_info" | cut -d: -f2 | sed 's|.*/||')
+         local cpu
+         cpu=$(echo "$proc_info" | cut -d: -f3)
+         
+         # Check if protected
+         local is_protected=false
+         for p in "${protected_processes[@]}"; do
+             if [[ "$name" == *"$p"* ]]; then
+                 is_protected=true
+                 break
+             fi
+         done
+         
+         if [[ "$is_protected" == "false" ]]; then
+             log "WARN" "[PROCESS-CHECK] High CPU detected: $name (PID: $pid) at $cpu%"
+             
+             # Check if in baseline
+             local in_baseline=false
+             for baseline_proc in "${PROCESS_BASELINE[@]}"; do
+                 if [[ "$baseline_proc" == "$name" ]]; then
+                     in_baseline=true
+                     break
+                 fi
+             done
+             
+             if [[ "$in_baseline" == "false" ]]; then
+                 log "WARN" "[PROCESS-CHECK] Process $name NOT in baseline - killing..."
+                 kill -9 "$pid" 2>/dev/null || true
+                 killed_count=$((killed_count + 1))
+                 log "SUCCESS" "[PROCESS-CHECK] Killed suspicious process: $name (PID: $pid)"
+             fi
+         fi
+     done
+     
+     if [[ $killed_count -gt 0 ]]; then
+         AUTO_REPAIR_PROCESSES_KILLED=$((AUTO_REPAIR_PROCESSES_KILLED + killed_count))
+         AUTO_REPAIR_LAST_PROCESS_KILL=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+     fi
+     
+     echo '{"checked":true,"killed_count":'$killed_count'}'
+ }
+ 
+ # ============================================
+ #  v5.0.1: TOP PROCESSES COLLECTION
+ # ============================================
+ get_top_processes() {
+     local top_by_cpu
+     top_by_cpu=$(ps aux -r | awk 'NR>1 && NR<=6 {printf "{\"name\":\"%s\",\"pid\":%s,\"cpu_percent\":%.1f,\"memory_mb\":%.1f},", $11, $2, $3, $6/1024}' | sed 's/,$//')
+     
+     local top_by_memory
+     top_by_memory=$(ps aux -m | awk 'NR>1 && NR<=6 {printf "{\"name\":\"%s\",\"pid\":%s,\"cpu_percent\":%.1f,\"memory_mb\":%.1f},", $11, $2, $3, $6/1024}' | sed 's/,$//')
+     
+     local total_procs
+     total_procs=$(ps aux | wc -l | tr -d ' ')
+     
+     cat <<EOF
+ {"top_by_cpu":[$top_by_cpu],"top_by_memory":[$top_by_memory],"total_processes":$total_procs,"collected_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+ EOF
+ }
+ 
+ # ============================================
+ #  v5.0.1: PROCESS BASELINE
+ # ============================================
+ initialize_process_baseline() {
+     if [[ -f "$PROCESS_BASELINE_PATH" ]]; then
+         while IFS= read -r proc; do
+             PROCESS_BASELINE+=("$proc")
+         done < <(python3 -c "import json; [print(p['name']) for p in json.load(open('$PROCESS_BASELINE_PATH'))]" 2>/dev/null)
+         log "INFO" "[BASELINE] Loaded baseline with ${#PROCESS_BASELINE[@]} processes"
+     else
+         log "INFO" "[BASELINE] Creating initial process baseline..."
+         
+         local baseline='['
+         local first=true
+         for proc in $(ps -eo comm= | sort -u); do
+             if [[ "$first" == "true" ]]; then
+                 first=false
+             else
+                 baseline+=','
+             fi
+             baseline+="{\"name\":\"$proc\",\"first_seen\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}"
+             PROCESS_BASELINE+=("$proc")
+         done
+         baseline+=']'
+         
+         echo "$baseline" > "$PROCESS_BASELINE_PATH"
+         log "SUCCESS" "[BASELINE] Created baseline with ${#PROCESS_BASELINE[@]} processes"
+     fi
+ }
+ 
+ get_process_anomalies() {
+     local anomaly_count=0
+     
+     for proc in $(ps -eo comm= | sort -u); do
+         local found=false
+         for baseline_proc in "${PROCESS_BASELINE[@]}"; do
+             if [[ "$proc" == "$baseline_proc" ]]; then
+                 found=true
+                 break
+             fi
+         done
+         
+         if [[ "$found" == "false" ]]; then
+             anomaly_count=$((anomaly_count + 1))
+             PROCESS_BASELINE+=("$proc")
+         fi
+     done
+     
+     if [[ $anomaly_count -gt 0 ]]; then
+         log "WARN" "[BASELINE] Detected $anomaly_count new processes"
+     fi
+     
+     echo '{"anomaly_count":'$anomaly_count'}'
+ }
+ 
+ # ============================================
+ #  SYSTEM METRICS
+ # ============================================
+ get_system_metrics() {
+     local cpu_percent
+     cpu_percent=$(top -l 1 | grep "CPU usage" | awk '{print $3}' | tr -d '%' 2>/dev/null || echo 0)
+     
+     local mem_info
+     mem_info=$(vm_stat 2>/dev/null)
+     local page_size=4096
+     local pages_free
+     pages_free=$(echo "$mem_info" | grep "Pages free" | awk '{print $3}' | tr -d '.')
+     local pages_active
+     pages_active=$(echo "$mem_info" | grep "Pages active" | awk '{print $3}' | tr -d '.')
+     
+     local mem_total
+     mem_total=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
+     local mem_used=$((pages_active * page_size))
+     local mem_percent
+     if [[ $mem_total -gt 0 ]]; then
+         mem_percent=$(echo "scale=2; $mem_used * 100 / $mem_total" | bc 2>/dev/null || echo 0)
+     else
+         mem_percent=0
+     fi
+     
+     local disk_info
+     disk_info=$(df / | tail -1)
+     local disk_percent
+     disk_percent=$(echo "$disk_info" | awk '{print $5}' | tr -d '%')
+     
+     local uptime_seconds
+     uptime_seconds=$(sysctl -n kern.boottime 2>/dev/null | awk '{print $4}' | tr -d ',')
+     local now
+     now=$(date +%s)
+     if [[ -n "$uptime_seconds" ]]; then
+         uptime_seconds=$((now - uptime_seconds))
+     else
+         uptime_seconds=0
+     fi
+     
+     cat <<EOF
+ {"cpu_percent":$cpu_percent,"memory_total_gb":$(echo "scale=2; $mem_total / 1073741824" | bc 2>/dev/null || echo 0),"memory_used_gb":$(echo "scale=2; $mem_used / 1073741824" | bc 2>/dev/null || echo 0),"memory_used_percent":$mem_percent,"disk_used_percent":$disk_percent,"uptime_seconds":$uptime_seconds}
+ EOF
+ }
+ 
+ # ============================================
+ #  HEARTBEAT
+ # ============================================
+ send_heartbeat() {
+     log "DEBUG" "[HEARTBEAT] Sending heartbeat..."
+     
+     local metrics
+     metrics=$(get_system_metrics)
+     local top_processes
+     top_processes=$(get_top_processes)
+     local anomalies
+     anomalies=$(get_process_anomalies)
+     local anomaly_count
+     anomaly_count=$(python3 -c "import json; print(json.loads('$anomalies').get('anomaly_count', 0))" 2>/dev/null || echo 0)
+     
+     local payload
+     payload=$(cat <<EOF
+ {"agent_name":"$AGENT_NAME","agent_version":"$AGENT_VERSION","hostname":"$(hostname)","timestamp":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")","system_metrics":$metrics,"processes":$top_processes,"process_anomaly_count":$anomaly_count,"auto_repair_stats":{"disk_cleanups":$AUTO_REPAIR_DISK_CLEANUPS,"processes_killed":$AUTO_REPAIR_PROCESSES_KILLED,"last_disk_cleanup":"$AUTO_REPAIR_LAST_DISK_CLEANUP","last_process_kill":"$AUTO_REPAIR_LAST_PROCESS_KILL"},"state":"$CURRENT_STATE"}
+ EOF
+ )
+     
+     local result
+     result=$(invoke_secure_request "POST" "/functions/v1/heartbeat" "$payload" 30 3)
+     
+     if [[ $? -eq 0 ]]; then
+         log "SUCCESS" "[HEARTBEAT] Sent successfully"
+         return 0
+     else
+         log "ERROR" "[HEARTBEAT] Failed"
+         return 1
+     fi
+ }
+ 
+ # ============================================
+ #  MAIN LOOP v5.0.1 FULL ENTERPRISE
+ # ============================================
+ log "============================================"
+ log "INFO" "[START] CyberShield Agent $AGENT_VERSION FULL ENTERPRISE"
+ log "DEBUG" "[INFO] ServerUrl: $SERVER_URL"
+ log "DEBUG" "[INFO] AgentName: $AGENT_NAME"
+ log "INFO" "[INFO] Features: ECDSA-signing, Ed25519-verify, hash-chain, FSM, DNS-filter, auto-remediation"
+ log "============================================"
+ 
+ # ============================================
+ #  PHASE 1: INITIALIZATION
+ # ============================================
+ set_agent_state "INITIALIZING" "Agent startup"
+ 
+ # Restore previous state if exists
+ saved_state=$(get_saved_state)
+ if [[ "$saved_state" == "SAFE_MODE" ]]; then
+     log "WARN" "[STARTUP] Recovering from SAFE_MODE..."
+ fi
+ 
+ # Initialize ECDSA keys
+ keys_initialized=false
+ if initialize_agent_keys; then
+     keys_initialized=true
+ else
+     log "ERROR" "[STARTUP] Failed to initialize keys - entering DEGRADED mode"
+ fi
+ 
+ # ============================================
+ #  PHASE 2: AUTHENTICATION
+ # ============================================
+ set_agent_state "AUTHENTICATING" "Validating credentials"
+ 
+ # Send first heartbeat
+ heartbeat_success=false
+ if send_heartbeat; then
+     heartbeat_success=true
+     
+     # Register public key
+     if [[ "$keys_initialized" == "true" ]]; then
+         register_agent_key || log "WARN" "[STARTUP] Key registration failed"
+     fi
+ else
+     log "WARN" "[STARTUP] Initial heartbeat failed - entering DEGRADED mode"
+     set_agent_state "DEGRADED" "Heartbeat failed"
+ fi
+ 
+ # ============================================
+ #  PHASE 3: SYNCHRONIZATION
+ # ============================================
+ set_agent_state "SYNCING" "Syncing policies and baseline"
+ 
+ # Initialize process baseline
+ initialize_process_baseline
+ 
+ # Sync DNS blocklist
+ sync_dns_blocklist || true
+ 
+ # ============================================
+ #  PHASE 4: ENFORCEMENT
+ # ============================================
+ set_agent_state "ENFORCING" "Normal operation"
+ 
+ log "SUCCESS" "[STARTUP] Agent fully operational in ENFORCING state"
+ 
+ last_heartbeat=$(date +%s)
+ last_auto_repair=$(date +%s)
+ last_job_poll=$(date +%s)
+ last_dns_sync=$(date +%s)
+ 
+ while true; do
+     now=$(date +%s)
+     
+     # ============================================
+     # NETWORK WATCHDOG
+     # ============================================
+     network_ok=false
+     if test_network_connectivity; then
+         network_ok=true
+         if [[ $CONSECUTIVE_NETWORK_FAILURES -ge 3 && "$CURRENT_STATE" == "DEGRADED" ]]; then
+             set_agent_state "ENFORCING" "Network restored"
+         fi
+         CONSECUTIVE_NETWORK_FAILURES=0
+     else
+         CONSECUTIVE_NETWORK_FAILURES=$((CONSECUTIVE_NETWORK_FAILURES + 1))
+         if [[ $CONSECUTIVE_NETWORK_FAILURES -ge 3 ]]; then
+             set_agent_state "DEGRADED" "Network connectivity lost"
+         fi
+     fi
+     
+     # ============================================
+     # JOB POLLING AND EXECUTION
+     # ============================================
+     if [[ $((now - last_job_poll)) -ge $JOB_POLL_INTERVAL && "$network_ok" == "true" ]]; then
+         jobs=$(poll_jobs)
+         
+         # Process each job
+         echo "$jobs" | python3 -c "import sys,json; [print(json.dumps(j)) for j in json.loads(sys.stdin.read())]" 2>/dev/null | while read -r job; do
+             if [[ -n "$job" ]]; then
+                 result=$(execute_job "$job")
+                 submit_job_result "$job" "$result"
+             fi
+         done
+         
+         last_job_poll=$now
+     fi
+     
+     # ============================================
+     # AUTO-REPAIR EVERY 5 MINUTES
+     # ============================================
+     if [[ $((now - last_auto_repair)) -ge 300 ]]; then
+         # Disk cleanup
+         disk_result=$(invoke_disk_cleanup)
+         if python3 -c "import json; exit(0 if json.loads('$disk_result').get('cleaned') else 1)" 2>/dev/null; then
+             freed=$(python3 -c "import json; print(json.loads('$disk_result').get('freed_percent', 0))" 2>/dev/null)
+             log "SUCCESS" "[AUTO-REPAIR] Disk cleanup freed ${freed}%"
+         fi
+         
+         # High CPU process check
+         cpu_result=$(invoke_high_cpu_process_check)
+         killed=$(python3 -c "import json; print(json.loads('$cpu_result').get('killed_count', 0))" 2>/dev/null)
+         if [[ "$killed" -gt 0 ]]; then
+             log "SUCCESS" "[AUTO-REPAIR] Killed $killed high-CPU processes"
+         fi
+         
+         last_auto_repair=$now
+     fi
+     
+     # ============================================
+     # HEARTBEAT EVERY INTERVAL
+     # ============================================
+     if [[ $((now - last_heartbeat)) -ge $POLL_INTERVAL && "$network_ok" == "true" ]]; then
+         if ! send_heartbeat; then
+             if [[ "$CURRENT_STATE" == "ENFORCING" ]]; then
+                 set_agent_state "DEGRADED" "Heartbeat failed"
+             fi
+         fi
+         last_heartbeat=$now
+     fi
+     
+     # ============================================
+     # DNS BLOCKLIST SYNC (1x per hour)
+     # ============================================
+     if [[ $((now - last_dns_sync)) -ge 3600 && "$network_ok" == "true" ]]; then
+         sync_dns_blocklist || true
+         last_dns_sync=$now
+     fi
+     
+     sleep 2
+ done
