@@ -286,7 +286,7 @@ export function InsightInvestigationDrawer({
 
               {/* Agent state */}
               {item.agent_id && (
-                <AgentStateExplainer agentId={item.agent_id} compact />
+                <AgentStateExplainer agentId={item.agent_id} tenantId={tenant?.id} compact />
               )}
             </TabsContent>
             

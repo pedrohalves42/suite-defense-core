@@ -59,11 +59,12 @@ const STATE_LABELS: Record<AgentState, string> = {
 
 interface AgentStateExplainerProps {
   agentId: string | null;
+  tenantId?: string | null;
   compact?: boolean;
 }
 
-export function AgentStateExplainer({ agentId, compact = false }: AgentStateExplainerProps) {
-  const { data: causality, isLoading, error } = useAgentCausality(agentId);
+export function AgentStateExplainer({ agentId, tenantId, compact = false }: AgentStateExplainerProps) {
+  const { data: causality, isLoading, error } = useAgentCausality(agentId, tenantId);
   const [showAllTransitions, setShowAllTransitions] = useState(false);
 
   if (!agentId) {
