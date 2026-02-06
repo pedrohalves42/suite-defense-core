@@ -25,6 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { DiagnosticPanel } from '@/components/agent/DiagnosticPanel';
+import { PreserveReinstallSection } from '@/components/admin/PreserveReinstallSection';
 import { AgentStateExplainer } from '@/components/agent/AgentStateExplainer';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { JobLiveMonitor } from '@/components/admin/JobLiveMonitor';
@@ -851,11 +852,16 @@ export default function DiagnosticsCenter() {
                     </Card>
                   </div>
 
+                  {/* Preserve Reinstall Section - RECOMMENDED */}
+                  <div className="mb-6">
+                    <PreserveReinstallSection />
+                  </div>
+
                   {/* Original Tools */}
                   <div>
                     <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
                       <Wrench className="h-4 w-4" />
-                      Ferramentas de Reinstalação
+                      Reinstalação Limpa (novo registro)
                     </h4>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Card>
