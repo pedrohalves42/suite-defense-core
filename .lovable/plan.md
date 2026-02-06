@@ -1,91 +1,108 @@
 
-# Correção de Erros nos Dashboards Admin
+# Correção de Erros no Painel Administrativo
 
-## Diagnóstico
+## Problemas Identificados
 
-Através da análise de logs e requisições de rede, identifiquei que **várias Edge Functions críticas estão retornando 404 (não encontrado)**. Isso significa que elas existem no código, mas não estão ativas no ambiente de produção.
+### Erro 1: "Computador não visível" no drawer (MIT-SERVIDOR)
+O drawer de detalhes do agente recebe `tenantId` como prop mas **não repassa** para o hook `useAgentCausality()`. Quando há delay na sincronização do JWT, a view `agents_safe` retorna vazio porque:
+- `get_active_tenant_id()` retorna NULL (JWT ainda não atualizado)
+- `is_current_super_admin()` falha sem contexto de auth
+- O hook usa `activeTenant?.id` como fallback, mas isso também pode estar loading
 
-### Funções Afetadas
+### Erro 2: "[DLQ:AGENT_OFFLINE] Auto-cleanup..." na Central de Tarefas
+Jobs agendados para agentes offline são automaticamente enviados para DLQ após 2 horas de timeout. Isso é comportamento esperado do sistema, não um erro real - mas está sendo exibido como uma tarefa pendente.
 
-| Função | Status | Impacto |
-|--------|--------|---------|
-| `set-active-tenant` | 404 | Login travado, sincronização de tenant falha |
-| `get-agent-dashboard-data` | 404 | "Monitoramento em Tempo Real" não carrega dados |
-| `action-center-feed` | 404 | "Central de Ações" fica vazia |
-| `heartbeat` | 404 | Agentes não conseguem reportar status |
-| `submit-agent-evidence` | 404 | Evidências de segurança não são salvas |
-| `process-scheduled-jobs` | 404 | Jobs agendados não executam |
-| `invoke-scheduled-jobs` | 404 | Jobs agendados não são iniciados |
+### Erro 3: 388 Alertas Críticos
+Grande volume de alertas AI (`ai_insight_alert`) e de sistema (`high_cpu`, `high_disk`, etc.) não reconhecidos. A maioria é de análise de IA gerando insights em lote.
 
-### Causa Raiz
+### Erro 4: 3 Computadores Offline
+Agentes que não enviam heartbeat há mais de 10 minutos. Situação real que requer atenção.
 
-As implantações anteriores sofreram **timeout do bundler** (SUPABASE_CODEGEN_ERROR), o que corrompeu o estado de deploy de múltiplas funções. Quando o bundler falha, as funções afetadas não são reimplantadas corretamente.
+---
 
 ## Solução
 
-### Passo 1: Reimplantar Funções Críticas (Alta Prioridade)
+### Fix 1: Passar tenantId explícito para useAgentCausality
 
-Reimplantar as 7 funções que estão retornando 404:
+**Arquivo:** `src/components/agent/AgentDetailsDrawer.tsx`
 
-```text
-Funções a reimplantar:
-├── set-active-tenant            (crítico - sincronização de tenant)
-├── get-agent-dashboard-data     (crítico - dashboard de monitoramento)
-├── action-center-feed           (crítico - central de ações)
-├── heartbeat                    (crítico - heartbeat dos agentes)
-├── submit-agent-evidence        (crítico - logs de evidência)
-├── process-scheduled-jobs       (alto - jobs agendados)
-└── invoke-scheduled-jobs        (alto - invocação de jobs)
-```
-
-### Passo 2: Otimizar action-center-feed (Prevenção de Timeout)
-
-O arquivo `action-center-feed/index.ts` usa a sintaxe antiga `serve()` que pode causar timeout no bundler. Será modernizado para `Deno.serve()`:
-
-**Antes:**
+**Mudança:**
 ```typescript
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-// ...
-serve(async (req) => {
+// ANTES (linha 97):
+const { data: causality, isLoading, isError, refetch } = useAgentCausality(agentId);
+
+// DEPOIS:
+const { data: causality, isLoading, isError, refetch } = useAgentCausality(agentId, tenantId);
 ```
 
-**Depois:**
+Isso garante que mesmo com delay no JWT, o hook usa o tenantId explícito passado pelo componente pai.
+
+### Fix 2: Aplicar mesmo padrão no AgentStateExplainer
+
+**Arquivo:** `src/components/agent/AgentStateExplainer.tsx`
+
+O componente precisa aceitar `tenantId` como prop opcional e repassar para `useAgentCausality`:
+
 ```typescript
-// Sem import de serve
-Deno.serve(async (req) => {
+interface AgentStateExplainerProps {
+  agentId: string | null;
+  tenantId?: string | null;  // NOVO
+  compact?: boolean;
+}
+
+export function AgentStateExplainer({ agentId, tenantId, compact = false }) {
+  const { data: causality, isLoading, error } = useAgentCausality(agentId, tenantId);
+  // ...
+}
 ```
 
-Isso reduz o tamanho do bundle e evita timeouts futuros.
+### Fix 3: Propagar tenantId nas chamadas do AgentStateExplainer
 
-### Passo 3: Verificar Funcionamento
+Atualizar todos os usos de `AgentStateExplainer` para passar `tenantId` quando disponível:
 
-Após o deploy, testar cada endpoint com curl para confirmar status 200 e que os dashboards voltam a funcionar.
+- `AgentDetailsDrawer.tsx` → já tem tenantId
+- `DiagnosticsCenter.tsx` → tem acesso via selectedAgent
+- `InsightInvestigationDrawer.tsx` → tem acesso via useTenant
 
-## Arquivos que Serão Alterados
+### Fix 4: (Opcional) Melhorar feedback para DLQ jobs
 
-- `supabase/functions/action-center-feed/index.ts` - Modernizar de `serve()` para `Deno.serve()`
+Considerar filtrar ou diferenciar visualmente jobs DLQ por timeout de agente offline vs. falhas reais na Central de Tarefas.
+
+---
+
+## Arquivos a Modificar
+
+1. `src/components/agent/AgentDetailsDrawer.tsx` - Passar tenantId para useAgentCausality
+2. `src/components/agent/AgentStateExplainer.tsx` - Aceitar e usar tenantId prop
+3. `src/pages/admin/DiagnosticsCenter.tsx` - Passar tenantId para AgentStateExplainer
+4. `src/components/action-center/InsightInvestigationDrawer.tsx` - Passar tenantId
+
+---
 
 ## Resultado Esperado
 
-Após a implementação:
-- Login e sincronização de tenant funcionando
-- Dashboard "Monitoramento em Tempo Real" carrega dados
-- "Central de Ações" exibe items pendentes e resolvidos
-- Agentes voltam a enviar heartbeats com sucesso
-- Jobs agendados executam normalmente
+Após as correções:
+- Drawer de MIT-SERVIDOR carregará dados corretamente
+- Não haverá mais erro "Computador não visível" por race condition de JWT
+- Componentes terão comportamento determinístico usando tenantId explícito
+- Os alertas críticos e DLQ continuarão visíveis (são dados reais do sistema)
+
+---
 
 ## Detalhes Técnicos
 
-As funções serão reimplantadas individualmente para evitar timeout do bundler:
-1. Deploy de `set-active-tenant`
-2. Deploy de `get-agent-dashboard-data`
-3. Modificar e deploy de `action-center-feed`
-4. Deploy de `heartbeat`
-5. Deploy de `submit-agent-evidence`
-6. Deploy de `process-scheduled-jobs`
-7. Deploy de `invoke-scheduled-jobs`
+O padrão ADR-029 (tenant sync guard) recomenda:
+1. Sempre usar `enabled: !loading && !!tenantId` em queries
+2. Preferir tenantId explícito sobre contexto global quando disponível
+3. O hook `useAgentCausality` já implementa isso, mas precisa receber o parâmetro
 
-Cada deploy:
-- Compila a função com Deno
-- Faz upload para o edge runtime
-- Ativa o endpoint para receber requests
+A view `agents_safe` tem 3 caminhos de acesso:
+```sql
+WHERE (
+  tenant_id = get_active_tenant_id()           -- Via JWT claim
+  OR (get_active_tenant_id() IS NULL AND EXISTS(SELECT 1 FROM user_roles...))  -- Fallback
+  OR is_current_super_admin()                  -- Super admin
+)
+```
+
+Quando o JWT não está sincronizado, todos os 3 falham. Passando tenantId explícito para a query com `.eq('tenant_id', effectiveTenantId)`, garantimos que funcione mesmo sem JWT.
