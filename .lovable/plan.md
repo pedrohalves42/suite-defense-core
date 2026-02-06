@@ -1,108 +1,113 @@
 
-# Correção de Erros no Painel Administrativo
+# Correção: Force Update de Agentes Desatualizados
 
-## Problemas Identificados
+## Diagnóstico Confirmado
 
-### Erro 1: "Computador não visível" no drawer (MIT-SERVIDOR)
-O drawer de detalhes do agente recebe `tenantId` como prop mas **não repassa** para o hook `useAgentCausality()`. Quando há delay na sincronização do JWT, a view `agents_safe` retorna vazio porque:
-- `get_active_tenant_id()` retorna NULL (JWT ainda não atualizado)
-- `is_current_super_admin()` falha sem contexto de auth
-- O hook usa `activeTenant?.id` como fallback, mas isso também pode estar loading
+### Problema Identificado
 
-### Erro 2: "[DLQ:AGENT_OFFLINE] Auto-cleanup..." na Central de Tarefas
-Jobs agendados para agentes offline são automaticamente enviados para DLQ após 2 horas de timeout. Isso é comportamento esperado do sistema, não um erro real - mas está sendo exibido como uma tarefa pendente.
+Dois mecanismos de update que **NÃO estão sincronizados**:
 
-### Erro 3: 388 Alertas Críticos
-Grande volume de alertas AI (`ai_insight_alert`) e de sistema (`high_cpu`, `high_disk`, etc.) não reconhecidos. A maioria é de análise de IA gerando insights em lote.
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│  MECANISMO 1: Job System (process-agent-updates cron)               │
+│  ├── Cria jobs "update_agent" a cada 6 horas                        │
+│  ├── Jobs estão FALHANDO (agentes v4.x não suportam job system)     │
+│  └── NÃO atualiza force_update_version                              │
+├─────────────────────────────────────────────────────────────────────┤
+│  MECANISMO 2: Force Update via Heartbeat                            │
+│  ├── Verifica force_update_version no heartbeat                     │
+│  ├── Envia script atualizado diretamente no response                │
+│  ├── FUNCIONA PERFEITAMENTE (Pc-Bianca-Tibery está recebendo)       │
+│  └── MAS: force_update_version está NULL para 7 agentes online      │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-### Erro 4: 3 Computadores Offline
-Agentes que não enviam heartbeat há mais de 10 minutos. Situação real que requer atenção.
+### Evidência do Problema
+
+| Agente | Versão Atual | force_update_version | Status |
+|--------|--------------|---------------------|--------|
+| pcteste1 | v4.5.0 | NULL | ONLINE - NÃO RECEBE UPDATE |
+| PC-Servidor-Planalto | v4.5.0 | NULL | ONLINE - NÃO RECEBE UPDATE |
+| Pc-Anna-Tibery | v4.5.0 | NULL | ONLINE - NÃO RECEBE UPDATE |
+| Pc-Bianca-Tibery | v4.1.9 | **v5.0.2** | ONLINE - RECEBENDO UPDATE ✓ |
+| Pc-Julianna1-Planalto | v4.5.0 | NULL | ONLINE - NÃO RECEBE UPDATE |
+| Pc-Meio-Planalto | v4.5.0 | NULL | ONLINE - NÃO RECEBE UPDATE |
+| Pc-Vidro-Planalto | v4.5.0 | NULL | ONLINE - NÃO RECEBE UPDATE |
 
 ---
 
 ## Solução
 
-### Fix 1: Passar tenantId explícito para useAgentCausality
+### Parte 1: Correção Imediata (SQL Update)
 
-**Arquivo:** `src/components/agent/AgentDetailsDrawer.tsx`
+Atualizar `force_update_version = 'v5.0.2'` para todos os agentes desatualizados:
 
-**Mudança:**
-```typescript
-// ANTES (linha 97):
-const { data: causality, isLoading, isError, refetch } = useAgentCausality(agentId);
-
-// DEPOIS:
-const { data: causality, isLoading, isError, refetch } = useAgentCausality(agentId, tenantId);
+```sql
+UPDATE agents 
+SET 
+  force_update_version = 'v5.0.2',
+  force_update_reason = 'Automated rollout via force update mechanism'
+WHERE status = 'active' 
+  AND archived_at IS NULL
+  AND agent_version != 'v5.0.2'
+  AND (force_update_version IS NULL OR force_update_version != 'v5.0.2');
 ```
 
-Isso garante que mesmo com delay no JWT, o hook usa o tenantId explícito passado pelo componente pai.
+**Resultado:** Agentes online receberão o update no próximo heartbeat (~60 segundos).
 
-### Fix 2: Aplicar mesmo padrão no AgentStateExplainer
+### Parte 2: Correção do Cron Job (Código)
 
-**Arquivo:** `src/components/agent/AgentStateExplainer.tsx`
+Modificar `supabase/functions/process-agent-updates/index.ts` para também atualizar o campo `force_update_version`:
 
-O componente precisa aceitar `tenantId` como prop opcional e repassar para `useAgentCausality`:
+**Mudança no código (após linha 143):**
 
 ```typescript
-interface AgentStateExplainerProps {
-  agentId: string | null;
-  tenantId?: string | null;  // NOVO
-  compact?: boolean;
-}
+// NOVO: Além de criar job, atualizar force_update_version para ativar update via heartbeat
+const { error: updateError } = await supabase
+  .from('agents')
+  .update({ 
+    force_update_version: latest.version,
+    force_update_reason: 'Automated rollout via cron job'
+  })
+  .eq('id', agent.id);
 
-export function AgentStateExplainer({ agentId, tenantId, compact = false }) {
-  const { data: causality, isLoading, error } = useAgentCausality(agentId, tenantId);
-  // ...
+if (updateError) {
+  logger.warn('[process-agent-updates] Failed to set force_update_version', {
+    requestId,
+    agentName: agent.agent_name,
+    error: updateError
+  });
 }
 ```
 
-### Fix 3: Propagar tenantId nas chamadas do AgentStateExplainer
-
-Atualizar todos os usos de `AgentStateExplainer` para passar `tenantId` quando disponível:
-
-- `AgentDetailsDrawer.tsx` → já tem tenantId
-- `DiagnosticsCenter.tsx` → tem acesso via selectedAgent
-- `InsightInvestigationDrawer.tsx` → tem acesso via useTenant
-
-### Fix 4: (Opcional) Melhorar feedback para DLQ jobs
-
-Considerar filtrar ou diferenciar visualmente jobs DLQ por timeout de agente offline vs. falhas reais na Central de Tarefas.
+Isso garante que o mecanismo de force update via heartbeat seja ativado em paralelo com o job system.
 
 ---
 
 ## Arquivos a Modificar
 
-1. `src/components/agent/AgentDetailsDrawer.tsx` - Passar tenantId para useAgentCausality
-2. `src/components/agent/AgentStateExplainer.tsx` - Aceitar e usar tenantId prop
-3. `src/pages/admin/DiagnosticsCenter.tsx` - Passar tenantId para AgentStateExplainer
-4. `src/components/action-center/InsightInvestigationDrawer.tsx` - Passar tenantId
+1. **Banco de Dados**: SQL update para forçar `force_update_version = 'v5.0.2'` em agentes desatualizados
+2. **`supabase/functions/process-agent-updates/index.ts`**: Adicionar update de `force_update_version` quando cron detecta agentes desatualizados
 
 ---
 
 ## Resultado Esperado
 
 Após as correções:
-- Drawer de MIT-SERVIDOR carregará dados corretamente
-- Não haverá mais erro "Computador não visível" por race condition de JWT
-- Componentes terão comportamento determinístico usando tenantId explícito
-- Os alertas críticos e DLQ continuarão visíveis (são dados reais do sistema)
+- 7 agentes online receberão comando de update no próximo heartbeat
+- Agentes v4.x receberão script v5.0.2 diretamente no response do heartbeat
+- Futuras execuções do cron também ativarão force update automaticamente
+- Tempo estimado para update: 1-2 minutos após aprovação
 
 ---
 
 ## Detalhes Técnicos
 
-O padrão ADR-029 (tenant sync guard) recomenda:
-1. Sempre usar `enabled: !loading && !!tenantId` em queries
-2. Preferir tenantId explícito sobre contexto global quando disponível
-3. O hook `useAgentCausality` já implementa isso, mas precisa receber o parâmetro
+O mecanismo de force update via heartbeat (linhas 215-297 do `heartbeat/index.ts`):
+1. Verifica se `force_update_version` está preenchido e difere de `agent_version`
+2. Busca o script da versão alvo em `agent_releases`
+3. Normaliza para Windows (CRLF), calcula SHA256
+4. Envia `script_content_base64`, `sha256` e `target_version` no response
+5. Agente aplica o update imediatamente sem depender do job system
 
-A view `agents_safe` tem 3 caminhos de acesso:
-```sql
-WHERE (
-  tenant_id = get_active_tenant_id()           -- Via JWT claim
-  OR (get_active_tenant_id() IS NULL AND EXISTS(SELECT 1 FROM user_roles...))  -- Fallback
-  OR is_current_super_admin()                  -- Super admin
-)
-```
-
-Quando o JWT não está sincronizado, todos os 3 falham. Passando tenantId explícito para a query com `.eq('tenant_id', effectiveTenantId)`, garantimos que funcione mesmo sem JWT.
+Este é o mecanismo mais confiável para agentes legados (v4.x) que não suportam o job system moderno.
