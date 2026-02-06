@@ -94,7 +94,7 @@ export function AgentDetailsDrawer({
   onAgentDeleted
 }: AgentDetailsDrawerProps) {
   const navigate = useNavigate();
-  const { data: causality, isLoading, isError, refetch } = useAgentCausality(agentId);
+  const { data: causality, isLoading, isError, refetch } = useAgentCausality(agentId, tenantId);
   const { data: antivirusStatus } = useAntivirusStatus(agentId || '', !!agentId);
 
   const handleAgentDeleted = () => {
@@ -191,7 +191,7 @@ export function AgentDetailsDrawer({
               {/* Tab: Visão Geral */}
               <TabsContent value="overview" className="mt-4 space-y-4">
                 {/* Explicador de Estado Completo */}
-                <AgentStateExplainer agentId={agentId} />
+                <AgentStateExplainer agentId={agentId} tenantId={tenantId} />
 
                 {/* Antivirus Status */}
                 {antivirusStatus && antivirusStatus.length > 0 && (

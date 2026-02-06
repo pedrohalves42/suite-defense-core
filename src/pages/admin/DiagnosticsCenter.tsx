@@ -539,7 +539,7 @@ export default function DiagnosticsCenter() {
 
                 {/* State Tab */}
                 <TabsContent value="state" className="mt-4 space-y-4">
-                  <AgentStateExplainer agentId={selectedAgent.id} />
+                  <AgentStateExplainer agentId={selectedAgent.id} tenantId={selectedAgent.tenant_id} />
                   
                   <div className="pt-4 border-t">
                     <h4 className="text-sm font-medium mb-3">Ações Rápidas</h4>
