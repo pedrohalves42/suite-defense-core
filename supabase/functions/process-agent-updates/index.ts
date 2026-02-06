@@ -152,9 +152,27 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // CORREÇÃO: Também atualizar force_update_version para ativar update via heartbeat
+        // Isso garante compatibilidade com agentes legados (v4.x) que não suportam job system
+        const { error: updateError } = await supabase
+          .from('agents')
+          .update({ 
+            force_update_version: latest.version,
+            force_update_reason: 'Automated rollout via cron job'
+          })
+          .eq('id', agent.id);
+
+        if (updateError) {
+          logger.warn('[process-agent-updates] Failed to set force_update_version', {
+            requestId,
+            agentName: agent.agent_name,
+            error: updateError
+          });
+        }
+
         jobsCreated++;
         totalJobsCreated++;
-        logger.info('[process-agent-updates] Update job created', {
+        logger.info('[process-agent-updates] Update job created + force_update_version set', {
           requestId,
           agentName: agent.agent_name,
           currentVersion: agent.agent_version,
