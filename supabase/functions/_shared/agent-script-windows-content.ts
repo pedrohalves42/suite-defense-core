@@ -2,8 +2,13 @@
  * CyberShield Agent Windows Script - AUTO-GENERATED
  * DO NOT EDIT MANUALLY.
  * Source: public/agent-scripts/cybershield-agent-windows-v5.ps1
- * Version: v5.0.2
- * Generated: 2026-02-05
+ * Version: v5.0.3
+ * Generated: 2026-02-07
+ * 
+ * v5.0.3 FIXES:
+ * - Assert-TaskHealth: Auto-repairs disabled/stopped scheduled tasks
+ * - Startup task health verification
+ * - Main loop task health checks every 5 minutes
  */
 
 export function getAgentScriptWindows(): string {
@@ -11,7 +16,13 @@ export function getAgentScriptWindows(): string {
 }
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
-    CyberShield Agent - Windows v5.0.2 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.3 FULL ENTERPRISE
+
+    v5.0.3: STABILITY FIXES - Task Recovery & DNS Filter Resilience
+    - FIXED: Assert-TaskHealth auto-repairs disabled/stopped scheduled tasks
+    - FIXED: DNS Filter check is now non-blocking (graceful degradation)
+    - FIXED: Better startup resilience with task health verification
+    - IMPROVED: Main loop includes task health checks every 5 minutes
 
     v5.0.2: FULL ENTERPRISE - Complete Bidirectional Signature Chain (FIXED)
 
