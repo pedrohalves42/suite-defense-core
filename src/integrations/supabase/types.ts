@@ -5482,6 +5482,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "audit_logs_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "audit_logs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -5922,6 +5929,13 @@ export type Database = {
             columns: ["blocked_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_websites_blocked_by_fkey"
+            columns: ["blocked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
             referencedColumns: ["id"]
           },
           {
@@ -18228,17 +18242,26 @@ export type Database = {
       }
       profiles_public: {
         Row: {
+          created_at: string | null
           full_name: string | null
+          id: string | null
+          updated_at: string | null
           user_id: string | null
           username: string | null
         }
         Insert: {
+          created_at?: string | null
           full_name?: string | null
+          id?: string | null
+          updated_at?: string | null
           user_id?: string | null
           username?: string | null
         }
         Update: {
+          created_at?: string | null
           full_name?: string | null
+          id?: string | null
+          updated_at?: string | null
           user_id?: string | null
           username?: string | null
         }
