@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { type AppRole } from '@/types/roles';
 
 interface Tenant {
   id: string;
@@ -22,10 +23,11 @@ interface UserTenantRole {
 interface ActiveTenantContextType {
   tenants: Tenant[];
   activeTenant: Tenant | null;
+  activeRole: AppRole | null; // CORREÇÃO: role do usuário no tenant ativo
   setActiveTenant: (tenant: Tenant) => Promise<void>;
   loading: boolean;
   hasMultipleTenants: boolean;
-  isFetched: boolean; // PATCH #4: Expose fetch status for ProtectedRoute
+  isFetched: boolean;
 }
 
 const ActiveTenantContext = createContext<ActiveTenantContextType | undefined>(undefined);
@@ -141,6 +143,14 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     return tenants[0];
   })();
 
+  // CORREÇÃO: Calcular role baseada no tenant ATIVO
+  const activeRole = useMemo((): AppRole | null => {
+    if (!activeTenant || userTenantRoles.length === 0) return null;
+    
+    const tenantRole = userTenantRoles.find(r => r.tenant_id === activeTenant.id);
+    return (tenantRole?.role as AppRole) || null;
+  }, [activeTenant, userTenantRoles]);
+
   // Update localStorage when active tenant changes
   useEffect(() => {
     if (activeTenant) {
@@ -230,11 +240,10 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       value={{ 
         tenants, 
         activeTenant, 
+        activeRole, // CORREÇÃO: expor role do tenant ativo
         setActiveTenant, 
-        // PATCH #2: Include isSyncing in loading state to block queries
         loading: isLoading || isSyncing,
         hasMultipleTenants,
-        // PATCH #4: Expose isFetched for ProtectedRoute
         isFetched,
       }}
     >
