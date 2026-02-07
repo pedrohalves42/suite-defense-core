@@ -1,19 +1,9 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sanitizeForAI, sanitizeObjectForAI, anonymizeAgentName, validateAIResponse } from "../_shared/ai-sanitizer.ts";
-import { withCircuitBreaker, executeWithTimeout } from "../_shared/ai-circuit-breaker.ts";
+import { callAI, callAIJson, type AIMessage } from "../_shared/ai-provider-helper.ts";
 import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from "../_shared/ai-metrics.ts";
 import { persistAIMetrics } from "../_shared/ai-metrics-persistence.ts";
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from "../_shared/ai-evidence-types.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-const AI_MODEL = 'google/gemini-2.5-flash';
-const AI_TIMEOUT_MS = 10000;
-const metricsLogger = createMetricsLogger('ai-analyze-agent', AI_MODEL);
 
 interface AgentContext {
   metrics: {
@@ -53,7 +43,7 @@ interface AIAnalysis {
   confidence: number;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -137,16 +127,6 @@ serve(async (req) => {
       ));
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      console.error('LOVABLE_API_KEY not configured');
-      const basicAnalysis = generateBasicAnalysis(context, evidence);
-      return new Response(
-        JSON.stringify(basicAnalysis),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Build context summary for AI with sanitization
     const rawContextSummary = buildContextSummary(agent, context);
     const sanitizeResult = sanitizeForAI(rawContextSummary);
@@ -180,72 +160,32 @@ Responda APENAS com JSON valido no formato:
   "riskFactors": [string]
 }`;
 
-    // Start metrics tracking
-    const startTime = metricsLogger.logStart();
+    // Call AI using multi-provider system
+    const { data: parsedAnalysis, result: aiResult } = await callAIJson<{
+      healthScore?: number;
+      suggestions?: AISuggestion[];
+      insights?: string[];
+      riskFactors?: string[];
+    }>(systemPrompt, contextSummary, {
+      maxTokens: 1024,
+      functionName: 'ai-analyze-agent',
+    });
 
-    // Use circuit breaker with timeout for AI call
-    const aiResult = await withCircuitBreaker(
-      async () => {
-        return executeWithTimeout(async () => {
-          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: AI_MODEL,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: contextSummary }
-              ],
-              temperature: 0.3,
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error(`AI API error: ${response.status}`);
-          }
-
-          return response.json();
-        }, AI_TIMEOUT_MS);
-      },
-      { 
-        timeoutMs: AI_TIMEOUT_MS,
-        fallbackResponse: null 
-      }
-    );
-
-    // Handle circuit breaker result
-    if (!aiResult.success || !aiResult.data) {
-      metricsLogger.logFailure(startTime, aiResult.error || 'Unknown error', undefined, aiResult.usedFallback);
+    // Handle AI call failure
+    if (!aiResult.success || !parsedAnalysis) {
       console.warn('[ai-analyze-agent] AI call failed, using basic analysis:', aiResult.error);
       const basicAnalysis = generateBasicAnalysis(context, evidence);
       return new Response(
-        JSON.stringify(basicAnalysis),
+        JSON.stringify({ 
+          ...basicAnalysis, 
+          aiProvider: aiResult.provider,
+          aiError: aiResult.error 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const aiResponse = aiResult.data;
-    const content = aiResponse.choices?.[0]?.message?.content;
-    const tokenUsage = extractTokenUsage(aiResponse);
-
-    // Log success metrics and persist to database
-    metricsLogger.logSuccess(startTime, undefined, tokenUsage);
-    
-    // Persist metrics to DB for dashboard
-    const successMetrics: AIInferenceMetrics = {
-      timestamp: new Date().toISOString(),
-      function_name: 'ai-analyze-agent',
-      model: AI_MODEL,
-      latency_ms: Date.now() - startTime,
-      success: true,
-      tokens_prompt: tokenUsage.prompt,
-      tokens_completion: tokenUsage.completion,
-      tokens_total: tokenUsage.total,
-    };
-    await persistAIMetrics(successMetrics);
+    console.log(`[ai-analyze-agent] Analysis completed via ${aiResult.provider} in ${aiResult.latencyMs}ms`);
 
     if (!content) {
       const basicAnalysis = generateBasicAnalysis(context, evidence);
