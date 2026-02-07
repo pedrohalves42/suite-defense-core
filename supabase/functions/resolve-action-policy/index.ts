@@ -28,9 +28,37 @@ interface PolicyResponse {
   };
 }
 
-// Default mappings from insight-action-mapping.ts
+// Default mappings for ALL insight_types used in the system
+// These must match the insight_type values in ai_insights table
 const DEFAULT_MAPPINGS: Record<string, 'auto' | 'approval'> = {
-  // Auto-executable (baixo risco)
+  // === Tipos principais de insight (mais usados) ===
+  // Ameaças de segurança: auto para remediação rápida
+  security_threat: 'auto',
+  
+  // Detecção de anomalias: auto para alertar/remediar automaticamente
+  anomaly_detection: 'auto',
+  anomaly: 'auto', // variant
+  
+  // Predições: approval (ações preventivas podem ter impacto)
+  prediction: 'approval',
+  
+  // Análise de causa raiz: approval (requer revisão)
+  root_cause: 'approval',
+  
+  // Otimizações: approval (mudanças de configuração)
+  optimization: 'approval',
+  
+  // === Tipos específicos de agente ===
+  agent_improdutive: 'auto',
+  agent_recovered: 'auto', // apenas notificação
+  
+  // Violação de integridade: auto (urgente)
+  integrity_violation: 'auto',
+  
+  // Informativos: disabled (sem ação)
+  info: 'auto',
+  
+  // === Tipos legados (mantidos para compatibilidade) ===
   antivirus_disabled: 'auto',
   antivirus_outdated: 'auto',
   dns_malicious_activity: 'auto',
