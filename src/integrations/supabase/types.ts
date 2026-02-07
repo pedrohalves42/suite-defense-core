@@ -9099,6 +9099,13 @@ export type Database = {
             foreignKeyName: "job_slo_state_last_task_id_fkey"
             columns: ["last_task_id"]
             isOneToOne: false
+            referencedRelation: "v_critical_unassigned_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_slo_state_last_task_id_fkey"
+            columns: ["last_task_id"]
+            isOneToOne: false
             referencedRelation: "v_risk_debt_active"
             referencedColumns: ["id"]
           },
@@ -14604,6 +14611,13 @@ export type Database = {
             foreignKeyName: "task_events_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
+            referencedRelation: "v_critical_unassigned_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_events_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
             referencedRelation: "v_risk_debt_active"
             referencedColumns: ["id"]
           },
@@ -14694,6 +14708,13 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "v_active_risk_debt"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_evidence_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "v_critical_unassigned_tasks"
             referencedColumns: ["id"]
           },
           {
@@ -19268,6 +19289,74 @@ export type Database = {
           },
         ]
       }
+      v_critical_unassigned_tasks: {
+        Row: {
+          age_hours: number | null
+          created_at: string | null
+          due_at: string | null
+          id: string | null
+          severity: string | null
+          sla_breached: boolean | null
+          source_type: string | null
+          status: string | null
+          tenant_id: string | null
+          title: string | null
+        }
+        Insert: {
+          age_hours?: never
+          created_at?: string | null
+          due_at?: string | null
+          id?: string | null
+          severity?: string | null
+          sla_breached?: never
+          source_type?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          title?: string | null
+        }
+        Update: {
+          age_hours?: never
+          created_at?: string | null
+          due_at?: string | null
+          id?: string | null
+          severity?: string | null
+          sla_breached?: never
+          source_type?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_cron_health: {
         Row: {
           consecutive_failures: number | null
@@ -21098,6 +21187,45 @@ export type Database = {
         }
         Relationships: []
       }
+      v_task_automation_metrics: {
+        Row: {
+          auto_closed: number | null
+          automation_rate_percent: number | null
+          closure_day: string | null
+          manual_closed: number | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_task_stats: {
         Row: {
           completed: number | null
@@ -21411,6 +21539,7 @@ export type Database = {
           job_ids: string[]
         }[]
       }
+      auto_resolve_stale_tasks: { Args: never; Returns: Json }
       backfill_audit_log_hashes: {
         Args: { p_tenant_id?: string }
         Returns: {
