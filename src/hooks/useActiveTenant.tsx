@@ -148,29 +148,49 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [activeTenant?.id]);
 
-  // PATCH #2: Sync initial tenant to backend BLOCKING to ensure JWT has active_tenant_id
-  // Queries are blocked via isSyncing until this completes
+  // PATCH #2 OPTIMIZED: Sync initial tenant to backend
+  // Only sync on FIRST load or when tenant actually changes
+  // Non-blocking: queries can proceed with explicit tenantId while sync happens
   useEffect(() => {
     if (!activeTenant || !user) {
       setIsSyncing(false);
       return;
     }
 
-    let cancelled = false;
-    setIsSyncing(true);
-
-    syncActiveTenantToBackend(activeTenant.id)
-      .then(async (synced) => {
-        if (synced && !cancelled) {
-          // Force refresh to ensure JWT has active_tenant_id claim
-          await supabase.auth.refreshSession();
+    // Check if JWT already has correct active_tenant_id
+    // This avoids unnecessary sync calls on page reload
+    const checkJWTAndSync = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const currentJWTTenantId = session?.user?.app_metadata?.active_tenant_id;
+        
+        // If JWT already has correct tenant, skip sync
+        if (currentJWTTenantId === activeTenant.id) {
+          console.log('[useActiveTenant] JWT already synced, skipping backend call');
+          setIsSyncing(false);
+          return;
         }
-      })
-      .finally(() => {
-        if (!cancelled) setIsSyncing(false);
-      });
+        
+        // Sync needed - but don't block UI
+        console.log('[useActiveTenant] Syncing tenant to backend...');
+        syncActiveTenantToBackend(activeTenant.id)
+          .then(async (synced) => {
+            if (synced) {
+              await supabase.auth.refreshSession();
+              console.log('[useActiveTenant] Session refreshed after sync');
+            }
+          })
+          .finally(() => {
+            setIsSyncing(false);
+          });
+      } catch (err) {
+        console.warn('[useActiveTenant] JWT check failed:', err);
+        setIsSyncing(false);
+      }
+    };
 
-    return () => { cancelled = true; };
+    setIsSyncing(true);
+    checkJWTAndSync();
   }, [activeTenant?.id, user?.id]);
 
   const setActiveTenant = useCallback(async (tenant: Tenant) => {
