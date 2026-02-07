@@ -98,10 +98,24 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
 
   if (isError || !data) {
     return (
-      <div className="text-center py-6 text-muted-foreground">
-        <Cpu className="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">Dados de processos indisponíveis</p>
-        <p className="text-xs mt-1">Atualize o agente para v5.0+</p>
+      <div className="text-center py-8 px-4">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+          <Cpu className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+        <h3 className="font-medium text-foreground mb-2">Monitoramento de Processos</h3>
+        <p className="text-sm text-muted-foreground mb-3">
+          Dados de processos serão exibidos aqui quando disponíveis.
+        </p>
+        <div className="text-xs text-muted-foreground space-y-1">
+          <p className="flex items-center justify-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
+            Requer agente versão 5.0 ou superior
+          </p>
+          <p className="flex items-center justify-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
+            O agente coleta CPU, memória e processos ativos
+          </p>
+        </div>
       </div>
     );
   }
@@ -230,10 +244,24 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
 
       {/* Mensagem quando não há dados relevantes */}
       {(!processes || !processes.top_by_cpu?.length) && (!anomalies || !anomalies.length) && (!autoRepairStats || (!autoRepairStats.disk_cleanups && !autoRepairStats.processes_killed)) && (
-        <div className="text-center py-6 text-muted-foreground">
-          <Cpu className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Aguardando dados de processos</p>
-          <p className="text-xs mt-1">Disponível com agente v5.0+</p>
+        <div className="text-center py-8 px-4">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+            <Cpu className="h-8 w-8 text-muted-foreground/50" />
+          </div>
+          <h3 className="font-medium text-foreground mb-2">Aguardando Dados</h3>
+          <p className="text-sm text-muted-foreground mb-3">
+            O próximo heartbeat trará informações de processos.
+          </p>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p className="flex items-center justify-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
+              Coleta automática a cada 5 minutos
+            </p>
+            <p className="flex items-center justify-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
+              Requer agente versão 5.0+
+            </p>
+          </div>
         </div>
       )}
     </div>
