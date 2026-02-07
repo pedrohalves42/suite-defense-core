@@ -22,6 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { SidebarTenantSelector } from '@/components/SidebarTenantSelector';
+import { AppModeBadge } from '@/components/layout/AppModeBadge';
 import logoImage from '@/assets/logo-cybshield.png';
 
 interface MenuItem {
@@ -291,7 +292,7 @@ export const AppSidebar = () => {
           collapsed ? 'w-16' : 'w-52'
         )}
       >
-        {/* Logo CyberShield Cloud */}
+        {/* Logo CyberShield Cloud + Mode Badge */}
         <div className="h-14 flex items-center justify-between px-3 border-b border-border/30">
           {!collapsed && (
             <div className="flex items-center gap-2">
@@ -300,14 +301,18 @@ export const AppSidebar = () => {
                 alt="CyberShield Logo" 
                 className="h-8 w-auto object-contain"
               />
+              <AppModeBadge collapsed={false} />
             </div>
           )}
           {collapsed && (
-            <img 
-              src={logoImage} 
-              alt="CyberShield Logo" 
-              className="h-6 w-auto object-contain mx-auto"
-            />
+            <div className="flex flex-col items-center gap-1 mx-auto">
+              <img 
+                src={logoImage} 
+                alt="CyberShield Logo" 
+                className="h-6 w-auto object-contain"
+              />
+              <AppModeBadge collapsed={true} />
+            </div>
           )}
           <Button
             variant="ghost"
