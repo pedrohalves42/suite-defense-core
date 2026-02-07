@@ -1,7 +1,100 @@
 // UI Labels dictionary for humanized, non-technical interface
 // All labels are in Brazilian Portuguese for end-users
+// FONTE ÚNICA DA VERDADE para terminologia de UI
 
 export const UI_LABELS = {
+  // ===== AGENT STATUS LABELS (centralized) =====
+  // Usar estes labels em TODOS os dashboards para consistência
+  agent_status: {
+    healthy: {
+      label: 'Protegido',
+      labelShort: 'OK',
+      description: 'Computador online e funcionando normalmente',
+      color: 'green'
+    },
+    warning: {
+      label: 'Atenção',
+      labelShort: '!',
+      description: 'Computador pode estar com problemas de conexão',
+      color: 'yellow'
+    },
+    offline: {
+      label: 'Offline',
+      labelShort: '—',
+      description: 'Computador sem comunicação há mais de 10 minutos',
+      color: 'red'
+    },
+    critical: {
+      label: 'Crítico',
+      labelShort: '⚠',
+      description: 'Computador com alertas de segurança não resolvidos',
+      color: 'red'
+    },
+    never_connected: {
+      label: 'Nunca conectou',
+      labelShort: '?',
+      description: 'Agente instalado mas nunca enviou dados',
+      color: 'gray'
+    },
+    safe_mode: {
+      label: 'Modo Protegido',
+      labelShort: '🛡',
+      description: 'Proteção ativada automaticamente após falhas',
+      color: 'orange'
+    },
+    isolated: {
+      label: 'Isolado',
+      labelShort: '🔒',
+      description: 'Computador bloqueado por motivo de segurança',
+      color: 'purple'
+    },
+    degraded: {
+      label: 'Com Restrições',
+      labelShort: '↓',
+      description: 'Computador com comunicação reduzida temporariamente',
+      color: 'amber'
+    },
+    archived: {
+      label: 'Arquivado',
+      labelShort: '📦',
+      description: 'Computador removido do monitoramento ativo',
+      color: 'gray'
+    },
+    updating: {
+      label: 'Atualizando',
+      labelShort: '↻',
+      description: 'Computador recebendo nova versão do agente',
+      color: 'blue'
+    }
+  },
+
+  // ===== AGENT KPI LABELS (dashboard cards) =====
+  agent_kpis: {
+    total: 'Computadores',
+    protected: 'Protegidos',
+    needs_attention: 'Precisam de Atenção',
+    offline: 'Offline',
+    never_connected: 'Nunca Conectaram',
+    with_problems: 'Com Problemas',
+    in_safe_mode: 'Em Modo Protegido'
+  },
+
+  // ===== PROCESSES TAB MESSAGES =====
+  processes: {
+    loading: 'Carregando processos...',
+    empty: {
+      title: 'Monitoramento de Processos',
+      description: 'Dados de processos serão exibidos aqui quando disponíveis.',
+      requirement: 'Requer agente versão 5.0 ou superior.',
+      hint: 'O agente coleta informações sobre CPU, memória e processos ativos automaticamente.'
+    },
+    error: {
+      title: 'Dados indisponíveis',
+      description: 'Não foi possível carregar os dados de processos.',
+      retry: 'Tente novamente em alguns instantes.'
+    }
+  },
+
   // Security metrics - translating technical terms
   rate_limit: {
     label: 'Tentativas Bloqueadas',
@@ -372,4 +465,58 @@ export function getGlossaryExplanation(term: string): string {
   const glossary = UI_LABELS.compliance.glossary as Record<string, { term: string; explanation: string }>;
   const entry = glossary[term.toLowerCase()];
   return entry ? entry.explanation : '';
+}
+
+// ===== AGENT STATUS HELPERS =====
+
+export type AgentStatusKey = keyof typeof UI_LABELS.agent_status;
+
+/**
+ * Get agent status label and info
+ * Use this in all dashboards for consistent terminology
+ */
+export function getAgentStatusLabel(status: string): string {
+  const key = status as AgentStatusKey;
+  return UI_LABELS.agent_status[key]?.label || status;
+}
+
+/**
+ * Get full agent status info including description and color
+ */
+export function getAgentStatusInfo(status: string): {
+  label: string;
+  labelShort: string;
+  description: string;
+  color: string;
+} {
+  const key = status as AgentStatusKey;
+  const info = UI_LABELS.agent_status[key];
+  return info || {
+    label: status,
+    labelShort: '?',
+    description: 'Status desconhecido',
+    color: 'gray'
+  };
+}
+
+/**
+ * Get KPI label for agent dashboards
+ */
+export function getAgentKpiLabel(kpi: keyof typeof UI_LABELS.agent_kpis): string {
+  return UI_LABELS.agent_kpis[kpi] || kpi;
+}
+
+/**
+ * Get processes tab message by type
+ */
+export function getProcessesEmptyMessage(): typeof UI_LABELS.processes.empty {
+  return UI_LABELS.processes.empty;
+}
+
+export function getProcessesErrorMessage(): typeof UI_LABELS.processes.error {
+  return UI_LABELS.processes.error;
+}
+
+export function getProcessesLoadingMessage(): string {
+  return UI_LABELS.processes.loading;
 }
