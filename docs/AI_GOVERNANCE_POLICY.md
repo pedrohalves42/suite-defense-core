@@ -34,18 +34,27 @@ Este documento estabelece as políticas, controles e procedimentos de governanç
 
 ---
 
-## 🤖 Inventário de Modelos
+## 🤖 Inventário de Modelos e Provedores
 
-| Modelo | Uso | Risco | Controles |
-|--------|-----|-------|-----------|
-| gemini-2.5-flash | Análise de agentes, sistema | Médio | Sanitização, rate limit |
-| gemini-2.5-flash-lite | Classificação, resumos | Baixo | Sanitização |
-| gpt-4o-mini | Fallback para análises | Médio | Circuit breaker |
+O sistema utiliza arquitetura **multi-provider com 6 IAs** em round-robin:
 
-### Critérios de Seleção de Modelo
-- **Análises complexas**: gemini-2.5-flash (melhor raciocínio)
-- **Classificações simples**: gemini-2.5-flash-lite (mais rápido)
-- **Fallback**: gpt-4o-mini (redundância)
+| # | Provedor | Modelo | Custo | Uso Principal |
+|---|----------|--------|-------|---------------|
+| 1 | **Google Gemini** | gemini-2.0-flash | $0.075/M | Análise geral, tradução CVE |
+| 2 | **Groq** | llama-3.3-70b | **$0** | Consultas rápidas (~210ms) |
+| 3 | **OpenRouter** | gemini-2.0-flash-exp:free | **$0** | Testes, prototipagem |
+| 4 | **Cloudflare** | llama-3.1-8b | **$0** (10K/dia) | Batch processing |
+| 5 | **Manus** | manus-1 | $0.10/M | Análises alternativas |
+| 6 | **Lovable AI** | gemini-2.5-flash | $0.15/M | Fallback confiável |
+
+### Critérios de Seleção de Provedor
+- **Velocidade crítica**: Groq (latência ~210ms)
+- **Custo zero**: Groq, OpenRouter, Cloudflare
+- **Análises profundas**: Google Gemini, Manus
+- **Fallback garantido**: Lovable AI (prioridade 99)
+
+### Documentação Técnica
+Ver: `docs/architecture/AI_MULTI_PROVIDER_ARCHITECTURE.md`
 
 ---
 
