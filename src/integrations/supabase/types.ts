@@ -6172,6 +6172,7 @@ export type Database = {
           id: string
           last_error: string | null
           last_failure_at: string | null
+          last_result: Json | null
           last_success_at: string | null
           updated_at: string | null
         }
@@ -6181,6 +6182,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           last_failure_at?: string | null
+          last_result?: Json | null
           last_success_at?: string | null
           updated_at?: string | null
         }
@@ -6190,6 +6192,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           last_failure_at?: string | null
+          last_result?: Json | null
           last_success_at?: string | null
           updated_at?: string | null
         }
@@ -21740,6 +21743,7 @@ export type Database = {
       }
       cleanup_expired_keys: { Args: never; Returns: number }
       cleanup_expired_sessions: { Args: never; Returns: number }
+      cleanup_jobs_for_offline_agents: { Args: never; Returns: Json }
       cleanup_offline_agents_jobs: {
         Args: never
         Returns: {
@@ -22042,6 +22046,7 @@ export type Database = {
         }
         Returns: string
       }
+      evaluate_software_risk_with_reporting: { Args: never; Returns: Json }
       execute_ai_action_rollback: {
         Args: { p_ai_action_id: string; p_notes?: string; p_success: boolean }
         Returns: Json
@@ -22533,6 +22538,7 @@ export type Database = {
         Returns: Json
       }
       reset_monthly_scan_quota: { Args: never; Returns: undefined }
+      resolve_stale_dlq_entries: { Args: never; Returns: Json }
       review_dlq_item: {
         Args: {
           p_dlq_id: string
@@ -22561,6 +22567,7 @@ export type Database = {
           passed: boolean
         }[]
       }
+      run_system_maintenance: { Args: never; Returns: Json }
       severity_floor_rate: { Args: { p_severity: string }; Returns: number }
       should_auto_execute_playbook: {
         Args: { p_context: Json; p_event_type: string; p_playbook_id: string }
@@ -22633,6 +22640,7 @@ export type Database = {
         Args: { p_error?: string; p_job_key: string }
         Returns: undefined
       }
+      update_offline_agent_status: { Args: never; Returns: Json }
       update_quota_usage: {
         Args: { p_delta: number; p_feature_key: string; p_tenant_id: string }
         Returns: undefined
