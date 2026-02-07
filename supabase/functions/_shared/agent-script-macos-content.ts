@@ -1,18 +1,22 @@
 /* eslint-disable no-useless-escape */
 /**
- * CyberShield Agent Macos Script - AUTO-GERADO
- * NAO EDITAR MANUALMENTE.
- * Fonte: public/agent-scripts/cybershield-agent-macos-v4.sh
- * Versao: v4.2.1
- * SHA256: 2e77c376ceaa3e00870041fccd8af38b04401f108d921277149d690cff9ea370
- * Gerado em: 2025-12-29T17:51:24.590Z
+ * CyberShield Agent macOS Script - AUTO-GENERATED
+ * DO NOT EDIT MANUALLY.
+ * Source: public/agent-scripts/cybershield-agent-macos-v5.sh
+ * Version: v5.0.3
+ * Generated: 2026-02-07
+ *
+ * v5.0.3 FIXES:
+ * - assert_launchd_health: Auto-repairs disabled/stopped LaunchDaemons
+ * - Startup launchd health verification
+ * - Main loop launchd health checks every 5 minutes
  */
 
 export function getAgentScriptMacos(): string {
   return AGENT_SCRIPT_MACOS_SH;
 }
 
-export const AGENT_SCRIPT_MACOS_SH = `#!/usr/bin/env bash
+export const AGENT_SCRIPT_MACOS_SH = \`#!/usr/bin/env bash
 #
 # CyberShield Agent - macOS v4.2.1
 #

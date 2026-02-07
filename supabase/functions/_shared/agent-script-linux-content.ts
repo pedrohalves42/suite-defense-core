@@ -1,18 +1,22 @@
 /* eslint-disable no-useless-escape */
 /**
- * CyberShield Agent Linux Script - AUTO-GERADO
- * NAO EDITAR MANUALMENTE.
- * Fonte: public/agent-scripts/cybershield-agent-linux-v4.sh
- * Versao: v4.2.1
- * SHA256: 2c5d3c8be997dbf8dab2a868625a071d5cb10d83b6d9cb0e6fbdc8b04a2c393c
- * Gerado em: 2025-12-29T17:51:24.586Z
+ * CyberShield Agent Linux Script - AUTO-GENERATED
+ * DO NOT EDIT MANUALLY.
+ * Source: public/agent-scripts/cybershield-agent-linux-v5.sh
+ * Version: v5.0.3
+ * Generated: 2026-02-07
+ *
+ * v5.0.3 FIXES:
+ * - assert_service_health: Auto-repairs disabled/stopped systemd services
+ * - Startup service health verification
+ * - Main loop service health checks every 5 minutes
  */
 
 export function getAgentScriptLinux(): string {
   return AGENT_SCRIPT_LINUX_SH;
 }
 
-export const AGENT_SCRIPT_LINUX_SH = `#!/usr/bin/env bash
+export const AGENT_SCRIPT_LINUX_SH = \`#!/usr/bin/env bash
 #
 # CyberShield Agent - Linux v4.2.1
 #
