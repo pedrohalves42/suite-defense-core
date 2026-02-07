@@ -25,6 +25,7 @@ export function getAgentDisplayName(agent: {
 
 /**
  * Get status display info for agent
+ * Usa thresholds centralizados de AGENT_STATUS_THRESHOLDS
  */
 export function getAgentStatusInfo(agent: {
   status?: string;
@@ -38,19 +39,23 @@ export function getAgentStatusInfo(agent: {
   const lastHeartbeat = agent.last_heartbeat ? new Date(agent.last_heartbeat) : null;
   const onlineThreshold = new Date(now.getTime() - AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES * 60 * 1000);
   const warningThreshold = new Date(now.getTime() - AGENT_STATUS_THRESHOLDS.WARNING_MAX_MINUTES * 60 * 1000);
+  const offlineThreshold = new Date(now.getTime() - AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES * 60 * 1000);
   
   if (!lastHeartbeat) {
     return { label: 'Nunca Conectou', variant: 'outline', isOnline: false };
   }
   
+  // Online: menos de 2 minutos
   if (lastHeartbeat > onlineThreshold) {
     return { label: 'Online', variant: 'default', isOnline: true };
   }
   
+  // Warning/Intermitente: entre 2 e 5 minutos
   if (lastHeartbeat > warningThreshold) {
     return { label: 'Intermitente', variant: 'secondary', isOnline: false };
   }
   
+  // Offline: mais de 10 minutos (antes era 5)
   return { label: 'Offline', variant: 'destructive', isOnline: false };
 }
 

@@ -95,8 +95,11 @@ export const AGENT_STATUS_CONFIG: Record<DetailedAgentStatus, AgentStatusConfig>
   },
 };
 
+import { AGENT_STATUS_THRESHOLDS } from '@/lib/agent-status-constants';
+
 /**
  * Derives detailed agent status from agent data
+ * Usa thresholds centralizados de AGENT_STATUS_THRESHOLDS
  */
 export function getDetailedAgentStatus(agent: {
   status: string;
@@ -117,17 +120,17 @@ export function getDetailedAgentStatus(agent: {
   const now = new Date();
   const minutesSinceHeartbeat = (now.getTime() - lastHeartbeat.getTime()) / 1000 / 60;
 
-  // Online (less than 5 minutes)
-  if (minutesSinceHeartbeat < 5) {
+  // Online (less than ONLINE_MAX_MINUTES)
+  if (minutesSinceHeartbeat < AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES) {
     return 'online';
   }
 
-  // Stale heartbeat (5-30 minutes)
-  if (minutesSinceHeartbeat < 30) {
+  // Stale heartbeat (ONLINE to WARNING threshold)
+  if (minutesSinceHeartbeat < AGENT_STATUS_THRESHOLDS.WARNING_MAX_MINUTES) {
     return 'stale_heartbeat';
   }
 
-  // Offline - check reason
+  // Offline - check reason (after OFFLINE_MIN_MINUTES)
   const offlineReason = agent.offline_reason as OfflineReason | undefined;
   
   switch (offlineReason) {
