@@ -58,23 +58,74 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
     queryFn: async (): Promise<AgentCausality | null> => {
       if (!agentId || !effectiveTenantId) return null;
 
-      // Buscar via view agents_safe - tem fallback por user_roles e super_admin
-      // Isso evita problemas de RLS restritivo na tabela base
-      const { data: agent, error: agentError } = await supabase
-        .from('agents_safe')
-        .select('*')
-        .eq('id', agentId)
-        .eq('tenant_id', effectiveTenantId)
-        .maybeSingle();
+      let agent: Record<string, unknown> | null = null;
 
-      if (agentError) {
-        console.warn('[useAgentCausality] Query error:', agentError);
-        throw new Error('Erro ao buscar computador');
+      // TENTATIVA 1: Buscar via view agents_safe (respeitando RLS)
+      try {
+        const { data, error: safeError } = await supabase
+          .from('agents_safe')
+          .select('*')
+          .eq('id', agentId)
+          .eq('tenant_id', effectiveTenantId)
+          .maybeSingle();
+
+        if (!safeError && data) {
+          agent = data;
+        } else if (safeError) {
+          console.warn('[useAgentCausality] agents_safe query failed:', safeError);
+        }
+      } catch (err) {
+        console.warn('[useAgentCausality] agents_safe exception:', err);
+      }
+
+      // TENTATIVA 2: Fallback para RPC get_agent_health_metrics se view falhar
+      if (!agent) {
+        console.info('[useAgentCausality] Trying RPC fallback for agent:', agentId);
+        try {
+          const { data: rpcData, error: rpcError } = await supabase
+            .rpc('get_agent_health_metrics', { p_tenant_id: effectiveTenantId });
+          
+          if (!rpcError && rpcData) {
+            const foundAgent = (rpcData as Array<Record<string, unknown>>).find(
+              (a: Record<string, unknown>) => a.id === agentId
+            );
+            if (foundAgent) {
+              agent = foundAgent;
+            }
+          }
+        } catch (rpcErr) {
+          console.warn('[useAgentCausality] RPC fallback failed:', rpcErr);
+        }
+      }
+
+      // TENTATIVA 3: Fallback direto para tabela agents (sem campos sensíveis)
+      if (!agent) {
+        console.info('[useAgentCausality] Trying direct agents query:', agentId);
+        const { data: directData, error: directError } = await supabase
+          .from('agents')
+          .select(`
+            id, agent_name, hostname, status, agent_version, last_heartbeat,
+            tenant_id, is_isolated, is_throttled, safe_mode_reason, safe_mode_entered_at,
+            force_update_version, force_update_at, force_update_reason,
+            throttle_reason, isolation_reason, isolated_at, throttled_at,
+            force_update_override_safe_mode_expires_at, enrolled_at
+          `)
+          .eq('id', agentId)
+          .eq('tenant_id', effectiveTenantId)
+          .is('archived_at', null)
+          .maybeSingle();
+
+        if (!directError && directData) {
+          agent = directData;
+        } else if (directError) {
+          console.warn('[useAgentCausality] Direct query error:', directError);
+          throw new Error('Erro ao buscar computador');
+        }
       }
 
       if (!agent) {
-        // Agente não encontrado - retornar null graciosamente
-        console.info('[useAgentCausality] Agent not found:', agentId);
+        // Agente não encontrado após todas as tentativas
+        console.info('[useAgentCausality] Agent not found after all attempts:', agentId);
         return null;
       }
 
@@ -165,37 +216,37 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
       switch (currentState) {
         case 'isolated':
           causedBy = 'Segurança';
-          reason = agent.isolation_reason || 'Isolado por motivo de segurança';
-          stateSince = agent.isolated_at;
+          reason = (agent.isolation_reason as string) || 'Isolado por motivo de segurança';
+          stateSince = (agent.isolated_at as string | null);
           break;
         case 'safe_mode':
           causedBy = 'Proteção automática';
-          reason = agent.safe_mode_reason || 'Proteção ativada após falhas';
-          stateSince = agent.safe_mode_entered_at;
+          reason = (agent.safe_mode_reason as string) || 'Proteção ativada após falhas';
+          stateSince = (agent.safe_mode_entered_at as string | null);
           // Verificar se há override ativo
           if (agent.force_update_override_safe_mode_expires_at) {
-            overrideExpiresAt = agent.force_update_override_safe_mode_expires_at;
+            overrideExpiresAt = (agent.force_update_override_safe_mode_expires_at as string);
           }
           break;
         case 'degraded':
           causedBy = 'Sistema de proteção';
-          reason = agent.throttle_reason || 'Comunicação reduzida para proteger o sistema';
-          stateSince = agent.throttled_at;
+          reason = (agent.throttle_reason as string) || 'Comunicação reduzida para proteger o sistema';
+          stateSince = (agent.throttled_at as string | null);
           break;
         case 'offline':
           causedBy = 'Perda de conexão';
           reason = 'Computador não se comunica há mais de 10 minutos';
-          stateSince = agent.last_heartbeat;
+          stateSince = (agent.last_heartbeat as string | null);
           break;
         case 'updating':
           causedBy = agent.force_update_reason ? 'Administrador' : 'Sistema';
-          reason = agent.force_update_reason || 'Atualização em andamento';
-          stateSince = agent.force_update_at;
+          reason = (agent.force_update_reason as string) || 'Atualização em andamento';
+          stateSince = (agent.force_update_at as string | null);
           break;
         case 'healthy':
           causedBy = 'Operação normal';
           reason = 'Computador funcionando sem problemas';
-          stateSince = agent.last_heartbeat;
+          stateSince = (agent.last_heartbeat as string | null);
           break;
       }
 

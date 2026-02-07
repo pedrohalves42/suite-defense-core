@@ -119,8 +119,10 @@ export const STATE_TRANSITIONS: Record<AgentState, AgentState[]> = {
   shutdown: []  // Terminal - sem saídas permitidas
 };
 
-// Tempo em minutos para considerar offline
-const OFFLINE_THRESHOLD_MINUTES = 10;
+import { AGENT_STATUS_THRESHOLDS } from './agent-status-constants';
+
+// Usa threshold centralizado
+const OFFLINE_THRESHOLD_MINUTES = AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES;
 
 /**
  * Deriva o estado formal do agente a partir dos dados do banco
