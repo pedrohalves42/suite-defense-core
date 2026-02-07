@@ -76,7 +76,7 @@ function getDisplayName(provider: AIProviderName): string {
     'groq': 'Groq',
     'openrouter': 'OpenRouter',
     'cloudflare': 'Cloudflare Workers AI',
-    'manaus-ia': 'Manaus IA',
+    'manus': 'Manus',
     'lovable': 'Lovable AI (Fallback)',
   };
   return names[provider] || provider;
