@@ -27,7 +27,7 @@ export type AIProviderName =
   | 'groq' 
   | 'openrouter' 
   | 'cloudflare' 
-  | 'manaus-ia' 
+  | 'manus' 
   | 'lovable';
 
 export interface AIProviderConfig {
@@ -79,7 +79,7 @@ const providerCircuits: Record<AIProviderName, {
   'groq': { failures: 0, lastFailure: 0, isOpen: false },
   'openrouter': { failures: 0, lastFailure: 0, isOpen: false },
   'cloudflare': { failures: 0, lastFailure: 0, isOpen: false },
-  'manaus-ia': { failures: 0, lastFailure: 0, isOpen: false },
+  'manus': { failures: 0, lastFailure: 0, isOpen: false },
   'lovable': { failures: 0, lastFailure: 0, isOpen: false },
 };
 
@@ -150,15 +150,15 @@ const PROVIDERS: AIProviderConfig[] = [
     costPerMToken: 0, // Free tier: 10K inferences/day
   },
   {
-    name: 'manaus-ia',
-    displayName: 'Manaus IA',
-    baseUrl: 'https://api.manaus.ia/v1/chat/completions',
-    model: 'manaus-default',
+    name: 'manus',
+    displayName: 'Manus',
+    baseUrl: 'https://manus.im/api/v1/chat/completions',
+    model: 'manus-1',
     headers: () => ({
-      'Authorization': `Bearer ${Deno.env.get('MANAUS_IA_API_KEY')}`,
+      'Authorization': `Bearer ${Deno.env.get('MANUS_API_KEY')}`,
       'Content-Type': 'application/json',
     }),
-    enabled: () => !!Deno.env.get('MANAUS_IA_API_KEY'),
+    enabled: () => !!Deno.env.get('MANUS_API_KEY'),
     priority: 5,
     maxTokens: 4096,
     costPerMToken: 0.1,
@@ -368,7 +368,7 @@ async function callCloudflare(
   };
 }
 
-async function callManausIA(
+async function callManus(
   config: AIProviderConfig,
   messages: AIMessage[],
   maxTokens: number
@@ -386,7 +386,7 @@ async function callManausIA(
   
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Manaus IA error ${response.status}: ${errorText}`);
+    throw new Error(`Manus error ${response.status}: ${errorText}`);
   }
   
   const data = await response.json();
@@ -442,8 +442,8 @@ async function callProvider(
       return callOpenRouter(config, messages, maxTokens);
     case 'cloudflare':
       return callCloudflare(config, messages, maxTokens);
-    case 'manaus-ia':
-      return callManausIA(config, messages, maxTokens);
+    case 'manus':
+      return callManus(config, messages, maxTokens);
     case 'lovable':
       return callLovable(config, messages, maxTokens);
     default:
