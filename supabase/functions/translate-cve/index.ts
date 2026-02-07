@@ -1,11 +1,11 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiSimpleComplete, getProviderStatus } from '../_shared/ai-multi-provider.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -27,58 +27,42 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ 
-        error: 'AI not configured',
-        translated: description 
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const systemPrompt = `Você é um tradutor técnico especializado em segurança da informação.
 Traduza a descrição de vulnerabilidade CVE do inglês para português brasileiro.
 Mantenha termos técnicos importantes em inglês quando apropriado (ex: buffer overflow, SQL injection, XSS).
 Seja conciso e claro. Responda APENAS com a tradução, sem explicações adicionais.`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Traduza para português: "${description}"` }
-        ],
-        max_tokens: 500,
-      }),
-    });
+    const response = await aiSimpleComplete(
+      systemPrompt,
+      `Traduza para português: "${description}"`,
+      {
+        maxTokens: 500,
+        functionName: 'translate-cve',
+      }
+    );
 
-    if (!response.ok) {
-      console.error('AI API error:', response.status);
+    if (response.error) {
+      console.error('AI translation error:', response.error);
       return new Response(JSON.stringify({ 
-        translated: description,
-        error: 'Translation failed' 
+        translated: description, // Fallback to original
+        error: response.error,
+        provider: response.provider,
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const data = await response.json();
-    const translated = data.choices?.[0]?.message?.content?.trim() || description;
-
-    console.log(`Translated CVE ${cve_id}: ${translated.substring(0, 100)}...`);
+    console.log(`[translate-cve] CVE ${cve_id} translated via ${response.provider} in ${response.latencyMs}ms`);
 
     return new Response(JSON.stringify({ 
       cve_id,
-      translated,
-      original: description 
+      translated: response.content,
+      original: description,
+      provider: response.provider,
+      model: response.model,
+      latencyMs: response.latencyMs,
+      usedFallback: response.usedFallback,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -88,7 +72,8 @@ Seja conciso e claro. Responda APENAS com a tradução, sem explicações adicio
     console.error('Translation error:', errorMessage);
     return new Response(JSON.stringify({ 
       error: errorMessage,
-      translated: null 
+      translated: null,
+      providers: getProviderStatus(),
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

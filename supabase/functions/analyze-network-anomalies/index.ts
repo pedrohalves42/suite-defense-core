@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { sanitizeForAI, sanitizeObjectForAI, anonymizeAgentName } from "../_shared/ai-sanitizer.ts";
-import { withCircuitBreaker, executeWithTimeout } from "../_shared/ai-circuit-breaker.ts";
+import { callAISimple, type AICallResult } from "../_shared/ai-provider-helper.ts";
 import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from "../_shared/ai-metrics.ts";
 import { persistAIMetrics } from "../_shared/ai-metrics-persistence.ts";
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from "../_shared/ai-evidence-types.ts";
@@ -10,11 +10,6 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-const AI_MODEL = 'openai/gpt-5-mini';
-const AI_TIMEOUT_MS = 15000;
-const metricsLogger = createMetricsLogger('analyze-network-anomalies', AI_MODEL);
 
 interface AnalysisRequest {
   agentName?: string;
@@ -170,71 +165,25 @@ Seja especifico e tecnico, focando em seguranca cibernetica.`;
     }
     const aiPrompt = promptSanitizeResult.sanitized;
 
-    if (!LOVABLE_API_KEY) {
-      console.warn('LOVABLE_API_KEY not configured');
-      return new Response(
-        JSON.stringify({ 
-          error: 'IA nao configurada',
-          rawData: analysisContext 
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    // Start metrics tracking
-    const metricsStartTime = metricsLogger.logStart();
-
-    // Use circuit breaker with timeout
-    const aiResult = await withCircuitBreaker(
-      async () => {
-        return executeWithTimeout(async () => {
-          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: AI_MODEL,
-              messages: [
-                {
-                  role: 'system',
-                  content: 'Voce e um especialista em seguranca de rede e deteccao de anomalias.'
-                },
-                {
-                  role: 'user',
-                  content: aiPrompt
-                }
-              ],
-              max_completion_tokens: 2000,
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error(`AI API error: ${response.status}`);
-          }
-
-          return response.json();
-        }, AI_TIMEOUT_MS);
-      },
-      { 
-        timeoutMs: AI_TIMEOUT_MS,
-        fallbackResponse: null 
+    // Call AI using multi-provider system
+    const aiResult = await callAISimple(
+      'Voce e um especialista em seguranca de rede e deteccao de anomalias.',
+      aiPrompt,
+      {
+        maxTokens: 2000,
+        functionName: 'analyze-network-anomalies',
       }
     );
 
-    // Handle circuit breaker result
-    if (!aiResult.success || !aiResult.data) {
-      metricsLogger.logFailure(metricsStartTime, aiResult.error || 'Unknown error', undefined, aiResult.usedFallback);
+    // Handle AI call failure
+    if (!aiResult.success) {
       console.error('[analyze-network-anomalies] AI call failed:', aiResult.error);
       return new Response(
         JSON.stringify({ 
           error: 'Erro ao analisar dados com IA - servico temporariamente indisponivel',
           rawData: analysisContext,
-          fallback: true
+          fallback: true,
+          provider: aiResult.provider,
         }),
         {
           status: 200,
@@ -243,25 +192,8 @@ Seja especifico e tecnico, focando em seguranca cibernetica.`;
       );
     }
 
-    const aiData = aiResult.data;
-    const analysis = aiData.choices?.[0]?.message?.content;
-    const tokenUsage = extractTokenUsage(aiData);
-
-    // Log success metrics and persist to database
-    metricsLogger.logSuccess(metricsStartTime, undefined, tokenUsage);
-    
-    // Persist metrics to DB for dashboard
-    const successMetrics: AIInferenceMetrics = {
-      timestamp: new Date().toISOString(),
-      function_name: 'analyze-network-anomalies',
-      model: AI_MODEL,
-      latency_ms: Date.now() - metricsStartTime,
-      success: true,
-      tokens_prompt: tokenUsage.prompt,
-      tokens_completion: tokenUsage.completion,
-      tokens_total: tokenUsage.total,
-    };
-    await persistAIMetrics(successMetrics);
+    const analysis = aiResult.content;
+    console.log(`[analyze-network-anomalies] Analysis completed via ${aiResult.provider} in ${aiResult.latencyMs}ms`);
 
     console.log('[analyze-network-anomalies] Analysis completed successfully');
 

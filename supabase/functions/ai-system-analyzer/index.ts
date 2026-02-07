@@ -1,16 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { sanitizeForAI, anonymizeAgentName } from '../_shared/ai-sanitizer.ts';
-import { withCircuitBreaker, executeWithTimeout } from '../_shared/ai-circuit-breaker.ts';
+import { callAIJson, getAIProviderHealth, type AIMessage } from '../_shared/ai-provider-helper.ts';
 import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from '../_shared/ai-metrics.ts';
 import { persistAIMetrics } from '../_shared/ai-metrics-persistence.ts';
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from '../_shared/ai-evidence-types.ts';
 
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const AI_MODEL = 'google/gemini-2.5-flash';
-const AI_TIMEOUT_MS = 15000; // 15 seconds
 
 interface AnalysisData {
   problematicJobs: any[];
@@ -383,10 +380,7 @@ async function analyzeWithAI(
   data: AnalysisData,
   jobStats: any[]
 ): Promise<AIInsight[]> {
-  if (!LOVABLE_API_KEY) {
-    console.warn('[ai-system-analyzer] LOVABLE_API_KEY not configured, skipping AI analysis');
-    return [];
-  }
+  // No API key check needed - multi-provider handles availability
 
   try {
     // Calcular estatisticas resumidas
@@ -545,93 +539,26 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
     }
     const prompt = promptSanitizeResult.sanitized;
 
-    // Start metrics tracking
-    const aiMetricsLogger = createMetricsLogger('ai-system-analyzer', AI_MODEL);
-    const startTime = aiMetricsLogger.logStart(tenantId);
-
-    // Use circuit breaker with timeout
-    const aiResult = await withCircuitBreaker(
-      async () => {
-        return executeWithTimeout(async () => {
-          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: AI_MODEL,
-              messages: [
-                { 
-                  role: 'system', 
-                  content: 'Voce e um especialista em analise de sistemas. Responda APENAS com JSON valido, sem texto adicional.' 
-                },
-                { role: 'user', content: prompt }
-              ],
-            }),
-          });
-
-          if (!response.ok) {
-            if (response.status === 429) {
-              throw new Error('Rate limit exceeded');
-            }
-            if (response.status === 402) {
-              throw new Error('Payment required - credits exhausted');
-            }
-            throw new Error(`AI API error: ${response.status}`);
-          }
-
-          return response.json();
-        }, AI_TIMEOUT_MS);
-      },
-      { 
-        timeoutMs: AI_TIMEOUT_MS,
-        fallbackResponse: null 
+    // Call AI using multi-provider system
+    const systemPrompt = 'Voce e um especialista em analise de sistemas. Responda APENAS com JSON valido, sem texto adicional.';
+    
+    const { data: parsedInsights, result: aiResult } = await callAIJson<any[]>(
+      systemPrompt,
+      prompt,
+      {
+        maxTokens: 2048,
+        functionName: 'ai-system-analyzer',
+        tenantId,
       }
     );
 
-    // Handle circuit breaker result
-    if (!aiResult.success || !aiResult.data) {
-      aiMetricsLogger.logFailure(startTime, aiResult.error || 'Unknown error', tenantId, aiResult.usedFallback);
+    // Handle AI call failure
+    if (!aiResult.success || !parsedInsights) {
       console.error('[ai-system-analyzer] AI call failed for tenant:', tenantId, aiResult.error);
       return [];
     }
 
-    const aiResponse = aiResult.data;
-    const content = aiResponse.choices?.[0]?.message?.content;
-    const tokenUsage = extractTokenUsage(aiResponse);
-
-    // Log success metrics and persist to database
-    aiMetricsLogger.logSuccess(startTime, tenantId, tokenUsage);
-    
-    // Persist metrics to DB for dashboard
-    const successMetrics: AIInferenceMetrics = {
-      timestamp: new Date().toISOString(),
-      function_name: 'ai-system-analyzer',
-      model: AI_MODEL,
-      latency_ms: Date.now() - startTime,
-      success: true,
-      tokens_prompt: tokenUsage.prompt,
-      tokens_completion: tokenUsage.completion,
-      tokens_total: tokenUsage.total,
-      tenant_id: tenantId,
-    };
-    await persistAIMetrics(successMetrics);
-
-    if (!content) {
-      console.error('[ai-system-analyzer] No content in AI response');
-      return [];
-    }
-
-    // Extrair JSON da resposta (pode vir com ```json ou sem)
-    let jsonContent = content.trim();
-    if (jsonContent.startsWith('```json')) {
-      jsonContent = jsonContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-    } else if (jsonContent.startsWith('```')) {
-      jsonContent = jsonContent.replace(/```\n?/g, '');
-    }
-
-    const parsedInsights = JSON.parse(jsonContent);
+    console.log(`[ai-system-analyzer] Analysis for ${tenantName} completed via ${aiResult.provider} in ${aiResult.latencyMs}ms`);
 
     if (!Array.isArray(parsedInsights)) {
       console.error('[ai-system-analyzer] AI response is not an array');
