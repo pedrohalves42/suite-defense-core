@@ -32,6 +32,8 @@ import { SectionDivider } from '@/components/ui/section-divider';
 import { PipelineHealthCard } from '@/components/pipeline/PipelineHealthCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BurningIssuesCard } from '@/components/dashboard/BurningIssuesCard';
+import { SimpleDashboard } from '@/components/dashboard/SimpleDashboard';
+import { useSimpleModeContext } from '@/hooks/useSimpleMode';
 
 export default function Dashboard() {
   // V-FIX: Extract loading guard to prevent race conditions during tenant sync
@@ -40,6 +42,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  
+  // Simple Mode - para visualização simplificada para donos de negócio
+  const { isSimple } = useSimpleModeContext();
 
   useEffect(() => {
     const onboardingParam = searchParams.get('onboarding');
@@ -267,6 +272,31 @@ export default function Dashboard() {
     );
   }
 
+  // 🎯 MODO SIMPLES - Renderização específica para donos de negócio
+  if (isSimple) {
+    return (
+      <div className="space-y-6">
+        {/* Header simplificado */}
+        <div className="page-header-enterprise">
+          <h1>Minha Proteção</h1>
+          <p>Status de segurança dos seus computadores</p>
+        </div>
+
+        <SimpleDashboard 
+          globalStatus={globalStatus}
+          stats={{
+            totalAgents: agents?.length || 0,
+            onlineAgents,
+            offlineAgents,
+            criticalAlerts,
+          }}
+          isLoading={agentsLoading}
+        />
+      </div>
+    );
+  }
+
+  // 🔧 MODO TÉCNICO - Interface completa para TI
   return (
     <div className="space-y-6">
       {/* Header */}
