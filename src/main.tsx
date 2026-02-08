@@ -3,6 +3,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
+import { HelmetProvider } from "react-helmet-async";
 import { ActiveTenantProvider } from "./hooks/useActiveTenant";
 import App from "./App.tsx";
 import "./index.css";
@@ -22,18 +23,20 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="dark"
-      enableSystem={false}
-      storageKey="intelligence-theme"
-      disableTransitionOnChange
-    >
-      <QueryClientProvider client={queryClient}>
-        <ActiveTenantProvider>
-          <App />
-        </ActiveTenantProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <HelmetProvider>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="dark"
+        enableSystem={false}
+        storageKey="intelligence-theme"
+        disableTransitionOnChange
+      >
+        <QueryClientProvider client={queryClient}>
+          <ActiveTenantProvider>
+            <App />
+          </ActiveTenantProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </HelmetProvider>
   </React.StrictMode>
 );
