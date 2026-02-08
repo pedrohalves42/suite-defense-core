@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
-import { getAgentStatusInfo } from '@/lib/agent-utils';
+
 import { toast } from 'sonner';
 import { ProtectionTrendChart } from '@/components/admin/ProtectionTrendChart';
 import { GovernanceHealthBanner } from '@/components/admin/GovernanceHealthBanner';
@@ -55,24 +55,17 @@ export default function Dashboard() {
     }
   }, [searchParams, setSearchParams]);
 
-  // Fetch agents - only when tenant is loaded
+  // Fetch agents using the same RPC as AgentHealthMonitor for consistency
   const { data: agents, isLoading: agentsLoading, isFetched: agentsFetched } = useQuery({
-    queryKey: ['dashboard-agents', tenant?.id],
+    queryKey: ['agent-health', tenant?.id], // Same queryKey as AgentHealthMonitor for cache sharing
     queryFn: async () => {
       if (!tenant?.id) return [];
-      // ADR-026: Usar RPC com tenant_id explícito para evitar dessincronização JWT
-      const { data, error } = await supabase.rpc('get_agents_list', {
-        p_tenant_id: tenant.id,
-        p_include_archived: false
+      // Use get_agent_health_metrics for consistent data across all dashboard pages
+      const { data, error } = await supabase.rpc('get_agent_health_metrics', {
+        p_tenant_id: tenant.id
       });
       if (error) throw error;
-      // RPC retorna jsonb objects com nomes de campos corretos
-      return (data || []).map((agent: any) => ({
-        id: agent.id,
-        agent_name: agent.agent_name,
-        status: agent.status,
-        last_heartbeat: agent.last_heartbeat,
-      }));
+      return data || [];
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
@@ -150,10 +143,14 @@ export default function Dashboard() {
     },
   });
 
-  // Calculate stats - só calcula quando dados estão carregados
+  // Calculate stats using health_status from RPC (same logic as AgentHealthMonitor)
   const hasAgentData = agentsFetched && agents && agents.length > 0;
-  const onlineAgents = hasAgentData ? agents.filter(a => getAgentStatusInfo(a).isOnline).length : 0;
-  const offlineAgents = hasAgentData ? agents.length - onlineAgents : 0;
+  const onlineAgents = hasAgentData 
+    ? agents.filter((a: any) => a.health_status === 'healthy' || a.health_status === 'critical').length 
+    : 0;
+  const offlineAgents = hasAgentData 
+    ? agents.filter((a: any) => a.health_status === 'offline' || a.health_status === 'never_connected').length 
+    : 0;
   const criticalAlerts = alerts?.filter(a => a.severity === 'critical' || a.severity === 'high').length || 0;
 
   // Calculate security score (0-100) - Simplified without jobsStats
