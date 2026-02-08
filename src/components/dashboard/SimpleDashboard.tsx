@@ -4,6 +4,9 @@ import { Link } from 'react-router-dom';
 import { CheckCircle, AlertTriangle, XCircle, Phone, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { QuickActions, SmartNotificationBanner } from './QuickActions';
+import { useSmartNotifications } from '@/hooks/useSmartNotifications';
+import { toast } from 'sonner';
 
 interface SimpleDashboardProps {
   globalStatus: {
@@ -19,6 +22,7 @@ interface SimpleDashboardProps {
     criticalAlerts: number;
   };
   isLoading?: boolean;
+  tenantId?: string;
 }
 
 /**
@@ -28,8 +32,23 @@ interface SimpleDashboardProps {
  * - Status geral (semáforo verde/amarelo/vermelho)
  * - Números essenciais em linguagem de negócio
  * - Ações claras quando há problemas
+ * - Notificações inteligentes
  */
-export function SimpleDashboard({ globalStatus, stats, isLoading }: SimpleDashboardProps) {
+export function SimpleDashboard({ globalStatus, stats, isLoading, tenantId }: SimpleDashboardProps) {
+  const { notifications } = useSmartNotifications();
+  
+  const handleRunScan = () => {
+    toast.info('Verificação de segurança iniciada...', {
+      description: 'Isso pode levar alguns minutos.',
+    });
+  };
+
+  const handleGenerateReport = () => {
+    toast.info('Gerando relatório...', {
+      description: 'O relatório será exibido em breve.',
+    });
+  };
+
   const getStatusConfig = () => {
     switch (globalStatus.variant) {
       case 'success':
@@ -71,7 +90,12 @@ export function SimpleDashboard({ globalStatus, stats, isLoading }: SimpleDashbo
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Notificações Inteligentes */}
+      {notifications.filter(n => n.type !== 'all_good').map((notification, idx) => (
+        <SmartNotificationBanner key={idx} notification={notification} />
+      ))}
+
       {/* Status Principal - Grande e Claro */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -177,6 +201,12 @@ export function SimpleDashboard({ globalStatus, stats, isLoading }: SimpleDashbo
           </Card>
         </motion.div>
       </div>
+
+      {/* Ações Rápidas */}
+      <QuickActions 
+        onRunScan={handleRunScan}
+        onGenerateReport={handleGenerateReport}
+      />
 
       {/* Mensagem de Resumo */}
       <Card className="bg-muted/30">

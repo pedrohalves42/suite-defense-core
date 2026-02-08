@@ -288,6 +288,7 @@ export default function Dashboard() {
             criticalAlerts,
           }}
           isLoading={agentsLoading}
+          tenantId={tenant?.id}
         />
       </div>
     );

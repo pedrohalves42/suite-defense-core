@@ -22382,6 +22382,7 @@ export type Database = {
         Args: { p_severity: string }
         Returns: number
       }
+      get_smart_notifications: { Args: { p_tenant_id?: string }; Returns: Json }
       get_software_risk_summary: {
         Args: { p_tenant_id: string }
         Returns: {
