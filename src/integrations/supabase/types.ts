@@ -21763,17 +21763,7 @@ export type Database = {
       check_task_sla_breach: { Args: never; Returns: number }
       claim_jobs_for_agent: {
         Args: { p_agent_id: string; p_limit?: number }
-        Returns: {
-          execution_id: string
-          execution_index: number
-          expires_at: string
-          job_id: string
-          job_type: string
-          nonce: string
-          payload: Json
-          payload_hash: string
-          previous_execution_hash: string
-        }[]
+        Returns: Record<string, unknown>[]
       }
       classify_job_failure: {
         Args: { p_error_message: string }
