@@ -19,6 +19,7 @@
 
 import { withCircuitBreaker, getCircuitState } from './ai-circuit-breaker.ts';
 import { createMetricsLogger, extractTokenUsage } from './ai-metrics.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 // ============ PROVIDER CONFIGURATION ============
 
@@ -83,11 +84,35 @@ const providerCircuits: Record<AIProviderName, {
   'lovable': { failures: 0, lastFailure: 0, isOpen: false },
 };
 
+// ============ PROVIDER STATS FOR SCORE-BASED ROUTING ============
+interface ProviderStats {
+  avgLatencyMs: number;
+  requests: number;
+  failures: number;
+  lastUpdated: number;
+}
+
+const providerStats: Record<AIProviderName, ProviderStats> = {
+  'google-gemini': { avgLatencyMs: 0, requests: 0, failures: 0, lastUpdated: 0 },
+  'groq': { avgLatencyMs: 0, requests: 0, failures: 0, lastUpdated: 0 },
+  'openrouter': { avgLatencyMs: 0, requests: 0, failures: 0, lastUpdated: 0 },
+  'cloudflare': { avgLatencyMs: 0, requests: 0, failures: 0, lastUpdated: 0 },
+  'manus': { avgLatencyMs: 0, requests: 0, failures: 0, lastUpdated: 0 },
+  'lovable': { avgLatencyMs: 0, requests: 0, failures: 0, lastUpdated: 0 },
+};
+
+// Score weights for intelligent provider selection
+const SCORE_LATENCY_WEIGHT = 0.5;
+const SCORE_COST_WEIGHT = 0.3;
+const SCORE_ERROR_WEIGHT = 0.2;
+
 const CIRCUIT_FAILURE_THRESHOLD = 3;
 const CIRCUIT_RESET_MS = 60000; // 1 minute
 
 // Round-robin state (per-instance, resets on cold start)
 let roundRobinIndex = 0;
+// Flag to enable/disable score-based routing
+let useScoreBasedRouting = true;
 
 // ============ PROVIDER DEFINITIONS ============
 
@@ -451,6 +476,84 @@ async function callProvider(
   }
 }
 
+// ============ SCORE-BASED PROVIDER SELECTION ============
+
+/**
+ * Calculate provider score (lower = better)
+ * Score = (latency * 0.5) + (cost * 0.3) + (error_rate * 0.2) + circuit_penalty
+ */
+function calculateProviderScore(provider: AIProviderConfig): number {
+  const stats = providerStats[provider.name];
+  const circuit = providerCircuits[provider.name];
+
+  // Average latency (ms) - use default if no data
+  const avgLatency = stats.avgLatencyMs || 1000;
+  
+  // Failure rate (0-1)
+  const failureRate = stats.requests > 0 ? stats.failures / stats.requests : 0;
+  
+  // Circuit breaker penalty
+  const circuitPenalty = circuit.isOpen ? 10000 : 0;
+  
+  // Calculate final score (lower = better)
+  const score = 
+    avgLatency * SCORE_LATENCY_WEIGHT +
+    provider.costPerMToken * 1000 * SCORE_COST_WEIGHT +
+    failureRate * 1000 * SCORE_ERROR_WEIGHT +
+    circuitPenalty;
+  
+  return Math.round(score);
+}
+
+/**
+ * Select best provider based on score
+ */
+function selectBestProviderByScore(excludeFallback = true): AIProviderConfig | null {
+  let candidates = PROVIDERS
+    .filter(p => p.enabled() && isProviderAvailable(p.name));
+  
+  if (excludeFallback) {
+    candidates = candidates.filter(p => p.name !== 'lovable');
+  }
+
+  if (candidates.length === 0) return null;
+
+  // Sort by score (lower = better)
+  const scored = candidates
+    .map(p => ({ provider: p, score: calculateProviderScore(p) }))
+    .sort((a, b) => a.score - b.score);
+
+  console.log('[AI Router] Provider scores:', scored.map(s => 
+    `${s.provider.displayName}: ${s.score}`
+  ).join(', '));
+
+  return scored[0].provider;
+}
+
+/**
+ * Record successful call stats for score calculation
+ */
+function recordStatsSuccess(provider: AIProviderName, latencyMs: number): void {
+  const stats = providerStats[provider];
+  stats.requests++;
+  stats.lastUpdated = Date.now();
+  
+  // Exponential moving average (80% history + 20% new)
+  stats.avgLatencyMs = stats.avgLatencyMs === 0 
+    ? latencyMs 
+    : Math.round(stats.avgLatencyMs * 0.8 + latencyMs * 0.2);
+}
+
+/**
+ * Record failed call stats for score calculation
+ */
+function recordStatsFailure(provider: AIProviderName): void {
+  const stats = providerStats[provider];
+  stats.requests++;
+  stats.failures++;
+  stats.lastUpdated = Date.now();
+}
+
 // ============ ROUND-ROBIN PROVIDER SELECTION ============
 
 function getAvailableProviders(): AIProviderConfig[] {
@@ -460,6 +563,12 @@ function getAvailableProviders(): AIProviderConfig[] {
 }
 
 function selectNextProvider(excludeFallback = true): AIProviderConfig | null {
+  // Use score-based routing if enabled
+  if (useScoreBasedRouting) {
+    return selectBestProviderByScore(excludeFallback);
+  }
+  
+  // Fallback to round-robin
   let providers = getAvailableProviders();
   
   if (excludeFallback) {
@@ -477,6 +586,49 @@ function selectNextProvider(excludeFallback = true): AIProviderConfig | null {
 
 // ============ MAIN COMPLETION FUNCTION ============
 
+/**
+ * Persist metrics with provider and cost info
+ */
+async function persistAIMetricsWithProvider(data: {
+  function_name: string;
+  model: string;
+  provider: AIProviderName;
+  latency_ms: number;
+  success: boolean;
+  tokens_total?: number;
+  tokens_prompt?: number;
+  tokens_completion?: number;
+  tenant_id?: string;
+  used_fallback: boolean;
+  cost_usd?: number;
+  error?: string;
+}): Promise<void> {
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+    
+    await supabase.from('ai_inference_metrics').insert({
+      function_name: data.function_name,
+      model: data.model,
+      provider: data.provider,
+      latency_ms: data.latency_ms,
+      success: data.success,
+      tokens_total: data.tokens_total || null,
+      tokens_prompt: data.tokens_prompt || null,
+      tokens_completion: data.tokens_completion || null,
+      tenant_id: data.tenant_id || null,
+      used_fallback: data.used_fallback,
+      cost_usd: data.cost_usd || 0,
+      error: data.error || null,
+      created_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.warn('[AI Metrics] Failed to persist:', err);
+  }
+}
+
 export async function aiComplete(
   request: AICompletionRequest
 ): Promise<AICompletionResponse> {
@@ -486,73 +638,134 @@ export async function aiComplete(
   const metrics = createMetricsLogger(functionName, 'multi-provider');
   const metricsStart = metrics.logStart(tenantId);
   
-  // Get available providers (excluding fallback initially)
+  // Use score-based provider selection
   let provider = selectNextProvider(true);
   let usedFallback = false;
   let lastError: string | undefined;
+  const attemptedProviders: Set<AIProviderName> = new Set();
   
-  // Try primary providers first
-  while (provider) {
+  // Try primary providers based on score
+  while (provider && attemptedProviders.size < PROVIDERS.length - 1) {
+    attemptedProviders.add(provider.name);
+    
     try {
-      console.log(`[multi-provider] Trying ${provider.displayName} (${provider.model})`);
+      const score = calculateProviderScore(provider);
+      console.log(`[AI Router] Trying ${provider.displayName} (score: ${score})`);
       
       const result = await callProvider(provider, messages, Math.min(maxTokens, provider.maxTokens));
+      const latencyMs = Date.now() - startTime;
       
+      // Record success stats for score calculation
       recordProviderSuccess(provider.name);
-      metrics.logSuccess(metricsStart, tenantId, result.tokens);
+      recordStatsSuccess(provider.name, latencyMs);
+      
+      // Calculate cost
+      const tokensUsed = result.tokens?.total || 0;
+      const costUsd = (tokensUsed / 1_000_000) * provider.costPerMToken;
+      
+      // Persist metrics with provider info
+      persistAIMetricsWithProvider({
+        function_name: functionName,
+        model: provider.model,
+        provider: provider.name,
+        latency_ms: latencyMs,
+        success: true,
+        tokens_total: tokensUsed,
+        tokens_prompt: result.tokens?.prompt,
+        tokens_completion: result.tokens?.completion,
+        tenant_id: tenantId,
+        used_fallback: usedFallback,
+        cost_usd: costUsd,
+      });
       
       return {
         content: result.content,
         provider: provider.name,
         model: provider.model,
         tokensUsed: result.tokens,
-        latencyMs: Date.now() - startTime,
+        latencyMs,
         usedFallback,
       };
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
       recordProviderFailure(provider.name, lastError);
-      console.warn(`[multi-provider] ${provider.displayName} failed: ${lastError}`);
+      recordStatsFailure(provider.name);
+      console.warn(`[AI Router] ${provider.displayName} failed: ${lastError}`);
       
-      // Try next available provider
-      provider = selectNextProvider(true);
+      // Get next best provider, excluding already attempted ones
+      const remaining = getAvailableProviders()
+        .filter(p => !attemptedProviders.has(p.name) && p.name !== 'lovable')
+        .sort((a, b) => calculateProviderScore(a) - calculateProviderScore(b));
+      
+      provider = remaining.length > 0 ? remaining[0] : null;
     }
   }
   
   // All primary providers failed, try Lovable as fallback
-  console.log('[multi-provider] All primary providers failed, trying Lovable AI fallback');
+  console.log('[AI Router] All primary providers failed, trying Lovable AI fallback');
   const lovableConfig = PROVIDERS.find(p => p.name === 'lovable');
   
   if (lovableConfig && lovableConfig.enabled() && isProviderAvailable('lovable')) {
     try {
       usedFallback = true;
       const result = await callProvider(lovableConfig, messages, Math.min(maxTokens, lovableConfig.maxTokens));
+      const latencyMs = Date.now() - startTime;
       
       recordProviderSuccess('lovable');
-      metrics.logSuccess(metricsStart, tenantId, result.tokens);
+      recordStatsSuccess('lovable', latencyMs);
+      
+      // Calculate cost
+      const tokensUsed = result.tokens?.total || 0;
+      const costUsd = (tokensUsed / 1_000_000) * lovableConfig.costPerMToken;
+      
+      // Persist metrics
+      persistAIMetricsWithProvider({
+        function_name: functionName,
+        model: lovableConfig.model,
+        provider: 'lovable',
+        latency_ms: latencyMs,
+        success: true,
+        tokens_total: tokensUsed,
+        tokens_prompt: result.tokens?.prompt,
+        tokens_completion: result.tokens?.completion,
+        tenant_id: tenantId,
+        used_fallback: true,
+        cost_usd: costUsd,
+      });
       
       return {
         content: result.content,
         provider: 'lovable',
         model: lovableConfig.model,
         tokensUsed: result.tokens,
-        latencyMs: Date.now() - startTime,
+        latencyMs,
         usedFallback: true,
       };
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
       recordProviderFailure('lovable', lastError);
+      recordStatsFailure('lovable');
     }
   }
   
-  // All providers failed
-  metrics.logFailure(metricsStart, lastError || 'All providers failed', tenantId, true);
+  // All providers failed - persist failure metrics
+  const finalLatencyMs = Date.now() - startTime;
+  persistAIMetricsWithProvider({
+    function_name: functionName,
+    model: 'none',
+    provider: 'lovable',
+    latency_ms: finalLatencyMs,
+    success: false,
+    tenant_id: tenantId,
+    used_fallback: true,
+    error: lastError,
+  });
   
   return {
     content: '',
     provider: 'lovable',
     model: 'none',
-    latencyMs: Date.now() - startTime,
+    latencyMs: finalLatencyMs,
     usedFallback: true,
     error: `All AI providers failed. Last error: ${lastError}`,
   };
@@ -589,6 +802,47 @@ export function resetProviderCircuit(provider: AIProviderName): void {
 
 export function getActiveProviders(): AIProviderName[] {
   return getAvailableProviders().map(p => p.name);
+}
+
+/**
+ * Get current provider scores for dashboard/monitoring
+ */
+export function getProviderScores(): Array<{
+  provider: AIProviderName;
+  displayName: string;
+  score: number;
+  avgLatencyMs: number;
+  requests: number;
+  failures: number;
+  failureRate: number;
+  circuitOpen: boolean;
+  enabled: boolean;
+}> {
+  return PROVIDERS.map(p => {
+    const stats = providerStats[p.name];
+    const circuit = providerCircuits[p.name];
+    const failureRate = stats.requests > 0 ? stats.failures / stats.requests : 0;
+    
+    return {
+      provider: p.name,
+      displayName: p.displayName,
+      score: calculateProviderScore(p),
+      avgLatencyMs: stats.avgLatencyMs,
+      requests: stats.requests,
+      failures: stats.failures,
+      failureRate: Math.round(failureRate * 100) / 100,
+      circuitOpen: circuit.isOpen,
+      enabled: p.enabled(),
+    };
+  }).sort((a, b) => a.score - b.score);
+}
+
+/**
+ * Toggle score-based vs round-robin routing
+ */
+export function setScoreBasedRouting(enabled: boolean): void {
+  useScoreBasedRouting = enabled;
+  console.log(`[AI Router] Score-based routing ${enabled ? 'ENABLED' : 'DISABLED'}`);
 }
 
 // ============ CONVENIENCE WRAPPERS ============

@@ -3956,12 +3956,14 @@ export type Database = {
       ai_inference_metrics: {
         Row: {
           circuit_breaker_state: string | null
+          cost_usd: number | null
           created_at: string | null
           error: string | null
           function_name: string
           id: string
           latency_ms: number
           model: string
+          provider: string | null
           request_metadata: Json | null
           success: boolean
           tenant_id: string | null
@@ -3972,12 +3974,14 @@ export type Database = {
         }
         Insert: {
           circuit_breaker_state?: string | null
+          cost_usd?: number | null
           created_at?: string | null
           error?: string | null
           function_name: string
           id?: string
           latency_ms: number
           model: string
+          provider?: string | null
           request_metadata?: Json | null
           success?: boolean
           tenant_id?: string | null
@@ -3988,12 +3992,14 @@ export type Database = {
         }
         Update: {
           circuit_breaker_state?: string | null
+          cost_usd?: number | null
           created_at?: string | null
           error?: string | null
           function_name?: string
           id?: string
           latency_ms?: number
           model?: string
+          provider?: string | null
           request_metadata?: Json | null
           success?: boolean
           tenant_id?: string | null
@@ -19086,6 +19092,42 @@ export type Database = {
           },
         ]
       }
+      v_ai_function_performance: {
+        Row: {
+          avg_latency_ms: number | null
+          avg_tokens: number | null
+          cost_cents_24h: number | null
+          function_name: string | null
+          last_request: string | null
+          requests_24h: number | null
+          success_rate_pct: number | null
+        }
+        Relationships: []
+      }
+      v_ai_hourly_trends: {
+        Row: {
+          avg_latency_ms: number | null
+          cost_cents: number | null
+          hour: string | null
+          requests: number | null
+          success_rate_pct: number | null
+          total_tokens: number | null
+        }
+        Relationships: []
+      }
+      v_ai_provider_performance: {
+        Row: {
+          avg_latency_ms: number | null
+          cost_cents_24h: number | null
+          fallback_rate_pct: number | null
+          p95_latency_ms: number | null
+          provider: string | null
+          requests_24h: number | null
+          success_rate_pct: number | null
+          total_tokens: number | null
+        }
+        Relationships: []
+      }
       v_anomalies_without_runbook: {
         Row: {
           anomaly_type: string | null
@@ -22144,6 +22186,16 @@ export type Database = {
       get_agents_snapshots_list: {
         Args: { p_tenant_id?: string }
         Returns: Json[]
+      }
+      get_ai_provider_scores: {
+        Args: never
+        Returns: {
+          avg_latency_ms: number
+          provider: string
+          requests_count: number
+          score: number
+          success_rate: number
+        }[]
       }
       get_alert_decision_chain: { Args: { p_alert_id: string }; Returns: Json }
       get_audit_raw_metrics: { Args: { p_tenant_id: string }; Returns: Json }
