@@ -21020,6 +21020,17 @@ export type Database = {
         }
         Relationships: []
       }
+      v_service_role_policies: {
+        Row: {
+          granted_to: string | null
+          justification: string | null
+          operation: string | null
+          policyname: unknown
+          risk_level: string | null
+          tablename: unknown
+        }
+        Relationships: []
+      }
       v_soc2_readiness: {
         Row: {
           control_code: string | null
