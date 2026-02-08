@@ -11,6 +11,8 @@ import { TenantSetupWizard } from '@/components/TenantSetupWizard';
 import { useTenantSetup } from '@/hooks/useTenantSetup';
 import { GlobalSearch } from '@/components/navigation/GlobalSearch';
 import { FirstTimeSetupWizard } from '@/components/onboarding/FirstTimeSetupWizard';
+import { SimpleModeToggle } from '@/components/layout/SimpleModeToggle';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 export const AdminLayout = () => {
   const { isAdmin, loading } = useIsAdmin();
@@ -55,10 +57,13 @@ export const AdminLayout = () => {
       {/* Tenant Setup Wizard - shows when tenant needs initial configuration */}
       <TenantSetupWizard open={needsSetup} />
 
-      {/* Header with Tenant Selector */}
+      {/* Header with Tenant Selector and Simple Mode Toggle */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-foreground">Painel Administrativo</h1>
         <div className="flex items-center gap-3">
+          <TooltipProvider>
+            <SimpleModeToggle />
+          </TooltipProvider>
           <GlobalSearch />
           <TenantSelector />
         </div>

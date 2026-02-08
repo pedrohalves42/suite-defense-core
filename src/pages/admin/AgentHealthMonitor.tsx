@@ -22,6 +22,8 @@ import { AgentCard } from '@/components/agent/AgentCard';
 import { useAgentsSystemMetrics } from '@/hooks/useAgentSystemMetrics';
 import { useAgentsDiskMetrics } from '@/hooks/useAgentsDiskMetrics';
 import { Link } from 'react-router-dom';
+import { SimpleAgentList } from '@/components/dashboard/SimpleAgentList';
+import { useSimpleModeContext } from '@/hooks/useSimpleMode';
 
 type StatusFilter = 'all' | 'problems' | 'protected' | 'offline';
 
@@ -41,6 +43,9 @@ export default function AgentHealthMonitor() {
   const [recentHeartbeats, setRecentHeartbeats] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedAgent, setSelectedAgent] = useState<SelectedAgent | null>(null);
+  
+  // Simple Mode - visualização simplificada
+  const { isSimple } = useSimpleModeContext();
 
   // Fetch agent health metrics using RPC
   // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
@@ -160,6 +165,42 @@ export default function AgentHealthMonitor() {
     );
   }
 
+  // 🎯 MODO SIMPLES - Lista simplificada para donos de negócio
+  if (isSimple) {
+    return (
+      <div className="space-y-6">
+        <div className="page-header-enterprise">
+          <h1>Meus Computadores</h1>
+          <p>Veja quais estão protegidos</p>
+        </div>
+
+        <SimpleAgentList 
+          agents={agentsHealth.map(a => ({
+            id: a.id || '',
+            agent_name: a.agent_name || 'Computador',
+            health_status: a.health_status as 'healthy' | 'critical' | 'offline' | 'never_connected',
+          }))}
+          isLoading={isLoading}
+          onAgentClick={(agent) => tenant?.id && setSelectedAgent({
+            id: agent.id,
+            name: agent.agent_name,
+            tenantId: tenant.id,
+          })}
+        />
+
+        {/* Agent Details Drawer */}
+        <AgentDetailsDrawer
+          agentId={selectedAgent?.id || null}
+          agentName={selectedAgent?.name}
+          tenantId={selectedAgent?.tenantId}
+          open={!!selectedAgent}
+          onClose={() => setSelectedAgent(null)}
+        />
+      </div>
+    );
+  }
+
+  // 🔧 MODO TÉCNICO - Interface completa
   return (
     <div className="space-y-6">
       {/* Header */}
