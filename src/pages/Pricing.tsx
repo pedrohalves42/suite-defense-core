@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Zap, Crown, Building2, ArrowRight, Shield, Monitor } from 'lucide-react';
 import { CONTACT } from '@/constants/config';
+import { SEOHead } from '@/components/SEOHead';
 
 export default function Pricing() {
   const plans = [
@@ -93,7 +94,14 @@ export default function Pricing() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
+      <SEOHead 
+        title="Precos e Planos - CyberShield | Seguranca Cibernetica para PMEs"
+        description="Planos de seguranca cibernetica a partir de R$149/mes. Proteja sua empresa com antivirus, monitoramento 24/7 e compliance LGPD. Trial gratuito de 14 dias."
+        keywords="preco antivirus empresarial, planos seguranca cibernetica, cybershield precos, protecao PME Brasil"
+        canonicalUrl="/pricing"
+      />
+      <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -302,6 +310,7 @@ export default function Pricing() {
           <p>© {new Date().getFullYear()} CyberShield. Todos os direitos reservados.</p>
         </div>
       </footer>
-    </div>
+      </div>
+    </>
   );
 }

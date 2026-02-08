@@ -5,18 +5,31 @@ import {
 } from "lucide-react";
 
 export const LANDING_CONTENT = {
+  // SEO Metadata
+  seo: {
+    title: "CyberShield - Seguranca Cibernetica Inteligente para PMEs Brasileiras",
+    description: "Protecao completa para sua empresa: antivirus, monitoramento 24/7 e compliance LGPD em um so lugar. Empresa 100% brasileira com suporte em portugues. Trial gratuito de 14 dias.",
+    keywords: "seguranca cibernetica, antivirus empresarial, PME Brasil, protecao de dados, compliance LGPD",
+  },
+
   hero: {
-    badge: "Empresa Brasileira • Suporte 100% em Português",
-    title1: "Tenha controle total dos riscos digitais",
-    title2: "da sua empresa",
-    description: "Descubra vulnerabilidades, falhas invisíveis e riscos jurídicos",
-    descriptionBold: " antes que virem prejuízo, multa ou paralisação.",
-    ctaButton: "Fazer diagnóstico gratuito",
-    reassurance: "Sem cartão de crédito • Resultado em até 48h",
+    badge: "🇧🇷 Empresa 100% Brasileira • Suporte em Portugues",
+    title1: "Protecao Cibernetica Inteligente",
+    title2: "para PMEs Brasileiras",
+    description: "Antivirus, monitoramento 24/7 e compliance LGPD em um so lugar.",
+    descriptionBold: " Trial gratuito de 14 dias - sem cartao de credito.",
+    ctaButton: "Quero meu diagnostico gratuito",
+    reassurance: "Sem cartao de credito • Resultado em ate 48h • Suporte em portugues",
     stats: [
-      { value: "até 48h", label: "Diagnóstico gratuito" },
-      { value: "24/7", label: "Monitoramento contínuo" },
-      { value: "Sem TI", label: "Funciona sem equipe técnica" }
+      { value: "ate 48h", label: "Diagnostico gratuito" },
+      { value: "24/7", label: "Monitoramento continuo" },
+      { value: "100%", label: "Empresa brasileira" }
+    ],
+    benefits: [
+      "Compliance com LGPD automaticamente",
+      "Suporte em portugues",
+      "Precos em reais, sem taxas internacionais",
+      "Certificacoes brasileiras reconhecidas"
     ]
   },
 
