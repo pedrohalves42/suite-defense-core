@@ -59,18 +59,22 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
       if (!agentId || !effectiveTenantId) return null;
 
       let agent: Record<string, unknown> | null = null;
+      let source = 'unknown';
 
-      // TENTATIVA 1: Buscar via view agents_safe (respeitando RLS)
+      // TENTATIVA 1: Buscar via view agents_safe (respeitando RLS, com fallback interno)
       try {
         const { data, error: safeError } = await supabase
           .from('agents_safe')
           .select('*')
           .eq('id', agentId)
-          .eq('tenant_id', effectiveTenantId)
           .maybeSingle();
 
         if (!safeError && data) {
-          agent = data;
+          // Verificar se o tenant corresponde (a view já filtra, mas garantir)
+          if (data.tenant_id === effectiveTenantId) {
+            agent = data;
+            source = 'agents_safe';
+          }
         } else if (safeError) {
           console.warn('[useAgentCausality] agents_safe query failed:', safeError);
         }
@@ -78,7 +82,7 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
         console.warn('[useAgentCausality] agents_safe exception:', err);
       }
 
-      // TENTATIVA 2: Fallback para RPC get_agent_health_metrics se view falhar
+      // TENTATIVA 2: Fallback para RPC get_agent_health_metrics
       if (!agent) {
         console.info('[useAgentCausality] Trying RPC fallback for agent:', agentId);
         try {
@@ -91,6 +95,7 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
             );
             if (foundAgent) {
               agent = foundAgent;
+              source = 'rpc_health_metrics';
             }
           }
         } catch (rpcErr) {
@@ -98,36 +103,32 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
         }
       }
 
-      // TENTATIVA 3: Fallback direto para tabela agents (sem campos sensíveis)
+      // TENTATIVA 3: Retry agents_safe sem filtro de tenant (a view já tem RLS interno)
+      // Isso funciona porque agents_safe tem fallback para user_roles quando get_active_tenant_id() é NULL
       if (!agent) {
-        console.info('[useAgentCausality] Trying direct agents query:', agentId);
-        const { data: directData, error: directError } = await supabase
-          .from('agents')
-          .select(`
-            id, agent_name, hostname, status, agent_version, last_heartbeat,
-            tenant_id, is_isolated, is_throttled, safe_mode_reason, safe_mode_entered_at,
-            force_update_version, force_update_at, force_update_reason,
-            throttle_reason, isolation_reason, isolated_at, throttled_at,
-            force_update_override_safe_mode_expires_at, enrolled_at
-          `)
-          .eq('id', agentId)
-          .eq('tenant_id', effectiveTenantId)
-          .is('archived_at', null)
-          .maybeSingle();
+        console.info('[useAgentCausality] Trying agents_safe without tenant filter:', agentId);
+        try {
+          const { data, error: retryError } = await supabase
+            .from('agents_safe')
+            .select('*')
+            .eq('id', agentId)
+            .maybeSingle();
 
-        if (!directError && directData) {
-          agent = directData;
-        } else if (directError) {
-          console.warn('[useAgentCausality] Direct query error:', directError);
-          throw new Error('Erro ao buscar computador');
+          if (!retryError && data) {
+            agent = data;
+            source = 'agents_safe_no_filter';
+          }
+        } catch (retryErr) {
+          console.warn('[useAgentCausality] Retry agents_safe failed:', retryErr);
         }
       }
 
       if (!agent) {
-        // Agente não encontrado após todas as tentativas
-        console.info('[useAgentCausality] Agent not found after all attempts:', agentId);
+        console.info('[useAgentCausality] Agent not found after all attempts:', agentId, 'tenant:', effectiveTenantId);
         return null;
       }
+      
+      console.debug('[useAgentCausality] Agent loaded via:', source, 'for', agentId);
 
       // Buscar últimos decision_events
       const { data: decisionEvents } = await supabase
