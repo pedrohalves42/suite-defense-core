@@ -21020,6 +21020,17 @@ export type Database = {
         }
         Relationships: []
       }
+      v_security_scan_compliance: {
+        Row: {
+          anon_access: boolean | null
+          authenticated_access: boolean | null
+          description: string | null
+          object_name: string | null
+          object_type: string | null
+          rls_enabled: boolean | null
+        }
+        Relationships: []
+      }
       v_service_role_policies: {
         Row: {
           granted_to: string | null
