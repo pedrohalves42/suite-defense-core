@@ -18,9 +18,11 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
-  RefreshCw
+  RefreshCw,
+  Key
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -37,6 +39,7 @@ export function PreserveReinstallSection() {
   const [copiedPrimary, setCopiedPrimary] = useState(false);
   const [copiedFallback, setCopiedFallback] = useState(false);
   const [copiedNetworkTest, setCopiedNetworkTest] = useState(false);
+  const [copiedJwt, setCopiedJwt] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleCopy = async (text: string, type: 'primary' | 'fallback' | 'network') => {
@@ -93,6 +96,7 @@ export function PreserveReinstallSection() {
             <li>Clique em "Copiar Comando" abaixo</li>
             <li>Cole no PowerShell (Ctrl+V ou clique direito)</li>
             <li>Pressione Enter e aguarde finalizar</li>
+            <li>Se pedir JWT token, clique em <strong>"Copiar Token JWT"</strong> abaixo e cole no PowerShell</li>
             <li>Confirme a versão exibida no final</li>
           </ol>
         </div>
@@ -124,7 +128,48 @@ export function PreserveReinstallSection() {
           </div>
         </div>
 
-        {/* Toggle para opções avançadas */}
+        {/* Copiar JWT para recuperação de credenciais (Strategy 3 - v2.8.0) */}
+        <div className="space-y-2">
+          <p className="text-xs font-medium">Token JWT (se o script pedir):</p>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1"
+              onClick={async () => {
+                try {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session?.access_token) {
+                    toast.error('Você precisa estar logado para copiar o token');
+                    return;
+                  }
+                  await navigator.clipboard.writeText(session.access_token);
+                  setCopiedJwt(true);
+                  setTimeout(() => setCopiedJwt(false), 3000);
+                  toast.success('Token JWT copiado! Cole no PowerShell quando solicitado.');
+                } catch {
+                  toast.error('Falha ao copiar token');
+                }
+              }}
+            >
+              {copiedJwt ? (
+                <>
+                  <Check className="h-3 w-3 mr-1" />
+                  Token Copiado!
+                </>
+              ) : (
+                <>
+                  <Key className="h-3 w-3 mr-1" />
+                  Copiar Token JWT
+                </>
+              )}
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Necessário apenas se credenciais locais foram perdidas
+            </span>
+          </div>
+        </div>
+
         <Button
           variant="ghost"
           size="sm"

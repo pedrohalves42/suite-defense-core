@@ -1,9 +1,10 @@
 // CyberShield Agent - Reinstall Preserve Script Content
 // Embedded version for Edge Function delivery
-// Version: 2.7.0 - Full rebuild with robust task registration and diagnostics
+// Version: 2.8.0 - Added Strategy 3: Server-side credential recovery
 
-export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v2.7.0
+export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v2.8.0
 # Preserves credentials (AgentName, Token, HMAC) during agent update
+# Strategy 3: Server recovery when local credentials are lost
 # ASCII-safe, English-only for cross-locale compatibility
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ErrorActionPreference = "Stop"
@@ -21,7 +22,7 @@ function Write-Status {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " CyberShield - Reinstall Preserve v2.7.0" -ForegroundColor Cyan
+Write-Host " CyberShield - Reinstall Preserve v2.8.0" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -100,6 +101,55 @@ if (-not $AgentToken) {
     }
 }
 
+# Strategy 3: Recover credentials from server (NEW in v2.8.0)
+if (-not $AgentToken -and $AgentName) {
+    Write-Status "Local credentials not found - trying server recovery..." "WARN"
+    Write-Host ""
+    Write-Host "  Agent credentials were lost (task deleted or v4.x agent)." -ForegroundColor Yellow
+    Write-Host "  Enter your CyberShield dashboard JWT token to recover." -ForegroundColor Yellow
+    Write-Host "  (Dashboard > Profile icon > Copy Auth Token)" -ForegroundColor Yellow
+    Write-Host ""
+    $jwt = Read-Host "  Paste your JWT token (or press Enter to skip)"
+    $jwt = $jwt.Trim()
+
+    if ($jwt -and $jwt.Length -gt 20) {
+        Write-Status "Calling server recovery for agent: $AgentName" "INFO"
+        $recoveryUrl = "$ServerUrl/functions/v1/recover-agent-credentials"
+        $bodyJson = "{${q}agent_name${q}:${q}$AgentName${q}}"
+        $headers = @{
+            "Authorization" = "Bearer $jwt"
+            "Content-Type" = "application/json"
+            "apikey" = "***REMOVED***"
+        }
+
+        try {
+            $resp = Invoke-RestMethod -Uri $recoveryUrl -Method POST -Body $bodyJson -Headers $headers -TimeoutSec 30
+            if ($resp.agentToken) {
+                $AgentToken = $resp.agentToken
+                $HmacSecret = $resp.hmacSecret
+                if ($resp.agentName) { $AgentName = $resp.agentName }
+                Write-Status "Credentials recovered from server!" "SUCCESS"
+                Write-Status "AgentToken: recovered (prefix: $($AgentToken.Substring(0,8))...)" "SUCCESS"
+                Write-Status "HmacSecret: $(if($HmacSecret){'recovered'}else{'empty'})" "SUCCESS"
+            } else {
+                Write-Status "Server returned no credentials" "ERROR"
+            }
+        } catch {
+            $errMsg = $_.Exception.Message
+            Write-Status "Server recovery failed: $errMsg" "ERROR"
+            if ($errMsg -match '401|Unauthorized') {
+                Write-Status "Invalid or expired JWT token" "ERROR"
+            } elseif ($errMsg -match '403|Forbidden') {
+                Write-Status "Your user does not have admin/operator permissions" "ERROR"
+            } elseif ($errMsg -match '404') {
+                Write-Status "Agent '$AgentName' not found in your tenant" "ERROR"
+            }
+        }
+    } else {
+        Write-Status "No JWT provided - skipping server recovery" "WARN"
+    }
+}
+
 # Validate required credentials
 if (-not $AgentName -or -not $AgentToken) {
     Write-Status "CRITICAL: Cannot extract required credentials!" "ERROR"
@@ -111,7 +161,9 @@ if (-not $AgentName -or -not $AgentToken) {
         Write-Status "  $taskArgs" "WARN"
     }
     Write-Host ""
-    Write-Status "Try full reinstall with enrollment key instead" "ERROR"
+    Write-Status "Options:" "INFO"
+    Write-Status "  1. Run again and provide a valid JWT token" "INFO"
+    Write-Status "  2. Use full reinstall with enrollment key" "INFO"
     Read-Host "Press Enter to exit"
     exit 1
 }
