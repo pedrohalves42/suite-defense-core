@@ -22,10 +22,10 @@ if (-not $script) { Write-Status "No existing agent found in $InstallDir!" "ERRO
 $content = Get-Content $script.FullName -Raw
 $AgentName = if ($script.Name -match 'cybershield-agent-(.+)\\.ps1$') { $Matches[1] } else { $null }
 $AgentToken = if ($content -match '[$]AgentToken\\s*=\\s*[\\x27\\x22]([^\\x27\\x22]+)[\\x27\\x22]') { $Matches[1] } else { $null }
-$HmacSecret = if ($content -match '[$]HmacSecret\\s*=\\s*[\\x27\\x22]([^\\x27\\x22]*)[\\x27\\x22]') { $Matches[1] } else { $null }
+$HmacSecret = if ($content -match '[$]HmacSecret\\s*=\\s*[\\x27\\x22]([^\\x27\\x22]+)[\\x27\\x22]') { $Matches[1] } else { "" }
 
-if (-not $AgentName -or -not $AgentToken -or -not $HmacSecret) { Write-Status "Incomplete credentials in existing script!" "ERROR"; exit 1 }
-Write-Status "Detected: $AgentName" "SUCCESS"
+if (-not $AgentName -or -not $AgentToken) { Write-Status "Incomplete credentials in existing script! AgentName=$AgentName AgentToken=$(-not (-not $AgentToken))" "ERROR"; exit 1 }
+Write-Status "Detected: $AgentName (HMAC: $(-not (-not $HmacSecret)))" "SUCCESS"
 
 # PHASE 2: Stop services
 Write-Status "PHASE 2/5: Stop Services" "INFO"
