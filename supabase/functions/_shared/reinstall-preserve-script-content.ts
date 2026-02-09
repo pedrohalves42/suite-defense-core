@@ -1,8 +1,8 @@
 // CyberShield Agent - Reinstall Preserve Script Content
 // Embedded version for Edge Function delivery
-// Version: 2.4.0 - Added fallback download methods and improved error messages
+// Version: 2.6.0 - Fixed: credentials passed as task args (param() compatible)
 
-export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v2.5.0
+export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v2.6.0
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ErrorActionPreference = "Stop"
 $InstallDir = "C:\\CyberShield"
@@ -13,172 +13,143 @@ function Write-Status { param([string]$M, [string]$T = "INFO"); Write-Host "[$T]
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " CyberShield - Reinstall Preserve v2.5.0" -ForegroundColor Cyan
+Write-Host " CyberShield - Reinstall Preserve v2.6.0" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { Write-Status "Run as Administrator!" "ERROR"; Read-Host "Press Enter to exit"; exit 1 }
 
-# PHASE 1: Detect existing agent
-Write-Status "PHASE 1/5: Detect Existing Agent" "INFO"
-Write-Status "Looking in: $InstallDir" "INFO"
+# PHASE 1: Extract credentials BEFORE stopping anything
+Write-Status "PHASE 1/5: Extract Credentials" "INFO"
 
 if (-not (Test-Path $InstallDir)) { Write-Status "Directory $InstallDir does NOT exist!" "ERROR"; Read-Host "Press Enter to exit"; exit 1 }
 
+# Find agent script (exclude backups)
 $files = Get-ChildItem "$InstallDir\\cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch 'backup' }
-Write-Status "Found $($files.Count) agent script(s) (excluding backups)" "INFO"
-if ($files) { $files | ForEach-Object { Write-Status "  -> $($_.Name) ($($_.Length) bytes)" "INFO" } }
+Write-Status "Found $($files.Count) agent script(s)" "INFO"
+$agentScript = $files | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $agentScript) { Write-Status "No agent script found!" "ERROR"; Read-Host "Press Enter to exit"; exit 1 }
+Write-Status "Script: $($agentScript.Name)" "INFO"
 
-$script = $files | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-if (-not $script) { Write-Status "No existing agent found!" "ERROR"; Write-Status "Use clean reinstall with enrollment key instead." "WARN"; Read-Host "Press Enter to exit"; exit 1 }
-
-Write-Status "Using: $($script.Name)" "INFO"
-$content = Get-Content $script.FullName -Raw
-Write-Status "Script size: $($content.Length) chars" "INFO"
-
-# Extract AgentName from filename
+# Get AgentName from filename
 $AgentName = $null
-if ($script.Name -match 'cybershield-agent-(.+)\\.ps1$') { $AgentName = $Matches[1] }
-Write-Status "AgentName from filename: $AgentName" "INFO"
+if ($agentScript.Name -match 'cybershield-agent-(.+)\\.ps1$') { $AgentName = $Matches[1] }
+Write-Status "AgentName: $AgentName" "INFO"
 
-# Extract credentials - Method A: from script content (v5.x style: variable assignment)
+# Try to get credentials from Scheduled Task args FIRST (works for both v4.x and v5.x)
 $AgentToken = $null
 $HmacSecret = ""
-if ($content -match '\\$AgentToken\\s*=\\s*"([^"]+)"') { $AgentToken = $Matches[1]; Write-Status "AgentToken found in script (v5 style)" "SUCCESS" }
-if ($content -match '\\$HmacSecret\\s*=\\s*"([^"]+)"') { $HmacSecret = $Matches[1]; Write-Status "HmacSecret found in script" "SUCCESS" }
+$existingTask = Get-ScheduledTask -TaskName "CyberShield*" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($existingTask) {
+    $taskArgs = $existingTask.Actions[0].Arguments
+    Write-Status "Task: $($existingTask.TaskName) | Args: $($taskArgs.Length) chars" "INFO"
+    if ($taskArgs -match '-AgentToken\\s+"([^"]+)"') { $AgentToken = $Matches[1]; Write-Status "AgentToken: from task args" "SUCCESS" }
+    elseif ($taskArgs -match "-AgentToken\\s+'([^']+)'") { $AgentToken = $Matches[1]; Write-Status "AgentToken: from task args (sq)" "SUCCESS" }
+    if ($taskArgs -match '-HmacSecret\\s+"([^"]+)"') { $HmacSecret = $Matches[1]; Write-Status "HmacSecret: from task args" "SUCCESS" }
+    elseif ($taskArgs -match "-HmacSecret\\s+'([^']+)'") { $HmacSecret = $Matches[1]; Write-Status "HmacSecret: from task args (sq)" "SUCCESS" }
+    if ($taskArgs -match '-ServerUrl\\s+"([^"]+)"') { $ServerUrl = $Matches[1]; Write-Status "ServerUrl: $ServerUrl" "INFO" }
+} else { Write-Status "No scheduled task found - will try script content" "WARN" }
 
-# Extract credentials - Method B: from Scheduled Task arguments (v4.x style: param block)
+# Fallback: try to extract from script content (v5.x variable assignment style)
 if (-not $AgentToken) {
-    Write-Status "Checking Scheduled Task arguments..." "INFO"
-    $existingTask = Get-ScheduledTask -TaskName "CyberShield*" -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($existingTask) {
-        $taskArgs = $existingTask.Actions[0].Arguments
-        Write-Status "Task args length: $($taskArgs.Length)" "INFO"
-        if ($taskArgs -match '-AgentToken\\s+"([^"]+)"') { $AgentToken = $Matches[1]; Write-Status "AgentToken found in task args" "SUCCESS" }
-        elseif ($taskArgs -match "-AgentToken\\s+'([^']+)'") { $AgentToken = $Matches[1]; Write-Status "AgentToken found in task args (single-quote)" "SUCCESS" }
-        if ($taskArgs -match '-HmacSecret\\s+"([^"]+)"') { $HmacSecret = $Matches[1]; Write-Status "HmacSecret found in task args" "SUCCESS" }
-        elseif ($taskArgs -match "-HmacSecret\\s+'([^']+)'") { $HmacSecret = $Matches[1]; Write-Status "HmacSecret found in task args (single-quote)" "SUCCESS" }
-        if ($taskArgs -match '-ServerUrl\\s+"([^"]+)"') { $ServerUrl = $Matches[1]; Write-Status "ServerUrl from task args: $ServerUrl" "INFO" }
-    } else { Write-Status "No existing CyberShield task found" "WARN" }
-}
-
-# Extract credentials - Method C: from script param defaults (v4.x with defaults)
-if (-not $AgentToken) {
-    if ($content -match '\\$AgentToken\\s*=\\s*"([^"]+)"') { $AgentToken = $Matches[1] }
-    elseif ($content -match "AgentToken[^\\n]*default[^\\n]*'([^']+)'") { $AgentToken = $Matches[1] }
+    $content = Get-Content $agentScript.FullName -Raw
+    if ($content -match '\\$AgentToken\\s*=\\s*"([^"]+)"') { $AgentToken = $Matches[1]; Write-Status "AgentToken: from script content" "SUCCESS" }
+    if ($content -match '\\$HmacSecret\\s*=\\s*"([^"]+)"') { $HmacSecret = $Matches[1]; Write-Status "HmacSecret: from script content" "SUCCESS" }
 }
 
 if (-not $AgentName -or -not $AgentToken) {
-    Write-Status "FAILED: Missing credentials!" "ERROR"
+    Write-Status "FAILED: Cannot extract credentials!" "ERROR"
     Write-Status "  AgentName: $(if($AgentName){'OK'}else{'MISSING'})" "ERROR"
     Write-Status "  AgentToken: $(if($AgentToken){'OK'}else{'MISSING'})" "ERROR"
     Write-Host ""
-    Write-Status "DEBUG: First 300 chars of script:" "WARN"
-    Write-Host ($content.Substring(0, [Math]::Min(300, $content.Length)))
-    Write-Host ""
-    Write-Status "DEBUG: Task args:" "WARN"
-    $dbgTask = Get-ScheduledTask -TaskName "CyberShield*" -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($dbgTask) { Write-Host $dbgTask.Actions[0].Arguments } else { Write-Host "(no task found)" }
+    if ($existingTask) { Write-Status "Task args: $taskArgs" "WARN" }
     Read-Host "Press Enter to exit"
     exit 1
 }
-Write-Status "Agent: $AgentName | Token: OK | HMAC: $(if($HmacSecret){'OK'}else{'empty'})" "SUCCESS"
+Write-Status "Credentials OK | Agent: $AgentName | HMAC: $(if($HmacSecret){'YES'}else{'NO'})" "SUCCESS"
 
-# PHASE 2: Stop services
+# PHASE 2: Stop services (AFTER extracting credentials)
 Write-Status "PHASE 2/5: Stop Services" "INFO"
 $tasks = Get-ScheduledTask -TaskName "CyberShield*" -ErrorAction SilentlyContinue
-if ($tasks) { Write-Status "Found $($tasks.Count) task(s) to stop" "INFO"; $tasks | ForEach-Object { Write-Status "  Stopping: $($_.TaskName)" "INFO"; Stop-ScheduledTask -TaskName $_.TaskName -ErrorAction SilentlyContinue; Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue } }
-else { Write-Status "No existing tasks found" "WARN" }
+if ($tasks) {
+    $tasks | ForEach-Object {
+        Write-Status "  Stopping: $($_.TaskName)" "INFO"
+        Stop-ScheduledTask -TaskName $_.TaskName -ErrorAction SilentlyContinue
+        Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue
+    }
+    Write-Status "Services stopped" "SUCCESS"
+} else { Write-Status "No tasks to stop" "WARN" }
 Start-Sleep -Seconds 2
 
 # PHASE 3: Backup
 Write-Status "PHASE 3/5: Backup" "INFO"
 $backupDir = "$InstallDir\\backup"
 if (-not (Test-Path $backupDir)) { New-Item -ItemType Directory -Path $backupDir -Force | Out-Null }
-Copy-Item $script.FullName (Join-Path $backupDir "backup-$(Get-Date -Format 'yyyyMMdd-HHmmss').ps1") -Force
+Copy-Item $agentScript.FullName (Join-Path $backupDir "backup-$(Get-Date -Format 'yyyyMMdd-HHmmss').ps1") -Force
 Write-Status "Backup created" "SUCCESS"
 
-# PHASE 4: Download updated script
+# PHASE 4: Download updated script (NO credential injection - template uses param())
 Write-Status "PHASE 4/5: Download Updated Script" "INFO"
 $newScript = $null; $newVer = "unknown"; $downloadMethod = "none"
 $dlUrl = "$ServerUrl/functions/v1/get-latest-agent-script?platform=windows&format=plain"
-Write-Status "URL: $dlUrl" "INFO"
 
 # Method 1: Invoke-RestMethod
 try {
-    Write-Status "Trying IRM..." "INFO"
     $template = Invoke-RestMethod -Uri $dlUrl -Method GET -TimeoutSec 60
-    Write-Status "IRM response: $($template.Length) chars" "INFO"
-    if ($template -and $template.Length -gt 5000) {
-        $template = $template -replace '(\\$AgentName\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('$1"' + $AgentName + '"')
-        $template = $template -replace '(\\$AgentToken\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('$1"' + $AgentToken + '"')
-        $template = $template -replace '(\\$HmacSecret\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('$1"' + $HmacSecret + '"')
-        $newScript = $template; $downloadMethod = "IRM"
-        Write-Status "Downloaded via IRM ($($template.Length) chars)" "SUCCESS"
-    } else { Write-Status "IRM response too short: $($template.Length) chars" "WARN" }
+    if ($template -and $template.Length -gt 5000) { $newScript = $template; $downloadMethod = "IRM"; Write-Status "Downloaded via IRM ($($template.Length) chars)" "SUCCESS" }
+    else { Write-Status "IRM response too short" "WARN" }
 } catch { Write-Status "IRM failed: $($_.Exception.Message)" "WARN" }
 
 # Method 2: Invoke-WebRequest
 if (-not $newScript) {
     try {
-        Write-Status "Trying IWR..." "INFO"
         $resp = Invoke-WebRequest -Uri $dlUrl -UseBasicParsing -TimeoutSec 60
-        $template = $resp.Content
-        Write-Status "IWR response: $($template.Length) chars" "INFO"
-        if ($template -and $template.Length -gt 5000) {
-            $template = $template -replace '(\\$AgentName\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('$1"' + $AgentName + '"')
-            $template = $template -replace '(\\$AgentToken\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('$1"' + $AgentToken + '"')
-            $template = $template -replace '(\\$HmacSecret\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('$1"' + $HmacSecret + '"')
-            $newScript = $template; $downloadMethod = "IWR"
-            Write-Status "Downloaded via IWR" "SUCCESS"
-        }
+        if ($resp.Content -and $resp.Content.Length -gt 5000) { $newScript = $resp.Content; $downloadMethod = "IWR"; Write-Status "Downloaded via IWR" "SUCCESS" }
     } catch { Write-Status "IWR failed: $($_.Exception.Message)" "WARN" }
 }
 
 # Method 3: WebClient
 if (-not $newScript) {
     try {
-        Write-Status "Trying WebClient..." "INFO"
         $wc = New-Object System.Net.WebClient; $wc.Proxy = [System.Net.WebRequest]::GetSystemWebProxy(); $wc.Proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
         $template = $wc.DownloadString($dlUrl)
-        Write-Status "WebClient response: $($template.Length) chars" "INFO"
-        if ($template -and $template.Length -gt 5000) {
-            $template = $template -replace '(\\$AgentName\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('$1"' + $AgentName + '"')
-            $template = $template -replace '(\\$AgentToken\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('$1"' + $AgentToken + '"')
-            $template = $template -replace '(\\$HmacSecret\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('$1"' + $HmacSecret + '"')
-            $newScript = $template; $downloadMethod = "WebClient"
-            Write-Status "Downloaded via WebClient" "SUCCESS"
-        }
+        if ($template -and $template.Length -gt 5000) { $newScript = $template; $downloadMethod = "WebClient"; Write-Status "Downloaded via WebClient" "SUCCESS" }
     } catch { Write-Status "WebClient failed: $($_.Exception.Message)" "WARN" }
 }
 
-if (-not $newScript) {
-    Write-Status "ALL download methods FAILED!" "ERROR"
-    Read-Host "Press Enter to exit"
-    exit 1
-}
+if (-not $newScript) { Write-Status "ALL download methods FAILED!" "ERROR"; Read-Host "Press Enter to exit"; exit 1 }
 
-# Extract version
-$installedVer = $null
-if ($newScript -match '\\$AgentVersion\\s*=\\s*[\\x27\\x22]([^\\x27\\x22]+)[\\x27\\x22]') { $installedVer = $Matches[1] }
-if ($installedVer) { $newVer = $installedVer }
-Write-Status "Downloaded version: $newVer" "INFO"
+# Extract version from downloaded script
+if ($newScript -match 'AgentVersion\\s*=\\s*"([^"]+)"') { $newVer = $Matches[1] }
+Write-Status "Version: $newVer" "INFO"
 
-# PHASE 5: Reinstall
+# PHASE 5: Reinstall with credentials as TASK ARGUMENTS (param() compatible)
 Write-Status "PHASE 5/5: Reinstall" "INFO"
-Get-ChildItem "$InstallDir\\cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Remove-Item -Force
+
+# Remove old scripts
+Get-ChildItem "$InstallDir\\cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch 'backup' } | Remove-Item -Force
+
+# Write new script (template without credentials - they go in task args)
 $scriptPath = "$InstallDir\\cybershield-agent-$AgentName.ps1"
 [IO.File]::WriteAllText($scriptPath, $newScript, [Text.Encoding]::UTF8)
-Write-Status "Script written: $scriptPath ($($newScript.Length) chars)" "SUCCESS"
+Write-Status "Script: $scriptPath ($($newScript.Length) chars)" "SUCCESS"
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $([char]34)$scriptPath$([char]34)"
+# Build task arguments - credentials passed as script parameters
+$q = [char]34
+$taskArgStr = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $q$scriptPath$q -ServerUrl $q$ServerUrl$q -AgentToken $q$AgentToken$q -HmacSecret $q$HmacSecret$q -AgentName $q$AgentName$q"
+Write-Status "Task args built ($($taskArgStr.Length) chars)" "INFO"
+
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $taskArgStr
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
 $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 $taskFullName = "$TaskName-$AgentName"
+
 Register-ScheduledTask -TaskName $taskFullName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
 Write-Status "Task registered: $taskFullName" "SUCCESS"
+
 Start-ScheduledTask -TaskName $taskFullName
+Write-Status "Task started" "SUCCESS"
 
 Start-Sleep -Seconds 3
 $info = Get-ScheduledTaskInfo -TaskName $taskFullName -ErrorAction SilentlyContinue
