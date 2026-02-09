@@ -45,6 +45,9 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const platform = url.searchParams.get('platform') || 'windows';
+    const format = (url.searchParams.get('format') || 'json').toLowerCase();
+    const includePlainParam = (url.searchParams.get('include_plain') || '').toLowerCase();
+    const includeScriptContent = includePlainParam === '1' || includePlainParam === 'true' || includePlainParam === 'yes';
     
     // Validate platform
     if (!['windows', 'linux', 'macos'].includes(platform)) {
@@ -107,14 +110,31 @@ Deno.serve(async (req) => {
         .replace(/\n/g, '\r\n');
     }
 
-    // Calculate SHA256 and Base64
+    // Calculate SHA256
     const encoder = new TextEncoder();
     const scriptBytes = encoder.encode(normalizedScript);
     const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const sha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    
-    // Base64 encode
+
+    // Option: serve as plain text (avoids huge JSON parsing issues in older PowerShell)
+    if (format === 'plain' || format === 'ps1' || format === 'text') {
+      console.log(`[${requestId}] Serving ${platform} script v${release.version} as text/plain (${scriptBytes.length} bytes)`);
+
+      return new Response(normalizedScript, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'X-Agent-Version': release.version,
+          'X-Agent-Sha256': sha256,
+          'X-Request-ID': requestId,
+        },
+      });
+    }
+
+    // Base64 encode (JSON mode)
     const base64Chunks: string[] = [];
     const chunkSize = 0x8000;
     for (let i = 0; i < scriptBytes.length; i += chunkSize) {
@@ -125,16 +145,21 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Serving ${platform} script v${release.version} (${scriptBytes.length} bytes)`);
 
+    const responsePayload: Record<string, unknown> = {
+      version: release.version,
+      script_content_base64: base64Script,
+      sha256,
+      platform,
+      release_notes: release.release_notes,
+      requestId,
+    };
+
+    if (includeScriptContent) {
+      responsePayload.script_content = normalizedScript;
+    }
+
     return new Response(
-      JSON.stringify({
-        version: release.version,
-        script_content: normalizedScript,
-        script_content_base64: base64Script,
-        sha256,
-        platform,
-        release_notes: release.release_notes,
-        requestId
-      }),
+      JSON.stringify(responsePayload),
       {
         status: 200,
         headers: {

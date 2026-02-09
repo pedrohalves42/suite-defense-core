@@ -44,29 +44,27 @@ $newScript = $null; $newVer = "existing"; $downloadMethod = "none"
 
 # Method 1: Invoke-RestMethod (fastest)
 try {
-    $resp = Invoke-RestMethod -Uri "$ServerUrl/functions/v1/get-latest-agent-script?platform=windows" -Method GET -TimeoutSec 60
-    if ($resp.script_content_base64) {
-        $template = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($resp.script_content_base64))
+    $template = Invoke-RestMethod -Uri "$ServerUrl/functions/v1/get-latest-agent-script?platform=windows&format=plain" -Method GET -TimeoutSec 60
+    if ($template -and $template.Length -gt 5000) {
         $template = $template -replace '([$]AgentName\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('\$1"' + $AgentName + '"')
         $template = $template -replace '([$]AgentToken\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('\$1"' + $AgentToken + '"')
         $template = $template -replace '([$]HmacSecret\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('\$1"' + $HmacSecret + '"')
-        $newScript = $template; $newVer = $resp.version; $downloadMethod = "IRM"
-        Write-Status "Downloaded via IRM: $newVer" "SUCCESS"
+        $newScript = $template; $downloadMethod = "IRM"
+        Write-Status "Downloaded via IRM" "SUCCESS"
     }
 } catch { Write-Status "IRM failed: $($_.Exception.Message)" "WARN" }
 
 # Method 2: Invoke-WebRequest with UseBasicParsing (better proxy compatibility)
 if (-not $newScript) {
     try {
-        $resp = Invoke-WebRequest -Uri "$ServerUrl/functions/v1/get-latest-agent-script?platform=windows" -UseBasicParsing -TimeoutSec 60
-        $json = $resp.Content | ConvertFrom-Json
-        if ($json.script_content_base64) {
-            $template = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($json.script_content_base64))
+        $resp = Invoke-WebRequest -Uri "$ServerUrl/functions/v1/get-latest-agent-script?platform=windows&format=plain" -UseBasicParsing -TimeoutSec 60
+        $template = $resp.Content
+        if ($template -and $template.Length -gt 5000) {
             $template = $template -replace '([$]AgentName\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('\$1"' + $AgentName + '"')
             $template = $template -replace '([$]AgentToken\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('\$1"' + $AgentToken + '"')
             $template = $template -replace '([$]HmacSecret\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('\$1"' + $HmacSecret + '"')
-            $newScript = $template; $newVer = $json.version; $downloadMethod = "IWR"
-            Write-Status "Downloaded via IWR: $newVer" "SUCCESS"
+            $newScript = $template; $downloadMethod = "IWR"
+            Write-Status "Downloaded via IWR" "SUCCESS"
         }
     } catch { Write-Status "IWR failed: $($_.Exception.Message)" "WARN" }
 }
@@ -75,21 +73,28 @@ if (-not $newScript) {
 if (-not $newScript) {
     try {
         $wc = New-Object System.Net.WebClient; $wc.Proxy = [System.Net.WebRequest]::GetSystemWebProxy(); $wc.Proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
-        $respText = $wc.DownloadString("$ServerUrl/functions/v1/get-latest-agent-script?platform=windows")
-        $json = $respText | ConvertFrom-Json
-        if ($json.script_content_base64) {
-            $template = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($json.script_content_base64))
+        $template = $wc.DownloadString("$ServerUrl/functions/v1/get-latest-agent-script?platform=windows&format=plain")
+        if ($template -and $template.Length -gt 5000) {
             $template = $template -replace '([$]AgentName\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('\$1"' + $AgentName + '"')
             $template = $template -replace '([$]AgentToken\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('\$1"' + $AgentToken + '"')
             $template = $template -replace '([$]HmacSecret\\s*=\\s*)[\\x27\\x22][^\\x27\\x22]*[\\x27\\x22]', ('\$1"' + $HmacSecret + '"')
-            $newScript = $template; $newVer = $json.version; $downloadMethod = "WebClient"
-            Write-Status "Downloaded via WebClient: $newVer" "SUCCESS"
+            $newScript = $template; $downloadMethod = "WebClient"
+            Write-Status "Downloaded via WebClient" "SUCCESS"
         }
     } catch { Write-Status "WebClient failed: $($_.Exception.Message)" "WARN" }
 }
 
-# Fallback to existing script
-if (-not $newScript) { $newScript = $content; $downloadMethod = "fallback"; Write-Status "Using existing script (download failed)" "WARN" }
+# If download failed, abort (do not reinstall old version)
+if (-not $newScript) {
+    Write-Status "FAILED to download latest agent script. Aborting to avoid reinstalling old version." "ERROR"
+    Write-Status "Verifique conectividade HTTPS/Proxy e tente novamente." "WARN"
+    exit 1
+}
+
+# Try to extract version from downloaded script (defensive)
+$installedVer = $null
+if ($newScript -match '[$]AgentVersion\s*=\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]') { $installedVer = $Matches[1] }
+if ($installedVer) { $newVer = $installedVer }
 
 # PHASE 5: Reinstall
 Write-Status "PHASE 5/5: Reinstall" "INFO"
@@ -97,13 +102,19 @@ Get-ChildItem "$InstallDir\\cybershield-agent-*.ps1" -ErrorAction SilentlyContin
 $scriptPath = "$InstallDir\\cybershield-agent-$AgentName.ps1"
 [IO.File]::WriteAllText($scriptPath, $newScript, [Text.Encoding]::UTF8)
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File $([char]34)$scriptPath$([char]34)"
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $([char]34)$scriptPath$([char]34)"
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 10 -RestartInterval (New-TimeSpan -Seconds 30)
 $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 $taskFullName = "$TaskName-$AgentName"
 Register-ScheduledTask -TaskName $taskFullName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
 Start-ScheduledTask -TaskName $taskFullName
+
+Start-Sleep -Seconds 2
+$info = Get-ScheduledTaskInfo -TaskName $taskFullName -ErrorAction SilentlyContinue
+if ($info) {
+    Write-Status "Task LastRunTime: $($info.LastRunTime) | LastTaskResult: $($info.LastTaskResult)" "INFO"
+}
 
 Write-Host ""
 Write-Host "REINSTALLATION COMPLETED!" -ForegroundColor Green
