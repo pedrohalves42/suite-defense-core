@@ -109,7 +109,9 @@ if (-not $AgentToken -and $AgentName) {
     Write-Host "  Enter your CyberShield dashboard JWT token to recover." -ForegroundColor Yellow
     Write-Host "  (Dashboard > Profile icon > Copy Auth Token)" -ForegroundColor Yellow
     Write-Host ""
-    $jwt = Read-Host "  Paste your JWT token (or press Enter to skip)"
+    if (-not $jwt) {
+        $jwt = Read-Host "  Paste your JWT token (or press Enter to skip)"
+    }
     $jwt = $jwt.Trim()
 
     if ($jwt -and $jwt.Length -gt 20) {
