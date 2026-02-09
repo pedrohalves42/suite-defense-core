@@ -25,8 +25,8 @@ Write-Status "Looking in: $InstallDir" "INFO"
 
 if (-not (Test-Path $InstallDir)) { Write-Status "Directory $InstallDir does NOT exist!" "ERROR"; Read-Host "Press Enter to exit"; exit 1 }
 
-$files = Get-ChildItem "$InstallDir\\cybershield-agent-*.ps1" -ErrorAction SilentlyContinue
-Write-Status "Found $($files.Count) agent script(s)" "INFO"
+$files = Get-ChildItem "$InstallDir\\cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch 'backup' }
+Write-Status "Found $($files.Count) agent script(s) (excluding backups)" "INFO"
 if ($files) { $files | ForEach-Object { Write-Status "  -> $($_.Name) ($($_.Length) bytes)" "INFO" } }
 
 $script = $files | Sort-Object LastWriteTime -Descending | Select-Object -First 1
@@ -173,7 +173,7 @@ Write-Status "Script written: $scriptPath ($($newScript.Length) chars)" "SUCCESS
 
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $([char]34)$scriptPath$([char]34)"
 $trigger = New-ScheduledTaskTrigger -AtStartup
-$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 10 -RestartInterval (New-TimeSpan -Seconds 30)
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
 $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 $taskFullName = "$TaskName-$AgentName"
 Register-ScheduledTask -TaskName $taskFullName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
