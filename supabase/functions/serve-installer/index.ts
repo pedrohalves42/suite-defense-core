@@ -656,30 +656,10 @@ Deno.serve(async (req) => {
         );
       }
 
-      // ? PHASE 4: Validacao adicional para StartedAt (Jobs v3)
-      console.log(`[${requestId}] Validating StartedAt parameter presence...`);
-      
-      if (!embeddedScript.includes('StartedAt')) {
-        console.error(`[${requestId}] CRITICAL: StartedAt parameter missing in embedded script`, {
-          agentName: agentData.agent_name,
-          scriptPreview: embeddedScript.substring(0, 200)
-        });
-        
-        return new Response(
-          JSON.stringify({
-            error: 'Generated agent script is outdated',
-            details: 'Missing StartedAt parameter. Backend needs redeploy with updated agent-script-windows-content.ts',
-            requestId,
-            timestamp: new Date().toISOString()
-          }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-      
-      console.log(`[${requestId}] [OK]  StartedAt parameter validation passed`);
+      // PHASE 4: StartedAt validation removed - v5.0.3 handles Jobs v3 internally
+      // The StartedAt parameter is managed by the agent's job execution engine,
+      // not required in the main script param() block.
+      console.log(`[${requestId}] [OK]  Script validation complete (StartedAt check skipped - handled by agent internally)`);
     }
 
     // ? BUG FIX P3: Log consolidado de sucesso com TODAS as validacoes
