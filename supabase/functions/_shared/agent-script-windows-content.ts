@@ -100,7 +100,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v5.0.2"
+    [string]\$AgentVersion = "v5.0.3"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
