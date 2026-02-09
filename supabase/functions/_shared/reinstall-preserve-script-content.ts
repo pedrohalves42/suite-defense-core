@@ -115,7 +115,7 @@ if (-not $AgentToken -and $AgentName) {
     if ($jwt -and $jwt.Length -gt 20) {
         Write-Status "Calling server recovery for agent: $AgentName" "INFO"
         $recoveryUrl = "$ServerUrl/functions/v1/recover-agent-credentials"
-        $bodyJson = "{${q}agent_name${q}:${q}$AgentName${q}}"
+        $bodyJson = "{\${q}agent_name\${q}:\${q}$AgentName\${q}}"
         $headers = @{
             "Authorization" = "Bearer $jwt"
             "Content-Type" = "application/json"
