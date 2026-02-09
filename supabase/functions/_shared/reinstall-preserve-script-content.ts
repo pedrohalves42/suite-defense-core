@@ -41,25 +41,44 @@ $AgentName = $null
 if ($script.Name -match 'cybershield-agent-(.+)\\.ps1$') { $AgentName = $Matches[1] }
 Write-Status "AgentName from filename: $AgentName" "INFO"
 
-# Extract AgentToken - try multiple patterns
+# Extract credentials - Method A: from script content (v5.x style: variable assignment)
 $AgentToken = $null
-if ($content -match '\\$AgentToken\\s*=\\s*"([^"]+)"') { $AgentToken = $Matches[1]; Write-Status "AgentToken found (double-quote pattern)" "INFO" }
-elseif ($content -match "\\$AgentToken\\s*=\\s*'([^']+)'") { $AgentToken = $Matches[1]; Write-Status "AgentToken found (single-quote pattern)" "INFO" }
-else { Write-Status "AgentToken NOT found in script!" "WARN" }
-
-# Extract HmacSecret - try multiple patterns
 $HmacSecret = ""
-if ($content -match '\\$HmacSecret\\s*=\\s*"([^"]+)"') { $HmacSecret = $Matches[1]; Write-Status "HmacSecret found" "INFO" }
-elseif ($content -match "\\$HmacSecret\\s*=\\s*'([^']+)'") { $HmacSecret = $Matches[1]; Write-Status "HmacSecret found (single-quote)" "INFO" }
-else { Write-Status "HmacSecret not found (will use empty - OK for v4.x)" "WARN" }
+if ($content -match '\\$AgentToken\\s*=\\s*"([^"]+)"') { $AgentToken = $Matches[1]; Write-Status "AgentToken found in script (v5 style)" "SUCCESS" }
+if ($content -match '\\$HmacSecret\\s*=\\s*"([^"]+)"') { $HmacSecret = $Matches[1]; Write-Status "HmacSecret found in script" "SUCCESS" }
+
+# Extract credentials - Method B: from Scheduled Task arguments (v4.x style: param block)
+if (-not $AgentToken) {
+    Write-Status "Checking Scheduled Task arguments..." "INFO"
+    $existingTask = Get-ScheduledTask -TaskName "CyberShield*" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($existingTask) {
+        $taskArgs = $existingTask.Actions[0].Arguments
+        Write-Status "Task args length: $($taskArgs.Length)" "INFO"
+        if ($taskArgs -match '-AgentToken\\s+"([^"]+)"') { $AgentToken = $Matches[1]; Write-Status "AgentToken found in task args" "SUCCESS" }
+        elseif ($taskArgs -match "-AgentToken\\s+'([^']+)'") { $AgentToken = $Matches[1]; Write-Status "AgentToken found in task args (single-quote)" "SUCCESS" }
+        if ($taskArgs -match '-HmacSecret\\s+"([^"]+)"') { $HmacSecret = $Matches[1]; Write-Status "HmacSecret found in task args" "SUCCESS" }
+        elseif ($taskArgs -match "-HmacSecret\\s+'([^']+)'") { $HmacSecret = $Matches[1]; Write-Status "HmacSecret found in task args (single-quote)" "SUCCESS" }
+        if ($taskArgs -match '-ServerUrl\\s+"([^"]+)"') { $ServerUrl = $Matches[1]; Write-Status "ServerUrl from task args: $ServerUrl" "INFO" }
+    } else { Write-Status "No existing CyberShield task found" "WARN" }
+}
+
+# Extract credentials - Method C: from script param defaults (v4.x with defaults)
+if (-not $AgentToken) {
+    if ($content -match '\\$AgentToken\\s*=\\s*"([^"]+)"') { $AgentToken = $Matches[1] }
+    elseif ($content -match "AgentToken[^\\n]*default[^\\n]*'([^']+)'") { $AgentToken = $Matches[1] }
+}
 
 if (-not $AgentName -or -not $AgentToken) {
     Write-Status "FAILED: Missing credentials!" "ERROR"
     Write-Status "  AgentName: $(if($AgentName){'OK'}else{'MISSING'})" "ERROR"
     Write-Status "  AgentToken: $(if($AgentToken){'OK'}else{'MISSING'})" "ERROR"
     Write-Host ""
-    Write-Status "DEBUG: First 500 chars of script:" "WARN"
-    Write-Host ($content.Substring(0, [Math]::Min(500, $content.Length)))
+    Write-Status "DEBUG: First 300 chars of script:" "WARN"
+    Write-Host ($content.Substring(0, [Math]::Min(300, $content.Length)))
+    Write-Host ""
+    Write-Status "DEBUG: Task args:" "WARN"
+    $dbgTask = Get-ScheduledTask -TaskName "CyberShield*" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($dbgTask) { Write-Host $dbgTask.Actions[0].Arguments } else { Write-Host "(no task found)" }
     Read-Host "Press Enter to exit"
     exit 1
 }
