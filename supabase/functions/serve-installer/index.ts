@@ -259,21 +259,80 @@ Deno.serve(async (req) => {
       });
     }
 
-    // P1 SEC-002 FIX: Validate agent_id exists before generating token
-    if (!enrollmentData.agent_id) {
-      console.error(`[${requestId}] Agent ID not found in enrollment_keys - please regenerate enrollment key`);
-      return new Response('Agent not linked to enrollment key. Please generate a new enrollment key.', { 
-        status: 404,
-        headers: corsHeaders
+    // Resolve agent_id: use existing or auto-provision new agent
+    let resolvedAgentId = enrollmentData.agent_id;
+    let agentData: { agent_name: string; os_type: string | null; hmac_secret: string } | null = null;
+
+    if (!resolvedAgentId) {
+      // === AUTO-PROVISION: Create new agent for enrollment keys without agent_id ===
+      console.log(`[${requestId}] Enrollment key has no agent_id - auto-provisioning new agent`);
+      
+      const hostname = url.searchParams.get('hostname') || `agent-${crypto.randomUUID().substring(0, 8)}`;
+      const osPlatform = url.searchParams.get('os_type') || 'windows';
+      
+      // Generate HMAC secret (64 chars hex)
+      const hmacBytes = new Uint8Array(32);
+      crypto.getRandomValues(hmacBytes);
+      const newHmacSecret = Array.from(hmacBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      // Insert new agent
+      const { data: newAgent, error: newAgentError } = await supabaseClient
+        .from('agents')
+        .insert({
+          agent_name: hostname,
+          tenant_id: enrollmentData.tenant_id,
+          status: 'active',
+          os_type: osPlatform,
+          hmac_secret: newHmacSecret,
+          enrolled_at: new Date().toISOString(),
+          agent_version: '0.0.0',
+        })
+        .select('id, agent_name, os_type, hmac_secret')
+        .single();
+      
+      if (newAgentError || !newAgent) {
+        console.error(`[${requestId}] Failed to auto-provision agent`, newAgentError);
+        return new Response('Failed to create agent record', { 
+          status: 500,
+          headers: corsHeaders
+        });
+      }
+      
+      resolvedAgentId = newAgent.id;
+      agentData = { agent_name: newAgent.agent_name, os_type: newAgent.os_type, hmac_secret: newAgent.hmac_secret };
+      
+      console.log(`[${requestId}] Auto-provisioned agent`, {
+        agentId: resolvedAgentId,
+        agentName: hostname,
+        tenantId: enrollmentData.tenant_id
       });
+
+      // Increment usage count on enrollment key
+      await supabaseClient.rpc('increment_enrollment_key_usage', { p_key_hash: enrollmentKeyHash }).catch(e => {
+        console.warn(`[${requestId}] Failed to increment EK usage (non-critical):`, e);
+      });
+    } else {
+      // === EXISTING AGENT: Fetch agent info ===
+      const { data: existingAgent, error: agentError } = await supabaseClient
+        .from('agents')
+        .select('agent_name, os_type, hmac_secret')
+        .eq('id', resolvedAgentId)
+        .order('enrolled_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (agentError || !existingAgent) {
+        console.log(`[${requestId}] Agent not found: ${agentError?.message}`);
+        return new Response('Agent not found', { 
+          status: 404,
+          headers: corsHeaders
+        });
+      }
+      agentData = existingAgent;
     }
 
-    // P1 SEC-002 FIX: Generate fresh token at installer download time
-    // This ensures no plaintext tokens are stored in database
-    // Token is created here and stored hashed in agent_tokens
+    // Generate fresh token for the agent
     const freshAgentToken = crypto.randomUUID();
-    
-    // Hash the fresh token for storage
     const freshTokenHashBuffer = await crypto.subtle.digest(
       'SHA-256',
       new TextEncoder().encode(freshAgentToken)
@@ -287,14 +346,14 @@ Deno.serve(async (req) => {
     await supabaseClient
       .from('agent_tokens')
       .update({ is_active: false })
-      .eq('agent_id', enrollmentData.agent_id);
+      .eq('agent_id', resolvedAgentId);
 
     // Create new token with hash
     const tokenExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
     const { error: tokenInsertError } = await supabaseClient
       .from('agent_tokens')
       .insert({
-        agent_id: enrollmentData.agent_id,
+        agent_id: resolvedAgentId,
         token_hash: freshTokenHash,
         token_prefix: freshTokenPrefix,
         expires_at: tokenExpiresAt.toISOString(),
@@ -311,26 +370,8 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Fresh agent token generated`, {
       tokenPrefix: freshTokenPrefix,
-      agentId: enrollmentData.agent_id
+      agentId: resolvedAgentId
     });
-
-
-    // Fetch agent info AND hmac_secret from agents table
-    const { data: agentData, error: agentError } = await supabaseClient
-      .from('agents')
-      .select('agent_name, os_type, hmac_secret')
-      .eq('id', enrollmentData.agent_id)
-      .order('enrolled_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (agentError || !agentData) {
-      console.log(`[${requestId}] Agent not found: ${agentError?.message}`);
-      return new Response('Agent not found', { 
-        status: 404,
-        headers: corsHeaders
-      });
-    }
 
     // CRITICAL FIX: Fetch Windows agent script from agent_releases table (same as Linux/macOS)
     // This ensures version synchronization - no more desync with storage bucket
@@ -721,7 +762,7 @@ Deno.serve(async (req) => {
         .from('installation_analytics')
         .insert({
           tenant_id: enrollmentData.tenant_id,
-          agent_id: enrollmentData.agent_id,
+          agent_id: resolvedAgentId,
           agent_name: agentData.agent_name,
           event_type: 'downloaded',
           platform: platform,
