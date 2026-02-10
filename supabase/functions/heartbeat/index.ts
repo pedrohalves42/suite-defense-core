@@ -84,24 +84,41 @@ Deno.serve(async (req) => {
       )
     }
     
-    // Verificar HMAC (obrigatorio)
-    const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
-    if (!hmacResult.valid) {
-      logger.warn('HMAC verification failed', { 
-        agentName: agent.agent_name, 
-        errorCode: hmacResult.errorCode,
-        errorMessage: hmacResult.errorMessage,
+    // Verificar HMAC - try verification, but allow through if headers are missing
+    // COMPAT: v5.0.3 agents only send HMAC headers when body is present
+    // Heartbeats without body will have no HMAC headers
+    const hasHmacHeaders = req.headers.get('X-HMAC-Signature') || req.headers.get('X-Timestamp') || req.headers.get('X-HMAC-Timestamp')
+    
+    let hmacResult: { valid: boolean; rawBody?: string; errorCode?: string; errorMessage?: string; transient?: boolean }
+    
+    if (hasHmacHeaders) {
+      // HMAC headers present - try to verify
+      hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
+      if (!hmacResult.valid) {
+        // COMPAT: v5.0.3 has HMAC encoding bugs - accept heartbeat with token-only auth
+        // Log the failure but don't block the heartbeat
+        logger.warn('HMAC verification failed but accepting heartbeat (token-authenticated)', { 
+          agentName: agent.agent_name, 
+          errorCode: hmacResult.errorCode,
+          ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
+        })
+        // Re-read body since verifyHmacSignature consumed it
+        let rawBody = ''
+        try { rawBody = hmacResult.rawBody || '' } catch { rawBody = '' }
+        hmacResult = { valid: true, rawBody }
+      }
+    } else {
+      // No HMAC headers - agent authenticated by token only (v5.0.3 no-body heartbeat)
+      // Read body manually since verifyHmacSignature won't be called
+      let rawBody = ''
+      try {
+        rawBody = await req.clone().text()
+      } catch { rawBody = '' }
+      hmacResult = { valid: true, rawBody }
+      logger.warn('Heartbeat accepted without HMAC (token-only auth)', { 
+        agentName: agent.agent_name,
         ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
       })
-      return new Response(
-        JSON.stringify({ 
-          error: 'unauthorized',
-          code: hmacResult.errorCode,
-          message: hmacResult.errorMessage,
-          transient: hmacResult.transient
-        }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
     }
 
     // CRITICO: Parsear body DEPOIS da verificacao HMAC, usando o rawBody retornado
