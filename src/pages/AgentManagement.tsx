@@ -263,9 +263,8 @@ export default function AgentManagement() {
         .update({ status: disable ? 'disabled' : 'active' })
         .eq('id', agentId);
       if (agentError) throw agentError;
-      if (disable) {
-        await supabase.from('agent_tokens').update({ is_active: false }).eq('agent_id', agentId);
-      }
+      // Disable or re-enable tokens accordingly
+      await supabase.from('agent_tokens').update({ is_active: !disable }).eq('agent_id', agentId);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
