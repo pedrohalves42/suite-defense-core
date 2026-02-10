@@ -3078,6 +3078,8 @@ export type Database = {
           ed25519_supported: boolean | null
           enrolled_at: string
           force_update_at: string | null
+          force_update_delivered_count: number | null
+          force_update_first_delivered_at: string | null
           force_update_override_safe_mode: boolean | null
           force_update_override_safe_mode_expires_at: string | null
           force_update_reason: string | null
@@ -3129,6 +3131,8 @@ export type Database = {
           ed25519_supported?: boolean | null
           enrolled_at?: string
           force_update_at?: string | null
+          force_update_delivered_count?: number | null
+          force_update_first_delivered_at?: string | null
           force_update_override_safe_mode?: boolean | null
           force_update_override_safe_mode_expires_at?: string | null
           force_update_reason?: string | null
@@ -3180,6 +3184,8 @@ export type Database = {
           ed25519_supported?: boolean | null
           enrolled_at?: string
           force_update_at?: string | null
+          force_update_delivered_count?: number | null
+          force_update_first_delivered_at?: string | null
           force_update_override_safe_mode?: boolean | null
           force_update_override_safe_mode_expires_at?: string | null
           force_update_reason?: string | null

@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
     // ============================================================
     const { data: forceCheck } = await supabase
       .from('agents')
-      .select('force_update_version, force_update_reason, force_update_override_safe_mode, force_update_override_safe_mode_expires_at')
+      .select('force_update_version, force_update_reason, force_update_override_safe_mode, force_update_override_safe_mode_expires_at, force_update_delivered_count, force_update_first_delivered_at')
       .eq('id', agent.id)
       .single()
     
@@ -242,74 +242,130 @@ Deno.serve(async (req) => {
 
     // Se tem force_update pendente, buscar release e incluir no response
     if (forceCheck?.force_update_version) {
-      logger.info('Force update detected for agent', { 
-        agentName: agent.agent_name, 
-        targetVersion: forceCheck.force_update_version 
-      })
-      
-      // Determinar plataforma (default windows para retrocompatibilidade)
-      const platform = updateData.os_type || 'windows'
-      
-      const { data: release } = await supabase
-        .from('agent_releases')
-        .select('version, script_content, sha256')
-        .eq('version', forceCheck.force_update_version)
-        .eq('platform', platform)
-        .eq('is_active', true)
-        .single()
-
-      if (release) {
-        // Normalizar script para Windows (mesmo algoritmo do serve-agent-update)
-        const normalizeForWindows = (content: string): string => {
-          return content
-            .replace(/\r\n/g, '\n')   
-            .replace(/\r/g, '\n')     
-            .replace(/\n/g, '\r\n');  
-        };
-        
-        const normalizedScript = normalizeForWindows(release.script_content);
-        
-        // Encode Base64 usando Deno std (consistente com serve-agent-update)
-        const encoder = new TextEncoder()
-        const scriptBytes = encoder.encode(normalizedScript)
-        const base64Script = encodeBase64(scriptBytes)
-        
-        // Calcular SHA256 do conteúdo normalizado (mesmo algoritmo do serve-agent-update)
-        const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes)
-        const hashArray = Array.from(new Uint8Array(hashBuffer))
-        const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-
-        logger.info('Sending force update via heartbeat response', {
+      // PARTE 1: Verificar se agente JÁ está na versão alvo → limpar flag
+      const currentVersion = agentVersion || updateData.agent_version
+      if (currentVersion === forceCheck.force_update_version) {
+        logger.info('Agent already at target version, clearing force_update flag', {
           agentName: agent.agent_name,
-          targetVersion: release.version,
-          platform,
-          sha256: calculatedSha256.substring(0, 16) + '...'
+          version: currentVersion
         })
-
-        return new Response(
-          JSON.stringify({ 
-            ok: true,
-            agent: agent.agent_name,
-            timestamp: new Date().toISOString(),
-            // FORCE UPDATE DATA
-            force_update: true,
-            target_version: release.version,
-            script_content_base64: base64Script,
-            sha256: calculatedSha256,
-            reason: forceCheck.force_update_reason || 'Forced update via backend',
-            override_safe_mode: overrideValid
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200
-          }
-        )
+        await supabase
+          .from('agents')
+          .update({ 
+            force_update_version: null, 
+            force_update_reason: null,
+            force_update_delivered_count: 0,
+            force_update_first_delivered_at: null,
+            force_update_override_safe_mode: false,
+            force_update_override_safe_mode_expires_at: null
+          })
+          .eq('id', agent.id)
+        
+        // Response normal - agente já está atualizado
       } else {
-        logger.warn('Force update version not found in agent_releases', {
-          agentName: agent.agent_name,
-          targetVersion: forceCheck.force_update_version,
-          platform
-        })
+        // PARTE 1: Verificar delivered_count - se > 50, limpar flag (agente não suporta)
+        const deliveredCount = (forceCheck as any).force_update_delivered_count || 0
+        
+        if (deliveredCount >= 50) {
+          logger.warn('Agent does not support force_update after 50 deliveries, clearing flag', {
+            agentName: agent.agent_name,
+            targetVersion: forceCheck.force_update_version,
+            deliveredCount
+          })
+          await supabase
+            .from('agents')
+            .update({ 
+              force_update_version: null, 
+              force_update_reason: null,
+              force_update_delivered_count: 0,
+              force_update_first_delivered_at: null,
+              force_update_override_safe_mode: false,
+              force_update_override_safe_mode_expires_at: null
+            })
+            .eq('id', agent.id)
+        } else {
+          // Incrementar delivered_count e enviar force_update
+          const now = new Date().toISOString()
+          await supabase
+            .from('agents')
+            .update({ 
+              force_update_delivered_count: deliveredCount + 1,
+              force_update_first_delivered_at: (forceCheck as any).force_update_first_delivered_at || now
+            })
+            .eq('id', agent.id)
+
+          logger.info('Force update detected for agent', { 
+            agentName: agent.agent_name, 
+            targetVersion: forceCheck.force_update_version,
+            deliveryAttempt: deliveredCount + 1
+          })
+          
+          // Determinar plataforma (default windows para retrocompatibilidade)
+          const platform = updateData.os_type || 'windows'
+          
+          const { data: release } = await supabase
+            .from('agent_releases')
+            .select('version, script_content, sha256')
+            .eq('version', forceCheck.force_update_version)
+            .eq('platform', platform)
+            .eq('is_active', true)
+            .single()
+
+          if (release) {
+            // Normalizar script para Windows (mesmo algoritmo do serve-agent-update)
+            const normalizeForWindows = (content: string): string => {
+              return content
+                .replace(/\r\n/g, '\n')   
+                .replace(/\r/g, '\n')     
+                .replace(/\n/g, '\r\n');  
+            };
+            
+            const normalizedScript = normalizeForWindows(release.script_content);
+            
+            // Encode Base64 usando Deno std (consistente com serve-agent-update)
+            const encoder = new TextEncoder()
+            const scriptBytes = encoder.encode(normalizedScript)
+            const base64Script = encodeBase64(scriptBytes)
+            
+            // Calcular SHA256 do conteúdo normalizado (mesmo algoritmo do serve-agent-update)
+            const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes)
+            const hashArray = Array.from(new Uint8Array(hashBuffer))
+            const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+
+            logger.info('Sending force update via heartbeat response', {
+              agentName: agent.agent_name,
+              targetVersion: release.version,
+              platform,
+              deliveryAttempt: deliveredCount + 1,
+              sha256: calculatedSha256.substring(0, 16) + '...'
+            })
+
+            return new Response(
+              JSON.stringify({ 
+                ok: true,
+                agent: agent.agent_name,
+                timestamp: new Date().toISOString(),
+                // FORCE UPDATE DATA
+                force_update: true,
+                target_version: release.version,
+                script_content_base64: base64Script,
+                sha256: calculatedSha256,
+                reason: forceCheck.force_update_reason || 'Forced update via backend',
+                override_safe_mode: overrideValid
+              }),
+              {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200
+              }
+            )
+          } else {
+            logger.warn('Force update version not found in agent_releases', {
+              agentName: agent.agent_name,
+              targetVersion: forceCheck.force_update_version,
+              platform
+            })
+          }
+        }
       }
     }
 
