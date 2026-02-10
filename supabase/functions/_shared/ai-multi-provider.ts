@@ -105,6 +105,9 @@ const providerStats: Record<AIProviderName, ProviderStats> = {
 const SCORE_LATENCY_WEIGHT = 0.5;
 const SCORE_COST_WEIGHT = 0.3;
 const SCORE_ERROR_WEIGHT = 0.2;
+// High-latency penalty: providers exceeding this threshold get an additional penalty
+const HIGH_LATENCY_THRESHOLD_MS = 10000;
+const HIGH_LATENCY_PENALTY = 5000;
 
 const CIRCUIT_FAILURE_THRESHOLD = 3;
 const CIRCUIT_RESET_MS = 60000; // 1 minute
@@ -487,7 +490,9 @@ function calculateProviderScore(provider: AIProviderConfig): number {
   const circuit = providerCircuits[provider.name];
 
   // Average latency (ms) - use default if no data
-  const avgLatency = stats.avgLatencyMs || 1000;
+  // Cloudflare penalized with higher default due to observed P95 ~43s
+  const defaultLatency = provider.name === 'cloudflare' ? 15000 : 1000;
+  const avgLatency = stats.avgLatencyMs || defaultLatency;
   
   // Failure rate (0-1)
   const failureRate = stats.requests > 0 ? stats.failures / stats.requests : 0;
@@ -495,12 +500,16 @@ function calculateProviderScore(provider: AIProviderConfig): number {
   // Circuit breaker penalty
   const circuitPenalty = circuit.isOpen ? 10000 : 0;
   
+  // High-latency penalty for slow providers (e.g., Cloudflare at ~15s avg)
+  const latencyPenalty = avgLatency > HIGH_LATENCY_THRESHOLD_MS ? HIGH_LATENCY_PENALTY : 0;
+  
   // Calculate final score (lower = better)
   const score = 
     avgLatency * SCORE_LATENCY_WEIGHT +
     provider.costPerMToken * 1000 * SCORE_COST_WEIGHT +
     failureRate * 1000 * SCORE_ERROR_WEIGHT +
-    circuitPenalty;
+    circuitPenalty +
+    latencyPenalty;
   
   return Math.round(score);
 }
