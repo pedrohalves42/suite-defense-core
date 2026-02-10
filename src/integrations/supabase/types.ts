@@ -22732,7 +22732,9 @@ export type Database = {
         Args: { p_new_role: string; p_user_id: string }
         Returns: undefined
       }
-      user_belongs_to_tenant: { Args: { _tenant_id: string }; Returns: boolean }
+      user_belongs_to_tenant:
+        | { Args: { _tenant_id: string }; Returns: boolean }
+        | { Args: { _tenant_id: string; _user_id: string }; Returns: boolean }
       user_has_tenant_access: { Args: { _tenant_id: string }; Returns: boolean }
       validate_agent_release_integrity: {
         Args: never
