@@ -20,8 +20,7 @@ import { useAgentGroups, useAgentGroupMembers, useAvailableAgents } from '@/hook
 import { useAgentGroupPolicies } from '@/hooks/useSecurityPolicies';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Shield } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { HighImpactConfirmDialog, needsHighImpactConfirmation } from '@/components/ui/high-impact-confirm-dialog';
 import { useAuditLog } from '@/hooks/useAuditLog';
 

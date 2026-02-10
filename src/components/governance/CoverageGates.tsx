@@ -5,8 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, ptBR } from '@/lib/date-utils';
 
 const gateLabels: Record<string, { label: string; description: string }> = {
   'all_critical_alerts_have_tasks': {

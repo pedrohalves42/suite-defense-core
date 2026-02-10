@@ -30,9 +30,7 @@ import {
   Package,
   ShieldAlert
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { formatBrazil } from '@/lib/date-utils';
+import { formatDistanceToNow, ptBR, formatBrazil } from '@/lib/date-utils';
 import { 
   useUpdateTaskStatus, 
   type Task, 

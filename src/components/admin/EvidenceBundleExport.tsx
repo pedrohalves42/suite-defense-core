@@ -23,8 +23,8 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { format, subDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, ptBR } from '@/lib/date-utils';
+import { subDays } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 
 const EVIDENCE_OPTIONS = [

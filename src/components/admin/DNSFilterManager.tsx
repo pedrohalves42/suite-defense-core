@@ -24,8 +24,7 @@ import {
   ShieldCheck,
   ShieldX
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function DNSFilterManager() {

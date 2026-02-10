@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow, differenceInMinutes } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
+import { differenceInMinutes } from 'date-fns';
 import { Link } from 'react-router-dom';
 
 interface ApprovalRequestsPanelProps {

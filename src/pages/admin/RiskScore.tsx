@@ -10,8 +10,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useRiskScore, RiskBreakdown } from '@/hooks/useRiskScore';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, ptBR } from '@/lib/date-utils';
 
 // Breakdown category configuration
 const BREAKDOWN_CONFIG: Record<keyof RiskBreakdown, { 

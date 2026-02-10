@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { addDays, format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, ptBR } from '@/lib/date-utils';
+import { addDays } from 'date-fns';
 import { AlertTriangle, Calendar, Loader2, ShieldAlert } from 'lucide-react';
 import {
   Dialog,

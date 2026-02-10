@@ -23,8 +23,8 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { format, formatDistanceToNow, subHours } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, formatDistanceToNow, ptBR } from '@/lib/date-utils';
+import { subHours } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { IncidentTimeline } from '@/hooks/useIncidentTimeline';
 

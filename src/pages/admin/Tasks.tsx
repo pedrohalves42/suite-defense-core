@@ -25,8 +25,7 @@ import {
   Shield,
   Crosshair
 } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow, format, ptBR } from '@/lib/date-utils';
 import { TaskDetailDrawer } from '@/components/tasks/TaskDetailDrawer';
 
 const severityConfig: Record<TaskSeverity, { label: string; color: string; icon: React.ReactNode }> = {

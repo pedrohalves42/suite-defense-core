@@ -17,8 +17,7 @@ import {
   getAnomalySeverityConfig 
 } from '@/hooks/useJobAnomalies';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 
 interface JobAnomaliesCardProps {
   onNavigateToCleanup?: () => void;

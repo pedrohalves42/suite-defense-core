@@ -33,8 +33,7 @@ import {
   useExecutePlaybook, 
   useIgnorePlaybookExecution 
 } from '@/hooks/usePlaybooks';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 
 interface PlaybookRecommendationProps {

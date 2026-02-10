@@ -24,8 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, ptBR } from '@/lib/date-utils';
 
 const modeConfig: Record<SystemMode, { label: string; color: string; icon: React.ReactNode }> = {
   normal: { 
