@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
           expires_at: expiresAt,
           max_uses: 100,
           warning: 'ANOTE ESTA CHAVE! Ela não pode ser recuperada depois (armazenada apenas como hash).',
-          nuclear_reinstall_command: `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $ek="${plaintextKey}"; irm "https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/serve-installer?ek=$ek&platform=windows" | iex`
+          nuclear_reinstall_command: `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "${supabaseUrl}/functions/v1/serve-installer/${plaintextKey}" | iex`
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
