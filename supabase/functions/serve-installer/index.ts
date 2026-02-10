@@ -308,9 +308,12 @@ Deno.serve(async (req) => {
       });
 
       // Increment usage count on enrollment key
-      await supabaseClient.rpc('increment_enrollment_key_usage', { p_key_hash: enrollmentKeyHash }).catch(e => {
+      try {
+        const { error: rpcErr } = await supabaseClient.rpc('increment_enrollment_key_usage', { p_key_hash: enrollmentKeyHash });
+        if (rpcErr) console.warn(`[${requestId}] Failed to increment EK usage (non-critical):`, rpcErr);
+      } catch (e) {
         console.warn(`[${requestId}] Failed to increment EK usage (non-critical):`, e);
-      });
+      }
     } else {
       // === EXISTING AGENT: Fetch agent info ===
       const { data: existingAgent, error: agentError } = await supabaseClient
