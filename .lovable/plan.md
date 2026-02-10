@@ -1,79 +1,85 @@
 
 
-## Plano: Forcar Atualizacao da Frota + Corrigir Associacao de Tenant
+## Plano: Corrigir Login do genialcred@gmail.com + Status dos Agentes
 
-### Problema Identificado
+### Problema 1: "Nenhuma Empresa Associada" para genialcred@gmail.com
 
-Os agentes nas versoes v4.x e v5.0.1/v5.0.2 **nao possuem codigo para processar** o campo `force_update` que o backend envia no response do heartbeat. Isso significa que mesmo com `force_update_version` setado, esses agentes **ignoram** o comando e continuam rodando a versao antiga. A reinstalacao preservada tambem pode falhar silenciosamente em agentes v4.x.
+**Causa raiz encontrada:** A funcao `get_active_tenant_id()` no banco de dados le o campo `active_tenant_id` do **nivel raiz** do JWT (`->>'active_tenant_id'`). Porem, no JWT do Supabase, campos de `app_metadata` ficam **dentro** do objeto `app_metadata`. O caminho correto seria `::json->'app_metadata'->>'active_tenant_id'`.
 
-Sobre `genialcred@gmail.com`: o usuario **esta associado** ao tenant "Genial Cred" com role `admin` na tabela `user_roles`. Se ele nao consegue ver o tenant no dashboard, o problema esta no fluxo de claims/JWT, nao na associacao.
+Isso faz com que `get_active_tenant_id()` **sempre retorne NULL** para usuarios nao-super_admin. A politica RLS da tabela `tenants` exige `id = get_active_tenant_id()` para SELECT -- como retorna NULL, o JOIN na query do hook `useActiveTenant` falha silenciosamente, o tenant volta como null, e o usuario e redirecionado para /no-tenant.
 
-### Solucao em 2 Partes
+O unico usuario que funciona atualmente e `pedrohalves42@gmail.com` porque ele e `super_admin`, e a politica tem `OR is_current_super_admin()` que libera o acesso.
 
----
-
-### Parte 1: Corrigir o heartbeat para limpar `force_update_version` apos entrega
-
-Atualmente o backend envia o force_update em **todo heartbeat** infinitamente, pois nunca limpa o flag. Precisamos:
-
-1. **Apos enviar force_update no heartbeat**: marcar `force_update_delivered_at` no banco
-2. **Apos N entregas sem sucesso (agente nao atualiza versao)**: logar que o agente nao suporta auto-update e limpar o flag para parar o loop
-
-Isso evita que o backend fique enviando payloads de ~250KB em cada heartbeat para agentes que nunca vao processar.
+**Solucao:** Corrigir a funcao `get_active_tenant_id()` para ler do caminho correto no JWT E adicionar uma politica RLS de fallback na tabela `tenants` que permita SELECT quando o `user_id` tem um `user_roles` associado (para resolver o problema de "ovo e galinha" -- precisa ler o tenant para setar o active_tenant, mas precisa do active_tenant para ler o tenant).
 
 ---
 
-### Parte 2: Criar edge function `force-reinstall-fleet` para reinstalacao em massa
+### Problema 2: Agentes ainda em versoes antigas
 
-Como agentes antigos nao processam force_update, a unica solucao real e a **reinstalacao nuclear remota**. Porem, isso requer acesso fisico ou RMM.
+**Status atual da frota (ambos tenants, excluindo archived):**
 
-Para facilitar, vamos:
+| Hostname | Versao | Status |
+|----------|--------|--------|
+| SERVIDOR | v5.0.3 | Online |
+| SISTEMA | v5.0.3 | Online |
+| DANI | v5.0.3 | Online |
+| PRISCILA | v5.0.3 | Online |
+| DESKTOP-F4LJVQE | v5.0.3 | Online |
+| DESKTOP-NOHACIE | v5.0.3 | Online |
+| ATENDIMENTO02 | v5.0.3 | Online |
+| DESKTOP-UOABRHB | **v4.5.0** | Online |
+| DESKTOP-H1GI8NB | **v5.0.2** | Online |
+| DESKTOP-9E0EABD | **v5.0.2** | Online |
+| DESKTOP-59Q54R2 | **v5.0.2** | Online |
+| DESKTOP-IM5ALAC | **v5.0.2** | Online |
+| ADM | **v5.0.1** | Online |
+| ATEND_04 | **v4.1.9** | Online (1 delivery, ignorou) |
 
-1. **Criar uma nova edge function `force-reinstall-fleet`** que:
-   - Recebe `tenant_id` e opcionalmente lista de `agent_ids`
-   - Gera os comandos PowerShell de reinstalacao nuclear prontos para copiar/colar
-   - Usa a enrollment key ativa do tenant automaticamente
-   - Retorna um script "batch" que pode ser distribuido via RMM/GPO
+**7 de 14 agentes online estao em versao desatualizada.**
 
-2. **Adicionar no dashboard um botao "Reinstalacao Forcada"** na pagina de Version Sync que:
-   - Mostra os agentes stuck (com force_update_version mas versao antiga)
-   - Gera o comando PowerShell nuclear com 1 clique
-   - Inclui instrucoes claras para o operador
+O `force_update_version` foi limpo para a maioria, entao o heartbeat nao esta enviando comando de update. Precisamos re-setar o `force_update_version = 'v5.0.3'` para todos os agentes que nao estao nessa versao.
 
 ---
 
-### Parte 3: Limpar o estado stuck atual
+### Acoes a Executar
 
-Apos deploy, executar limpeza:
-- Limpar `force_update_version` dos agentes que ja estao em v5.0.3 (redundante)
-- Manter `force_update_version` nos que realmente precisam, mas adicionar tracking de entregas
-
----
-
-### Detalhes Tecnicos
-
-**Arquivos a modificar:**
-- `supabase/functions/heartbeat/index.ts` — adicionar logica de tracking de entregas e auto-limpeza do force_update apos X tentativas
-- `src/components/admin/AgentVersionSync.tsx` — adicionar secao de "agentes stuck" com botao de reinstalacao nuclear e comando pronto
-
-**Arquivos a criar:**
-- `supabase/functions/force-reinstall-fleet/index.ts` — edge function que gera comandos de reinstalacao em massa
-
-**Migracao SQL:**
-- Adicionar coluna `force_update_delivered_count` e `force_update_first_delivered_at` na tabela `agents`
-
-**Fluxo:**
-
-```text
-Heartbeat chega
-  |
-  v
-force_update_version setado?
-  |--- Nao --> Response normal
-  |--- Sim --> Agente ja esta nessa versao?
-                  |--- Sim --> Limpar flag, response normal
-                  |--- Nao --> Incrementar delivered_count
-                                |--- count > 50? --> Logar "agente nao suporta", limpar flag
-                                |--- count <= 50 --> Enviar force_update no response
+#### 1. Migracao SQL -- Corrigir `get_active_tenant_id()`
+Alterar a funcao para ler o caminho correto do JWT:
+```sql
+-- De:
+v_claim := current_setting('request.jwt.claims', true)::json->>'active_tenant_id';
+-- Para:
+v_claim := current_setting('request.jwt.claims', true)::json->'app_metadata'->>'active_tenant_id';
 ```
+
+#### 2. Migracao SQL -- Adicionar politica RLS de fallback na tabela `tenants`
+Permitir que usuarios com `user_roles` associado possam fazer SELECT no seu proprio tenant (resolve o problema de bootstrap):
+```sql
+CREATE POLICY "Users can view their own tenants"
+ON public.tenants FOR SELECT TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    WHERE ur.user_id = auth.uid() AND ur.tenant_id = tenants.id
+  )
+);
+```
+
+#### 3. Migracao SQL -- Re-setar force_update para agentes desatualizados
+```sql
+UPDATE public.agents 
+SET force_update_version = 'v5.0.3', force_update_delivered_count = 0
+WHERE agent_version != 'v5.0.3' AND status = 'active';
+```
+
+#### 4. Nenhuma alteracao de codigo frontend necessaria
+O hook `useActiveTenant` e o `ProtectedRoute` ja estao corretos -- o problema e exclusivamente nas politicas RLS do banco.
+
+---
+
+### Resultado Esperado
+
+- **genialcred@gmail.com** conseguira logar e ver o dashboard da Genial Cred normalmente
+- **Qualquer usuario admin** (nao apenas super_admin) podera acessar o sistema
+- **Agentes desatualizados** receberao novamente o comando de force_update no proximo heartbeat
 
