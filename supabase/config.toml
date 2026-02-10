@@ -695,3 +695,7 @@ verify_jwt = true
 
 [functions.get-admin-releases]
 verify_jwt = true
+
+# === Force Reinstall Fleet (Nuclear Reinstall Commands) ===
+[functions.force-reinstall-fleet]
+verify_jwt = false
