@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
           expires_at: expiresAt,
           max_uses: 100,
           warning: 'ANOTE ESTA CHAVE! Ela não pode ser recuperada depois (armazenada apenas como hash).',
-          nuclear_reinstall_command: `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "${supabaseUrl}/functions/v1/serve-installer/${plaintextKey}" | iex`
+          nuclear_reinstall_command: `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $h=$env:COMPUTERNAME; Get-ScheduledTask -TaskName '*CyberShield*' -ErrorAction SilentlyContinue | ForEach-Object { Stop-ScheduledTask $_.TaskName -ErrorAction SilentlyContinue; Unregister-ScheduledTask $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue }; Remove-Item 'C:\\CyberShield' -Recurse -Force -ErrorAction SilentlyContinue; irm "${supabaseUrl}/functions/v1/serve-installer/${plaintextKey}?hostname=$h&os_type=windows" | iex`
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
     const serverUrl = supabaseUrl
     const ek = enrollmentKey.key
 
-    const singleCommand = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $ek="${ek}"; irm "${serverUrl}/functions/v1/serve-installer/$ek?os_type=windows" -UseBasicParsing | iex`
+    const singleCommand = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $ek="${ek}"; $h=$env:COMPUTERNAME; Get-ScheduledTask -TaskName '*CyberShield*' -ErrorAction SilentlyContinue | ForEach-Object { Stop-ScheduledTask $_.TaskName -ErrorAction SilentlyContinue; Unregister-ScheduledTask $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue }; Remove-Item 'C:\\CyberShield' -Recurse -Force -ErrorAction SilentlyContinue; irm "${serverUrl}/functions/v1/serve-installer/$ek?hostname=$h&os_type=windows" -UseBasicParsing | iex`
 
     // Generate batch script for RMM/GPO
     const batchScript = `@echo off
@@ -216,7 +216,7 @@ if (Test-Path "C:\\CyberShield") {
 
 # 3. Download and execute fresh installer
 Write-Host "[3/4] Downloading fresh installer..." -ForegroundColor Yellow
-$installerUrl = "${serverUrl}/functions/v1/serve-installer/${ek}?os_type=windows"
+$installerUrl = "${serverUrl}/functions/v1/serve-installer/${ek}?hostname=$($env:COMPUTERNAME)&os_type=windows"
 $installerScript = Invoke-RestMethod -Uri $installerUrl -UseBasicParsing
 Invoke-Expression $installerScript
 
