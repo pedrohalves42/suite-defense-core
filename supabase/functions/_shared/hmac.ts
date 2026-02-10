@@ -51,8 +51,9 @@ export async function verifyHmacSignature(
   context?: AuthFailureContext
 ): Promise<HmacVerificationResult> {
   const signature = request.headers.get('X-HMAC-Signature');
-  const timestamp = request.headers.get('X-Timestamp');
-  const nonce = request.headers.get('X-Nonce');
+  // COMPAT: Accept both X-Timestamp/X-Nonce (legacy) and X-HMAC-Timestamp/X-HMAC-Nonce (v5.0.3+)
+  const timestamp = request.headers.get('X-Timestamp') || request.headers.get('X-HMAC-Timestamp');
+  const nonce = request.headers.get('X-Nonce') || request.headers.get('X-HMAC-Nonce');
   const serverTimeMs = Date.now();
 
   if (!signature || !timestamp || !nonce) {
@@ -66,7 +67,12 @@ export async function verifyHmacSignature(
   }
 
   // Verificar timestamp (maximo 5 minutos de diferenca)
-  const requestTime = parseInt(timestamp);
+  // COMPAT: v5.0.3 agents send timestamp in SECONDS, legacy agents send in MILLISECONDS
+  let requestTime = parseInt(timestamp);
+  // Auto-detect: if timestamp < 1e12, it's in seconds; convert to ms
+  if (requestTime < 1e12) {
+    requestTime = requestTime * 1000;
+  }
   const maxDiff = 5 * 60 * 1000; // 5 minutos
   const skewSeconds = Math.abs(serverTimeMs - requestTime) / 1000;
 
@@ -125,18 +131,31 @@ export async function verifyHmacSignature(
     body = '';
   }
 
-  const payload = `${timestamp}:${nonce}:${body}`;
+  // COMPAT: v5.0.3 uses "." separator, legacy uses ":" separator
+  // Use the original timestamp string (not the converted one) for payload reconstruction
+  const payloadColon = `${timestamp}:${nonce}:${body}`;
+  const payloadDot = `${timestamp}.${nonce}.${body}`;
 
-  // FASE 1 FIX: Usar HEX para compatibilidade com agentes Windows/macOS
+  // COMPAT: Try multiple key encodings and payload formats
+  // v5.0.3 agents use UTF8.GetBytes(hexString) as HMAC key + "." separator
+  // Legacy agents use hexToBytes(hexString) as HMAC key + ":" separator
   const encoder = new TextEncoder();
-  let keyData: Uint8Array;
   
+  // Build key variants
+  const keyVariants: { name: string; data: Uint8Array }[] = [];
+  
+  // 1. HEX-decoded bytes (legacy/correct)
   try {
-    keyData = hexToBytes(hmacSecret);
-  } catch (hexError) {
-    // P0 FIX: Remover fallback UTF-8 - secrets DEVEM ser HEX valido (64 chars)
-    // Fallback permitia bypass de autenticacao com secrets malformados
-    console.error(`[HMAC] CRITICAL: Invalid HMAC secret format for agent ${agentName}. Must be 64 hex chars.`, hexError);
+    keyVariants.push({ name: 'hex', data: hexToBytes(hmacSecret) });
+  } catch {
+    // Not valid hex - skip
+  }
+  
+  // 2. UTF-8 raw bytes (v5.0.3 bug - treats hex string as UTF-8)
+  keyVariants.push({ name: 'utf8', data: encoder.encode(hmacSecret) });
+  
+  if (keyVariants.length === 0) {
+    console.error(`[HMAC] CRITICAL: No valid key encoding for agent ${agentName}`);
     return {
       valid: false,
       errorCode: 'AUTH_INVALID_SECRET_FORMAT',
@@ -145,61 +164,64 @@ export async function verifyHmacSignature(
     };
   }
   
-  const messageData = encoder.encode(payload);
-
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    keyData.buffer as ArrayBuffer,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
-  const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-
-  if (signature !== expectedSignature) {
-    // Production logging: minimal info to prevent signature analysis attacks
-    console.error('[HMAC] Signature verification failed', {
-      agent: agentName,
-      error_code: 'AUTH_INVALID_SIGNATURE',
-      timestamp: timestamp
-    });
+  // Try all combinations of key encoding × payload format
+  const payloads = [payloadColon, payloadDot];
+  
+  for (const keyVariant of keyVariants) {
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      keyVariant.data.buffer as ArrayBuffer,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
     
-    return { 
-      valid: false, 
-      errorCode: 'AUTH_INVALID_SIGNATURE',
-      errorMessage: 'Assinatura HMAC invalida',
-      transient: false
-    };
+    for (const payload of payloads) {
+      const messageData = encoder.encode(payload);
+      const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+      const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      
+      if (signature === expectedSignature) {
+        // Match found! Store signature for replay protection
+        const { error: insertError } = await supabase.from('hmac_signatures').insert({
+          signature,
+          agent_name: agentName,
+        });
+
+        if (insertError) {
+          console.error(`[HMAC] CRITICAL: Failed to store signature for agent ${agentName}:`, {
+            error: insertError.message,
+            code: insertError.code,
+            details: insertError.details,
+            hint: insertError.hint
+          });
+        } else {
+          console.log(`[HMAC] Signature stored successfully for agent ${agentName} (key=${keyVariant.name}, sep=${payload.includes('.') ? 'dot' : 'colon'})`);
+        }
+
+        // SEC-01 FIX: Cleanup probabilistico sincrono
+        await probabilisticCleanup(supabase);
+
+        return { valid: true, rawBody: body };
+      }
+    }
   }
 
-  // Armazenar assinatura usada para replay protection (A-001 Nullmann)
-  const { error: insertError } = await supabase.from('hmac_signatures').insert({
-    signature,
-    agent_name: agentName,
+  // No match found
+  console.error('[HMAC] Signature verification failed', {
+    agent: agentName,
+    error_code: 'AUTH_INVALID_SIGNATURE',
+    timestamp: timestamp
   });
-
-  if (insertError) {
-    // A-001 FIX: Log explicito para diagnostico de falhas de insert
-    console.error(`[HMAC] CRITICAL: Failed to store signature for agent ${agentName}:`, {
-      error: insertError.message,
-      code: insertError.code,
-      details: insertError.details,
-      hint: insertError.hint
-    });
-    // Nao bloquear autenticacao se apenas o replay tracking falhar
-    // mas logar para investigacao posterior
-  } else {
-    console.log(`[HMAC] Signature stored successfully for agent ${agentName}`);
-  }
-
-  // SEC-01 FIX: Cleanup probabilistico sincrono (evita race conditions com setTimeout em Deno)
-  await probabilisticCleanup(supabase);
-
-  return { valid: true, rawBody: body };
+  
+  return { 
+    valid: false, 
+    errorCode: 'AUTH_INVALID_SIGNATURE',
+    errorMessage: 'Assinatura HMAC invalida',
+    transient: false
+  };
 }
 
 /**
