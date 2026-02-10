@@ -1,7 +1,38 @@
+import { format as fnsFormat } from 'date-fns';
 import { format as formatTz, toZonedTime } from 'date-fns-tz';
 import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow as fnsFormatDistanceToNow } from 'date-fns';
+
+// Re-export ptBR for backward compatibility with existing components
+export { ptBR } from 'date-fns/locale';
 
 export const BRASILIA_TIMEZONE = 'America/Sao_Paulo';
+
+/**
+ * Drop-in replacement for date-fns `format()` that always uses Brasília timezone.
+ * Usage: import { format } from '@/lib/date-utils'; (instead of date-fns)
+ */
+export function format(date: Date | string | number, formatStr: string, options?: { locale?: any }): string {
+  const d = typeof date === 'string' ? new Date(date) : typeof date === 'number' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return '-';
+  const zonedDate = toZonedTime(d, BRASILIA_TIMEZONE);
+  return formatTz(zonedDate, formatStr, { 
+    locale: options?.locale || ptBR,
+    timeZone: BRASILIA_TIMEZONE 
+  });
+}
+
+/**
+ * Drop-in replacement for date-fns `formatDistanceToNow()` using Brasília timezone.
+ */
+export function formatDistanceToNow(date: Date | string | number, options?: { addSuffix?: boolean; locale?: any }): string {
+  const d = typeof date === 'string' ? new Date(date) : typeof date === 'number' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return '-';
+  return fnsFormatDistanceToNow(d, { 
+    addSuffix: options?.addSuffix,
+    locale: options?.locale || ptBR 
+  });
+}
 
 /**
  * Indicador visual de timezone para exibição em headers

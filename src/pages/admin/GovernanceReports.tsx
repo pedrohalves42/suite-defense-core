@@ -19,8 +19,8 @@ import {
   Loader2,
   FileCheck
 } from 'lucide-react';
-import { format, subDays, startOfWeek, endOfWeek } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, ptBR } from '@/lib/date-utils';
+import { subDays, startOfWeek, endOfWeek } from 'date-fns';
 // jsPDF imported dynamically to avoid test/build issues
 
 export default function GovernanceReports() {

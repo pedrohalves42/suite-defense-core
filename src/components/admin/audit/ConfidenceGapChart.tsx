@@ -12,8 +12,7 @@ import {
   ComposedChart,
   Line
 } from 'recharts';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, ptBR } from '@/lib/date-utils';
 import { 
   ConfidenceGap, 
   ConfidenceGapTrend,

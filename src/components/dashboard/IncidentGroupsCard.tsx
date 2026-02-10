@@ -32,8 +32,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 const StatusIcon = ({ status }: { status: ReturnType<typeof getIncidentStatus> }) => {

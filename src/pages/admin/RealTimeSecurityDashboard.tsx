@@ -21,8 +21,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { format, formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { RiskScoreCard } from '@/components/admin/RiskScoreCard';
 
 interface SecurityEvent {

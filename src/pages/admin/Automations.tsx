@@ -11,8 +11,7 @@ import {
   Clock, Play, CheckCircle, XCircle, AlertTriangle, 
   Zap, Bot, RefreshCw, Calendar, Timer
 } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { callEdgeFunction } from '@/lib/edge-function-client';

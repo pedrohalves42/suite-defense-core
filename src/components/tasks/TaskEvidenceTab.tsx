@@ -1,6 +1,5 @@
 import { useTaskEvidence, EVIDENCE_TYPE_LABELS } from '@/hooks/useTaskEvidence';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, ptBR } from '@/lib/date-utils';
 import { 
   FileText, 
   Camera, 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -192,7 +193,7 @@ export function InsightActionPanel() {
                           </p>
                           <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
-                            {new Date(insight.created_at).toLocaleString('pt-BR')}
+                            {formatBrazilDateTime(insight.created_at, 'short')}
                           </div>
                         </div>
                       </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -227,7 +228,7 @@ export default function ThreatIntelligenceLookup({ initialTarget, onAnalyze }: T
                 <div className="flex items-center gap-1 mt-3 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
                   Resultado em cache
-                  {result.cached_at && ` - ${new Date(result.cached_at).toLocaleString('pt-BR')}`}
+                  {result.cached_at && ` - ${formatBrazilDateTime(result.cached_at, 'full')}`}
                 </div>
               )}
             </div>

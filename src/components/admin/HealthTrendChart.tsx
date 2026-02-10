@@ -13,8 +13,8 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { format, subDays, startOfDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, ptBR } from '@/lib/date-utils';
+import { subDays, startOfDay } from 'date-fns';
 import { getAgentStatusInfo } from '@/lib/agent-utils';
 
 interface TrendData {

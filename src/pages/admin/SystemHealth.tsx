@@ -18,8 +18,7 @@ import {
   Timer
 } from "lucide-react";
 import JobTestRunner from "@/components/admin/JobTestRunner";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, ptBR } from '@/lib/date-utils';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useTenant } from "@/hooks/useTenant";
 

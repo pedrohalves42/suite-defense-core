@@ -30,8 +30,7 @@ import {
   type AgentExecutionHealth,
   type NonExecutionAlert,
 } from '@/hooks/useAgentHealthAlerts';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { Link } from 'react-router-dom';
 import { HumanizedAlertCard } from '@/components/admin/HumanizedAlertCard';
 

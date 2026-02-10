@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -350,7 +351,7 @@ export default function JobTestRunner() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Criado:</span>
                   <span className="font-mono text-xs">
-                    {new Date(testJob.created_at).toLocaleString('pt-BR')}
+                    {formatBrazilDateTime(testJob.created_at, 'full')}
                   </span>
                 </div>
               )}
@@ -359,7 +360,7 @@ export default function JobTestRunner() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Entregue:</span>
                   <span className="font-mono text-xs">
-                    {new Date(testJob.delivered_at).toLocaleString('pt-BR')}
+                    {formatBrazilDateTime(testJob.delivered_at, 'full')}
                   </span>
                 </div>
               )}
@@ -368,7 +369,7 @@ export default function JobTestRunner() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Concluído:</span>
                   <span className="font-mono text-xs">
-                    {new Date(testJob.completed_at).toLocaleString('pt-BR')}
+                    {formatBrazilDateTime(testJob.completed_at, 'full')}
                   </span>
                 </div>
               )}

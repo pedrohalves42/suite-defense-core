@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useForensicSnapshots } from '@/hooks/useForensicSnapshots';
 import { Camera, Clock, Server, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow, formatBrazilDateTime, ptBR } from '@/lib/date-utils';
 import {
   Dialog,
   DialogContent,
@@ -108,7 +107,7 @@ export function ForensicSnapshotsCard() {
                         <DialogHeader>
                           <DialogTitle>Snapshot Forense</DialogTitle>
                           <DialogDescription>
-                            Capturado em {new Date(snapshot.created_at).toLocaleString('pt-BR')}
+                            Capturado em {formatBrazilDateTime(snapshot.created_at, 'full')}
                           </DialogDescription>
                         </DialogHeader>
                         <ScrollArea className="max-h-[60vh]">

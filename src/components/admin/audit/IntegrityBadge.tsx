@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { verifyAuditLogChain } from '@/lib/audit-integrity';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -97,7 +98,7 @@ export function IntegrityBadge({ tenantId, startDate, endDate, className, loadin
           <p className="text-xs">
             A cadeia de hashes foi quebrada em{' '}
             {verification.first_broken_at 
-              ? new Date(verification.first_broken_at).toLocaleString('pt-BR')
+              ? formatBrazilDateTime(verification.first_broken_at, 'full')
               : 'data desconhecida'}
           </p>
           <p className="text-xs text-muted-foreground">

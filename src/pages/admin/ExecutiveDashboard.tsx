@@ -26,8 +26,8 @@ import {
   Zap,
   RefreshCw
 } from 'lucide-react';
-import { format, subDays, differenceInMinutes } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, ptBR } from '@/lib/date-utils';
+import { subDays, differenceInMinutes } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';

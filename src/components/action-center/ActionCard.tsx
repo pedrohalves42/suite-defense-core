@@ -38,8 +38,7 @@ import {
   Target,
   Wand2,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 import { ActionItem, useExecuteActionItem } from '@/hooks/useActionCenter';
 import { getActionCopy, SEVERITY_CONFIG, generateDynamicContent } from './ActionCopyMap';

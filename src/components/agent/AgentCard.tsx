@@ -4,8 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AgentMetricsBar } from './AgentMetricsBar';
 import { StatusDot } from '@/components/ui/simple-status-indicator';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 
 export interface DiskMetric {
   drive_letter: string;

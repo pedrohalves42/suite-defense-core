@@ -22,8 +22,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { format, formatDistanceToNow, differenceInMinutes } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, formatDistanceToNow, ptBR } from '@/lib/date-utils';
+import { differenceInMinutes } from 'date-fns';
 
 export default function ApprovalRequests() {
   const [searchQuery, setSearchQuery] = useState('');

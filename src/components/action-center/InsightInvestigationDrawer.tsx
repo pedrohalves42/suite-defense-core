@@ -22,8 +22,7 @@ import { useTenant } from '@/hooks/useTenant';
 import { getSuggestedActions } from '@/lib/insight-action-mapping';
 import { executeInsightAction, getActionLabel } from '@/lib/insight-actions';
 import { humanizeEvidence } from '@/lib/humanize-evidence';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { 
   Sparkles, 
   Activity, 
