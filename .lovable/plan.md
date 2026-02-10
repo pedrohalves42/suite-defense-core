@@ -1,56 +1,79 @@
 
-## Gerar Novas Enrollment Keys para Pedro Alves e Genial Cred
+## Corrigir Comando de Reinstalacao Nuclear (2 problemas)
 
-### O que sera feito
+### Problema 1: URL incorreta - EK como query param em vez de path
 
-Gerar 2 novas enrollment keys (uma por tenant) com validade de 30 dias e 100 usos cada. As chaves serao geradas via migracao SQL usando a mesma logica de hash SHA-256 usada pelo sistema.
+O comando gerado coloca a enrollment key como `?ek=CHAVE`, mas a funcao `serve-installer` espera a chave no **path** da URL (`/serve-installer/CHAVE`). Com a EK no query param, o pathname fica `/serve-installer`, que bate com o health check da linha 97, retornando JSON em vez do script PowerShell.
 
-**Importante:** Como as chaves sao armazenadas apenas como hash no banco (SEC-001), o valor em texto puro so aparece **uma vez** -- no output da migracao. Voce precisara anotar as chaves geradas.
+**Resultado:** PowerShell recebe `@{status=healthy; timestamp=...}` e gera ParseException.
 
-### Tenant IDs
+### Problema 2: Enrollment keys sem `agent_id`
 
-| Tenant | ID |
-|--------|-----|
-| Pedro Alves | `3adc67e6-8908-4d98-b85b-5e93be4673a1` |
-| Genial Cred | `2584d2cd-8b99-4ca7-a8e2-b61256e82b3e` |
+As chaves geradas pelo `force-reinstall-fleet` nao incluem `agent_id`. A funcao `serve-installer` exige `agent_id` na linha 263 e rejeita chaves sem ele ("Agent not linked to enrollment key").
 
-### Abordagem Tecnica
+Para reinstalacao nuclear, a funcao precisa suportar chaves de registro generico (sem `agent_id` pre-definido), criando um novo agente automaticamente.
 
-Como o hash SHA-256 nao pode ser feito puramente em SQL de forma simples, vamos usar a edge function `generate-enrollment-key` existente chamando-a diretamente para cada tenant. Porem, como isso requer JWT de usuario autenticado, a alternativa mais pratica e:
+---
 
-1. **Criar uma edge function temporaria `admin-generate-keys`** que aceita service role e gera chaves para tenants especificos
-2. **OU** usar a funcao `auto-renew-enrollment-keys` ja existente -- mas ela nao retorna o valor em texto puro
+### Solucao
 
-**Melhor abordagem:** Criar as chaves diretamente na edge function `force-reinstall-fleet` que ja existe, adicionando um modo `generate-key` que:
-- Gera uma chave criptograficamente segura (XXXX-XXXX-XXXX-XXXX)
-- Calcula o hash SHA-256
-- Insere no banco com 30 dias de validade e 100 usos
-- Retorna o valor em texto puro (visibilidade unica)
+#### 1. Atualizar `serve-installer` para suportar enrollment keys sem agent_id
 
-### Implementacao
+Quando `agent_id` e NULL na enrollment key, a funcao deve:
+- Criar um novo agente usando o hostname fornecido (query param `hostname`) ou gerar um nome automatico
+- Gerar novas credenciais (token + HMAC)
+- Registrar o agente no banco
+- Continuar o fluxo normal de geracao do instalador
 
-**Modificar `supabase/functions/force-reinstall-fleet/index.ts`:**
-- Adicionar um modo `action: "generate-key"` que aceita `tenant_id`
-- Gera a chave, insere hash no banco, retorna texto puro
-- Requer autenticacao (admin/operator/super_admin)
+Isso transforma a enrollment key em uma "chave de registro aberta" para o tenant.
 
-**Apos deploy, chamar a funcao 2 vezes:**
-1. Para Pedro Alves: `{ "action": "generate-key", "tenant_id": "3adc67e6-..." }`
-2. Para Genial Cred: `{ "action": "generate-key", "tenant_id": "2584d2cd-..." }`
+#### 2. Atualizar `force-reinstall-fleet` para gerar comando com formato correto
 
-### Comandos de Reinstalacao
-
-Com as novas chaves geradas, o comando de reinstalacao nuclear para cada maquina sera:
-
+Corrigir o `nuclear_reinstall_command` retornado pela funcao `generate-key` para usar o formato de path:
 ```text
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$ek="CHAVE-AQUI"; irm "https://<url>/functions/v1/serve-installer?ek=$ek&platform=windows" | iex
+/functions/v1/serve-installer/CHAVE-AQUI
+```
+em vez de:
+```text
+/functions/v1/serve-installer?ek=CHAVE-AQUI
 ```
 
-Este comando faz instalacao limpa (nao preservada) -- substitui completamente o agente, gerando novas credenciais. Use apenas como fallback se a reinstalacao preservada falhar.
+#### 3. Comandos corrigidos para uso imediato
 
-### Resultado Esperado
+Apos a correcao, os comandos para os agentes stuck serao:
 
-- 2 novas enrollment keys ativas (30 dias, 100 usos cada)
-- Chaves em texto puro fornecidas para uso imediato
-- Comandos PowerShell prontos para reinstalacao nuclear dos 7 agentes stuck
+**Pedro Alves (7 agentes):**
+```text
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/serve-installer/APGO-TVEK-BOP5-8YGG" | iex
+```
+
+**Genial Cred:**
+```text
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/serve-installer/VEB1-IWTU-FNX4-UL33" | iex
+```
+
+---
+
+### Detalhes Tecnicos da Alteracao em `serve-installer`
+
+No bloco onde `enrollmentData.agent_id` e NULL (linha 263), em vez de rejeitar:
+
+1. Extrair hostname do query param ou gerar automatico (`agent-XXXXX`)
+2. Gerar `hmac_secret` (64 chars hex via crypto.getRandomValues)
+3. Inserir novo agente na tabela `agents` com tenant_id da enrollment key
+4. Gerar token e hash como ja feito no fluxo existente
+5. Continuar com o fluxo normal de geracao de script
+
+Isso mantem a seguranca (a chave ainda e validada por hash, rate-limited, e com prazo de expiracao) enquanto permite registros em massa sem pre-cadastro individual de agentes.
+
+### Arquivos a alterar
+
+1. `supabase/functions/serve-installer/index.ts` -- adicionar logica de criacao de agente quando agent_id e NULL
+2. `supabase/functions/force-reinstall-fleet/index.ts` -- corrigir formato do comando no `nuclear_reinstall_command`
+
+### Resultado esperado
+
+- Comando PowerShell funciona sem ParseException
+- Novos agentes sao criados automaticamente no tenant correto
+- Dashboard mostra os agentes recem-instalados
+- Chaves de enrollment funcionam para multiplas maquinas (ate o limite de 100 usos)
