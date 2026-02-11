@@ -6,7 +6,7 @@ import {
   Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, 
   Heart, Search, Monitor, AppWindow, GitBranch,
   Download, Building2, FileText, Cpu, Network, Percent, ClipboardCheck, FileBarChart,
-  AlertCircle, Lightbulb, Wrench
+  AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -47,18 +47,22 @@ export const AppSidebar = () => {
 
   // Section collapse states - saved to localStorage
   const [sectionStates, setSectionStates] = useState<Record<string, boolean>>(() => {
-    const saved = localStorage.getItem('sidebar-sections-v2');
+    const saved = localStorage.getItem('sidebar-sections-v3');
     return saved ? JSON.parse(saved) : {
       protection: true,
       management: false,
+      compliance: false,
       advanced: false,
-      superAdmin: true
+      superAdmin: true,
+      superOps: true,
+      superFinance: false,
+      superSystem: false
     };
   });
 
   // Save section states
   useEffect(() => {
-    localStorage.setItem('sidebar-sections-v2', JSON.stringify(sectionStates));
+    localStorage.setItem('sidebar-sections-v3', JSON.stringify(sectionStates));
   }, [sectionStates]);
 
   useEffect(() => {
@@ -99,10 +103,10 @@ export const AppSidebar = () => {
   // === PROTEÇÃO (colapsável - expandido por padrão) ===
   const protectionItems = useMemo<MenuItem[]>(() => [
     { icon: AlertTriangle, label: 'Alertas', to: '/admin/security-monitoring' },
-    { icon: Shield, label: 'Vulnerabilidades', to: '/admin/vulnerabilities' },
-    { icon: AlertTriangle, label: 'Quarentena', to: '/quarantine' },
+    { icon: ShieldCheck, label: 'Vulnerabilidades', to: '/admin/vulnerabilities' },
+    { icon: AlertCircle, label: 'Quarentena', to: '/quarantine' },
     { icon: Globe, label: 'Navegação Web', to: '/admin/web-activity' },
-    { icon: Clock, label: 'Histórico', to: '/admin/agent-timeline' },
+    { icon: FileSearch, label: 'Histórico', to: '/admin/agent-timeline' },
   ], []);
 
   // === GESTÃO (colapsável) ===
@@ -110,36 +114,46 @@ export const AppSidebar = () => {
     { icon: Users, label: 'Grupos', to: '/admin/agent-groups' },
     { icon: Shield, label: 'Políticas', to: '/admin/security-policies' },
     { icon: AppWindow, label: 'Programas', to: '/admin/software-inventory' },
-    { icon: Users, label: 'Equipe', to: '/admin/members' },
+    { icon: Crown, label: 'Equipe', to: '/admin/members' },
     { icon: FileBarChart, label: 'Relatórios', to: '/admin/reports' },
-    { icon: Settings, label: 'Configurações', to: '/admin/tenant' },
     { icon: Bell, label: 'Notificações', to: '/admin/notification-channels' },
+    { icon: Settings, label: 'Configurações', to: '/admin/tenant' },
   ], []);
 
-  // === AVANÇADO (colapsável) ===
-  const advancedItems = useMemo<MenuItem[]>(() => [
-    { icon: Clock, label: 'Automações', to: '/admin/automations' },
-    { icon: Download, label: 'Instalações', to: '/admin/installations' },
-    { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases' },
-    { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics' },
-    { icon: Gauge, label: 'Saúde Sistema', to: '/admin/system-health' },
-    { icon: AlertCircle, label: 'Resolução Alertas', to: '/admin/alert-resolution' },
-    { icon: Lightbulb, label: 'Triagem Insights', to: '/admin/insight-triage' },
-    { icon: TrendingUp, label: 'Gap de Confiança', to: '/admin/confidence-gap' },
-    { icon: Wrench, label: 'Saúde de Jobs', to: '/admin/job-health' },
+  // === CONFORMIDADE (nova seção) ===
+  const complianceItems = useMemo<MenuItem[]>(() => [
     { icon: ClipboardCheck, label: 'SOC 2', to: '/admin/soc2-compliance' },
-    { icon: FileText, label: 'Auditoria', to: '/admin/system-audit' },
+    { icon: ScrollText, label: 'Auditoria', to: '/admin/system-audit' },
     { icon: Scale, label: 'Compliance', to: '/admin/compliance-timeline' },
     { icon: Brain, label: 'Regras IA', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
-    { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
   ], [criticalInsightsCount]);
 
-  // === SUPER ADMIN ===
-  const superAdminItems = useMemo<MenuItem[]>(() => [
-    { icon: Building2, label: 'Minha Empresa', to: '/admin/dashboard', end: false },
+  // === AVANÇADO (colapsável - só técnico) ===
+  const advancedItems = useMemo<MenuItem[]>(() => [
+    { icon: Download, label: 'Instalações', to: '/admin/installations' },
+    { icon: Key, label: 'Chaves de Cadastro', to: '/admin/enrollment-keys' },
+    { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases' },
+    { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics' },
+    { icon: Clock, label: 'Automações', to: '/admin/automations' },
+    { icon: Gauge, label: 'Saúde Sistema', to: '/admin/system-health' },
+    { icon: Wrench, label: 'Saúde de Jobs', to: '/admin/job-health' },
+    { icon: Lightbulb, label: 'Triagem Insights', to: '/admin/insight-triage' },
+    { icon: TrendingUp, label: 'Gap de Confiança', to: '/admin/confidence-gap' },
+    { icon: AlertCircle, label: 'Resolução Alertas', to: '/admin/alert-resolution' },
+    { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
+  ], []);
+
+  // === SUPER ADMIN - Operacional ===
+  const superOpsItems = useMemo<MenuItem[]>(() => [
     { icon: Server, label: 'Empresas', to: '/super-admin/tenants', end: true },
-    { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases', end: false },
-    { icon: Percent, label: 'Rollout', to: '/super-admin/rollout-policies', end: false },
+    { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases' },
+    { icon: Percent, label: 'Rollout', to: '/super-admin/rollout-policies' },
+    { icon: Users, label: 'Usuários', to: '/super-admin/users' },
+    { icon: Shield, label: 'Funcionalidades', to: '/super-admin/features' },
+  ], []);
+
+  // === SUPER ADMIN - Financeiro ===
+  const superFinanceItems = useMemo<MenuItem[]>(() => [
     { icon: BarChart3, label: 'Métricas', to: '/super-admin/metrics' },
     { icon: PieChart, label: 'Assinaturas', to: '/super-admin/subscription-analytics' },
     { icon: DollarSign, label: 'Indicadores', to: '/super-admin/unit-economics' },
@@ -149,8 +163,10 @@ export const AppSidebar = () => {
     { icon: Scale, label: 'Apresentação', to: '/super-admin/pitch-deck' },
     { icon: AlertTriangle, label: 'Riscos', to: '/super-admin/risk-analysis' },
     { icon: CreditCard, label: 'Pagamentos', to: '/super-admin/stripe-setup' },
-    { icon: Users, label: 'Usuários', to: '/super-admin/users' },
-    { icon: Shield, label: 'Funcionalidades', to: '/super-admin/features' },
+  ], []);
+
+  // === SUPER ADMIN - Sistema ===
+  const superSystemItems = useMemo<MenuItem[]>(() => [
     { icon: ScrollText, label: 'Auditoria', to: '/super-admin/audit-logs' },
     { icon: Activity, label: 'Logs', to: '/super-admin/system-logs' },
     { icon: Settings, label: 'Configurações', to: '/super-admin/settings' },
@@ -385,6 +401,11 @@ export const AppSidebar = () => {
 
               <div className="my-2" />
 
+              {/* CONFORMIDADE */}
+              {renderCollapsibleSection('Conformidade', 'compliance', complianceItems)}
+
+              <div className="my-2" />
+
               {/* AVANÇADO */}
               {renderCollapsibleSection('Avançado', 'advanced', advancedItems)}
             </>
@@ -434,15 +455,26 @@ export const AppSidebar = () => {
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <AnimatePresence>
-                      <div className="space-y-0.5 mt-1">
-                        {superAdminItems.map((item, idx) => renderNavItem(item, idx, 'super'))}
+                      <div className="space-y-1 mt-1">
+                        {/* Operacional */}
+                        {renderCollapsibleSection('Operacional', 'superOps', superOpsItems, 'super')}
+                        
+                        <div className="my-1" />
+                        
+                        {/* Financeiro */}
+                        {renderCollapsibleSection('Financeiro', 'superFinance', superFinanceItems, 'super')}
+                        
+                        <div className="my-1" />
+                        
+                        {/* Sistema */}
+                        {renderCollapsibleSection('Sistema', 'superSystem', superSystemItems, 'super')}
                       </div>
                     </AnimatePresence>
                   </CollapsibleContent>
                 </Collapsible>
               ) : (
                 <div className="space-y-0.5">
-                  {superAdminItems.slice(0, 5).map((item, idx) => renderNavItem(item, idx, 'super'))}
+                  {superOpsItems.slice(0, 3).map((item, idx) => renderNavItem(item, idx, 'super'))}
                 </div>
               )}
             </>
