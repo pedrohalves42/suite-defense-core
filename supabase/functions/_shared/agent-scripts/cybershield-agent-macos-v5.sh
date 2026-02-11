@@ -361,13 +361,14 @@ assert_launchd_health() {
              -H "X-Agent-Name: $AGENT_NAME"
          )
          
-         # HMAC signature if body present
-         if [[ -n "$body" && -n "$HMAC_SECRET" ]]; then
+         # HMAC signature (sign even without body for GET requests)
+         if [[ -n "$HMAC_SECRET" ]]; then
+             local body_for_hmac="${body:-}"
              local timestamp
              timestamp=$(date +%s)
              local nonce
              nonce=$(uuidgen 2>/dev/null || date +%s%N)
-             local signature_payload="${timestamp}.${nonce}.${body}"
+             local signature_payload="${timestamp}.${nonce}.${body_for_hmac}"
              local signature
              signature=$(echo -n "$signature_payload" | openssl dgst -sha256 -hmac "$HMAC_SECRET" | awk '{print $2}')
              
@@ -727,8 +728,11 @@ restart_service_handler() {
  poll_jobs() {
      log "DEBUG" "[POLL-JOBS] Checking for pending jobs..."
      
+     local poll_body
+     poll_body="{\"agent_name\":\"$AGENT_NAME\",\"agent_version\":\"$AGENT_VERSION\",\"timestamp\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}"
+     
      local result
-     result=$(invoke_secure_request "GET" "/functions/v1/poll-jobs" "" 15 2)
+     result=$(invoke_secure_request "POST" "/functions/v1/poll-jobs" "$poll_body" 15 2)
      
      if [[ $? -ne 0 ]]; then
          log "WARN" "[POLL-JOBS] Failed to poll"
@@ -736,16 +740,15 @@ restart_service_handler() {
          return 1
      fi
      
-     local jobs
-     jobs=$(python3 -c "import json; print(json.dumps(json.loads('$result').get('jobs', [])))" 2>/dev/null || echo '[]')
+     # Backend returns array directly, not { jobs: [...] }
      local count
-     count=$(python3 -c "import json; print(len(json.loads('$jobs')))" 2>/dev/null || echo 0)
+     count=$(python3 -c "import json; print(len(json.loads('''$result''')))" 2>/dev/null || echo 0)
      
      if [[ "$count" -gt 0 ]]; then
          log "INFO" "[POLL-JOBS] Received $count job(s)"
      fi
      
-     echo "$jobs"
+     echo "$result"
  }
  
  execute_job() {
@@ -968,8 +971,11 @@ restart_service_handler() {
  #  v5.0.1: DNS BLOCKLIST SYNC
  # ============================================
  sync_dns_blocklist() {
+     local dns_body
+     dns_body="{\"agent_name\":\"$AGENT_NAME\",\"timestamp\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}"
+     
      local result
-     result=$(invoke_secure_request "GET" "/functions/v1/serve-dns-filter" "" 15 2)
+     result=$(invoke_secure_request "POST" "/functions/v1/serve-dns-filter" "$dns_body" 15 2)
      
      if [[ $? -ne 0 ]]; then
          return 1
