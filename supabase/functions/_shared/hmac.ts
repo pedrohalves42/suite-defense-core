@@ -218,6 +218,7 @@ export async function verifyHmacSignature(
   
   return { 
     valid: false, 
+    rawBody: body,
     errorCode: 'AUTH_INVALID_SIGNATURE',
     errorMessage: 'Assinatura HMAC invalida',
     transient: false
