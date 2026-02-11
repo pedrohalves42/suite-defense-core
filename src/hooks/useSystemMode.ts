@@ -16,10 +16,41 @@ export function useSystemMode() {
   return useQuery({
     queryKey: ['system-mode'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_system_mode');
+      // get_system_mode() returns just the enum value (string), not a full object
+      const { data: modeValue, error } = await supabase.rpc('get_system_mode');
       
       if (error) throw error;
-      return data as unknown as SystemState;
+      
+      // If no active state exists, or mode is just a string, construct a SystemState
+      const mode = (typeof modeValue === 'string' ? modeValue : 'normal') as SystemMode;
+      
+      // Only fetch full state details if NOT normal
+      if (mode !== 'normal') {
+        const { data: stateRow } = await supabase
+          .from('system_global_state')
+          .select('*')
+          .order('triggered_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (stateRow) {
+          return {
+            mode: stateRow.mode as SystemMode,
+            triggered_at: stateRow.triggered_at,
+            reason: stateRow.reason,
+            triggered_by: stateRow.triggered_by,
+            expires_at: stateRow.expires_at,
+          } as SystemState;
+        }
+      }
+      
+      return {
+        mode: 'normal',
+        triggered_at: null,
+        reason: null,
+        triggered_by: null,
+        expires_at: null,
+      } as SystemState;
     },
     refetchInterval: 30000,
     staleTime: 10000,
