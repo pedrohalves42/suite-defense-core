@@ -59,6 +59,33 @@ Deno.serve(async (req) => {
 
     const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents
  
+    // DIAGNOSTIC: Log HTTP method and HMAC header presence for fleet analysis
+    const httpMethod = req.method
+    const hasHmacSignature = !!req.headers.get('X-HMAC-Signature')
+    const hasHmacTimestamp = !!(req.headers.get('X-HMAC-Timestamp') || req.headers.get('X-Timestamp'))
+    const hasHmacNonce = !!(req.headers.get('X-HMAC-Nonce') || req.headers.get('X-Nonce'))
+    const hasAnyHmacHeader = hasHmacSignature || hasHmacTimestamp || hasHmacNonce
+    
+    if (httpMethod === 'GET') {
+      logger.warn('DIAGNOSTIC: Agent using GET method (pre-hotfix script)', {
+        agentName: agent.agent_name,
+        method: httpMethod,
+        hasHmacHeaders: hasAnyHmacHeader,
+        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
+      })
+    }
+    
+    if (!hasAnyHmacHeader) {
+      logger.warn('DIAGNOSTIC: Agent poll-jobs request WITHOUT HMAC headers', {
+        agentName: agent.agent_name,
+        method: httpMethod,
+        hasSignature: hasHmacSignature,
+        hasTimestamp: hasHmacTimestamp,
+        hasNonce: hasHmacNonce,
+        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
+      })
+    }
+
     // FASE 1.2: HMAC OBRIGATORIO - Agora hmac_secret e NOT NULL
     if (!agent.hmac_secret) {
       logger.error('CRITICAL SECURITY: Agent without HMAC secret', { agentName: agent.agent_name })
@@ -80,6 +107,8 @@ Deno.serve(async (req) => {
         agent: agent.agent_name,
         errorCode: hmacResult.errorCode,
         errorMessage: hmacResult.errorMessage,
+        method: httpMethod,
+        hasHmacHeaders: hasAnyHmacHeader,
         ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
       })
       return new Response(
