@@ -131,10 +131,25 @@ export async function verifyHmacSignature(
     body = '';
   }
 
+  // BUG-FIX: v5.0.3 agents sign with ConvertTo-Json -Compress (compact JSON)
+  // but send the body with ConvertTo-Json (pretty-printed with \r\n and spaces)
+  // Try both the raw body and a compacted version
+  let compactBody = body;
+  try {
+    if (body.trim().startsWith('{') || body.trim().startsWith('[')) {
+      compactBody = JSON.stringify(JSON.parse(body));
+    }
+  } catch {
+    compactBody = body; // If parse fails, keep original
+  }
+
   // COMPAT: v5.0.3 uses "." separator, legacy uses ":" separator
   // Use the original timestamp string (not the converted one) for payload reconstruction
   const payloadColon = `${timestamp}:${nonce}:${body}`;
   const payloadDot = `${timestamp}.${nonce}.${body}`;
+  // v5.0.3 compact body variants
+  const payloadColonCompact = `${timestamp}:${nonce}:${compactBody}`;
+  const payloadDotCompact = `${timestamp}.${nonce}.${compactBody}`;
 
   // COMPAT: Try multiple key encodings and payload formats
   // v5.0.3 agents use UTF8.GetBytes(hexString) as HMAC key + "." separator
@@ -165,7 +180,7 @@ export async function verifyHmacSignature(
   }
   
   // Try all combinations of key encoding × payload format
-  const payloads = [payloadColon, payloadDot];
+  const payloads = [payloadColon, payloadDot, payloadColonCompact, payloadDotCompact];
   
   for (const keyVariant of keyVariants) {
     const cryptoKey = await crypto.subtle.importKey(
@@ -209,11 +224,27 @@ export async function verifyHmacSignature(
     }
   }
 
-  // No match found
+  // No match found - DEBUG: Log details for diagnosis
+  const debugUtf8Key = encoder.encode(hmacSecret);
+  let debugHexKey: Uint8Array | null = null;
+  try { debugHexKey = hexToBytes(hmacSecret); } catch { /* skip */ }
+  
   console.error('[HMAC] Signature verification failed', {
     agent: agentName,
     error_code: 'AUTH_INVALID_SIGNATURE',
-    timestamp: timestamp
+    timestamp: timestamp,
+    nonce: nonce?.substring(0, 8),
+    receivedSignature: signature?.substring(0, 16) + '...',
+    bodyLength: body.length,
+    bodyPreview: body.substring(0, 100),
+    secretLength: hmacSecret?.length,
+    secretPrefix: hmacSecret?.substring(0, 8),
+    utf8KeyLength: debugUtf8Key.length,
+    hexKeyLength: debugHexKey?.length || 'N/A',
+    headerNames: {
+      timestamp: request.headers.get('X-Timestamp') ? 'X-Timestamp' : request.headers.get('X-HMAC-Timestamp') ? 'X-HMAC-Timestamp' : 'none',
+      nonce: request.headers.get('X-Nonce') ? 'X-Nonce' : request.headers.get('X-HMAC-Nonce') ? 'X-HMAC-Nonce' : 'none',
+    }
   });
   
   return { 
