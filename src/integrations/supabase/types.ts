@@ -17404,6 +17404,7 @@ export type Database = {
       }
       enrollment_keys_safe: {
         Row: {
+          agent_id: string | null
           created_at: string | null
           created_by: string | null
           current_uses: number | null
@@ -17411,11 +17412,14 @@ export type Database = {
           expires_at: string | null
           id: string | null
           is_active: boolean | null
-          key: string | null
+          key_masked: string | null
           max_uses: number | null
           tenant_id: string | null
+          used_at: string | null
+          used_by_agent: string | null
         }
         Insert: {
+          agent_id?: string | null
           created_at?: string | null
           created_by?: string | null
           current_uses?: number | null
@@ -17423,11 +17427,14 @@ export type Database = {
           expires_at?: string | null
           id?: string | null
           is_active?: boolean | null
-          key?: string | null
+          key_masked?: never
           max_uses?: number | null
           tenant_id?: string | null
+          used_at?: string | null
+          used_by_agent?: string | null
         }
         Update: {
+          agent_id?: string | null
           created_at?: string | null
           created_by?: string | null
           current_uses?: number | null
@@ -17435,11 +17442,104 @@ export type Database = {
           expires_at?: string | null
           id?: string | null
           is_active?: boolean | null
-          key?: string | null
+          key_masked?: never
           max_uses?: number | null
           tenant_id?: string | null
+          used_at?: string | null
+          used_by_agent?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "enrollment_keys_tenant_id_fkey"
             columns: ["tenant_id"]
