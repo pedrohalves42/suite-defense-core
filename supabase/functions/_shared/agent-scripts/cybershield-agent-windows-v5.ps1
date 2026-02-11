@@ -173,6 +173,10 @@ $Global:CurrentState = $Global:FSM_STATES.INITIALIZING
 $Global:LastTaskHealthCheck = $null
 $Global:TaskHealthCheckIntervalSeconds = 300  # Check task every 5 min
 
+# v5.0.4: Log flood suppression
+$Global:ConsecutivePollErrors = 0
+$Global:TaskHealthCheckIntervalSeconds = 300  # Check task every 5 min
+
 # v5.0.1: Hash Chain for execution
 $Global:ExecutionChain = @{
     last_hash = "genesis"
@@ -262,9 +266,9 @@ function Invoke-SecureRequest {
                 "X-Agent-Name" = $Global:AgentName
             }
             
-            # HMAC if available
-            if ($Global:HmacSecret -and $Body) {
-                $bodyJson = if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Compress -Depth 10 }
+            # HMAC if available (sign even without body for GET requests)
+            if ($Global:HmacSecret) {
+                $bodyJson = if ($Body) { if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Compress -Depth 10 } } else { "" }
                 $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
                 $nonce = [Guid]::NewGuid().ToString("N")
                 $signaturePayload = "$timestamp.$nonce.$bodyJson"
@@ -425,9 +429,28 @@ function Initialize-AgentKeys {
         # Generate new keypair using .NET Crypto
         Add-Type -AssemblyName System.Security
         
-        $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(
-            [System.Security.Cryptography.ECCurve]::NamedCurves.nistP256
-        )
+        $ecdsa = $null
+        try {
+            # Modern method (.NET 4.7+)
+            $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(
+                [System.Security.Cryptography.ECCurve]::NamedCurves.nistP256
+            )
+        } catch {
+            Write-Log "[KEYS] Modern ECDSA method failed, trying fallback: $($_.Exception.Message)" "WARN"
+            try {
+                # Fallback for .NET < 4.7
+                $cngKey = [System.Security.Cryptography.CngKey]::Create(
+                    [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
+                    $null,
+                    (New-Object System.Security.Cryptography.CngKeyCreationParameters)
+                )
+                $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
+            } catch {
+                Write-Log "[KEYS] ECDSA fallback also failed: $($_.Exception.Message)" "ERROR"
+                Write-Log "[KEYS] Result signing will be DISABLED for this agent" "WARN"
+                return $false
+            }
+        }
         
         # Export private key (PKCS#8)
         $privateKeyBytes = $ecdsa.ExportPkcs8PrivateKey()
@@ -699,22 +722,34 @@ function Poll-Jobs {
     try {
         Write-Log "[POLL-JOBS] Checking for pending jobs..." "DEBUG"
         
+        $body = @{
+            agent_name = $Global:AgentName
+            agent_version = $Global:AgentVersion
+            timestamp = [DateTime]::UtcNow.ToString("o")
+        }
+        
         $result = Invoke-SecureRequest `
             -Path "/functions/v1/poll-jobs" `
-            -Method "GET" `
+            -Method "POST" `
+            -Body $body `
             -MaxRetries 2 `
             -TimeoutSec 15
         
         if (-not $result.Success) {
-            Write-Log "[POLL-JOBS] Failed to poll: $($result.Error)" "WARN"
+            $Global:ConsecutivePollErrors++
+            if ($Global:ConsecutivePollErrors % 10 -eq 1) {
+                Write-Log "[POLL-JOBS] Failed to poll ($($Global:ConsecutivePollErrors) consecutive): $($result.Error)" "WARN"
+            }
             return @()
         }
         
+        $Global:ConsecutivePollErrors = 0
         $response = $result.Content | ConvertFrom-Json
         
-        if ($response.jobs -and $response.jobs.Count -gt 0) {
-            Write-Log "[POLL-JOBS] Received $($response.jobs.Count) job(s)" "INFO"
-            return $response.jobs
+        # Backend returns array directly, not { jobs: [...] }
+        if ($response -and @($response).Count -gt 0) {
+            Write-Log "[POLL-JOBS] Received $(@($response).Count) job(s)" "INFO"
+            return @($response)
         }
         
         return @()
@@ -902,9 +937,15 @@ function Sync-DnsBlocklist {
         Syncs DNS blocklist from server
     #>
     try {
+        $dnsBody = @{
+            agent_name = $Global:AgentName
+            timestamp = [DateTime]::UtcNow.ToString("o")
+        }
+        
         $result = Invoke-SecureRequest `
             -Path "/functions/v1/serve-dns-filter" `
-            -Method "GET" `
+            -Method "POST" `
+            -Body $dnsBody `
             -MaxRetries 2 `
             -TimeoutSec 15
         
@@ -2051,7 +2092,8 @@ function Send-Heartbeat {
             processes = $topProcesses
             process_anomalies = $anomalies.anomalies
             auto_repair_stats = $Global:AutoRepairStats
-            state = "ENFORCING"
+            state = $Global:CurrentState
+            ecdsa_enabled = ($null -ne $Global:AgentPrivateKey)
         }
         
         $result = Invoke-SecureRequest `
