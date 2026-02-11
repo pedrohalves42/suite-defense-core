@@ -127,9 +127,19 @@ Deno.serve(async (req) => {
       try {
         const parsedBody = JSON.parse(hmacResult.rawBody)
         osInfo = parsedBody || {}
+        // DEBUG: Log payload keys to verify what agent sends
+        logger.info('Heartbeat payload keys', { 
+          agentName: agent.agent_name, 
+          keys: Object.keys(osInfo),
+          hasSystemMetrics: !!(osInfo as any).system_metrics,
+          bodyLength: hmacResult.rawBody.length
+        })
       } catch {
         // Body vazio ou invalido e OK para heartbeats legacy
+        logger.debug('Empty/invalid heartbeat body', { agentName: agent.agent_name, bodyLength: hmacResult.rawBody?.length })
       }
+    } else {
+      logger.debug('No body in heartbeat', { agentName: agent.agent_name })
     }
 
     // Rate limiting: 3 req/min (heartbeat a cada 60s + margem para retry)
@@ -202,7 +212,6 @@ Deno.serve(async (req) => {
       .eq('id', agent.id)
 
     if (updateError) {
-      // Log detalhado do erro mas nao bloqueia o heartbeat
       logger.error('Failed to update agent heartbeat', {
         error: updateError,
         errorMessage: updateError.message,
@@ -212,10 +221,70 @@ Deno.serve(async (req) => {
         agentName: agent.agent_name,
         updateData: JSON.stringify(updateData)
       })
-      // Continua mesmo com erro no UPDATE - heartbeat foi autenticado
       logger.warn('Heartbeat authenticated but update failed - continuing')
     } else {
       logger.success('Agent heartbeat updated successfully')
+    }
+
+    // ============================================================
+    // SAVE SYSTEM METRICS from heartbeat payload
+    // v5 agents send system_metrics with CPU/RAM/Disk data
+    // ============================================================
+    const systemMetrics = (osInfo as any).system_metrics
+    logger.info('Metrics extraction check', { agentName: agent.agent_name, hasMetrics: !!systemMetrics, metricsType: typeof systemMetrics, hasError: systemMetrics?.error })
+    if (systemMetrics && typeof systemMetrics === 'object' && !systemMetrics.error) {
+      // Get tenant_id for the agent
+      const { data: agentTenant } = await supabase
+        .from('agents')
+        .select('tenant_id')
+        .eq('id', agent.id)
+        .single()
+
+      if (agentTenant?.tenant_id) {
+        const metricsRow = {
+          agent_id: agent.id,
+          tenant_id: agentTenant.tenant_id,
+          cpu_usage_percent: systemMetrics.cpu_percent ?? null,
+          cpu_name: systemMetrics.cpu_name ?? null,
+          cpu_cores: systemMetrics.cpu_cores ?? null,
+          memory_total_gb: systemMetrics.memory_total_gb ?? null,
+          memory_used_gb: systemMetrics.memory_used_gb ?? null,
+          memory_free_gb: systemMetrics.memory_free_gb != null 
+            ? systemMetrics.memory_free_gb 
+            : (systemMetrics.memory_total_gb != null && systemMetrics.memory_used_gb != null 
+              ? Math.round((systemMetrics.memory_total_gb - systemMetrics.memory_used_gb) * 100) / 100 
+              : null),
+          memory_usage_percent: systemMetrics.memory_used_percent ?? null,
+          disk_total_gb: systemMetrics.disk_total_gb ?? null,
+          disk_used_gb: systemMetrics.disk_total_gb != null && systemMetrics.disk_free_gb != null
+            ? Math.round((systemMetrics.disk_total_gb - systemMetrics.disk_free_gb) * 100) / 100
+            : null,
+          disk_free_gb: systemMetrics.disk_free_gb ?? null,
+          disk_usage_percent: systemMetrics.disk_used_percent ?? null,
+          uptime_seconds: systemMetrics.uptime_seconds ?? null,
+          collected_at: new Date().toISOString(),
+        }
+
+        logger.info('Inserting metrics', { agentName: agent.agent_name, cpu: metricsRow.cpu_usage_percent, ram: metricsRow.memory_usage_percent })
+
+        const { error: metricsError } = await supabase
+          .from('agent_system_metrics')
+          .insert(metricsRow)
+
+        if (metricsError) {
+          logger.error('METRICS INSERT FAILED', { 
+            agentName: agent.agent_name, 
+            error: metricsError.message,
+            code: metricsError.code,
+            details: metricsError.details,
+            hint: metricsError.hint
+          })
+        } else {
+          logger.info('METRICS SAVED OK', { agentName: agent.agent_name })
+        }
+      } else {
+        logger.warn('No tenant found for agent', { agentId: agent.id })
+      }
     }
 
     // Atualizar last_used_at do token (usando hash)
