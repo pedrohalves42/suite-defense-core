@@ -2,7 +2,7 @@ import type { CryptoPort } from '@/domain/ports/CryptoPort';
 
 /**
  * Infrastructure adapter: Web Crypto API implementation of CryptoPort.
- * Uses browser-native APIs for HMAC and SHA-256 operations.
+ * Uses browser-native APIs for HMAC, SHA-256, and AES-GCM operations.
  */
 export class HmacCryptoAdapter implements CryptoPort {
   async generateHmacSecret(): Promise<string> {
@@ -15,7 +15,7 @@ export class HmacCryptoAdapter implements CryptoPort {
     return this.bufferToHex(exported);
   }
 
-  async verifyHmac(payload: string, signature: string, secret: string): Promise<boolean> {
+  async verifyHmac(message: string, secret: string, signature: string): Promise<boolean> {
     const key = await crypto.subtle.importKey(
       'raw',
       this.hexToBuffer(secret),
@@ -24,7 +24,7 @@ export class HmacCryptoAdapter implements CryptoPort {
       ['verify']
     );
     const signatureBuffer = this.hexToBuffer(signature);
-    const data = new TextEncoder().encode(payload);
+    const data = new TextEncoder().encode(message);
     return crypto.subtle.verify('HMAC', key, signatureBuffer, data);
   }
 
@@ -36,6 +36,47 @@ export class HmacCryptoAdapter implements CryptoPort {
     const encoded = new TextEncoder().encode(data);
     const hash = await crypto.subtle.digest('SHA-256', encoded);
     return this.bufferToHex(hash);
+  }
+
+  async encrypt(data: string, key: string): Promise<string> {
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      this.hexToBuffer(key.padEnd(64, '0').slice(0, 64)),
+      { name: 'AES-GCM' },
+      false,
+      ['encrypt']
+    );
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encoded = new TextEncoder().encode(data);
+    const encrypted = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      cryptoKey,
+      encoded
+    );
+    // Prefix IV to ciphertext
+    const combined = new Uint8Array(iv.length + encrypted.byteLength);
+    combined.set(iv);
+    combined.set(new Uint8Array(encrypted), iv.length);
+    return this.bufferToHex(combined.buffer);
+  }
+
+  async decrypt(encryptedData: string, key: string): Promise<string> {
+    const combined = new Uint8Array(this.hexToBuffer(encryptedData));
+    const iv = combined.slice(0, 12);
+    const ciphertext = combined.slice(12);
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      this.hexToBuffer(key.padEnd(64, '0').slice(0, 64)),
+      { name: 'AES-GCM' },
+      false,
+      ['decrypt']
+    );
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      cryptoKey,
+      ciphertext
+    );
+    return new TextDecoder().decode(decrypted);
   }
 
   private bufferToHex(buffer: ArrayBuffer): string {

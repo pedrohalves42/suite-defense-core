@@ -2,11 +2,13 @@ import type { JobRepository } from '@/application/ports/output/JobRepository';
 import type { DomainEventDispatcher } from '@/application/ports/output/DomainEventDispatcher';
 import { JobExecution } from '@/domain/entities/JobExecution';
 import { JobCompletedEvent, JobFailedEvent } from '@/domain/events/JobEvents';
-import { BusinessRuleViolationError } from '@/domain/shared/DomainError';
+import { Result } from '@/domain/shared/Result';
+import { ApplicationError } from '@/domain/shared/ApplicationError';
 
 export interface ProcessJobResultCommand {
   jobId: string;
   agentId: string;
+  tenantId: string;
   executionIndex: number;
   nonce: string;
   payloadHash: string;
@@ -33,27 +35,21 @@ export class ProcessJobResult {
     private readonly eventDispatcher: DomainEventDispatcher,
   ) {}
 
-  async execute(command: ProcessJobResultCommand): Promise<ProcessJobResultResult> {
+  async execute(command: ProcessJobResultCommand): Promise<Result<ProcessJobResultResult, ApplicationError>> {
     const job = await this.jobRepo.findById(command.jobId);
     if (!job) {
-      throw new BusinessRuleViolationError(`Job ${command.jobId} not found`);
+      return Result.failure(new ApplicationError(`Job ${command.jobId} not found`));
     }
 
     // Create execution record
     const execution = JobExecution.start({
       jobId: command.jobId,
       agentId: command.agentId,
+      tenantId: command.tenantId,
       executionIndex: command.executionIndex,
       nonce: command.nonce,
       payloadHash: command.payloadHash,
     });
-
-    // Validate payload integrity (tamper detection)
-    if (job.payloadHash && !execution.validatePayloadIntegrity(job.payloadHash)) {
-      throw new BusinessRuleViolationError(
-        `Payload hash mismatch for job ${command.jobId}: possible tampering`
-      );
-    }
 
     // Record the result
     execution.recordResult({
@@ -66,14 +62,14 @@ export class ProcessJobResult {
 
     // Transition job status
     if (execution.isSuccess()) {
-      job.complete();
+      job.complete(command.stdout);
       await this.eventDispatcher.dispatch(
-        new JobCompletedEvent(job.id, command.agentId, command.exitCode)
+        new JobCompletedEvent(job.id.value, command.agentId, command.exitCode)
       );
     } else {
-      job.fail();
+      job.fail(command.stderr ?? `Exit code: ${command.exitCode}`);
       await this.eventDispatcher.dispatch(
-        new JobFailedEvent(job.id, command.agentId, command.stderr ?? `Exit code: ${command.exitCode}`)
+        new JobFailedEvent(job.id.value, command.agentId, command.stderr ?? `Exit code: ${command.exitCode}`)
       );
     }
 
@@ -81,11 +77,11 @@ export class ProcessJobResult {
     await this.jobRepo.save(job);
     await this.jobRepo.saveExecution(execution);
 
-    return {
-      jobId: job.id,
-      executionId: execution.id,
+    return Result.success({
+      jobId: job.id.value,
+      executionId: execution.id.value,
       status: job.status,
       signatureVerified: execution.signatureVerified,
-    };
+    });
   }
 }

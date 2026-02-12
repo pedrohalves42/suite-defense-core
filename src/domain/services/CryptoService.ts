@@ -1,37 +1,36 @@
 import type { CryptoPort } from '../ports/CryptoPort';
+import type { Agent } from '../entities/Agent';
 
 /**
  * Domain service: Crypto operations delegated to port.
  * Provides high-level crypto methods used by use cases.
  */
 export class CryptoService {
-  constructor(private readonly crypto: CryptoPort) {}
+  constructor(private readonly cryptoPort: CryptoPort) {}
 
-  /**
-   * Generate a new HMAC secret for agent enrollment.
-   */
-  async generateAgentSecret(): Promise<string> {
-    return this.crypto.generateHmacSecret();
+  async generateAgentCredentials(): Promise<{ token: string; hmacSecret: string }> {
+    const token = crypto.randomUUID();
+    const hmacSecret = await this.cryptoPort.generateHmacSecret();
+    return { token, hmacSecret };
   }
 
-  /**
-   * Verify an agent's HMAC signature.
-   */
-  async verifyAgentSignature(payload: string, signature: string, secret: string): Promise<boolean> {
-    return this.crypto.verifyHmac(payload, signature, secret);
+  async verifyAgentRequest(
+    agent: Agent,
+    requestBody: string,
+    signature: string
+  ): Promise<boolean> {
+    return await this.cryptoPort.verifyHmac(
+      requestBody,
+      agent.hmacSecret.value,
+      signature
+    );
   }
 
-  /**
-   * Hash a payload for integrity verification (e.g., job payload hash).
-   */
+  async hashAgentToken(token: string): Promise<string> {
+    return await this.cryptoPort.hashToken(token);
+  }
+
   async hashPayload(payload: string): Promise<string> {
-    return this.crypto.computeSha256(payload);
-  }
-
-  /**
-   * Hash a token for secure storage.
-   */
-  async hashToken(token: string): Promise<string> {
-    return this.crypto.hashToken(token);
+    return this.cryptoPort.computeSha256(payload);
   }
 }

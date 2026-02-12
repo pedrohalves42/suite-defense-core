@@ -7,6 +7,8 @@ export class AgentEnrolledEvent implements DomainEvent {
     public readonly aggregateId: string,
     public readonly tenantId: string,
     public readonly agentName: string,
+    public readonly token: string,
+    public readonly hmacSecret: string,
   ) {}
 }
 
@@ -33,5 +35,15 @@ export class AgentHeartbeatReceivedEvent implements DomainEvent {
   constructor(
     public readonly aggregateId: string,
     public readonly version: string | null,
+  ) {}
+}
+
+export class AgentStateChangedEvent implements DomainEvent {
+  readonly eventType = 'agent.state_changed';
+  readonly occurredOn = new Date();
+  constructor(
+    public readonly aggregateId: string,
+    public readonly fromState: string,
+    public readonly toState: string,
   ) {}
 }

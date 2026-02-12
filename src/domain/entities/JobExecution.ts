@@ -1,10 +1,16 @@
+import { Entity } from '../shared/Entity';
 import { BusinessRuleViolationError } from '../shared/DomainError';
+import { AgentId } from '../value-objects/AgentId';
+import { TenantId } from '../value-objects/TenantId';
+import { JobId } from '../value-objects/JobId';
+import { JobExecutionId } from '../value-objects/JobExecutionId';
 
 // ─── Execution Props ────────────────────────────────────
 export interface JobExecutionProps {
   id: string;
   jobId: string;
   agentId: string;
+  tenantId: string;
   executionIndex: number;
   nonce: string;
   payloadHash: string;
@@ -25,11 +31,52 @@ export interface JobExecutionProps {
  * Immutable record of a single execution attempt for a job.
  * Part of the immutable audit trail (ADR: job-execution-immutable-audit-trail).
  */
-export class JobExecution {
-  private props: JobExecutionProps;
+export class JobExecution extends Entity<JobExecutionId> {
+  private _jobId: JobId;
+  private _agentId: AgentId;
+  private _tenantId: TenantId;
+  private _executionIndex: number;
+  private _nonce: string;
+  private _payloadHash: string;
+  private _startedAt: Date;
+  private _completedAt: Date | null;
+  private _exitCode: number | null;
+  private _stdout: string | null;
+  private _stderr: string | null;
+  private _outputHash: string | null;
+  private _resultSignature: string | null;
+  private _signatureVerified: boolean;
+  private _durationMs: number | null;
+  private _createdAt: Date;
 
-  private constructor(props: JobExecutionProps) {
-    this.props = props;
+  private constructor(
+    id: JobExecutionId,
+    jobId: JobId,
+    agentId: AgentId,
+    tenantId: TenantId,
+    executionIndex: number,
+    nonce: string,
+    payloadHash: string,
+    startedAt: Date,
+    createdAt: Date
+  ) {
+    super(id);
+    this._jobId = jobId;
+    this._agentId = agentId;
+    this._tenantId = tenantId;
+    this._executionIndex = executionIndex;
+    this._nonce = nonce;
+    this._payloadHash = payloadHash;
+    this._startedAt = startedAt;
+    this._completedAt = null;
+    this._exitCode = null;
+    this._stdout = null;
+    this._stderr = null;
+    this._outputHash = null;
+    this._resultSignature = null;
+    this._signatureVerified = false;
+    this._durationMs = null;
+    this._createdAt = createdAt;
   }
 
   /**
@@ -38,51 +85,64 @@ export class JobExecution {
   static start(params: {
     jobId: string;
     agentId: string;
+    tenantId: string;
     executionIndex: number;
     nonce: string;
     payloadHash: string;
   }): JobExecution {
-    return new JobExecution({
-      id: crypto.randomUUID(),
-      jobId: params.jobId,
-      agentId: params.agentId,
-      executionIndex: params.executionIndex,
-      nonce: params.nonce,
-      payloadHash: params.payloadHash,
-      startedAt: new Date(),
-      completedAt: null,
-      exitCode: null,
-      stdout: null,
-      stderr: null,
-      outputHash: null,
-      resultSignature: null,
-      signatureVerified: false,
-      durationMs: null,
-      createdAt: new Date(),
-    });
+    return new JobExecution(
+      JobExecutionId.generate(),
+      JobId.create(params.jobId).value,
+      AgentId.create(params.agentId).value,
+      TenantId.create(params.tenantId).value,
+      params.executionIndex,
+      params.nonce,
+      params.payloadHash,
+      new Date(),
+      new Date()
+    );
   }
 
   static reconstitute(props: JobExecutionProps): JobExecution {
-    return new JobExecution(props);
+    const exec = new JobExecution(
+      JobExecutionId.create(props.id).value,
+      JobId.create(props.jobId).value,
+      AgentId.create(props.agentId).value,
+      TenantId.create(props.tenantId).value,
+      props.executionIndex,
+      props.nonce,
+      props.payloadHash,
+      props.startedAt,
+      props.createdAt
+    );
+    exec._completedAt = props.completedAt;
+    exec._exitCode = props.exitCode;
+    exec._stdout = props.stdout;
+    exec._stderr = props.stderr;
+    exec._outputHash = props.outputHash;
+    exec._resultSignature = props.resultSignature;
+    exec._signatureVerified = props.signatureVerified;
+    exec._durationMs = props.durationMs;
+    return exec;
   }
 
   // ─── Getters ────────────────────────────────────────────
-  get id(): string { return this.props.id; }
-  get jobId(): string { return this.props.jobId; }
-  get agentId(): string { return this.props.agentId; }
-  get executionIndex(): number { return this.props.executionIndex; }
-  get nonce(): string { return this.props.nonce; }
-  get payloadHash(): string { return this.props.payloadHash; }
-  get startedAt(): Date { return this.props.startedAt; }
-  get completedAt(): Date | null { return this.props.completedAt; }
-  get exitCode(): number | null { return this.props.exitCode; }
-  get stdout(): string | null { return this.props.stdout; }
-  get stderr(): string | null { return this.props.stderr; }
-  get outputHash(): string | null { return this.props.outputHash; }
-  get resultSignature(): string | null { return this.props.resultSignature; }
-  get signatureVerified(): boolean { return this.props.signatureVerified; }
-  get durationMs(): number | null { return this.props.durationMs; }
-  get createdAt(): Date { return this.props.createdAt; }
+  get jobId(): JobId { return this._jobId; }
+  get agentId(): AgentId { return this._agentId; }
+  get tenantId(): TenantId { return this._tenantId; }
+  get executionIndex(): number { return this._executionIndex; }
+  get nonce(): string { return this._nonce; }
+  get payloadHash(): string { return this._payloadHash; }
+  get startedAt(): Date { return this._startedAt; }
+  get completedAt(): Date | null { return this._completedAt; }
+  get exitCode(): number | null { return this._exitCode; }
+  get stdout(): string | null { return this._stdout; }
+  get stderr(): string | null { return this._stderr; }
+  get outputHash(): string | null { return this._outputHash; }
+  get resultSignature(): string | null { return this._resultSignature; }
+  get signatureVerified(): boolean { return this._signatureVerified; }
+  get durationMs(): number | null { return this._durationMs; }
+  get createdAt(): Date { return this._createdAt; }
 
   // ─── Business Logic ─────────────────────────────────────
 
@@ -96,50 +156,38 @@ export class JobExecution {
     outputHash: string;
     resultSignature?: string;
   }): void {
-    if (this.props.completedAt !== null) {
+    if (this._completedAt !== null) {
       throw new BusinessRuleViolationError(
-        `Execution ${this.props.id} already has a result recorded (immutable)`
+        `Execution ${this.id.value} already has a result recorded (immutable)`
       );
     }
 
     const now = new Date();
-    this.props.completedAt = now;
-    this.props.exitCode = params.exitCode;
-    this.props.stdout = params.stdout ?? null;
-    this.props.stderr = params.stderr ?? null;
-    this.props.outputHash = params.outputHash;
-    this.props.resultSignature = params.resultSignature ?? null;
-    this.props.durationMs = now.getTime() - this.props.startedAt.getTime();
+    this._completedAt = now;
+    this._exitCode = params.exitCode;
+    this._stdout = params.stdout ?? null;
+    this._stderr = params.stderr ?? null;
+    this._outputHash = params.outputHash;
+    this._resultSignature = params.resultSignature ?? null;
+    this._durationMs = now.getTime() - this._startedAt.getTime();
   }
 
-  /**
-   * Mark the result signature as verified.
-   */
   markSignatureVerified(): void {
-    if (!this.props.resultSignature) {
+    if (!this._resultSignature) {
       throw new BusinessRuleViolationError('Cannot verify signature: no signature present');
     }
-    this.props.signatureVerified = true;
+    this._signatureVerified = true;
   }
 
-  /**
-   * Validate payload hash matches the job's payload hash (tamper detection).
-   */
   validatePayloadIntegrity(expectedHash: string): boolean {
-    return this.props.payloadHash === expectedHash;
+    return this._payloadHash === expectedHash;
   }
 
-  /**
-   * Check if execution succeeded (exit code 0).
-   */
   isSuccess(): boolean {
-    return this.props.exitCode === 0;
+    return this._exitCode === 0;
   }
 
-  /**
-   * Check if execution is completed.
-   */
   isCompleted(): boolean {
-    return this.props.completedAt !== null;
+    return this._completedAt !== null;
   }
 }

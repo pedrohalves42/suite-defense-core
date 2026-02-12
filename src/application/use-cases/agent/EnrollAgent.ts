@@ -1,20 +1,26 @@
 import type { AgentRepository } from '@/application/ports/output/AgentRepository';
 import type { DomainEventDispatcher } from '@/application/ports/output/DomainEventDispatcher';
-import { Agent, OsType } from '@/domain/entities/Agent';
+import { Agent } from '@/domain/entities/Agent';
 import { TenantId } from '@/domain/value-objects/TenantId';
 import { CryptoService } from '@/domain/services/CryptoService';
 import { AgentEnrolledEvent } from '@/domain/events/AgentEvents';
-import { BusinessRuleViolationError } from '@/domain/shared/DomainError';
+import { Result } from '@/domain/shared/Result';
+import { ApplicationError } from '@/domain/shared/ApplicationError';
 
 export interface EnrollAgentCommand {
   tenantId: string;
   agentName: string;
   osType: string;
+  version?: string;
 }
 
 export interface EnrollAgentResult {
   agentId: string;
+  agentName: string;
+  token: string;
   hmacSecret: string;
+  state: string;
+  status: string;
 }
 
 /**
@@ -27,10 +33,10 @@ export class EnrollAgent {
     private readonly eventDispatcher: DomainEventDispatcher,
   ) {}
 
-  async execute(command: EnrollAgentCommand): Promise<EnrollAgentResult> {
+  async execute(command: EnrollAgentCommand): Promise<Result<EnrollAgentResult, ApplicationError>> {
     const tenantIdResult = TenantId.create(command.tenantId);
     if (tenantIdResult.isFailure) {
-      throw new BusinessRuleViolationError(`Invalid tenant ID: ${command.tenantId}`);
+      return Result.failure(new ApplicationError('Invalid tenant ID'));
     }
 
     // Check for duplicate name within tenant
@@ -39,32 +45,44 @@ export class EnrollAgent {
       tenantIdResult.value,
     );
     if (existing) {
-      throw new BusinessRuleViolationError(
-        `Agent with name "${command.agentName}" already exists in this tenant`
-      );
+      return Result.failure(new ApplicationError('Agent name already exists in tenant'));
     }
 
-    // Generate HMAC secret
-    const hmacSecret = await this.cryptoService.generateAgentSecret();
+    // Generate credentials
+    const credentials = await this.cryptoService.generateAgentCredentials();
 
     // Create agent entity
-    const osType = command.osType as OsType;
-    const agent = Agent.create({
+    const agentResult = Agent.create({
       tenantId: tenantIdResult.value,
       name: command.agentName,
-      osType,
-      hmacSecret,
+      osType: command.osType,
     });
 
+    if (agentResult.isFailure) {
+      return Result.failure(new ApplicationError(agentResult.error.message));
+    }
+
+    const agent = agentResult.value;
     await this.agentRepo.save(agent);
 
+    // Publish domain event
     await this.eventDispatcher.dispatch(
-      new AgentEnrolledEvent(agent.id.value, command.tenantId, command.agentName)
+      new AgentEnrolledEvent(
+        agent.id.value,
+        command.tenantId,
+        agent.name,
+        credentials.token,
+        agent.hmacSecret.value
+      )
     );
 
-    return {
+    return Result.success({
       agentId: agent.id.value,
-      hmacSecret,
-    };
+      agentName: agent.name,
+      token: credentials.token,
+      hmacSecret: agent.hmacSecret.value,
+      state: agent.state,
+      status: agent.status,
+    });
   }
 }

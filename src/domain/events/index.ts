@@ -18,6 +18,7 @@ export {
   AgentActivatedEvent,
   AgentDecommissionedEvent,
   AgentHeartbeatReceivedEvent,
+  AgentStateChangedEvent,
 } from './AgentEvents';
 
 export {
@@ -25,4 +26,5 @@ export {
   JobCompletedEvent,
   JobFailedEvent,
   JobTimedOutEvent,
+  JobRetryScheduledEvent,
 } from './JobEvents';

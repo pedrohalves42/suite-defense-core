@@ -1,9 +1,10 @@
 import type { AgentRepository } from '@/application/ports/output/AgentRepository';
 import type { DomainEventDispatcher } from '@/application/ports/output/DomainEventDispatcher';
-import { AgentLifecycleState } from '@/domain/entities/Agent';
+import { AgentState } from '@/domain/entities/Agent';
 import { AgentId } from '@/domain/value-objects/AgentId';
 import { AgentActivatedEvent, AgentDecommissionedEvent } from '@/domain/events/AgentEvents';
-import { BusinessRuleViolationError } from '@/domain/shared/DomainError';
+import { Result } from '@/domain/shared/Result';
+import { ApplicationError } from '@/domain/shared/ApplicationError';
 
 export interface UpdateAgentStateCommand {
   agentId: string;
@@ -13,8 +14,8 @@ export interface UpdateAgentStateCommand {
 
 export interface UpdateAgentStateResult {
   agentId: string;
-  previousState: string;
-  currentState: string;
+  oldState: string;
+  newState: string;
 }
 
 /**
@@ -26,38 +27,42 @@ export class UpdateAgentState {
     private readonly eventDispatcher: DomainEventDispatcher,
   ) {}
 
-  async execute(command: UpdateAgentStateCommand): Promise<UpdateAgentStateResult> {
+  async execute(command: UpdateAgentStateCommand): Promise<Result<UpdateAgentStateResult, ApplicationError>> {
     const agentIdResult = AgentId.create(command.agentId);
     if (agentIdResult.isFailure) {
-      throw new BusinessRuleViolationError(`Invalid agent ID: ${command.agentId}`);
+      return Result.failure(new ApplicationError(`Invalid agent ID: ${command.agentId}`));
     }
 
     const agent = await this.agentRepo.findById(agentIdResult.value);
     if (!agent) {
-      throw new BusinessRuleViolationError(`Agent ${command.agentId} not found`);
+      return Result.failure(new ApplicationError('Agent not found'));
     }
 
     const previousState = agent.state;
-    const newState = command.newState as AgentLifecycleState;
+    const newState = command.newState as AgentState;
 
-    agent.transitionTo(newState);
+    const transitionResult = agent.transitionTo(newState);
+    if (transitionResult.isFailure) {
+      return Result.failure(new ApplicationError(transitionResult.error.message));
+    }
+
     await this.agentRepo.save(agent);
 
     // Dispatch domain events
-    if (newState === AgentLifecycleState.ACTIVE) {
+    if (newState === AgentState.ACTIVE) {
       await this.eventDispatcher.dispatch(
         new AgentActivatedEvent(command.agentId)
       );
-    } else if (newState === AgentLifecycleState.DECOMMISSIONED) {
+    } else if (newState === AgentState.DECOMMISSIONED) {
       await this.eventDispatcher.dispatch(
         new AgentDecommissionedEvent(command.agentId, command.reason ?? 'Admin action')
       );
     }
 
-    return {
+    return Result.success({
       agentId: command.agentId,
-      previousState,
-      currentState: agent.state,
-    };
+      oldState: previousState,
+      newState: agent.state,
+    });
   }
 }

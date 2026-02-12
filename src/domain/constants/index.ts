@@ -19,7 +19,15 @@ export enum UpdateStatus {
   ROLLED_BACK = 'rolled_back',
 }
 
-export enum AgentState {
+// Re-export entity-level enums for convenience
+export { AgentState, AgentStatus, OsType } from '../entities/Agent';
+export { JobType, JobStatus, JobPriority } from '../entities/Job';
+
+/**
+ * Agent operational FSM states (PowerShell agent runtime).
+ * Distinct from AgentState (lifecycle) — these track runtime behavior.
+ */
+export enum AgentOperationalState {
   INITIALIZING = 'INITIALIZING',
   AUTHENTICATING = 'AUTHENTICATING',
   SYNCING = 'SYNCING',
@@ -27,7 +35,3 @@ export enum AgentState {
   DEGRADED = 'DEGRADED',
   SAFE_MODE = 'SAFE_MODE',
 }
-
-// Re-export entity-level enums for convenience
-export { AgentLifecycleState, AgentStatus, OsType } from '../entities/Agent';
-export { JobType, JobStatus, JobPriority } from '../entities/Job';
