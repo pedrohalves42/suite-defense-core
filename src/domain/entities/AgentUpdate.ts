@@ -59,6 +59,12 @@ export class AgentUpdate {
   get status(): UpdateStatus { return this.props.status; }
   get errorMessage(): string | null | undefined { return this.props.errorMessage; }
   get rollbackReason(): string | null | undefined { return this.props.rollbackReason; }
+  get downloadStartedAt(): Date | null | undefined { return this.props.downloadStartedAt; }
+  get downloadCompletedAt(): Date | null | undefined { return this.props.downloadCompletedAt; }
+  get applyStartedAt(): Date | null | undefined { return this.props.applyStartedAt; }
+  get applyCompletedAt(): Date | null | undefined { return this.props.applyCompletedAt; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   private transitionTo(newStatus: UpdateStatus): void {
     const allowed = VALID_TRANSITIONS[this.props.status];

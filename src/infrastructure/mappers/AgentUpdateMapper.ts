@@ -31,6 +31,10 @@ export class AgentUpdateMapper {
       agent_id: entity.agentId.value,
       package_id: entity.packageId.value,
       status: entity.status,
+      download_started_at: entity.downloadStartedAt?.toISOString() ?? null,
+      download_completed_at: entity.downloadCompletedAt?.toISOString() ?? null,
+      apply_started_at: entity.applyStartedAt?.toISOString() ?? null,
+      apply_completed_at: entity.applyCompletedAt?.toISOString() ?? null,
       error_message: entity.errorMessage ?? null,
       rollback_reason: entity.rollbackReason ?? null,
     };
