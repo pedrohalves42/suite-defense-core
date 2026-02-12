@@ -2841,6 +2841,59 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_updates: {
+        Row: {
+          agent_id: string
+          apply_completed_at: string | null
+          apply_started_at: string | null
+          created_at: string
+          download_completed_at: string | null
+          download_started_at: string | null
+          error_message: string | null
+          id: string
+          package_id: string
+          rollback_reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          apply_completed_at?: string | null
+          apply_started_at?: string | null
+          created_at?: string
+          download_completed_at?: string | null
+          download_started_at?: string | null
+          error_message?: string | null
+          id?: string
+          package_id: string
+          rollback_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          apply_completed_at?: string | null
+          apply_started_at?: string | null
+          created_at?: string
+          download_completed_at?: string | null
+          download_started_at?: string | null
+          error_message?: string | null
+          id?: string
+          package_id?: string
+          rollback_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_updates_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "update_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_versions: {
         Row: {
           blocked_at: string | null
@@ -15644,6 +15697,60 @@ export type Database = {
           id?: string
           token_hash_prefix?: string
           user_agent?: string | null
+        }
+        Relationships: []
+      }
+      update_packages: {
+        Row: {
+          channel: string
+          checksum: string
+          created_at: string
+          id: string
+          is_active: boolean
+          max_version: string | null
+          min_version: string | null
+          platform: string
+          release_notes: string
+          script_content: string
+          signature_base64: string | null
+          signed_at: string | null
+          signed_by: string | null
+          size: number
+          version: string
+        }
+        Insert: {
+          channel?: string
+          checksum: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_version?: string | null
+          min_version?: string | null
+          platform?: string
+          release_notes?: string
+          script_content: string
+          signature_base64?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          size: number
+          version: string
+        }
+        Update: {
+          channel?: string
+          checksum?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_version?: string | null
+          min_version?: string | null
+          platform?: string
+          release_notes?: string
+          script_content?: string
+          signature_base64?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          size?: number
+          version?: string
         }
         Relationships: []
       }
