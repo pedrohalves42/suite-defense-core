@@ -7,7 +7,7 @@ import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logger } from '../_shared/logger.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 import { hashToken } from '../_shared/token-hash.ts'
-import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts'
+import { normalizeVersion, normalizeForWindows } from '../_shared/hexagonal/update-decision-service.ts'
 
 Deno.serve(async (req) => {
   // QUAL-01: Proper HTTP method validation
@@ -384,13 +384,7 @@ Deno.serve(async (req) => {
             .single()
 
           if (release) {
-            // Normalizar script para Windows (mesmo algoritmo do serve-agent-update)
-            const normalizeForWindows = (content: string): string => {
-              return content
-                .replace(/\r\n/g, '\n')   
-                .replace(/\r/g, '\n')     
-                .replace(/\n/g, '\r\n');  
-            };
+            // Normalizar script para Windows (via hexagonal shared module)
             
             const normalizedScript = normalizeForWindows(release.script_content);
             

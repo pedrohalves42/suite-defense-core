@@ -2,11 +2,16 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { hashToken } from '../_shared/token-hash.ts';
+import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts';
 
 /**
  * Edge Function para agentes verificarem updates disponiveis
  * Autenticacao: X-Agent-Token + HMAC
  * Retorna versao latest baseada no platform do agente
+ * 
+ * Integrado com Hexagonal Architecture:
+ * - Usa normalizeVersion para comparação consistente de versões
+ * - Compara versão do agente com latest antes de retornar has_update
  */
 
 Deno.serve(async (req) => {
@@ -58,7 +63,8 @@ Deno.serve(async (req) => {
           agent_name,
           tenant_id,
           hmac_secret,
-          os_type
+          os_type,
+          agent_version
         )
       `)
       .eq('token_hash', tokenHash)
@@ -153,16 +159,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[${requestId}] Latest version found: ${latestRelease.version}`);
+    // 6. Comparar versão via normalizeVersion (hexagonal)
+    const currentNorm = normalizeVersion(agent.agent_version);
+    const latestNorm = normalizeVersion(latestRelease.version);
+    const hasUpdate = currentNorm !== latestNorm;
 
-    // 6. Retornar informacoes da versao
+    console.log(`[${requestId}] Version comparison: current=${currentNorm} latest=${latestNorm} hasUpdate=${hasUpdate}`);
+
+    // 7. Retornar informacoes da versao
     return new Response(
       JSON.stringify({
-        has_update: true,
+        has_update: hasUpdate,
+        current_version: agent.agent_version,
+        latest_version: latestRelease.version,
         version: latestRelease.version,
         platform: latestRelease.platform,
         sha256: latestRelease.sha256,
-        release_notes: latestRelease.release_notes,
+        release_notes: hasUpdate ? latestRelease.release_notes : null,
         requestId
       }),
       {
