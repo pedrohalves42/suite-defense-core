@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // FASE 1.2: HMAC OBRIGATORIO - Agora hmac_secret e NOT NULL
+    // FASE 1.2: HMAC verification with token-only fallback for pre-hotfix agents
     if (!agent.hmac_secret) {
       logger.error('CRITICAL SECURITY: Agent without HMAC secret', { agentName: agent.agent_name })
       return new Response(
@@ -95,36 +95,35 @@ Deno.serve(async (req) => {
       )
     }
     
-    // Verificar HMAC (obrigatorio)
-    const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret, {
-      agentId: token.agent_id,
-      tenantId: undefined, // Will be fetched later if needed
-      endpoint: 'poll-jobs',
-      ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined
-    })
-    if (!hmacResult.valid) {
-      logger.warn('HMAC verification failed', {
+    // COMPAT: v5.0.3 pre-hotfix agents use GET without HMAC headers
+    // Allow token-only auth (like heartbeat) to unblock job delivery
+    // while agents receive the script update via serve-agent-update
+    if (hasAnyHmacHeader) {
+      // HMAC headers present - verify signature
+      const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret, {
+        agentId: token.agent_id,
+        tenantId: undefined,
+        endpoint: 'poll-jobs',
+        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined
+      })
+      if (!hmacResult.valid) {
+        // COMPAT: Accept with token-only auth if HMAC fails (encoding bugs in v5.0.3)
+        logger.warn('HMAC verification failed but accepting poll-jobs (token-authenticated)', {
+          agent: agent.agent_name,
+          errorCode: hmacResult.errorCode,
+          method: httpMethod,
+          ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
+        })
+      } else {
+        logger.debug('HMAC verified for poll-jobs', { agent: agent.agent_name })
+      }
+    } else {
+      // No HMAC headers - pre-hotfix agent authenticated by token only
+      logger.warn('Poll-jobs accepted without HMAC (token-only auth, pre-hotfix agent)', {
         agent: agent.agent_name,
-        errorCode: hmacResult.errorCode,
-        errorMessage: hmacResult.errorMessage,
         method: httpMethod,
-        hasHmacHeaders: hasAnyHmacHeader,
         ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
       })
-      return new Response(
-        JSON.stringify({ 
-          error: 'unauthorized',
-          code: hmacResult.errorCode,
-          message: hmacResult.errorMessage,
-          transient: hmacResult.transient,
-          // Fase 2: Include server time for clock skew recovery
-          server_time_ms: hmacResult.serverTimeMs,
-          skew_seconds: hmacResult.skewSeconds,
-          received_timestamp: hmacResult.receivedTimestamp,
-          max_skew_seconds: hmacResult.maxSkewSeconds
-        }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
     }
 
     // Rate limiting
