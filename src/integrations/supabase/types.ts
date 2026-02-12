@@ -23579,6 +23579,7 @@ export type Database = {
           old_status: string
         }[]
       }
+      sync_pgcron_health_from_run_details: { Args: never; Returns: Json }
       test_tenant_isolation: {
         Args: never
         Returns: {
