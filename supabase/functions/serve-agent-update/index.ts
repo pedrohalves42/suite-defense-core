@@ -279,8 +279,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Normalizar versoes (remover prefixo "v" para comparacao)
-    const normalizeVersion = (v: string | null) => v?.replace(/^v/i, '') || '';
+    // Normalizar versoes (remover prefixo "v" e sufixos como "-hotfix", "-BASE64-SAFE-UPDATE")
+    const normalizeVersion = (v: string | null) => v?.replace(/^v/i, '').replace(/-.*$/, '') || '';
     const currentVersionNorm = normalizeVersion(agent.agent_version);
     const releaseVersionNorm = normalizeVersion(release.version);
 

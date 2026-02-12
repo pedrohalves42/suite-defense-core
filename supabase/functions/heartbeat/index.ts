@@ -312,8 +312,10 @@ Deno.serve(async (req) => {
     // Se tem force_update pendente, buscar release e incluir no response
     if (forceCheck?.force_update_version) {
       // PARTE 1: Verificar se agente JÁ está na versão alvo → limpar flag
+      // Normalizar versões para comparação (strip "v" prefix e sufixos como "-hotfix")
+      const normalizeVer = (v: string | null | undefined) => v?.replace(/^v/i, '').replace(/-.*$/, '') || '';
       const currentVersion = agentVersion || updateData.agent_version
-      if (currentVersion === forceCheck.force_update_version) {
+      if (normalizeVer(currentVersion) === normalizeVer(forceCheck.force_update_version)) {
         logger.info('Agent already at target version, clearing force_update flag', {
           agentName: agent.agent_name,
           version: currentVersion
