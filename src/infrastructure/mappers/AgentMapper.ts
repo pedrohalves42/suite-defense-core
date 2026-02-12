@@ -1,40 +1,21 @@
-import { Agent, type AgentProps, AgentLifecycleState, AgentStatus, OsType } from '@/domain/entities/Agent';
-import { AgentId } from '@/domain/value-objects/AgentId';
-import { TenantId } from '@/domain/value-objects/TenantId';
-import { AgentVersion } from '@/domain/value-objects/AgentVersion';
+import { Agent, type AgentProps, AgentState, AgentStatus } from '@/domain/entities/Agent';
 
 /**
  * Maps between Supabase DB rows and Agent domain entities.
  */
 export class AgentMapper {
   static toDomain(row: Record<string, any>): Agent {
-    const agentIdResult = AgentId.create(row.id);
-    if (agentIdResult.isFailure) throw new Error(`Invalid agent id in DB row: ${row.id}`);
-
-    const tenantIdResult = TenantId.create(row.tenant_id);
-    if (tenantIdResult.isFailure) throw new Error(`Invalid tenant_id in DB row: ${row.tenant_id}`);
-
-    let version: AgentVersion | null = null;
-    if (row.agent_version) {
-      const versionResult = AgentVersion.create(row.agent_version);
-      if (versionResult.isSuccess) {
-        version = versionResult.value;
-      }
-    }
-
     const props: AgentProps = {
-      id: agentIdResult.value,
-      tenantId: tenantIdResult.value,
+      id: row.id,
+      tenantId: row.tenant_id,
       name: row.agent_name ?? row.hostname ?? '',
-      osType: (row.os_type ?? 'windows') as OsType,
+      osType: row.os_type ?? 'windows',
       state: AgentMapper.mapLifecycleState(row.status),
       status: AgentMapper.mapAgentStatus(row.status, row.last_seen),
-      version,
-      lastHeartbeatAt: row.last_seen ? new Date(row.last_seen) : null,
-      hmacSecret: row.hmac_secret ?? null,
-      lightModeEnabled: row.light_mode_enabled ?? false,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at ?? row.created_at),
+      version: row.agent_version ?? null,
+      lastSeen: row.last_seen ?? null,
+      hmacSecret: row.hmac_secret ?? '',
+      lightModeConfig: row.light_mode_config ?? undefined,
     };
 
     return Agent.reconstitute(props);
@@ -46,25 +27,25 @@ export class AgentMapper {
       tenant_id: entity.tenantId.value,
       agent_name: entity.name,
       os_type: entity.osType,
-      status: entity.state === AgentLifecycleState.ACTIVE ? 'active' : entity.state,
+      status: entity.state === AgentState.ACTIVE ? 'active' : entity.state,
       agent_version: entity.version?.normalized ?? null,
-      last_seen: entity.lastHeartbeatAt?.toISOString() ?? null,
-      light_mode_enabled: entity.lightModeEnabled,
+      last_seen: entity.lastSeen?.toISOString() ?? null,
+      light_mode_enabled: entity.isInLightMode(),
     };
   }
 
-  private static mapLifecycleState(dbStatus: string): AgentLifecycleState {
+  private static mapLifecycleState(dbStatus: string): string {
     switch (dbStatus) {
-      case 'active': return AgentLifecycleState.ACTIVE;
-      case 'inactive': return AgentLifecycleState.INACTIVE;
-      case 'suspended': return AgentLifecycleState.SUSPENDED;
-      case 'decommissioned': return AgentLifecycleState.DECOMMISSIONED;
-      case 'enrolled': return AgentLifecycleState.ENROLLED;
-      default: return AgentLifecycleState.ENROLLED;
+      case 'active': return AgentState.ACTIVE;
+      case 'inactive': return AgentState.INACTIVE;
+      case 'suspended': return AgentState.SUSPENDED;
+      case 'decommissioned': return AgentState.DECOMMISSIONED;
+      case 'enrolled': return AgentState.ENROLLED;
+      default: return AgentState.ENROLLED;
     }
   }
 
-  private static mapAgentStatus(dbStatus: string, lastSeen: string | null): AgentStatus {
+  private static mapAgentStatus(dbStatus: string, lastSeen: string | null): string {
     if (dbStatus === 'decommissioned' || dbStatus === 'suspended') {
       return AgentStatus.OFFLINE;
     }

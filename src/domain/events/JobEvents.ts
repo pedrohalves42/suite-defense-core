@@ -7,6 +7,7 @@ export class JobCreatedEvent implements DomainEvent {
     public readonly aggregateId: string,
     public readonly agentId: string,
     public readonly jobType: string,
+    public readonly payload: any,
   ) {}
 }
 
@@ -36,5 +37,14 @@ export class JobTimedOutEvent implements DomainEvent {
   constructor(
     public readonly aggregateId: string,
     public readonly agentId: string,
+  ) {}
+}
+
+export class JobRetryScheduledEvent implements DomainEvent {
+  readonly eventType = 'job.retry_scheduled';
+  readonly occurredOn = new Date();
+  constructor(
+    public readonly aggregateId: string,
+    public readonly retryCount: number,
   ) {}
 }

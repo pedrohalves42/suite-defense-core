@@ -1,23 +1,28 @@
 import type { JobRepository } from '@/application/ports/output/JobRepository';
 import type { AgentRepository } from '@/application/ports/output/AgentRepository';
 import type { DomainEventDispatcher } from '@/application/ports/output/DomainEventDispatcher';
-import { Job, JobType, JobPriority } from '@/domain/entities/Job';
+import { Job, JobType } from '@/domain/entities/Job';
 import { AgentId } from '@/domain/value-objects/AgentId';
 import { TenantId } from '@/domain/value-objects/TenantId';
+import { AgentState } from '@/domain/entities/Agent';
 import { JobCreatedEvent } from '@/domain/events/JobEvents';
-import { BusinessRuleViolationError } from '@/domain/shared/DomainError';
+import { Result } from '@/domain/shared/Result';
+import { ApplicationError } from '@/domain/shared/ApplicationError';
 
 export interface CreateJobCommand {
   agentId: string;
   tenantId: string;
   type: string;
-  payload: Record<string, unknown>;
+  payload?: any;
   priority?: number;
+  timeoutSeconds?: number;
+  maxRetries?: number;
 }
 
 export interface CreateJobResult {
   jobId: string;
   status: string;
+  priority: number;
 }
 
 /**
@@ -30,50 +35,57 @@ export class CreateJob {
     private readonly eventDispatcher: DomainEventDispatcher,
   ) {}
 
-  async execute(command: CreateJobCommand): Promise<CreateJobResult> {
+  async execute(command: CreateJobCommand): Promise<Result<CreateJobResult, ApplicationError>> {
     const agentIdResult = AgentId.create(command.agentId);
     if (agentIdResult.isFailure) {
-      throw new BusinessRuleViolationError(`Invalid agent ID: ${command.agentId}`);
+      return Result.failure(new ApplicationError(`Invalid agent ID: ${command.agentId}`));
     }
 
     const tenantIdResult = TenantId.create(command.tenantId);
     if (tenantIdResult.isFailure) {
-      throw new BusinessRuleViolationError(`Invalid tenant ID: ${command.tenantId}`);
+      return Result.failure(new ApplicationError(`Invalid tenant ID: ${command.tenantId}`));
     }
 
     // Validate agent exists and is active
     const agent = await this.agentRepo.findById(agentIdResult.value);
     if (!agent) {
-      throw new BusinessRuleViolationError(`Agent ${command.agentId} not found`);
+      return Result.failure(new ApplicationError('Agent not found'));
     }
-    if (agent.isTerminal()) {
-      throw new BusinessRuleViolationError(`Agent ${command.agentId} is decommissioned`);
+    if (agent.state !== AgentState.ACTIVE) {
+      return Result.failure(new ApplicationError(`Agent is not active (state: ${agent.state})`));
     }
 
     const jobType = command.type as JobType;
-    const priority = (command.priority ?? JobPriority.NORMAL) as JobPriority;
 
-    const job = Job.create({
+    const jobResult = Job.create({
       agentId: agentIdResult.value,
-      agentName: agent.name,
       tenantId: tenantIdResult.value,
       type: jobType,
       payload: command.payload,
-      priority,
+      priority: command.priority,
+      timeoutSeconds: command.timeoutSeconds,
+      maxRetries: command.maxRetries,
     });
 
-    // Auto-approve and queue
-    job.approve();
+    if (jobResult.isFailure) {
+      return Result.failure(new ApplicationError(jobResult.error.message));
+    }
+
+    const job = jobResult.value;
+
+    // Auto-queue
+    job.queue();
 
     await this.jobRepo.save(job);
 
     await this.eventDispatcher.dispatch(
-      new JobCreatedEvent(job.id, command.agentId, command.type)
+      new JobCreatedEvent(job.id.value, command.agentId, command.type, command.payload)
     );
 
-    return {
-      jobId: job.id,
+    return Result.success({
+      jobId: job.id.value,
       status: job.status,
-    };
+      priority: job.priority,
+    });
   }
 }

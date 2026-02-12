@@ -1,55 +1,47 @@
-import { Job, type JobProps, JobType, JobStatus, JobPriority } from '@/domain/entities/Job';
+import { Job, JobType, JobStatus, JobPriority } from '@/domain/entities/Job';
 import { JobExecution, type JobExecutionProps } from '@/domain/entities/JobExecution';
-import { AgentId } from '@/domain/value-objects/AgentId';
-import { TenantId } from '@/domain/value-objects/TenantId';
 
 /**
  * Maps between Supabase DB rows and Job/JobExecution domain entities.
  */
 export class JobMapper {
   static toDomain(row: Record<string, any>): Job {
-    const agentIdResult = AgentId.create(row.agent_id);
-    if (agentIdResult.isFailure) throw new Error(`Invalid agent_id in job row: ${row.agent_id}`);
-
-    const tenantIdResult = TenantId.create(row.tenant_id);
-    if (tenantIdResult.isFailure) throw new Error(`Invalid tenant_id in job row: ${row.tenant_id}`);
-
-    const props: JobProps = {
+    return Job.reconstitute({
       id: row.id,
-      agentId: agentIdResult.value,
-      agentName: row.agent_name ?? '',
-      tenantId: tenantIdResult.value,
-      type: (row.type ?? 'run_script') as JobType,
-      status: (row.status ?? 'pending') as JobStatus,
-      priority: (row.priority ?? JobPriority.NORMAL) as JobPriority,
+      agentId: row.agent_id,
+      tenantId: row.tenant_id,
+      type: row.type ?? 'run_script',
       payload: row.payload ?? {},
-      payloadHash: row.payload_hash ?? null,
-      approved: row.approved ?? false,
+      priority: row.priority ?? JobPriority.NORMAL,
+      timeoutSeconds: row.timeout_seconds ?? 300,
+      status: row.status ?? 'pending',
       retryCount: row.retry_count ?? 0,
       maxRetries: row.max_retries ?? 3,
-      expiresAt: row.expires_at ? new Date(row.expires_at) : new Date(Date.now() + 4 * 60 * 60 * 1000),
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at ?? row.created_at),
-    };
-
-    return Job.reconstitute(props);
+      deliveredAt: row.delivered_at ?? null,
+      startedAt: row.started_at ?? null,
+      completedAt: row.completed_at ?? null,
+      result: row.result ?? null,
+      error: row.error ?? null,
+    });
   }
 
   static toPersistence(entity: Job): Record<string, any> {
     return {
-      id: entity.id,
+      id: entity.id.value,
       agent_id: entity.agentId.value,
-      agent_name: entity.agentName,
       tenant_id: entity.tenantId.value,
       type: entity.type,
       status: entity.status,
       priority: entity.priority,
       payload: entity.payload,
-      payload_hash: entity.payloadHash,
-      approved: entity.approved,
+      timeout_seconds: entity.timeoutSeconds,
       retry_count: entity.retryCount,
       max_retries: entity.maxRetries,
-      expires_at: entity.expiresAt.toISOString(),
+      delivered_at: entity.deliveredAt?.toISOString() ?? null,
+      started_at: entity.startedAt?.toISOString() ?? null,
+      completed_at: entity.completedAt?.toISOString() ?? null,
+      result: entity.result,
+      error: entity.error,
     };
   }
 
@@ -58,6 +50,7 @@ export class JobMapper {
       id: row.id,
       jobId: row.job_id,
       agentId: row.agent_id,
+      tenantId: row.tenant_id,
       executionIndex: row.execution_index ?? 0,
       nonce: row.nonce ?? '',
       payloadHash: row.payload_hash ?? '',
@@ -78,9 +71,10 @@ export class JobMapper {
 
   static executionToPersistence(entity: JobExecution): Record<string, any> {
     return {
-      id: entity.id,
-      job_id: entity.jobId,
-      agent_id: entity.agentId,
+      id: entity.id.value,
+      job_id: entity.jobId.value,
+      agent_id: entity.agentId.value,
+      tenant_id: entity.tenantId.value,
       execution_index: entity.executionIndex,
       nonce: entity.nonce,
       payload_hash: entity.payloadHash,
