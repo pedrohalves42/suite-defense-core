@@ -186,6 +186,15 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[${requestId}] Security scan complete. Alerts: ${alerts.length}`);
 
+    // Report success to cron health monitoring
+    try {
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'security-alert-dispatcher',
+        p_success: true,
+        p_error: null
+      });
+    } catch (_) { /* best effort */ }
+
     return secureJsonResponse({
       success: true,
       request_id: requestId,
@@ -198,6 +207,17 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`[${requestId}] Error:`, error);
+
+    // Report failure to cron health monitoring
+    try {
+      const supabase = createClient(supabaseUrl, serviceRoleKey);
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'security-alert-dispatcher',
+        p_success: false,
+        p_error: errorMessage
+      });
+    } catch (_) { /* best effort */ }
+
     return secureErrorResponse(
       'Security alert dispatcher failed',
       500,

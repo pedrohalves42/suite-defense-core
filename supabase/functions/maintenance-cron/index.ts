@@ -20,6 +20,15 @@ Deno.serve(async (req) => {
     const useCase = new RunMaintenanceUseCase(supabase);
     const result = await useCase.execute();
 
+    // Report success to cron health monitoring
+    try {
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'maintenance-cron-every-30min',
+        p_success: true,
+        p_error: null
+      });
+    } catch (_) { /* best effort */ }
+
     return new Response(JSON.stringify({
       success: true,
       ...result,
