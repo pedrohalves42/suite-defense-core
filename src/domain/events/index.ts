@@ -6,3 +6,9 @@ export {
   UpdateFailedEvent,
   UpdateRolledBackEvent,
 } from './UpdateEvents';
+
+export {
+  LightModeActivatedEvent,
+  LightModeDeactivatedEvent,
+  LightModeEvaluatedEvent,
+} from './LightModeEvents';

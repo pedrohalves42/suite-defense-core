@@ -1065,6 +1065,192 @@ export type Database = {
           },
         ]
       }
+      agent_light_mode_configs: {
+        Row: {
+          activated_at: string | null
+          active_media_processes: Json
+          agent_id: string
+          collection_interval_seconds: number
+          compress_payloads: boolean
+          cpu_threshold_percent: number
+          created_at: string
+          duration_minutes: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          media_processes: Json
+          network_threshold_mbps: number
+          reason: string
+          reduced_interval_seconds: number
+          skip_network_collection: boolean
+          skip_process_collection: boolean
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          active_media_processes?: Json
+          agent_id: string
+          collection_interval_seconds?: number
+          compress_payloads?: boolean
+          cpu_threshold_percent?: number
+          created_at?: string
+          duration_minutes?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          media_processes?: Json
+          network_threshold_mbps?: number
+          reason?: string
+          reduced_interval_seconds?: number
+          skip_network_collection?: boolean
+          skip_process_collection?: boolean
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          active_media_processes?: Json
+          agent_id?: string
+          collection_interval_seconds?: number
+          compress_payloads?: boolean
+          cpu_threshold_percent?: number
+          created_at?: string
+          duration_minutes?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          media_processes?: Json
+          network_threshold_mbps?: number
+          reason?: string
+          reduced_interval_seconds?: number
+          skip_network_collection?: boolean
+          skip_process_collection?: boolean
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_light_mode_configs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agent_light_mode_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       agent_metrics_daily: {
         Row: {
           agent_id: string

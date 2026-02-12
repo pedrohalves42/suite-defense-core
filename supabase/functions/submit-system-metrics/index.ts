@@ -424,6 +424,86 @@ Deno.serve(async (req) => {
       logger.warn('Automation evaluation failed (non-blocking)', automationError);
     }
 
+    // ── Light Mode Evaluation ──
+    let lightModeConfig: any = null;
+    try {
+      // Get latest process snapshot for media process detection
+      const { data: latestProcesses } = await supabase
+        .from('agent_processes')
+        .select('processes')
+        .eq('agent_id', agent.id)
+        .order('collected_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestProcesses?.processes) {
+        const processNames = (latestProcesses.processes as any[]).map((p: any) => p.name || '');
+        const cpuPercent = metrics.cpu_usage_percent ?? 0;
+        // Estimate network throughput from bytes (rough Mbps)
+        const networkMbps = ((metrics.network_bytes_sent ?? 0) + (metrics.network_bytes_received ?? 0)) / (1024 * 1024);
+
+        // Default media processes to detect
+        const mediaProcesses = ['chrome', 'firefox', 'msedge', 'vlc', 'obs64', 'obs', 'teams', 'zoom', 'discord', 'spotify'];
+        const normalizedActive = new Set(processNames.map(n => n.toLowerCase().replace('.exe', '')));
+        const detectedMedia = mediaProcesses.filter(mp => normalizedActive.has(mp));
+
+        // Get or create light mode config
+        const { data: existingConfig } = await supabase
+          .from('agent_light_mode_configs')
+          .select('*')
+          .eq('agent_id', agent.id)
+          .maybeSingle();
+
+        if (detectedMedia.length > 0 && cpuPercent > 50 && networkMbps > 10) {
+          // Conditions met — activate light mode
+          if (!existingConfig?.is_active) {
+            const configData = {
+              agent_id: agent.id,
+              tenant_id: agent.tenant_id,
+              is_active: true,
+              activated_at: new Date().toISOString(),
+              expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+              reason: 'media_streaming_detected',
+              collection_interval_seconds: 600,
+              skip_process_collection: true,
+              skip_network_collection: true,
+              compress_payloads: true,
+              active_media_processes: detectedMedia,
+            };
+
+            if (existingConfig) {
+              await supabase.from('agent_light_mode_configs').update(configData).eq('id', existingConfig.id);
+            } else {
+              await supabase.from('agent_light_mode_configs').insert(configData);
+            }
+
+            lightModeConfig = { activated: true, media: detectedMedia, duration: 15 };
+            logger.info(`[Light Mode] Activated for ${agent.agent_name}: ${detectedMedia.join(', ')}`);
+          }
+        } else if (existingConfig?.is_active) {
+          // Check expiration
+          if (existingConfig.expires_at && new Date() >= new Date(existingConfig.expires_at)) {
+            await supabase.from('agent_light_mode_configs').update({
+              is_active: false,
+              activated_at: null,
+              expires_at: null,
+              reason: '',
+              collection_interval_seconds: 60,
+              skip_process_collection: false,
+              skip_network_collection: false,
+              compress_payloads: false,
+              active_media_processes: [],
+            }).eq('id', existingConfig.id);
+
+            lightModeConfig = { deactivated: true, reason: 'expired' };
+            logger.info(`[Light Mode] Deactivated for ${agent.agent_name}: expired`);
+          }
+        }
+      }
+    } catch (lightModeError) {
+      logger.warn('[Light Mode] Evaluation failed (non-blocking)', lightModeError);
+    }
+
     logger.success(`Metrics processed, ${alerts.length} alerts generated, ${automationTriggered} automations triggered`);
 
     return new Response(
@@ -431,6 +511,7 @@ Deno.serve(async (req) => {
         success: true, 
         alerts_generated: alerts.length,
         automation_triggered: automationTriggered,
+        light_mode: lightModeConfig,
       }), 
       {
         status: 200,
