@@ -51,6 +51,18 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Report cron health on success
+    try {
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'process-agent-updates',
+        p_success: true,
+        p_details: {
+          total_jobs_created: result.totalJobsCreated,
+          platforms_processed: result.platforms.length,
+        },
+      });
+    } catch (_) { /* best effort */ }
+
     return new Response(
       JSON.stringify({
         success: result.success,
@@ -71,6 +83,15 @@ Deno.serve(async (req) => {
       error: err.message,
       stack: err.stack,
     });
+
+    // Report cron health on failure
+    try {
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'process-agent-updates',
+        p_success: false,
+        p_details: { error: err.message },
+      });
+    } catch (_) { /* best effort */ }
 
     return new Response(
       JSON.stringify({
