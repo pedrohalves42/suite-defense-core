@@ -27,3 +27,7 @@ export enum AgentState {
   DEGRADED = 'DEGRADED',
   SAFE_MODE = 'SAFE_MODE',
 }
+
+// Re-export entity-level enums for convenience
+export { AgentLifecycleState, AgentStatus, OsType } from '../entities/Agent';
+export { JobType, JobStatus, JobPriority } from '../entities/Job';
