@@ -54,6 +54,10 @@ export class UpdatePackage {
   get releaseNotes(): string { return this.props.releaseNotes; }
   get isActive(): boolean { return this.props.isActive; }
   get signatureBase64(): string | null | undefined { return this.props.signatureBase64; }
+  get signedAt(): Date | null | undefined { return this.props.signedAt; }
+  get signedBy(): string | null | undefined { return this.props.signedBy; }
+  get minVersion(): AgentVersion | null | undefined { return this.props.minVersion; }
+  get maxVersion(): AgentVersion | null | undefined { return this.props.maxVersion; }
   get createdAt(): Date { return this.props.createdAt; }
 
   /**

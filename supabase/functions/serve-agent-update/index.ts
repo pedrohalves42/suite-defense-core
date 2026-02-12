@@ -6,6 +6,7 @@ import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { AGENT_SCRIPT_WINDOWS_CONTENT } from '../_shared/agent-script-windows-content.ts';
 import { INSTALLER_VERSION } from '../_shared/installer-version.ts';
 import { hashToken } from '../_shared/token-hash.ts';
+import { updateDecisionService, normalizeVersion, normalizeForWindows, calculateSha256 } from '../_shared/hexagonal/update-decision-service.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -282,18 +283,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Normalizar versoes (remover prefixo "v" e sufixos como "-hotfix", "-BASE64-SAFE-UPDATE")
-    const normalizeVersion = (v: string | null) => v?.replace(/^v/i, '').replace(/-.*$/, '') || '';
-    const currentVersionNorm = normalizeVersion(agent.agent_version);
-    const releaseVersionNorm = normalizeVersion(release.version);
-
-    // ============================================================
-    // KILL-SWITCH: Detectar agentes legados (v3.10.37, v3.10.39)
-    // Estes agentes têm path hardcoded que impede auto-update real.
-    // Forçar envio do script v3.10.40 para que seja salvo em disco
-    // e carregado após reboot do Windows.
-    // ============================================================
+    // Normalizar versoes via UpdateDecisionService (hexagonal)
     const legacyVersions = ['3.10.37', '3.10.39', '3.10.14'];
+    const currentVersionNorm = normalizeVersion(agent.agent_version);
     const isLegacyAgent = legacyVersions.some(v => currentVersionNorm.includes(v));
     
     if (isLegacyAgent) {
@@ -304,86 +296,51 @@ Deno.serve(async (req) => {
         targetVersion: release.version,
         note: 'Script will be saved to disk and loaded after Windows reboot'
       });
-      // Continua o fluxo para enviar script mesmo se versões parecerem iguais
     } else {
-      // Verificar se ja esta na ultima versao (apenas para agentes não-legados)
-      // HOTFIX: Comparar SHA256 além da versão para detectar hotfixes com mesmo número
-      if (releaseVersionNorm === currentVersionNorm) {
-        // Calcular SHA256 do script da release para comparar com o que o agente tem
-        const normalizeForWindowsCheck = (content: string): string => {
-          return content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r\n');
-        };
-        const normalizedCheck = normalizeForWindowsCheck(release.script_content);
-        const checkBytes = new TextEncoder().encode(normalizedCheck);
-        const checkHashBuffer = await crypto.subtle.digest('SHA-256', checkBytes);
-        const checkHashArray = Array.from(new Uint8Array(checkHashBuffer));
-        const releaseSha256 = checkHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      // Use hexagonal UpdateDecisionService for version/hotfix comparison
+      const decision = await updateDecisionService.evaluate(
+        {
+          agentId: agent.id,
+          agentName: agent.agent_name,
+          currentVersion: agent.agent_version,
+          currentScriptSha256: req.headers.get('X-Script-SHA256') || req.headers.get('X-Current-SHA256'),
+          platform,
+        },
+        {
+          version: release.version,
+          scriptContent: release.script_content,
+          sha256: release.sha256,
+          releaseNotes: release.release_notes,
+          createdAt: release.created_at,
+        },
+      );
+
+      if (decision.action === 'no_update') {
+        logger.info('[serve-agent-update] Agent up to date (via UpdateDecisionService)', { 
+          requestId, 
+          agentName: agent.agent_name,
+          version: agent.agent_version,
+          reason: decision.reason,
+        });
         
-        // Get agent's current script SHA256 from last heartbeat or check-agent-updates
-        const agentScriptHash = req.headers.get('X-Script-SHA256') || req.headers.get('X-Current-SHA256');
+        await logRolloutDecision('already_current', release.version, rolloutPolicy?.rollout_percentage || 100);
         
-        if (agentScriptHash && agentScriptHash.toLowerCase() !== releaseSha256.toLowerCase()) {
-          logger.warn('[serve-agent-update] SHA256 MISMATCH: Same version but different script content (hotfix detected)', {
-            requestId,
-            agentName: agent.agent_name,
-            version: agent.agent_version,
-            agentSha256: agentScriptHash.substring(0, 16) + '...',
-            releaseSha256: releaseSha256.substring(0, 16) + '...',
-            note: 'Delivering hotfix with same version number'
-          });
-          // Continue to deliver the updated script (don't return early)
-        } else if (!agentScriptHash) {
-          // Agent doesn't send SHA256 header - check if release SHA differs from stored
-          // For agents without SHA256 header, force delivery if release was updated recently (last 24h)
-          const releaseAge = Date.now() - new Date(release.created_at).getTime();
-          const isRecentRelease = releaseAge < 24 * 60 * 60 * 1000; // 24 hours
-          
-          if (isRecentRelease) {
-            logger.info('[serve-agent-update] Recent release detected, delivering to agent without SHA256 header', {
-              requestId,
-              agentName: agent.agent_name,
-              version: agent.agent_version,
-              releaseAge: Math.round(releaseAge / 1000 / 60) + ' minutes',
-              releaseSha256: releaseSha256.substring(0, 16) + '...'
-            });
-            // Continue to deliver the updated script
-          } else {
-            logger.info('[serve-agent-update] Agente ja esta atualizado (version match, no SHA256 header, release not recent)', { 
-              requestId, 
-              agentName: agent.agent_name,
-              version: agent.agent_version,
-              releaseVersion: release.version
-            });
-            
-            await logRolloutDecision('already_current', release.version, rolloutPolicy?.rollout_percentage || 100);
-            
-            return new Response(
-              JSON.stringify({ 
-                message: 'Already up to date',
-                current_version: agent.agent_version 
-              }),
-              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          }
-        } else {
-          logger.info('[serve-agent-update] Agente ja esta atualizado (version + SHA256 match)', { 
-            requestId, 
-            agentName: agent.agent_name,
-            version: agent.agent_version,
-            sha256Match: true
-          });
-          
-          await logRolloutDecision('already_current', release.version, rolloutPolicy?.rollout_percentage || 100);
-          
-          return new Response(
-            JSON.stringify({ 
-              message: 'Already up to date',
-              current_version: agent.agent_version 
-            }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+        return new Response(
+          JSON.stringify({ 
+            message: 'Already up to date',
+            current_version: agent.agent_version 
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
+
+      logger.info('[serve-agent-update] Update decision', {
+        requestId,
+        agentName: agent.agent_name,
+        action: decision.action,
+        fromVersion: agent.agent_version,
+        toVersion: release.version,
+      });
     }
 
     // AUTHORITATIVE SOURCE: Use codebase script for Windows (always up-to-date with hotfixes)
