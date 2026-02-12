@@ -146,10 +146,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Normalizar script para Windows
-      const normalizeForWindows = (content: string): string => {
-        return content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r\n');
-      };
+      // Normalizar script para Windows (via hexagonal shared module)
       
       const normalizedScript = normalizeForWindows(forcedRelease.script_content);
       const encoder = new TextEncoder();
@@ -411,13 +408,7 @@ Deno.serve(async (req) => {
     // Usa SHA256 do banco - calculado no momento do registro da release
     const storedSha256 = release.sha256;
     
-    // Normalizar para CRLF (Windows)
-    const normalizeForWindows = (content: string): string => {
-      return content
-        .replace(/\r\n/g, '\n')   
-        .replace(/\r/g, '\n')     
-        .replace(/\n/g, '\r\n');  
-    };
+    // Normalizar para CRLF (Windows) via hexagonal shared module
     
     const normalizedScript = normalizeForWindows(finalScriptContent);
     const encoder = new TextEncoder();
