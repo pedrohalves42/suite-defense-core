@@ -5,9 +5,226 @@ import { corsSecurityHeaders, secureJsonResponse, secureErrorResponse, secureCor
 /**
  * Evaluate Automation Rules
  * 
- * Called periodically (cron) or on-demand after metric ingestion.
- * Checks active rules against latest agent metrics and executes actions.
+ * Called after metric ingestion or on-demand.
+ * Checks active rules against latest agent metrics/processes and executes actions.
+ * Supports trigger types: metric_threshold, process_anomaly
  */
+
+// ── Helpers ──
+
+function evaluateOperator(value: number, operator: string, threshold: number): boolean {
+  switch (operator) {
+    case '>': return value > threshold;
+    case '>=': return value >= threshold;
+    case '<': return value < threshold;
+    case '<=': return value <= threshold;
+    case '==': return value === threshold;
+    default: return false;
+  }
+}
+
+function isInCooldown(rule: any): boolean {
+  if (!rule.last_triggered_at) return false;
+  const cooldownMs = (rule.cooldown_minutes || 30) * 60 * 1000;
+  return Date.now() - new Date(rule.last_triggered_at).getTime() < cooldownMs;
+}
+
+function matchesScope(rule: any, agentId: string): boolean {
+  if (rule.target_scope === 'all_agents') return true;
+  if (rule.target_scope === 'specific_agent') {
+    return (rule.target_ids || []).includes(agentId);
+  }
+  return true;
+}
+
+// ── Action Executors ──
+
+async function executeAction(
+  supabase: any,
+  rule: any,
+  agentId: string,
+  tenantId: string,
+  triggerData: any,
+  agents: any[]
+): Promise<{ status: string; result: any }> {
+  const actionConfig = rule.action_config as any;
+
+  try {
+    if (rule.action_type === 'send_alert') {
+      const { data: alertData, error: alertError } = await supabase
+        .from('system_alerts')
+        .insert({
+          tenant_id: tenantId,
+          agent_id: agentId,
+          alert_type: `automation_${rule.trigger_type}`,
+          severity: triggerData.value >= 95 ? 'critical' : 'high',
+          title: `[Auto] ${rule.name}`,
+          message: triggerData.message || `Rule triggered: ${JSON.stringify(triggerData)}`,
+          details: { ...triggerData, rule_id: rule.id },
+        })
+        .select('id')
+        .single();
+
+      if (alertError) throw alertError;
+      return { status: 'executed', result: { alert_id: alertData?.id } };
+
+    } else if (rule.action_type === 'create_job') {
+      const agent = agents.find((a: any) => a.id === agentId);
+      const { data: jobData, error: jobError } = await supabase
+        .from('jobs')
+        .insert({
+          tenant_id: tenantId,
+          agent_id: agentId,
+          agent_name: agent?.agent_name || 'Unknown',
+          type: actionConfig.job_type || 'health_report',
+          status: 'queued',
+          payload: {
+            source: 'automation_rule',
+            rule_id: rule.id,
+            ...triggerData,
+            ...actionConfig.params,
+          },
+        })
+        .select('id')
+        .single();
+
+      if (jobError) throw jobError;
+      return { status: 'executed', result: { job_id: jobData?.id } };
+    }
+
+    return { status: 'skipped', result: { reason: `Unknown action: ${rule.action_type}` } };
+  } catch (error: any) {
+    return { status: 'failed', result: { error: error.message } };
+  }
+}
+
+// ── Trigger Evaluators ──
+
+async function evaluateMetricThreshold(
+  supabase: any,
+  rule: any,
+  tenantId: string,
+  agents: any[],
+  latestMetrics: Map<string, any>
+): Promise<any[]> {
+  const conditions = rule.trigger_conditions as any;
+  const executions: any[] = [];
+
+  for (const [agentId, m] of latestMetrics) {
+    if (!matchesScope(rule, agentId)) continue;
+
+    const metricMap: Record<string, number | null> = {
+      'cpu_usage_percent': m.cpu_usage_percent,
+      'memory_usage_percent': m.memory_usage_percent,
+      'disk_usage_percent': m.disk_usage_percent,
+    };
+
+    const metricValue = metricMap[conditions.metric];
+    if (metricValue === null || metricValue === undefined) continue;
+
+    if (evaluateOperator(metricValue, conditions.operator, conditions.value)) {
+      const triggerData = {
+        metric: conditions.metric,
+        value: metricValue,
+        threshold: conditions.value,
+        message: `${conditions.metric} = ${metricValue}% (threshold: ${conditions.operator} ${conditions.value}%)`,
+      };
+
+      const { status, result } = await executeAction(supabase, rule, agentId, tenantId, triggerData, agents);
+
+      executions.push({
+        tenant_id: tenantId,
+        rule_id: rule.id,
+        agent_id: agentId,
+        trigger_data: triggerData,
+        action_taken: rule.action_type,
+        action_result: result,
+        status,
+        executed_at: status === 'executed' ? new Date().toISOString() : null,
+      });
+    }
+  }
+
+  return executions;
+}
+
+async function evaluateProcessAnomaly(
+  supabase: any,
+  rule: any,
+  tenantId: string,
+  agents: any[]
+): Promise<any[]> {
+  const conditions = rule.trigger_conditions as any;
+  const executions: any[] = [];
+  const agentIds = agents.map((a: any) => a.id);
+
+  // Get latest process snapshots
+  const { data: processData } = await supabase
+    .from('agent_processes')
+    .select('agent_id, suspicious_processes, new_processes, total_processes, collected_at')
+    .in('agent_id', agentIds)
+    .order('collected_at', { ascending: false });
+
+  // Deduplicate: keep latest per agent
+  const latestProcesses = new Map<string, any>();
+  (processData || []).forEach((p: any) => {
+    if (!latestProcesses.has(p.agent_id)) {
+      latestProcesses.set(p.agent_id, p);
+    }
+  });
+
+  for (const [agentId, p] of latestProcesses) {
+    if (!matchesScope(rule, agentId)) continue;
+
+    let shouldTrigger = false;
+    let triggerData: any = {};
+
+    const eventType = conditions.eventType || conditions.event_type || 'suspicious_process';
+
+    if (eventType === 'suspicious_process') {
+      const suspiciousCount = (p.suspicious_processes || []).length;
+      const threshold = conditions.value || 1;
+      shouldTrigger = suspiciousCount >= threshold;
+      triggerData = {
+        event_type: 'suspicious_process',
+        count: suspiciousCount,
+        threshold,
+        processes: (p.suspicious_processes || []).slice(0, 5).map((sp: any) => sp.name),
+        message: `${suspiciousCount} suspicious process(es) detected (threshold: ${threshold})`,
+      };
+    } else if (eventType === 'new_process_burst') {
+      const newCount = (p.new_processes || []).length;
+      const threshold = conditions.value || 10;
+      shouldTrigger = newCount >= threshold;
+      triggerData = {
+        event_type: 'new_process_burst',
+        count: newCount,
+        threshold,
+        message: `${newCount} new processes detected in snapshot (threshold: ${threshold})`,
+      };
+    }
+
+    if (shouldTrigger) {
+      const { status, result } = await executeAction(supabase, rule, agentId, tenantId, triggerData, agents);
+
+      executions.push({
+        tenant_id: tenantId,
+        rule_id: rule.id,
+        agent_id: agentId,
+        trigger_data: triggerData,
+        action_taken: rule.action_type,
+        action_result: result,
+        status,
+        executed_at: status === 'executed' ? new Date().toISOString() : null,
+      });
+    }
+  }
+
+  return executions;
+}
+
+// ── Main Handler ──
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return secureCorsPreflightResponse();
@@ -18,31 +235,35 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Auth check: requires authenticated user or internal call
+    // Auth check: requires authenticated user or service_role
     const authHeader = req.headers.get('authorization');
     let tenantId: string | null = null;
 
     if (authHeader) {
-      const { data: { user }, error: authError } = await supabase.auth.getUser(
-        authHeader.replace('Bearer ', '')
-      );
-      if (authError || !user) {
-        return secureErrorResponse('Unauthorized', 401);
-      }
+      // Check if service_role key (internal call)
+      if (authHeader === `Bearer ${supabaseServiceKey}`) {
+        // Internal call — tenant_id comes from body
+      } else {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(
+          authHeader.replace('Bearer ', '')
+        );
+        if (authError || !user) {
+          return secureErrorResponse('Unauthorized', 401);
+        }
 
-      // Get tenant from user_roles
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('tenant_id, role')
-        .eq('user_id', user.id)
-        .in('role', ['admin', 'super_admin'])
-        .limit(1)
-        .maybeSingle();
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('tenant_id, role')
+          .eq('user_id', user.id)
+          .in('role', ['admin', 'super_admin'])
+          .limit(1)
+          .maybeSingle();
 
-      if (!roleData) {
-        return secureErrorResponse('Admin access required', 403);
+        if (!roleData) {
+          return secureErrorResponse('Admin access required', 403);
+        }
+        tenantId = roleData.tenant_id;
       }
-      tenantId = roleData.tenant_id;
     }
 
     const body = req.method === 'POST' ? await req.json() : {};
@@ -69,7 +290,7 @@ serve(async (req) => {
       return secureJsonResponse({ evaluated: 0, triggered: 0, message: 'No active rules' });
     }
 
-    // Fetch latest metrics for all agents in tenant
+    // Fetch active agents
     const { data: agents } = await supabase
       .from('agents')
       .select('id, agent_name, status')
@@ -80,159 +301,77 @@ serve(async (req) => {
       return secureJsonResponse({ evaluated: 0, triggered: 0, message: 'No active agents' });
     }
 
-    const agentIds = agents.map(a => a.id);
+    const agentIds = agents.map((a: any) => a.id);
 
-    // Get latest system metrics
+    // Get latest system metrics (for metric_threshold rules)
     const { data: metrics } = await supabase
       .from('agent_system_metrics')
       .select('*')
       .in('agent_id', agentIds)
       .order('collected_at', { ascending: false });
 
-    // Deduplicate: keep only latest per agent
     const latestMetrics = new Map<string, any>();
-    (metrics || []).forEach(m => {
+    (metrics || []).forEach((m: any) => {
       if (!latestMetrics.has(m.agent_id)) {
         latestMetrics.set(m.agent_id, m);
       }
     });
 
-    let triggered = 0;
-    const executions: any[] = [];
+    // Evaluate all rules
+    let totalTriggered = 0;
+    const allExecutions: any[] = [];
 
     for (const rule of rules) {
-      const conditions = rule.trigger_conditions as any;
+      if (isInCooldown(rule)) continue;
 
-      // Check cooldown
-      if (rule.last_triggered_at) {
-        const cooldownMs = (rule.cooldown_minutes || 30) * 60 * 1000;
-        if (Date.now() - new Date(rule.last_triggered_at).getTime() < cooldownMs) {
-          continue; // Skip, in cooldown
-        }
-      }
+      let ruleExecutions: any[] = [];
 
       if (rule.trigger_type === 'metric_threshold') {
-        for (const [agentId, m] of latestMetrics) {
-          // Check scope
-          if (rule.target_scope === 'specific_agent' && !(rule.target_ids || []).includes(agentId)) {
-            continue;
-          }
-
-          const metricMap: Record<string, number | null> = {
-            'cpu_usage_percent': m.cpu_usage_percent,
-            'memory_usage_percent': m.memory_usage_percent,
-            'disk_usage_percent': m.disk_usage_percent,
-          };
-
-          const metricValue = metricMap[conditions.metric];
-          if (metricValue === null || metricValue === undefined) continue;
-
-          let shouldTrigger = false;
-          const threshold = conditions.value;
-
-          switch (conditions.operator) {
-            case '>': shouldTrigger = metricValue > threshold; break;
-            case '>=': shouldTrigger = metricValue >= threshold; break;
-            case '<': shouldTrigger = metricValue < threshold; break;
-            case '<=': shouldTrigger = metricValue <= threshold; break;
-            case '==': shouldTrigger = metricValue === threshold; break;
-          }
-
-          if (shouldTrigger) {
-            const actionConfig = rule.action_config as any;
-            let actionResult: any = null;
-            let status = 'executed';
-
-            try {
-              if (rule.action_type === 'send_alert') {
-                // Create system alert
-                const { data: alertData, error: alertError } = await supabase
-                  .from('system_alerts')
-                  .insert({
-                    tenant_id: tenantId,
-                    agent_id: agentId,
-                    alert_type: `automation_${conditions.metric}`,
-                    severity: conditions.value >= 95 ? 'critical' : 'high',
-                    title: `[Auto] ${rule.name}`,
-                    message: `${conditions.metric} = ${metricValue}% (threshold: ${conditions.operator} ${threshold}%)`,
-                    details: { metric: conditions.metric, value: metricValue, threshold, rule_id: rule.id },
-                  })
-                  .select('id')
-                  .single();
-
-                actionResult = { alert_id: alertData?.id };
-                if (alertError) throw alertError;
-
-              } else if (rule.action_type === 'create_job') {
-                const agent = agents.find(a => a.id === agentId);
-                const { data: jobData, error: jobError } = await supabase
-                  .from('jobs')
-                  .insert({
-                    tenant_id: tenantId,
-                    agent_id: agentId,
-                    agent_name: agent?.agent_name || 'Unknown',
-                    type: actionConfig.job_type || 'health_report',
-                    status: 'queued',
-                    payload: {
-                      source: 'automation_rule',
-                      rule_id: rule.id,
-                      trigger_metric: conditions.metric,
-                      trigger_value: metricValue,
-                      ...actionConfig.params,
-                    },
-                  })
-                  .select('id')
-                  .single();
-
-                actionResult = { job_id: jobData?.id };
-                if (jobError) throw jobError;
-              }
-            } catch (actionError: any) {
-              status = 'failed';
-              actionResult = { error: actionError.message };
-            }
-
-            executions.push({
-              tenant_id: tenantId,
-              rule_id: rule.id,
-              agent_id: agentId,
-              trigger_data: { metric: conditions.metric, value: metricValue, threshold },
-              action_taken: rule.action_type,
-              action_result: actionResult,
-              status,
-              executed_at: status === 'executed' ? new Date().toISOString() : null,
-            });
-
-            triggered++;
-          }
-        }
+        ruleExecutions = await evaluateMetricThreshold(supabase, rule, tenantId, agents, latestMetrics);
+      } else if (rule.trigger_type === 'process_anomaly') {
+        ruleExecutions = await evaluateProcessAnomaly(supabase, rule, tenantId, agents);
       }
+      // security_event and vulnerability types can be added here later
+
+      allExecutions.push(...ruleExecutions);
+      totalTriggered += ruleExecutions.length;
     }
 
     // Batch insert executions
-    if (executions.length > 0) {
-      await supabase.from('automation_executions').insert(executions);
+    if (allExecutions.length > 0) {
+      await supabase.from('automation_executions').insert(allExecutions);
 
       // Update last_triggered_at for triggered rules
-      const triggeredRuleIds = [...new Set(executions.map(e => e.rule_id))];
+      const triggeredRuleIds = [...new Set(allExecutions.map((e: any) => e.rule_id))];
       for (const ruleId of triggeredRuleIds) {
+        const rule = rules.find((r: any) => r.id === ruleId);
         await supabase
           .from('automation_rules')
           .update({
             last_triggered_at: new Date().toISOString(),
-            trigger_count: rules.find(r => r.id === ruleId)!.trigger_count + 1,
+            trigger_count: (rule?.trigger_count || 0) + 1,
           })
           .eq('id', ruleId);
       }
     }
 
-    console.log(`Automation evaluation: ${rules.length} rules, ${triggered} triggered for tenant ${tenantId}`);
+    // Update cron health if called as cron
+    const isCronCall = req.headers.get('x-cron-source') === 'true';
+    if (isCronCall) {
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'evaluate-automation-rules-5min',
+        p_success: true,
+        p_details: { evaluated: rules.length, triggered: totalTriggered },
+      });
+    }
+
+    console.log(`Automation evaluation: ${rules.length} rules, ${totalTriggered} triggered for tenant ${tenantId}`);
 
     return secureJsonResponse({
       evaluated: rules.length,
-      agents_checked: latestMetrics.size,
-      triggered,
-      executions: executions.length,
+      agents_checked: agents.length,
+      triggered: totalTriggered,
+      executions: allExecutions.length,
     });
 
   } catch (error) {
