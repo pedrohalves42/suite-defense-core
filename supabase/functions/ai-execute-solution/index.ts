@@ -68,16 +68,19 @@ Deno.serve(async (req) => {
       }
 
       case 'create_security_jobs': {
-        // Get all active agents for this tenant
+        // Get all ONLINE active agents for this tenant (heartbeat within 10 min)
+        const onlineThreshold = new Date(Date.now() - 10 * 60 * 1000).toISOString();
         const { data: agents, error: agentsError } = await supabase
           .from('agents')
           .select('id, agent_name')
           .eq('tenant_id', tenant_id)
-          .eq('status', 'active');
+          .eq('status', 'active')
+          .gte('last_heartbeat', onlineThreshold);
 
         if (agentsError) throw agentsError;
 
         const securityJobs = ['software_inventory_collect', 'collect_antivirus_status', 'collect_web_activity', 'light_vuln_scan'];
+        const expiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
         const jobsToCreate = [];
 
         for (const agent of agents || []) {
@@ -89,16 +92,19 @@ Deno.serve(async (req) => {
               type: jobType,
               status: 'queued',
               approved: true,
-              payload: {}
+              payload: {},
+              expires_at: expiresAt,
             });
           }
         }
 
-        const { error: jobsError } = await supabase
-          .from('jobs')
-          .insert(jobsToCreate);
+        if (jobsToCreate.length > 0) {
+          const { error: jobsError } = await supabase
+            .from('jobs')
+            .insert(jobsToCreate);
 
-        if (jobsError) throw jobsError;
+          if (jobsError) throw jobsError;
+        }
 
         result = {
           jobs_created: jobsToCreate.length,
@@ -125,6 +131,7 @@ Deno.serve(async (req) => {
 
         // Create collection jobs for this specific agent
         const securityJobs = ['software_inventory_collect', 'collect_antivirus_status', 'collect_web_activity', 'light_vuln_scan'];
+        const expiresAt2 = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
         const jobsToCreate = securityJobs.map(jobType => ({
           tenant_id,
           agent_id,
@@ -132,7 +139,8 @@ Deno.serve(async (req) => {
           type: jobType,
           status: 'queued',
           approved: true,
-          payload: {}
+          payload: {},
+          expires_at: expiresAt2,
         }));
 
         const { error: jobsError } = await supabase

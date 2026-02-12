@@ -120,7 +120,8 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          // Create a new job instance
+          // Create a new job instance with TTL
+          const jobExpiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
           const { error: insertError } = await supabase
             .from('jobs')
             .insert({
@@ -132,7 +133,8 @@ Deno.serve(async (req) => {
               approved: true,
               tenant_id: recurringJob.tenant_id,
               parent_job_id: recurringJob.id,
-              is_recurring: false
+              is_recurring: false,
+              expires_at: jobExpiresAt,
             });
 
           if (insertError) {
