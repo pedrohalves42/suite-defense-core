@@ -120,14 +120,26 @@ Deno.serve(async (req) => {
           throw new Error('agent_id required for restart_agent_collection');
         }
 
+        const onlineThreshold2 = new Date(Date.now() - 10 * 60 * 1000).toISOString();
         const { data: agent } = await supabase
           .from('agents')
-          .select('agent_name')
+          .select('agent_name, last_heartbeat, status')
           .eq('id', agent_id)
           .eq('tenant_id', tenant_id)
           .single();
 
         if (!agent) throw new Error('Agent not found');
+        
+        // Check if agent is online
+        const agentIsOnline = agent.status === 'active' && 
+          agent.last_heartbeat && 
+          new Date(agent.last_heartbeat) > new Date(onlineThreshold2);
+        
+        if (!agentIsOnline) {
+          result = { skipped: true, reason: 'Agent offline', agent_name: agent.agent_name };
+          console.log(`[AI-EXECUTE-SOLUTION] Skipping restart_agent_collection - agent ${agent.agent_name} offline`);
+          break;
+        }
 
         // Create collection jobs for this specific agent
         const securityJobs = ['software_inventory_collect', 'collect_antivirus_status', 'collect_web_activity', 'light_vuln_scan'];

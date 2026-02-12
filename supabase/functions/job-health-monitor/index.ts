@@ -36,6 +36,14 @@ interface MonitorResult {
   stale_jobs: number
   alerts_created: number
   duration_ms: number
+  slo_metrics: {
+    delivery_latency_p95: number | null
+    completion_rate: number | null
+    dlq_coverage: number | null
+    state_anomalies: number
+    zombie_count: number
+    burn_rate_1h: number | null
+  }
 }
 
 Deno.serve(async (req) => {
@@ -74,6 +82,14 @@ Deno.serve(async (req) => {
       stale_jobs: 0,
       alerts_created: 0,
       duration_ms: 0,
+      slo_metrics: {
+        delivery_latency_p95: null,
+        completion_rate: null,
+        dlq_coverage: null,
+        state_anomalies: 0,
+        zombie_count: 0,
+        burn_rate_1h: null,
+      },
     }
 
     // Categorize jobs
@@ -143,6 +159,88 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Collect SLO metrics per ADR-038
+    try {
+      // State anomalies
+      const { data: anomalies } = await supabase
+        .from('v_job_health_anomalies')
+        .select('anomaly_type, count')
+      
+      const totalAnomalies = (anomalies || []).reduce((sum: number, a: any) => sum + (a.count || 0), 0)
+      result.slo_metrics.state_anomalies = totalAnomalies
+
+      // Zombie count
+      const { count: zombieCount } = await supabase
+        .from('jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'delivered')
+        .lt('delivered_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
+      
+      result.slo_metrics.zombie_count = zombieCount || 0
+
+      // Completion rate (last 24h)
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      const { data: jobStats } = await supabase
+        .from('jobs')
+        .select('status')
+        .gte('created_at', oneDayAgo)
+        .in('status', ['completed', 'failed', 'cancelled'])
+      
+      if (jobStats && jobStats.length > 0) {
+        const terminal = jobStats.length
+        const validTerminal = jobStats.filter((j: any) => 
+          ['completed', 'failed', 'cancelled'].includes(j.status)
+        ).length
+        result.slo_metrics.completion_rate = terminal > 0 ? (validTerminal / terminal) * 100 : 100
+      }
+
+      // DLQ coverage
+      const { count: failedCount } = await supabase
+        .from('jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'failed')
+      
+      const { count: dlqCount } = await supabase
+        .from('failed_jobs_dlq')
+        .select('id', { count: 'exact', head: true })
+      
+      if (failedCount && failedCount > 0) {
+        result.slo_metrics.dlq_coverage = ((dlqCount || 0) / failedCount) * 100
+      } else {
+        result.slo_metrics.dlq_coverage = 100
+      }
+
+      // Burn rate (failures in last hour vs error budget)
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+      const { data: hourJobs } = await supabase
+        .from('jobs')
+        .select('status')
+        .gte('created_at', oneHourAgo)
+        .in('status', ['completed', 'failed'])
+      
+      if (hourJobs && hourJobs.length > 0) {
+        const hourFailed = hourJobs.filter((j: any) => j.status === 'failed').length
+        const hourTotal = hourJobs.length
+        const hourFailRate = hourFailed / hourTotal
+        // Error budget = 0.1% (0.001), burn rate = actual failure rate / budget rate
+        result.slo_metrics.burn_rate_1h = hourFailRate / 0.001
+      }
+
+      console.log(`[${requestId}] SLO metrics:`, result.slo_metrics)
+
+      // Create critical alerts for SLO violations
+      if (totalAnomalies > 0) {
+        await createSLOAlert(supabase, 'state_validity', `${totalAnomalies} anomalias de estado detectadas`, 'high')
+        result.alerts_created++
+      }
+      if ((zombieCount || 0) > 0) {
+        await createSLOAlert(supabase, 'zombie_jobs', `${zombieCount} jobs zombie detectados (delivered >2h)`, 'high')
+        result.alerts_created++
+      }
+    } catch (sloErr) {
+      console.error(`[${requestId}] Error collecting SLO metrics:`, sloErr)
+    }
+
     // Log this monitoring run
     const duration = Date.now() - startTime
     result.duration_ms = duration
@@ -199,3 +297,29 @@ Deno.serve(async (req) => {
     )
   }
 })
+
+async function createSLOAlert(supabase: any, type: string, message: string, severity: string) {
+  try {
+    const { data: existing } = await supabase
+      .from('system_alerts')
+      .select('id')
+      .eq('alert_type', `slo_violation_${type}`)
+      .eq('resolved', false)
+      .gte('created_at', new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString())
+      .limit(1)
+      .maybeSingle()
+
+    if (!existing) {
+      await supabase.from('system_alerts').insert({
+        alert_type: `slo_violation_${type}`,
+        severity,
+        title: `SLO Violation: ${type}`,
+        message,
+        details: { source: 'job-health-monitor', type },
+        resolved: false,
+      })
+    }
+  } catch (err) {
+    console.error(`Failed to create SLO alert for ${type}:`, err)
+  }
+}

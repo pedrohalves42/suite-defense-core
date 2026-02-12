@@ -19,9 +19,13 @@ Deno.serve(async (req) => {
     let createdRecurringCount = 0;
 
     // 1. Process one-time scheduled jobs that are due
+    // Join with agents to check online status
     const { data: scheduledJobs, error: scheduledError } = await supabase
       .from('jobs')
-      .select('*')
+      .select(`
+        *,
+        agent:agents!jobs_agent_id_fkey(id, last_heartbeat, status)
+      `)
       .eq('status', 'queued')
       .eq('is_recurring', false)
       .not('scheduled_at', 'is', null)
@@ -35,23 +39,62 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Found ${scheduledJobs?.length || 0} one-time scheduled jobs to process`);
 
-    // Update status to queued and remove scheduled_at so they get picked up by agents
+    // Filter: only activate jobs for online agents (heartbeat within 30 min)
+    let skippedOneTimeOffline = 0;
     if (scheduledJobs && scheduledJobs.length > 0) {
-      const jobIds = scheduledJobs.map(j => j.id);
-      
-      const { error: updateError } = await supabase
-        .from('jobs')
-        .update({ 
-          status: 'queued',
-          scheduled_at: null // Clear scheduled_at so it's available immediately
-        })
-        .in('id', jobIds);
+      const onlineThreshold = new Date(Date.now() - 30 * 60 * 1000);
+      const onlineJobIds: string[] = [];
+      const offlineJobIds: string[] = [];
 
-      if (updateError) {
-        console.error(`[${requestId}] Error updating scheduled jobs:`, updateError);
-      } else {
-        processedCount = scheduledJobs.length;
-        console.log(`[${requestId}] Activated ${processedCount} scheduled jobs`);
+      for (const job of scheduledJobs) {
+        const agent = job.agent;
+        const isOnline = agent &&
+          agent.status === 'active' &&
+          agent.last_heartbeat &&
+          new Date(agent.last_heartbeat) > onlineThreshold;
+
+        if (isOnline) {
+          onlineJobIds.push(job.id);
+        } else {
+          offlineJobIds.push(job.id);
+          skippedOneTimeOffline++;
+          console.log(`[${requestId}] Skipping scheduled job ${job.id} - agent ${job.agent_name} offline`);
+        }
+      }
+
+      // Activate jobs for online agents
+      if (onlineJobIds.length > 0) {
+        const { error: updateError } = await supabase
+          .from('jobs')
+          .update({ 
+            status: 'queued',
+            scheduled_at: null
+          })
+          .in('id', onlineJobIds);
+
+        if (updateError) {
+          console.error(`[${requestId}] Error updating scheduled jobs:`, updateError);
+        } else {
+          processedCount = onlineJobIds.length;
+          console.log(`[${requestId}] Activated ${processedCount} scheduled jobs`);
+        }
+      }
+
+      // Fail jobs for offline agents that have expired TTL
+      if (offlineJobIds.length > 0) {
+        const { error: failError } = await supabase
+          .from('jobs')
+          .update({
+            status: 'failed',
+            error_message: '[DLQ:AGENT_OFFLINE] Scheduled job skipped: agent offline at execution time',
+            completed_at: now,
+          })
+          .in('id', offlineJobIds)
+          .lt('expires_at', now);
+
+        if (failError) {
+          console.error(`[${requestId}] Error failing expired offline jobs:`, failError);
+        }
       }
     }
 
@@ -170,11 +213,28 @@ Deno.serve(async (req) => {
       success: true,
       processedScheduled: processedCount,
       createdRecurring: createdRecurringCount,
-      skippedOffline: skippedOfflineCount,
+      skippedOffline: skippedOfflineCount + skippedOneTimeOffline,
+      skippedRecurringOffline: skippedOfflineCount,
+      skippedScheduledOffline: skippedOneTimeOffline,
       timestamp: now
     };
 
     console.log(`[${requestId}] Completed:`, result);
+
+    // Report to cron health
+    const duration = Date.now() - new Date(now).getTime();
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'process-scheduled-jobs',
+        p_success: true,
+        p_duration_ms: duration > 0 ? duration : 1,
+        p_result: result,
+        p_processed_count: processedCount + createdRecurringCount,
+        p_job_source: 'cron'
+      });
+    } catch (logErr) {
+      console.error(`[${requestId}] Failed to log cron health:`, logErr);
+    }
 
     return new Response(
       JSON.stringify(result),
