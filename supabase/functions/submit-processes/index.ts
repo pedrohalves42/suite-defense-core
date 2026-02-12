@@ -119,19 +119,64 @@ serve(async (req) => {
       return secureErrorResponse('Failed to save process data', 500);
     }
 
-    // Cleanup old snapshots (keep last 24)
+    // Cleanup old snapshots (keep last 7 days)
     await supabase
       .from('agent_processes')
       .delete()
       .eq('agent_id', agentId)
       .lt('collected_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
-    console.log(`Process snapshot saved for agent ${agentId}: ${processes.length} processes, ${services.length} services, ${newProcesses.length} new, ${suspiciousProcesses.length} suspicious`);
+    // ── Bloco A: Create alert if suspicious processes detected ──
+    if (suspiciousProcesses.length > 0) {
+      const suspNames = suspiciousProcesses.map(p => p.name).join(', ');
+      await supabase
+        .from('system_alerts')
+        .insert({
+          tenant_id: tenantId,
+          agent_id: agentId,
+          alert_type: 'suspicious_process',
+          severity: suspiciousProcesses.length >= 3 ? 'critical' : 'high',
+          title: `[Auto] Processos suspeitos detectados`,
+          message: `${suspiciousProcesses.length} processo(s) executando de locais suspeitos: ${suspNames}`,
+          details: {
+            count: suspiciousProcesses.length,
+            processes: suspiciousProcesses.slice(0, 10),
+            source: 'submit-processes',
+          },
+        });
+    }
+
+    // ── Bloco A: Trigger process_anomaly automation rules ──
+    let automationTriggered = 0;
+    if (suspiciousProcesses.length > 0 || newProcesses.length > 5) {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const evalUrl = `${supabaseUrl}/functions/v1/evaluate-automation-rules`;
+        const evalResponse = await fetch(evalUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({ tenant_id: tenantId }),
+        });
+        if (evalResponse.ok) {
+          const result = await evalResponse.json();
+          automationTriggered = result.triggered || 0;
+        }
+      } catch (e) {
+        console.warn('Automation evaluation failed (non-blocking)', e);
+      }
+    }
+
+    console.log(`Process snapshot saved for agent ${agentId}: ${processes.length} processes, ${services.length} services, ${newProcesses.length} new, ${suspiciousProcesses.length} suspicious, ${automationTriggered} automations`);
 
     return secureJsonResponse({
       success: true,
       new_processes_detected: newProcesses.length,
       suspicious_processes_detected: suspiciousProcesses.length,
+      automation_triggered: automationTriggered,
     });
 
   } catch (error) {

@@ -390,12 +390,47 @@ Deno.serve(async (req) => {
       }
     }
 
-    logger.success(`Metrics processed, ${alerts.length} alerts generated`);
+    // ── Bloco A: Trigger automation rules evaluation after metrics ingestion ──
+    let automationTriggered = 0;
+    try {
+      const { data: activeRules } = await supabase
+        .from('automation_rules')
+        .select('id')
+        .eq('tenant_id', agent.tenant_id)
+        .eq('is_active', true)
+        .eq('trigger_type', 'metric_threshold')
+        .limit(1);
+
+      if (activeRules && activeRules.length > 0) {
+        const evalUrl = `${SUPABASE_URL}/functions/v1/evaluate-automation-rules`;
+        const evalResponse = await fetch(evalUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({ tenant_id: agent.tenant_id }),
+        });
+
+        if (evalResponse.ok) {
+          const evalResult = await evalResponse.json();
+          automationTriggered = evalResult.triggered || 0;
+          if (automationTriggered > 0) {
+            logger.info(`Automation: ${automationTriggered} rules triggered for ${agent.agent_name}`);
+          }
+        }
+      }
+    } catch (automationError) {
+      logger.warn('Automation evaluation failed (non-blocking)', automationError);
+    }
+
+    logger.success(`Metrics processed, ${alerts.length} alerts generated, ${automationTriggered} automations triggered`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        alerts_generated: alerts.length 
+        alerts_generated: alerts.length,
+        automation_triggered: automationTriggered,
       }), 
       {
         status: 200,
