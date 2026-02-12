@@ -143,10 +143,10 @@ Deno.serve(async (req) => {
       ...userPayload,
     };
 
-    // SEMPRE buscar o agente para obter agent_id e tenant_id
+    // SEMPRE buscar o agente para obter agent_id, tenant_id e status
     const { data: agentData, error: agentError } = await supabaseAdmin
       .from('agents')
-      .select('id, tenant_id')
+      .select('id, tenant_id, status, last_heartbeat')
       .eq('agent_name', agentName)
       .limit(1)
       .maybeSingle();
@@ -176,6 +176,15 @@ Deno.serve(async (req) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Check if agent is online (heartbeat within last 10 min)
+    const isAgentOnline = agentData.status === 'active' && 
+      agentData.last_heartbeat && 
+      new Date(agentData.last_heartbeat) > new Date(Date.now() - 10 * 60 * 1000);
+    
+    const agentOfflineWarning = !isAgentOnline 
+      ? `Agent '${agentName}' is currently offline. Job will expire in 4 hours if not claimed.` 
+      : null;
 
     // Usar tenant_id do agente ou do user_role
     const effectiveTenantId = agentData.tenant_id || userRole?.tenant_id;
@@ -230,7 +239,10 @@ Deno.serve(async (req) => {
       nextRunAt = nextRunData;
     }
 
-    // Prepare job data - INCLUINDO agent_id e payload completo
+    // Prepare job data - INCLUINDO agent_id, payload completo e expires_at
+    const DEFAULT_TTL_HOURS = 4;
+    const expiresAt = new Date(Date.now() + DEFAULT_TTL_HOURS * 60 * 60 * 1000).toISOString();
+    
     const jobData: any = {
       agent_id: agentData.id,  // CRITICO: incluir agent_id
       agent_name: agentName, 
@@ -242,7 +254,8 @@ Deno.serve(async (req) => {
       scheduled_at: scheduledAt || null,
       is_recurring: isRecurring,
       recurrence_pattern: recurrencePattern || null,
-      next_run_at: nextRunAt
+      next_run_at: nextRunAt,
+      expires_at: expiresAt,
     };
     
     console.log(`[create-job] Creating job with payload:`, JSON.stringify(effectivePayload));
@@ -284,7 +297,9 @@ Deno.serve(async (req) => {
         agentName: job.agent_name,
         scheduledAt: job.scheduled_at,
         isRecurring: job.is_recurring,
-        nextRunAt: job.next_run_at
+        nextRunAt: job.next_run_at,
+        expiresAt: job.expires_at,
+        warning: agentOfflineWarning,
       }), 
       { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
