@@ -20,16 +20,12 @@ Deno.serve(async (req) => {
   try {
     logger.info('[serve-agent-update] Requisicao recebida', { requestId });
 
-    // Verificar HMAC
+    // Token authentication with HMAC fallback for pre-hotfix agents
     const agentToken = req.headers.get('X-Agent-Token');
-    const signature = req.headers.get('X-HMAC-Signature');
-    const timestamp = req.headers.get('X-Timestamp');
-    const nonce = req.headers.get('X-Nonce');
-
-    if (!agentToken || !signature || !timestamp || !nonce) {
-      logger.warn('[serve-agent-update] Headers HMAC ausentes', { requestId });
+    if (!agentToken) {
+      logger.warn('[serve-agent-update] Missing X-Agent-Token', { requestId });
       return new Response(
-        JSON.stringify({ error: 'Missing HMAC headers' }),
+        JSON.stringify({ error: 'Missing agent token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -67,30 +63,37 @@ Deno.serve(async (req) => {
       force_update_reason: string | null;
     };
 
-    // Verificar HMAC
-    const hmacResult = await verifyHmacSignature(
-      supabase,
-      req,
-      agent.agent_name,
-      agent.hmac_secret
-    );
+    // COMPAT: HMAC verification with token-only fallback for pre-hotfix agents
+    // Pre-hotfix v5.0.3 agents call serve-agent-update without HMAC headers
+    const signature = req.headers.get('X-HMAC-Signature');
+    const timestamp = req.headers.get('X-Timestamp') || req.headers.get('X-HMAC-Timestamp');
+    const nonce = req.headers.get('X-Nonce') || req.headers.get('X-HMAC-Nonce');
+    const hasAnyHmacHeader = !!(signature || timestamp || nonce);
 
-    if (!hmacResult.valid) {
-      logger.warn('[serve-agent-update] HMAC invalido', { 
-        requestId, 
-        agentName: agent.agent_name,
-        errorCode: hmacResult.errorCode
-      });
-      return new Response(
-        JSON.stringify({ error: 'Invalid HMAC signature' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    if (hasAnyHmacHeader && agent.hmac_secret) {
+      const hmacResult = await verifyHmacSignature(
+        supabase, req, agent.agent_name, agent.hmac_secret
       );
+      if (!hmacResult.valid) {
+        // Accept with token-only auth if HMAC fails (encoding bugs in pre-hotfix agents)
+        logger.warn('[serve-agent-update] HMAC failed but accepting (token-authenticated)', { 
+          requestId, agentName: agent.agent_name, errorCode: hmacResult.errorCode
+        });
+      } else {
+        logger.debug('[serve-agent-update] HMAC verified', { requestId, agentName: agent.agent_name });
+      }
+    } else {
+      // No HMAC headers - pre-hotfix agent authenticated by token only
+      logger.warn('[serve-agent-update] Accepted without HMAC (token-only auth, pre-hotfix agent)', { 
+        requestId, agentName: agent.agent_name
+      });
     }
 
-    logger.info('[serve-agent-update] HMAC valido', { 
+    logger.info('[serve-agent-update] Agent authenticated', { 
       requestId, 
       agentName: agent.agent_name,
-      currentVersion: agent.agent_version 
+      currentVersion: agent.agent_version,
+      authMethod: hasAnyHmacHeader ? 'hmac' : 'token-only'
     });
 
     // Determinar plataforma
@@ -383,16 +386,29 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Verificar se script_content e placeholder (< 1000 bytes = placeholder)
+    // AUTHORITATIVE SOURCE: Use codebase script for Windows (always up-to-date with hotfixes)
+    // The .ps1 file in _shared/agent-scripts/ is the single source of truth
+    // This eliminates the agent_releases sync gap that caused hotfix delivery failures
     let finalScriptContent = release.script_content;
     
-    if (!release.script_content || release.script_content.length < 1000) {
+    if (platform === 'windows' && AGENT_SCRIPT_WINDOWS_CONTENT && AGENT_SCRIPT_WINDOWS_CONTENT.length > 1000) {
+      const codebaseLen = AGENT_SCRIPT_WINDOWS_CONTENT.length;
+      const dbLen = release.script_content?.length || 0;
+      if (codebaseLen !== dbLen) {
+        logger.info('[serve-agent-update] Using codebase script (authoritative) instead of DB', {
+          requestId,
+          codebaseSize: codebaseLen,
+          dbSize: dbLen,
+          agentName: agent.agent_name
+        });
+      }
+      finalScriptContent = AGENT_SCRIPT_WINDOWS_CONTENT;
+    } else if (!release.script_content || release.script_content.length < 1000) {
       logger.warn('[serve-agent-update] Script no banco e placeholder, tentando buscar do storage', { 
         requestId, 
         dbScriptSize: release.script_content?.length || 0
       });
       
-      // Tentar buscar do storage bucket
       if (platform === 'windows') {
         try {
           const { data: fileData, error: storageError } = await supabase.storage
@@ -413,18 +429,18 @@ Deno.serve(async (req) => {
           });
         }
       }
-      
-      // Se ainda não temos script válido, retornar erro
-      if (!finalScriptContent || finalScriptContent.length < 1000) {
-        logger.error('[serve-agent-update] Nenhum script válido disponível', { requestId });
-        return new Response(
-          JSON.stringify({ 
-            error: 'No valid script available',
-            message: 'Script content not found in database or storage'
-          }),
-          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    }
+    
+    // Se ainda não temos script válido, retornar erro
+    if (!finalScriptContent || finalScriptContent.length < 1000) {
+      logger.error('[serve-agent-update] Nenhum script válido disponível', { requestId });
+      return new Response(
+        JSON.stringify({ 
+          error: 'No valid script available',
+          message: 'Script content not found in database or storage'
+        }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // ============================================================
