@@ -11,7 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Activity, AlertCircle, CheckCircle, Clock, Cpu, HardDrive, MemoryStick, Monitor, Search, XCircle, RefreshCw, Wifi, WifiOff, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, Clock, Cog, Cpu, HardDrive, MemoryStick, Monitor, Search, XCircle, RefreshCw, Wifi, WifiOff, AlertTriangle, ChevronDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getOsDisplayName, getOsIcon } from '@/lib/os-utils';
@@ -22,6 +22,8 @@ import { prepareJobForInsert } from '@/lib/job-utils';
 import { AgentVersionStatus } from '@/components/monitoring/AgentVersionStatus';
 import { OrphanedJobsAlert } from '@/components/monitoring/OrphanedJobsAlert';
 import { PipelineHealthInline } from '@/components/pipeline/PipelineHealthInline';
+import { AutomationRulesPanel } from '@/components/monitoring/AutomationRulesPanel';
+import { AgentProcessesPanel } from '@/components/monitoring/AgentProcessesPanel';
 
 interface AgentMetrics {
   id: string;
@@ -84,6 +86,7 @@ export default function AgentMonitoringAdvanced() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'offline'>('all');
+  const [selectedAgentForProcesses, setSelectedAgentForProcesses] = useState<{ id: string; name: string } | null>(null);
   const { tenant } = useTenant();
 
   const fetchDashboardData = async (showToast = false) => {
@@ -839,10 +842,28 @@ export default function AgentMonitoringAdvanced() {
                 {/* Footer Info */}
                 <div className="flex justify-between items-center pt-2 border-t text-xs text-muted-foreground">
                   <span>{getOsDisplayName(agent.os_type, agent.os_version || null)}</span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {agent.uptime_hours !== null ? `${agent.uptime_hours}h ligado` : 'N/A'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 px-1.5 text-[10px]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedAgentForProcesses(
+                          selectedAgentForProcesses?.id === agent.id
+                            ? null
+                            : { id: agent.id, name: agent.name }
+                        );
+                      }}
+                    >
+                      <Cog className="h-3 w-3 mr-0.5" />
+                      Processos
+                    </Button>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {agent.uptime_hours !== null ? `${agent.uptime_hours}h ligado` : 'N/A'}
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -861,6 +882,17 @@ export default function AgentMonitoringAdvanced() {
           </CardContent>
         </Card>
       )}
+
+      {/* Process Details for selected agent */}
+      {selectedAgentForProcesses && (
+        <AgentProcessesPanel
+          agentId={selectedAgentForProcesses.id}
+          agentName={selectedAgentForProcesses.name}
+        />
+      )}
+
+      {/* Automation Rules */}
+      <AutomationRulesPanel />
     </div>
   );
 }
