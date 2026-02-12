@@ -1,6 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
+import {
+  SupabaseVersionQueryAdapter,
+  SupabaseUpdateJobAdapter,
+  SupabaseObservabilityAdapter,
+  LoggingEventDispatcherAdapter,
+  ProcessAgentUpdatesUseCase,
+} from '../_shared/hexagonal/index.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -8,10 +15,10 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 /**
  * FASE 4: Edge Function para push de updates automatico
  * 
- * Scheduled cron job que identifica agentes desatualizados e cria
- * jobs "update_agent" para forcar atualizacao em agentes criticos.
- * 
- * Execucao: A cada 6 horas via cron
+ * Refatorada com Arquitetura Hexagonal:
+ * - Use Case: ProcessAgentUpdatesUseCase (orquestra lógica de negócio)
+ * - Adapters: Supabase implementations dos output ports
+ * - Edge Function: Thin HTTP handler (Presentation Layer)
  */
 
 Deno.serve(async (req) => {
@@ -20,198 +27,41 @@ Deno.serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID();
-  const startedAt = Date.now();
 
   try {
     logger.info('[process-agent-updates] Cron job started', { requestId });
 
+    // ─── Compose hexagonal dependencies ───────────────
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Buscar ultima versao de cada plataforma
-    const { data: latestVersions, error: versionError } = await supabase
-      .from('agent_versions')
-      .select('platform, version')
-      .eq('is_latest', true);
+    const useCase = new ProcessAgentUpdatesUseCase(
+      new SupabaseVersionQueryAdapter(supabase),
+      new SupabaseUpdateJobAdapter(supabase),
+      new SupabaseObservabilityAdapter(supabase),
+      new LoggingEventDispatcherAdapter(),
+    );
 
-    if (versionError) {
-      logger.error('[process-agent-updates] Failed to fetch latest versions', {
-        requestId,
-        error: versionError
-      });
-      throw versionError;
-    }
+    // ─── Execute use case ─────────────────────────────
+    const result = await useCase.execute(requestId);
 
-    if (!latestVersions || latestVersions.length === 0) {
-      logger.warn('[process-agent-updates] No latest versions found', { requestId });
+    if (result.platforms.length === 0) {
       return new Response(
         JSON.stringify({ message: 'No latest versions registered' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
-    let totalJobsCreated = 0;
-    const results = [];
-
-    for (const latest of latestVersions) {
-      logger.info('[process-agent-updates] Processing platform', {
-        requestId,
-        platform: latest.platform,
-        latestVersion: latest.version
-      });
-
-      // Normalizar versao para comparacao (remover prefixo "v")
-      const normalizeVersion = (v: string | null) => v?.replace(/^v/i, '') || '';
-      const latestVersionNorm = normalizeVersion(latest.version);
-
-      // Buscar agentes ativos desta plataforma (filtraremos versao manualmente)
-      const { data: allAgents, error: agentsError } = await supabase
-        .from('agents')
-        .select('id, agent_name, agent_version, tenant_id')
-        .eq('status', 'active')
-        .eq('os_type', latest.platform)
-        .not('agent_version', 'is', null);
-
-      // Filtrar agentes realmente desatualizados (comparacao normalizada)
-      const outdatedAgents = (allAgents || []).filter(agent => {
-        const agentVersionNorm = normalizeVersion(agent.agent_version);
-        return agentVersionNorm !== latestVersionNorm;
-      });
-
-      if (agentsError) {
-        logger.error('[process-agent-updates] Failed to fetch outdated agents', {
-          requestId,
-          platform: latest.platform,
-          error: agentsError
-        });
-        continue;
-      }
-
-      if (!outdatedAgents || outdatedAgents.length === 0) {
-        logger.info('[process-agent-updates] No outdated agents for platform', {
-          requestId,
-          platform: latest.platform
-        });
-        results.push({
-          platform: latest.platform,
-          outdated_count: 0,
-          jobs_created: 0
-        });
-        continue;
-      }
-
-      logger.info('[process-agent-updates] Found outdated agents', {
-        requestId,
-        platform: latest.platform,
-        count: outdatedAgents.length
-      });
-
-      // Criar job update_agent para cada agente desatualizado
-      let jobsCreated = 0;
-      for (const agent of outdatedAgents) {
-        // Verificar se ja existe job update_agent pendente para este agente
-        const { data: existingJobs } = await supabase
-          .from('jobs')
-          .select('id')
-          .eq('agent_id', agent.id)
-          .eq('type', 'update_agent')
-          .in('status', ['pending', 'queued', 'delivered'])
-          .limit(1);
-
-        if (existingJobs && existingJobs.length > 0) {
-          logger.info('[process-agent-updates] Update job already exists', {
-            requestId,
-            agentName: agent.agent_name
-          });
-          continue;
-        }
-
-        // Criar job update_agent
-        const { error: jobError } = await supabase
-          .from('jobs')
-          .insert({
-            agent_id: agent.id,
-            agent_name: agent.agent_name,
-            tenant_id: agent.tenant_id,
-            type: 'update_agent',
-            status: 'queued',
-            approved: true,
-            payload: {
-              current_version: agent.agent_version,
-              target_version: latest.version,
-              platform: latest.platform,
-              auto_triggered: true
-            }
-          });
-
-        if (jobError) {
-          logger.error('[process-agent-updates] Failed to create update job', {
-            requestId,
-            agentName: agent.agent_name,
-            error: jobError
-          });
-          continue;
-        }
-
-        // CORREÇÃO: Também atualizar force_update_version para ativar update via heartbeat
-        // Isso garante compatibilidade com agentes legados (v4.x) que não suportam job system
-        const { error: updateError } = await supabase
-          .from('agents')
-          .update({ 
-            force_update_version: latest.version,
-            force_update_reason: 'Automated rollout via cron job'
-          })
-          .eq('id', agent.id);
-
-        if (updateError) {
-          logger.warn('[process-agent-updates] Failed to set force_update_version', {
-            requestId,
-            agentName: agent.agent_name,
-            error: updateError
-          });
-        }
-
-        jobsCreated++;
-        totalJobsCreated++;
-        logger.info('[process-agent-updates] Update job created + force_update_version set', {
-          requestId,
-          agentName: agent.agent_name,
-          currentVersion: agent.agent_version,
-          targetVersion: latest.version
-        });
-      }
-
-      results.push({
-        platform: latest.platform,
-        outdated_count: outdatedAgents.length,
-        jobs_created: jobsCreated
-      });
-    }
-
-    logger.info('[process-agent-updates] Cron job completed', {
-      requestId,
-      totalJobsCreated,
-      results
-    });
-
-    const result = {
-      success: true,
-      total_jobs_created: totalJobsCreated,
-      platforms: results
-    };
-
-    // Log observability
-    await supabase.rpc('log_scheduled_job_run', {
-      p_job_key: 'process-agent-updates',
-      p_success: true,
-      p_duration_ms: Date.now() - startedAt,
-      p_result: result,
-      p_processed_count: totalJobsCreated,
-      p_job_source: 'cron'
-    });
-
     return new Response(
-      JSON.stringify(result),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({
+        success: result.success,
+        total_jobs_created: result.totalJobsCreated,
+        platforms: result.platforms.map((p) => ({
+          platform: p.platform,
+          outdated_count: p.outdatedCount,
+          jobs_created: p.jobsCreated,
+        })),
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
 
   } catch (error) {
@@ -219,30 +69,16 @@ Deno.serve(async (req) => {
     logger.error('[process-agent-updates] Internal error', {
       requestId,
       error: err.message,
-      stack: err.stack
+      stack: err.stack,
     });
-
-    // Log error observability
-    try {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      await supabase.rpc('log_scheduled_job_run', {
-        p_job_key: 'process-agent-updates',
-        p_success: false,
-        p_duration_ms: Date.now() - startedAt,
-        p_error: err.message,
-        p_result: null,
-        p_processed_count: 0,
-        p_job_source: 'cron'
-      });
-    } catch {}
 
     return new Response(
       JSON.stringify({
         error: 'Internal server error',
         message: err.message,
-        requestId
+        requestId,
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
 });
