@@ -21891,8 +21891,7 @@ export type Database = {
       v_security_invariants: {
         Row: {
           health_active_agents: number | null
-          health_executed_actions_24h: number | null
-          health_jobs_completed_24h: number | null
+          health_completed_actions: number | null
           health_pending_actions: number | null
           inv001_tables_with_policies: number | null
           inv001_tables_with_rls: number | null
@@ -21918,9 +21917,8 @@ export type Database = {
       }
       v_security_scan_compliance: {
         Row: {
-          anon_access: boolean | null
-          authenticated_access: boolean | null
-          description: string | null
+          hardening_standard: string | null
+          has_rls_policies: boolean | null
           object_name: string | null
           object_type: string | null
           rls_enabled: boolean | null

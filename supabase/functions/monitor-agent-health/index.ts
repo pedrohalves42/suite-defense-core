@@ -266,6 +266,15 @@ Deno.serve(async (req) => {
       p_job_source: 'cron'
     });
 
+    // Report to cron health monitoring
+    try {
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'monitor-agent-health-every-5min',
+        p_success: true,
+        p_error: null
+      });
+    } catch (_) { /* best effort */ }
+
     return new Response(
       JSON.stringify(result),
       { headers: { 'Content-Type': 'application/json' } }
@@ -283,6 +292,11 @@ Deno.serve(async (req) => {
         p_result: null,
         p_processed_count: 0,
         p_job_source: 'cron'
+      });
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'monitor-agent-health-every-5min',
+        p_success: false,
+        p_error: error.message
       });
     } catch {}
     
