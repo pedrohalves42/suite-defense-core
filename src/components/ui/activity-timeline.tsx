@@ -1,7 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDistanceToNow, ptBR } from "@/lib/date-utils";
 
 interface TimelineItem {
   id: string;
