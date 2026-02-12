@@ -7264,6 +7264,71 @@ export type Database = {
         }
         Relationships: []
       }
+      domain_events: {
+        Row: {
+          aggregate_id: string
+          aggregate_type: string
+          created_at: string
+          event_type: string
+          event_version: number
+          id: string
+          occurred_on: string
+          payload: Json
+          tenant_id: string | null
+        }
+        Insert: {
+          aggregate_id: string
+          aggregate_type: string
+          created_at?: string
+          event_type: string
+          event_version?: number
+          id?: string
+          occurred_on?: string
+          payload?: Json
+          tenant_id?: string | null
+        }
+        Update: {
+          aggregate_id?: string
+          aggregate_type?: string
+          created_at?: string
+          event_type?: string
+          event_version?: number
+          id?: string
+          occurred_on?: string
+          payload?: Json
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domain_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "domain_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "domain_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "domain_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       edge_function_metrics: {
         Row: {
           created_at: string
