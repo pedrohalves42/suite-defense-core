@@ -6,3 +6,4 @@ export * from './types.ts';
 export * from './ports.ts';
 export * from './adapters.ts';
 export * from './use-cases.ts';
+export * from './update-decision-service.ts';

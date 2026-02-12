@@ -9,12 +9,19 @@ import { Platform, UpdateChannel } from '@/domain/constants';
  */
 export class UpdatePackageMapper {
   static toDomain(row: Record<string, any>): UpdatePackage {
+    const idResult = UpdatePackageId.create(row.id);
+    if (idResult.isFailure) throw new Error(`Invalid package id in DB row: ${row.id}`);
+    const versionResult = AgentVersion.create(row.version);
+    if (versionResult.isFailure) throw new Error(`Invalid version in DB row: ${row.version}`);
+    const checksumResult = UpdateChecksum.create(row.checksum);
+    if (checksumResult.isFailure) throw new Error(`Invalid checksum in DB row: ${row.checksum}`);
+
     const props: UpdatePackageProps = {
-      id: UpdatePackageId.create(row.id).value,
-      version: AgentVersion.create(row.version).value,
+      id: idResult.value,
+      version: versionResult.value,
       platform: row.platform as Platform,
       channel: row.channel as UpdateChannel,
-      checksum: UpdateChecksum.create(row.checksum).value,
+      checksum: checksumResult.value,
       scriptContent: row.script_content,
       size: row.size,
       releaseNotes: row.release_notes,
@@ -41,6 +48,10 @@ export class UpdatePackageMapper {
       release_notes: entity.releaseNotes,
       is_active: entity.isActive,
       signature_base64: entity.signatureBase64 ?? null,
+      signed_at: entity.signedAt?.toISOString() ?? null,
+      signed_by: entity.signedBy ?? null,
+      min_version: entity.minVersion?.normalized ?? null,
+      max_version: entity.maxVersion?.normalized ?? null,
       created_at: entity.createdAt.toISOString(),
     };
   }

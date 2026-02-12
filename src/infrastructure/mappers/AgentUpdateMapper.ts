@@ -8,10 +8,15 @@ import { UpdateStatus } from '@/domain/constants';
  */
 export class AgentUpdateMapper {
   static toDomain(row: Record<string, any>): AgentUpdate {
+    const agentIdResult = AgentId.create(row.agent_id);
+    if (agentIdResult.isFailure) throw new Error(`Invalid agent_id in DB row: ${row.agent_id}`);
+    const packageIdResult = UpdatePackageId.create(row.package_id);
+    if (packageIdResult.isFailure) throw new Error(`Invalid package_id in DB row: ${row.package_id}`);
+
     const props: AgentUpdateProps = {
       id: row.id,
-      agentId: AgentId.create(row.agent_id).value,
-      packageId: UpdatePackageId.create(row.package_id).value,
+      agentId: agentIdResult.value,
+      packageId: packageIdResult.value,
       status: row.status as UpdateStatus,
       downloadStartedAt: row.download_started_at ? new Date(row.download_started_at) : null,
       downloadCompletedAt: row.download_completed_at ? new Date(row.download_completed_at) : null,

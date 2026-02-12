@@ -7,6 +7,7 @@ import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logger } from '../_shared/logger.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 import { hashToken } from '../_shared/token-hash.ts'
+import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts'
 
 Deno.serve(async (req) => {
   // QUAL-01: Proper HTTP method validation
@@ -313,9 +314,9 @@ Deno.serve(async (req) => {
     if (forceCheck?.force_update_version) {
       // PARTE 1: Verificar se agente JÁ está na versão alvo → limpar flag
       // Normalizar versões para comparação (strip "v" prefix e sufixos como "-hotfix")
-      const normalizeVer = (v: string | null | undefined) => v?.replace(/^v/i, '').replace(/-.*$/, '') || '';
+      // Version comparison via hexagonal normalizeVersion
       const currentVersion = agentVersion || updateData.agent_version
-      if (normalizeVer(currentVersion) === normalizeVer(forceCheck.force_update_version)) {
+      if (normalizeVersion(currentVersion) === normalizeVersion(forceCheck.force_update_version)) {
         logger.info('Agent already at target version, clearing force_update flag', {
           agentName: agent.agent_name,
           version: currentVersion
