@@ -22494,6 +22494,7 @@ export type Database = {
           insight_ids: string[]
         }[]
       }
+      auto_cancel_archived_agent_jobs: { Args: never; Returns: number }
       auto_cancel_zombie_jobs: {
         Args: never
         Returns: {
