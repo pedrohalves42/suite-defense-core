@@ -14,3 +14,6 @@ export type { ProcessJobResultCommand, ProcessJobResultResult } from './job/Proc
 // Observability & Remediation
 export * from './observability';
 export * from './remediation';
+
+// Proactive Security
+export * from './security';

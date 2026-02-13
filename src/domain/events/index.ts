@@ -28,3 +28,15 @@ export {
   JobTimedOutEvent,
   JobRetryScheduledEvent,
 } from './JobEvents';
+
+export {
+  FileIntegrityViolationDetectedEvent,
+  FileIntegrityRestoredEvent,
+  UsbDeviceAutoBlockedEvent,
+  CertificateExpiringSoonEvent,
+  CertificateExpiredEvent,
+  BehavioralAnomalyDetectedEvent,
+  NetworkAnomalyDetectedEvent,
+  ComplianceScoreChangedEvent,
+  SoarPlaybookTriggeredEvent,
+} from './SecurityEvents';
