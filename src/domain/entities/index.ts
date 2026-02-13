@@ -32,3 +32,12 @@ export { Certificate, CertStore } from './Certificate';
 export type { CertificateProps, CreateCertificateProps } from './Certificate';
 export { NetworkMetrics } from './NetworkMetrics';
 export type { NetworkMetricsProps, CreateNetworkMetricsProps } from './NetworkMetrics';
+
+// ── Proactive Security Entities ──
+export { PatchDeployment, PatchDeploymentStatus, DeploymentType, DeploymentPriority, ValidationStatus, PatchDeploymentId } from './PatchDeployment';
+export type { CreatePatchDeploymentProps } from './PatchDeployment';
+export { NetworkAnomaly, NetworkAnomalyType, NetworkAnomalyId } from './NetworkAnomaly';
+export { AnomalySeverity as NetworkAnomalySeverity } from './NetworkAnomaly';
+export type { DetectNetworkAnomalyProps, NetworkBlockPolicy } from './NetworkAnomaly';
+export { ComplianceScore, ComplianceScoreId } from './ComplianceScore';
+export type { ComplianceDrift, ComplianceEvidence, ComplianceRecommendation } from './ComplianceScore';
