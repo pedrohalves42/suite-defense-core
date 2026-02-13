@@ -10,3 +10,7 @@ export { CreateJob } from './job/CreateJob';
 export type { CreateJobCommand, CreateJobResult } from './job/CreateJob';
 export { ProcessJobResult } from './job/ProcessJobResult';
 export type { ProcessJobResultCommand, ProcessJobResultResult } from './job/ProcessJobResult';
+
+// Observability & Remediation
+export * from './observability';
+export * from './remediation';

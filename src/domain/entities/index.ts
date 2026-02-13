@@ -18,3 +18,17 @@ export { NetworkSnapshot } from './NetworkSnapshot';
 export type { NetworkSnapshotProps, NetworkAdapter, OpenPort, ActiveConnection } from './NetworkSnapshot';
 export { AutomationRule } from './AutomationRule';
 export type { AutomationRuleProps, TriggerType, ActionType, TargetScope, TriggerCondition, ActionConfig } from './AutomationRule';
+
+// ── Observability & Remediation Entities ──
+export { FileIntegrityCheck, IntegrityStatus, ScanType, FileIntegritySeverity } from './FileIntegrityCheck';
+export type { FileIntegrityCheckProps, CreateFileIntegrityCheckProps } from './FileIntegrityCheck';
+export { VulnerabilityScan, RemediationStatus, VulnerabilitySeverity, VulnerabilityRemediatedEvent } from './VulnerabilityScan';
+export type { VulnerabilityScanProps, CreateVulnerabilityScanProps } from './VulnerabilityScan';
+export { BehavioralBaseline, BaselineType, AnomalySeverity } from './BehavioralBaseline';
+export type { BehavioralBaselineProps, CreateBehavioralBaselineProps, StatisticalThresholds, AnomalyResult } from './BehavioralBaseline';
+export { UsbDevice, DeviceType, UsbDeviceBlockedEvent } from './UsbDevice';
+export type { UsbDeviceProps, CreateUsbDeviceProps } from './UsbDevice';
+export { Certificate, CertStore } from './Certificate';
+export type { CertificateProps, CreateCertificateProps } from './Certificate';
+export { NetworkMetrics } from './NetworkMetrics';
+export type { NetworkMetricsProps, CreateNetworkMetricsProps } from './NetworkMetrics';
