@@ -1,3 +1,9 @@
 export { SupabaseAgentRepository } from './SupabaseAgentRepository';
 export { SupabaseJobRepository } from './SupabaseJobRepository';
 export { SupabaseUpdatePackageRepository } from './SupabaseUpdatePackageRepository';
+export { SupabaseFileIntegrityRepository } from './SupabaseFileIntegrityRepository';
+export { SupabaseVulnerabilityRepository } from './SupabaseVulnerabilityRepository';
+export { SupabaseNetworkMetricsRepository } from './SupabaseNetworkMetricsRepository';
+export { SupabaseUsbDeviceRepository } from './SupabaseUsbDeviceRepository';
+export { SupabaseCertificateRepository } from './SupabaseCertificateRepository';
+export { SupabaseBehavioralBaselineRepository } from './SupabaseBehavioralBaselineRepository';
