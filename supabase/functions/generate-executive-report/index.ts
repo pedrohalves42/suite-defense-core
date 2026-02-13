@@ -3,11 +3,10 @@
 
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { callAISimple } from '../_shared/ai-provider-helper.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const LOVABLE_AI_URL = 'https://lovable.dev/ai/v1';
-const LOVABLE_AI_API_KEY = Deno.env.get('LOVABLE_API_KEY') || '';
 
 interface RiskDelta {
   tenantId: string;
@@ -29,10 +28,8 @@ interface RiskDelta {
 }
 
 async function generateExecutiveSummary(data: RiskDelta): Promise<string> {
-  // Try AI generation first
-  if (LOVABLE_AI_API_KEY) {
-    try {
-      const prompt = `Você é um especialista em segurança cibernética. Gere um resumo executivo CURTO (máximo 3 frases) em português brasileiro sobre a situação de segurança do dia.
+  try {
+    const prompt = `Você é um especialista em segurança cibernética. Gere um resumo executivo CURTO (máximo 3 frases) em português brasileiro sobre a situação de segurança do dia.
 
 Dados do dia:
 - Score de risco início do dia: ${data.riskScoreStart ?? 'Não disponível'}
@@ -51,27 +48,23 @@ Regras:
 4. Se o score melhorou, destaque. Se piorou, explique o risco.
 5. Não use jargões técnicos`;
 
-      const response = await fetch(`${LOVABLE_AI_URL}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${LOVABLE_AI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 200,
-          temperature: 0.7,
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        return result.choices?.[0]?.message?.content || generateFallbackSummary(data);
+    const aiResult = await callAISimple(
+      'Você é um especialista em segurança cibernética corporativa.',
+      prompt,
+      {
+        maxTokens: 200,
+        functionName: 'generate-executive-report',
+        tenantId: data.tenantId,
       }
-    } catch (error) {
-      console.error('AI generation failed:', error);
+    );
+
+    if (aiResult.success && aiResult.content) {
+      return aiResult.content;
     }
+    
+    console.warn('[generate-executive-report] AI call failed, using fallback:', aiResult.error);
+  } catch (error) {
+    console.error('AI generation failed:', error);
   }
 
   return generateFallbackSummary(data);

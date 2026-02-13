@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
 import { safeParseJSON, createFallbackAudit } from "../_shared/json-parser.ts";
+import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,15 +27,6 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-
-    if (!lovableApiKey) {
-      console.error('LOVABLE_API_KEY not configured');
-      return new Response(
-        JSON.stringify({ error: 'AI service not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Service client for admin operations
     const serviceClient = createClient(supabaseUrl, supabaseKey);
@@ -127,34 +119,30 @@ serve(async (req) => {
     // Build analysis prompt with metrics
     const analysisPrompt = analysisTemplate.content.replace('{metrics}', JSON.stringify(metrics, null, 2));
 
-    // Call Lovable AI for analysis
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: personaPrompt.content },
-          { role: 'user', content: analysisPrompt }
-        ],
-      }),
+    // Call AI via multi-provider routing (replaces direct Lovable AI call)
+    const messages: AIMessage[] = [
+      { role: 'system', content: personaPrompt.content },
+      { role: 'user', content: analysisPrompt }
+    ];
+
+    const aiResult = await callAI(messages, {
+      maxTokens: 8192,
+      functionName: 'ai-system-audit',
+      tenantId,
     });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI API error:', aiResponse.status, errorText);
+    if (!aiResult.success || !aiResult.content) {
+      console.error('AI call failed:', aiResult.error);
       
-      if (aiResponse.status === 429) {
+      // Check for rate limit / credits exhausted patterns in error
+      if (aiResult.error?.includes('429') || aiResult.error?.toLowerCase().includes('rate limit')) {
         return new Response(
           JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
-      if (aiResponse.status === 402) {
+      if (aiResult.error?.includes('402') || aiResult.error?.toLowerCase().includes('credits')) {
         return new Response(
           JSON.stringify({ error: 'AI credits exhausted. Please add credits to continue.' }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -162,22 +150,13 @@ serve(async (req) => {
       }
       
       return new Response(
-        JSON.stringify({ error: 'AI analysis failed' }),
+        JSON.stringify({ error: 'AI analysis failed', details: aiResult.error }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const aiData = await aiResponse.json();
-    const aiContent = aiData.choices?.[0]?.message?.content;
-    const tokensUsed = aiData.usage?.total_tokens || 0;
-
-    if (!aiContent) {
-      console.error('No content in AI response');
-      return new Response(
-        JSON.stringify({ error: 'AI returned empty response' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const aiContent = aiResult.content;
+    const tokensUsed = aiResult.tokensUsed?.total || 0;
 
     // Parse AI response with robust stream-safe extraction
     let analysisResult: any;
@@ -222,7 +201,7 @@ serve(async (req) => {
       final_sentence: analysisResult.final_sentence,
       recommendation: analysisResult.recommendation,
       metrics_snapshot: metrics,
-      ai_model: 'google/gemini-2.5-flash',
+      ai_model: aiResult.model,
       prompt_hash: combinedPromptHash,
       tokens_used: tokensUsed,
       evidence_basis: analysisResult.evidence_basis || [],
@@ -250,7 +229,7 @@ serve(async (req) => {
       // Return result anyway, just log the save error
     }
 
-    console.log(`[ai-system-audit] Audit completed. Score: ${analysisResult.overall_score}, Recommendation: ${analysisResult.recommendation}`);
+    console.log(`[ai-system-audit] Audit completed. Score: ${analysisResult.overall_score}, Recommendation: ${analysisResult.recommendation}, Provider: ${aiResult.provider}, Fallback: ${aiResult.usedFallback}`);
 
     return new Response(
       JSON.stringify({
@@ -264,6 +243,9 @@ serve(async (req) => {
           persona: personaPrompt.hash,
           template: analysisTemplate.hash,
         },
+        ai_provider: aiResult.provider,
+        ai_model: aiResult.model,
+        used_fallback: aiResult.usedFallback,
         ...analysisResult,
         metrics_snapshot: metrics,
         tokens_used: tokensUsed,

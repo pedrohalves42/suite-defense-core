@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
+import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,15 +17,6 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-
-    if (!lovableApiKey) {
-      console.error('LOVABLE_API_KEY not configured');
-      return new Response(
-        JSON.stringify({ error: 'AI service not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Service client for admin operations
     const serviceClient = createClient(supabaseUrl, supabaseKey);
@@ -170,40 +162,36 @@ serve(async (req) => {
     console.log('[ai-red-team-assessment] Metrics collected, Ana summary available');
 
     // Build analysis prompt
-    let analysisPrompt = analysisTemplate.content
+    const analysisPrompt = analysisTemplate.content
       .replace('{metrics}', JSON.stringify(metrics, null, 2))
       .replace('{ana_summary}', anaSummary);
 
-    // Call Lovable AI
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: personaPrompt.content },
-          { role: 'user', content: analysisPrompt }
-        ],
-      }),
+    // Call AI via multi-provider routing (replaces direct Lovable AI call)
+    const messages: AIMessage[] = [
+      { role: 'system', content: personaPrompt.content },
+      { role: 'user', content: analysisPrompt }
+    ];
+
+    const aiResult = await callAI(messages, {
+      maxTokens: 8192,
+      functionName: 'ai-red-team-assessment',
+      tenantId,
     });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI API error:', aiResponse.status, errorText);
-      
-      if (aiResponse.status === 429) {
+    if (!aiResult.success || !aiResult.content) {
+      console.error('AI call failed:', aiResult.error);
+
+      // Check for rate limit
+      if (aiResult.error?.includes('429') || aiResult.error?.toLowerCase().includes('rate limit')) {
         return new Response(
           JSON.stringify({ error: 'Rate limit exceeded. Please try again later.', retry_after: 60 }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
-      // GRACEFUL FALLBACK: For 402 (credits exhausted), return deterministic assessment
-      if (aiResponse.status === 402) {
-        console.warn('[ai-red-team-assessment] AI credits exhausted (402). Creating deterministic fallback.');
+
+      // GRACEFUL FALLBACK: For 402 (credits exhausted) or total provider failure, return deterministic assessment
+      if (aiResult.error?.includes('402') || aiResult.error?.toLowerCase().includes('credits') || aiResult.error?.includes('All AI providers failed')) {
+        console.warn('[ai-red-team-assessment] AI unavailable. Creating deterministic fallback.');
         
         // Calculate deterministic binary criteria from metrics
         const binaryCriteria = {
@@ -224,7 +212,7 @@ serve(async (req) => {
           threat_level: threatLevel,
           red_score: redScore,
           binary_criteria: binaryCriteria,
-          attack_vectors: ['Análise determinística - créditos de IA esgotados'],
+          attack_vectors: ['Análise determinística - provedores de IA indisponíveis'],
           residual_risks: [`${criteriaCount} critérios de risco identificados automaticamente`],
           dimension_threats: {
             system_identity: binaryCriteria.offline_agents_exist ? 'medium' : 'low',
@@ -237,16 +225,14 @@ serve(async (req) => {
             compliance_alignment: 'unknown',
             market_trust: binaryCriteria.critical_alerts_open ? 'medium' : 'low',
           },
-          executive_threat_summary: `Análise determinística: ${criteriaCount} critérios de risco ativos. Créditos de IA esgotados - adicione créditos para análise completa.`,
-          worst_case_scenario: 'Não disponível - análise de IA requer créditos',
-          recommended_hardening: ['Adicionar créditos de IA para análise completa', 'Revisar critérios binários identificados'],
-          _fallback_reason: 'AI_CREDITS_EXHAUSTED_402',
+          executive_threat_summary: `Análise determinística: ${criteriaCount} critérios de risco ativos. Provedores de IA indisponíveis - análise completa requer reconexão.`,
+          worst_case_scenario: 'Não disponível - análise de IA requer provedor ativo',
+          recommended_hardening: ['Verificar configuração dos provedores de IA', 'Revisar critérios binários identificados'],
+          _fallback_reason: 'AI_PROVIDERS_UNAVAILABLE',
           _is_deterministic: true,
         };
         
         // Save deterministic assessment to database
-        const combinedPromptHash = `deterministic-fallback-402`;
-        
         const { data: savedAssessment } = await serviceClient
           .from('red_team_assessments')
           .insert({
@@ -268,7 +254,7 @@ serve(async (req) => {
             worst_case_scenario: deterministicResult.worst_case_scenario,
             recommended_hardening: deterministicResult.recommended_hardening,
             ai_model: 'deterministic-fallback',
-            ai_prompt_hash: combinedPromptHash,
+            ai_prompt_hash: 'deterministic-fallback',
             ai_response_raw: deterministicResult,
             metrics_snapshot: metrics,
           })
@@ -281,34 +267,25 @@ serve(async (req) => {
           JSON.stringify({
             success: true,
             assessment_id: savedAssessment?.id,
-            prompt_versions: { persona: 'deterministic', template: 'fallback-402' },
+            prompt_versions: { persona: 'deterministic', template: 'fallback' },
             prompt_hashes: { persona: 'n/a', template: 'n/a' },
             ...deterministicResult,
             metrics_snapshot: metrics,
             tokens_used: 0,
-            warning: 'AI credits exhausted. This is a deterministic fallback assessment. Add credits for full AI analysis.',
+            warning: 'AI providers unavailable. This is a deterministic fallback assessment.',
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
       return new Response(
-        JSON.stringify({ error: 'AI analysis failed' }),
+        JSON.stringify({ error: 'AI analysis failed', details: aiResult.error }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const aiData = await aiResponse.json();
-    const aiContent = aiData.choices?.[0]?.message?.content;
-    const tokensUsed = aiData.usage?.total_tokens || 0;
-
-    if (!aiContent) {
-      console.error('No content in AI response');
-      return new Response(
-        JSON.stringify({ error: 'AI returned empty response' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const aiContent = aiResult.content;
+    const tokensUsed = aiResult.tokensUsed?.total || 0;
 
     // Parse AI response
     let analysisResult;
@@ -351,7 +328,7 @@ serve(async (req) => {
         executive_threat_summary: analysisResult.executive_threat_summary,
         worst_case_scenario: analysisResult.worst_case_scenario,
         recommended_hardening: analysisResult.recommended_hardening || [],
-        ai_model: 'google/gemini-2.5-flash',
+        ai_model: aiResult.model,
         ai_prompt_hash: combinedPromptHash,
         ai_response_raw: analysisResult,
         metrics_snapshot: metrics,
@@ -363,7 +340,7 @@ serve(async (req) => {
       console.error('Error saving Red Team assessment:', saveError);
     }
 
-    console.log(`[ai-red-team-assessment] Assessment completed. Threat level: ${analysisResult.threat_level}, Red score: ${analysisResult.red_score}`);
+    console.log(`[ai-red-team-assessment] Assessment completed. Threat level: ${analysisResult.threat_level}, Red score: ${analysisResult.red_score}, Provider: ${aiResult.provider}, Fallback: ${aiResult.usedFallback}`);
 
     return new Response(
       JSON.stringify({
@@ -377,6 +354,9 @@ serve(async (req) => {
           persona: personaPrompt.hash,
           template: analysisTemplate.hash,
         },
+        ai_provider: aiResult.provider,
+        ai_model: aiResult.model,
+        used_fallback: aiResult.usedFallback,
         ...analysisResult,
         metrics_snapshot: metrics,
         tokens_used: tokensUsed,
