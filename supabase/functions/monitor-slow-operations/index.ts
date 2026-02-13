@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
+import { recordMetric } from '../_shared/apm.ts';
 
 /**
  * Monitor Slow Operations - FASE 4.1
@@ -98,6 +99,15 @@ Deno.serve(async (req) => {
       p_processed_count: slowOpCount,
       p_job_source: 'cron'
     });
+
+    // APM metric
+    recordMetric({
+      function_name: 'monitor-slow-operations',
+      operation_type: 'edge_function',
+      duration_ms: Date.now() - startedAt,
+      status_code: 200,
+      metadata: { slow_operations_count: slowOpCount }
+    }).catch(() => {});
 
     return new Response(
       JSON.stringify(result),

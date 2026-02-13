@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from "../_shared/cors.ts"
 import { RunMaintenanceUseCase } from "../_shared/hexagonal/use-cases/run-maintenance.ts"
+import { recordMetric } from '../_shared/apm.ts'
 
 /**
  * Thin Handler: maintenance-cron
@@ -16,9 +17,11 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
+  const startTime = Date.now();
   try {
     const useCase = new RunMaintenanceUseCase(supabase);
     const result = await useCase.execute();
+    const duration = Date.now() - startTime;
 
     // Report success to cron health monitoring
     try {
@@ -28,6 +31,15 @@ Deno.serve(async (req) => {
         p_error: null
       });
     } catch (_) { /* best effort */ }
+
+    // APM metric
+    recordMetric({
+      function_name: 'maintenance-cron',
+      operation_type: 'edge_function',
+      duration_ms: duration,
+      status_code: 200,
+      metadata: result as Record<string, any>
+    }).catch(() => {});
 
     return new Response(JSON.stringify({
       success: true,
