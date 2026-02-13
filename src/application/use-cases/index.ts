@@ -17,3 +17,12 @@ export * from './remediation';
 
 // Proactive Security
 export * from './security';
+
+// Patch Management
+export * from './patch';
+
+// Compliance
+export * from './compliance';
+
+// Maintenance
+export * from './maintenance';
