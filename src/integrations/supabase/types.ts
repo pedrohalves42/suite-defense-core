@@ -7874,6 +7874,65 @@ export type Database = {
           },
         ]
       }
+      compliance_snapshots: {
+        Row: {
+          calculated_at: string
+          category_scores: Json | null
+          created_at: string
+          grade: string
+          id: string
+          overall_score: number
+          tenant_id: string
+        }
+        Insert: {
+          calculated_at?: string
+          category_scores?: Json | null
+          created_at?: string
+          grade: string
+          id?: string
+          overall_score: number
+          tenant_id: string
+        }
+        Update: {
+          calculated_at?: string
+          category_scores?: Json | null
+          created_at?: string
+          grade?: string
+          id?: string
+          overall_score?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       cron_health_checks: {
         Row: {
           consecutive_failures: number | null

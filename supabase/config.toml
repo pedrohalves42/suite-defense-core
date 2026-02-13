@@ -699,3 +699,16 @@ verify_jwt = true
 # === Force Reinstall Fleet (Nuclear Reinstall Commands) ===
 [functions.force-reinstall-fleet]
 verify_jwt = false
+
+# === Agent Data Collection Functions ===
+[functions.collect-usb-devices]
+verify_jwt = false
+
+[functions.collect-certificates]
+verify_jwt = false
+
+[functions.update-baseline]
+verify_jwt = false
+
+[functions.calculate-compliance]
+verify_jwt = false
