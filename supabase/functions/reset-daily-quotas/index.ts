@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { recordMetric } from '../_shared/apm.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,6 +29,14 @@ Deno.serve(async (req) => {
     if (error) throw error;
 
     console.log("[RESET-DAILY-QUOTAS] Daily quotas reset successfully");
+
+    // APM metric
+    recordMetric({
+      function_name: 'reset-daily-quotas',
+      operation_type: 'edge_function',
+      duration_ms: Date.now() - Date.now(),
+      status_code: 200,
+    }).catch(() => {});
 
     return new Response(
       JSON.stringify({ success: true, message: "Daily quotas reset successfully" }),

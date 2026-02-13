@@ -8,6 +8,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { recordMetric } from '../_shared/apm.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -192,6 +193,15 @@ Deno.serve(async (req) => {
       p_success: true,
       p_error: null
     });
+
+    // APM metric
+    recordMetric({
+      function_name: 'cron-sentinel',
+      operation_type: 'edge_function',
+      duration_ms: duration,
+      status_code: 200,
+      metadata: { silent_jobs: unhealthyJobs.length, task_id: task?.id }
+    }).catch(() => {});
 
     return new Response(
       JSON.stringify({
