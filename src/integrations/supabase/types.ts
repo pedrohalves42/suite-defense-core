@@ -22832,6 +22832,7 @@ export type Database = {
           inserted_count: number
         }[]
       }
+      detect_blocked_attempts: { Args: never; Returns: Json }
       detect_chain_breaks: {
         Args: never
         Returns: {
@@ -22996,6 +22997,11 @@ export type Database = {
         }
         Returns: string
       }
+      evaluate_software_risk: {
+        Args: { p_agent_id: string }
+        Returns: undefined
+      }
+      evaluate_software_risk_all_agents: { Args: never; Returns: Json }
       evaluate_software_risk_with_reporting: { Args: never; Returns: Json }
       execute_ai_action_rollback: {
         Args: { p_ai_action_id: string; p_notes?: string; p_success: boolean }
@@ -23454,6 +23460,7 @@ export type Database = {
         Returns: Json
       }
       refresh_all_incident_slos: { Args: never; Returns: number }
+      refresh_incident_slos: { Args: never; Returns: Json }
       register_agent_signing_key: {
         Args: {
           p_agent_id: string
