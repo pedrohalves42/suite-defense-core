@@ -9903,48 +9903,6 @@ export type Database = {
         }
         Relationships: []
       }
-      hmac_signatures_2025_12: {
-        Row: {
-          agent_name: string
-          id: string
-          signature: string
-          used_at: string
-        }
-        Insert: {
-          agent_name: string
-          id?: string
-          signature: string
-          used_at?: string
-        }
-        Update: {
-          agent_name?: string
-          id?: string
-          signature?: string
-          used_at?: string
-        }
-        Relationships: []
-      }
-      hmac_signatures_2026_01: {
-        Row: {
-          agent_name: string
-          id: string
-          signature: string
-          used_at: string
-        }
-        Insert: {
-          agent_name: string
-          id?: string
-          signature: string
-          used_at?: string
-        }
-        Update: {
-          agent_name?: string
-          id?: string
-          signature?: string
-          used_at?: string
-        }
-        Relationships: []
-      }
       hmac_signatures_2026_02: {
         Row: {
           agent_name: string
@@ -21495,6 +21453,19 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      v_database_size_report: {
+        Row: {
+          index_size: string | null
+          last_autovacuum: string | null
+          rows_deleted: number | null
+          rows_inserted: number | null
+          schemaname: unknown
+          table_name: unknown
+          table_size: string | null
+          total_size: string | null
+        }
+        Relationships: []
       }
       v_dlq_pending_attention: {
         Row: {
