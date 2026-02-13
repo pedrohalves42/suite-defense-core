@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
 import { safeParseJSON, createFallbackAudit, createFallbackRedTeam } from "../_shared/json-parser.ts";
+import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
 
 /**
  * AI Full Audit Orchestrator v2.1
@@ -18,11 +19,7 @@ import { safeParseJSON, createFallbackAudit, createFallbackRedTeam } from "../_s
  * - Layer 4: Binary Criteria for threat_level (deterministic)
  * - Layer 5: Market Score (conservative smoothing)
  * 
- * JSON Parsing (4 layers):
- * - Layer 1: Stream-safe extraction (respects string boundaries)
- * - Layer 2: Minimal sanitization (control chars only)
- * - Layer 3: Defensive parse with logging
- * - Layer 4: Intelligent fallback (never breaks pipeline)
+ * v2.2: Migrated to multi-provider AI routing via ai-provider-helper.ts
  */
 
 const corsHeaders = {
@@ -33,109 +30,43 @@ const corsHeaders = {
 
 /**
  * Calculate deterministic base score from metrics (no LLM variance)
- * This provides a stable foundation that Red Team adjusts as risk factor
  * 
- * COMMIT 2: Corrigido para não penalizar ausência de uso
- * - REGRA 1: Não penalizar se aiActions.total === 0 (IA ainda não usada)
- * - REGRA 2: Só penalizar se HOUVE execução SEM aprovação
- * - REGRA 3: Revisão humana só exigida em volume significativo
- * - REGRA 4: Rollback = 0 NÃO é penalidade (nunca precisou reverter)
+ * REGRA 1: Não penalizar se aiActions.total === 0 (IA ainda não usada)
+ * REGRA 2: Só penalizar se HOUVE execução SEM aprovação
+ * REGRA 3: Revisão humana só exigida em volume significativo
+ * REGRA 4: Rollback = 0 NÃO é penalidade (nunca precisou reverter)
  */
 function calculateDeterministicScore(metrics: any): number {
-  let score = 70; // Base score
+  let score = 70;
   
-  // Penalidades determinísticas
   const agents = metrics?.agents || {};
   const aiActions = metrics?.ai_actions || {};
-  const rollbacks = metrics?.rollbacks || {};
-  const users = metrics?.users || {};
   const dlq = metrics?.dlq || {};
   const criticalAlerts = metrics?.critical_alerts || {};
+  const users = metrics?.users || {};
   const alerts = metrics?.alerts || {};
   
-  // Agentes offline (-5 cada, max -15)
-  if (agents.offline > 0) {
-    score -= Math.min(agents.offline * 5, 15);
-  }
+  if (agents.offline > 0) score -= Math.min(agents.offline * 5, 15);
+  if (aiActions.total > 0 && (aiActions.approval_rate || 0) === 0) score -= 15;
+  if (aiActions.total > 10 && (aiActions.human_reviewed || 0) === 0) score -= 10;
+  if ((users.count || 0) <= 1) score -= 2;
+  if (dlq.current > 0) score -= Math.min(dlq.current * 5, 10);
+  if (criticalAlerts.open > 0) score -= Math.min(criticalAlerts.open * 3, 9);
   
-  // REGRA 1: Não penalizar ausência de uso de IA
-  // REGRA 2: Só penaliza se HOUVE execução SEM aprovação
-  if (aiActions.total > 0 && (aiActions.approval_rate || 0) === 0) {
-    score -= 15;
-  }
-  
-  // REGRA 3: Revisão humana só exigida em volume significativo (> 10 ações)
-  if (aiActions.total > 10 && (aiActions.human_reviewed || 0) === 0) {
-    score -= 10;
-  }
-  
-  // REGRA 4: Rollback = 0 NÃO é penalidade (nunca precisou reverter = estabilidade!)
-  // REMOVIDO: if (rollbacks.total === 0) { score -= 5; }
-  
-  // Single user system (-2 reduzido de -5, pode ser sistema novo)
-  if ((users.count || 0) <= 1) {
-    score -= 2;
-  }
-  
-  // DLQ has items (-5 each, max -10)
-  if (dlq.current > 0) {
-    score -= Math.min(dlq.current * 5, 10);
-  }
-  
-  // Critical alerts open (-3 each, max -9)
-  if (criticalAlerts.open > 0) {
-    score -= Math.min(criticalAlerts.open * 3, 9);
-  }
-  
-  // Bônus determinísticos
-  
-  // Decision coverage = 100% (+5)
-  if (alerts.decision_coverage_percent === 100) {
-    score += 5;
-  }
-  
-  // Evidence chain healthy (+5)
-  if (metrics?.evidence_chain?.healthy === true) {
-    score += 5;
-  }
-  
-  // Shadow validation rate > 50% (+3)
-  if ((aiActions.shadow_validation_rate || 0) > 50) {
-    score += 3;
-  }
-  
-  // DLQ resolution = 100% (+3)
-  if (dlq.resolution_rate === 100) {
-    score += 3;
-  }
-  
-  // BÔNUS: 100% approval rate com volume significativo (+5)
-  if (aiActions.total > 0 && aiActions.approval_rate === 100) {
-    score += 5;
-  }
-  
-  // BÔNUS: 100% human reviewed (+3)
-  if (aiActions.total > 0 && aiActions.human_reviewed === aiActions.total) {
-    score += 3;
-  }
+  if (alerts.decision_coverage_percent === 100) score += 5;
+  if (metrics?.evidence_chain?.healthy === true) score += 5;
+  if ((aiActions.shadow_validation_rate || 0) > 50) score += 3;
+  if (dlq.resolution_rate === 100) score += 3;
+  if (aiActions.total > 0 && aiActions.approval_rate === 100) score += 5;
+  if (aiActions.total > 0 && aiActions.human_reviewed === aiActions.total) score += 3;
   
   return Math.max(20, Math.min(100, score));
 }
 
-/**
- * Calculate Red Team risk factor from red_score (0-100)
- * Returns multiplier between 0.7 and 1.0
- */
 function calculateRiskFactor(redScore: number): number {
-  // red_score 0 = no risk = factor 1.0
-  // red_score 100 = max risk = factor 0.7
-  return Math.max(0.7, 1 - (redScore / 333)); // 100/333 ≈ 0.3, so max reduction is 30%
+  return Math.max(0.7, 1 - (redScore / 333));
 }
 
-/**
- * Calculate binary criteria from metrics (fallback if LLM doesn't return)
- * This ensures threat_level is ALWAYS deterministic
- */
 function calculateBinaryCriteria(metrics: any): Record<string, boolean> {
   const agents = metrics?.agents || {};
   const aiActions = metrics?.ai_actions || {};
@@ -155,9 +86,6 @@ function calculateBinaryCriteria(metrics: any): Record<string, boolean> {
   };
 }
 
-/**
- * Get deterministic threat level from criteria count
- */
 function getDeterministicThreatLevel(criteriaCountTrue: number): string {
   if (criteriaCountTrue >= 4) return 'critical';
   if (criteriaCountTrue === 3) return 'high';
@@ -165,9 +93,6 @@ function getDeterministicThreatLevel(criteriaCountTrue: number): string {
   return 'low';
 }
 
-/**
- * Log governance event for audit trail
- */
 async function logGovernanceEvent(
   supabase: any,
   tenantId: string,
@@ -193,8 +118,20 @@ async function logGovernanceEvent(
     });
   } catch (err) {
     console.warn('[ai-full-audit] Failed to log governance event:', err);
-    // Non-blocking - don't fail audit if logging fails
   }
+}
+
+/**
+ * Check if AI failure is due to credits/rate limiting
+ */
+function isCreditsExhausted(error?: string): boolean {
+  if (!error) return false;
+  return error.includes('402') || error.toLowerCase().includes('credits') || error.includes('All AI providers failed');
+}
+
+function isRateLimited(error?: string): boolean {
+  if (!error) return false;
+  return error.includes('429') || error.toLowerCase().includes('rate limit');
 }
 
 serve(async (req) => {
@@ -206,15 +143,6 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-
-    if (!lovableApiKey) {
-      console.error('LOVABLE_API_KEY not configured');
-      return new Response(
-        JSON.stringify({ error: 'AI service not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Service client for admin operations (inserts, updates)
     const serviceClient = createClient(supabaseUrl, supabaseKey);
@@ -225,11 +153,10 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     
     let tenantId: string | null = null;
-    let userClient = serviceClient; // Default to service client for internal calls
+    let userClient = serviceClient;
     let isInternalCall = false;
 
     if (internalSecret && INTERNAL_FUNCTION_SECRET && internalSecret === INTERNAL_FUNCTION_SECRET) {
-      // Internal call - use service role, get tenant_id from body
       isInternalCall = true;
       console.log('[ai-full-audit] Internal call detected');
       
@@ -237,20 +164,17 @@ serve(async (req) => {
         const body = await req.clone().json();
         tenantId = body.tenant_id;
       } catch {
-        // Try query param
         const url = new URL(req.url);
         tenantId = url.searchParams.get('tenant_id');
       }
       
       if (!tenantId) {
-        // Get first tenant
         const { data: tenants } = await serviceClient.from('tenants').select('id').limit(1);
         tenantId = tenants?.[0]?.id;
       }
       
       console.log('[ai-full-audit] Internal call for tenant:', tenantId);
     } else if (authHeader) {
-      // User call - validate token and get tenant from roles
       userClient = createClient(supabaseUrl, supabaseAnonKey, {
         global: { headers: { Authorization: authHeader } },
       });
@@ -265,11 +189,9 @@ serve(async (req) => {
         );
       }
 
-      // Get user's tenant - prefer x-tenant-id header
       const requestedTenantId = req.headers.get('x-tenant-id');
       console.log(`[ai-full-audit] Requested tenant from header: ${requestedTenantId || 'not provided'}`);
 
-      // Get all user roles
       const { data: userRoles } = await serviceClient
         .from('user_roles')
         .select('tenant_id, role')
@@ -307,7 +229,7 @@ serve(async (req) => {
       );
     }
     
-    console.log(`[ai-full-audit] Starting FULL audit v2.0 for tenant ${tenantId} (Red → Ana → Gap)`);
+    console.log(`[ai-full-audit] Starting FULL audit v2.2 for tenant ${tenantId} (Red → Ana → Gap) [multi-provider]`);
 
     // Get metrics using userClient (so auth.uid() works in RPC)
     const { data: metrics, error: metricsError } = await userClient
@@ -325,7 +247,7 @@ serve(async (req) => {
           }
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     }
 
     // ============ PHASE 1: RED TEAM (FIRST - NO BIAS) ============
@@ -349,54 +271,24 @@ serve(async (req) => {
       .replace('{metrics}', JSON.stringify(metrics, null, 2))
       .replace('{ana_summary}', 'Nenhuma análise Ana disponível - executando Red Team primeiro para evitar viés otimista.');
 
-    // Red Team AI call with timeout and robust error handling
-    const redController = new AbortController();
-    const redTimeoutId = setTimeout(() => redController.abort(), 45000); // 45s timeout
+    // Red Team AI call via multi-provider
+    const redMessages: AIMessage[] = [
+      { role: 'system', content: redPersona.content },
+      { role: 'user', content: redPrompt }
+    ];
 
-    let redResponse: Response;
-    try {
-      redResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: redPersona.content },
-            { role: 'user', content: redPrompt }
-          ],
-        }),
-        signal: redController.signal,
-      });
-    } catch (fetchError: unknown) {
-      clearTimeout(redTimeoutId);
-      const err = fetchError as Error;
-      if (err.name === 'AbortError') {
-        console.error('[ai-full-audit] Red Team request timeout (45s)');
-        return new Response(
-          JSON.stringify({ error: 'Timeout na chamada Red Team (45s)', stage: 'red_team' }),
-          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      console.error('[ai-full-audit] Red Team fetch error:', fetchError);
-      return new Response(
-        JSON.stringify({ error: 'Erro de conexão com AI', stage: 'red_team' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } finally {
-      clearTimeout(redTimeoutId);
-    }
+    const redAiResult = await callAI(redMessages, {
+      maxTokens: 8192,
+      functionName: 'ai-full-audit-red-team',
+      tenantId,
+    });
 
-    // Handle AI API errors with graceful fallback for 402 (credits exhausted)
-    if (!redResponse.ok) {
-      const errorText = await redResponse.text();
-      console.error('[ai-full-audit] Red Team AI error:', redResponse.status, errorText);
-      
-      // GRACEFUL FALLBACK: For 402 (credits exhausted), return deterministic audit result
-      if (redResponse.status === 402) {
-        console.warn('[ai-full-audit] AI credits exhausted (402). Returning deterministic audit result.');
+    // Handle Red Team AI failure with graceful fallback
+    if (!redAiResult.success || !redAiResult.content) {
+      console.error('[ai-full-audit] Red Team AI failed:', redAiResult.error);
+
+      if (isCreditsExhausted(redAiResult.error)) {
+        console.warn('[ai-full-audit] AI unavailable. Returning deterministic audit result.');
         
         const fallbackCriteria = calculateBinaryCriteria(metrics);
         const criteriaCount = Object.values(fallbackCriteria).filter(Boolean).length;
@@ -404,88 +296,50 @@ serve(async (req) => {
         const deterministicRedScore = Math.min(100, criteriaCount * 15);
         const deterministicScore = calculateDeterministicScore(metrics);
         
-        // Log the credit exhaustion event
         await logGovernanceEvent(
-          serviceClient, tenantId, null, 'ai_credits_exhausted',
+          serviceClient, tenantId, null, 'ai_providers_unavailable',
           null, deterministicRedScore, 'deterministic_fallback',
-          'Créditos de IA esgotados (402). Usando análise determinística completa.',
-          { criteria_count: criteriaCount, threat_level: deterministicThreatLevel, deterministic_score: deterministicScore }
+          'Todos os provedores de IA falharam. Usando análise determinística completa.',
+          { criteria_count: criteriaCount, threat_level: deterministicThreatLevel, deterministic_score: deterministicScore, error: redAiResult.error }
         );
         
-        // Return deterministic audit result without AI analysis
         return new Response(
           JSON.stringify({
             success: true,
             audit_id: null,
             overall_score: deterministicScore,
-            market_score: Math.round(deterministicScore * 0.9), // Conservative
+            market_score: Math.round(deterministicScore * 0.9),
             threat_level: deterministicThreatLevel,
             red_score: deterministicRedScore,
             confidence_gap: 0,
             is_deterministic: true,
-            fallback_reason: 'AI_CREDITS_EXHAUSTED_402',
+            fallback_reason: 'AI_PROVIDERS_UNAVAILABLE',
             binary_criteria: fallbackCriteria,
             governance_applied: ['deterministic_fallback'],
-            executive_summary: `Análise determinística: Score ${deterministicScore}/100 baseado em métricas. ${criteriaCount} critérios de risco identificados. Créditos de IA esgotados - adicione créditos para análise completa com Red Team e Ana.`,
+            executive_summary: `Análise determinística: Score ${deterministicScore}/100 baseado em métricas. ${criteriaCount} critérios de risco identificados. Provedores de IA indisponíveis.`,
             recommendation: criteriaCount >= 3 ? 'Ação imediata requerida' : criteriaCount >= 2 ? 'Atenção recomendada' : 'Sistema operando normalmente',
             tokens_used: 0,
-            warning: 'AI credits exhausted (402). This is a deterministic fallback audit based on metrics only. Add credits for full AI-powered Red Team + Ana analysis.',
+            warning: 'AI providers unavailable. Deterministic fallback audit based on metrics only.',
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
-      // For 429 (rate limit), return specific error
-      if (redResponse.status === 429) {
+      if (isRateLimited(redAiResult.error)) {
         return new Response(
-          JSON.stringify({ 
-            error: 'Rate limit exceeded. Please try again later.', 
-            stage: 'red_team',
-            retry_after: 60
-          }),
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.', stage: 'red_team', retry_after: 60 }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
       return new Response(
-        JSON.stringify({ error: 'Red Team analysis failed', status: redResponse.status, stage: 'red_team' }),
-        { status: redResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Red Team analysis failed', stage: 'red_team', details: redAiResult.error }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate response before parsing
-    const redResponseText = await redResponse.text();
-    console.log('[ai-full-audit] Red Team response length:', redResponseText.length);
-
-    if (!redResponseText || redResponseText.length === 0) {
-      console.error('[ai-full-audit] Empty response from Red Team AI');
-      return new Response(
-        JSON.stringify({ error: 'AI retornou resposta vazia', stage: 'red_team' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    let redData;
-    try {
-      redData = JSON.parse(redResponseText);
-    } catch (parseErr) {
-      console.error('[ai-full-audit] Failed to parse Red Team AI response:', redResponseText.substring(0, 500));
-      return new Response(
-        JSON.stringify({ error: 'Resposta AI inválida (JSON malformado)', stage: 'red_team' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const redContent = redData.choices?.[0]?.message?.content;
-    const redTokens = redData.usage?.total_tokens || 0;
-
-    if (!redContent) {
-      console.error('[ai-full-audit] No content in Red Team AI response:', JSON.stringify(redData).substring(0, 500));
-      return new Response(
-        JSON.stringify({ error: 'AI não retornou conteúdo', stage: 'red_team' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const redContent = redAiResult.content;
+    const redTokens = redAiResult.tokensUsed?.total || 0;
 
     // Parse Red Team response with robust stream-safe parser
     let redResult: any;
@@ -494,10 +348,7 @@ serve(async (req) => {
       redResult = safeParseJSON(redContent, 'red-team');
     } catch (parseError) {
       console.error('[ai-full-audit] Red Team parse failed, using fallback');
-      console.error('[ai-full-audit] Parse error:', parseError);
-      console.error('[ai-full-audit] Content length:', redContent.length);
       
-      // Use fallback with deterministic binary criteria
       const fallbackCriteria = calculateBinaryCriteria(metrics);
       redResult = createFallbackRedTeam('AI_JSON_PARSE_ERROR', fallbackCriteria);
       redTeamFallbackUsed = true;
@@ -510,18 +361,16 @@ serve(async (req) => {
       );
     }
 
-    // ============ BINARY CRITERIA FALLBACK (Ajuste C) ============
+    // ============ BINARY CRITERIA FALLBACK ============
     let binaryCriteria = redResult.binary_criteria || {};
     let binaryCriteriaFallbackUsed = false;
     
-    // Check if LLM returned valid binary_criteria
     if (Object.keys(binaryCriteria).length < 7) {
       console.warn('[ai-full-audit] Red Team binary_criteria incomplete, calculating fallback');
       binaryCriteria = calculateBinaryCriteria(metrics);
       redResult.binary_criteria = binaryCriteria;
       binaryCriteriaFallbackUsed = true;
       
-      // Log governance event
       await logGovernanceEvent(
         serviceClient, tenantId, null, 'binary_criteria_fallback',
         null, Object.values(binaryCriteria).filter((v: unknown) => v === true).length,
@@ -533,14 +382,13 @@ serve(async (req) => {
     const criteriaCountTrue = Object.values(binaryCriteria).filter((v: unknown) => v === true).length;
     redResult.criteria_count_true = criteriaCountTrue;
     
-    // Validate and correct threat_level if inconsistent
     const expectedThreatLevel = getDeterministicThreatLevel(criteriaCountTrue);
     if (redResult.threat_level !== expectedThreatLevel) {
       console.warn(`[ai-full-audit] threat_level mismatch: LLM=${redResult.threat_level}, criteria=${expectedThreatLevel}. Correcting.`);
       redResult.threat_level = expectedThreatLevel;
     }
     
-    // Save Red Team result with binary criteria
+    // Save Red Team result
     const redPromptHash = `${redPersona.hash.slice(0, 8)}-${redTemplate.hash.slice(0, 8)}`;
     
     const { data: savedRed, error: redSaveError } = await serviceClient
@@ -563,7 +411,7 @@ serve(async (req) => {
         executive_threat_summary: redResult.executive_threat_summary,
         worst_case_scenario: redResult.worst_case_scenario,
         recommended_hardening: redResult.recommended_hardening || [],
-        ai_model: 'google/gemini-2.5-flash',
+        ai_model: redAiResult.model,
         ai_prompt_hash: redPromptHash,
         ai_response_raw: redResult,
         metrics_snapshot: metrics,
@@ -577,7 +425,7 @@ serve(async (req) => {
       console.error('Error saving Red Team:', redSaveError);
     }
     
-    console.log(`[ai-full-audit] Phase 1 complete. Red Score: ${redResult.red_score}, Threat: ${redResult.threat_level}, Criteria TRUE: ${criteriaCountTrue}, Fallback: ${binaryCriteriaFallbackUsed}`);
+    console.log(`[ai-full-audit] Phase 1 complete. Red Score: ${redResult.red_score}, Threat: ${redResult.threat_level}, Provider: ${redAiResult.provider}, Criteria TRUE: ${criteriaCountTrue}`);
 
     // ============ PHASE 2: ANA (WITH RED TEAM CONTEXT) ============
     console.log('[ai-full-audit] Phase 2: Running Ana audit with Red Team handoff...');
@@ -609,62 +457,32 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
 
     const anaPrompt = anaTemplate.content.replace('{metrics}', JSON.stringify(metrics, null, 2) + '\n\n' + redTeamContext);
 
-    // Ana AI call with timeout and robust error handling
-    const anaController = new AbortController();
-    const anaTimeoutId = setTimeout(() => anaController.abort(), 45000); // 45s timeout
+    // Ana AI call via multi-provider
+    const anaMessages: AIMessage[] = [
+      { role: 'system', content: anaPersona.content },
+      { role: 'user', content: anaPrompt }
+    ];
 
-    let anaResponse: Response;
-    try {
-      anaResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: anaPersona.content },
-            { role: 'user', content: anaPrompt }
-          ],
-        }),
-        signal: anaController.signal,
-      });
-    } catch (fetchError: unknown) {
-      clearTimeout(anaTimeoutId);
-      const err = fetchError as Error;
-      if (err.name === 'AbortError') {
-        console.error('[ai-full-audit] Ana request timeout (45s)');
-        return new Response(
-          JSON.stringify({ error: 'Timeout na chamada Ana (45s)', stage: 'ana' }),
-          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      console.error('[ai-full-audit] Ana fetch error:', fetchError);
-      return new Response(
-        JSON.stringify({ error: 'Erro de conexão com AI', stage: 'ana' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } finally {
-      clearTimeout(anaTimeoutId);
-    }
+    const anaAiResult = await callAI(anaMessages, {
+      maxTokens: 8192,
+      functionName: 'ai-full-audit-ana',
+      tenantId,
+    });
 
-    if (!anaResponse.ok) {
-      const errorText = await anaResponse.text();
-      console.error('[ai-full-audit] Ana AI error:', anaResponse.status, errorText);
-      
-      // GRACEFUL FALLBACK: For 402 (credits exhausted), return deterministic result
-      if (anaResponse.status === 402) {
-        console.warn('[ai-full-audit] AI credits exhausted (402) at Ana phase. Returning deterministic audit result.');
+    // Handle Ana AI failure
+    if (!anaAiResult.success || !anaAiResult.content) {
+      console.error('[ai-full-audit] Ana AI failed:', anaAiResult.error);
+
+      if (isCreditsExhausted(anaAiResult.error)) {
+        console.warn('[ai-full-audit] AI unavailable at Ana phase. Returning deterministic result with Red Team.');
         
         const deterministicScore = calculateDeterministicScore(metrics);
-        const criteriaCountTrue = Object.values(binaryCriteria).filter(Boolean).length;
         const deterministicThreatLevel = getDeterministicThreatLevel(criteriaCountTrue);
         
         await logGovernanceEvent(
-          serviceClient, tenantId, null, 'ai_credits_exhausted_ana_phase',
+          serviceClient, tenantId, null, 'ai_unavailable_ana_phase',
           null, deterministicScore, 'deterministic_fallback',
-          'Créditos de IA esgotados (402) na fase Ana. Usando resultado determinístico com Red Team já executado.',
+          'Provedores de IA indisponíveis na fase Ana. Usando resultado determinístico com Red Team já executado.',
           { criteria_count: criteriaCountTrue, red_score: redResult.red_score }
         );
         
@@ -678,70 +496,34 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
             red_score: redResult.red_score,
             confidence_gap: 0,
             is_deterministic: true,
-            fallback_reason: 'AI_CREDITS_EXHAUSTED_402_ANA_PHASE',
+            fallback_reason: 'AI_UNAVAILABLE_ANA_PHASE',
             binary_criteria: binaryCriteria,
             red_team_completed: true,
             governance_applied: ['deterministic_fallback', 'red_team_completed'],
-            executive_summary: `Análise parcial: Red Team executado (score ${redResult.red_score}). Ana não executada por falta de créditos. Score determinístico: ${deterministicScore}/100.`,
+            executive_summary: `Análise parcial: Red Team executado (score ${redResult.red_score}). Ana não executada - provedores indisponíveis. Score determinístico: ${deterministicScore}/100.`,
             recommendation: criteriaCountTrue >= 3 ? 'Ação imediata requerida' : criteriaCountTrue >= 2 ? 'Atenção recomendada' : 'Sistema operando normalmente',
             tokens_used: redTokens,
-            warning: 'AI credits exhausted during Ana phase. Red Team completed. Add credits for full analysis.',
+            warning: 'AI unavailable during Ana phase. Red Team completed. Check provider configuration.',
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
-      // For 429 (rate limit), return specific error
-      if (anaResponse.status === 429) {
+      if (isRateLimited(anaAiResult.error)) {
         return new Response(
-          JSON.stringify({ 
-            error: 'Rate limit exceeded. Please try again later.', 
-            stage: 'ana',
-            retry_after: 60
-          }),
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.', stage: 'ana', retry_after: 60 }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
       return new Response(
-        JSON.stringify({ error: 'Ana analysis failed', status: anaResponse.status, stage: 'ana' }),
-        { status: anaResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Ana analysis failed', stage: 'ana', details: anaAiResult.error }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate response before parsing
-    const anaResponseText = await anaResponse.text();
-    console.log('[ai-full-audit] Ana response length:', anaResponseText.length);
-
-    if (!anaResponseText || anaResponseText.length === 0) {
-      console.error('[ai-full-audit] Empty response from Ana AI');
-      return new Response(
-        JSON.stringify({ error: 'AI retornou resposta vazia', stage: 'ana' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    let anaData;
-    try {
-      anaData = JSON.parse(anaResponseText);
-    } catch (parseErr) {
-      console.error('[ai-full-audit] Failed to parse Ana AI response:', anaResponseText.substring(0, 500));
-      return new Response(
-        JSON.stringify({ error: 'Resposta AI inválida (JSON malformado)', stage: 'ana' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const anaContent = anaData.choices?.[0]?.message?.content;
-    const anaTokens = anaData.usage?.total_tokens || 0;
-
-    if (!anaContent) {
-      console.error('[ai-full-audit] No content in Ana AI response:', JSON.stringify(anaData).substring(0, 500));
-      return new Response(
-        JSON.stringify({ error: 'AI não retornou conteúdo', stage: 'ana' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const anaContent = anaAiResult.content;
+    const anaTokens = anaAiResult.tokensUsed?.total || 0;
 
     // Parse Ana response with robust stream-safe parser
     let anaResult: any;
@@ -750,10 +532,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       anaResult = safeParseJSON(anaContent, 'ana');
     } catch (parseError) {
       console.error('[ai-full-audit] Ana parse failed, using fallback');
-      console.error('[ai-full-audit] Parse error:', parseError);
-      console.error('[ai-full-audit] Content length:', anaContent.length);
       
-      // Use fallback audit result - pipeline continues
       anaResult = createFallbackAudit('AI_JSON_PARSE_ERROR');
       anaFallbackUsed = true;
       
@@ -768,7 +547,6 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     // ============ SCORE GOVERNANCE: Guardrails + Moving Average ============
     console.log('[ai-full-audit] Applying score governance v2.0...');
     
-    // Step 1: Calculate deterministic base score (no LLM variance)
     const deterministicBaseScore = calculateDeterministicScore(metrics);
     console.log(`[ai-full-audit] Deterministic base score: ${deterministicBaseScore}`);
     
@@ -779,7 +557,6 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       { metrics_used: ['agents', 'ai_actions', 'rollbacks', 'users', 'dlq', 'critical_alerts'] }
     );
     
-    // Step 2: Calculate risk factor from Red Team
     const redRiskFactor = calculateRiskFactor(redResult.red_score);
     console.log(`[ai-full-audit] Red risk factor: ${redRiskFactor.toFixed(3)}`);
     
@@ -790,7 +567,6 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       { red_score: redResult.red_score, threat_level: redResult.threat_level }
     );
     
-    // Step 3: Get previous audit for guardrail check (with robust fallback - Ajuste B)
     const { data: prevAuditData, error: rpcError } = await serviceClient
       .rpc('get_previous_audit_score', { p_tenant_id: tenantId });
     
@@ -798,7 +574,6 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       console.warn('[ai-full-audit] RPC get_previous_audit_score failed:', rpcError.message);
     }
     
-    // Robust fallbacks for historical scores
     const rawScore = anaResult.overall_score;
     const previousScore = prevAuditData?.[0]?.previous_score ?? rawScore;
     const avgLast3 = prevAuditData?.[0]?.avg_last_3 ?? rawScore;
@@ -806,7 +581,6 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     
     console.log(`[ai-full-audit] Historical scores: prev=${previousScore}, avg3=${avgLast3}, avg7=${avgLast7} (fallback: ${!prevAuditData?.[0]})`);
     
-    // Step 4: Apply guardrail (max ±10 points variation)
     const rawDelta = rawScore - previousScore;
     let guardedScore = rawScore;
     let guardrailApplied = false;
@@ -831,11 +605,9 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       serviceClient, tenantId, null, 'raw_score_calculated',
       null, rawScore, 'llm_evaluation',
       'Score bruto retornado pelo LLM Ana',
-      { model: 'google/gemini-2.5-flash', tokens: anaTokens }
+      { model: anaAiResult.model, provider: anaAiResult.provider, tokens: anaTokens }
     );
     
-    // Step 5: Calculate official score (weighted moving average)
-    // 50% current (guarded) + 30% avg_last_3 + 20% avg_last_7
     let officialScore = Math.round(
       0.5 * guardedScore +
       0.3 * avgLast3 +
@@ -849,8 +621,6 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       { weights: { current: 0.5, avg_3: 0.3, avg_7: 0.2 } }
     );
     
-    // Step 6: Calculate market score (more conservative, smoother)
-    // 30% current + 40% avg_3 + 30% avg_7, with floor adjustment
     let marketScore = Math.round(
       0.3 * guardedScore +
       0.4 * avgLast3 +
@@ -858,7 +628,6 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     );
     
     let marketFloorApplied = false;
-    // Don't let market score drop below 40 unless confirmed trend
     if (marketScore < 40 && avgLast3 > 50) {
       const originalMarket = marketScore;
       marketScore = 50;
@@ -882,13 +651,9 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     
     console.log(`[ai-full-audit] Scores: raw=${rawScore}, guarded=${guardedScore}, official=${officialScore}, market=${marketScore}`);
     
-    // NOTE: Score floor policy REMOVED - showing real scores for transparency
-    // Scores are now displayed exactly as calculated by AI and deterministic rules
-    
     // Save Ana result with governance data
     const anaPromptHash = `${anaPersona.hash.slice(0, 8)}-${anaTemplate.hash.slice(0, 8)}`;
     
-    // Map dimension names to columns
     const dimensionMapping: Record<string, { scoreCol: string; analysisCol: string }> = {
       'system_identity': { scoreCol: 'score_system_identity', analysisCol: 'analysis_system_identity' },
       'governance': { scoreCol: 'score_control_vs_monitor', analysisCol: 'analysis_control_vs_monitor' },
@@ -903,8 +668,8 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
 
     const insertData: Record<string, any> = {
       tenant_id: tenantId,
-      created_by: isInternalCall ? null : null, // User ID handled separately for non-internal calls
-      overall_score: guardedScore, // Use guarded score as official overall
+      created_by: isInternalCall ? null : null,
+      overall_score: guardedScore,
       raw_score: rawScore,
       official_score: officialScore,
       market_score: marketScore,
@@ -916,7 +681,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       final_sentence: anaResult.final_sentence,
       recommendation: anaResult.recommendation,
       metrics_snapshot: metrics,
-      ai_model: 'google/gemini-2.5-flash',
+      ai_model: anaAiResult.model,
       prompt_hash: anaPromptHash,
       tokens_used: anaTokens,
       evidence_basis: anaResult.evidence_basis || [],
@@ -941,7 +706,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       console.error('Error saving Ana audit:', anaSaveError);
     }
 
-    console.log(`[ai-full-audit] Phase 2 complete. Raw: ${rawScore}, Official: ${officialScore}, Market: ${marketScore}, Guardrail: ${guardrailApplied}`);
+    console.log(`[ai-full-audit] Phase 2 complete. Raw: ${rawScore}, Official: ${officialScore}, Market: ${marketScore}, Providers: Red=${redAiResult.provider}, Ana=${anaAiResult.provider}`);
 
     // ============ PHASE 3: CONFIDENCE GAP ============
     console.log('[ai-full-audit] Phase 3: Calculating Confidence Gap...');
@@ -950,7 +715,6 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     const redScore = redResult.red_score;
     const gap = anaScore - redScore;
 
-    // Determine health status
     let healthStatus: 'healthy' | 'attention' | 'critical';
     if (gap > 40) {
       healthStatus = 'healthy';
@@ -960,7 +724,6 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       healthStatus = 'critical';
     }
 
-    // Get previous gap for delta calculation
     const { data: prevGap } = await serviceClient
       .from('audit_confidence_gaps')
       .select('confidence_gap')
@@ -972,19 +735,17 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     const previousGap = prevGap?.confidence_gap || null;
     const gapDelta = previousGap !== null ? gap - previousGap : null;
 
-    // Calculate dimension gaps
     const dimensionGaps: Record<string, number> = {};
     const dims = ['system_identity', 'governance', 'evidence_proof', 'human_oversight', 
                   'operational_resilience', 'cross_tenant_isolation', 'transparency_explainability',
                   'compliance_alignment', 'market_trust'];
     
     for (const dim of dims) {
-      const anaScore = anaResult.dimensions?.[dim]?.score || 0;
+      const aDimScore = anaResult.dimensions?.[dim]?.score || 0;
       const redThreat = redResult.dimension_threats?.[dim] || 0;
-      dimensionGaps[dim] = anaScore - redThreat;
+      dimensionGaps[dim] = aDimScore - redThreat;
     }
 
-    // Alert logic
     let alertTriggered = false;
     let alertReason: string | null = null;
 
@@ -996,7 +757,6 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       alertReason = `Degradação significativa: gap caiu ${Math.abs(gapDelta)} pontos.`;
     }
 
-    // Save confidence gap
     const { data: savedGap, error: gapSaveError } = await serviceClient
       .from('audit_confidence_gaps')
       .insert({
@@ -1021,12 +781,12 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     }
 
     console.log(`[ai-full-audit] Phase 3 complete. Gap: ${gap} (${healthStatus}), Alert: ${alertTriggered}`);
-    console.log(`[ai-full-audit] FULL AUDIT v2.0 COMPLETE. Total tokens: ${redTokens + anaTokens}`);
+    console.log(`[ai-full-audit] FULL AUDIT v2.2 COMPLETE. Total tokens: ${redTokens + anaTokens}, Providers: Red=${redAiResult.provider}, Ana=${anaAiResult.provider}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        version: '2.0',
+        version: '2.2',
         execution_order: 'red_team → ana → gap',
         
         // Phase 1: Red Team
@@ -1039,6 +799,8 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
           binary_criteria: binaryCriteria,
           criteria_count_true: criteriaCountTrue,
           binary_criteria_fallback_used: binaryCriteriaFallbackUsed,
+          ai_provider: redAiResult.provider,
+          ai_model: redAiResult.model,
         },
         
         // Phase 2: Ana with Governance
@@ -1056,14 +818,16 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
           recommendation: anaResult.recommendation,
           falsification_count: anaResult.falsification_criteria?.length || 0,
           tokens_used: anaTokens,
+          ai_provider: anaAiResult.provider,
+          ai_model: anaAiResult.model,
         },
         
         // Phase 3: Confidence Gap
         confidence_gap: {
           gap_id: savedGap?.id,
-          ana_score: guardedScore, // Use guarded score for gap
+          ana_score: guardedScore,
           red_score: redScore,
-          gap: guardedScore - redScore, // Recalculate with guarded
+          gap: guardedScore - redScore,
           health_status: healthStatus,
           gap_delta: gapDelta,
           alert_triggered: alertTriggered,
