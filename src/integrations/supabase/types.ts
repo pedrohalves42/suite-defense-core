@@ -1572,6 +1572,125 @@ export type Database = {
           },
         ]
       }
+      agent_hmac_format_cache: {
+        Row: {
+          agent_id: string
+          body_format: string
+          hit_count: number | null
+          key_encoding: string
+          last_verified_at: string | null
+          separator: string
+        }
+        Insert: {
+          agent_id: string
+          body_format?: string
+          hit_count?: number | null
+          key_encoding?: string
+          last_verified_at?: string | null
+          separator?: string
+        }
+        Update: {
+          agent_id?: string
+          body_format?: string
+          hit_count?: number | null
+          key_encoding?: string
+          last_verified_at?: string | null
+          separator?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_light_mode_configs: {
         Row: {
           activated_at: string | null
@@ -23711,6 +23830,16 @@ export type Database = {
               minutes_offline: number
             }[]
           }
+      check_rate_limit_atomic: {
+        Args: {
+          p_block_minutes?: number
+          p_endpoint: string
+          p_identifier: string
+          p_max_requests?: number
+          p_window_minutes?: number
+        }
+        Returns: Json
+      }
       check_security_thresholds: {
         Args: never
         Returns: {
@@ -24495,9 +24624,27 @@ export type Database = {
       }
       parse_version_code: { Args: { version_text: string }; Returns: number }
       persist_chain_breaks: { Args: never; Returns: number }
+      poll_jobs_v2: {
+        Args: { p_max_jobs?: number; p_token_hash: string }
+        Returns: Json
+      }
       process_autonomous_safe_mode: { Args: never; Returns: Json }
       process_dlq_batch: {
         Args: { p_action?: string; p_batch_size?: number; p_tenant_id: string }
+        Returns: Json
+      }
+      process_heartbeat_v2: {
+        Args: {
+          p_agent_version?: string
+          p_cpu_usage?: number
+          p_disk_usage?: number
+          p_hostname?: string
+          p_memory_usage?: number
+          p_os_type?: string
+          p_os_version?: string
+          p_token_hash: string
+          p_uptime_seconds?: number
+        }
         Returns: Json
       }
       process_safe_mode_entry: {

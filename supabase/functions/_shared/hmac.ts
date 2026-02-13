@@ -152,8 +152,7 @@ export async function verifyHmacSignature(
   const payloadDotCompact = `${timestamp}.${nonce}.${compactBody}`;
 
   // COMPAT: Try multiple key encodings and payload formats
-  // v5.0.3 agents use UTF8.GetBytes(hexString) as HMAC key + "." separator
-  // Legacy agents use hexToBytes(hexString) as HMAC key + ":" separator
+  // Optimization: check cached format first, then try all variants
   const encoder = new TextEncoder();
   
   // Build key variants
@@ -179,10 +178,35 @@ export async function verifyHmacSignature(
     };
   }
   
-  // Try all combinations of key encoding × payload format
-  const payloads = [payloadColon, payloadDot, payloadColonCompact, payloadDotCompact];
+  // Check format cache to try the known-good combination first
+  let cachedFormat: { key_encoding: string; separator: string; body_format: string } | null = null;
+  if (context?.agentId) {
+    const { data: cache } = await supabase
+      .from('agent_hmac_format_cache')
+      .select('key_encoding, separator, body_format')
+      .eq('agent_id', context.agentId)
+      .maybeSingle();
+    if (cache) cachedFormat = cache;
+  }
   
-  for (const keyVariant of keyVariants) {
+  // Order payloads: cached separator first, then alternatives
+  const allPayloads: { payload: string; sep: string; fmt: string }[] = [];
+  const separators = cachedFormat ? [cachedFormat.separator, cachedFormat.separator === ':' ? '.' : ':'] : [':', '.'];
+  const bodyFormats = cachedFormat ? [cachedFormat.body_format, cachedFormat.body_format === 'raw' ? 'compact' : 'raw'] : ['raw', 'compact'];
+  
+  for (const sep of separators) {
+    for (const fmt of bodyFormats) {
+      const b = fmt === 'compact' ? compactBody : body;
+      allPayloads.push({ payload: `${timestamp}${sep}${nonce}${sep}${b}`, sep, fmt });
+    }
+  }
+  
+  // Order keys: cached encoding first
+  const orderedKeys = cachedFormat
+    ? [...keyVariants.filter(k => k.name === cachedFormat!.key_encoding), ...keyVariants.filter(k => k.name !== cachedFormat!.key_encoding)]
+    : keyVariants;
+  
+  for (const keyVariant of orderedKeys) {
     const cryptoKey = await crypto.subtle.importKey(
       'raw',
       keyVariant.data.buffer as ArrayBuffer,
@@ -191,7 +215,7 @@ export async function verifyHmacSignature(
       ['sign']
     );
     
-    for (const payload of payloads) {
+    for (const { payload, sep, fmt } of allPayloads) {
       const messageData = encoder.encode(payload);
       const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
       const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
@@ -209,15 +233,22 @@ export async function verifyHmacSignature(
           console.error(`[HMAC] CRITICAL: Failed to store signature for agent ${agentName}:`, {
             error: insertError.message,
             code: insertError.code,
-            details: insertError.details,
-            hint: insertError.hint
           });
-        } else {
-          console.log(`[HMAC] Signature stored successfully for agent ${agentName} (key=${keyVariant.name}, sep=${payload.includes('.') ? 'dot' : 'colon'})`);
         }
 
-        // SEC-01 FIX: Cleanup probabilistico sincrono
-        await probabilisticCleanup(supabase);
+        // Update format cache (fire-and-forget, no await needed for response)
+        if (context?.agentId) {
+          supabase.from('agent_hmac_format_cache').upsert({
+            agent_id: context.agentId,
+            key_encoding: keyVariant.name,
+            separator: sep,
+            body_format: fmt,
+            last_verified_at: new Date().toISOString(),
+            hit_count: 1,
+          }, { onConflict: 'agent_id' }).then(({ error }) => {
+            if (error) console.warn('[HMAC] Cache update failed:', error.message);
+          });
+        }
 
         return { valid: true, rawBody: body };
       }
@@ -256,27 +287,8 @@ export async function verifyHmacSignature(
   };
 }
 
-/**
- * Cleanup probabilistico para evitar race conditions em Deno Edge Functions
- * setTimeout/setInterval nao sao confiaveis em ambiente serverless
- * Solucao: 20% das requests executam cleanup de forma sincrona
- * P1 SCALE-01: Aumentado de 10% para 20% para melhor gestão de 15.7K registros/dia
- */
-const CLEANUP_PROBABILITY = 0.20; // 20% das requests - P1 optimization for 15.7K records/day
-
-async function probabilisticCleanup(supabase: SupabaseClient): Promise<void> {
-  // 10% das requests executam cleanup
-  if (Math.random() > CLEANUP_PROBABILITY) {
-    return;
-  }
-  
-  try {
-    await supabase.rpc('cleanup_old_hmac_signatures');
-  } catch (error) {
-    // Log silencioso - cleanup e best-effort, nao deve bloquear request
-    console.warn('[HMAC] Probabilistic cleanup failed (non-blocking):', error);
-  }
-}
+// HMAC signature cleanup moved to run_system_maintenance() cron (every 30 min).
+// Removed from hot path to save ~120 queries/min (was 20% of all requests).
 
 /**
  * Gera HMAC secret para novo agente

@@ -12,87 +12,41 @@ const DEFAULT_CONFIG: RateLimitConfig = {
   blockMinutes: 5,
 };
 
+/**
+ * Atomic rate limit check using database RPC.
+ * Reduces 2-3 sequential queries to 1 atomic call.
+ */
 export async function checkRateLimit(
   supabase: SupabaseClient,
   identifier: string,
   endpoint: string,
   config: RateLimitConfig = DEFAULT_CONFIG
 ): Promise<{ allowed: boolean; remainingRequests?: number; resetAt?: Date }> {
-  const now = new Date();
-  const windowStart = new Date(now.getTime() - config.windowMinutes * 60 * 1000);
+  const { data, error } = await supabase.rpc('check_rate_limit_atomic', {
+    p_identifier: identifier,
+    p_endpoint: endpoint,
+    p_max_requests: config.maxRequests,
+    p_window_minutes: config.windowMinutes,
+    p_block_minutes: config.blockMinutes ?? 5,
+  });
 
-  // Verificar se esta bloqueado
-  const { data: existing } = await supabase
-    .from('rate_limits')
-    .select('*')
-    .eq('identifier', identifier)
-    .eq('endpoint', endpoint)
-    .order('window_start', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  if (error) {
+    // Fail open on RPC error to avoid blocking legitimate requests
+    console.error('[RateLimit] RPC error, failing open:', error.message);
+    return { allowed: true, remainingRequests: config.maxRequests };
+  }
 
-  if (existing?.blocked_until && new Date(existing.blocked_until) > now) {
+  const result = data as { allowed: boolean; remaining?: number; reset_at?: string; reason?: string };
+
+  if (!result.allowed) {
     return {
       allowed: false,
-      resetAt: new Date(existing.blocked_until),
+      resetAt: result.reset_at ? new Date(result.reset_at) : undefined,
     };
   }
-
-  // Limpar ou criar nova janela
-  if (!existing || new Date(existing.window_start) < windowStart) {
-    await supabase
-      .from('rate_limits')
-      .upsert({
-        identifier,
-        endpoint,
-        request_count: 1,
-        window_start: now,
-        last_request_at: now,
-      }, {
-        onConflict: 'identifier,endpoint'
-      });
-
-    return {
-      allowed: true,
-      remainingRequests: config.maxRequests - 1,
-    };
-  }
-
-  // Incrementar contador
-  const newCount = existing.request_count + 1;
-
-  if (newCount > config.maxRequests) {
-    // Bloquear temporariamente
-    const blockedUntil = new Date(now.getTime() + (config.blockMinutes || 5) * 60 * 1000);
-    
-    await supabase
-      .from('rate_limits')
-      .update({
-        request_count: newCount,
-        last_request_at: now,
-        blocked_until: blockedUntil.toISOString(),
-      })
-      .eq('identifier', identifier)
-      .eq('endpoint', endpoint);
-
-    return {
-      allowed: false,
-      resetAt: blockedUntil,
-    };
-  }
-
-  // Atualizar contador
-  await supabase
-    .from('rate_limits')
-    .update({
-      request_count: newCount,
-      last_request_at: now,
-    })
-    .eq('identifier', identifier)
-    .eq('endpoint', endpoint);
 
   return {
     allowed: true,
-    remainingRequests: config.maxRequests - newCount,
+    remainingRequests: result.remaining ?? 0,
   };
 }
