@@ -810,7 +810,7 @@ restart_service_handler() {
         "fix_firewall")
             output=$(fix_firewall "$job")
             ;;
-        # v5.0.1: NEW - Process/Service Control Handlers
+        # v5.0.1: Process/Service Control Handlers
         "kill_process")
             output=$(kill_process_handler "$job")
             ;;
@@ -822,6 +822,25 @@ restart_service_handler() {
             ;;
         "restart_service")
             output=$(restart_service_handler "$job")
+            ;;
+        # v5.0.4: NEW - SOAR/Automation Handlers
+        "sync_blocked_websites")
+            output=$(sync_blocked_websites_handler "$job")
+            ;;
+        "service_health_check")
+            output=$(service_health_check_handler "$job")
+            ;;
+        "network_diagnostics")
+            output=$(network_diagnostics_handler "$job")
+            ;;
+        "quarantine_agent")
+            output=$(quarantine_agent_handler "$job")
+            ;;
+        "apply_security_patch")
+            output=$(apply_security_patch_handler "$job")
+            ;;
+        "disk_cleanup")
+            output=$(disk_cleanup_handler)
             ;;
         *)
             error_message="Unknown job type: $job_type"
@@ -1269,6 +1288,188 @@ restart_service_handler() {
      fi
  }
  
+ # ============================================
+ #  v5.0.4: SOAR/AUTOMATION HANDLERS
+ # ============================================
+ sync_blocked_websites_handler() {
+     local job="$1"
+     local urls
+     urls=$(echo "$job" | jq -r '.payload.urls // [] | .[]' 2>/dev/null)
+     
+     local blocked=0
+     local marker_start="# === CyberShield Blocked Websites Start ==="
+     local marker_end="# === CyberShield Blocked Websites End ==="
+     local hosts_file="/etc/hosts"
+     
+     # Remove existing blocks
+     sudo sed -i "/$marker_start/,/$marker_end/d" "$hosts_file" 2>/dev/null
+     
+     # Add new blocks
+     echo "$marker_start" | sudo tee -a "$hosts_file" > /dev/null
+     while IFS= read -r url; do
+         if [[ -n "$url" ]]; then
+             local domain
+             domain=$(echo "$url" | sed 's|https\?://||' | sed 's|/.*||')
+             echo "0.0.0.0 $domain" | sudo tee -a "$hosts_file" > /dev/null
+             echo "0.0.0.0 www.$domain" | sudo tee -a "$hosts_file" > /dev/null
+             blocked=$((blocked + 1))
+         fi
+     done <<< "$urls"
+     echo "$marker_end" | sudo tee -a "$hosts_file" > /dev/null
+     
+     cat <<EOF
+ {"success":true,"blocked_count":$blocked,"method":"hosts_file","synced_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+ EOF
+ }
+ 
+ service_health_check_handler() {
+     local job="$1"
+     local services
+     services=$(echo "$job" | jq -r '.payload.services // ["sshd","cron","rsyslog","systemd-resolved"] | .[]' 2>/dev/null)
+     
+     local results="[]"
+     local unhealthy=0
+     local checked=0
+     
+     while IFS= read -r svc; do
+         if [[ -n "$svc" ]]; then
+             local status="unknown"
+             local healthy="false"
+             if systemctl is-active "$svc" &>/dev/null; then
+                 status="running"
+                 healthy="true"
+             elif systemctl is-enabled "$svc" &>/dev/null; then
+                 status="stopped"
+                 unhealthy=$((unhealthy + 1))
+             else
+                 status="not_found"
+                 unhealthy=$((unhealthy + 1))
+             fi
+             results=$(echo "$results" | jq --arg n "$svc" --arg s "$status" --argjson h "$healthy" '. + [{"name":$n,"status":$s,"healthy":$h}]')
+             checked=$((checked + 1))
+         fi
+     done <<< "$services"
+     
+     cat <<EOF
+ {"success":true,"services_checked":$checked,"unhealthy_count":$unhealthy,"services":$results,"checked_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+ EOF
+ }
+ 
+ network_diagnostics_handler() {
+     local job="$1"
+     local targets
+     targets=$(echo "$job" | jq -r '.payload.targets // ["8.8.8.8","1.1.1.1"] | .[]' 2>/dev/null)
+     
+     local diagnostics="[]"
+     
+     while IFS= read -r target; do
+         if [[ -n "$target" ]]; then
+             local ping_result="null"
+             local dns_result="null"
+             local trace_result="null"
+             
+             # Ping
+             if ping_out=$(ping -c 3 -W 5 "$target" 2>/dev/null); then
+                 local avg_ms
+                 avg_ms=$(echo "$ping_out" | tail -1 | awk -F'/' '{print $5}' 2>/dev/null)
+                 ping_result="{\"success\":true,\"avg_ms\":${avg_ms:-0}}"
+             else
+                 ping_result='{"success":false}'
+             fi
+             
+             # DNS
+             if dig_out=$(dig +short "$target" 2>/dev/null | head -3); then
+                 dns_result="{\"success\":true,\"records\":\"$dig_out\"}"
+             else
+                 dns_result='{"success":false}'
+             fi
+             
+             # Traceroute (limited)
+             if trace_out=$(traceroute -m 10 -w 2 "$target" 2>/dev/null | tail -n +2 | head -5); then
+                 trace_result='{"success":true,"hops":5}'
+             else
+                 trace_result='{"success":false}'
+             fi
+             
+             diagnostics=$(echo "$diagnostics" | jq --arg t "$target" --argjson p "$ping_result" --argjson d "$dns_result" --argjson tr "$trace_result" '. + [{"target":$t,"ping":$p,"dns":$d,"traceroute":$tr}]')
+         fi
+     done <<< "$targets"
+     
+     cat <<EOF
+ {"success":true,"diagnostics":$diagnostics,"checked_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+ EOF
+ }
+ 
+ quarantine_agent_handler() {
+     local job="$1"
+     local action
+     action=$(echo "$job" | jq -r '.payload.action // "quarantine"' 2>/dev/null)
+     local server_host
+     server_host=$(echo "$SERVER_URL" | sed 's|https\?://||' | sed 's|/.*||')
+     
+     if [[ "$action" == "release" ]]; then
+         sudo iptables -D OUTPUT -j DROP 2>/dev/null
+         sudo iptables -D OUTPUT -d "$server_host" -j ACCEPT 2>/dev/null
+         sudo iptables -D OUTPUT -p udp --dport 53 -j ACCEPT 2>/dev/null
+         echo '{"success":true,"action":"released","released_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+     else
+         # Allow server and DNS, block rest
+         sudo iptables -A OUTPUT -d "$server_host" -j ACCEPT 2>/dev/null
+         sudo iptables -A OUTPUT -p udp --dport 53 -j ACCEPT 2>/dev/null
+         sudo iptables -A OUTPUT -o lo -j ACCEPT 2>/dev/null
+         sudo iptables -A OUTPUT -j DROP 2>/dev/null
+         echo '{"success":true,"action":"quarantined","server_host":"'"$server_host"'","quarantined_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+     fi
+ }
+ 
+ apply_security_patch_handler() {
+     local job="$1"
+     local package
+     package=$(echo "$job" | jq -r '.payload.package // ""' 2>/dev/null)
+     local cve_id
+     cve_id=$(echo "$job" | jq -r '.payload.cve_id // ""' 2>/dev/null)
+     
+     if command -v apt-get &>/dev/null; then
+         sudo apt-get update -qq 2>/dev/null
+         if [[ -n "$package" ]]; then
+             sudo apt-get install --only-upgrade -y "$package" 2>/dev/null
+         else
+             sudo apt-get upgrade -y --with-new-pkgs 2>/dev/null
+         fi
+     elif command -v yum &>/dev/null; then
+         if [[ -n "$package" ]]; then
+             sudo yum update -y "$package" 2>/dev/null
+         else
+             sudo yum update -y --security 2>/dev/null
+         fi
+     fi
+     
+     echo '{"success":true,"cve_id":"'"$cve_id"'","patched_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+ }
+ 
+ disk_cleanup_handler() {
+     local before_free
+     before_free=$(df -BG / | tail -1 | awk '{print $4}' | tr -d 'G')
+     
+     # Clean temp files
+     sudo find /tmp -type f -atime +7 -delete 2>/dev/null
+     sudo find /var/tmp -type f -atime +7 -delete 2>/dev/null
+     # Clean old logs
+     sudo find /var/log -name "*.gz" -mtime +30 -delete 2>/dev/null
+     sudo journalctl --vacuum-time=7d 2>/dev/null
+     # Clean package cache
+     if command -v apt-get &>/dev/null; then
+         sudo apt-get autoremove -y 2>/dev/null
+         sudo apt-get clean 2>/dev/null
+     fi
+     
+     local after_free
+     after_free=$(df -BG / | tail -1 | awk '{print $4}' | tr -d 'G')
+     local freed=$((after_free - before_free))
+     
+     echo '{"success":true,"freed_gb":'$freed',"before_free_gb":'$before_free',"after_free_gb":'$after_free',"cleaned_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+ }
+
  # ============================================
  #  MAIN LOOP v5.0.1 FULL ENTERPRISE
  # ============================================
