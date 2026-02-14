@@ -1,5 +1,14 @@
 <#
-    CyberShield Agent - Windows v5.0.3 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.4 FULL ENTERPRISE
+
+    v5.0.4: NEW JOB HANDLERS - SOAR/Automation Integration
+    - NEW: sync_blocked_websites - Sync and enforce URL blocklist from server
+    - NEW: service_health_check - Check health of specified Windows services
+    - NEW: network_diagnostics - Run ping/traceroute/DNS diagnostics
+    - NEW: quarantine_agent - Self-isolate via firewall rules
+    - NEW: apply_security_patch - Execute Windows Update for specific KBs
+    - NEW: disk_cleanup (job handler) - On-demand disk cleanup via job
+    - IMPROVED: Execute-Job switch covers all 15 supported job types
 
     v5.0.3: STABILITY FIXES - Task Recovery & DNS Filter Resilience
     - FIXED: Assert-TaskHealth auto-repairs disabled/stopped scheduled tasks
@@ -83,7 +92,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.3"
+    [string]$AgentVersion = "v5.0.4"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -820,7 +829,7 @@ function Execute-Job {
             "collect_web_activity" {
                 $output = Invoke-CollectWebActivity -Payload $Job.payload
             }
-            # v5.0.1: NEW - Process/Service Control Handlers
+            # v5.0.1: Process/Service Control Handlers
             "kill_process" {
                 $output = Invoke-KillProcess -Payload $Job.payload
             }
@@ -832,6 +841,25 @@ function Execute-Job {
             }
             "restart_service" {
                 $output = Invoke-RestartService -Payload $Job.payload
+            }
+            # v5.0.4: NEW - SOAR/Automation Handlers
+            "sync_blocked_websites" {
+                $output = Invoke-SyncBlockedWebsites -Payload $Job.payload
+            }
+            "service_health_check" {
+                $output = Invoke-ServiceHealthCheck -Payload $Job.payload
+            }
+            "network_diagnostics" {
+                $output = Invoke-NetworkDiagnostics -Payload $Job.payload
+            }
+            "quarantine_agent" {
+                $output = Invoke-QuarantineAgent -Payload $Job.payload
+            }
+            "apply_security_patch" {
+                $output = Invoke-ApplySecurityPatch -Payload $Job.payload
+            }
+            "disk_cleanup" {
+                $output = Invoke-DiskCleanup -ThresholdPercent 0
             }
             default {
                 $error_message = "Unknown job type: $($Job.job_type)"
@@ -2050,6 +2078,416 @@ function Send-AutoRepairTelemetry {
         
     } catch {
         # Silent - telemetry should never crash the agent
+    }
+}
+
+# ============================================
+#  v5.0.4: SYNC BLOCKED WEBSITES HANDLER
+# ============================================
+function Invoke-SyncBlockedWebsites {
+    <#
+    .SYNOPSIS
+        Syncs blocked website list from server and enforces via hosts file
+    #>
+    param([object]$Payload)
+    
+    try {
+        Write-Log "[SYNC-BLOCKED] Syncing blocked websites..." "INFO"
+        
+        $hostsPath = "C:\Windows\System32\drivers\etc\hosts"
+        $markerStart = "# === CyberShield Blocked Websites Start ==="
+        $markerEnd = "# === CyberShield Blocked Websites End ==="
+        
+        # Get URLs from payload or fetch from server
+        $urls = @()
+        if ($Payload.urls) {
+            $urls = @($Payload.urls)
+        } else {
+            # Fetch from server
+            $result = Invoke-SecureRequest `
+                -Path "/functions/v1/serve-dns-filter" `
+                -Method "POST" `
+                -Body @{ agent_name = $Global:AgentName; timestamp = [DateTime]::UtcNow.ToString("o") } `
+                -MaxRetries 2 -TimeoutSec 15
+            
+            if ($result.Success) {
+                $response = $result.Content | ConvertFrom-Json
+                if ($response.domains) { $urls = @($response.domains) }
+            }
+        }
+        
+        if ($urls.Count -eq 0) {
+            return @{ success = $true; blocked_count = 0; message = "No URLs to block" }
+        }
+        
+        # Read current hosts file
+        $hostsContent = Get-Content $hostsPath -Raw -ErrorAction SilentlyContinue
+        
+        # Remove existing CyberShield blocks
+        if ($hostsContent -match [regex]::Escape($markerStart)) {
+            $hostsContent = $hostsContent -replace "(?s)$([regex]::Escape($markerStart)).*?$([regex]::Escape($markerEnd))", ""
+        }
+        
+        # Build new block entries
+        $blockEntries = @($markerStart)
+        foreach ($url in $urls) {
+            $domain = $url -replace "^https?://", "" -replace "/.*$", ""
+            $blockEntries += "0.0.0.0 $domain"
+            $blockEntries += "0.0.0.0 www.$domain"
+        }
+        $blockEntries += $markerEnd
+        
+        # Append to hosts file
+        $newContent = $hostsContent.TrimEnd() + "`r`n" + ($blockEntries -join "`r`n") + "`r`n"
+        Set-Content -Path $hostsPath -Value $newContent -Encoding ASCII -Force
+        
+        # Flush DNS cache
+        ipconfig /flushdns | Out-Null
+        
+        # Save to local blocklist
+        @{ domains = $urls; updated_at = (Get-Date).ToString("o") } | ConvertTo-Json | Out-File $Global:DnsBlocklistPath -Encoding UTF8
+        
+        Write-Log "[SYNC-BLOCKED] Blocked $($urls.Count) websites via hosts file" "SUCCESS"
+        
+        return @{
+            success = $true
+            blocked_count = $urls.Count
+            blocked_domains = $urls
+            method = "hosts_file"
+            synced_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        Write-Log "[SYNC-BLOCKED] Error: $($_.Exception.Message)" "ERROR"
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.4: SERVICE HEALTH CHECK HANDLER
+# ============================================
+function Invoke-ServiceHealthCheck {
+    <#
+    .SYNOPSIS
+        Checks health of specified Windows services
+    #>
+    param([object]$Payload)
+    
+    try {
+        Write-Log "[SVC-HEALTH] Running service health check..." "INFO"
+        
+        $serviceNames = @()
+        if ($Payload.services) {
+            $serviceNames = @($Payload.services)
+        } else {
+            # Default critical services
+            $serviceNames = @(
+                "WinDefend", "mpssvc", "EventLog", "wuauserv",
+                "Dnscache", "BITS", "Schedule", "W32Time"
+            )
+        }
+        
+        $results = @()
+        $unhealthy = 0
+        
+        foreach ($svcName in $serviceNames) {
+            $svc = Get-Service -Name $svcName -ErrorAction SilentlyContinue
+            if ($svc) {
+                $startType = (Get-WmiObject Win32_Service -Filter "Name='$svcName'" -ErrorAction SilentlyContinue).StartMode
+                $isHealthy = ($svc.Status -eq 'Running') -or ($startType -eq 'Disabled' -or $startType -eq 'Manual')
+                
+                if (-not $isHealthy) { $unhealthy++ }
+                
+                $results += @{
+                    name = $svcName
+                    display_name = $svc.DisplayName
+                    status = $svc.Status.ToString()
+                    start_type = $startType
+                    healthy = $isHealthy
+                }
+            } else {
+                $results += @{
+                    name = $svcName
+                    status = "not_found"
+                    healthy = $false
+                }
+                $unhealthy++
+            }
+        }
+        
+        Write-Log "[SVC-HEALTH] Checked $($results.Count) services, $unhealthy unhealthy" $(if ($unhealthy -gt 0) {"WARN"} else {"SUCCESS"})
+        
+        return @{
+            success = $true
+            services_checked = $results.Count
+            unhealthy_count = $unhealthy
+            services = $results
+            checked_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.4: NETWORK DIAGNOSTICS HANDLER
+# ============================================
+function Invoke-NetworkDiagnostics {
+    <#
+    .SYNOPSIS
+        Runs network diagnostics (ping, traceroute, DNS lookup)
+    #>
+    param([object]$Payload)
+    
+    try {
+        Write-Log "[NET-DIAG] Running network diagnostics..." "INFO"
+        
+        $targets = @()
+        if ($Payload.targets) {
+            $targets = @($Payload.targets)
+        } else {
+            $targets = @("8.8.8.8", "1.1.1.1", $Global:ServerUrl -replace "^https?://", "")
+        }
+        
+        $diagnostics = @()
+        
+        foreach ($target in $targets) {
+            $diag = @{ target = $target }
+            
+            # Ping test
+            try {
+                $ping = Test-Connection -ComputerName $target -Count 3 -ErrorAction Stop
+                $diag.ping = @{
+                    success = $true
+                    avg_ms = [math]::Round(($ping | Measure-Object -Property ResponseTime -Average).Average, 1)
+                    min_ms = ($ping | Measure-Object -Property ResponseTime -Minimum).Minimum
+                    max_ms = ($ping | Measure-Object -Property ResponseTime -Maximum).Maximum
+                    packets_sent = 3
+                    packets_received = $ping.Count
+                }
+            } catch {
+                $diag.ping = @{ success = $false; error = $_.Exception.Message }
+            }
+            
+            # DNS lookup
+            try {
+                $dns = Resolve-DnsName -Name $target -ErrorAction Stop | Select-Object -First 3
+                $diag.dns = @{
+                    success = $true
+                    records = @($dns | ForEach-Object { @{ name = $_.Name; type = $_.Type.ToString(); ip = $_.IPAddress } })
+                }
+            } catch {
+                $diag.dns = @{ success = $false; error = $_.Exception.Message }
+            }
+            
+            # Traceroute (limited to 10 hops for speed)
+            try {
+                $trace = Test-NetConnection -ComputerName $target -TraceRoute -ErrorAction Stop
+                $diag.traceroute = @{
+                    success = $true
+                    hops = @($trace.TraceRoute | Select-Object -First 10)
+                    remote_port = $trace.RemotePort
+                    tcp_succeeded = $trace.TcpTestSucceeded
+                }
+            } catch {
+                $diag.traceroute = @{ success = $false; error = $_.Exception.Message }
+            }
+            
+            $diagnostics += $diag
+        }
+        
+        Write-Log "[NET-DIAG] Completed diagnostics for $($targets.Count) targets" "SUCCESS"
+        
+        return @{
+            success = $true
+            targets_checked = $targets.Count
+            diagnostics = $diagnostics
+            checked_at = (Get-Date).ToString("o")
+        }
+        
+    } catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.4: QUARANTINE AGENT HANDLER
+# ============================================
+function Invoke-QuarantineAgent {
+    <#
+    .SYNOPSIS
+        Self-isolates agent by blocking all network except server communication
+    #>
+    param([object]$Payload)
+    
+    try {
+        $action = if ($Payload.action -eq "release") { "release" } else { "quarantine" }
+        
+        Write-Log "[QUARANTINE] Action: $action" "WARN"
+        
+        $ruleName = "CyberShield-Quarantine"
+        $serverHost = ([System.Uri]$Global:ServerUrl).Host
+        
+        if ($action -eq "quarantine") {
+            # Block ALL outbound traffic
+            New-NetFirewallRule -DisplayName "$ruleName-BlockAll" `
+                -Direction Outbound -Action Block `
+                -Profile Any -Enabled True `
+                -ErrorAction SilentlyContinue | Out-Null
+            
+            # Allow CyberShield server communication
+            $serverIPs = [System.Net.Dns]::GetHostAddresses($serverHost) | ForEach-Object { $_.IPAddressToString }
+            foreach ($ip in $serverIPs) {
+                New-NetFirewallRule -DisplayName "$ruleName-AllowServer-$ip" `
+                    -Direction Outbound -Action Allow `
+                    -RemoteAddress $ip -Protocol TCP `
+                    -Profile Any -Enabled True `
+                    -ErrorAction SilentlyContinue | Out-Null
+            }
+            
+            # Allow DNS (needed for server resolution)
+            New-NetFirewallRule -DisplayName "$ruleName-AllowDNS" `
+                -Direction Outbound -Action Allow `
+                -RemotePort 53 -Protocol UDP `
+                -Profile Any -Enabled True `
+                -ErrorAction SilentlyContinue | Out-Null
+            
+            Write-Log "[QUARANTINE] Agent quarantined - only server communication allowed" "WARN"
+            
+            return @{
+                success = $true
+                action = "quarantined"
+                server_host = $serverHost
+                server_ips = $serverIPs
+                reason = $Payload.reason
+                quarantined_at = (Get-Date).ToString("o")
+            }
+            
+        } else {
+            # Release: remove all quarantine rules
+            Get-NetFirewallRule -DisplayName "$ruleName*" -ErrorAction SilentlyContinue | 
+                Remove-NetFirewallRule -ErrorAction SilentlyContinue
+            
+            Write-Log "[QUARANTINE] Agent released from quarantine" "SUCCESS"
+            
+            return @{
+                success = $true
+                action = "released"
+                released_at = (Get-Date).ToString("o")
+            }
+        }
+        
+    } catch {
+        Write-Log "[QUARANTINE] Error: $($_.Exception.Message)" "ERROR"
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.4: APPLY SECURITY PATCH HANDLER
+# ============================================
+function Invoke-ApplySecurityPatch {
+    <#
+    .SYNOPSIS
+        Applies security patches via Windows Update
+    #>
+    param([object]$Payload)
+    
+    try {
+        Write-Log "[PATCH] Applying security patch..." "INFO"
+        
+        $kbId = $Payload.kb_id
+        $cveId = $Payload.cve_id
+        
+        $results = @{
+            cve_id = $cveId
+            kb_id = $kbId
+            actions = @()
+        }
+        
+        if ($kbId) {
+            # Check if KB is already installed
+            $installed = Get-HotFix -Id $kbId -ErrorAction SilentlyContinue
+            if ($installed) {
+                Write-Log "[PATCH] KB $kbId already installed" "INFO"
+                return @{
+                    success = $true
+                    status = "already_installed"
+                    kb_id = $kbId
+                    installed_on = $installed.InstalledOn.ToString("o")
+                }
+            }
+            
+            # Try Windows Update via COM object
+            try {
+                $session = New-Object -ComObject Microsoft.Update.Session
+                $searcher = $session.CreateUpdateSearcher()
+                $searchResult = $searcher.Search("IsInstalled=0 AND Type='Software'")
+                
+                $targetUpdate = $null
+                foreach ($update in $searchResult.Updates) {
+                    foreach ($kb in $update.KBArticleIDs) {
+                        if ("KB$kb" -eq $kbId -or $kb -eq ($kbId -replace "^KB", "")) {
+                            $targetUpdate = $update
+                            break
+                        }
+                    }
+                    if ($targetUpdate) { break }
+                }
+                
+                if ($targetUpdate) {
+                    $updatesToInstall = New-Object -ComObject Microsoft.Update.UpdateColl
+                    $updatesToInstall.Add($targetUpdate) | Out-Null
+                    
+                    $downloader = $session.CreateUpdateDownloader()
+                    $downloader.Updates = $updatesToInstall
+                    $downloadResult = $downloader.Download()
+                    
+                    $installer = $session.CreateUpdateInstaller()
+                    $installer.Updates = $updatesToInstall
+                    $installResult = $installer.Install()
+                    
+                    $results.actions += "installed_via_wu"
+                    $results.reboot_required = $installResult.RebootRequired
+                    
+                    Write-Log "[PATCH] KB $kbId installed successfully (reboot: $($installResult.RebootRequired))" "SUCCESS"
+                    
+                    return @{
+                        success = $true
+                        status = "installed"
+                        kb_id = $kbId
+                        reboot_required = $installResult.RebootRequired
+                        patched_at = (Get-Date).ToString("o")
+                    }
+                } else {
+                    Write-Log "[PATCH] KB $kbId not found in available updates" "WARN"
+                    return @{
+                        success = $false
+                        status = "not_found"
+                        kb_id = $kbId
+                        message = "Update not available via Windows Update"
+                    }
+                }
+                
+            } catch {
+                Write-Log "[PATCH] Windows Update COM failed: $($_.Exception.Message)" "WARN"
+                return @{
+                    success = $false
+                    status = "wu_error"
+                    error = $_.Exception.Message
+                }
+            }
+        }
+        
+        return @{
+            success = $false
+            error = "No kb_id specified"
+        }
+        
+    } catch {
+        Write-Log "[PATCH] Error: $($_.Exception.Message)" "ERROR"
+        return @{ success = $false; error = $_.Exception.Message }
     }
 }
 

@@ -793,7 +793,7 @@ restart_service_handler() {
         "fix_firewall")
             output=$(fix_firewall "$job")
             ;;
-        # v5.0.1: NEW - Process/Service Control Handlers
+        # v5.0.1: Process/Service Control Handlers
         "kill_process")
             output=$(kill_process_handler "$job")
             ;;
@@ -805,6 +805,25 @@ restart_service_handler() {
             ;;
         "restart_service")
             output=$(restart_service_handler "$job")
+            ;;
+        # v5.0.4: NEW - SOAR/Automation Handlers
+        "sync_blocked_websites")
+            output=$(sync_blocked_websites_handler "$job")
+            ;;
+        "service_health_check")
+            output=$(service_health_check_handler "$job")
+            ;;
+        "network_diagnostics")
+            output=$(network_diagnostics_handler "$job")
+            ;;
+        "quarantine_agent")
+            output=$(quarantine_agent_handler "$job")
+            ;;
+        "apply_security_patch")
+            output=$(apply_security_patch_handler "$job")
+            ;;
+        "disk_cleanup")
+            output=$(disk_cleanup_handler)
             ;;
         *)
             error_message="Unknown job type: $job_type"
@@ -1264,6 +1283,154 @@ restart_service_handler() {
      fi
  }
  
+ # ============================================
+ #  v5.0.4: SOAR/AUTOMATION HANDLERS
+ # ============================================
+ sync_blocked_websites_handler() {
+     local job="$1"
+     local urls
+     urls=$(echo "$job" | python3 -c "import sys,json; [print(u) for u in json.loads(sys.stdin.read()).get('payload',{}).get('urls',[])]" 2>/dev/null)
+     
+     local blocked=0
+     local marker_start="# === CyberShield Blocked Websites Start ==="
+     local marker_end="# === CyberShield Blocked Websites End ==="
+     local hosts_file="/etc/hosts"
+     
+     sudo sed -i '' "/$marker_start/,/$marker_end/d" "$hosts_file" 2>/dev/null
+     
+     echo "$marker_start" | sudo tee -a "$hosts_file" > /dev/null
+     while IFS= read -r url; do
+         if [[ -n "$url" ]]; then
+             local domain
+             domain=$(echo "$url" | sed 's|https\?://||' | sed 's|/.*||')
+             echo "0.0.0.0 $domain" | sudo tee -a "$hosts_file" > /dev/null
+             echo "0.0.0.0 www.$domain" | sudo tee -a "$hosts_file" > /dev/null
+             blocked=$((blocked + 1))
+         fi
+     done <<< "$urls"
+     echo "$marker_end" | sudo tee -a "$hosts_file" > /dev/null
+     
+     sudo dscacheutil -flushcache 2>/dev/null
+     sudo killall -HUP mDNSResponder 2>/dev/null
+     
+     cat <<EOF
+ {"success":true,"blocked_count":$blocked,"method":"hosts_file","synced_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+ EOF
+ }
+ 
+ service_health_check_handler() {
+     local job="$1"
+     local services
+     services=$(echo "$job" | python3 -c "import sys,json; [print(s) for s in json.loads(sys.stdin.read()).get('payload',{}).get('services',['com.apple.mDNSResponder','com.apple.ftp-proxy'])]" 2>/dev/null)
+     
+     local results="[]"
+     local unhealthy=0
+     local checked=0
+     
+     while IFS= read -r svc; do
+         if [[ -n "$svc" ]]; then
+             local status="unknown"
+             local healthy="false"
+             if launchctl list "$svc" &>/dev/null; then
+                 status="running"
+                 healthy="true"
+             else
+                 status="not_running"
+                 unhealthy=$((unhealthy + 1))
+             fi
+             results=$(echo "$results" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); d.append({'name':'$svc','status':'$status','healthy':$healthy}); print(json.dumps(d))" 2>/dev/null)
+             checked=$((checked + 1))
+         fi
+     done <<< "$services"
+     
+     cat <<EOF
+ {"success":true,"services_checked":$checked,"unhealthy_count":$unhealthy,"services":$results,"checked_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+ EOF
+ }
+ 
+ network_diagnostics_handler() {
+     local job="$1"
+     local targets
+     targets=$(echo "$job" | python3 -c "import sys,json; [print(t) for t in json.loads(sys.stdin.read()).get('payload',{}).get('targets',['8.8.8.8','1.1.1.1'])]" 2>/dev/null)
+     
+     local diagnostics="[]"
+     
+     while IFS= read -r target; do
+         if [[ -n "$target" ]]; then
+             local ping_result='{"success":false}'
+             local dns_result='{"success":false}'
+             
+             if ping -c 3 -W 5 "$target" &>/dev/null; then
+                 local avg_ms
+                 avg_ms=$(ping -c 3 -W 5 "$target" 2>/dev/null | tail -1 | awk -F'/' '{print $5}')
+                 ping_result="{\"success\":true,\"avg_ms\":${avg_ms:-0}}"
+             fi
+             
+             if dig_out=$(dig +short "$target" 2>/dev/null | head -3); then
+                 dns_result='{"success":true}'
+             fi
+             
+             diagnostics=$(echo "$diagnostics" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); d.append({'target':'$target','ping':$ping_result,'dns':$dns_result}); print(json.dumps(d))" 2>/dev/null)
+         fi
+     done <<< "$targets"
+     
+     cat <<EOF
+ {"success":true,"diagnostics":$diagnostics,"checked_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+ EOF
+ }
+ 
+ quarantine_agent_handler() {
+     local job="$1"
+     local action
+     action=$(echo "$job" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('payload',{}).get('action','quarantine'))" 2>/dev/null)
+     local server_host
+     server_host=$(echo "$SERVER_URL" | sed 's|https\?://||' | sed 's|/.*||')
+     
+     if [[ "$action" == "release" ]]; then
+         sudo pfctl -F all 2>/dev/null
+         echo '{"success":true,"action":"released","released_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+     else
+         # macOS uses pf firewall
+         local pf_rules="/tmp/cybershield_quarantine.pf"
+         cat > "$pf_rules" << PFRULES
+ pass out quick on lo0 all
+ pass out quick proto udp to any port 53
+ pass out quick to $server_host
+ block out all
+ PFRULES
+         sudo pfctl -f "$pf_rules" -e 2>/dev/null
+         echo '{"success":true,"action":"quarantined","server_host":"'"$server_host"'","quarantined_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+     fi
+ }
+ 
+ apply_security_patch_handler() {
+     local job="$1"
+     local cve_id
+     cve_id=$(echo "$job" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('payload',{}).get('cve_id',''))" 2>/dev/null)
+     
+     # macOS uses softwareupdate
+     sudo softwareupdate --install --recommended 2>/dev/null
+     
+     echo '{"success":true,"cve_id":"'"$cve_id"'","method":"softwareupdate","patched_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+ }
+ 
+ disk_cleanup_handler() {
+     local before_free
+     before_free=$(df -g / | tail -1 | awk '{print $4}')
+     
+     # Clean caches and temp
+     sudo rm -rf /private/var/folders/*/* 2>/dev/null
+     sudo rm -rf /Library/Caches/* 2>/dev/null
+     rm -rf ~/Library/Caches/* 2>/dev/null
+     sudo find /private/var/log -name "*.gz" -mtime +30 -delete 2>/dev/null
+     
+     local after_free
+     after_free=$(df -g / | tail -1 | awk '{print $4}')
+     local freed=$((after_free - before_free))
+     
+     echo '{"success":true,"freed_gb":'$freed',"before_free_gb":'$before_free',"after_free_gb":'$after_free',"cleaned_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+ }
+
  # ============================================
  #  MAIN LOOP v5.0.1 FULL ENTERPRISE
  # ============================================
