@@ -23600,6 +23600,21 @@ export type Database = {
           },
         ]
       }
+      v_zero_gap_health: {
+        Row: {
+          active_jobs: number | null
+          completed_24h: number | null
+          dlq_exhausted: number | null
+          dlq_pending: number | null
+          domain_events_total: number | null
+          expired_jobs_stuck: number | null
+          failed_24h: number | null
+          failing_crons: number | null
+          stale_tasks: number | null
+          zombie_delivered: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _assert_service_role_or_super_admin: { Args: never; Returns: undefined }
@@ -24789,7 +24804,7 @@ export type Database = {
           old_status: string
         }[]
       }
-      sync_pgcron_health_from_run_details: { Args: never; Returns: Json }
+      sync_pgcron_health_from_run_details: { Args: never; Returns: undefined }
       test_tenant_isolation: {
         Args: never
         Returns: {
