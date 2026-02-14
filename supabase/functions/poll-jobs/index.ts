@@ -359,6 +359,7 @@ Deno.serve(async (req) => {
       return {
         id: j.job_id,
         type: j.job_type,
+        job_type: j.job_type,  // V-ZEROGAP: compat with v5 agents that read job_type
         payload: jobPayload,
         approved: true,
         agent_id: token.agent_id,

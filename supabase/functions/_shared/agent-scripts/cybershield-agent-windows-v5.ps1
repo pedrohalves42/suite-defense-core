@@ -748,6 +748,13 @@ function Poll-Jobs {
         
         # Backend returns array directly, not { jobs: [...] }
         if ($response -and @($response).Count -gt 0) {
+            # V-ZEROGAP: Normalize job_type field for backward compatibility
+            # poll-jobs may return "type" or "job_type" depending on version
+            foreach ($job in @($response)) {
+                if (-not $job.job_type -and $job.type) {
+                    $job | Add-Member -NotePropertyName "job_type" -NotePropertyValue $job.type -Force
+                }
+            }
             Write-Log "[POLL-JOBS] Received $(@($response).Count) job(s)" "INFO"
             return @($response)
         }
