@@ -1,16 +1,20 @@
 /**
- * Hexagonal Use Case: Expire Jobs
+ * Hexagonal Use Case: Run Maintenance
  * 
- * Domain logic for maintenance operations: expiring stale jobs,
- * marking agents inactive, and archiving old executions.
+ * Domain logic for maintenance operations: expiring stale jobs
+ * and archiving old executions.
+ * 
+ * CRITICAL: Auto-archiving/inactivating agents is FORBIDDEN.
+ * Agents powered off overnight or weekends must NOT be deactivated.
+ * See memory: agent/status-thresholds-and-logic
  */
 
 import { logger } from '../../logger.ts';
 
 export interface MaintenanceResult {
   expiredJobsProcessed: number;
-  offlineAgentsProcessed: number;
   archivedExecutions: number;
+  staleForceFlagsCleaned: number;
   durationMs: number;
 }
 
@@ -26,10 +30,10 @@ export class RunMaintenanceUseCase {
     const startedAt = Date.now();
     const now = new Date();
 
-    const [expiredJobs, offlineAgents, archivedExecs] = await Promise.all([
+    const [expiredJobs, archivedExecs, staleFlagsClean] = await Promise.all([
       this.expireJobs(now),
-      this.markAgentsInactive(now),
       this.archiveOldExecutions(now),
+      this.cleanStaleForceUpdateFlags(now),
     ]);
 
     const durationMs = Date.now() - startedAt;
@@ -41,8 +45,8 @@ export class RunMaintenanceUseCase {
         p_success: true,
         p_details: {
           expired_jobs_processed: expiredJobs,
-          offline_agents_processed: offlineAgents,
           archived_executions: archivedExecs,
+          stale_force_flags_cleaned: staleFlagsClean,
           duration_ms: durationMs,
         },
       });
@@ -52,12 +56,15 @@ export class RunMaintenanceUseCase {
 
     return {
       expiredJobsProcessed: expiredJobs,
-      offlineAgentsProcessed: offlineAgents,
       archivedExecutions: archivedExecs,
+      staleForceFlagsCleaned: staleFlagsClean,
       durationMs,
     };
   }
 
+  /**
+   * Expire jobs that have passed their TTL.
+   */
   private async expireJobs(now: Date): Promise<number> {
     const { data: expiredJobs } = await this.supabase
       .from('jobs')
@@ -83,33 +90,9 @@ export class RunMaintenanceUseCase {
     return ids.length;
   }
 
-  private async markAgentsInactive(now: Date): Promise<number> {
-    const offlineThreshold = new Date(now.getTime() - 5 * 60 * 1000).toISOString();
-
-    const { data: offlineAgents } = await this.supabase
-      .from('agents')
-      .select('id')
-      .eq('status', 'active')
-      .lt('last_seen', offlineThreshold)
-      .limit(500);
-
-    if (!offlineAgents?.length) return 0;
-
-    const ids = offlineAgents.map((a: { id: string }) => a.id);
-    const { error } = await this.supabase
-      .from('agents')
-      .update({ status: 'inactive', updated_at: now.toISOString() })
-      .in('id', ids);
-
-    if (error) {
-      logger.error('[RunMaintenance] Failed to mark agents inactive', { error: error.message });
-      return 0;
-    }
-
-    logger.info(`[RunMaintenance] Marked ${ids.length} agents inactive`);
-    return ids.length;
-  }
-
+  /**
+   * Archive old job executions (>30 days).
+   */
   private async archiveOldExecutions(now: Date): Promise<number> {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -135,5 +118,53 @@ export class RunMaintenanceUseCase {
 
     logger.info(`[RunMaintenance] Archived ${ids.length} old executions`);
     return ids.length;
+  }
+
+  /**
+   * Clean stale force_update flags for agents that have been
+   * delivered 50+ times without updating (STUCK state).
+   * Also cleans force_update flags pointing to non-existent releases.
+   */
+  private async cleanStaleForceUpdateFlags(now: Date): Promise<number> {
+    // Clean agents with non-existent force_update versions
+    const { data: agentsWithForce } = await this.supabase
+      .from('agents')
+      .select('id, force_update_version, force_update_delivered_count')
+      .not('force_update_version', 'is', null)
+      .limit(100);
+
+    if (!agentsWithForce?.length) return 0;
+
+    let cleaned = 0;
+    for (const agent of agentsWithForce) {
+      // Check if the target release exists
+      const { data: release } = await this.supabase
+        .from('agent_releases')
+        .select('id')
+        .eq('version', agent.force_update_version)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+
+      if (!release) {
+        // Release doesn't exist - clean the flag
+        await this.supabase
+          .from('agents')
+          .update({
+            force_update_version: null,
+            force_update_reason: null,
+            force_update_delivered_count: 0,
+            force_update_first_delivered_at: null,
+          })
+          .eq('id', agent.id);
+        cleaned++;
+        logger.info('[RunMaintenance] Cleaned stale force_update (release not found)', {
+          agentId: agent.id,
+          version: agent.force_update_version,
+        });
+      }
+    }
+
+    return cleaned;
   }
 }

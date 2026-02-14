@@ -90,15 +90,14 @@ Deno.serve(async (req) => {
       timestamp: new Date().toISOString(),
     };
 
-    // Log observability
-    await supabase.rpc('log_scheduled_job_run', {
-      p_job_key: 'monitor-slow-operations',
-      p_success: true,
-      p_duration_ms: Date.now() - startedAt,
-      p_result: result,
-      p_processed_count: slowOpCount,
-      p_job_source: 'cron'
-    });
+    // Report cron health
+    try {
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'monitor-slow-operations',
+        p_success: true,
+        p_details: result,
+      });
+    } catch (_) { /* best effort */ }
 
     // APM metric
     recordMetric({
@@ -117,20 +116,16 @@ Deno.serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('[MONITOR] Unexpected error', { error: errorMessage, requestId });
     
-    // Log error observability
+    // Report cron health on failure
     try {
       const supabase = createClient(
         Deno.env.get('SUPABASE_URL')!,
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       );
-      await supabase.rpc('log_scheduled_job_run', {
-        p_job_key: 'monitor-slow-operations',
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'monitor-slow-operations',
         p_success: false,
-        p_duration_ms: Date.now() - startedAt,
-        p_error: errorMessage,
-        p_result: null,
-        p_processed_count: 0,
-        p_job_source: 'cron'
+        p_details: { error: errorMessage },
       });
     } catch {}
     

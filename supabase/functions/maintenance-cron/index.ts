@@ -23,15 +23,6 @@ Deno.serve(async (req) => {
     const result = await useCase.execute();
     const duration = Date.now() - startTime;
 
-    // Report success to cron health monitoring
-    try {
-      await supabase.rpc('update_cron_health', {
-        p_cron_name: 'maintenance-cron-every-30min',
-        p_success: true,
-        p_error: null
-      });
-    } catch (_) { /* best effort */ }
-
     // APM metric
     recordMetric({
       function_name: 'maintenance-cron',

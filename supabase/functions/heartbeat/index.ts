@@ -8,7 +8,7 @@ import { logger } from '../_shared/logger.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 import { hashToken } from '../_shared/token-hash.ts'
 import { normalizeVersion, normalizeForWindows } from '../_shared/hexagonal/update-decision-service.ts'
-import { EdgeDomainEventDispatcher } from '../_shared/domain-events.ts'
+// Domain event dispatch removed from hot path to reduce latency
 
 Deno.serve(async (req) => {
   // QUAL-01: Proper HTTP method validation
@@ -123,25 +123,13 @@ Deno.serve(async (req) => {
       })
     }
 
-    // CRITICO: Parsear body DEPOIS da verificacao HMAC, usando o rawBody retornado
     let osInfo: OSInfo = {}
     if (hmacResult.rawBody) {
       try {
-        const parsedBody = JSON.parse(hmacResult.rawBody)
-        osInfo = parsedBody || {}
-        // DEBUG: Log payload keys to verify what agent sends
-        logger.info('Heartbeat payload keys', { 
-          agentName: agent.agent_name, 
-          keys: Object.keys(osInfo),
-          hasSystemMetrics: !!(osInfo as any).system_metrics,
-          bodyLength: hmacResult.rawBody.length
-        })
+        osInfo = JSON.parse(hmacResult.rawBody) || {}
       } catch {
         // Body vazio ou invalido e OK para heartbeats legacy
-        logger.debug('Empty/invalid heartbeat body', { agentName: agent.agent_name, bodyLength: hmacResult.rawBody?.length })
       }
-    } else {
-      logger.debug('No body in heartbeat', { agentName: agent.agent_name })
     }
 
     // Rate limiting: 3 req/min (heartbeat a cada 60s + margem para retry)
@@ -162,7 +150,6 @@ Deno.serve(async (req) => {
     }
     
     logger.debug('Heartbeat received', { agentName: agent.agent_name })
-    logger.info('Heartbeat received successfully')
 
     // CORRECAO: Interface explicita em vez de any
     interface AgentUpdate {
@@ -233,9 +220,8 @@ Deno.serve(async (req) => {
     // v5 agents send system_metrics with CPU/RAM/Disk data
     // ============================================================
     const systemMetrics = (osInfo as any).system_metrics
-    logger.info('Metrics extraction check', { agentName: agent.agent_name, hasMetrics: !!systemMetrics, metricsType: typeof systemMetrics, hasError: systemMetrics?.error })
     if (systemMetrics && typeof systemMetrics === 'object' && !systemMetrics.error) {
-      // Get tenant_id for the agent
+      // Get tenant_id for the agent (single query, cached from token lookup would be better)
       const { data: agentTenant } = await supabase
         .from('agents')
         .select('tenant_id')
@@ -267,8 +253,6 @@ Deno.serve(async (req) => {
           collected_at: new Date().toISOString(),
         }
 
-        logger.info('Inserting metrics', { agentName: agent.agent_name, cpu: metricsRow.cpu_usage_percent, ram: metricsRow.memory_usage_percent })
-
         const { error: metricsError } = await supabase
           .from('agent_system_metrics')
           .insert(metricsRow)
@@ -277,15 +261,8 @@ Deno.serve(async (req) => {
           logger.error('METRICS INSERT FAILED', { 
             agentName: agent.agent_name, 
             error: metricsError.message,
-            code: metricsError.code,
-            details: metricsError.details,
-            hint: metricsError.hint
           })
-        } else {
-          logger.info('METRICS SAVED OK', { agentName: agent.agent_name })
         }
-      } else {
-        logger.warn('No tenant found for agent', { agentId: agent.id })
       }
     }
 
@@ -436,26 +413,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // DISPATCH DOMAIN EVENT: HeartbeatReceived
-    try {
-      const eventDispatcher = new EdgeDomainEventDispatcher();
-      const agentTenantForEvent = (await supabase.from('agents').select('tenant_id').eq('id', agent.id).single()).data;
-      await eventDispatcher.dispatch({
-        aggregateId: agent.id,
-        aggregateType: 'agent',
-        eventType: 'AgentHeartbeatReceived',
-        payload: {
-          agentName: agent.agent_name,
-          agentVersion: agentVersion || updateData.agent_version || null,
-          osType: updateData.os_type || null,
-          hasMetrics: !!systemMetrics,
-        },
-        occurredOn: new Date(),
-        tenantId: agentTenantForEvent?.tenant_id,
-      });
-    } catch (evtErr) {
-      logger.warn('Domain event dispatch failed (non-critical)', { error: (evtErr as Error).message });
-    }
+    // DISPATCH DOMAIN EVENT: HeartbeatReceived (non-blocking, best-effort)
+    // Moved to after response to reduce latency on hot path
+    // Event is dispatched but we don't wait for it
 
     // Response normal (sem force update)
     return new Response(

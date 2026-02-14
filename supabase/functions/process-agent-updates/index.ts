@@ -84,9 +84,10 @@ Deno.serve(async (req) => {
       stack: err.stack,
     });
 
-    // Report cron health on failure
+    // Report cron health on failure (best-effort)
     try {
-      await supabase.rpc('update_cron_health', {
+      const supabaseFallback = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      await supabaseFallback.rpc('update_cron_health', {
         p_cron_name: 'process-agent-updates',
         p_success: false,
         p_details: { error: err.message },
