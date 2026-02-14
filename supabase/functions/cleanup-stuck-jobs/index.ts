@@ -1,6 +1,5 @@
 // FASE 2: Funcao de cleanup de jobs travados
-// P1-03 FIX: Adicionada validação de autenticação
-// HARDENING 2025-01-22: delivery_attempts limit + expires_at TTL
+// ZERO-GAP FIX: delivered→failed (not queued) to comply with FSM trigger
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
 
@@ -14,17 +13,14 @@ Deno.serve(async (req) => {
 
   const requestId = crypto.randomUUID()
 
-  // P1-03 FIX: Validate internal secret or scheduled execution
   const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET')
   const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')
   const providedSecret = req.headers.get('X-Internal-Secret')
   const authHeader = req.headers.get('authorization')
   
-  // Detect cron call (sends anon key in Bearer token)
   const isCronCall = authHeader?.startsWith('Bearer ') && 
                      authHeader?.includes(SUPABASE_ANON_KEY?.substring(0, 20) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9')
   
-  // Allow scheduled execution (no auth headers), cron calls, or internal secret
   const isScheduled = !providedSecret && !authHeader
   const isInternal = INTERNAL_SECRET && providedSecret === INTERNAL_SECRET
   
@@ -50,84 +46,102 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString()
 
     console.log(`[cleanup-stuck-jobs] Starting cleanup at ${now}`)
-    console.log(`[cleanup-stuck-jobs] Stuck timeout: ${STUCK_TIMEOUT_MINUTES}min, Max attempts: ${MAX_DELIVERY_ATTEMPTS}`)
 
-    // FASE 1: Jobs travados que ainda podem ser retentados
-    const { data: retryableJobs, error: retryError } = await supabase
+    // FASE 1: Jobs delivered travados > timeout → FAILED (não queued!)
+    // O trigger enforce_job_state_transitions bloqueia delivered→queued.
+    // A transição legal é delivered→failed.
+    const { data: stuckDelivered, error: stuckError } = await supabase
       .from('jobs')
-      .select('id, agent_name, type, delivered_at, delivery_attempts')
+      .select('id, agent_name, type, delivered_at, delivery_attempts, expires_at')
       .eq('status', 'delivered')
       .lt('delivered_at', cutoffTime)
-      .lt('delivery_attempts', MAX_DELIVERY_ATTEMPTS - 1) // Ainda tem tentativas
-      .gt('expires_at', now) // Não expirado
 
-    if (retryError) {
-      console.error('[cleanup-stuck-jobs] Error fetching retryable jobs:', retryError)
+    if (stuckError) {
+      console.error('[cleanup-stuck-jobs] Error fetching stuck delivered jobs:', stuckError)
     }
 
-    let retriedCount = 0
-    if (retryableJobs && retryableJobs.length > 0) {
-      console.log(`[cleanup-stuck-jobs] Found ${retryableJobs.length} retryable jobs`)
+    let failedDeliveredCount = 0
+    if (stuckDelivered && stuckDelivered.length > 0) {
+      // Separate: retryable (can create a NEW job) vs exhausted
+      const retryable: typeof stuckDelivered = []
+      const exhausted: typeof stuckDelivered = []
       
-      // Incrementar delivery_attempts e voltar para queued
-      for (const job of retryableJobs) {
-        const { error: updateError } = await supabase
-          .from('jobs')
-          .update({
-            status: 'queued',
-            delivered_at: null,
-            delivery_attempts: (job.delivery_attempts || 0) + 1
-          })
-          .eq('id', job.id)
-
-        if (updateError) {
-          console.error(`[cleanup-stuck-jobs] Error updating job ${job.id}:`, updateError)
+      for (const job of stuckDelivered) {
+        const attempts = job.delivery_attempts || 0
+        const expired = job.expires_at && new Date(job.expires_at) < new Date(now)
+        if (attempts >= MAX_DELIVERY_ATTEMPTS - 1 || expired) {
+          exhausted.push(job)
         } else {
-          retriedCount++
+          retryable.push(job)
         }
       }
-      console.log(`[cleanup-stuck-jobs] Reset ${retriedCount} jobs to queued (incremented attempts)`)
-    }
 
-    // FASE 2: Jobs que excederam tentativas máximas
-    const { data: exhaustedJobs, error: exhaustedError } = await supabase
-      .from('jobs')
-      .select('id, agent_name, type, delivery_attempts')
-      .eq('status', 'delivered')
-      .lt('delivered_at', cutoffTime)
-      .gte('delivery_attempts', MAX_DELIVERY_ATTEMPTS - 1)
+      // All stuck delivered jobs → failed (legal FSM transition)
+      const allIds = stuckDelivered.map(j => j.id)
+      if (allIds.length > 0) {
+        const { error: failError } = await supabase
+          .from('jobs')
+          .update({
+            status: 'failed',
+            completed_at: now,
+            error_message: '[CLEANUP] Job delivered but agent never submitted result',
+            failure_class: 'AGENT_STALLED'
+          })
+          .in('id', allIds)
 
-    if (exhaustedError) {
-      console.error('[cleanup-stuck-jobs] Error fetching exhausted jobs:', exhaustedError)
-    }
-
-    let exhaustedCount = 0
-    if (exhaustedJobs && exhaustedJobs.length > 0) {
-      console.log(`[cleanup-stuck-jobs] Found ${exhaustedJobs.length} exhausted jobs (max attempts reached)`)
-      
-      const { error: failError } = await supabase
-        .from('jobs')
-        .update({
-          status: 'failed',
-          error_message: `Max delivery attempts (${MAX_DELIVERY_ATTEMPTS}) exceeded - job never completed`,
-          completed_at: now,
-          delivery_attempts: MAX_DELIVERY_ATTEMPTS
-        })
-        .in('id', exhaustedJobs.map(j => j.id))
-
-      if (failError) {
-        console.error('[cleanup-stuck-jobs] Error failing exhausted jobs:', failError)
-      } else {
-        exhaustedCount = exhaustedJobs.length
-        console.log(`[cleanup-stuck-jobs] Marked ${exhaustedCount} jobs as failed (max attempts)`)
+        if (failError) {
+          console.error('[cleanup-stuck-jobs] Error failing stuck delivered jobs:', failError)
+        } else {
+          failedDeliveredCount = allIds.length
+        }
       }
+
+      // For retryable jobs: create NEW replacement jobs (instead of illegal delivered→queued)
+      let recreatedCount = 0
+      for (const job of retryable) {
+        // Fetch full job data to recreate
+        const { data: fullJob } = await supabase
+          .from('jobs')
+          .select('tenant_id, agent_id, agent_name, type, payload, priority, expires_at')
+          .eq('id', job.id)
+          .single()
+
+        if (fullJob && fullJob.type) {
+          const newExpiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
+          const { error: insertError } = await supabase
+            .from('jobs')
+            .insert({
+              tenant_id: fullJob.tenant_id,
+              agent_id: fullJob.agent_id,
+              agent_name: fullJob.agent_name,
+              type: fullJob.type,
+              payload: fullJob.payload || {},
+              status: 'queued',
+              approved: true,
+              priority: fullJob.priority,
+              expires_at: newExpiresAt,
+              delivery_attempts: (job.delivery_attempts || 0) + 1
+            })
+
+          if (!insertError) {
+            recreatedCount++
+          } else {
+            // Dedup index may block — that's fine, means there's already an active job
+            if (!insertError.message?.includes('idx_jobs_dedup_active')) {
+              console.error(`[cleanup-stuck-jobs] Error recreating job for ${job.agent_name}:`, insertError.message)
+            }
+          }
+        }
+      }
+
+      console.log(`[cleanup-stuck-jobs] Stuck delivered: ${failedDeliveredCount} failed, ${recreatedCount} recreated as new jobs, ${exhausted.length} exhausted`)
     }
 
-    // FASE 3: Jobs expirados (TTL exceeded)
+    // FASE 2: Jobs expirados (TTL exceeded) — queued or delivered
     const { data: expiredJobs, error: expiredError } = await supabase
       .from('jobs')
-      .select('id, agent_name, type, created_at, expires_at')
-      .in('status', ['queued', 'delivered'])
+      .select('id, agent_name, type')
+      .in('status', ['queued', 'delivered', 'pending'])
       .lt('expires_at', now)
 
     if (expiredError) {
@@ -136,14 +150,13 @@ Deno.serve(async (req) => {
 
     let expiredCount = 0
     if (expiredJobs && expiredJobs.length > 0) {
-      console.log(`[cleanup-stuck-jobs] Found ${expiredJobs.length} expired jobs (TTL exceeded)`)
-      
       const { error: expireError } = await supabase
         .from('jobs')
         .update({
           status: 'failed',
-          error_message: 'Job expired (TTL exceeded)',
-          completed_at: now
+          error_message: '[DLQ:EXPIRED_TTL] Job expired (TTL exceeded)',
+          completed_at: now,
+          failure_class: 'EXPIRED'
         })
         .in('id', expiredJobs.map(j => j.id))
 
@@ -151,42 +164,43 @@ Deno.serve(async (req) => {
         console.error('[cleanup-stuck-jobs] Error failing expired jobs:', expireError)
       } else {
         expiredCount = expiredJobs.length
-        console.log(`[cleanup-stuck-jobs] Marked ${expiredCount} jobs as failed (expired)`)
       }
     }
 
     const summary = {
       success: true,
       timestamp: now,
-      retried: {
-        count: retriedCount,
-        jobs: retryableJobs?.map(j => ({ id: j.id, agent: j.agent_name, type: j.type, attempts: (j.delivery_attempts || 0) + 1 })) || []
-      },
-      exhausted: {
-        count: exhaustedCount,
-        jobs: exhaustedJobs?.map(j => ({ id: j.id, agent: j.agent_name, type: j.type })) || []
-      },
-      expired: {
-        count: expiredCount,
-        jobs: expiredJobs?.map(j => ({ id: j.id, agent: j.agent_name, type: j.type })) || []
-      },
+      stuck_delivered_failed: failedDeliveredCount,
+      expired_failed: expiredCount,
+      total_cleaned: failedDeliveredCount + expiredCount,
       config: {
         max_delivery_attempts: MAX_DELIVERY_ATTEMPTS,
         stuck_timeout_minutes: STUCK_TIMEOUT_MINUTES
       }
     }
 
-    console.log(`[cleanup-stuck-jobs] Summary: ${retriedCount} retried, ${exhaustedCount} exhausted, ${expiredCount} expired`)
+    console.log(`[cleanup-stuck-jobs] Summary: ${failedDeliveredCount} delivered→failed, ${expiredCount} expired→failed`)
 
     // Log observability
-    await supabase.rpc('log_scheduled_job_run', {
-      p_job_key: 'cleanup-stuck-jobs',
-      p_success: true,
-      p_duration_ms: Date.now() - startedAt,
-      p_result: summary,
-      p_processed_count: retriedCount + exhaustedCount + expiredCount,
-      p_job_source: 'cron'
-    })
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'cleanup-stuck-jobs',
+        p_success: true,
+        p_duration_ms: Date.now() - startedAt,
+        p_result: summary,
+        p_processed_count: failedDeliveredCount + expiredCount,
+        p_job_source: 'cron'
+      })
+    } catch {}
+
+    // Report cron health
+    try {
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'cleanup-stuck-jobs-every-15min',
+        p_success: true,
+        p_error_message: null
+      })
+    } catch {}
 
     return new Response(
       JSON.stringify(summary),
@@ -195,19 +209,14 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('[cleanup-stuck-jobs] Unexpected error:', error)
     
-    // Log error observability
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       const supabase = createClient(supabaseUrl, supabaseKey)
-      await supabase.rpc('log_scheduled_job_run', {
-        p_job_key: 'cleanup-stuck-jobs',
+      await supabase.rpc('update_cron_health', {
+        p_cron_name: 'cleanup-stuck-jobs-every-15min',
         p_success: false,
-        p_duration_ms: Date.now() - startedAt,
-        p_error: error instanceof Error ? error.message : 'Unknown error',
-        p_result: null,
-        p_processed_count: 0,
-        p_job_source: 'cron'
+        p_error_message: error instanceof Error ? error.message : 'Unknown error'
       })
     } catch {}
     
