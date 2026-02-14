@@ -1,24 +1,21 @@
 /* eslint-disable no-useless-escape */
 /**
- * CyberShield Agent macOS Script - AUTO-LOADED FROM FILE
- * DO NOT EDIT MANUALLY.
- * Source: _shared/agent-scripts/cybershield-agent-macos-v5.sh
- * Version: v5.0.3-hotfix
- * Generated: 2026-02-11
- *
- * v5.0.3-hotfix FIXES:
- * - BUG-001: HMAC signature now generated even without body
- * - BUG-003: Poll-Jobs changed to POST; response parsed as direct array
- * - BUG-004: DNS Sync uses POST with body
- * - BUG-005: Heartbeat sends real FSM state
- * - LaunchDaemon health check in main loop
- *
- * ARCHITECTURE: Uses Deno.readTextFile() to load raw .sh at runtime,
- * eliminating template literal escaping issues permanently.
+ * CyberShield Agent macOS Script - Runtime Loader
+ * Tries Deno.readTextFile first, falls back to empty string.
+ * serve-agent-update will use DB content as fallback.
  */
 
-const scriptUrl = new URL('./agent-scripts/cybershield-agent-macos-v5.sh', import.meta.url);
-export const AGENT_SCRIPT_MACOS_SH = await Deno.readTextFile(scriptUrl);
+let _content = '';
+
+try {
+  const scriptUrl = new URL('./agent-scripts/cybershield-agent-macos-v5.sh', import.meta.url);
+  _content = await Deno.readTextFile(scriptUrl);
+} catch {
+  // File not available in deployed environment - serve-agent-update uses DB fallback
+  _content = '';
+}
+
+export const AGENT_SCRIPT_MACOS_SH = _content;
 
 export function getAgentScriptMacos(): string {
   return AGENT_SCRIPT_MACOS_SH;
