@@ -2476,6 +2476,180 @@ export type Database = {
           },
         ]
       }
+      agent_quarantine: {
+        Row: {
+          agent_id: string
+          created_at: string | null
+          duration_hours: number
+          id: string
+          quarantine_end: string | null
+          quarantine_reason: string
+          quarantined_by: string
+          released_at: string | null
+          released_by: string | null
+          restrict_file_access: boolean | null
+          restrict_network: boolean | null
+          restrict_processes: boolean | null
+          severity: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string | null
+          duration_hours?: number
+          id?: string
+          quarantine_end?: string | null
+          quarantine_reason: string
+          quarantined_by?: string
+          released_at?: string | null
+          released_by?: string | null
+          restrict_file_access?: boolean | null
+          restrict_network?: boolean | null
+          restrict_processes?: boolean | null
+          severity?: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string | null
+          duration_hours?: number
+          id?: string
+          quarantine_end?: string | null
+          quarantine_reason?: string
+          quarantined_by?: string
+          released_at?: string | null
+          released_by?: string | null
+          restrict_file_access?: boolean | null
+          restrict_network?: boolean | null
+          restrict_processes?: boolean | null
+          severity?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_quarantine_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agent_quarantine_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       agent_recovery_authorizations: {
         Row: {
           agent_id: string
@@ -4266,6 +4440,171 @@ export type Database = {
           version?: string
         }
         Relationships: []
+      }
+      agent_vulnerabilities: {
+        Row: {
+          affected_software: string | null
+          agent_id: string
+          created_at: string | null
+          cve_id: string
+          cvss_score: number | null
+          detected_at: string | null
+          id: string
+          remediation_completed_at: string | null
+          remediation_started_at: string | null
+          remediation_status: string
+          severity: string
+          tenant_id: string
+        }
+        Insert: {
+          affected_software?: string | null
+          agent_id: string
+          created_at?: string | null
+          cve_id: string
+          cvss_score?: number | null
+          detected_at?: string | null
+          id?: string
+          remediation_completed_at?: string | null
+          remediation_started_at?: string | null
+          remediation_status?: string
+          severity?: string
+          tenant_id: string
+        }
+        Update: {
+          affected_software?: string | null
+          agent_id?: string
+          created_at?: string | null
+          cve_id?: string
+          cvss_score?: number | null
+          detected_at?: string | null
+          id?: string
+          remediation_completed_at?: string | null
+          remediation_started_at?: string | null
+          remediation_status?: string
+          severity?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agent_vulnerabilities_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       agent_vulnerability_scans: {
         Row: {
@@ -11661,6 +12000,84 @@ export type Database = {
           },
           {
             foreignKeyName: "notification_channels_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      notification_deliveries: {
+        Row: {
+          alert_id: string | null
+          channel: string
+          created_at: string | null
+          delivered_at: string | null
+          error_message: string | null
+          id: string
+          message: string
+          recipient: string
+          status: string
+          subject: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          alert_id?: string | null
+          channel: string
+          created_at?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          message: string
+          recipient: string
+          status?: string
+          subject?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          alert_id?: string | null
+          channel?: string
+          created_at?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          message?: string
+          recipient?: string
+          status?: string
+          subject?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_deliveries_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "system_alerts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "notification_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "notification_deliveries_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"

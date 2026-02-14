@@ -8,6 +8,7 @@ import { logger } from '../_shared/logger.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 import { hashToken } from '../_shared/token-hash.ts'
 import { normalizeVersion, normalizeForWindows } from '../_shared/hexagonal/update-decision-service.ts'
+import { EdgeDomainEventDispatcher } from '../_shared/domain-events.ts'
 
 Deno.serve(async (req) => {
   // QUAL-01: Proper HTTP method validation
@@ -433,6 +434,27 @@ Deno.serve(async (req) => {
           }
         }
       }
+    }
+
+    // DISPATCH DOMAIN EVENT: HeartbeatReceived
+    try {
+      const eventDispatcher = new EdgeDomainEventDispatcher();
+      const agentTenantForEvent = (await supabase.from('agents').select('tenant_id').eq('id', agent.id).single()).data;
+      await eventDispatcher.dispatch({
+        aggregateId: agent.id,
+        aggregateType: 'agent',
+        eventType: 'AgentHeartbeatReceived',
+        payload: {
+          agentName: agent.agent_name,
+          agentVersion: agentVersion || updateData.agent_version || null,
+          osType: updateData.os_type || null,
+          hasMetrics: !!systemMetrics,
+        },
+        occurredOn: new Date(),
+        tenantId: agentTenantForEvent?.tenant_id,
+      });
+    } catch (evtErr) {
+      logger.warn('Domain event dispatch failed (non-critical)', { error: (evtErr as Error).message });
     }
 
     // Response normal (sem force update)
