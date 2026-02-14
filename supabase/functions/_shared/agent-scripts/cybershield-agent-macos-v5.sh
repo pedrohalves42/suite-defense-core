@@ -761,7 +761,7 @@ restart_service_handler() {
      local job_id
      job_id=$(python3 -c "import json; print(json.loads('$job').get('id', ''))" 2>/dev/null)
      local job_type
-     job_type=$(python3 -c "import json; print(json.loads('$job').get('job_type', ''))" 2>/dev/null)
+     job_type=$(python3 -c "import json; j=json.loads('$job'); print(j.get('job_type', '') or j.get('type', ''))" 2>/dev/null)
      
      log "INFO" "[JOB] Starting execution: $job_type (ID: $job_id)"
      

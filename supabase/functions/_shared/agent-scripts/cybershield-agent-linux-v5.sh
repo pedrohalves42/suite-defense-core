@@ -778,7 +778,7 @@ restart_service_handler() {
      local job_id
      job_id=$(echo "$job" | jq -r '.id' 2>/dev/null)
      local job_type
-     job_type=$(echo "$job" | jq -r '.job_type' 2>/dev/null)
+     job_type=$(echo "$job" | jq -r '.job_type // .type' 2>/dev/null)
      
      log "INFO" "[JOB] Starting execution: $job_type (ID: $job_id)"
      
