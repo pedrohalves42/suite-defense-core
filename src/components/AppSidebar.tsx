@@ -131,7 +131,6 @@ export const AppSidebar = () => {
   // === AVANÇADO (colapsável - só técnico) ===
   const advancedItems = useMemo<MenuItem[]>(() => [
     { icon: Download, label: 'Instalações', to: '/admin/installations' },
-    { icon: Key, label: 'Chaves de Cadastro', to: '/admin/enrollment-keys' },
     { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases' },
     { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics' },
     { icon: Clock, label: 'Automações', to: '/admin/automations' },
@@ -146,7 +145,7 @@ export const AppSidebar = () => {
   // === SUPER ADMIN - Operacional ===
   const superOpsItems = useMemo<MenuItem[]>(() => [
     { icon: Server, label: 'Empresas', to: '/super-admin/tenants', end: true },
-    { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases' },
+    { icon: Key, label: 'Chaves de Cadastro', to: '/super-admin/enrollment-keys' },
     { icon: Percent, label: 'Rollout', to: '/super-admin/rollout-policies' },
     { icon: Users, label: 'Usuários', to: '/super-admin/users' },
     { icon: Shield, label: 'Funcionalidades', to: '/super-admin/features' },
@@ -486,7 +485,7 @@ export const AppSidebar = () => {
           {!collapsed ? (
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/50">
               <Shield className="h-3 w-3" />
-              <span className="tracking-wide">v2.0.0</span>
+              <span className="tracking-wide">v5.0.3</span>
             </div>
           ) : (
             <Tooltip>
@@ -496,7 +495,7 @@ export const AppSidebar = () => {
                 </div>
               </TooltipTrigger>
               <TooltipContent side="right">
-                CyberShield v2.0.0
+                CyberShield v5.0.3
               </TooltipContent>
             </Tooltip>
           )}
