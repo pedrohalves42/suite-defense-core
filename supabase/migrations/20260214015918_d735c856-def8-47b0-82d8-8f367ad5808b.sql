@@ -1,0 +1,51 @@
+
+-- =============================================================================
+-- Fix get_agent_snapshot RPC: Read from agents table directly (not view)
+-- Aligns with get_agents_snapshots_list pattern for service-role compatibility
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION public.get_agent_snapshot(p_agent_id uuid)
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT jsonb_build_object(
+    'agent_id', a.id,
+    'tenant_id', a.tenant_id,
+    'hostname', a.hostname,
+    'os_type', a.os_type,
+    'version', a.agent_version,
+    'last_heartbeat', a.last_heartbeat,
+    'online', a.last_heartbeat > (now() - interval '2 minutes'),
+    'latency_ms', EXTRACT(epoch FROM now() - a.last_heartbeat) * 1000::numeric,
+    'agent_state', a.agent_state,
+    'safe_mode', COALESCE(a.safe_mode_entered_at IS NOT NULL, false),
+    'safe_mode_reason', a.safe_mode_reason,
+    'is_isolated', COALESCE(a.is_isolated, false),
+    'is_throttled', COALESCE(a.is_throttled, false),
+    'active_issues', COALESCE((SELECT count(*) FROM system_alerts sa WHERE sa.agent_id = a.id AND sa.resolved_at IS NULL), 0),
+    'unresolved_insights', COALESCE((SELECT count(*) FROM ai_insights ai WHERE ai.agent_id = a.id AND ai.status = 'open'), 0)
+  )
+  FROM agents a
+  WHERE a.id = p_agent_id
+    AND a.archived_at IS NULL
+    AND (
+      -- Tenant isolation: check JWT claim first
+      a.tenant_id = get_active_tenant_id()
+      OR
+      -- Fallback: check user_roles when JWT claim not set
+      (get_active_tenant_id() IS NULL AND auth.uid() IS NOT NULL AND EXISTS (
+        SELECT 1 FROM user_roles ur 
+        WHERE ur.user_id = auth.uid() 
+          AND ur.tenant_id = a.tenant_id
+      ))
+      OR
+      -- Super admin bypass
+      is_current_super_admin()
+      OR
+      -- Service role bypass (edge functions)
+      (auth.uid() IS NULL AND current_setting('role', true) = 'service_role')
+    );
+$$;
