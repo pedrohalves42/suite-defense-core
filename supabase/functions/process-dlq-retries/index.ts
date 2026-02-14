@@ -4,7 +4,21 @@ import { createRequestContext, mergeHeaders } from '../_shared/request-context.t
 import { getDLQEntriesForRetry, calculateNextRetry } from '../_shared/dlq.ts';
 import { logger, loggerWithContext } from '../_shared/logger.ts';
 
-// P3: Type-safe DLQ entry interface
+// ZERO-GAP: Failure classes that should NEVER be retried
+const UNRECOVERABLE_FAILURE_CLASSES = new Set([
+  'BUG',           // Unknown job type, code bugs
+  'EXPIRED',       // TTL exceeded — retrying creates same outcome
+  'UNKNOWN',       // Unclassified failures 
+]);
+
+// ZERO-GAP: Error message patterns that indicate permanent failures
+const UNRECOVERABLE_ERROR_PATTERNS = [
+  'Unknown job type',
+  'EXECUTION_ID_REQUIRED',
+  'unsupported_version',
+  'HMAC secret not configured',
+];
+
 interface DLQEntryRow {
   id: string;
   original_job_id: string;
@@ -17,7 +31,26 @@ interface DLQEntryRow {
   retry_count: number;
   max_retries: number;
   status: string;
+  failure_class: string | null;
+  error_message: string | null;
   metadata: Record<string, unknown> | null;
+}
+
+function isUnrecoverable(entry: DLQEntryRow): string | null {
+  // Check failure class
+  if (entry.failure_class && UNRECOVERABLE_FAILURE_CLASSES.has(entry.failure_class)) {
+    return `Unrecoverable failure_class: ${entry.failure_class}`
+  }
+
+  // Check error message patterns
+  const errorMsg = entry.error_message || ''
+  for (const pattern of UNRECOVERABLE_ERROR_PATTERNS) {
+    if (errorMsg.includes(pattern)) {
+      return `Unrecoverable error pattern: ${pattern}`
+    }
+  }
+
+  return null
 }
 
 Deno.serve(async (req) => {
@@ -38,6 +71,7 @@ Deno.serve(async (req) => {
     processed: 0,
     retried: 0,
     exhausted: 0,
+    skipped_unrecoverable: 0,
     alertsCreated: 0,
     errors: [] as string[],
   };
@@ -45,14 +79,12 @@ Deno.serve(async (req) => {
   try {
     log.info('Starting DLQ retry processing');
 
-    // Get entries ready for retry with proper typing
     const rawEntries = await getDLQEntriesForRetry(supabase, 20);
     const entries = rawEntries as unknown as DLQEntryRow[];
     
     log.info('Found entries for retry', { count: entries.length });
 
     if (entries.length === 0) {
-      // Log observability using RPC with job_key
       await supabase.rpc('log_scheduled_job_run', {
         p_job_key: 'process-dlq-retries',
         p_success: true,
@@ -70,16 +102,44 @@ Deno.serve(async (req) => {
 
     for (const entry of entries) {
       results.processed++;
-      const entryStartTime = Date.now();
 
       try {
+        // ZERO-GAP: Check if this entry is unrecoverable BEFORE retrying
+        const unrecoverableReason = isUnrecoverable(entry)
+        if (unrecoverableReason) {
+          log.info('Skipping unrecoverable DLQ entry', {
+            id: entry.id,
+            job_type: entry.job_type,
+            failure_class: entry.failure_class,
+            reason: unrecoverableReason,
+            agent: entry.agent_name,
+          })
+
+          // Mark as exhausted immediately — do NOT create a new job
+          await supabase
+            .from('failed_jobs_dlq')
+            .update({
+              status: 'exhausted',
+              next_retry_at: null,
+              metadata: {
+                ...(entry.metadata || {}),
+                exhausted_reason: unrecoverableReason,
+                exhausted_at: new Date().toISOString(),
+              },
+            })
+            .eq('id', entry.id)
+
+          results.skipped_unrecoverable++
+          continue
+        }
+
         // Mark as retrying
         await supabase
           .from('failed_jobs_dlq')
           .update({ status: 'retrying' })
           .eq('id', entry.id);
 
-        // Re-create the job with approved flag to ensure it can be claimed
+        // Re-create the job
         const { error: jobError } = await supabase
           .from('jobs')
           .insert({
@@ -89,14 +149,30 @@ Deno.serve(async (req) => {
             type: entry.job_type,
             payload: entry.payload,
             status: 'queued',
-            approved: true, // CRITICAL: DLQ retries must be pre-approved
+            approved: true,
           });
 
         if (jobError) {
+          // Dedup index block is acceptable — skip silently
+          if (jobError.message?.includes('idx_jobs_dedup_active')) {
+            log.info('DLQ retry skipped: active job already exists', {
+              id: entry.id,
+              job_type: entry.job_type,
+              agent: entry.agent_name,
+            })
+            // Mark back to pending with delayed retry
+            await supabase
+              .from('failed_jobs_dlq')
+              .update({
+                status: 'pending',
+                next_retry_at: calculateNextRetry(entry.retry_count + 1),
+              })
+              .eq('id', entry.id)
+            continue
+          }
           throw new Error(`Failed to recreate job: ${jobError.message}`);
         }
 
-        // P3: Type-safe retry count calculation
         const currentRetryCount = typeof entry.retry_count === 'number' ? entry.retry_count : 0;
         const maxRetries = typeof entry.max_retries === 'number' ? entry.max_retries : 3;
         const newRetryCount = currentRetryCount + 1;
@@ -113,7 +189,6 @@ Deno.serve(async (req) => {
             .eq('id', entry.id);
           results.exhausted++;
 
-          // Create critical alert for exhausted DLQ entries
           const { error: alertError } = await supabase
             .from('system_alerts')
             .insert({
@@ -121,7 +196,7 @@ Deno.serve(async (req) => {
               agent_id: entry.agent_id,
               alert_type: 'dlq_exhausted',
               severity: 'critical',
-              message: `Job "${entry.job_type}" falhou permanentemente após ${maxRetries} tentativas na DLQ para agente ${entry.agent_name}`,
+              message: `Job "${entry.job_type}" falhou permanentemente após ${maxRetries} tentativas para ${entry.agent_name}`,
               metadata: {
                 dlq_id: entry.id,
                 original_job_id: entry.original_job_id,
@@ -132,13 +207,9 @@ Deno.serve(async (req) => {
               resolved: false,
             });
 
-          if (!alertError) {
-            results.alertsCreated++;
-          }
+          if (!alertError) results.alertsCreated++;
         } else {
-          // P2: Use shared calculateNextRetry function
           const nextRetry = calculateNextRetry(newRetryCount);
-
           await supabase
             .from('failed_jobs_dlq')
             .update({
@@ -149,19 +220,11 @@ Deno.serve(async (req) => {
             .eq('id', entry.id);
           results.retried++;
         }
-
-        // P3: Log with timing
-        logger.span('dlq_entry_processed', entryStartTime, {
-          entry_id: entry.id,
-          retry_count: newRetryCount,
-          exhausted,
-        });
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
         results.errors.push(`${entry.id}: ${errorMsg}`);
         log.error(`Error processing entry ${entry.id}`, err);
 
-        // Reset to pending for next attempt
         await supabase
           .from('failed_jobs_dlq')
           .update({ status: 'pending' })
@@ -169,15 +232,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // P3: Log metrics
     logger.metric('dlq_processed', results.processed);
     logger.metric('dlq_retried', results.retried);
     logger.metric('dlq_exhausted', results.exhausted);
-    logger.metric('dlq_errors', results.errors.length);
+    logger.metric('dlq_skipped_unrecoverable', results.skipped_unrecoverable);
 
     log.timed('DLQ processing complete', results);
 
-    // Log observability - success using RPC with job_key
     await supabase.rpc('log_scheduled_job_run', {
       p_job_key: 'process-dlq-retries',
       p_success: true,
@@ -188,17 +249,12 @@ Deno.serve(async (req) => {
     });
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        requestId: ctx.requestId,
-        results,
-      }),
+      JSON.stringify({ success: true, requestId: ctx.requestId, results }),
       { status: 200, headers: mergeHeaders(corsHeaders, ctx) }
     );
   } catch (err) {
     log.error('Unexpected error', err);
 
-    // Log observability - failure using RPC with job_key
     await supabase.rpc('log_scheduled_job_run', {
       p_job_key: 'process-dlq-retries',
       p_success: false,
@@ -210,10 +266,7 @@ Deno.serve(async (req) => {
     });
 
     return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error', 
-        requestId: ctx.requestId 
-      }),
+      JSON.stringify({ error: 'Internal server error', requestId: ctx.requestId }),
       { status: 500, headers: mergeHeaders(corsHeaders, ctx) }
     );
   }
