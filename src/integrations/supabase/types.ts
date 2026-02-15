@@ -24441,6 +24441,17 @@ export type Database = {
         }
         Returns: Json
       }
+      create_job_if_not_exists: {
+        Args: {
+          p_agent_id: string
+          p_payload?: Json
+          p_priority?: number
+          p_tenant_id: string
+          p_ttl_hours?: number
+          p_type: string
+        }
+        Returns: string
+      }
       create_jobs_for_all_agents: {
         Args: { p_job_type: string; p_payload?: Json; p_tenant_id: string }
         Returns: number
