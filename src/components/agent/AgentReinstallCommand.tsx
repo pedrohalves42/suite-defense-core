@@ -62,7 +62,7 @@ export function AgentReinstallCommand({ agentId, agentName }: AgentReinstallComm
         "  $resp.script_content | Set-Content -Path $scriptPath -Encoding UTF8 -Force;",
         "  $cfg = @{ ServerUrl='" + serverUrl + "'; AgentToken='" + token + "'; HMACSecret='" + hmac + "'; AgentName='" + name + "' };",
         "  $cfg | ConvertTo-Json | Set-Content -Path \"$dir\\config.json\" -Encoding UTF8 -Force;",
-        "  $arg = '-ExecutionPolicy Bypass -WindowStyle Hidden -File \"' + \"$\" + 'scriptPath\" -ServerUrl \"" + serverUrl + "\" -AgentToken \"" + token + "\" -HMACSecret \"" + hmac + "\"';",
+        "  $arg = '-ExecutionPolicy Bypass -WindowStyle Hidden -File \"' + $scriptPath + '\" -ServerUrl \"" + serverUrl + "\" -AgentToken \"" + token + "\" -HMACSecret \"" + hmac + "\"';",
         "  $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arg;",
         "  $trigger = New-ScheduledTaskTrigger -AtStartup;",
         "  $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1);",
