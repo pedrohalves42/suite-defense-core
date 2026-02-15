@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Loader2, PlayCircle, AlertCircle, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { prepareJobsForInsert } from "@/lib/job-utils";
+import { useTenant } from "@/hooks/useTenant";
 
 interface AgentStatus {
   id: string;
@@ -27,6 +28,7 @@ interface ValidationJob {
 }
 
 export function DynamicValidationSystem() {
+  const { tenant } = useTenant();
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [agents, setAgents] = useState<AgentStatus[]>([]);
@@ -66,21 +68,13 @@ export function DynamicValidationSystem() {
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
-
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (!userRole) throw new Error("Tenant não encontrado");
+      if (!tenant) throw new Error("Tenant não selecionado");
 
       // Get all active agents - ADR-026: Use agents_safe view
       const { data: agentsData } = await supabase
         .from('agents_safe')
         .select('id, agent_name, agent_version, last_heartbeat')
-        .eq('tenant_id', userRole.tenant_id)
+        .eq('tenant_id', tenant.id)
         .eq('status', 'active')
         .is('archived_at', null)
         .order('agent_name');
@@ -190,15 +184,7 @@ export function DynamicValidationSystem() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
-
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (!userRole) throw new Error("Tenant não encontrado");
+      if (!tenant) throw new Error("Tenant não selecionado");
 
       // Create all jobs
       const jobsToCreate = validationJobs.map(vJob => {
@@ -214,7 +200,7 @@ export function DynamicValidationSystem() {
           : {};
 
         return {
-          tenant_id: userRole.tenant_id,
+          tenant_id: tenant.id,
           agent_id: agent.id,
           agent_name: agent.agent_name,
           type: vJob.jobType,

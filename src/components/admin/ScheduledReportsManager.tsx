@@ -9,6 +9,7 @@
  */
 
 import { useState } from "react";
+import { useTenant } from "@/hooks/useTenant";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +56,7 @@ const REPORT_TYPE_OPTIONS = [
 ];
 
 export function ScheduledReportsManager() {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newSchedule, setNewSchedule] = useState({
@@ -115,22 +117,12 @@ export function ScheduledReportsManager() {
           break;
       }
 
-      const { data: userData } = await supabase.auth.getUser();
-      const { data: userRole } = await supabase
-        .from("user_roles")
-        .select("tenant_id")
-        .eq("user_id", userData.user?.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (!userRole?.tenant_id) {
-        throw new Error("Tenant não encontrado");
-      }
+      if (!tenant) throw new Error("Tenant não selecionado");
 
       const { error } = await supabase
         .from("scheduled_reports")
         .insert({
-          tenant_id: userRole.tenant_id,
+          tenant_id: tenant.id,
           name: newSchedule.name || `Relatório ${REPORT_TYPE_OPTIONS.find(r => r.value === newSchedule.report_type)?.label}`,
           report_type: newSchedule.report_type,
           frequency: newSchedule.frequency,
