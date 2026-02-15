@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useMFAEnforcement } from '@/hooks/useMFAEnforcement';
@@ -17,10 +17,13 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
-  ExternalLink
+  ExternalLink,
+  Loader2,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 interface GovernanceMetrics {
   totalUsers: number;
@@ -34,6 +37,58 @@ export function GovernanceHealthBanner() {
   const { tenant } = useTenant();
   const { requiresMFA, hasMFA, isCompliant } = useMFAEnforcement();
   const [expanded, setExpanded] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Bulk resolve mutation for accumulated alerts
+  const bulkResolveMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Não autenticado');
+      if (!tenant?.id) throw new Error('Tenant não encontrado');
+
+      // Resolve all non-critical alerts older than 7 days
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      
+      // 1. Resolve non-critical alerts older than 7 days
+      const { data: nonCriticalData } = await supabase
+        .from('system_alerts')
+        .update({
+          resolved: true,
+          resolved_at: new Date().toISOString(),
+          resolution_notes: 'Resolução em massa — alertas antigos (>7 dias)',
+        })
+        .eq('tenant_id', tenant.id)
+        .eq('resolved', false)
+        .lt('created_at', sevenDaysAgo)
+        .not('severity', 'in', '("critical")')
+        .select('id');
+
+      // 2. Resolve critical alerts (requires resolved_by)
+      const { data: criticalData } = await supabase
+        .from('system_alerts')
+        .update({
+          resolved: true,
+          resolved_at: new Date().toISOString(),
+          resolved_by: user.id,
+          resolution_notes: 'Resolução em massa — alertas críticos antigos (>7 dias) revisados por admin',
+        })
+        .eq('tenant_id', tenant.id)
+        .eq('resolved', false)
+        .eq('severity', 'critical')
+        .lt('created_at', sevenDaysAgo)
+        .select('id');
+
+      return (nonCriticalData?.length ?? 0) + (criticalData?.length ?? 0);
+    },
+    onSuccess: (count) => {
+      toast.success(`${count} alertas antigos resolvidos em massa`);
+      queryClient.invalidateQueries({ queryKey: ['governance-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['system-alerts'] });
+    },
+    onError: (error) => {
+      toast.error('Erro na resolução em massa: ' + (error as Error).message);
+    },
+  });
 
   // Fetch governance metrics
   const { data: metrics, isLoading } = useQuery({
@@ -348,12 +403,27 @@ export function GovernanceHealthBanner() {
                       </Link>
                     </Button>
                     {metrics.criticalAlerts > 0 && (
-                      <Button asChild variant="outline" size="sm" className="text-red-500 hover:text-red-600">
-                        <Link to="/admin/security-monitoring">
-                          <AlertTriangle className="h-4 w-4 mr-2" />
-                          Resolver Alertas
-                        </Link>
-                      </Button>
+                      <>
+                        <Button asChild variant="outline" size="sm" className="text-red-500 hover:text-red-600">
+                          <Link to="/admin/security-monitoring">
+                            <AlertTriangle className="h-4 w-4 mr-2" />
+                            Resolver Alertas
+                          </Link>
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => bulkResolveMutation.mutate()}
+                          disabled={bulkResolveMutation.isPending}
+                        >
+                          {bulkResolveMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 mr-2" />
+                          )}
+                          Resolução em Massa ({metrics.criticalAlerts})
+                        </Button>
+                      </>
                     )}
                   </div>
                 </motion.div>
