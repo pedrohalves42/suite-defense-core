@@ -1,79 +1,72 @@
 
-## Corrigir Comando de Reinstalacao Nuclear (2 problemas)
+## Corrigir light_vuln_scan falhando nos agentes ativos
 
-### Problema 1: URL incorreta - EK como query param em vez de path
+### Diagnóstico (comprovado com dados)
 
-O comando gerado coloca a enrollment key como `?ek=CHAVE`, mas a funcao `serve-installer` espera a chave no **path** da URL (`/serve-installer/CHAVE`). Com a EK no query param, o pathname fica `/serve-installer`, que bate com o health check da linha 97, retornando JSON em vez do script PowerShell.
+**Causa raiz:** O script v5.0.4 armazenado na tabela `agent_releases` **não contém** o handler `light_vuln_scan` (POSITION retorna 0). Os 3 agentes ativos (SISTEMA, DESKTOP-UOABRHB, SERVIDOR) rodam v5.0.4 mas com um script que não reconhece esse tipo de job, gerando `[DLQ:BUG] Unknown job type: light_vuln_scan`.
 
-**Resultado:** PowerShell recebe `@{status=healthy; timestamp=...}` e gera ParseException.
+**Por que isso aconteceu:**
+- O codebase tem scripts v5.0.5 com o handler `light_vuln_scan` implementado
+- A release ativa no DB é v5.0.4 (criada em 14/02, 99KB)
+- O conteúdo do DB nunca foi atualizado para incluir o handler v5.0.5
+- Constraint de deploy do Lovable Cloud: arquivos `.ps1` não são bundled, então o DB é a fonte autoritativa
 
-### Problema 2: Enrollment keys sem `agent_id`
+### Cadeia de falha
 
-As chaves geradas pelo `force-reinstall-fleet` nao incluem `agent_id`. A funcao `serve-installer` exige `agent_id` na linha 263 e rejeita chaves sem ele ("Agent not linked to enrollment key").
-
-Para reinstalacao nuclear, a funcao precisa suportar chaves de registro generico (sem `agent_id` pre-definido), criando um novo agente automaticamente.
-
----
-
-### Solucao
-
-#### 1. Atualizar `serve-installer` para suportar enrollment keys sem agent_id
-
-Quando `agent_id` e NULL na enrollment key, a funcao deve:
-- Criar um novo agente usando o hostname fornecido (query param `hostname`) ou gerar um nome automatico
-- Gerar novas credenciais (token + HMAC)
-- Registrar o agente no banco
-- Continuar o fluxo normal de geracao do instalador
-
-Isso transforma a enrollment key em uma "chave de registro aberta" para o tenant.
-
-#### 2. Atualizar `force-reinstall-fleet` para gerar comando com formato correto
-
-Corrigir o `nuclear_reinstall_command` retornado pela funcao `generate-key` para usar o formato de path:
-```text
-/functions/v1/serve-installer/CHAVE-AQUI
 ```
-em vez de:
-```text
-/functions/v1/serve-installer?ek=CHAVE-AQUI
+Cron agenda light_vuln_scan → Job criado (queued) → Agente v5.0.4 puxa job → 
+Agente não reconhece tipo → Reporta "Unknown job type" → Backend marca [DLQ:BUG]
+→ Cron cria novo job na hora seguinte → Loop infinito de falhas
 ```
 
-#### 3. Comandos corrigidos para uso imediato
+### Solução (3 passos)
 
-Apos a correcao, os comandos para os agentes stuck serao:
+#### Passo 1: Criar release v5.0.5 no banco de dados
 
-**Pedro Alves (7 agentes):**
-```text
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/serve-installer/APGO-TVEK-BOP5-8YGG" | iex
-```
+Sincronizar o conteúdo do script Windows v5.0.5 do codebase (`supabase/functions/_shared/agent-scripts/cybershield-agent-windows-v5.ps1`) para a tabela `agent_releases`:
 
-**Genial Cred:**
-```text
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/serve-installer/VEB1-IWTU-FNX4-UL33" | iex
-```
+1. Ler o script v5.0.5 do codebase
+2. Inserir nova release v5.0.5 na tabela `agent_releases` com `is_active = true`
+3. Desativar release v5.0.4 (`is_active = false`)
+4. Inserir versão v5.0.5 na tabela `agent_versions`
 
----
+**Opção A (via Edge Function):** Usar/criar a função `sync-agent-release-content` para popular o DB automaticamente.
 
-### Detalhes Tecnicos da Alteracao em `serve-installer`
+**Opção B (manual):** Inserir diretamente via SQL com o conteúdo do script.
 
-No bloco onde `enrollmentData.agent_id` e NULL (linha 263), em vez de rejeitar:
+> **Preferido: Opção A** — o script tem ~100KB, inserir via SQL é impraticável.
 
-1. Extrair hostname do query param ou gerar automatico (`agent-XXXXX`)
-2. Gerar `hmac_secret` (64 chars hex via crypto.getRandomValues)
-3. Inserir novo agente na tabela `agents` com tenant_id da enrollment key
-4. Gerar token e hash como ja feito no fluxo existente
-5. Continuar com o fluxo normal de geracao de script
+#### Passo 2: Forçar atualização dos agentes ativos
 
-Isso mantem a seguranca (a chave ainda e validada por hash, rate-limited, e com prazo de expiracao) enquanto permite registros em massa sem pre-cadastro individual de agentes.
+Após a release v5.0.5 estar ativa no DB:
 
-### Arquivos a alterar
+1. O mecanismo de heartbeat `force_update` já compara a versão do agente com a versão ativa no DB
+2. Se o agente reportar v5.0.4 e a release ativa for v5.0.5, o heartbeat retorna `force_update: true` com o novo script
+3. Os 3 agentes ativos se auto-atualizam no próximo ciclo de heartbeat (~1 minuto)
 
-1. `supabase/functions/serve-installer/index.ts` -- adicionar logica de criacao de agente quando agent_id e NULL
-2. `supabase/functions/force-reinstall-fleet/index.ts` -- corrigir formato do comando no `nuclear_reinstall_command`
+**Verificação:** Confirmar que a função `process_heartbeat_v2` ou o endpoint de heartbeat compara versões e entrega o script atualizado.
 
-### Resultado esperado
+#### Passo 3: Limpar jobs falhados e parar criação de novos até atualização
 
-- Comando PowerShell funciona sem ParseException
-- Novos agentes sao criados automaticamente no tenant correto
-- Dashboard mostra os agentes recem-instalados
-- Chaves de enrollment funcionam para multiplas maquinas (ate o limite de 100 usos)
+1. Cancelar quaisquer jobs `light_vuln_scan` pendentes/enfileirados para evitar mais falhas
+2. Após confirmação de que os agentes atualizaram para v5.0.5, os novos jobs do cron passarão a funcionar
+
+### Arquivos envolvidos
+
+1. `supabase/functions/sync-agent-release-content/index.ts` — verificar se existe, se não, criar
+2. `supabase/functions/_shared/agent-scripts/cybershield-agent-windows-v5.ps1` — fonte do script v5.0.5
+3. `supabase/functions/process-heartbeat/index.ts` (ou equivalente) — verificar lógica de force_update
+
+### Verificação de sucesso
+
+- [ ] `agent_releases` tem v5.0.5 para Windows com `is_active = true` e `script_content` preenchido
+- [ ] `agent_versions` tem v5.0.5 para Windows
+- [ ] Os 3 agentes ativos reportam `agent_version = v5.0.5` após próximo heartbeat
+- [ ] Novos jobs `light_vuln_scan` completam com sucesso (status = `completed`)
+- [ ] Nenhum novo erro `[DLQ:BUG] Unknown job type: light_vuln_scan` nos logs
+
+### Riscos
+
+- **Nenhum downtime:** A atualização via heartbeat é transparente
+- **Rollback:** Se v5.0.5 causar problemas, reativar v5.0.4 no DB
+- **Agentes offline (v5.0.3):** Serão atualizados quando voltarem online na quinta-feira
