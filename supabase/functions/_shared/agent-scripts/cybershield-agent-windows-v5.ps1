@@ -1,5 +1,14 @@
 <#
-    CyberShield Agent - Windows v5.0.4 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.5 FULL ENTERPRISE
+
+    v5.0.5: BUGFIXES - Handler Parity & Side-Effect Compliance
+    - FIXED: collect_web_activity now returns dns_cache/browser_history format
+      required by submit-job-result trigger (enforce_job_side_effects)
+    - FIXED: light_vuln_scan handler added (Windows Update COM object scan)
+    - FIXED: update_agent handler added (delegates to serve-agent-update)
+    - FIXED: scan, report, reinstall_agent handlers restored from v4
+    - IMPROVED: Execute-Job switch covers all 25 supported job types
+    - NEW: Helper functions for browser history SQLite parsing
 
     v5.0.4: NEW JOB HANDLERS - SOAR/Automation Integration
     - NEW: sync_blocked_websites - Sync and enforce URL blocklist from server
@@ -8,7 +17,6 @@
     - NEW: quarantine_agent - Self-isolate via firewall rules
     - NEW: apply_security_patch - Execute Windows Update for specific KBs
     - NEW: disk_cleanup (job handler) - On-demand disk cleanup via job
-    - IMPROVED: Execute-Job switch covers all 15 supported job types
 
     v5.0.3: STABILITY FIXES - Task Recovery & DNS Filter Resilience
     - FIXED: Assert-TaskHealth auto-repairs disabled/stopped scheduled tasks
@@ -92,7 +100,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.4"
+    [string]$AgentVersion = "v5.0.5"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -861,6 +869,29 @@ function Execute-Job {
             "disk_cleanup" {
                 $output = Invoke-DiskCleanup -ThresholdPercent 0
             }
+            # v5.0.5: RESTORED from v4 - Missing handlers causing [DLQ:BUG]
+            "light_vuln_scan" {
+                $output = Invoke-LightVulnScan -Payload $Job.payload
+            }
+            "update_agent" {
+                $output = Invoke-UpdateAgent -Payload $Job.payload
+            }
+            "scan" {
+                $output = Invoke-ScanJob -Payload $Job.payload
+            }
+            "report" {
+                $output = Invoke-ReportJob
+            }
+            "reinstall_agent" {
+                $output = @{
+                    status = "acknowledged"
+                    message = "Reinstall must be performed via force_update mechanism"
+                    current_version = $Global:AgentVersion
+                }
+            }
+            "collect_info" {
+                $output = Get-SystemInfo
+            }
             default {
                 $error_message = "Unknown job type: $($Job.job_type)"
                 $status = "failed"
@@ -1275,35 +1306,515 @@ function Invoke-FixFirewall {
     }
 }
 
+# ============================================
+#  v5.0.5: HELPER FUNCTIONS FOR BROWSER HISTORY
+# ============================================
+function ConvertFrom-WebKitTimestamp {
+    param([Nullable[Int64]]$timestamp)
+    if (-not $timestamp -or $timestamp -le 0) { return $null }
+    try {
+        $origin = [DateTime]::new(1601, 1, 1, 0, 0, 0, [DateTimeKind]::Utc)
+        return $origin.AddTicks($timestamp * 10)
+    } catch { return $null }
+}
+
+function ConvertFrom-PRTime {
+    param([Nullable[Int64]]$timestamp)
+    if (-not $timestamp -or $timestamp -le 0) { return $null }
+    try {
+        return [DateTimeOffset]::FromUnixTimeMilliseconds(
+            [math]::Floor($timestamp / 1000)
+        ).UtcDateTime
+    } catch { return $null }
+}
+
+function Extract-DomainFromUrl {
+    param([string]$url)
+    if ([string]::IsNullOrWhiteSpace($url)) { return $null }
+    try {
+        $match = [regex]::Match($url, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+        if ($match.Success) { return $match.Groups[1].Value }
+    } catch {}
+    return $null
+}
+
+function Get-BrowserHistorySQLite {
+    param(
+        [string]$DbPath,
+        [string]$Query,
+        [string]$BrowserName,
+        [string]$UserName
+    )
+    
+    $results = New-Object System.Collections.ArrayList
+    try {
+        $fileInfo = Get-Item $DbPath -ErrorAction Stop
+        if ($fileInfo.Length -gt (200 * 1024 * 1024)) { return $null }
+        
+        $assembly = $null
+        try { $assembly = [System.Reflection.Assembly]::LoadWithPartialName("System.Data.SQLite") } catch {}
+        if (-not $assembly) { return $null }
+        
+        $connectionString = "Data Source=$DbPath;Version=3;Read Only=True;Journal Mode=Off;"
+        $connection = New-Object System.Data.SQLite.SQLiteConnection($connectionString)
+        $connection.Open()
+        
+        $command = $connection.CreateCommand()
+        $command.CommandText = $Query
+        $command.CommandTimeout = 2
+        
+        $reader = $command.ExecuteReader()
+        while ($reader.Read()) {
+            [void]$results.Add(@{
+                url = $reader["url"]
+                last_visit_time = $reader["last_visit_time"]
+                visit_count = $reader["visit_count"]
+            })
+        }
+        $reader.Close()
+        $connection.Close()
+        return $results
+    } catch {
+        Write-Log "[WEB-ACTIVITY] SQLite failed for $BrowserName ($UserName): $($_.Exception.Message)" "DEBUG"
+        return $null
+    }
+}
+
+# ============================================
+#  v5.0.5: FULL WEB ACTIVITY COLLECTION (ported from v4)
+#  CRITICAL: Must return dns_cache/browser_history format
+#  for submit-job-result enforce_job_side_effects trigger
+# ============================================
 function Invoke-CollectWebActivity {
     param([object]$Payload)
     
+    Write-Log "[WEB-ACTIVITY-V5] Starting web activity collection..." "INFO"
+    
     try {
-        # Simplified - basic Chrome history collection
-        $chromeHistory = @()
-        $daysBack = if ($Payload.days_back) { $Payload.days_back } else { 7 }
+        $maxDomains = 500
+        if ($Payload -and $Payload.max_domains) { $maxDomains = [int]$Payload.max_domains }
         
-        $chromeDbPath = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\History"
+        $nowUtc = [DateTime]::UtcNow
+        $dnsCache = New-Object System.Collections.ArrayList
+        $browserHistory = New-Object System.Collections.ArrayList
         
-        if (Test-Path $chromeDbPath) {
-            # Chrome history requires SQLite - simplified response
-            $chromeHistory = @(@{ browser = "chrome"; status = "db_exists"; path = $chromeDbPath })
+        # 1. Collect DNS Cache
+        Write-Log "[WEB-ACTIVITY-V5] Collecting DNS cache..." "INFO"
+        try {
+            $dnsEntries = Get-DnsClientCache -ErrorAction SilentlyContinue
+            if ($dnsEntries) {
+                $dnsEntries = $dnsEntries |
+                    Where-Object { $_.Entry -and $_.Name } |
+                    Sort-Object -Property Name -Unique |
+                    Select-Object -First 100
+                
+                foreach ($entry in $dnsEntries) {
+                    $domain = $entry.Name
+                    if ([string]::IsNullOrWhiteSpace($domain)) { continue }
+                    if ($domain -like "localhost*" -or $domain -like "*.local" -or $domain -like "local") { continue }
+                    
+                    [void]$dnsCache.Add(@{
+                        domain = $domain
+                        Name = $domain
+                        RecordName = $domain
+                        source = "dns_cache"
+                        visited_at = $nowUtc.ToString("o")
+                    })
+                }
+                Write-Log "[WEB-ACTIVITY-V5] DNS cache: $($dnsCache.Count) domains" "INFO"
+            }
+        } catch {
+            Write-Log "[WEB-ACTIVITY-V5] DNS cache error: $($_.Exception.Message)" "WARN"
         }
         
+        # 2. Collect browser history from ALL user profiles
+        Write-Log "[WEB-ACTIVITY-V5] Collecting browser history..." "INFO"
+        $userProfiles = @()
+        try {
+            $userProfiles = Get-ChildItem -Path "C:\Users" -Directory -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') }
+        } catch {}
+        
+        foreach ($userProfile in $userProfiles) {
+            $userName = $userProfile.Name
+            $userPath = $userProfile.FullName
+            
+            # Chrome
+            try {
+                $chromeHistoryPath = Join-Path $userPath "AppData\Local\Google\Chrome\User Data\Default\History"
+                if (Test-Path $chromeHistoryPath) {
+                    $tempPath = "$env:TEMP\chrome_history_$(Get-Random).db"
+                    Copy-Item -Path $chromeHistoryPath -Destination $tempPath -Force -ErrorAction SilentlyContinue
+                    if (Test-Path $tempPath) {
+                        $sqlResults = $null
+                        try {
+                            $sqlResults = Get-BrowserHistorySQLite -DbPath $tempPath `
+                                -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" `
+                                -BrowserName "Chrome" -UserName $userName
+                        } catch {}
+                        
+                        if ($sqlResults -and $sqlResults.Count -gt 0) {
+                            foreach ($row in $sqlResults) {
+                                $domain = Extract-DomainFromUrl $row.url
+                                if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local") { continue }
+                                $visitedAt = ConvertFrom-WebKitTimestamp $row.last_visit_time
+                                [void]$browserHistory.Add(@{
+                                    domain = $domain
+                                    url = $row.url
+                                    source = "chrome"
+                                    browser = "chrome"
+                                    visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
+                                    visit_count = [int]$row.visit_count
+                                })
+                            }
+                        } else {
+                            # Fallback: regex extraction
+                            try {
+                                $maxBytes = 5 * 1024 * 1024
+                                $fileInfo = Get-Item $tempPath
+                                $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
+                                $fileStream = [System.IO.File]::OpenRead($tempPath)
+                                $buffer = New-Object byte[] $bytesToRead
+                                [void]$fileStream.Read($buffer, 0, $bytesToRead)
+                                $fileStream.Close(); $fileStream.Dispose()
+                                if ($buffer) {
+                                    $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
+                                    $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+                                    $domains = $urlMatches | ForEach-Object { $_.Groups[1].Value } |
+                                        Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" } |
+                                        Select-Object -Unique -First 50
+                                    foreach ($domain in $domains) {
+                                        [void]$browserHistory.Add(@{
+                                            domain = $domain; source = "chrome"; browser = "chrome"
+                                            visited_at = $nowUtc.ToString("o"); visit_count = 1
+                                        })
+                                    }
+                                    $buffer = $null; $dataString = $null
+                                }
+                            } catch {}
+                        }
+                        Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
+                    }
+                }
+            } catch {}
+            
+            # Edge
+            try {
+                $edgeHistoryPath = Join-Path $userPath "AppData\Local\Microsoft\Edge\User Data\Default\History"
+                if (Test-Path $edgeHistoryPath) {
+                    $tempPath = "$env:TEMP\edge_history_$(Get-Random).db"
+                    Copy-Item -Path $edgeHistoryPath -Destination $tempPath -Force -ErrorAction SilentlyContinue
+                    if (Test-Path $tempPath) {
+                        $sqlResults = $null
+                        try {
+                            $sqlResults = Get-BrowserHistorySQLite -DbPath $tempPath `
+                                -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" `
+                                -BrowserName "Edge" -UserName $userName
+                        } catch {}
+                        
+                        if ($sqlResults -and $sqlResults.Count -gt 0) {
+                            foreach ($row in $sqlResults) {
+                                $domain = Extract-DomainFromUrl $row.url
+                                if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local") { continue }
+                                $visitedAt = ConvertFrom-WebKitTimestamp $row.last_visit_time
+                                [void]$browserHistory.Add(@{
+                                    domain = $domain; url = $row.url; source = "edge"; browser = "edge"
+                                    visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
+                                    visit_count = [int]$row.visit_count
+                                })
+                            }
+                        } else {
+                            try {
+                                $maxBytes = 5 * 1024 * 1024
+                                $fileInfo = Get-Item $tempPath
+                                $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
+                                $fileStream = [System.IO.File]::OpenRead($tempPath)
+                                $buffer = New-Object byte[] $bytesToRead
+                                [void]$fileStream.Read($buffer, 0, $bytesToRead)
+                                $fileStream.Close(); $fileStream.Dispose()
+                                if ($buffer) {
+                                    $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
+                                    $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+                                    $domains = $urlMatches | ForEach-Object { $_.Groups[1].Value } |
+                                        Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" } |
+                                        Select-Object -Unique -First 50
+                                    foreach ($domain in $domains) {
+                                        [void]$browserHistory.Add(@{
+                                            domain = $domain; source = "edge"; browser = "edge"
+                                            visited_at = $nowUtc.ToString("o"); visit_count = 1
+                                        })
+                                    }
+                                    $buffer = $null; $dataString = $null
+                                }
+                            } catch {}
+                        }
+                        Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
+                    }
+                }
+            } catch {}
+            
+            # Firefox
+            try {
+                $firefoxProfilesPath = Join-Path $userPath "AppData\Roaming\Mozilla\Firefox\Profiles"
+                if (Test-Path $firefoxProfilesPath) {
+                    $profiles = Get-ChildItem -Path $firefoxProfilesPath -Directory -ErrorAction SilentlyContinue
+                    foreach ($profile in $profiles) {
+                        $placesPath = Join-Path $profile.FullName "places.sqlite"
+                        if (Test-Path $placesPath) {
+                            $tempPath = "$env:TEMP\firefox_places_$(Get-Random).db"
+                            Copy-Item -Path $placesPath -Destination $tempPath -Force -ErrorAction SilentlyContinue
+                            if (Test-Path $tempPath) {
+                                $sqlResults = $null
+                                try {
+                                    $sqlResults = Get-BrowserHistorySQLite -DbPath $tempPath `
+                                        -Query "SELECT url, last_visit_date, visit_count FROM moz_places WHERE visit_count > 0 ORDER BY last_visit_date DESC LIMIT 200" `
+                                        -BrowserName "Firefox" -UserName $userName
+                                } catch {}
+                                
+                                if ($sqlResults -and $sqlResults.Count -gt 0) {
+                                    foreach ($row in $sqlResults) {
+                                        $domain = Extract-DomainFromUrl $row.url
+                                        if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local") { continue }
+                                        $visitedAt = ConvertFrom-PRTime $row.last_visit_time
+                                        [void]$browserHistory.Add(@{
+                                            domain = $domain; url = $row.url; source = "firefox"; browser = "firefox"
+                                            visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
+                                            visit_count = [int]$row.visit_count
+                                        })
+                                    }
+                                } else {
+                                    try {
+                                        $maxBytes = 5 * 1024 * 1024
+                                        $fileInfo = Get-Item $tempPath
+                                        $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
+                                        $fileStream = [System.IO.File]::OpenRead($tempPath)
+                                        $buffer = New-Object byte[] $bytesToRead
+                                        [void]$fileStream.Read($buffer, 0, $bytesToRead)
+                                        $fileStream.Close(); $fileStream.Dispose()
+                                        if ($buffer) {
+                                            $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
+                                            $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+                                            $domains = $urlMatches | ForEach-Object { $_.Groups[1].Value } |
+                                                Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" } |
+                                                Select-Object -Unique -First 50
+                                            foreach ($domain in $domains) {
+                                                [void]$browserHistory.Add(@{
+                                                    domain = $domain; source = "firefox"; browser = "firefox"
+                                                    visited_at = $nowUtc.ToString("o"); visit_count = 1
+                                                })
+                                            }
+                                            $buffer = $null; $dataString = $null
+                                        }
+                                    } catch {}
+                                }
+                                Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
+                            }
+                            break
+                        }
+                    }
+                }
+            } catch {}
+        }
+        
+        Write-Log "[WEB-ACTIVITY-V5] Collected: $($dnsCache.Count) DNS + $($browserHistory.Count) browser entries" "INFO"
+        
+        # Return in format expected by submit-job-result (dns_cache + browser_history)
         return @{
-            browsers_checked = @("chrome")
-            history_entries = $chromeHistory
-            days_back = $daysBack
-            collected_at = (Get-Date).ToString("o")
+            dns_cache = @($dnsCache)
+            browser_history = @($browserHistory)
+            total_dns = $dnsCache.Count
+            total_browser = $browserHistory.Count
+            collected_at = $nowUtc.ToString("o")
         }
         
     } catch {
+        Write-Log "[WEB-ACTIVITY-V5] Error: $($_.Exception.Message)" "ERROR"
         return @{ error = $_.Exception.Message }
     }
 }
 
 # ============================================
-#  v5.0.1: PROTECTED PROCESSES AND SERVICES
+#  v5.0.5: LIGHT VULN SCAN (Windows Update check)
+# ============================================
+function Invoke-LightVulnScan {
+    param([object]$Payload)
+    
+    Write-Log "[VULN-SCAN] Starting light vulnerability scan..." "INFO"
+    
+    try {
+        $results = @{
+            timestamp = (Get-Date).ToUniversalTime().ToString("o")
+            hostname = $env:COMPUTERNAME
+            scan_engine = "CyberShield VulnScanner v2.1"
+            scan_type = "light"
+            vulnerabilities_found = 0
+            by_severity = @{ critical = 0; high = 0; medium = 0; low = 0 }
+            top_cves = @()
+            patches_available = 0
+            scan_duration_seconds = 0
+            status = "success"
+        }
+        
+        $startTime = Get-Date
+        
+        try {
+            $updateSession = New-Object -ComObject Microsoft.Update.Session
+            $searcher = $updateSession.CreateUpdateSearcher()
+            $searchResult = $searcher.Search("IsInstalled=0 AND IsHidden=0")
+            
+            foreach ($update in $searchResult.Updates) {
+                $results.vulnerabilities_found++
+                
+                $severity = $update.MsrcSeverity
+                switch ($severity) {
+                    'Critical'  { $results.by_severity.critical++ }
+                    'Important' { $results.by_severity.high++ }
+                    'Moderate'  { $results.by_severity.medium++ }
+                    default     { $results.by_severity.low++ }
+                }
+                
+                if ($update.CveIDs -and $results.top_cves.Count -lt 10) {
+                    foreach ($cve in $update.CveIDs) {
+                        if ($results.top_cves.Count -lt 10) {
+                            $results.top_cves += "$cve - $($update.Title)"
+                        }
+                    }
+                }
+            }
+            
+            $results.patches_available = $results.vulnerabilities_found
+            
+        } catch {
+            Write-Log "[VULN-SCAN] Windows Update COM failed: $($_.Exception.Message)" "WARN"
+            # Fallback: check for pending updates via WMI
+            try {
+                $hotfixes = Get-HotFix -ErrorAction SilentlyContinue | 
+                    Sort-Object InstalledOn -Descending -ErrorAction SilentlyContinue |
+                    Select-Object -First 5
+                $results.last_hotfixes = @($hotfixes | ForEach-Object {
+                    @{ id = $_.HotFixID; installed = $_.InstalledOn.ToString("o") }
+                })
+            } catch {}
+        }
+        
+        $results.scan_duration_seconds = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
+        
+        Write-Log "[VULN-SCAN] Found $($results.vulnerabilities_found) vulnerabilities" "INFO"
+        return $results
+        
+    } catch {
+        return @{ 
+            status = "error"
+            error = $_.Exception.Message
+            hostname = $env:COMPUTERNAME
+        }
+    }
+}
+
+# ============================================
+#  v5.0.5: UPDATE AGENT (via serve-agent-update)
+# ============================================
+function Invoke-UpdateAgent {
+    param([object]$Payload)
+    
+    Write-Log "[UPDATE] Starting update_agent check..." "INFO"
+    
+    try {
+        $updateResult = Invoke-SecureRequest `
+            -Path "/functions/v1/serve-agent-update" `
+            -Method GET `
+            -TimeoutSec 60
+        
+        if (-not $updateResult.Success) {
+            return @{
+                status = "error"
+                error = "Failed to check for updates: HTTP $($updateResult.StatusCode)"
+                current_version = $Global:AgentVersion
+            }
+        }
+        
+        $data = $updateResult.Body | ConvertFrom-Json
+        
+        if ($data.message -eq "Already up to date") {
+            Write-Log "[UPDATE] Already at latest version ($($data.current_version))" "INFO"
+            return @{
+                status = "up_to_date"
+                current_version = $Global:AgentVersion
+                latest_version = $data.current_version
+            }
+        }
+        
+        # If update available, let force_update handle it in next heartbeat
+        Write-Log "[UPDATE] Update available: $($data.version). Will apply via force_update." "INFO"
+        return @{
+            status = "update_available"
+            current_version = $Global:AgentVersion
+            target_version = $data.version
+            message = "Update will be applied via heartbeat force_update mechanism"
+        }
+        
+    } catch {
+        return @{
+            status = "error"
+            error = $_.Exception.Message
+            current_version = $Global:AgentVersion
+        }
+    }
+}
+
+# ============================================
+#  v5.0.5: REPORT JOB (system info report)
+# ============================================
+function Invoke-ReportJob {
+    try {
+        $sysInfo = Get-SystemInfo
+        return @{
+            status = "success"
+            report_type = "system_info"
+            data = $sysInfo
+            generated_at = (Get-Date).ToUniversalTime().ToString("o")
+        }
+    } catch {
+        return @{ status = "error"; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.5: SCAN JOB (file hash check)
+# ============================================
+function Invoke-ScanJob {
+    param([object]$Payload)
+    
+    try {
+        $filePath = $Payload.filePath
+        if (-not $filePath) {
+            return @{ status = "error"; error = "Missing filePath in payload" }
+        }
+        
+        # Expand environment variables
+        if ($filePath -match '%([^%]+)%') {
+            $filePath = [System.Environment]::ExpandEnvironmentVariables($filePath)
+        }
+        
+        if (-not (Test-Path $filePath)) {
+            return @{ status = "error"; error = "File not found: $filePath" }
+        }
+        
+        $fileHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash.ToLower()
+        Write-Log "[SCAN] Scanned: $filePath (hash: $fileHash)" "INFO"
+        
+        return @{
+            status = "success"
+            file_path = $filePath
+            sha256 = $fileHash
+            file_size = (Get-Item $filePath).Length
+            scanned_at = (Get-Date).ToUniversalTime().ToString("o")
+        }
+        
+    } catch {
+        return @{ status = "error"; error = $_.Exception.Message }
+    }
+}
 #  Defense-in-depth: Agent-side validation
 # ============================================
 $Global:ProtectedProcesses = @(
