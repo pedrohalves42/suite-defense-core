@@ -704,10 +704,10 @@ export function ComplianceReportGenerator() {
               <div className="flex flex-col justify-center">
                 <ComplianceBadge 
                   status={
-                    reportPayload.risk_score <= 20 ? "BOM" :
-                    reportPayload.risk_score <= 40 ? "ADEQUADO" :
-                    reportPayload.risk_score <= 60 ? "ATENÇÃO" : "CRÍTICO"
-                  } 
+                    reportPayload.risk_score >= 90 ? "BOM" :
+                    reportPayload.risk_score >= 70 ? "ADEQUADO" :
+                    reportPayload.risk_score >= 50 ? "ATENÇÃO" : "CRÍTICO"
+                  }
                   size="lg"
                   className="mb-4"
                 />
@@ -781,7 +781,11 @@ export function ComplianceReportGenerator() {
                   ) : reportPayload.risk_level === 'MÉDIO' ? (
                     `A empresa "${reportPayload.tenant_name}" possui alguns pontos de atenção que merecem acompanhamento. Não há riscos críticos imediatos, mas recomendamos revisar as pendências listadas abaixo.`
                   ) : (
-                    `A empresa "${reportPayload.tenant_name}" precisa de atenção urgente. Foram identificados ${reportPayload.statistics?.critical_vulnerabilities || 0} vulnerabilidades críticas que devem ser corrigidas imediatamente.`
+                    `A empresa "${reportPayload.tenant_name}" precisa de atenção urgente. ${
+                      (reportPayload.statistics?.critical_vulnerabilities || 0) > 0 
+                        ? `Foram identificadas ${reportPayload.statistics?.critical_vulnerabilities} vulnerabilidades críticas que devem ser corrigidas imediatamente.`
+                        : 'O score de segurança está abaixo do ideal. Revise os controles e recomendações abaixo para melhorar a postura de segurança.'
+                    }`
                   )
                 )}
               </p>
@@ -873,9 +877,10 @@ export function ComplianceReportGenerator() {
                           <Badge variant={
                             idx === 0 && (reportPayload.statistics?.critical_vulnerabilities || 0) > 0 
                               ? "destructive" 
+                              : reportPayload.risk_score >= 70 && idx === 0 ? "outline"
                               : idx < 2 ? "secondary" : "outline"
                           } className="shrink-0">
-                            {idx === 0 ? "Urgente" : idx === 1 ? "Importante" : "Sugestão"}
+                            {reportPayload.risk_score >= 70 && idx === 0 ? "Sucesso" : idx === 0 ? "Urgente" : idx === 1 ? "Importante" : "Sugestão"}
                           </Badge>
                         </div>
                       ))}

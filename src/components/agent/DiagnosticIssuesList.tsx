@@ -68,6 +68,28 @@ const ISSUE_TYPE_LABELS: Record<string, string> = {
   cpu_high: 'CPU elevada',
   agent_not_found: 'Agente não encontrado',
   agent_archived: 'Agente arquivado',
+  // Extended check_key translations
+  antivirus_outdated: 'Antivírus desatualizado',
+  antivirus_disabled: 'Antivírus desativado',
+  firewall_disabled: 'Firewall desativado',
+  windows_update_disabled: 'Windows Update desativado',
+  uac_disabled: 'Controle de conta desativado (UAC)',
+  rdp_open: 'Área de trabalho remota exposta',
+  service_not_running: 'Serviço crítico parado',
+  cert_expired: 'Certificado expirado',
+  cert_expiring: 'Certificado próximo do vencimento',
+  weak_password_policy: 'Política de senha fraca',
+  admin_account_active: 'Conta admin local ativa',
+  guest_account_active: 'Conta de convidado ativa',
+  bitlocker_disabled: 'Criptografia de disco desativada',
+  smb_v1_enabled: 'SMBv1 habilitado (vulnerável)',
+  auto_login_enabled: 'Login automático ativado',
+  screen_lock_disabled: 'Bloqueio de tela desativado',
+  dns_anomaly: 'Anomalia de DNS detectada',
+  high_network_usage: 'Tráfego de rede elevado',
+  process_anomaly: 'Processo anômalo detectado',
+  file_integrity_violation: 'Violação de integridade de arquivo',
+  baseline_deviation: 'Desvio do padrão comportamental',
 };
 
 function getIssueTypeLabel(issueType: string): string {

@@ -84,6 +84,19 @@ export default function SoftwareInventory() {
       // CRITICAL FIX: Find agent_name by agent_id
       const agent = agents?.find(a => a.id === agentId);
       if (!agent) throw new Error('Agente não encontrado');
+
+      // Check for active job of same type to avoid duplicate key error
+      const { data: existingJob } = await supabase
+        .from('jobs')
+        .select('id, status')
+        .eq('agent_id', agentId)
+        .eq('type', 'software_inventory_collect')
+        .in('status', ['pending', 'queued', 'delivered', 'running'])
+        .maybeSingle();
+
+      if (existingJob) {
+        throw new Error(`DEDUP:Já existe uma coleta em andamento (${existingJob.status}). Aguarde a conclusão.`);
+      }
       
       const jobData = await prepareJobForInsert({
         agent_id: agentId,           // UUID
@@ -103,7 +116,11 @@ export default function SoftwareInventory() {
       toast.success('Coleta de programas iniciada! Aguarde alguns minutos.');
     },
     onError: (error) => {
-      toast.error(`Erro ao iniciar coleta: ${error.message}`);
+      if (error.message.startsWith('DEDUP:')) {
+        toast.info(error.message.replace('DEDUP:', ''));
+      } else {
+        toast.error(`Erro ao iniciar coleta: ${error.message}`);
+      }
     },
   });
 
