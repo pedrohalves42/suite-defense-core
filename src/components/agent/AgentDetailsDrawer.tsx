@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AgentStateExplainer } from '@/components/agent/AgentStateExplainer';
+import { useAgentActions } from '@/hooks/useAgentActions';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { DiagnosticPanel } from '@/components/agent/DiagnosticPanel';
 import { AgentProcessesPanel } from '@/components/agent/AgentProcessesPanel';
@@ -43,7 +44,9 @@ import {
   Activity,
   Zap,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Clock,
+  Key
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -99,6 +102,7 @@ export function AgentDetailsDrawer({
   const navigate = useNavigate();
   const { data: causality, isLoading, isError, refetch } = useAgentCausality(agentId, tenantId);
   const { data: antivirusStatus } = useAntivirusStatus(agentId || '', !!agentId);
+  const agentActions = useAgentActions();
 
   const handleAgentDeleted = () => {
     onClose();
@@ -265,17 +269,19 @@ export function AgentDetailsDrawer({
               {/* Tab: Diagnóstico */}
               <TabsContent value="diagnostic" className="mt-4">
                 {agentId && agentName && tenantId ? (
-                  <DiagnosticPanel
-                    agentId={agentId}
-                    agentName={agentName}
-                    tenantId={tenantId}
-                    agentState={causality?.currentState}
-                    variant="compact"
-                    intent="overview"
-                  />
+                  <div className="space-y-4">
+                    <DiagnosticPanel
+                      agentId={agentId}
+                      agentName={agentName}
+                      tenantId={tenantId}
+                      agentState={causality?.currentState}
+                      variant="compact"
+                      intent="overview"
+                    />
+                  </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <Stethoscope className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">Selecione um computador para ver o diagnóstico</p>
                   </div>
                 )}
@@ -284,28 +290,146 @@ export function AgentDetailsDrawer({
               {/* Tab: Ações */}
               <TabsContent value="actions" className="mt-4">
                 {agentId && agentName && (
-                  <div className="space-y-6">
-                    {/* Quick Actions */}
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-medium text-muted-foreground">Ações Rápidas</h4>
-                      <TooltipProvider>
-                        <AgentQuickActions
-                          agentId={agentId}
-                          agentName={agentName}
-                          isThrottled={isThrottled}
-                          isIsolated={isIsolated}
-                          isInSafeMode={isInSafeMode}
-                          onAgentDeleted={handleAgentDeleted}
-                        />
-                      </TooltipProvider>
+                  <div className="space-y-5">
+                    {/* Security Actions */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Segurança
+                      </h4>
+                      <div className="space-y-2">
+                        {isThrottled && (
+                          <button
+                            onClick={() => agentActions.removeThrottle.mutate(agentId)}
+                            disabled={agentActions.removeThrottle.isPending}
+                            className="w-full flex items-start gap-3 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 transition-colors text-left"
+                          >
+                            <Clock className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Remover Limitação</p>
+                              <p className="text-xs text-muted-foreground">Remove a limitação temporária de comunicação deste agente.</p>
+                            </div>
+                          </button>
+                        )}
+                        {isIsolated && (
+                          <button
+                            onClick={() => agentActions.removeIsolation.mutate(agentId)}
+                            disabled={agentActions.removeIsolation.isPending}
+                            className="w-full flex items-start gap-3 p-3 rounded-lg border border-destructive/20 bg-destructive/5 hover:bg-destructive/10 transition-colors text-left"
+                          >
+                            <ShieldOff className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Remover Isolamento</p>
+                              <p className="text-xs text-muted-foreground">Restaura conectividade de rede do agente isolado.</p>
+                            </div>
+                          </button>
+                        )}
+                        {isInSafeMode && (
+                          <>
+                            <button
+                              onClick={() => agentActions.resetSafeMode.mutate(agentId)}
+                              disabled={agentActions.resetSafeMode.isPending}
+                              className="w-full flex items-start gap-3 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 transition-colors text-left"
+                            >
+                              <RefreshCw className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-sm font-medium">Resetar Modo Protegido</p>
+                                <p className="text-xs text-muted-foreground">Cria uma tarefa para desativar o modo de proteção.</p>
+                              </div>
+                            </button>
+                            <button
+                              onClick={() => agentActions.enableOverrideSafeMode.mutate(agentId)}
+                              disabled={agentActions.enableOverrideSafeMode.isPending}
+                              className="w-full flex items-start gap-3 p-3 rounded-lg border border-destructive/20 bg-destructive/5 hover:bg-destructive/10 transition-colors text-left"
+                            >
+                              <ShieldAlert className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-sm font-medium">Forçar Atualização (30 min)</p>
+                                <p className="text-xs text-muted-foreground">Ignora proteções temporariamente. Use apenas em emergências.</p>
+                              </div>
+                            </button>
+                          </>
+                        )}
+                        {!isThrottled && !isIsolated && !isInSafeMode && (
+                          <div className="flex items-center gap-2 p-3 rounded-lg border border-primary/20 bg-primary/5">
+                            <CheckCircle className="h-4 w-4 text-primary" />
+                            <span className="text-sm text-foreground/80">Nenhuma ação de segurança necessária</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Reinstall Command */}
-                    <div className="border-t pt-4">
+                    {/* Navigation Actions */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Navegação
+                      </h4>
+                      <div className="space-y-2">
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start h-auto py-3 px-4"
+                          onClick={handleViewDiagnostics}
+                        >
+                          <Stethoscope className="h-4 w-4 mr-3 text-muted-foreground" />
+                          <div className="text-left">
+                            <p className="text-sm font-medium">Diagnóstico Completo</p>
+                            <p className="text-xs text-muted-foreground">Análise detalhada de saúde e vulnerabilidades</p>
+                          </div>
+                          <ExternalLink className="h-3 w-3 ml-auto opacity-40" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start h-auto py-3 px-4"
+                          onClick={() => navigate('/admin/enrollment-keys')}
+                        >
+                          <Key className="h-4 w-4 mr-3 text-muted-foreground" />
+                          <div className="text-left">
+                            <p className="text-sm font-medium">Chaves de Instalação</p>
+                            <p className="text-xs text-muted-foreground">Gerenciar chaves para novos agentes</p>
+                          </div>
+                          <ExternalLink className="h-3 w-3 ml-auto opacity-40" />
+                        </Button>
+                        {causality && causality.stateTransitions.length > 0 && (
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start h-auto py-3 px-4"
+                            onClick={handleViewTimeline}
+                          >
+                            <Activity className="h-4 w-4 mr-3 text-muted-foreground" />
+                            <div className="text-left">
+                              <p className="text-sm font-medium">Timeline de Eventos</p>
+                              <p className="text-xs text-muted-foreground">Histórico de transições de estado</p>
+                            </div>
+                            <ExternalLink className="h-3 w-3 ml-auto opacity-40" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Reinstall */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Manutenção
+                      </h4>
                       <AgentReinstallCommand 
                         agentId={agentId} 
                         agentName={agentName} 
                       />
+                    </div>
+
+                    {/* Danger Zone */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-destructive/70">
+                        Zona de Perigo
+                      </h4>
+                      <div className="border border-destructive/20 rounded-lg p-3 space-y-2 bg-destructive/5">
+                        <TooltipProvider>
+                          <AgentQuickActions
+                            agentId={agentId}
+                            agentName={agentName}
+                            onAgentDeleted={handleAgentDeleted}
+                          />
+                        </TooltipProvider>
+                      </div>
                     </div>
                   </div>
                 )}
