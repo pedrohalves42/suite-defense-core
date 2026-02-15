@@ -24115,6 +24115,7 @@ export type Database = {
           job_ids: string[]
         }[]
       }
+      auto_mark_agents_inactive: { Args: never; Returns: Json }
       auto_resolve_stale_tasks: { Args: never; Returns: Json }
       backfill_audit_log_hashes: {
         Args: { p_tenant_id?: string }
