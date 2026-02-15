@@ -163,26 +163,25 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          // Create a new job instance with TTL
-          const jobExpiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
-          const { error: insertError } = await supabase
-            .from('jobs')
-            .insert({
-              agent_name: recurringJob.agent_name,
-              agent_id: recurringJob.agent_id,
-              type: recurringJob.type,
-              payload: recurringJob.payload,
-              status: 'queued',
-              approved: true,
-              tenant_id: recurringJob.tenant_id,
-              parent_job_id: recurringJob.id,
-              is_recurring: false,
-              expires_at: jobExpiresAt,
+          // Create a new job instance with dedup guard (prevents idx_jobs_dedup_active violations)
+          const { data: newJobId, error: insertError } = await supabase
+            .rpc('create_job_if_not_exists', {
+              p_agent_id: recurringJob.agent_id,
+              p_tenant_id: recurringJob.tenant_id,
+              p_type: recurringJob.type,
+              p_payload: recurringJob.payload || {},
+              p_priority: recurringJob.priority || 5,
+              p_ttl_hours: 4
             });
 
           if (insertError) {
             console.error(`[${requestId}] Error creating job instance for ${recurringJob.id}:`, insertError);
             continue;
+          }
+
+          if (!newJobId) {
+            console.log(`[${requestId}] Skipping recurring job ${recurringJob.id} - active job of type '${recurringJob.type}' already exists for agent ${recurringJob.agent_name}`);
+            // Still update next_run_at below
           }
 
           // Update the recurring job with new next_run_at and last_run_at
