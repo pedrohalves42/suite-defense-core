@@ -52,38 +52,49 @@ interface AgentProcessesPanelProps {
 }
 
 export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelProps) {
-  // Buscar último heartbeat com dados de processos
+  // Buscar último snapshot de processos da tabela agent_processes
   const { data, isLoading, isError } = useQuery({
     queryKey: ['agent-processes', agentId],
     queryFn: async () => {
-      // Buscar do agent_evidence_logs os dados mais recentes de processos
-      const { data: evidenceLogs, error } = await supabase
-        .from('agent_evidence_logs')
-        .select('event_data, created_at')
+      const { data: processData, error } = await supabase
+        .from('agent_processes')
+        .select('*')
         .eq('agent_id', agentId)
-        .in('event_type', ['heartbeat', 'processes'])
-        .order('created_at', { ascending: false })
+        .order('collected_at', { ascending: false })
         .limit(1)
         .maybeSingle();
       
       if (error) throw error;
-      
-      // Parse dos dados do evento
-      if (evidenceLogs?.event_data) {
-        const eventData = evidenceLogs.event_data as Record<string, unknown>;
-        return {
-          processes: eventData.processes as ProcessesData | null,
-          anomalies: (eventData.process_anomalies as string[]) || [],
-          autoRepairStats: eventData.auto_repair_stats as AutoRepairStats | null,
-          collectedAt: evidenceLogs.created_at
-        };
-      }
-      
-      return null;
+      if (!processData) return null;
+
+      // Parse processes array into top_by_cpu and top_by_memory
+      const rawProcesses = (processData.processes as any[]) || [];
+      const top_by_cpu = [...rawProcesses]
+        .sort((a, b) => (b.cpu || b.cpu_seconds || 0) - (a.cpu || a.cpu_seconds || 0))
+        .slice(0, 5)
+        .map(p => ({ name: p.name, pid: p.pid, cpu_seconds: p.cpu || p.cpu_seconds || 0, memory_mb: p.memory_mb || 0 }));
+      const top_by_memory = [...rawProcesses]
+        .sort((a, b) => (b.memory_mb || 0) - (a.memory_mb || 0))
+        .slice(0, 5)
+        .map(p => ({ name: p.name, pid: p.pid, cpu_seconds: p.cpu || p.cpu_seconds || 0, memory_mb: p.memory_mb || 0 }));
+
+      const suspicious = (processData.suspicious_processes as any[]) || [];
+
+      return {
+        processes: {
+          top_by_cpu,
+          top_by_memory,
+          total_processes: processData.total_processes || rawProcesses.length,
+          collected_at: processData.collected_at,
+        } as ProcessesData,
+        anomalies: suspicious.map((s: any) => `${s.name} - ${s.reason}`),
+        autoRepairStats: null as AutoRepairStats | null,
+        collectedAt: processData.collected_at,
+      };
     },
     enabled: !!agentId,
-    staleTime: 30000, // 30 segundos
-    refetchInterval: 60000 // Refetch a cada 60 segundos
+    staleTime: 30000,
+    refetchInterval: 60000,
   });
 
   if (isLoading) {
