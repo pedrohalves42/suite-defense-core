@@ -22,7 +22,7 @@ export function TargetAudienceSection() {
               description={segment.description}
               variant="highlight"
               centered
-              className="p-6"
+              className="p-5"
             />
           ))}
         </div>

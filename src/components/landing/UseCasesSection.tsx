@@ -5,28 +5,26 @@ export function UseCasesSection() {
   const { useCases } = LANDING_CONTENT;
 
   return (
-    <section className="py-20 relative">
+    <section className="py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader 
           title={useCases.title}
           subtitle={useCases.subtitle}
         />
 
-        <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {useCases.cases.map((useCase, index) => {
             const Icon = useCase.icon;
             return (
               <div 
                 key={index}
-                className="group relative bg-card/50 backdrop-blur-sm p-8 rounded-2xl border border-border text-center transition-all duration-300 hover:-translate-y-2 hover:shadow-lg hover:border-primary/50"
+                className="card-enterprise card-enterprise-hover p-8 rounded-xl text-center"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="relative mb-4 inline-block">
-                  <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <Icon className="relative mx-auto w-12 h-12 text-primary group-hover:scale-110 transition-transform" />
+                <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <Icon className="w-6 h-6 text-accent" />
                 </div>
-                <h3 className="relative text-xl font-bold mb-2">{useCase.title}</h3>
-                <p className="relative text-muted-foreground">{useCase.description}</p>
+                <h3 className="text-base font-semibold mb-2">{useCase.title}</h3>
+                <p className="text-sm text-muted-foreground">{useCase.description}</p>
               </div>
             );
           })}

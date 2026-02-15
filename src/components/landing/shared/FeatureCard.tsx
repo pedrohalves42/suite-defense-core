@@ -21,9 +21,9 @@ export function FeatureCard({
   centered = false
 }: FeatureCardProps) {
   const variantStyles = {
-    default: "border-border/50 hover:border-primary/50",
-    highlight: "border-primary/20 hover:border-primary/50 hover:shadow-glow-primary",
-    danger: "border-destructive/20 hover:border-destructive/50"
+    default: "border-border hover:border-accent/30",
+    highlight: "border-border hover:border-accent/30",
+    danger: "border-destructive/20 hover:border-destructive/40"
   };
 
   const titleStyles = {
@@ -34,25 +34,25 @@ export function FeatureCard({
 
   return (
     <div className={cn(
-      "group p-6 rounded-xl bg-card/50 backdrop-blur-sm border transition-all hover:scale-105",
+      "group p-6 rounded-xl bg-card border transition-all duration-200",
       variantStyles[variant],
       centered && "text-center",
       className
     )}>
       {emoji && (
-        <div className="text-3xl mb-3">{emoji}</div>
+        <div className="text-2xl mb-3">{emoji}</div>
       )}
       
       {Icon && (
         <div className={cn(
-          "w-12 h-12 bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform",
+          "w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center mb-4",
           centered && "mx-auto"
         )}>
-          <Icon className="w-6 h-6 text-primary" />
+          <Icon className="w-5 h-5 text-accent" />
         </div>
       )}
       
-      <h3 className={cn("font-bold text-lg mb-2", titleStyles[variant])}>
+      <h3 className={cn("font-semibold text-base mb-2", titleStyles[variant])}>
         {title}
       </h3>
       
