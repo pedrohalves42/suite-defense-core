@@ -3,119 +3,127 @@
 @tailwind utilities;
 
 /* ============================================================
-   INTELLIGENCE SYSTEM - Design Tokens
+   CYBERSHIELD — Premium Design System
    
-   Posicionamento: Um sistema de inteligência operacional
-   que revela riscos, decisões e estados críticos com clareza absoluta.
-   
-   Cor Proprietária: Graphite Green (#2E3F3A)
-   Cor de Acento: Oxide Amber (#C89B3C)
+   Visual identity: Clean, minimal, enterprise-grade.
+   Primary: Deep Graphite (#1A1D21)
+   Accent: Warm Gold (#B8963E)
+   Font: Inter
    ============================================================ */
 
 @layer base {
   :root {
-    /* === INTELLIGENCE SYSTEM - LIGHT MODE === */
-    --background: 210 10% 96%;        /* #F5F6F7 */
-    --foreground: 210 25% 11%;        /* #1A1F24 */
+    /* === PREMIUM LIGHT MODE === */
+    --background: 220 14% 96%;         /* #F3F4F6 */
+    --foreground: 220 20% 10%;         /* #171A1F */
     
-    --card: 0 0% 100%;                /* #FFFFFF */
-    --card-foreground: 210 25% 11%;
+    --card: 0 0% 100%;                 /* #FFFFFF */
+    --card-foreground: 220 20% 10%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 210 25% 11%;
+    --popover-foreground: 220 20% 10%;
     
-    /* Graphite Green - Cor Proprietária */
-    --primary: 163 17% 21%;           /* #2E3F3A */
+    /* Deep Graphite — Primary */
+    --primary: 220 12% 12%;            /* #1A1D21 */
     --primary-foreground: 0 0% 98%;
-    --primary-hover: 163 16% 27%;     /* #3A4F49 */
-    --primary-active: 163 17% 17%;    /* #25332F */
+    --primary-hover: 220 10% 18%;
+    --primary-active: 220 14% 8%;
     
-    --secondary: 210 10% 94%;         /* #EEF0F2 */
-    --secondary-foreground: 210 25% 11%;
+    --secondary: 220 14% 94%;          /* #ECEEF1 */
+    --secondary-foreground: 220 20% 10%;
     
-    --muted: 210 10% 94%;
-    --muted-foreground: 163 12% 39%;  /* #5A6A65 */
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 8% 46%;    /* #6B7280 */
     
-    /* Oxide Amber - Acento Raro (uso com parcimônia) */
-    --accent: 41 54% 51%;             /* #C89B3C */
-    --accent-foreground: 210 25% 11%;
-    --accent-soft: 41 58% 68%;        /* #E2C47A */
+    /* Warm Gold — Accent (use sparingly) */
+    --accent: 40 52% 48%;              /* #B8963E */
+    --accent-foreground: 220 20% 10%;
+    --accent-soft: 40 40% 72%;
     
-    --destructive: 0 55% 50%;         /* #B94A48 */
+    --destructive: 0 72% 51%;          /* #EF4444 */
     --destructive-foreground: 0 0% 98%;
     
-    /* Estados de Sistema */
-    --warning: 41 54% 51%;            /* #C89B3C */
-    --warning-foreground: 210 25% 11%;
+    --warning: 38 92% 50%;             /* #F59E0B */
+    --warning-foreground: 220 20% 10%;
     
-    --success: 146 40% 48%;           /* #4FA36A */
-    --success-foreground: 210 25% 11%;
+    --success: 160 60% 45%;            /* #10B981 */
+    --success-foreground: 0 0% 98%;
     
-    --info: 207 28% 53%;              /* #6C8EA3 */
-    --info-foreground: 210 25% 11%;
+    --info: 217 55% 55%;               /* #3B82F6 */
+    --info-foreground: 0 0% 98%;
     
-    --border: 210 10% 87%;            /* #D9DEE3 */
-    --input: 210 10% 94%;
-    --ring: 163 17% 21%;
+    --border: 220 13% 91%;             /* #E5E7EB */
+    --input: 220 13% 91%;
+    --ring: 220 12% 12%;
     
-    --radius: 0.5rem;
+    --radius: 0.625rem;
+    
+    /* Elevation */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.03);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.03);
   }
   
   .dark {
-    /* === INTELLIGENCE SYSTEM - DARK MODE === */
-    --background: 210 20% 4%;         /* #0B0E11 */
-    --foreground: 210 10% 90%;        /* #E6E8EA */
+    /* === PREMIUM DARK MODE === */
+    --background: 224 18% 5%;          /* #0B0D10 */
+    --foreground: 220 14% 90%;         /* #E5E7EB */
     
-    --card: 210 18% 9%;               /* #12171C */
-    --card-foreground: 210 10% 90%;
+    --card: 224 16% 8%;                /* #111318 */
+    --card-foreground: 220 14% 90%;
     
-    --popover: 210 18% 9%;
-    --popover-foreground: 210 10% 90%;
+    --popover: 224 16% 8%;
+    --popover-foreground: 220 14% 90%;
     
-    /* Graphite Green - mantém consistência em ambos os modos */
-    --primary: 163 17% 21%;           /* #2E3F3A */
-    --primary-foreground: 0 0% 98%;
-    --primary-hover: 163 16% 27%;     /* #3A4F49 */
-    --primary-active: 163 17% 17%;    /* #25332F */
+    --primary: 220 14% 90%;            /* Inverted for dark */
+    --primary-foreground: 224 18% 5%;
+    --primary-hover: 220 14% 82%;
+    --primary-active: 220 14% 96%;
     
-    --secondary: 210 17% 12%;         /* #161C22 */
-    --secondary-foreground: 210 10% 90%;
+    --secondary: 224 14% 12%;          /* #1A1D23 */
+    --secondary-foreground: 220 14% 90%;
     
-    --muted: 210 17% 12%;
-    --muted-foreground: 163 12% 64%;  /* #9FB0AA */
+    --muted: 224 14% 12%;
+    --muted-foreground: 220 8% 55%;    /* #868E9C */
     
-    /* Oxide Amber - mesmo acento em dark */
-    --accent: 41 54% 51%;             /* #C89B3C */
-    --accent-foreground: 210 25% 11%;
-    --accent-soft: 41 58% 68%;        /* #E2C47A */
+    --accent: 40 52% 48%;
+    --accent-foreground: 220 14% 90%;
+    --accent-soft: 40 40% 30%;
     
-    --destructive: 0 55% 50%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
     
-    --warning: 41 54% 51%;
-    --warning-foreground: 210 25% 11%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 220 20% 10%;
     
-    --success: 146 40% 48%;
-    --success-foreground: 210 25% 11%;
+    --success: 160 60% 45%;
+    --success-foreground: 0 0% 98%;
     
-    --info: 207 28% 53%;
-    --info-foreground: 210 25% 11%;
+    --info: 217 55% 55%;
+    --info-foreground: 0 0% 98%;
     
-    --border: 210 17% 15%;            /* #1F262D */
-    --input: 210 17% 12%;
-    --ring: 163 17% 21%;
+    --border: 224 14% 14%;             /* #1F2229 */
+    --input: 224 14% 14%;
+    --ring: 220 14% 90%;
+    
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.25), 0 1px 2px -1px rgb(0 0 0 / 0.2);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.35), 0 4px 6px -4px rgb(0 0 0 / 0.2);
   }
 }
 
 /* ============================================================
-   INTELLIGENCE SYSTEM - Utility Classes
+   PREMIUM UTILITY CLASSES
    ============================================================ */
 
 @layer utilities {
-  /* === CARD COM BORDA ESQUERDA (Assinatura Visual) === */
+  /* === Card Variants === */
   .card-intel {
-    @apply bg-card border border-border rounded-lg relative;
-    border-left: 2px solid hsl(var(--primary));
+    @apply bg-card border border-border rounded-xl relative;
+    border-left: 2px solid hsl(var(--accent));
+    box-shadow: var(--shadow-sm);
   }
 
   .card-intel-success {
@@ -134,28 +142,30 @@
     border-left-color: hsl(var(--info));
   }
 
-  /* === MÉTRICAS GRANDES === */
+  /* === Metric Typography === */
   .metric-display {
-    @apply font-mono text-2xl font-medium tracking-tight;
+    @apply text-2xl font-semibold tracking-tight;
+    font-variant-numeric: tabular-nums;
   }
 
   .metric-display-lg {
-    @apply font-mono text-3xl font-semibold tracking-tight;
+    @apply text-3xl font-bold tracking-tight;
+    font-variant-numeric: tabular-nums;
   }
 
-  /* === LABELS DE SEÇÃO === */
+  /* === Section Labels === */
   .section-label {
-    @apply text-xs uppercase tracking-wider text-muted-foreground font-medium;
+    @apply text-[11px] uppercase tracking-[0.08em] text-muted-foreground font-medium;
   }
 
-  /* === TIMELINE ITEM === */
+  /* === Timeline === */
   .timeline-item {
     @apply relative pl-6 pb-4;
   }
   
   .timeline-item::before {
     content: '';
-    @apply absolute left-0 top-1.5 w-2 h-2 rounded-full bg-primary -translate-x-1/2;
+    @apply absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full bg-accent -translate-x-1/2;
   }
   
   .timeline-item::after {
@@ -167,9 +177,9 @@
     display: none;
   }
 
-  /* === PAGE HEADER INTELLIGENCE === */
+  /* === Page Header === */
   .page-header-intel {
-    @apply mb-6;
+    @apply mb-8;
   }
   
   .page-header-intel h1 {
@@ -180,19 +190,20 @@
     @apply text-sm text-muted-foreground mt-1;
   }
 
-  /* === SIDEBAR ITEM ATIVO (Barra Vertical) === */
+  /* === Sidebar Active === */
   .sidebar-item-active {
     @apply relative;
   }
   
   .sidebar-item-active::before {
     content: '';
-    @apply absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-primary rounded-r;
+    @apply absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r;
+    background: hsl(var(--accent));
   }
 
-  /* === STATUS INDICATOR === */
+  /* === Status Indicators === */
   .status-dot {
-    @apply w-2 h-2 rounded-full;
+    @apply w-1.5 h-1.5 rounded-full;
   }
   
   .status-dot-healthy {
@@ -207,21 +218,22 @@
     @apply bg-destructive;
   }
 
-  /* === LEGACY: Enterprise Design System (mantido para compatibilidade) === */
-  
+  /* === Premium Cards === */
   .card-enterprise {
-    @apply backdrop-blur-xl bg-card/95 
-      border border-border 
-      shadow-sm
-      rounded-xl;
+    @apply bg-card border border-border rounded-xl;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
   }
 
   .card-enterprise-hover {
-    @apply transition-all duration-300 hover:shadow-md hover:border-border/80;
+    @apply hover:border-accent/20;
+    &:hover {
+      box-shadow: var(--shadow-md);
+    }
   }
 
   .page-header-enterprise {
-    @apply mb-6;
+    @apply mb-8;
   }
   .page-header-enterprise h1,
   .page-header-enterprise h2 {
@@ -232,29 +244,33 @@
   }
 
   .stats-card-enterprise {
-    @apply border-l-2 bg-card rounded-xl border border-border;
+    @apply bg-card rounded-xl border border-border;
+    border-left: 2px solid hsl(var(--accent));
+    box-shadow: var(--shadow-xs);
   }
 
   .section-label-enterprise {
-    @apply text-xs uppercase tracking-wider text-muted-foreground font-medium;
+    @apply text-[11px] uppercase tracking-[0.08em] text-muted-foreground font-medium;
   }
 
   .table-enterprise {
-    @apply bg-card/50 rounded-xl border border-border;
+    @apply bg-card rounded-xl border border-border;
+    box-shadow: var(--shadow-xs);
   }
 
   .input-enterprise {
-    @apply focus:ring-2 focus:ring-primary/15 focus:border-primary/40 
-      transition-all duration-200 bg-background/50;
+    @apply focus:ring-2 focus:ring-accent/10 focus:border-accent/30 
+      transition-all duration-150 bg-background;
   }
 
   .btn-enterprise {
-    @apply bg-primary hover:bg-primary/90 text-primary-foreground
-      shadow-sm hover:shadow-md transition-all duration-200;
+    @apply bg-primary hover:bg-primary-hover text-primary-foreground
+      transition-all duration-150 font-medium;
+    box-shadow: var(--shadow-sm);
   }
 
   .btn-enterprise-ghost {
-    @apply hover:bg-muted transition-all duration-200;
+    @apply hover:bg-muted transition-all duration-150;
   }
 }
 
@@ -265,14 +281,36 @@
 
   html {
     font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
-    font-family: 'IBM Plex Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.011em;
   }
 
   .font-mono {
     font-family: 'IBM Plex Mono', 'JetBrains Mono', 'Courier New', monospace;
+  }
+
+  /* Premium scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.3);
   }
 }
