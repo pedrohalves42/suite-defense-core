@@ -17,7 +17,7 @@ import { formatBrazilDateTime } from '@/lib/date-utils';
 import { SecurityFooter, BrandSignature } from '@/components/auth/SecurityFooter';
 import { SecurityCheckScreen } from '@/components/auth/SecurityCheckScreen';
 import { SessionVerifiedScreen } from '@/components/auth/SessionVerifiedScreen';
-import logoImage from '@/assets/logo-cybshield.png';
+import logoImage from '@/assets/logo-cybshield-new.png';
 const loginSchema = z.object({
   identifier: z.string()
     .trim()
