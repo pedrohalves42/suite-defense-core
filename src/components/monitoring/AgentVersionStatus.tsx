@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,7 @@ export function AgentVersionStatus({ agents, tenantId, onRefresh }: AgentVersion
   const [isOpen, setIsOpen] = useState(false);
 
   // Fetch latest version on component mount
-  useState(() => {
+  useEffect(() => {
     const fetchLatestVersion = async () => {
       const { data } = await supabase
         .from('agent_versions')
@@ -42,7 +42,7 @@ export function AgentVersionStatus({ agents, tenantId, onRefresh }: AgentVersion
       }
     };
     fetchLatestVersion();
-  });
+  }, []);
 
   // Compare versions - returns true if v1 < v2
   const isVersionOutdated = (agentVersion: string | undefined, latest: string): boolean => {
