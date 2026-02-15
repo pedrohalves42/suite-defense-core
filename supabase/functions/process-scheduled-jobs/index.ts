@@ -39,10 +39,10 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Found ${scheduledJobs?.length || 0} one-time scheduled jobs to process`);
 
-    // Filter: only activate jobs for online agents (heartbeat within 30 min)
+    // Filter: only activate jobs for online agents (heartbeat within 2 hours)
     let skippedOneTimeOffline = 0;
     if (scheduledJobs && scheduledJobs.length > 0) {
-      const onlineThreshold = new Date(Date.now() - 30 * 60 * 1000);
+      const onlineThreshold = new Date(Date.now() - 2 * 60 * 60 * 1000);
       const onlineJobIds: string[] = [];
       const offlineJobIds: string[] = [];
 
@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
           const isOnline = agent && 
             agent.status === 'active' && 
             agent.last_heartbeat && 
-            new Date(agent.last_heartbeat) > new Date(Date.now() - 30 * 60 * 1000); // 30 min
+            new Date(agent.last_heartbeat) > new Date(Date.now() - 2 * 60 * 60 * 1000); // 2 hours
           
           if (!isOnline) {
             skippedOfflineCount++;

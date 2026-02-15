@@ -177,13 +177,48 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if agent is online (heartbeat within last 10 min)
+    // Check if agent is online (heartbeat within last 2 hours)
+    const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
     const isAgentOnline = agentData.status === 'active' && 
       agentData.last_heartbeat && 
-      new Date(agentData.last_heartbeat) > new Date(Date.now() - 10 * 60 * 1000);
+      new Date(agentData.last_heartbeat) > new Date(Date.now() - TWO_HOURS_MS);
     
+    // BLOCK job creation for agents offline >2h (except update_agent and reinstall_agent which may recover them)
+    const exemptTypes = ['update_agent', 'reinstall_agent'];
+    if (!isAgentOnline && !exemptTypes.includes(type)) {
+      const lastHeartbeat = agentData.last_heartbeat 
+        ? new Date(agentData.last_heartbeat).toISOString() 
+        : 'never';
+      
+      await createAuditLog({ 
+        supabase: supabaseAdmin, 
+        userId: user.id, 
+        tenantId: agentData.tenant_id || userRole?.tenant_id || 'unknown', 
+        action: 'job_creation_blocked_offline', 
+        resourceType: 'job', 
+        details: { 
+          reason: 'agent_offline_2h',
+          agent_name: agentName,
+          last_heartbeat: lastHeartbeat,
+          job_type: type
+        }, 
+        request: req, 
+        success: false 
+      });
+
+      return new Response(
+        JSON.stringify({ 
+          error: {
+            code: 'AGENT_OFFLINE',
+            message: `Agente '${agentName}' está offline há mais de 2 horas (último heartbeat: ${lastHeartbeat}). Não é possível criar jobs para agentes inacessíveis.`
+          }
+        }), 
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const agentOfflineWarning = !isAgentOnline 
-      ? `Agent '${agentName}' is currently offline. Job will expire in 4 hours if not claimed.` 
+      ? `Agent '${agentName}' may be slow to respond. Job will expire in 4 hours if not claimed.` 
       : null;
 
     // Usar tenant_id do agente ou do user_role
