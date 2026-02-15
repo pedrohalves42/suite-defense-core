@@ -1,0 +1,2 @@
+ALTER TABLE public.jobs DROP CONSTRAINT jobs_failure_class_check;
+ALTER TABLE public.jobs ADD CONSTRAINT jobs_failure_class_check CHECK (failure_class = ANY (ARRAY['AGENT_OFFLINE'::text, 'AGENT_STALLED'::text, 'AGENT_INCOMPATIBLE'::text, 'EXPECTED_DROP'::text, 'CASCADE_FAILURE'::text, 'TRANSIENT'::text, 'BUG'::text, 'POLICY'::text, 'SECURITY'::text, 'EXPIRED'::text, 'STUCK'::text]));
