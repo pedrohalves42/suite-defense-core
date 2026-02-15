@@ -278,32 +278,76 @@ Deno.serve(async (req) => {
     const DEFAULT_TTL_HOURS = 4;
     const expiresAt = new Date(Date.now() + DEFAULT_TTL_HOURS * 60 * 60 * 1000).toISOString();
     
-    const jobData: any = {
-      agent_id: agentData.id,  // CRITICO: incluir agent_id
-      agent_name: agentName, 
-      type, 
-      payload: effectivePayload,  // Usar payload mesclado com defaults
-      status: 'queued', 
-      approved,
-      tenant_id: effectiveTenantId,
-      scheduled_at: scheduledAt || null,
-      is_recurring: isRecurring,
-      recurrence_pattern: recurrencePattern || null,
-      next_run_at: nextRunAt,
-      expires_at: expiresAt,
-    };
-    
     console.log(`[create-job] Creating job with payload:`, JSON.stringify(effectivePayload));
 
-    const { data: job, error: insertError } = await supabaseAdmin
-      .from('jobs')
-      .insert(jobData)
-      .select()
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-      
-    if (insertError) throw insertError;
+    // Use dedup RPC for non-recurring/non-scheduled jobs to prevent idx_jobs_dedup_active violations
+    // For scheduled/recurring jobs, use direct insert as they have unique scheduling params
+    let job: any;
+    
+    if (!scheduledAt && !isRecurring) {
+      // Use atomic dedup guard
+      const { data: newJobId, error: rpcError } = await supabaseAdmin.rpc('create_job_if_not_exists', {
+        p_agent_id: agentData.id,
+        p_tenant_id: effectiveTenantId,
+        p_type: type,
+        p_payload: effectivePayload,
+        p_priority: 5,
+        p_ttl_hours: DEFAULT_TTL_HOURS
+      });
+
+      if (rpcError) throw rpcError;
+
+      if (!newJobId) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: 'JOB_ALREADY_EXISTS',
+              message: `Já existe um job ativo do tipo '${type}' para o agente '${agentName}'.`
+            }
+          }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Fetch created job
+      const { data: fetchedJob, error: fetchError } = await supabaseAdmin
+        .from('jobs')
+        .select('*')
+        .eq('id', newJobId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      job = fetchedJob;
+    } else {
+      // Scheduled/recurring jobs use direct insert
+      const jobData: any = {
+        agent_id: agentData.id,
+        agent_name: agentName,
+        type,
+        payload: effectivePayload,
+        status: 'queued',
+        approved,
+        tenant_id: effectiveTenantId,
+        scheduled_at: scheduledAt || null,
+        is_recurring: isRecurring,
+        recurrence_pattern: recurrencePattern || null,
+        next_run_at: nextRunAt,
+        expires_at: expiresAt,
+      };
+
+      const { data: insertedJob, error: insertError } = await supabaseAdmin
+        .from('jobs')
+        .insert(jobData)
+        .select()
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (insertError) throw insertError;
+      job = insertedJob;
+    }
+
+    const DEFAULT_TTL_HOURS_DISPLAY = DEFAULT_TTL_HOURS;
 
     await createAuditLog({ 
       supabase: supabaseAdmin, 
