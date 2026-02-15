@@ -47,9 +47,9 @@ export function AgentReinstallCommand({ agentId, agentName }: AgentReinstallComm
       const hmac = data.hmacSecret;
       const name = data.agentName;
       
-      // Generate PowerShell reinstall command - avoids backtick issues by using simple string concat
+      // Generate PowerShell reinstall command - kill OTHER CyberShield processes, not self
       const parts = [
-        "Stop-Process -Name powershell -Force -ErrorAction SilentlyContinue;",
+        "Get-ScheduledTask -TaskName 'CyberShield*' -ErrorAction SilentlyContinue | Stop-ScheduledTask -ErrorAction SilentlyContinue;",
         "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;",
         "$dir = 'C:\\CyberShield';",
         "if (!(Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null };",
