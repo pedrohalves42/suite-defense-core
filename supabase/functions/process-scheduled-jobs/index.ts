@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     }
 
     // 2. Process recurring jobs that are due
-    // IMPROVEMENT: Join with agents to check if agent is online (heartbeat within last 30 min)
+    // Join with agents to check if agent is online (heartbeat within last 2 hours)
     const { data: recurringJobs, error: recurringError } = await supabase
       .from('jobs')
       .select(`
