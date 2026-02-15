@@ -166,22 +166,20 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background relative overflow-hidden">
-      {/* Subtle enterprise background */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(45,158,140,0.02),transparent_60%)] pointer-events-none" />
-      
-      <Card className="w-full max-w-[460px] backdrop-blur-xl bg-card/95 border border-white/[0.06] shadow-[0_0_0_1px_rgba(0,255,200,0.05),0_30px_80px_rgba(0,0,0,0.7)] rounded-[14px] relative z-10">
-        <CardHeader className="space-y-1 text-center pb-2">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+      <Card className="w-full max-w-[460px] card-enterprise rounded-xl relative z-10 overflow-hidden">
+        {/* Top accent line */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent" />
+        <CardHeader className="space-y-1 text-center pb-2 pt-8">
           <div className="flex justify-center mb-4">
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000" />
-              <img src={logoImage} alt="CyberShield" className="relative h-12 w-12 object-contain" />
+            <div className="p-3 bg-muted/50 rounded-xl border border-border">
+              <img src={logoImage} alt="CyberShield" className="h-10 w-10 object-contain" />
             </div>
           </div>
-          <CardTitle className="text-xl font-semibold tracking-tight text-foreground/90">
+          <CardTitle className="text-xl font-semibold tracking-tight text-foreground">
             Criar Conta Segura
           </CardTitle>
-          <CardDescription className="text-[13px] text-muted-foreground/70">
+          <CardDescription className="text-sm text-muted-foreground">
             Junte-se ao ambiente protegido CyberShield Cloud
           </CardDescription>
         </CardHeader>

@@ -12,16 +12,15 @@ export const WhatsAppButton = () => {
       rel="noopener noreferrer"
       className={cn(
         "fixed bottom-6 right-6 z-40",
-        "w-14 h-14 bg-green-500 hover:bg-green-600",
-        "rounded-full shadow-2xl",
+        "w-14 h-14 bg-success hover:bg-success/90",
+        "rounded-full shadow-elevated",
         "flex items-center justify-center",
-        "transition-all duration-300",
-        "hover:scale-110 active:scale-95",
-        "animate-pulse-glow"
+        "transition-all duration-200",
+        "hover:shadow-float active:scale-95"
       )}
       aria-label="Falar no WhatsApp"
     >
-      <MessageCircle className="w-7 h-7 text-white" />
+      <MessageCircle className="w-6 h-6 text-success-foreground" />
     </a>
   );
 };

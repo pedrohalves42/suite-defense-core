@@ -9,27 +9,24 @@ export function HeroSection() {
 
   return (
     <section id="inicio" className="relative overflow-hidden" aria-labelledby="hero-heading">
-      {/* Background Effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/5 to-background" />
-      <div className="absolute inset-0 bg-grid-white/[0.02]" />
-      <div className="absolute top-20 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl opacity-50" />
-      <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl opacity-50" />
+      {/* Subtle background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-muted/40 to-background" />
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24">
         <div className="text-center space-y-8 animate-fade-in">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/10 border border-primary/30 backdrop-blur-sm">
-            <Shield className="w-4 h-4 text-primary" aria-hidden="true" />
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20">
+            <Shield className="w-4 h-4 text-accent" aria-hidden="true" />
             <span className="text-sm font-medium text-foreground">{hero.badge}</span>
           </div>
 
-          {/* Title - Main H1 for SEO */}
+          {/* Title */}
           <h1 id="hero-heading" className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-            <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+            <span className="text-foreground">
               {hero.title1}
             </span>
             <br />
-            <span className="text-foreground">{hero.title2}</span>
+            <span className="text-muted-foreground">{hero.title2}</span>
           </h1>
 
           {/* Description */}
@@ -38,12 +35,12 @@ export function HeroSection() {
             <strong className="text-foreground font-semibold">{hero.descriptionBold}</strong>
           </p>
 
-          {/* Benefits List - SEO Optimized */}
+          {/* Benefits List */}
           {hero.benefits && (
             <ul className="flex flex-wrap justify-center gap-4 pt-2" aria-label="Beneficios principais">
               {hero.benefits.map((benefit, index) => (
                 <li key={index} className="flex items-center gap-2 text-sm md:text-base text-muted-foreground">
-                  <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" aria-hidden="true" />
+                  <CheckCircle className="w-4 h-4 text-accent flex-shrink-0" aria-hidden="true" />
                   <span>{benefit}</span>
                 </li>
               ))}
@@ -51,7 +48,7 @@ export function HeroSection() {
           )}
 
           {/* Stats */}
-          <div className="flex flex-wrap justify-center gap-8 pt-4" role="list" aria-label="Estatisticas">
+          <div className="flex flex-wrap justify-center gap-6 pt-4" role="list" aria-label="Estatisticas">
             {hero.stats.map((stat, index) => (
               <StatCard key={index} value={stat.value} label={stat.label} />
             ))}
@@ -62,7 +59,7 @@ export function HeroSection() {
             <Button 
               asChild 
               size="lg" 
-              className="text-lg h-14 px-8 bg-gradient-to-r from-primary to-accent hover:shadow-glow-primary transition-all hover:scale-105"
+              className="text-lg h-14 px-8 btn-enterprise"
             >
               <Link to="/signup" aria-label="Iniciar diagnostico gratuito de seguranca">
                 {hero.ctaButton}

@@ -19,7 +19,6 @@ export const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("inicio");
 
-  // Handle scroll for navbar background
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -28,7 +27,6 @@ export const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Scroll spy - detect active section
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -55,10 +53,7 @@ export const Navbar = () => {
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-      });
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
       setIsMobileMenuOpen(false);
     }
   };
@@ -70,19 +65,19 @@ export const Navbar = () => {
       <nav className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         isScrolled 
-          ? "bg-background/95 backdrop-blur-md border-b border-border shadow-lg" 
+          ? "bg-card/95 backdrop-blur-md border-b border-border shadow-premium" 
           : "bg-transparent"
       )}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 group">
+            <Link to="/" className="flex items-center gap-2.5">
               <img 
                 src={logoImage} 
                 alt="CyberShield Logo" 
-                className="h-9 w-auto object-contain group-hover:scale-105 transition-transform"
+                className="h-8 w-auto object-contain"
               />
-              <span className="text-xl font-bold text-foreground">
+              <span className="text-lg font-bold text-foreground tracking-tight">
                 CyberShield
               </span>
             </Link>
@@ -96,13 +91,13 @@ export const Navbar = () => {
                   className={cn(
                     "text-sm font-medium transition-colors relative",
                     activeSection === id 
-                      ? "text-primary" 
-                      : "text-foreground/80 hover:text-foreground"
+                      ? "text-foreground" 
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {label}
                   {activeSection === id && (
-                    <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                    <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-accent rounded-full" />
                   )}
                 </button>
               ))}
@@ -115,7 +110,7 @@ export const Navbar = () => {
                 asChild 
                 variant="default" 
                 size="sm" 
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-success hover:bg-success/90 text-success-foreground"
               >
                 <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                   WhatsApp
@@ -132,7 +127,7 @@ export const Navbar = () => {
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Toggle menu"
             >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
@@ -141,10 +136,10 @@ export const Navbar = () => {
         <div className={cn(
           "md:hidden overflow-hidden transition-all duration-300 ease-in-out",
           isMobileMenuOpen 
-            ? "max-h-96 opacity-100 bg-background border-t border-border" 
+            ? "max-h-96 opacity-100 bg-card border-t border-border" 
             : "max-h-0 opacity-0"
         )}>
-          <div className="px-4 py-4 space-y-3">
+          <div className="px-4 py-4 space-y-2">
             {NAV_SECTIONS.map(({ id, label }) => (
               <button
                 key={id}
@@ -152,8 +147,8 @@ export const Navbar = () => {
                 className={cn(
                   "block w-full text-left px-4 py-2 text-sm font-medium rounded-lg transition-colors",
                   activeSection === id 
-                    ? "bg-primary/10 text-primary" 
-                    : "text-foreground/80 hover:text-foreground hover:bg-muted"
+                    ? "bg-accent/10 text-foreground" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
                 {label}
@@ -165,7 +160,7 @@ export const Navbar = () => {
                 asChild 
                 variant="default" 
                 size="sm" 
-                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                className="w-full bg-success hover:bg-success/90 text-success-foreground"
               >
                 <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                   WhatsApp
@@ -179,7 +174,6 @@ export const Navbar = () => {
         </div>
       </nav>
 
-      {/* Spacer to prevent content from being hidden under fixed navbar */}
       <div className="h-16" />
     </>
   );
