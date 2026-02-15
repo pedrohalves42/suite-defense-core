@@ -704,9 +704,9 @@ export function ComplianceReportGenerator() {
               <div className="flex flex-col justify-center">
                 <ComplianceBadge 
                   status={
-                    reportPayload.risk_score >= 90 ? "BOM" :
-                    reportPayload.risk_score >= 70 ? "ADEQUADO" :
-                    reportPayload.risk_score >= 50 ? "ATENÇÃO" : "CRÍTICO"
+                    reportPayload.risk_level === "EXCELENTE" || reportPayload.risk_level === "BOM" ? "BOM" :
+                    reportPayload.risk_level === "ADEQUADO" ? "ADEQUADO" :
+                    reportPayload.risk_level === "ATENÇÃO" ? "ATENÇÃO" : "CRÍTICO"
                   }
                   size="lg"
                   className="mb-4"
