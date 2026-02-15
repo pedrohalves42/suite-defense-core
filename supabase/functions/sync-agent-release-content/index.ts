@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
   try {
     // Auth: Accept internal secret OR super_admin
     const internalSecret = req.headers.get('X-Internal-Secret');
-    const expectedSecret = Deno.env.get('INTERNAL_SECRET');
+    const expectedSecret = Deno.env.get('INTERNAL_SECRET') || Deno.env.get('INTERNAL_FUNCTION_SECRET');
     
     if (!(internalSecret && expectedSecret && internalSecret === expectedSecret)) {
       const authResult = await requireSuperAdmin(req);

@@ -362,46 +362,53 @@ Deno.serve(async (req) => {
             .single()
 
           if (release) {
-            // Normalizar script para Windows (via hexagonal shared module)
-            
-            const normalizedScript = normalizeForWindows(release.script_content);
-            
-            // Encode Base64 usando Deno std (consistente com serve-agent-update)
-            const encoder = new TextEncoder()
-            const scriptBytes = encoder.encode(normalizedScript)
-            const base64Script = encodeBase64(scriptBytes)
-            
-            // Calcular SHA256 do conteúdo normalizado (mesmo algoritmo do serve-agent-update)
-            const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes)
-            const hashArray = Array.from(new Uint8Array(hashBuffer))
-            const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+            // SAFETY: Reject HTML content from DB (corrupted releases)
+            if (release.script_content?.trimStart().startsWith('<!DOCTYPE') || release.script_content?.trimStart().startsWith('<html')) {
+              logger.error('Force update script is corrupted HTML, skipping delivery', {
+                agentName: agent.agent_name,
+                targetVersion: forceCheck.force_update_version,
+              });
+            } else {
+              // Normalizar script para Windows (via hexagonal shared module)
+              const normalizedScript = normalizeForWindows(release.script_content);
+              
+              // Encode Base64 usando Deno std (consistente com serve-agent-update)
+              const encoder = new TextEncoder()
+              const scriptBytes = encoder.encode(normalizedScript)
+              const base64Script = encodeBase64(scriptBytes)
+              
+              // Calcular SHA256 do conteúdo normalizado (mesmo algoritmo do serve-agent-update)
+              const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes)
+              const hashArray = Array.from(new Uint8Array(hashBuffer))
+              const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 
-            logger.info('Sending force update via heartbeat response', {
-              agentName: agent.agent_name,
-              targetVersion: release.version,
-              platform,
-              deliveryAttempt: deliveredCount + 1,
-              sha256: calculatedSha256.substring(0, 16) + '...'
-            })
+              logger.info('Sending force update via heartbeat response', {
+                agentName: agent.agent_name,
+                targetVersion: release.version,
+                platform,
+                deliveryAttempt: deliveredCount + 1,
+                sha256: calculatedSha256.substring(0, 16) + '...'
+              })
 
-            return new Response(
-              JSON.stringify({ 
-                ok: true,
-                agent: agent.agent_name,
-                timestamp: new Date().toISOString(),
-                // FORCE UPDATE DATA
-                force_update: true,
-                target_version: release.version,
-                script_content_base64: base64Script,
-                sha256: calculatedSha256,
-                reason: forceCheck.force_update_reason || 'Forced update via backend',
-                override_safe_mode: overrideValid
-              }),
-              {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 200
-              }
-            )
+              return new Response(
+                JSON.stringify({ 
+                  ok: true,
+                  agent: agent.agent_name,
+                  timestamp: new Date().toISOString(),
+                  // FORCE UPDATE DATA
+                  force_update: true,
+                  target_version: release.version,
+                  script_content_base64: base64Script,
+                  sha256: calculatedSha256,
+                  reason: forceCheck.force_update_reason || 'Forced update via backend',
+                  override_safe_mode: overrideValid
+                }),
+                {
+                  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                  status: 200
+                }
+              )
+            }
           } else {
             logger.warn('Force update version not found in agent_releases', {
               agentName: agent.agent_name,
