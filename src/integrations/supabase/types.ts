@@ -25234,8 +25234,8 @@ export type Database = {
       sync_agent_state_from_heartbeat: {
         Args: never
         Returns: {
-          agent_ids: string[]
-          agents_updated: number
+          updated_count: number
+          updated_ids: string[]
         }[]
       }
       sync_agent_status_from_heartbeat: { Args: never; Returns: undefined }
