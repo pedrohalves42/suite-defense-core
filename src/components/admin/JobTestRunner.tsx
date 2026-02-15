@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTenant } from "@/hooks/useTenant";
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +45,7 @@ type TestState = 'idle' | 'creating' | 'polling' | 'completed' | 'failed' | 'tim
 const STATUS_STEPS = ['queued', 'delivered', 'completed'];
 
 export default function JobTestRunner() {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
   const [testState, setTestState] = useState<TestState>('idle');
@@ -78,21 +80,12 @@ export default function JobTestRunner() {
       const agent = agents?.find(a => a.id === agentId);
       if (!agent) throw new Error("Agente não encontrado");
 
-      // Get tenant_id from user's roles
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData.user) throw new Error("Usuário não autenticado");
-
-      const { data: roleData, error: roleError } = await supabase
-        .from("user_roles")
-        .select("tenant_id")
-        .eq("user_id", userData.user.id)
-        .single();
-      
-      if (roleError || !roleData) throw new Error("Tenant não encontrado");
+      // Get tenant_id from active tenant context
+      if (!tenant) throw new Error("Tenant não selecionado");
 
       const jobData = await prepareJobForInsert({
         agent_name: agent.agent_name,
-        tenant_id: roleData.tenant_id,
+        tenant_id: tenant.id,
         type: "integration_test_v3",
         status: "queued",
         approved: true,

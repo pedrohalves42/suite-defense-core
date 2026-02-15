@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTenant } from "@/hooks/useTenant";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +8,7 @@ import { Package, RefreshCw, Loader2, CheckCircle } from "lucide-react";
 import { prepareJobForInsert } from "@/lib/job-utils";
 
 export function ValidationJobDispatcher() {
+  const { tenant } = useTenant();
   const [isCreatingJobs, setIsCreatingJobs] = useState(false);
   const [jobsCreated, setJobsCreated] = useState<string[]>([]);
 
@@ -16,25 +18,14 @@ export function ValidationJobDispatcher() {
     const created: string[] = [];
 
     try {
-      // Get user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
-
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (!userRole) throw new Error("Tenant não encontrado");
+      if (!tenant) throw new Error("Tenant não selecionado");
 
       // Get TESTEMIT agent - ADR-026: Use agents_safe view
       const { data: testemitAgent, error: testemitError } = await supabase
         .from('agents_safe')
         .select('id, agent_name')
         .eq('agent_name', 'TESTEMIT')
-        .eq('tenant_id', userRole.tenant_id)
+        .eq('tenant_id', tenant.id)
         .single();
 
       if (testemitError || !testemitAgent) {
@@ -42,7 +33,7 @@ export function ValidationJobDispatcher() {
       } else {
         // Create software_inventory_collect job for TESTEMIT
         const testemitJobData = await prepareJobForInsert({
-          tenant_id: userRole.tenant_id,
+          tenant_id: tenant.id,
           agent_id: testemitAgent.id,
           agent_name: testemitAgent.agent_name,
           type: 'software_inventory_collect',
@@ -68,7 +59,7 @@ export function ValidationJobDispatcher() {
         .from('agents_safe')
         .select('id, agent_name')
         .eq('agent_name', 'testepc2')
-        .eq('tenant_id', userRole.tenant_id)
+        .eq('tenant_id', tenant.id)
         .single();
 
       if (testepc2Error || !testepc2Agent) {
@@ -76,7 +67,7 @@ export function ValidationJobDispatcher() {
       } else {
         // Create update_agent job for testepc2
         const testepc2JobData = await prepareJobForInsert({
-          tenant_id: userRole.tenant_id,
+          tenant_id: tenant.id,
           agent_id: testepc2Agent.id,
           agent_name: testepc2Agent.agent_name,
           type: 'update_agent',

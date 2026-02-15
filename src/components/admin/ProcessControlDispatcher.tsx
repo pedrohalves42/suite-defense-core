@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTenant } from "@/hooks/useTenant";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -91,6 +92,7 @@ const processControlJobs: ProcessControlJob[] = [
 ];
 
 export function ProcessControlDispatcher({ agents }: { agents: Agent[] }) {
+  const { tenant } = useTenant();
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
   const [selectedJob, setSelectedJob] = useState<ProcessControlJob | null>(null);
   const [targetName, setTargetName] = useState<string>("");
@@ -155,24 +157,14 @@ export function ProcessControlDispatcher({ agents }: { agents: Agent[] }) {
     try {
       setIsCreatingJob(true);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
-
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (!userRole) throw new Error("Tenant não encontrado");
+      if (!tenant) throw new Error("Tenant não selecionado");
 
       const payload = selectedJob.requiresTarget === 'process' 
         ? { process_name: targetName.trim() }
         : { service_name: targetName.trim() };
 
       const jobData = await prepareJobForInsert({
-        tenant_id: userRole.tenant_id,
+        tenant_id: tenant.id,
         agent_id: selectedAgentId,
         agent_name: agent.agent_name,
         type: selectedJob.type,
@@ -189,8 +181,8 @@ export function ProcessControlDispatcher({ agents }: { agents: Agent[] }) {
 
       // Log audit trail
       await supabase.from('audit_logs').insert({
-        tenant_id: userRole.tenant_id,
-        user_id: user.id,
+        tenant_id: tenant.id,
+        user_id: null,
         action: 'process_control_job_created',
         resource_type: 'job',
         resource_id: selectedAgentId,

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTenant } from "@/hooks/useTenant";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +21,7 @@ interface Agent {
 }
 
 export function SecurityJobDispatcher({ agents }: { agents: Agent[] }) {
+  const { tenant } = useTenant();
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
   const [isCreatingJob, setIsCreatingJob] = useState(false);
 
@@ -38,22 +40,11 @@ export function SecurityJobDispatcher({ agents }: { agents: Agent[] }) {
     try {
       setIsCreatingJob(true);
 
-      // Get user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
-
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (!userRole) throw new Error("Tenant não encontrado");
+      if (!tenant) throw new Error("Tenant não selecionado");
 
       // Create job
       const jobData = await prepareJobForInsert({
-        tenant_id: userRole.tenant_id,
+        tenant_id: tenant.id,
         agent_id: selectedAgentId,
         agent_name: agent.agent_name,
         type: jobType,
