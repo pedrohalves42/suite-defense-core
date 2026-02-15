@@ -23,7 +23,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Badge } from '@/components/ui/badge';
 import { SidebarTenantSelector } from '@/components/SidebarTenantSelector';
 import { AppModeBadge } from '@/components/layout/AppModeBadge';
-import logoImage from '@/assets/logo-cybshield.png';
+import logoImage from '@/assets/logo-cybshield-new.png';
 
 interface MenuItem {
   icon: any;

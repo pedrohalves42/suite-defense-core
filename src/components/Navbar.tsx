@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { CONTACT } from "@/constants/config";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import logoImage from '@/assets/logo-cybshield.png';
+import logoImage from '@/assets/logo-cybshield-new.png';
 
 const NAV_SECTIONS = [
   { id: "inicio", label: "Início" },
