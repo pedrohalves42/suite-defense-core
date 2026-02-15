@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - Linux v5.0.3
+# CyberShield Agent - Linux v5.0.5
+#
+# v5.0.5: HANDLER PARITY & BUG FIXES
+# - NEW: collect_web_activity handler (dns_cache + browser_history arrays)
+# - NEW: light_vuln_scan handler (apt/yum security updates check)
+# - NEW: update_agent stub (delegates to heartbeat force_update)
+# - NEW: scan, report, collect_info, reinstall_agent handlers
+# - FIXED: All 25 job types now supported (eliminates Unknown job type errors)
 #
 # v5.0.3: STABILITY FIXES - Service Recovery & Task Health
 # - FIXED: assert_service_health auto-repairs stopped/disabled systemd units
@@ -54,7 +61,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.3"
+AGENT_VERSION="v5.0.5"
 BASE_DIR="/opt/cybershield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -842,6 +849,34 @@ restart_service_handler() {
         "disk_cleanup")
             output=$(disk_cleanup_handler)
             ;;
+        # v5.0.5: NEW - Missing handler parity
+        "collect_web_activity")
+            output=$(collect_web_activity_handler)
+            ;;
+        "light_vuln_scan")
+            output=$(light_vuln_scan_handler)
+            ;;
+        "update_agent")
+            output=$(update_agent_handler)
+            ;;
+        "scan")
+            output=$(scan_handler)
+            ;;
+        "report")
+            output=$(report_handler)
+            ;;
+        "collect_info")
+            output=$(collect_info_handler)
+            ;;
+        "reinstall_agent")
+            output=$(reinstall_agent_handler)
+            ;;
+        "collect_dns_blocks")
+            output=$(collect_dns_blocks_handler)
+            ;;
+        "remove_dns_filter")
+            output=$(remove_dns_filter_handler)
+            ;;
         *)
             error_message="Unknown job type: $job_type"
             status="failed"
@@ -1470,9 +1505,164 @@ restart_service_handler() {
      echo '{"success":true,"freed_gb":'$freed',"before_free_gb":'$before_free',"after_free_gb":'$after_free',"cleaned_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
  }
 
- # ============================================
- #  MAIN LOOP v5.0.1 FULL ENTERPRISE
- # ============================================
+# ============================================
+#  v5.0.5: NEW HANDLERS - Handler Parity
+# ============================================
+
+collect_web_activity_handler() {
+    log "INFO" "[JOB] Collecting web activity (DNS cache + browser history)"
+    
+    # Collect DNS cache
+    local dns_entries='[]'
+    if command -v systemd-resolve &>/dev/null; then
+        dns_entries=$(systemd-resolve --statistics 2>/dev/null | head -20 | jq -R -s '[split("\n")[] | select(length > 0) | {entry: .}]' 2>/dev/null || echo '[]')
+    elif [[ -f /etc/resolv.conf ]]; then
+        dns_entries=$(cat /etc/resolv.conf 2>/dev/null | grep -v '^#' | grep -v '^$' | jq -R -s '[split("\n")[] | select(length > 0) | {entry: .}]' 2>/dev/null || echo '[]')
+    fi
+    
+    # Collect browser history (Firefox)
+    local browser_history='[]'
+    local firefox_db
+    firefox_db=$(find /home -name "places.sqlite" -path "*/.mozilla/firefox/*" 2>/dev/null | head -1)
+    if [[ -n "$firefox_db" ]]; then
+        local tmp_db="/tmp/cybershield_places_$(date +%s).sqlite"
+        cp "$firefox_db" "$tmp_db" 2>/dev/null
+        if command -v sqlite3 &>/dev/null; then
+            browser_history=$(sqlite3 "$tmp_db" "SELECT url, title, last_visit_date FROM moz_places ORDER BY last_visit_date DESC LIMIT 50;" 2>/dev/null | \
+                awk -F'|' '{printf "{\"url\":\"%s\",\"title\":\"%s\",\"visited_at\":\"%s\"},", $1, $2, $3}' | sed 's/,$//' | sed 's/^/[/' | sed 's/$/]/' 2>/dev/null || echo '[]')
+        fi
+        rm -f "$tmp_db" 2>/dev/null
+    fi
+    
+    local collected_at
+    collected_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    echo '{"dns_cache":'"$dns_entries"',"browser_history":'"$browser_history"',"collected_at":"'"$collected_at"'","source":"linux"}'
+}
+
+light_vuln_scan_handler() {
+    log "INFO" "[JOB] Running light vulnerability scan"
+    
+    local vulns='[]'
+    local scan_tool="none"
+    local total=0
+    local critical=0
+    local high=0
+    
+    if command -v apt-get &>/dev/null; then
+        scan_tool="apt"
+        # Check for security updates
+        local security_updates
+        security_updates=$(apt-get -s upgrade 2>/dev/null | grep -i "^Inst" | grep -i "security" || echo "")
+        
+        if [[ -n "$security_updates" ]]; then
+            vulns=$(echo "$security_updates" | head -50 | while read -r line; do
+                local pkg
+                pkg=$(echo "$line" | awk '{print $2}')
+                local ver
+                ver=$(echo "$line" | awk '{print $3}' | tr -d '[]')
+                echo "{\"package\":\"$pkg\",\"current_version\":\"$ver\",\"severity\":\"high\",\"source\":\"apt-security\"}"
+            done | jq -s '.' 2>/dev/null || echo '[]')
+            total=$(echo "$vulns" | jq 'length' 2>/dev/null || echo 0)
+            high=$total
+        fi
+    elif command -v yum &>/dev/null; then
+        scan_tool="yum"
+        local yum_sec
+        yum_sec=$(yum updateinfo list security 2>/dev/null | tail -n +3 | head -50 || echo "")
+        if [[ -n "$yum_sec" ]]; then
+            vulns=$(echo "$yum_sec" | while read -r sev _ pkg; do
+                echo "{\"package\":\"$pkg\",\"severity\":\"$sev\",\"source\":\"yum-security\"}"
+            done | jq -s '.' 2>/dev/null || echo '[]')
+            total=$(echo "$vulns" | jq 'length' 2>/dev/null || echo 0)
+        fi
+    fi
+    
+    local scanned_at
+    scanned_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    echo '{"vulnerabilities":'"$vulns"',"summary":{"total":'$total',"critical":'$critical',"high":'$high',"medium":0,"low":0},"scan_tool":"'"$scan_tool"'","scanned_at":"'"$scanned_at"'","platform":"linux"}'
+}
+
+update_agent_handler() {
+    log "INFO" "[JOB] update_agent received - delegating to heartbeat force_update mechanism"
+    echo '{"success":true,"message":"Update delegated to heartbeat force_update mechanism","agent_version":"'"$AGENT_VERSION"'","timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+}
+
+scan_handler() {
+    log "INFO" "[JOB] Running general security scan"
+    local open_ports
+    open_ports=$(ss -tlnp 2>/dev/null | tail -n +2 | awk '{print $4}' | head -20 | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
+    local users_logged
+    users_logged=$(who 2>/dev/null | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
+    local uptime_info
+    uptime_info=$(uptime 2>/dev/null || echo "unknown")
+    echo '{"open_ports":'"$open_ports"',"logged_users":'"$users_logged"',"uptime":"'"$uptime_info"'","scanned_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+}
+
+report_handler() {
+    log "INFO" "[JOB] Generating agent report"
+    local disk_usage
+    disk_usage=$(df -BG / | tail -1 | awk '{print "{\"total\":\""$2"\",\"used\":\""$3"\",\"free\":\""$4"\",\"percent\":\""$5"\"}"}')
+    local mem_info
+    mem_info=$(free -m 2>/dev/null | awk '/^Mem:/ {print "{\"total_mb\":"$2",\"used_mb\":"$3",\"free_mb\":"$4"}"}' || echo '{}')
+    echo '{"agent_version":"'"$AGENT_VERSION"'","hostname":"'$(hostname)'"','$disk_usage',"memory":'"$mem_info"',"generated_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+}
+
+collect_info_handler() {
+    log "INFO" "[JOB] Collecting system info"
+    local os_info
+    os_info=$(cat /etc/os-release 2>/dev/null | head -5 | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
+    local kernel
+    kernel=$(uname -r 2>/dev/null || echo "unknown")
+    local arch
+    arch=$(uname -m 2>/dev/null || echo "unknown")
+    echo '{"os_info":'"$os_info"',"kernel":"'"$kernel"'","architecture":"'"$arch"'","hostname":"'$(hostname)'","agent_version":"'"$AGENT_VERSION"'","collected_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+}
+
+reinstall_agent_handler() {
+    log "INFO" "[JOB] Reinstall agent requested"
+    # Download latest script and replace current
+    local download_url="${SERVER_URL}/functions/v1/serve-agent-update?platform=linux"
+    local new_script
+    new_script=$(curl -s -H "X-Agent-Token: $AGENT_TOKEN" "$download_url" 2>/dev/null)
+    if [[ -n "$new_script" && ${#new_script} -gt 1000 ]]; then
+        local script_path
+        script_path=$(readlink -f "$0" 2>/dev/null || echo "$0")
+        echo "$new_script" > "${script_path}.new" 2>/dev/null
+        chmod +x "${script_path}.new" 2>/dev/null
+        echo '{"success":true,"message":"New script downloaded, will apply on next restart","path":"'"${script_path}.new"'","timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+    else
+        echo '{"success":false,"message":"Failed to download new agent script","timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+    fi
+}
+
+collect_dns_blocks_handler() {
+    log "INFO" "[JOB] Collecting DNS blocks from hosts file"
+    local blocks='[]'
+    if [[ -f /etc/hosts ]]; then
+        blocks=$(grep -E "^(0\.0\.0\.0|127\.0\.0\.1)" /etc/hosts 2>/dev/null | grep -v "localhost" | awk '{print $2}' | head -100 | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
+    fi
+    echo '{"blocked_domains":'"$blocks"',"source":"/etc/hosts","collected_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+}
+
+remove_dns_filter_handler() {
+    log "INFO" "[JOB] Removing DNS filter entries from hosts file"
+    if [[ -f /etc/hosts ]]; then
+        local count_before
+        count_before=$(grep -cE "^(0\.0\.0\.0|127\.0\.0\.1)" /etc/hosts 2>/dev/null | grep -v "localhost" || echo 0)
+        sudo sed -i '/# CyberShield DNS Block/,/# End CyberShield DNS Block/d' /etc/hosts 2>/dev/null
+        local count_after
+        count_after=$(grep -cE "^(0\.0\.0\.0|127\.0\.0\.1)" /etc/hosts 2>/dev/null | grep -v "localhost" || echo 0)
+        echo '{"success":true,"removed":'$((count_before - count_after))',"timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+    else
+        echo '{"success":false,"message":"Hosts file not found","timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+    fi
+}
+
+# ============================================
+#  MAIN LOOP v5.0.1 FULL ENTERPRISE
+# ============================================
  log "============================================"
  log "INFO" "[START] CyberShield Agent $AGENT_VERSION FULL ENTERPRISE"
  log "DEBUG" "[INFO] ServerUrl: $SERVER_URL"
