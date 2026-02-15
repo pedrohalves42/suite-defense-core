@@ -237,7 +237,7 @@ export function AgentQuickActions({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate(`/admin/agent-diagnostics?agent=${agentId}`)}
+              onClick={() => navigate(`/admin/diagnostics?agent=${agentId}`)}
             >
               <Stethoscope className="h-4 w-4" />
             </Button>

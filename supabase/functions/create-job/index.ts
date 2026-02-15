@@ -347,9 +347,7 @@ Deno.serve(async (req) => {
       job = insertedJob;
     }
 
-    const DEFAULT_TTL_HOURS_DISPLAY = DEFAULT_TTL_HOURS;
-
-    await createAuditLog({ 
+    await createAuditLog({
       supabase: supabaseAdmin, 
       userId: user.id,
       tenantId: effectiveTenantId,

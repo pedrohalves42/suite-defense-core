@@ -255,7 +255,7 @@ export function JobsHealthCard() {
         {/* Link to details */}
         <div className="mt-4 pt-3 border-t">
           <Link 
-            to="/admin/jobs" 
+            to="/admin/jobs-health" 
             className="flex items-center justify-center gap-1 text-sm text-primary hover:underline"
           >
             Ver detalhes de Jobs

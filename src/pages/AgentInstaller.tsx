@@ -1164,7 +1164,7 @@ const AgentInstaller = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate("/admin/agent-troubleshooting")}
+              onClick={() => navigate("/admin/diagnostics")}
               className="gap-2"
             >
               <Terminal className="h-3 w-3" />

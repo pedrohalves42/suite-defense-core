@@ -132,7 +132,7 @@ export const AppSidebar = () => {
   const advancedItems = useMemo<MenuItem[]>(() => [
     { icon: Download, label: 'Instalações', to: '/admin/installations' },
     { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases' },
-    { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics' },
+    { icon: Terminal, label: 'Diagnóstico', to: '/admin/diagnostics' },
     { icon: Clock, label: 'Automações', to: '/admin/automations' },
     { icon: Gauge, label: 'Saúde Sistema', to: '/admin/system-health' },
     { icon: Wrench, label: 'Saúde de Jobs', to: '/admin/job-health' },

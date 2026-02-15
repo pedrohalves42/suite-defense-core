@@ -204,9 +204,6 @@ const App = () => (
                 <Route path="installations" element={<Installations />} />
                 <Route path="agent-health" element={<AgentHealthMonitor />} />
                 <Route path="diagnostics" element={<DiagnosticsCenter />} />
-                <Route path="agent-diagnostics" element={<DiagnosticsCenter />} />
-                <Route path="agent-troubleshooting" element={<DiagnosticsCenter />} />
-                <Route path="problematic-agents" element={<DiagnosticsCenter />} />
                 <Route path="ai-insights" element={<AIInsights />} />
                 <Route path="ai-actions" element={<AIActionApproval />} />
                 <Route path="ai-metrics" element={<AIMetrics />} />
@@ -239,7 +236,6 @@ const App = () => (
                 <Route path="my-account" element={<MyAccount />} />
                 <Route path="slo-dashboard" element={<SLODashboard />} />
                 <Route path="jobs-health" element={<JobsHealthDashboard />} />
-                <Route path="jobs" element={<JobsHealthDashboard />} />
                 <Route path="system-operations" element={<SystemOperations />} />
                 <Route path="compliance-timeline" element={<ComplianceTimeline />} />
                 <Route path="risk-score" element={<RiskScore />} />
@@ -258,7 +254,7 @@ const App = () => (
                 <Route path="alert-resolution" element={<AlertResolutionCenter />} />
                 <Route path="insight-triage" element={<InsightTriageCenter />} />
                 <Route path="confidence-gap" element={<ConfidenceGapDashboardPage />} />
-                <Route path="job-health" element={<JobsHealthDashboard />} />
+                <Route path="job-health" element={<Navigate to="/admin/jobs-health" replace />} />
                 <Route path="tasks" element={<Tasks />} />
                 <Route path="governance" element={<Governance />} />
                 <Route path="governance-reports" element={<GovernanceReports />} />
