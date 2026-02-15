@@ -33,15 +33,17 @@ export function GapsSummaryCard() {
   const { riskScore, isLoading: riskLoading } = useRiskScore();
   const { data: confidenceGap, isLoading: confidenceLoading } = useLatestConfidenceGap();
 
-  // Fetch critical alerts count
+  // Fetch critical alerts count (last 7 days only to avoid inflated counts)
   const { data: alertsData, isLoading: alertsLoading } = useQuery({
     queryKey: ['gaps-critical-alerts'],
     queryFn: async () => {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const { count } = await supabase
         .from('system_alerts')
         .select('*', { count: 'exact', head: true })
         .eq('resolved', false)
-        .in('severity', ['high', 'critical']);
+        .in('severity', ['high', 'critical'])
+        .gte('created_at', sevenDaysAgo);
       return count || 0;
     },
     staleTime: 60000,
@@ -113,7 +115,7 @@ export function GapsSummaryCard() {
 
   const gaps: GapItem[] = [
     {
-      label: 'Alertas Críticos',
+      label: 'Alertas Críticos (7d)',
       count: alertsData || 0,
       status: (alertsData || 0) > 0 ? 'critical' : 'ok',
       link: '/admin/alert-resolution',
