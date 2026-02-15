@@ -2,10 +2,12 @@
  * AgentDetailsDrawer - Drawer lateral para detalhes do agente
  * 
  * Container de explicação que mostra:
+ * - Informações do sistema (hostname, OS, versão, IP, etc.)
  * - Estado atual com explicação completa
  * - Timeline de transições
  * - Diagnóstico inline
  * - Ações rápidas contextuais
+ * - Comando de reinstalação
  */
 
 import {
@@ -22,6 +24,8 @@ import { AgentStateExplainer } from '@/components/agent/AgentStateExplainer';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { DiagnosticPanel } from '@/components/agent/DiagnosticPanel';
 import { AgentProcessesPanel } from '@/components/agent/AgentProcessesPanel';
+import { AgentSystemInfo } from '@/components/agent/AgentSystemInfo';
+import { AgentReinstallCommand } from '@/components/agent/AgentReinstallCommand';
 import { useAgentCausality } from '@/hooks/useAgentCausality';
 import { useAntivirusStatus } from '@/hooks/useAntivirusStatus';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -51,7 +55,6 @@ interface AgentDetailsDrawerProps {
   tenantId?: string;
   open: boolean;
   onClose: () => void;
-  // Props opcionais para ações (passados do pai que já tem os dados)
   isThrottled?: boolean | null;
   isIsolated?: boolean | null;
   isInSafeMode?: boolean | null;
@@ -116,7 +119,6 @@ export function AgentDetailsDrawer({
     }
   };
 
-  // Render state badge
   const renderStateBadge = () => {
     if (!causality) return null;
     const state = causality.currentState;
@@ -190,7 +192,16 @@ export function AgentDetailsDrawer({
 
               {/* Tab: Visão Geral */}
               <TabsContent value="overview" className="mt-4 space-y-4">
-                {/* Explicador de Estado Completo */}
+                {/* System Info */}
+                {agentId && (
+                  <>
+                    <SectionDivider label="Informações do Sistema" />
+                    <AgentSystemInfo agentId={agentId} tenantId={tenantId} />
+                  </>
+                )}
+
+                {/* State Explainer */}
+                <SectionDivider label="Estado Atual" />
                 <AgentStateExplainer agentId={agentId} tenantId={tenantId} />
 
                 {/* Antivirus Status */}
@@ -213,7 +224,7 @@ export function AgentDetailsDrawer({
                   </>
                 )}
 
-                {/* Links para Mais Detalhes */}
+                {/* Quick Links */}
                 <div className="space-y-2 pt-2">
                   <Button
                     variant="outline"
@@ -272,21 +283,30 @@ export function AgentDetailsDrawer({
 
               {/* Tab: Ações */}
               <TabsContent value="actions" className="mt-4">
-                {agentId && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-medium text-muted-foreground">Ações Rápidas</h4>
-                    <TooltipProvider>
-                      <div className="flex flex-wrap gap-2">
-                      <AgentQuickActions
+                {agentId && agentName && (
+                  <div className="space-y-6">
+                    {/* Quick Actions */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-muted-foreground">Ações Rápidas</h4>
+                      <TooltipProvider>
+                        <AgentQuickActions
                           agentId={agentId}
-                          agentName={agentName || 'Computador'}
+                          agentName={agentName}
                           isThrottled={isThrottled}
                           isIsolated={isIsolated}
                           isInSafeMode={isInSafeMode}
                           onAgentDeleted={handleAgentDeleted}
                         />
-                      </div>
-                    </TooltipProvider>
+                      </TooltipProvider>
+                    </div>
+
+                    {/* Reinstall Command */}
+                    <div className="border-t pt-4">
+                      <AgentReinstallCommand 
+                        agentId={agentId} 
+                        agentName={agentName} 
+                      />
+                    </div>
                   </div>
                 )}
               </TabsContent>
