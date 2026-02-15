@@ -5,11 +5,11 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    // Fetch script from project preview
-    const previewUrl = 'https://id-preview--affc1ab5-463f-41f7-ae33-f788e864f6ee.lovable.app/agent-v5-temp.ps1';
-    console.log('[sync-v5] Fetching script from preview URL...');
+    // Fetch script from Supabase Storage
+    const storageUrl = `${Deno.env.get('SUPABASE_URL')!}/storage/v1/object/public/agent-scripts/cybershield-agent-windows-v5.ps1`;
+    console.log('[sync-v5] Fetching script from Storage...');
     
-    const scriptResp = await fetch(previewUrl);
+    const scriptResp = await fetch(storageUrl);
     if (!scriptResp.ok) {
       return new Response(JSON.stringify({ error: `Failed to fetch script: ${scriptResp.status}` }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -50,12 +50,12 @@ Deno.serve(async (req) => {
 
     // Try both version formats
     const { data: d1, error: e1 } = await supabase.from('agent_releases')
-      .update({ script_content: normalized, checksum: hash, updated_at: new Date().toISOString() })
+      .update({ script_content: normalized, sha256: hash })
       .eq('version', 'v5.0.4').eq('platform', 'windows').eq('is_active', true)
       .select('id, version, platform');
 
     const { data: d2, error: e2 } = await supabase.from('agent_releases')
-      .update({ script_content: normalized, checksum: hash, updated_at: new Date().toISOString() })
+      .update({ script_content: normalized, sha256: hash })
       .eq('version', '5.0.4').eq('platform', 'windows').eq('is_active', true)
       .select('id, version, platform');
 
