@@ -21053,7 +21053,9 @@ export type Database = {
           agent_mode: string | null
           agent_name: string | null
           agent_version: string | null
+          checked_at: string | null
           enrolled_at: string | null
+          health_description: string | null
           health_status: string | null
           last_execution_at: string | null
           last_heartbeat: string | null
@@ -21061,6 +21063,7 @@ export type Database = {
           minutes_since_heartbeat: number | null
           pending_jobs: number | null
           seconds_since_heartbeat: number | null
+          severity: string | null
           stale_delivered_jobs: number | null
           stale_queued_jobs: number | null
           status: string | null
@@ -22968,6 +22971,7 @@ export type Database = {
           agent_state: string | null
           agent_version: string | null
           display_name: string | null
+          enrolled_at: string | null
           hostname: string | null
           id: string | null
           is_isolated: boolean | null
@@ -22983,6 +22987,7 @@ export type Database = {
           agent_state?: string | null
           agent_version?: string | null
           display_name?: string | null
+          enrolled_at?: string | null
           hostname?: string | null
           id?: string | null
           is_isolated?: boolean | null
@@ -22998,6 +23003,7 @@ export type Database = {
           agent_state?: string | null
           agent_version?: string | null
           display_name?: string | null
+          enrolled_at?: string | null
           hostname?: string | null
           id?: string | null
           is_isolated?: boolean | null
