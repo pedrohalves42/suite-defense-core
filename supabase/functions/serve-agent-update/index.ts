@@ -148,10 +148,22 @@ Deno.serve(async (req) => {
         );
       }
 
+      // SAFETY: Reject HTML content from DB (corrupted releases)
+      if (forcedRelease.script_content?.trimStart().startsWith('<!DOCTYPE') || forcedRelease.script_content?.trimStart().startsWith('<html')) {
+        logger.error('[serve-agent-update] Force update script is corrupted HTML', {
+          requestId,
+          forceVersion: agent.force_update_version,
+          preview: forcedRelease.script_content.substring(0, 100),
+        });
+        return new Response(
+          JSON.stringify({ error: 'Script content corrupted (HTML)', version: agent.force_update_version }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       // Normalizar script para Windows (via hexagonal shared module)
       
       const normalizedScript = normalizeForWindows(forcedRelease.script_content);
-      const encoder = new TextEncoder();
       const scriptBytes = encoder.encode(normalizedScript);
       const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
@@ -347,6 +359,16 @@ Deno.serve(async (req) => {
     // This eliminates the agent_releases sync gap that caused hotfix delivery failures
     let finalScriptContent = release.script_content;
     
+    // SAFETY: Reject HTML content from DB (corrupted releases)
+    if (finalScriptContent && (finalScriptContent.trimStart().startsWith('<!DOCTYPE') || finalScriptContent.trimStart().startsWith('<html'))) {
+      logger.error('[serve-agent-update] DB script_content is corrupted HTML, rejecting', {
+        requestId,
+        platform,
+        preview: finalScriptContent.substring(0, 100),
+      });
+      finalScriptContent = '';  // Force fallback to codebase
+    }
+    
     const codebaseScripts: Record<string, string> = {
       windows: AGENT_SCRIPT_WINDOWS_CONTENT,
       linux: AGENT_SCRIPT_LINUX_SH,
@@ -356,7 +378,7 @@ Deno.serve(async (req) => {
     const codebaseScript = codebaseScripts[platform];
     if (codebaseScript && codebaseScript.length > 1000) {
       const codebaseLen = codebaseScript.length;
-      const dbLen = release.script_content?.length || 0;
+      const dbLen = finalScriptContent?.length || 0;
       if (codebaseLen !== dbLen) {
         logger.info('[serve-agent-update] Using codebase script (authoritative) instead of DB', {
           requestId,
@@ -367,7 +389,7 @@ Deno.serve(async (req) => {
         });
       }
       finalScriptContent = codebaseScript;
-    } else if (!release.script_content || release.script_content.length < 1000) {
+    } else if (!finalScriptContent || finalScriptContent.length < 1000) {
       logger.warn('[serve-agent-update] No valid script in codebase or DB', { 
         requestId, 
         platform,
