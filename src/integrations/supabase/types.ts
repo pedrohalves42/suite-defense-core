@@ -4999,6 +4999,8 @@ export type Database = {
           revalidation_required_at: string | null
           safe_mode_entered_at: string | null
           safe_mode_reason: string | null
+          scheduling_paused: boolean
+          scheduling_paused_reason: string | null
           signature_mode: string | null
           status: string
           tenant_id: string
@@ -5052,6 +5054,8 @@ export type Database = {
           revalidation_required_at?: string | null
           safe_mode_entered_at?: string | null
           safe_mode_reason?: string | null
+          scheduling_paused?: boolean
+          scheduling_paused_reason?: string | null
           signature_mode?: string | null
           status?: string
           tenant_id: string
@@ -5105,6 +5109,8 @@ export type Database = {
           revalidation_required_at?: string | null
           safe_mode_entered_at?: string | null
           safe_mode_reason?: string | null
+          scheduling_paused?: boolean
+          scheduling_paused_reason?: string | null
           signature_mode?: string | null
           status?: string
           tenant_id?: string

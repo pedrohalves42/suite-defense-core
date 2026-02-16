@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
       .from('jobs')
       .select(`
         *,
-        agent:agents!jobs_agent_id_fkey(id, last_heartbeat, status)
+        agent:agents!jobs_agent_id_fkey(id, last_heartbeat, status, scheduling_paused)
       `)
       .eq('status', 'queued')
       .eq('is_recurring', false)
@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
         const agent = job.agent;
         const isOnline = agent &&
           agent.status === 'active' &&
+          !agent.scheduling_paused &&
           agent.last_heartbeat &&
           new Date(agent.last_heartbeat) > onlineThreshold;
 
@@ -104,7 +105,7 @@ Deno.serve(async (req) => {
       .from('jobs')
       .select(`
         *,
-        agent:agents!jobs_agent_id_fkey(id, last_heartbeat, status)
+        agent:agents!jobs_agent_id_fkey(id, last_heartbeat, status, scheduling_paused)
       `)
       .eq('is_recurring', true)
       .eq('approved', true)
@@ -128,6 +129,7 @@ Deno.serve(async (req) => {
           const agent = recurringJob.agent;
           const isOnline = agent && 
             agent.status === 'active' && 
+            !agent.scheduling_paused &&
             agent.last_heartbeat && 
             new Date(agent.last_heartbeat) > new Date(Date.now() - 2 * 60 * 60 * 1000); // 2 hours
           
