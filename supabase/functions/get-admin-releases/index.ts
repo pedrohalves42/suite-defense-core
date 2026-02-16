@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
     // Fetch all releases with full data using service role
     const { data: releases, error: fetchError } = await serviceClient
       .from('agent_releases')
-      .select('*')
+      .select('id, version, platform, channel, is_active, sha256, release_notes, created_at, updated_at, created_by, file_size_bytes')
       .order('created_at', { ascending: false });
 
     if (fetchError) {
