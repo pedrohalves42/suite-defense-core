@@ -192,7 +192,6 @@ $Global:TaskHealthCheckIntervalSeconds = 300  # Check task every 5 min
 
 # v5.0.4: Log flood suppression
 $Global:ConsecutivePollErrors = 0
-$Global:TaskHealthCheckIntervalSeconds = 300  # Check task every 5 min
 
 # v5.0.1: Hash Chain for execution
 $Global:ExecutionChain = @{
@@ -1733,7 +1732,7 @@ function Invoke-UpdateAgent {
             }
         }
         
-        $data = $updateResult.Body | ConvertFrom-Json
+        $data = $updateResult.Content | ConvertFrom-Json
         
         if ($data.message -eq "Already up to date") {
             Write-Log "[UPDATE] Already at latest version ($($data.current_version))" "INFO"
@@ -2999,6 +2998,37 @@ function Invoke-ApplySecurityPatch {
     } catch {
         Write-Log "[PATCH] Error: $($_.Exception.Message)" "ERROR"
         return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  SYSTEM INFO (ported from v4)
+# ============================================
+function Get-SystemInfo {
+    try {
+        $os = Get-CimInstance Win32_OperatingSystem
+        $cs = Get-CimInstance Win32_ComputerSystem
+
+        return @{
+            os_type       = "windows"
+            os_name       = $os.Caption
+            os_version    = $os.Version
+            build_number  = $os.BuildNumber
+            hostname      = $env:COMPUTERNAME
+            domain        = $cs.Domain
+            total_ram_gb  = [Math]::Round($cs.TotalPhysicalMemory / 1GB, 2)
+            agent_name    = $Global:AgentName
+            agent_version = $Global:AgentVersion
+            state         = $Global:CurrentState
+        }
+    } catch {
+        return @{
+            os_type       = "windows"
+            hostname      = $env:COMPUTERNAME
+            agent_name    = $Global:AgentName
+            agent_version = $Global:AgentVersion
+            state         = $Global:CurrentState
+        }
     }
 }
 
