@@ -1,5 +1,10 @@
 <#
-    CyberShield Agent - Windows v5.0.5 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.6 FULL ENTERPRISE
+
+    v5.0.6: HANDLER PARITY - collect_dns_blocks & integration_test_v3
+    - NEW: collect_dns_blocks handler (Windows hosts file DNS block collection)
+    - NEW: integration_test_v3 handler (simple pong response for connectivity tests)
+    - IMPROVED: Execute-Job switch covers all 27 supported job types
 
     v5.0.5: BUGFIXES - Handler Parity & Side-Effect Compliance
     - FIXED: collect_web_activity now returns dns_cache/browser_history format
@@ -892,6 +897,18 @@ function Execute-Job {
             "collect_info" {
                 $output = Get-SystemInfo
             }
+            # v5.0.6: NEW - DNS Blocks & Integration Test
+            "collect_dns_blocks" {
+                $output = Invoke-CollectDnsBlocks
+            }
+            "integration_test_v3" {
+                $output = @{
+                    pong = $true
+                    agent_version = $Global:AgentVersion
+                    timestamp = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+                    hostname = $env:COMPUTERNAME
+                }
+            }
             default {
                 $error_message = "Unknown job type: $($Job.job_type)"
                 $status = "failed"
@@ -1630,6 +1647,45 @@ function Invoke-CollectWebActivity {
     } catch {
         Write-Log "[WEB-ACTIVITY-V5] Error: $($_.Exception.Message)" "ERROR"
         return @{ error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.6: COLLECT DNS BLOCKS (Windows hosts file)
+# ============================================
+function Invoke-CollectDnsBlocks {
+    Write-Log "[JOB] Collecting DNS blocks from hosts file" "INFO"
+    try {
+        $hostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
+        $blockedDomains = @()
+        
+        if (Test-Path $hostsPath) {
+            $lines = Get-Content $hostsPath -ErrorAction SilentlyContinue
+            foreach ($line in $lines) {
+                $trimmed = $line.Trim()
+                if ($trimmed -match "^(0\.0\.0\.0|127\.0\.0\.1)\s+(.+)" -and $trimmed -notmatch "localhost") {
+                    $domain = $Matches[2].Trim()
+                    if ($domain -and $blockedDomains.Count -lt 100) {
+                        $blockedDomains += $domain
+                    }
+                }
+            }
+        }
+        
+        return @{
+            blocked_domains = $blockedDomains
+            source = $hostsPath
+            collected_at = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+            count = $blockedDomains.Count
+        }
+    } catch {
+        Write-Log "[JOB] DNS blocks collection failed: $_" "WARN"
+        return @{
+            blocked_domains = @()
+            source = "error"
+            error = $_.ToString()
+            collected_at = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+        }
     }
 }
 

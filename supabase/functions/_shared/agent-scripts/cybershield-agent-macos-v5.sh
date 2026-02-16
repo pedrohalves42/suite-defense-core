@@ -2,6 +2,10 @@
 #
 # CyberShield Agent - macOS v5.0.5
 #
+# v5.0.6: HANDLER PARITY - integration_test_v3
+# - NEW: integration_test_v3 handler (simple pong response for connectivity tests)
+# - IMPROVED: All 27 job types now supported
+#
 # v5.0.5: HANDLER PARITY & BUG FIXES
 # - NEW: collect_web_activity handler (dns_cache + browser_history arrays)
 # - NEW: light_vuln_scan handler (softwareupdate --list check)
@@ -61,7 +65,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.5"
+AGENT_VERSION="v5.0.6"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -859,6 +863,9 @@ restart_service_handler() {
             ;;
         "remove_dns_filter")
             output=$(remove_dns_filter_handler)
+            ;;
+        "integration_test_v3")
+            output='{"pong":true,"agent_version":"'"$AGENT_VERSION"'","timestamp":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","hostname":"'"$(hostname)"'"}'
             ;;
         *)
             error_message="Unknown job type: $job_type"
