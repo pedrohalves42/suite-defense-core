@@ -71,7 +71,7 @@ export function MFAVerificationDialog({
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && handleCancel()}>
-      <DialogContent className="sm:max-w-md border-border/50 bg-card/98" onPointerDownOutside={(e) => e.preventDefault()}>
+      <DialogContent className="sm:max-w-md border-border/50 bg-card" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader className="space-y-3">
           <DialogTitle className="flex items-center gap-2.5 text-foreground">
             <Shield className="h-5 w-5 text-primary/80" />
