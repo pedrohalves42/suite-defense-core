@@ -1,5 +1,11 @@
 <#
-    CyberShield Agent - Windows v5.0.6 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.7 FULL ENTERPRISE
+
+    v5.0.7: AUTO-UPDATE FIX - Force Update via Heartbeat (ported from v4)
+    - NEW: Apply-ForcedUpdate function (Base64 decode, SHA256 validation, dynamic task detection)
+    - FIXED: Send-Heartbeat now processes force_update in heartbeat response
+    - FIXED: Dynamic Scheduled Task name detection (CyberShieldAgent-*, CyberShield Agent, etc.)
+    - FIXED: Confirm force update on backend after successful application
 
     v5.0.6: HANDLER PARITY - collect_dns_blocks & integration_test_v3
     - NEW: collect_dns_blocks handler (Windows hosts file DNS block collection)
@@ -105,7 +111,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.5"
+    [string]$AgentVersion = "v5.0.7"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -3084,7 +3090,195 @@ function Get-SystemMetrics {
 }
 
 # ============================================
-#  IMPROVED HEARTBEAT (v5.0)
+#  FORCE UPDATE VIA HEARTBEAT (v5.0.7 - Ported from v4)
+# ============================================
+# Esta funcao:
+# 1. NAO depende do job system
+# 2. Processa dados recebidos diretamente no heartbeat response
+# 3. Funciona com agentes antigos que nao tem update_agent funcionando
+# 4. Deteccao dinamica de Scheduled Task name
+# ============================================
+function Apply-ForcedUpdate {
+    param(
+        [Parameter(Mandatory = $true)]
+        $Response
+    )
+    
+    try {
+        Write-Log "[FORCE UPDATE] Iniciando aplicacao de update forcado..." "INFO"
+        
+        # Extrair dados do response
+        $targetVersion = $Response.target_version
+        $base64Content = $Response.script_content_base64
+        $expectedHash = $Response.sha256
+        $reason = $Response.reason
+        
+        if (-not $targetVersion -or -not $base64Content -or -not $expectedHash) {
+            throw "Dados de force update incompletos no response"
+        }
+        
+        Write-Log "[FORCE UPDATE] Version: $targetVersion, Reason: $reason" "INFO"
+        
+        # SAFE MODE CHECK
+        $rollbackState = Get-RollbackState
+        if ($rollbackState.safe_mode) {
+            if ($Response.override_safe_mode -eq $true) {
+                Write-Log "[FORCE UPDATE] Safe mode override ativo - prosseguindo com update" "WARN"
+            } else {
+                Write-Log "[SAFE MODE] Updates desabilitados - rollback loop detectado" "ERROR"
+                Add-EvidenceEntry -Type "security_warning" -Data @{
+                    event = "force_update_blocked_safe_mode"
+                    target_version = $targetVersion
+                    rollback_count = $rollbackState.rollback_count
+                } -Severity "warning"
+                return @{ success = $false; error = "Safe mode active - updates disabled" }
+            }
+        }
+        
+        # Criar arquivo temporario
+        $tempScript = Join-Path $env:TEMP "cybershield-force-update-$targetVersion.ps1"
+        
+        # CRITICAL: Base64 decode - preserva 100% dos bytes
+        Write-Log "[FORCE UPDATE] Decodificando Base64..." "DEBUG"
+        $bytes = [System.Convert]::FromBase64String($base64Content)
+        [System.IO.File]::WriteAllBytes($tempScript, $bytes)
+        Write-Log "[FORCE UPDATE] Script salvo: $($bytes.Length) bytes" "DEBUG"
+        
+        # Validar SHA256
+        $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
+        if ($actualHash -ne $expectedHash.ToLower()) {
+            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+            throw "SHA256 mismatch! Esperado: $expectedHash, Obtido: $actualHash"
+        }
+        
+        Write-Log "[FORCE UPDATE] SHA256 validado: $actualHash" "SUCCESS"
+        
+        # Detectar script atual e diretorio de instalacao
+        $installDir = "C:\CyberShield"
+        $targetScript = Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"
+        
+        $currentScript = $null
+        $possiblePaths = @(
+            $PSCommandPath,
+            (Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"),
+            (Join-Path $installDir "cybershield-agent-v5.ps1"),
+            (Join-Path $installDir "cybershield-agent-v4.ps1"),
+            (Join-Path $installDir "cybershield-agent.ps1")
+        )
+        
+        foreach ($path in $possiblePaths) {
+            if ($path -and (Test-Path $path)) {
+                $currentScript = $path
+                break
+            }
+        }
+        
+        if (-not $currentScript) {
+            $found = Get-ChildItem -Path $installDir -Filter "cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) { $currentScript = $found.FullName }
+        }
+        
+        # BACKUP para rollback estruturado
+        $previousPath = $Global:RollbackPaths.Previous
+        if ($currentScript -and (Test-Path $currentScript)) {
+            try {
+                Copy-Item -Path $currentScript -Destination $previousPath -Force
+                Write-Log "[FORCE UPDATE] Backup criado: $previousPath" "INFO"
+                
+                $rlbState = Get-RollbackState
+                $rlbState.previous_version = $Global:AgentVersion
+                Save-RollbackState -State $rlbState
+            } catch {
+                Write-Log "[FORCE UPDATE] Backup falhou: $($_.Exception.Message)" "WARN"
+            }
+        }
+        
+        # APLICAR UPDATE
+        Copy-Item -Path $tempScript -Destination $targetScript -Force
+        Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+        Write-Log "[FORCE UPDATE] Script instalado: $targetScript" "SUCCESS"
+        
+        # Registrar evidencia
+        Add-EvidenceEntry -Type "force_update" -Data @{
+            old_version = $Global:AgentVersion
+            new_version = $targetVersion
+            target_path = $targetScript
+            sha256 = $actualHash
+            reason = $reason
+            method = "heartbeat_response"
+        } -Severity "info"
+        
+        # Confirmar no backend que force update foi aplicado
+        try {
+            $confirmResult = Invoke-SecureRequest `
+                -Path "/functions/v1/confirm-force-update" `
+                -Method "POST" `
+                -Body @{
+                    new_version = $targetVersion
+                    old_version = $Global:AgentVersion
+                } `
+                -TimeoutSec 10
+            
+            if ($confirmResult.Success) {
+                Write-Log "[FORCE UPDATE] Confirmacao enviada ao backend" "SUCCESS"
+            }
+        } catch {
+            Write-Log "[FORCE UPDATE] Falha ao confirmar no backend (nao critico): $($_.Exception.Message)" "WARN"
+        }
+        
+        Write-Log "[FORCE UPDATE] Update $targetVersion aplicado com sucesso!" "SUCCESS"
+        
+        # DYNAMIC TASK DETECTION: Find the correct Scheduled Task name
+        Write-Log "[FORCE UPDATE] Detectando Scheduled Task..." "INFO"
+        $taskName = $null
+        $taskPatterns = @(
+            "CyberShieldAgent-$($Global:AgentName)",
+            "CyberShieldAgent",
+            "CyberShield Agent",
+            "CyberShield*"
+        )
+        
+        foreach ($pattern in $taskPatterns) {
+            $foundTask = Get-ScheduledTask -TaskName $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($foundTask) {
+                $taskName = $foundTask.TaskName
+                Write-Log "[FORCE UPDATE] Task encontrada: $taskName" "INFO"
+                break
+            }
+        }
+        
+        if ($taskName) {
+            try {
+                Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+                Start-Sleep -Seconds 2
+                Start-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+                Write-Log "[FORCE UPDATE] Task '$taskName' reiniciada - nova versao ativa!" "SUCCESS"
+            } catch {
+                Write-Log "[FORCE UPDATE] Restart task falhou, sera ativado no proximo boot: $($_.Exception.Message)" "WARN"
+            }
+        } else {
+            Write-Log "[FORCE UPDATE] Nenhuma Scheduled Task encontrada - nova versao ativa no proximo boot" "WARN"
+        }
+        
+        # EXIT para permitir novo script iniciar
+        Write-Log "[FORCE UPDATE] Encerrando processo atual para nova versao iniciar..." "INFO"
+        exit 0
+        
+    } catch {
+        Write-Log "[FORCE UPDATE] Erro: $($_.Exception.Message)" "ERROR"
+        
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "force_update_failed"
+            error = $_.Exception.Message
+            target_version = $Response.target_version
+        } -Severity "error"
+        
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  IMPROVED HEARTBEAT (v5.0.7)
 # ============================================
 function Send-Heartbeat {
     try {
@@ -3118,12 +3312,31 @@ function Send-Heartbeat {
         if ($result.Success) {
             Write-Log "[HEARTBEAT] Sent successfully" "SUCCESS"
             
-            # Processar resposta (force update, rotate key, etc.)
+            # Processar resposta do servidor (force update, rotate key, etc.)
             if ($result.Content) {
                 try {
                     $response = $result.Content | ConvertFrom-Json
-                    # TODO: processar comandos do servidor
-                } catch { }
+                    
+                    # ============================================
+                    # FORCE UPDATE VIA HEARTBEAT RESPONSE
+                    # Ported from v4 - bypasses job system completely
+                    # ============================================
+                    if ($response.force_update -eq $true) {
+                        Write-Log "[FORCE UPDATE] Update forcado detectado via heartbeat!" "WARN"
+                        Write-Log "[FORCE UPDATE] Target version: $($response.target_version)" "INFO"
+                        
+                        $updateResult = Apply-ForcedUpdate -Response $response
+                        
+                        if ($updateResult.success) {
+                            # Apply-ForcedUpdate will exit the process after restarting the task
+                            return $true
+                        } else {
+                            Write-Log "[FORCE UPDATE] Falha ao aplicar: $($updateResult.error)" "ERROR"
+                        }
+                    }
+                } catch {
+                    Write-Log "[HEARTBEAT] Erro ao processar response: $($_.Exception.Message)" "WARN"
+                }
             }
             
             return $true
