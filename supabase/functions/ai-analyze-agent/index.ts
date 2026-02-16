@@ -1,9 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sanitizeForAI, sanitizeObjectForAI, anonymizeAgentName, validateAIResponse } from "../_shared/ai-sanitizer.ts";
-import { callAI, callAIJson, type AIMessage } from "../_shared/ai-provider-helper.ts";
+import { callAIJson, type AIMessage } from "../_shared/ai-provider-helper.ts";
 import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from "../_shared/ai-metrics.ts";
 import { persistAIMetrics } from "../_shared/ai-metrics-persistence.ts";
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from "../_shared/ai-evidence-types.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+};
 
 interface AgentContext {
   metrics: {
@@ -36,7 +41,6 @@ interface AIAnalysis {
   suggestions: AISuggestion[];
   insights: string[];
   riskFactors: string[];
-  // Evidence Pack - TOP 5% Global
   evidence: AIEvidence[];
   data_sources: string[];
   reasoning_summary: string;
@@ -61,73 +65,45 @@ Deno.serve(async (req) => {
     // Build evidence from context data
     const evidence: AIEvidence[] = [];
     
-    // Add metrics evidence
     if (context.metrics) {
       if (context.metrics.cpu_usage_percent !== null) {
         evidence.push(buildEvidence(
-          'Uso de CPU',
-          'agent_system_metrics_partitioned',
-          context.metrics.cpu_usage_percent,
-          agent.id,
+          'Uso de CPU', 'agent_system_metrics_partitioned',
+          context.metrics.cpu_usage_percent, agent.id,
           context.metrics.cpu_usage_percent > 80 ? 'critical' : context.metrics.cpu_usage_percent > 60 ? 'warning' : 'info'
         ));
       }
       if (context.metrics.memory_usage_percent !== null) {
         evidence.push(buildEvidence(
-          'Uso de Memória',
-          'agent_system_metrics_partitioned',
-          context.metrics.memory_usage_percent,
-          agent.id,
+          'Uso de Memória', 'agent_system_metrics_partitioned',
+          context.metrics.memory_usage_percent, agent.id,
           context.metrics.memory_usage_percent > 85 ? 'critical' : context.metrics.memory_usage_percent > 70 ? 'warning' : 'info'
         ));
       }
       if (context.metrics.disk_usage_percent !== null) {
         evidence.push(buildEvidence(
-          'Uso de Disco',
-          'agent_system_metrics_partitioned',
-          context.metrics.disk_usage_percent,
-          agent.id,
+          'Uso de Disco', 'agent_system_metrics_partitioned',
+          context.metrics.disk_usage_percent, agent.id,
           context.metrics.disk_usage_percent > 90 ? 'critical' : context.metrics.disk_usage_percent > 80 ? 'warning' : 'info'
         ));
       }
     }
 
-    // Add vulnerabilities evidence
     const criticalVulns = context.vulnerabilities.filter(v => v.severity === 'critical' || v.severity === 'high');
     if (criticalVulns.length > 0) {
-      evidence.push(buildEvidence(
-        'Vulnerabilidades Críticas/Altas',
-        'vulnerabilities',
-        criticalVulns.length,
-        agent.id,
-        'critical'
-      ));
+      evidence.push(buildEvidence('Vulnerabilidades Críticas/Altas', 'vulnerabilities', criticalVulns.length, agent.id, 'critical'));
     }
 
-    // Add software inventory evidence
     if (context.software.length > 0) {
-      evidence.push(buildEvidence(
-        'Softwares Instalados',
-        'software_inventory',
-        context.software.length,
-        agent.id,
-        'info'
-      ));
+      evidence.push(buildEvidence('Softwares Instalados', 'software_inventory', context.software.length, agent.id, 'info'));
     }
 
-    // Add job failure evidence
     const failedJobs = context.recentJobs.filter(j => j.status === 'failed');
     if (failedJobs.length > 0) {
-      evidence.push(buildEvidence(
-        'Jobs com Falha',
-        'jobs',
-        failedJobs.length,
-        agent.id,
-        failedJobs.length > 3 ? 'critical' : 'warning'
-      ));
+      evidence.push(buildEvidence('Jobs com Falha', 'jobs', failedJobs.length, agent.id, failedJobs.length > 3 ? 'critical' : 'warning'));
     }
 
-    // Build context summary for AI with sanitization
+    // Build context summary with sanitization
     const rawContextSummary = buildContextSummary(agent, context);
     const sanitizeResult = sanitizeForAI(rawContextSummary);
     
@@ -171,7 +147,7 @@ Responda APENAS com JSON valido no formato:
       functionName: 'ai-analyze-agent',
     });
 
-    // Handle AI call failure
+    // Handle AI call failure — use basic analysis as fallback
     if (!aiResult.success || !parsedAnalysis) {
       console.warn('[ai-analyze-agent] AI call failed, using basic analysis:', aiResult.error);
       const basicAnalysis = generateBasicAnalysis(context, evidence);
@@ -187,29 +163,6 @@ Responda APENAS com JSON valido no formato:
 
     console.log(`[ai-analyze-agent] Analysis completed via ${aiResult.provider} in ${aiResult.latencyMs}ms`);
 
-    if (!content) {
-      const basicAnalysis = generateBasicAnalysis(context, evidence);
-      return new Response(
-        JSON.stringify(basicAnalysis),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Parse AI response
-    let analysis: Partial<AIAnalysis>;
-    try {
-      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/\{[\s\S]*\}/);
-      const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
-      analysis = JSON.parse(jsonStr);
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', parseError);
-      const basicAnalysis = generateBasicAnalysis(context, evidence);
-      return new Response(
-        JSON.stringify(basicAnalysis),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Build complete response with Evidence Pack
     const data_sources = extractDataSources(evidence);
     const confidence = calculateConfidence(evidence, true);
@@ -220,11 +173,10 @@ Responda APENAS com JSON valido no formato:
     );
 
     const completeAnalysis: AIAnalysis = {
-      healthScore: Math.min(100, Math.max(0, analysis.healthScore || 50)),
-      suggestions: (analysis.suggestions || []).slice(0, 5),
-      insights: (analysis.insights || []).slice(0, 5),
-      riskFactors: (analysis.riskFactors || []).slice(0, 5),
-      // Evidence Pack
+      healthScore: Math.min(100, Math.max(0, parsedAnalysis.healthScore || 50)),
+      suggestions: (parsedAnalysis.suggestions || []).slice(0, 5),
+      insights: (parsedAnalysis.insights || []).slice(0, 5),
+      riskFactors: (parsedAnalysis.riskFactors || []).slice(0, 5),
       evidence,
       data_sources,
       reasoning_summary,
@@ -290,100 +242,59 @@ function generateBasicAnalysis(context: AgentContext, evidence: AIEvidence[]): A
 
   const metrics = context.metrics;
 
-  // CPU analysis
   if (metrics?.cpu_usage_percent && metrics.cpu_usage_percent > 80) {
     healthScore -= 15;
     riskFactors.push('Uso de CPU elevado pode indicar processo malicioso ou sobrecarga');
-    suggestions.push({
-      jobType: 'light_vuln_scan',
-      priority: 'high',
-      reason: 'CPU alto - verificar processos suspeitos',
-      confidence: 85,
-    });
+    suggestions.push({ jobType: 'light_vuln_scan', priority: 'high', reason: 'CPU alto - verificar processos suspeitos', confidence: 85 });
   }
 
-  // Memory analysis
   if (metrics?.memory_usage_percent && metrics.memory_usage_percent > 85) {
     healthScore -= 10;
     riskFactors.push('Uso de memoria elevado');
     insights.push('Considere verificar processos consumindo muita memoria');
   }
 
-  // Disk analysis
   if (metrics?.disk_usage_percent && metrics.disk_usage_percent > 90) {
     healthScore -= 15;
     riskFactors.push('Disco quase cheio - risco de falhas');
     insights.push('Espaco em disco critico, libere espaco urgentemente');
   }
 
-  // Vulnerabilities
-  const criticalVulns = context.vulnerabilities.filter(v => 
-    v.severity === 'critical' || v.severity === 'high'
-  ).length;
-  
+  const criticalVulns = context.vulnerabilities.filter(v => v.severity === 'critical' || v.severity === 'high').length;
   if (criticalVulns > 0) {
     healthScore -= criticalVulns * 5;
     riskFactors.push(`${criticalVulns} vulnerabilidades criticas/altas detectadas`);
-    suggestions.push({
-      jobType: 'light_vuln_scan',
-      priority: 'high',
-      reason: `${criticalVulns} vulnerabilidades precisam de atencao`,
-      confidence: 90,
-    });
+    suggestions.push({ jobType: 'light_vuln_scan', priority: 'high', reason: `${criticalVulns} vulnerabilidades precisam de atencao`, confidence: 90 });
   }
 
-  // Software inventory
   if (context.software.length === 0) {
-    suggestions.push({
-      jobType: 'software_inventory_collect',
-      priority: 'medium',
-      reason: 'Inventario de software nao coletado',
-      confidence: 95,
-    });
+    suggestions.push({ jobType: 'software_inventory_collect', priority: 'medium', reason: 'Inventario de software nao coletado', confidence: 95 });
   }
 
-  // Job failures
   const failedJobs = context.recentJobs.filter(j => j.status === 'failed').length;
   if (failedJobs > 3) {
     healthScore -= 10;
     riskFactors.push('Alta taxa de falha em jobs recentes');
   }
 
-  // Default suggestions
   if (suggestions.length === 0) {
-    suggestions.push({
-      jobType: 'collect_antivirus_status',
-      priority: 'low',
-      reason: 'Verificacao de rotina do antivirus',
-      confidence: 70,
-    });
-    suggestions.push({
-      jobType: 'collect_network_info',
-      priority: 'low',
-      reason: 'Coletar informacoes de rede para diagnostico',
-      confidence: 75,
-    });
+    suggestions.push({ jobType: 'collect_antivirus_status', priority: 'low', reason: 'Verificacao de rotina do antivirus', confidence: 70 });
+    suggestions.push({ jobType: 'collect_network_info', priority: 'low', reason: 'Coletar informacoes de rede para diagnostico', confidence: 75 });
   }
 
   if (insights.length === 0) {
     insights.push('Sistema operando dentro dos parametros normais');
   }
 
-  // Evidence Pack for basic analysis
   const data_sources = extractDataSources(evidence);
   const confidence = calculateConfidence(evidence, false);
-  const reasoning_summary = generateReasoningSummary(
-    evidence,
-    'análise básica de métricas do sistema',
-    undefined
-  );
+  const reasoning_summary = generateReasoningSummary(evidence, 'análise básica de métricas do sistema', undefined);
 
   return {
     healthScore: Math.max(0, healthScore),
     suggestions,
     insights,
     riskFactors,
-    // Evidence Pack
     evidence,
     data_sources,
     reasoning_summary,
