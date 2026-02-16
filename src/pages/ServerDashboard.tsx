@@ -21,6 +21,7 @@ import { getJobTypeLabel, getJobTypeLabelNoEmoji } from "@/lib/job-labels";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/hooks/useTenant";
+import { formatBrazilDateTime } from "@/lib/date-utils";
 
 interface Agent {
   id: string;
@@ -418,7 +419,7 @@ const ServerDashboard = () => {
   const jobsTrendData = last7Days.map(day => {
     const dayJobs = jobs.filter(j => j.created_at.startsWith(day));
     return {
-      date: new Date(day).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+      date: formatBrazilDateTime(day, 'day-month'),
       total: dayJobs.length,
       completed: dayJobs.filter(j => j.status === 'completed').length,
       failed: dayJobs.filter(j => j.status === 'failed').length,
@@ -429,7 +430,7 @@ const ServerDashboard = () => {
   const scansTrendData = last7Days.map(day => {
     const dayScans = virusScans.filter(s => s.scanned_at.startsWith(day));
     return {
-      date: new Date(day).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+      date: formatBrazilDateTime(day, 'day-month'),
       total: dayScans.length,
       malicious: dayScans.filter(s => s.is_malicious).length,
       clean: dayScans.filter(s => s.is_malicious === false).length,
@@ -473,8 +474,8 @@ const ServerDashboard = () => {
   const securityEvents = auditLogs.slice(0, 10).map(log => {
     const { icon, text } = humanizeAction(log.action, log.resource_type);
     return {
-      time: new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      date: new Date(log.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+      time: formatBrazilDateTime(log.created_at, 'time'),
+      date: formatBrazilDateTime(log.created_at, 'day-month'),
       icon,
       text,
       action: log.action,

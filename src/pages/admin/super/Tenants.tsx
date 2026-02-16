@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Building2, Users, Activity, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 interface Tenant {
   id: string;
@@ -384,7 +385,7 @@ export default function SuperAdminTenants() {
                       {tenant.agent_count}/{tenant.subscription?.subscription_plans.max_agents || 'ilimitado'}
                     </span>
                   </TableCell>
-                  <TableCell>{new Date(tenant.created_at).toLocaleDateString('pt-BR')}</TableCell>
+                  <TableCell>{formatBrazilDateTime(tenant.created_at, 'date')}</TableCell>
                   <TableCell>
                     <Select
                       value={tenant.subscription?.plan_id}

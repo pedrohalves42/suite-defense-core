@@ -13,8 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShieldAlert, CheckCircle, XCircle, Clock, UserCheck, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow } from '@/lib/date-utils';
 
 interface PendingApproval {
   id: string;
@@ -72,8 +71,8 @@ function ApprovalCard({ approval, onApprove, onReject, isPending }: {
 }) {
   const severity = approval.severity || 'medium';
   const styles = SEVERITY_STYLES[severity] || SEVERITY_STYLES.medium;
-  const expiresIn = formatDistanceToNow(new Date(approval.expires_at), { locale: ptBR, addSuffix: true });
-  const createdAgo = formatDistanceToNow(new Date(approval.created_at), { locale: ptBR, addSuffix: true });
+  const expiresIn = formatDistanceToNow(new Date(approval.expires_at), { addSuffix: true });
+  const createdAgo = formatDistanceToNow(new Date(approval.created_at), { addSuffix: true });
 
   const displayName = approval.playbook_name || 
     (approval.action_payload as any)?.playbook_name || 

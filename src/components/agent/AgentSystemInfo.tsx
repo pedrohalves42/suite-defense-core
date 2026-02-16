@@ -17,7 +17,7 @@ import {
   Calendar,
   Tag
 } from 'lucide-react';
-import { formatRelativeTime } from '@/lib/date-utils';
+import { formatRelativeTime, formatBrazilDateTime } from '@/lib/date-utils';
 
 interface AgentSystemInfoProps {
   agentId: string;
@@ -176,7 +176,7 @@ export function AgentSystemInfo({ agentId, tenantId }: AgentSystemInfoProps) {
       <InfoRow 
         icon={Calendar} 
         label="Instalado em" 
-        value={info.enrolled_at ? new Date(info.enrolled_at).toLocaleDateString('pt-BR') : null} 
+        value={info.enrolled_at ? formatBrazilDateTime(info.enrolled_at, 'date') : null} 
       />
       <InfoRow 
         icon={Clock} 
