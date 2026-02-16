@@ -50,7 +50,7 @@ async function executeAction(
   const actionConfig = rule.action_config as any;
 
   try {
-    if (rule.action_type === 'send_alert') {
+    if (rule.action_type === 'send_alert' || rule.action_type === 'create_alert') {
       const { data: alertData, error: alertError } = await supabase
         .from('system_alerts')
         .insert({
@@ -115,8 +115,11 @@ async function evaluateMetricThreshold(
 
     const metricMap: Record<string, number | null> = {
       'cpu_usage_percent': m.cpu_usage_percent,
+      'cpu_percent': m.cpu_usage_percent, // alias for rule compatibility
       'memory_usage_percent': m.memory_usage_percent,
+      'memory_percent': m.memory_usage_percent, // alias
       'disk_usage_percent': m.disk_usage_percent,
+      'disk_free_percent': m.disk_usage_percent != null ? 100 - m.disk_usage_percent : null, // inverse alias
     };
 
     const metricValue = metricMap[conditions.metric];
@@ -211,6 +214,68 @@ async function evaluateProcessAnomaly(
         tenant_id: tenantId,
         rule_id: rule.id,
         agent_id: agentId,
+        trigger_data: triggerData,
+        action_taken: rule.action_type,
+        action_result: result,
+        status,
+        executed_at: status === 'executed' ? new Date().toISOString() : null,
+      });
+    }
+  }
+
+  return executions;
+}
+
+// ── Agent Status Evaluator ──
+
+async function evaluateAgentStatus(
+  supabase: any,
+  rule: any,
+  tenantId: string,
+  agents: any[]
+): Promise<any[]> {
+  const conditions = rule.trigger_conditions as any;
+  const executions: any[] = [];
+  const eventType = conditions.eventType || conditions.event_type || 'agent_offline';
+  const durationMinutes = conditions.duration_minutes || 10;
+  const thresholdMs = durationMinutes * 60 * 1000;
+
+  // Get all agents with heartbeat info
+  const { data: allAgents } = await supabase
+    .from('agents')
+    .select('id, agent_name, status, last_heartbeat')
+    .eq('tenant_id', tenantId);
+
+  if (!allAgents) return executions;
+
+  for (const agent of allAgents) {
+    if (!matchesScope(rule, agent.id)) continue;
+
+    let shouldTrigger = false;
+    let triggerData: any = {};
+
+    if (eventType === 'agent_offline') {
+      const lastHb = agent.last_heartbeat ? new Date(agent.last_heartbeat).getTime() : 0;
+      const offlineDuration = Date.now() - lastHb;
+      shouldTrigger = offlineDuration > thresholdMs && agent.status !== 'archived';
+
+      if (shouldTrigger) {
+        triggerData = {
+          event_type: 'agent_offline',
+          agent_name: agent.agent_name,
+          offline_minutes: Math.round(offlineDuration / 60000),
+          threshold_minutes: durationMinutes,
+          message: `Agent '${agent.agent_name}' offline for ${Math.round(offlineDuration / 60000)} min (threshold: ${durationMinutes} min)`,
+        };
+      }
+    }
+
+    if (shouldTrigger) {
+      const { status, result } = await executeAction(supabase, rule, agent.id, tenantId, triggerData, allAgents);
+      executions.push({
+        tenant_id: tenantId,
+        rule_id: rule.id,
+        agent_id: agent.id,
         trigger_data: triggerData,
         action_taken: rule.action_type,
         action_result: result,
@@ -328,10 +393,12 @@ serve(async (req) => {
 
       if (rule.trigger_type === 'metric_threshold') {
         ruleExecutions = await evaluateMetricThreshold(supabase, rule, tenantId, agents, latestMetrics);
-      } else if (rule.trigger_type === 'process_anomaly') {
+      } else if (rule.trigger_type === 'process_anomaly' || rule.trigger_type === 'anomaly_detection') {
         ruleExecutions = await evaluateProcessAnomaly(supabase, rule, tenantId, agents);
+      } else if (rule.trigger_type === 'agent_status') {
+        // Evaluate agent status rules (e.g., offline detection)
+        ruleExecutions = await evaluateAgentStatus(supabase, rule, tenantId, agents);
       }
-      // security_event and vulnerability types can be added here later
 
       allExecutions.push(...ruleExecutions);
       totalTriggered += ruleExecutions.length;
