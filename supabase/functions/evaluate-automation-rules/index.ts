@@ -288,6 +288,83 @@ async function evaluateAgentStatus(
   return executions;
 }
 
+// ── Per-Tenant Evaluation Helper ──
+
+async function evaluateForTenant(
+  supabase: any,
+  tenantId: string
+): Promise<{ evaluated: number; triggered: number }> {
+  const { data: rules } = await supabase
+    .from('automation_rules')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .order('priority', { ascending: true });
+
+  if (!rules || rules.length === 0) return { evaluated: 0, triggered: 0 };
+
+  const { data: agents } = await supabase
+    .from('agents')
+    .select('id, agent_name, status')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active');
+
+  if (!agents || agents.length === 0) return { evaluated: 0, triggered: 0 };
+
+  const agentIds = agents.map((a: any) => a.id);
+
+  const { data: metrics } = await supabase
+    .from('agent_system_metrics')
+    .select('*')
+    .in('agent_id', agentIds)
+    .order('collected_at', { ascending: false });
+
+  const latestMetrics = new Map<string, any>();
+  (metrics || []).forEach((m: any) => {
+    if (!latestMetrics.has(m.agent_id)) {
+      latestMetrics.set(m.agent_id, m);
+    }
+  });
+
+  let totalTriggered = 0;
+  const allExecutions: any[] = [];
+
+  for (const rule of rules) {
+    if (isInCooldown(rule)) continue;
+
+    let ruleExecutions: any[] = [];
+
+    if (rule.trigger_type === 'metric_threshold') {
+      ruleExecutions = await evaluateMetricThreshold(supabase, rule, tenantId, agents, latestMetrics);
+    } else if (rule.trigger_type === 'process_anomaly' || rule.trigger_type === 'anomaly_detection') {
+      ruleExecutions = await evaluateProcessAnomaly(supabase, rule, tenantId, agents);
+    } else if (rule.trigger_type === 'agent_status') {
+      ruleExecutions = await evaluateAgentStatus(supabase, rule, tenantId, agents);
+    }
+
+    allExecutions.push(...ruleExecutions);
+    totalTriggered += ruleExecutions.length;
+  }
+
+  if (allExecutions.length > 0) {
+    await supabase.from('automation_executions').insert(allExecutions);
+
+    const triggeredRuleIds = [...new Set(allExecutions.map((e: any) => e.rule_id))];
+    for (const ruleId of triggeredRuleIds) {
+      const rule = rules.find((r: any) => r.id === ruleId);
+      await supabase
+        .from('automation_rules')
+        .update({
+          last_triggered_at: new Date().toISOString(),
+          trigger_count: (rule?.trigger_count || 0) + 1,
+        })
+        .eq('id', ruleId);
+    }
+  }
+
+  return { evaluated: rules.length, triggered: totalTriggered };
+}
+
 // ── Main Handler ──
 
 serve(async (req) => {
@@ -303,142 +380,112 @@ serve(async (req) => {
     // Auth check: requires authenticated user or service_role
     const authHeader = req.headers.get('authorization');
     let tenantId: string | null = null;
+    let isServiceRole = false;
 
     if (authHeader) {
-      // Check if service_role key (internal call)
-      if (authHeader === `Bearer ${supabaseServiceKey}`) {
-        // Internal call — tenant_id comes from body
+      const token = authHeader.replace('Bearer ', '');
+      // Check if service_role key (internal call) - compare raw token
+      if (token === supabaseServiceKey) {
+        isServiceRole = true;
+        // Internal call — tenant_id comes from body or auto-discover
       } else {
-        const { data: { user }, error: authError } = await supabase.auth.getUser(
-          authHeader.replace('Bearer ', '')
-        );
-        if (authError || !user) {
-          return secureErrorResponse('Unauthorized', 401);
-        }
+        // Try to decode JWT to check role
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if (payload.role === 'service_role') {
+            isServiceRole = true;
+          }
+        } catch { /* not a JWT, try as user token */ }
 
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('tenant_id, role')
-          .eq('user_id', user.id)
-          .in('role', ['admin', 'super_admin'])
-          .limit(1)
-          .maybeSingle();
+        if (!isServiceRole) {
+          const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+          if (authError || !user) {
+            return secureErrorResponse('Unauthorized', 401);
+          }
 
-        if (!roleData) {
-          return secureErrorResponse('Admin access required', 403);
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('tenant_id, role')
+            .eq('user_id', user.id)
+            .in('role', ['admin', 'super_admin'])
+            .limit(1)
+            .maybeSingle();
+
+          if (!roleData) {
+            return secureErrorResponse('Admin access required', 403);
+          }
+          tenantId = roleData.tenant_id;
         }
-        tenantId = roleData.tenant_id;
       }
     }
 
     const body = req.method === 'POST' ? await req.json() : {};
     tenantId = tenantId || body.tenant_id;
 
+    // Auto-discover tenants when called from cron (service_role, no tenant_id)
+    if (!tenantId && isServiceRole) {
+      const { data: tenants } = await supabase
+        .from('tenants')
+        .select('id')
+        .limit(50);
+
+      if (!tenants || tenants.length === 0) {
+        return secureJsonResponse({ message: 'No tenants found' });
+      }
+
+      let totalEvaluated = 0;
+      let totalTriggered = 0;
+
+      for (const t of tenants) {
+        const result = await evaluateForTenant(supabase, t.id);
+        totalEvaluated += result.evaluated;
+        totalTriggered += result.triggered;
+      }
+
+      // Update cron health
+      const isCronCall = req.headers.get('x-cron-source') === 'true';
+      if (isCronCall) {
+        try {
+          await supabase.rpc('update_cron_health', {
+            p_cron_name: 'evaluate-automation-rules-5min',
+            p_success: true,
+            p_details: { tenants: tenants.length, evaluated: totalEvaluated, triggered: totalTriggered },
+          });
+        } catch { /* best effort */ }
+      }
+
+      console.log(`Automation evaluation (multi-tenant): ${tenants.length} tenants, ${totalEvaluated} rules, ${totalTriggered} triggered`);
+
+      return secureJsonResponse({
+        tenants_processed: tenants.length,
+        evaluated: totalEvaluated,
+        triggered: totalTriggered,
+      });
+    }
+
     if (!tenantId) {
       return secureErrorResponse('tenant_id required', 400);
     }
 
-    // Fetch active automation rules for this tenant
-    const { data: rules, error: rulesError } = await supabase
-      .from('automation_rules')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-      .order('priority', { ascending: true });
-
-    if (rulesError) {
-      console.error('Error fetching rules:', rulesError);
-      return secureErrorResponse('Failed to fetch rules', 500);
-    }
-
-    if (!rules || rules.length === 0) {
-      return secureJsonResponse({ evaluated: 0, triggered: 0, message: 'No active rules' });
-    }
-
-    // Fetch active agents
-    const { data: agents } = await supabase
-      .from('agents')
-      .select('id, agent_name, status')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active');
-
-    if (!agents || agents.length === 0) {
-      return secureJsonResponse({ evaluated: 0, triggered: 0, message: 'No active agents' });
-    }
-
-    const agentIds = agents.map((a: any) => a.id);
-
-    // Get latest system metrics (for metric_threshold rules)
-    const { data: metrics } = await supabase
-      .from('agent_system_metrics')
-      .select('*')
-      .in('agent_id', agentIds)
-      .order('collected_at', { ascending: false });
-
-    const latestMetrics = new Map<string, any>();
-    (metrics || []).forEach((m: any) => {
-      if (!latestMetrics.has(m.agent_id)) {
-        latestMetrics.set(m.agent_id, m);
-      }
-    });
-
-    // Evaluate all rules
-    let totalTriggered = 0;
-    const allExecutions: any[] = [];
-
-    for (const rule of rules) {
-      if (isInCooldown(rule)) continue;
-
-      let ruleExecutions: any[] = [];
-
-      if (rule.trigger_type === 'metric_threshold') {
-        ruleExecutions = await evaluateMetricThreshold(supabase, rule, tenantId, agents, latestMetrics);
-      } else if (rule.trigger_type === 'process_anomaly' || rule.trigger_type === 'anomaly_detection') {
-        ruleExecutions = await evaluateProcessAnomaly(supabase, rule, tenantId, agents);
-      } else if (rule.trigger_type === 'agent_status') {
-        // Evaluate agent status rules (e.g., offline detection)
-        ruleExecutions = await evaluateAgentStatus(supabase, rule, tenantId, agents);
-      }
-
-      allExecutions.push(...ruleExecutions);
-      totalTriggered += ruleExecutions.length;
-    }
-
-    // Batch insert executions
-    if (allExecutions.length > 0) {
-      await supabase.from('automation_executions').insert(allExecutions);
-
-      // Update last_triggered_at for triggered rules
-      const triggeredRuleIds = [...new Set(allExecutions.map((e: any) => e.rule_id))];
-      for (const ruleId of triggeredRuleIds) {
-        const rule = rules.find((r: any) => r.id === ruleId);
-        await supabase
-          .from('automation_rules')
-          .update({
-            last_triggered_at: new Date().toISOString(),
-            trigger_count: (rule?.trigger_count || 0) + 1,
-          })
-          .eq('id', ruleId);
-      }
-    }
+    const result = await evaluateForTenant(supabase, tenantId);
 
     // Update cron health if called as cron
     const isCronCall = req.headers.get('x-cron-source') === 'true';
     if (isCronCall) {
-      await supabase.rpc('update_cron_health', {
-        p_cron_name: 'evaluate-automation-rules-5min',
-        p_success: true,
-        p_details: { evaluated: rules.length, triggered: totalTriggered },
-      });
+      try {
+        await supabase.rpc('update_cron_health', {
+          p_cron_name: 'evaluate-automation-rules-5min',
+          p_success: true,
+          p_details: { evaluated: result.evaluated, triggered: result.triggered },
+        });
+      } catch { /* best effort */ }
     }
 
-    console.log(`Automation evaluation: ${rules.length} rules, ${totalTriggered} triggered for tenant ${tenantId}`);
+    console.log(`Automation evaluation: ${result.evaluated} rules, ${result.triggered} triggered for tenant ${tenantId}`);
 
     return secureJsonResponse({
-      evaluated: rules.length,
-      agents_checked: agents.length,
-      triggered: totalTriggered,
-      executions: allExecutions.length,
+      evaluated: result.evaluated,
+      triggered: result.triggered,
     });
 
   } catch (error) {
