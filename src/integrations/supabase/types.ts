@@ -5671,6 +5671,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ai_actions_approval_request_id_fkey"
+            columns: ["approval_request_id"]
+            isOneToOne: false
+            referencedRelation: "v_pending_critical_approvals"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ai_actions_decision_event_id_fkey"
             columns: ["decision_event_id"]
             isOneToOne: false
@@ -7155,6 +7162,13 @@ export type Database = {
             columns: ["request_id"]
             isOneToOne: false
             referencedRelation: "approval_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approvals_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "v_pending_critical_approvals"
             referencedColumns: ["id"]
           },
         ]
@@ -17590,6 +17604,7 @@ export type Database = {
           enable_dry_run_mode: boolean | null
           enable_email_alerts: boolean | null
           enable_webhook_alerts: boolean | null
+          force_human_review_critical: boolean
           id: string
           stripe_enabled: boolean | null
           tenant_id: string
@@ -17609,6 +17624,7 @@ export type Database = {
           enable_dry_run_mode?: boolean | null
           enable_email_alerts?: boolean | null
           enable_webhook_alerts?: boolean | null
+          force_human_review_critical?: boolean
           id?: string
           stripe_enabled?: boolean | null
           tenant_id: string
@@ -17628,6 +17644,7 @@ export type Database = {
           enable_dry_run_mode?: boolean | null
           enable_email_alerts?: boolean | null
           enable_webhook_alerts?: boolean | null
+          force_human_review_critical?: boolean
           id?: string
           stripe_enabled?: boolean | null
           tenant_id?: string
@@ -22892,6 +22909,64 @@ export type Database = {
           },
         ]
       }
+      v_pending_critical_approvals: {
+        Row: {
+          action_payload: Json | null
+          action_type: string | null
+          agent_name: string | null
+          created_at: string | null
+          current_approvers: number | null
+          dry_run: boolean | null
+          expires_at: string | null
+          hostname: string | null
+          id: string | null
+          playbook_execution_id: string | null
+          playbook_name: string | null
+          required_approvers: number | null
+          risk_score: number | null
+          severity: string | null
+          status: string | null
+          tenant_id: string | null
+          trigger_source: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_requests_playbook_execution_id_fkey"
+            columns: ["playbook_execution_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_executions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "approval_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "approval_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_pipeline_health_metrics: {
         Row: {
           completed_jobs: number | null
@@ -25167,6 +25242,14 @@ export type Database = {
           p_requested_by: string
         }
         Returns: Json
+      }
+      requires_human_review: {
+        Args: {
+          p_action_type?: string
+          p_severity: string
+          p_tenant_id: string
+        }
+        Returns: boolean
       }
       reset_monthly_scan_quota: { Args: never; Returns: undefined }
       resolve_stale_dlq_entries: { Args: never; Returns: Json }

@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Brain, Activity, Shield, Gavel } from 'lucide-react';
+import { Brain, Activity, Shield, Gavel, UserCheck } from 'lucide-react';
 import { useAutonomyMetrics, useAuditTrailIntegrity, useDecisionTimeline, useActiveRules } from '@/hooks/useAutonomyMetrics';
 import { AutonomyMetricsCards } from '@/components/admin/autonomy/AutonomyMetricsCards';
 import { DecisionTimeline } from '@/components/admin/autonomy/DecisionTimeline';
 import { RuleStatusPanel } from '@/components/admin/autonomy/RuleStatusPanel';
 import { AuditTrailValidator } from '@/components/admin/autonomy/AuditTrailValidator';
 import { JobSuccessRateCard } from '@/components/admin/autonomy/JobSuccessRateCard';
+import { HumanInTheLoopPanel } from '@/components/admin/autonomy/HumanInTheLoopPanel';
 
 export default function AutonomyDashboard() {
   const [days, setDays] = useState(7);
@@ -57,6 +58,9 @@ export default function AutonomyDashboard() {
 
       {/* Metrics Cards */}
       <AutonomyMetricsCards metrics={metrics} isLoading={metricsLoading} days={days} />
+
+      {/* Human-in-the-Loop Panel - Always visible */}
+      <HumanInTheLoopPanel />
 
       {/* Tabs */}
       <Tabs defaultValue="timeline" className="space-y-4">

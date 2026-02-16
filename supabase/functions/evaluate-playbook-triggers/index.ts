@@ -278,9 +278,18 @@ serve(async (req) => {
         risk_level: action.risk_level,
       }));
 
+    // ✅ HUMAN-IN-THE-LOOP: Force human review for critical/high severity
+    const playbookSeverity = playbook.severity || 'medium';
+    const { data: needsHumanReview } = await supabase.rpc('requires_human_review', {
+      p_tenant_id: tenant_id,
+      p_severity: playbookSeverity,
+      p_action_type: trigger_type,
+    });
+
     // ✅ PHASE 3: Em Shadow Mode, NUNCA auto-executar
     const wouldAutoExecute = riskAnalysis.should_auto_execute;
-    const shouldAutoExecute = isDryRun ? false : wouldAutoExecute;
+    // CRITICAL: If human review required, NEVER auto-execute regardless of risk engine
+    const shouldAutoExecute = isDryRun ? false : (needsHumanReview ? false : wouldAutoExecute);
     
     // Determinar decisão para logging
     let decision: 'auto_execute' | 'require_approval' | 'dry_run' = 'require_approval';
