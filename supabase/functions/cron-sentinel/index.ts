@@ -5,6 +5,9 @@
  * and create P0 tasks when jobs are not executing.
  * 
  * This is the automatic trigger for the INC-CRON-001 Runbook.
+ * 
+ * IMPORTANT: Uses actual v_cron_silent_failures view columns:
+ * id, tenant_id, job_name, cron_expression, last_run_at, next_run_at, status, enabled
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
@@ -15,16 +18,43 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-internal-secret',
 };
 
+/**
+ * Matches the ACTUAL columns of v_cron_silent_failures view.
+ */
 interface SilentJob {
   id: string;
+  tenant_id: string | null;
   job_name: string;
-  job_type: string;
-  cron_expr: string;
+  cron_expression: string | null;
   last_run_at: string | null;
-  tenant_id: string;
-  last_successful_run: string | null;
-  silence_duration: string;
-  health_status: 'NEVER_RAN' | 'STALE' | 'OK';
+  next_run_at: string | null;
+  status: string | null;
+  enabled: boolean | null;
+}
+
+/**
+ * Derive health status from actual view data.
+ * A job is unhealthy if:
+ * - It has never run (last_run_at is null)
+ * - It is enabled but status is not 'active'/'ok'
+ * - Its next_run_at is in the past (overdue)
+ */
+function deriveHealthStatus(job: SilentJob): 'OK' | 'NEVER_RAN' | 'STALE' {
+  if (!job.last_run_at) return 'NEVER_RAN';
+  
+  // If next_run_at is in the past by more than 10 minutes, it's stale
+  if (job.next_run_at) {
+    const nextRun = new Date(job.next_run_at).getTime();
+    const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+    if (nextRun < tenMinutesAgo) return 'STALE';
+  }
+  
+  // If status indicates failure
+  if (job.status && ['failed', 'error', 'stuck'].includes(job.status.toLowerCase())) {
+    return 'STALE';
+  }
+
+  return 'OK';
 }
 
 Deno.serve(async (req) => {
@@ -52,27 +82,27 @@ Deno.serve(async (req) => {
       throw queryError;
     }
 
-    // Filter only unhealthy jobs
-    const unhealthyJobs = (silentJobs || []).filter(
-      (job: SilentJob) => job.health_status !== 'OK'
-    );
+    const allJobs = (silentJobs || []) as SilentJob[];
 
-    console.log(`[${requestId}] Found ${unhealthyJobs.length} silent jobs`);
+    // Derive health status from actual data and filter unhealthy
+    const unhealthyJobs = allJobs
+      .filter((job) => job.enabled !== false) // only check enabled jobs
+      .filter((job) => deriveHealthStatus(job) !== 'OK');
+
+    console.log(`[${requestId}] Checked ${allJobs.length} jobs, found ${unhealthyJobs.length} unhealthy`);
 
     if (unhealthyJobs.length === 0) {
       console.log(`[${requestId}] All cron jobs healthy - no action needed`);
       
-      // Log successful run
       await supabase.rpc('log_scheduled_job_run', {
         p_job_key: 'cron-sentinel',
         p_success: true,
         p_duration_ms: Date.now() - startTime,
-        p_result: { message: 'All jobs healthy', jobs_checked: silentJobs?.length || 0 },
+        p_result: { message: 'All jobs healthy', jobs_checked: allJobs.length },
         p_processed_count: 0,
         p_job_source: 'cron'
       });
 
-      // NULLMANN-FIX: Adicionar update_cron_health para fechar loop de monitoramento
       await supabase.rpc('update_cron_health', {
         p_cron_name: 'cron-sentinel',
         p_success: true,
@@ -83,7 +113,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: true,
           message: 'All cron jobs healthy',
-          jobs_checked: silentJobs?.length || 0,
+          jobs_checked: allJobs.length,
           silent_jobs: 0
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -97,7 +127,7 @@ Deno.serve(async (req) => {
       .eq('source_type', 'system_alert')
       .like('title', '%Cron Jobs Silent Failure%')
       .in('status', ['open', 'in_progress'])
-      .gte('created_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()) // Last 2 hours
+      .gte('created_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
       .limit(1);
 
     if (existingTask && existingTask.length > 0) {
@@ -122,7 +152,7 @@ Deno.serve(async (req) => {
       .single();
 
     // Create P0 task with runbook reference
-    const jobNames = unhealthyJobs.map((j: SilentJob) => j.job_name).slice(0, 10).join(', ');
+    const jobNames = unhealthyJobs.map((j) => j.job_name).slice(0, 10).join(', ');
     const moreCount = unhealthyJobs.length > 10 ? ` (+${unhealthyJobs.length - 10} more)` : '';
 
     const { data: task, error: taskError } = await supabase
@@ -136,12 +166,12 @@ Deno.serve(async (req) => {
         status: 'open',
         auto_generated: true,
         metadata: {
-          silent_jobs: unhealthyJobs.map((j: SilentJob) => ({
+          silent_jobs: unhealthyJobs.map((j) => ({
             name: j.job_name,
-            type: j.job_type,
-            status: j.health_status,
-            silence_duration: j.silence_duration,
-            last_run: j.last_successful_run
+            status: deriveHealthStatus(j),
+            last_run_at: j.last_run_at,
+            next_run_at: j.next_run_at,
+            cron_expression: j.cron_expression,
           })),
           runbook_id: runbook?.id || null,
           runbook_title: runbook?.title || 'INC-CRON-001',
@@ -167,7 +197,7 @@ Deno.serve(async (req) => {
         silent_jobs_count: unhealthyJobs.length,
         task_id: task?.id,
         sentinel_run: requestId,
-        jobs: unhealthyJobs.map((j: SilentJob) => j.job_name)
+        jobs: unhealthyJobs.map((j) => j.job_name)
       },
       severity: 'critical'
     });
@@ -181,20 +211,18 @@ Deno.serve(async (req) => {
       p_result: {
         silent_jobs: unhealthyJobs.length,
         task_created: task?.id,
-        jobs: unhealthyJobs.map((j: SilentJob) => j.job_name)
+        jobs: unhealthyJobs.map((j) => j.job_name)
       },
       p_processed_count: unhealthyJobs.length,
       p_job_source: 'cron'
     });
 
-    // NULLMANN-FIX: Adicionar update_cron_health para fechar loop de monitoramento
     await supabase.rpc('update_cron_health', {
       p_cron_name: 'cron-sentinel',
       p_success: true,
       p_error: null
     });
 
-    // APM metric
     recordMetric({
       function_name: 'cron-sentinel',
       operation_type: 'edge_function',
@@ -218,7 +246,6 @@ Deno.serve(async (req) => {
     const duration = Date.now() - startTime;
     console.error(`[${requestId}] Fatal error:`, error);
 
-    // Try to log the error
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -234,7 +261,6 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
 
-      // NULLMANN-FIX: Registrar falha no cron health
       await supabase.rpc('update_cron_health', {
         p_cron_name: 'cron-sentinel',
         p_success: false,

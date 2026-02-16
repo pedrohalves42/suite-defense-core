@@ -70,8 +70,44 @@ export class SupabaseAICacheAdapter implements AICachePort {
       const ttlMinutes = command.ttlMinutes ?? 360; // 6 hours default
       const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString();
 
-      await this.client.from('ai_response_cache').upsert(
-        {
+      // PostgREST doesn't support COALESCE in onConflict.
+      // Use a two-step approach: try update first, then insert if not found.
+      const tenantKey = command.tenantId || null;
+      
+      // Check if entry already exists
+      let existsQuery = this.client
+        .from('ai_response_cache')
+        .select('id')
+        .eq('prompt_hash', command.promptHash)
+        .eq('task_category', command.taskCategory);
+      
+      if (tenantKey) {
+        existsQuery = existsQuery.eq('tenant_id', tenantKey);
+      } else {
+        existsQuery = existsQuery.is('tenant_id', null);
+      }
+      
+      const { data: existing } = await existsQuery.maybeSingle();
+      
+      if (existing) {
+        // Update existing entry
+        await this.client
+          .from('ai_response_cache')
+          .update({
+            response_content: command.responseContent,
+            provider: command.provider,
+            model: command.model,
+            tokens_used: command.tokensUsed,
+            cost_usd: command.costUsd,
+            function_name: command.functionName || null,
+            latency_ms: command.latencyMs,
+            hit_count: 0,
+            expires_at: expiresAt,
+          })
+          .eq('id', existing.id);
+      } else {
+        // Insert new entry
+        const { error: insertError } = await this.client.from('ai_response_cache').insert({
           prompt_hash: command.promptHash,
           task_category: command.taskCategory,
           system_prompt_hash: command.systemPromptHash || null,
@@ -80,17 +116,17 @@ export class SupabaseAICacheAdapter implements AICachePort {
           model: command.model,
           tokens_used: command.tokensUsed,
           cost_usd: command.costUsd,
-          tenant_id: command.tenantId || null,
+          tenant_id: tenantKey,
           function_name: command.functionName || null,
           latency_ms: command.latencyMs,
           hit_count: 0,
           expires_at: expiresAt,
-        },
-        {
-          onConflict: 'prompt_hash,task_category,COALESCE(tenant_id,\'__global__\')',
-          ignoreDuplicates: false,
-        },
-      );
+        });
+
+        if (insertError) {
+          logger.warn('[AICacheAdapter] Insert failed', { error: insertError.message });
+        }
+      }
 
       logger.info('[AICacheAdapter] Stored cache entry', {
         promptHash: command.promptHash.substring(0, 16) + '...',
