@@ -25339,6 +25339,10 @@ export type Database = {
           passed: boolean
         }[]
       }
+      run_maintenance_v2: {
+        Args: { p_archive_limit?: number; p_expire_limit?: number }
+        Returns: Json
+      }
       run_system_maintenance: { Args: never; Returns: Json }
       severity_floor_rate: { Args: { p_severity: string }; Returns: number }
       should_auto_execute_playbook: {
