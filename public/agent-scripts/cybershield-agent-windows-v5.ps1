@@ -3157,13 +3157,31 @@ function Apply-ForcedUpdate {
         
         Write-Log "[FORCE UPDATE] Update $targetVersion aplicado com sucesso!" "SUCCESS"
         
-        # Reiniciar Scheduled Task
+        # Reiniciar Scheduled Task (detecção dinâmica do nome)
         Write-Log "[FORCE UPDATE] Reiniciando Scheduled Task..." "INFO"
         try {
-            Stop-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
-            Start-Sleep -Seconds 2
-            Start-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
-            Write-Log "[FORCE UPDATE] Task reiniciada - nova versao ativa!" "SUCCESS"
+            $taskPatterns = @(
+                "CyberShieldAgent-$($Global:AgentName)",
+                "CyberShieldAgent",
+                "CyberShield Agent",
+                "CyberShield*"
+            )
+            $taskFound = $null
+            foreach ($tp in $taskPatterns) {
+                $taskFound = Get-ScheduledTask -TaskName $tp -ErrorAction SilentlyContinue | Select-Object -First 1
+                if ($taskFound) { break }
+            }
+            if ($taskFound) {
+                $taskFound | Stop-ScheduledTask -ErrorAction SilentlyContinue
+                Start-Sleep -Seconds 2
+                $taskFound | Start-ScheduledTask -ErrorAction SilentlyContinue
+                Write-Log "[FORCE UPDATE] Task '$($taskFound.TaskName)' reiniciada - nova versao ativa!" "SUCCESS"
+            } else {
+                Write-Log "[FORCE UPDATE] Nenhuma Scheduled Task encontrada - tentando restart via schtasks..." "WARN"
+                & schtasks /End /TN "CyberShieldAgent" 2>$null
+                Start-Sleep -Seconds 2
+                & schtasks /Run /TN "CyberShieldAgent" 2>$null
+            }
         } catch {
             Write-Log "[FORCE UPDATE] Restart task falhou: $($_.Exception.Message)" "WARN"
         }
