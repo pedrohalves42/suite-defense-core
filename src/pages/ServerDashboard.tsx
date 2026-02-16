@@ -437,7 +437,8 @@ const ServerDashboard = () => {
   });
 
   // Dados para distribuicao por tipo de job (com nomes amigáveis)
-  const jobTypeData = Object.entries(
+  // Agrupa categorias menores como "Outros" para melhor visualização
+  const jobTypeDataRaw = Object.entries(
     jobs.reduce((acc, job) => {
       acc[job.type] = (acc[job.type] || 0) + 1;
       return acc;
@@ -446,7 +447,16 @@ const ServerDashboard = () => {
     name: getJobTypeLabelNoEmoji(type), 
     originalType: type,
     value: count 
-  }));
+  })).sort((a, b) => b.value - a.value);
+
+  const MAX_PIE_CATEGORIES = 8;
+  const jobTypeData = useMemo(() => {
+    if (jobTypeDataRaw.length <= MAX_PIE_CATEGORIES) return jobTypeDataRaw;
+    const top = jobTypeDataRaw.slice(0, MAX_PIE_CATEGORIES - 1);
+    const othersValue = jobTypeDataRaw.slice(MAX_PIE_CATEGORIES - 1).reduce((sum, d) => sum + d.value, 0);
+    const othersCount = jobTypeDataRaw.length - (MAX_PIE_CATEGORIES - 1);
+    return [...top, { name: `Outros (${othersCount} tipos)`, originalType: 'others', value: othersValue }];
+  }, [jobTypeDataRaw]);
 
   // Dados para jobs por agente (top 10)
   const jobsByAgentData = Object.entries(
@@ -926,9 +936,11 @@ const ServerDashboard = () => {
               </CardTitle>
               <CardDescription>
                 Distribuição por categoria
-                <span className="block text-[10px] text-muted-foreground/70 mt-1">
-                  Mostra quais operações são mais frequentes no sistema
-                </span>
+                {jobTypeDataRaw.length > MAX_PIE_CATEGORIES && (
+                  <span className="block text-[10px] text-muted-foreground/70 mt-1">
+                    Top {MAX_PIE_CATEGORIES - 1} categorias · {jobTypeDataRaw.length} tipos no total
+                  </span>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -943,41 +955,52 @@ const ServerDashboard = () => {
                   </p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <RechartsPieChart>
-                    <Pie
-                      data={jobTypeData}
-                      cx="35%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={85}
-                      labelLine={false}
-                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                      fill="hsl(217 91% 60%)"
-                      dataKey="value"
-                      paddingAngle={2}
-                    >
-                      {jobTypeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value: number, name: string) => [`${value} tarefas`, name]}
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(222 47% 11%)', 
-                        border: '1px solid hsl(215 20% 25%)', 
-                        borderRadius: '8px',
-                        padding: '8px 12px'
-                      }} 
-                    />
-                    <Legend 
-                      layout="vertical"
-                      align="right"
-                      verticalAlign="middle"
-                      wrapperStyle={{ fontSize: '11px', paddingLeft: '10px' }}
-                    />
-                  </RechartsPieChart>
-                </ResponsiveContainer>
+                <div className="flex flex-col gap-4">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <RechartsPieChart>
+                      <Pie
+                        data={jobTypeData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={95}
+                        labelLine={false}
+                        label={({ percent }) => percent > 0.04 ? `${(percent * 100).toFixed(0)}%` : ''}
+                        fill="hsl(217 91% 60%)"
+                        dataKey="value"
+                        paddingAngle={2}
+                        style={{ fontSize: '11px', fontWeight: 600, fill: 'hsl(0 0% 90%)' }}
+                      >
+                        {jobTypeData.map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: number, name: string) => [`${value} tarefas`, name]}
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(222 47% 11%)', 
+                          border: '1px solid hsl(215 20% 25%)', 
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          fontSize: '12px'
+                        }} 
+                      />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                  {/* Legenda customizada em grid */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 px-2">
+                    {jobTypeData.map((entry, index) => (
+                      <div key={entry.name} className="flex items-center gap-2 text-xs truncate">
+                        <span 
+                          className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        />
+                        <span className="text-muted-foreground truncate">{entry.name}</span>
+                        <span className="text-foreground font-medium ml-auto flex-shrink-0">{entry.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
