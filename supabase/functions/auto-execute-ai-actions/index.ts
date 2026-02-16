@@ -204,6 +204,42 @@ Deno.serve(async (req) => {
         continue
       }
 
+      // ✅ HUMAN-IN-THE-LOOP: Check if critical actions require human review
+      const insightSeverity = insight?.severity || config.risk_level || 'medium'
+      const { data: needsHumanReview } = await supabase.rpc('requires_human_review', {
+        p_tenant_id: action.tenant_id,
+        p_severity: insightSeverity,
+        p_action_type: action.action_type,
+      })
+
+      if (needsHumanReview) {
+        console.log(`[${requestId}] HUMAN-IN-THE-LOOP: Action ${action.id} (severity=${insightSeverity}) requires human review, creating approval request`)
+        
+        // Create approval request instead of auto-executing
+        await supabase.from('approval_requests').insert({
+          tenant_id: action.tenant_id,
+          action_type: action.action_type,
+          action_payload: {
+            ...(action.action_payload as Record<string, unknown>),
+            insight_id: action.insight_id,
+            original_severity: insightSeverity,
+            human_review_reason: 'critical_severity_requires_approval',
+          },
+          requested_by: null, // System
+          status: 'pending',
+          required_approvers: 1,
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        })
+
+        // Mark action as awaiting approval
+        await supabase.from('ai_actions').update({
+          status: 'awaiting_approval',
+        }).eq('id', action.id)
+
+        result.actions_skipped++
+        continue
+      }
+
       // Verificar rate limit
       const { data: canExecute } = await supabase
         .rpc('check_action_rate_limit', {
