@@ -33,6 +33,38 @@ const CATEGORY_TTL_MINUTES: Record<AITaskCategory, number> = {
   [AITaskCategory.GENERAL]: 120,      // 2 hours
 };
 
+// ─── Cache Key Normalization (Pure) ────────────────────
+
+/**
+ * Normalize prompt content for stable cache keys.
+ * Rounds numbers to nearest bucket (5% for percentages, 10 for counts)
+ * and removes volatile timestamps so that similar analyses get cache hits.
+ */
+export function normalizeCacheContent(content: string): string {
+  return content
+    // Round percentages to nearest 5 (e.g., 47.3% → 45%)
+    .replace(/(\d+\.?\d*)\s*%/g, (_match, num) => {
+      const rounded = Math.round(parseFloat(num) / 5) * 5;
+      return `${rounded}%`;
+    })
+    // Round standalone decimals with units (e.g., "48.0" → "50")
+    .replace(/\b(\d+)\.\d+\b/g, (_match, intPart) => {
+      const n = parseInt(intPart, 10);
+      return String(Math.round(n / 5) * 5);
+    })
+    // Bucket counts: round to nearest 10 for small, 100 for large
+    .replace(/\b(\d{2,})\b/g, (_match, num) => {
+      const n = parseInt(num, 10);
+      if (n < 100) return String(Math.round(n / 10) * 10);
+      if (n < 1000) return String(Math.round(n / 50) * 50);
+      return String(Math.round(n / 100) * 100);
+    })
+    // Remove ISO timestamps
+    .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[^\s]*/g, '[TIMESTAMP]')
+    // Remove UUIDs (agent IDs change position but not meaning)
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '[UUID]');
+}
+
 // ─── Hash Generation (Pure) ────────────────────────────
 
 /**
@@ -96,9 +128,10 @@ export class AICacheUseCase {
     const taskCategory = classifyTask(functionName);
     const ttlMinutes = CATEGORY_TTL_MINUTES[taskCategory];
 
-    // Build cache key from concatenated message contents
-    const cacheInput = messages.map((m) => `${m.role}:${m.content}`).join('|');
-    const promptHash = await generatePromptHash(cacheInput);
+    // Build cache key from normalized message contents for stable hashing
+    const rawInput = messages.map((m) => `${m.role}:${m.content}`).join('|');
+    const normalizedInput = normalizeCacheContent(rawInput);
+    const promptHash = await generatePromptHash(normalizedInput);
 
     try {
       const cached = await this.cache.lookup(promptHash, taskCategory, tenantId);
