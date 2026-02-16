@@ -1,10 +1,12 @@
 /**
- * AI Multi-Provider System v2.0
+ * AI Multi-Provider System v3.0
  * 
- * Weighted round-robin load balancing across 4 AI providers:
- * - Groq (Llama 3.3-70B) — 40% weight, fastest, free
- * - OpenRouter (Gemini 2.0 Flash) — 25% weight, free
- * - Google Gemini (2.5 Flash) — 25% weight, free tier
+ * Weighted round-robin load balancing across 6 AI providers:
+ * - Groq (Llama 3.3-70B) — 30% weight, fastest, free
+ * - Cerebras (Llama 3.3-70B) — 20% weight, ultra-fast, free
+ * - OpenRouter (Gemini 2.0 Flash) — 15% weight, free
+ * - Google Gemini (2.5 Flash) — 15% weight, free tier
+ * - Mistral (Small 3.1) — 10% weight, free tier 1B tokens/month
  * - Lovable AI (Gemini 2.5 Flash) — 10% weight, included in plan
  * 
  * Features:
@@ -24,6 +26,8 @@ export type AIProviderName =
   | 'google-gemini' 
   | 'groq' 
   | 'openrouter' 
+  | 'cerebras'
+  | 'mistral'
   | 'lovable';
 
 export interface AIProviderConfig {
@@ -36,7 +40,7 @@ export interface AIProviderConfig {
   priority: number;
   maxTokens: number;
   costPerMToken: number;
-  weight: number; // Weighted round-robin: higher = more traffic
+  weight: number;
 }
 
 export interface AIMessage {
@@ -75,6 +79,8 @@ const providerCircuits: Record<AIProviderName, {
   'google-gemini': { failures: 0, lastFailure: 0, isOpen: false },
   'groq': { failures: 0, lastFailure: 0, isOpen: false },
   'openrouter': { failures: 0, lastFailure: 0, isOpen: false },
+  'cerebras': { failures: 0, lastFailure: 0, isOpen: false },
+  'mistral': { failures: 0, lastFailure: 0, isOpen: false },
   'lovable': { failures: 0, lastFailure: 0, isOpen: false },
 };
 
@@ -90,6 +96,8 @@ const providerStats: Record<AIProviderName, ProviderStats> = {
   'google-gemini': { avgLatencyMs: 0, requests: 0, failures: 0, lastUpdated: 0 },
   'groq': { avgLatencyMs: 0, requests: 0, failures: 0, lastUpdated: 0 },
   'openrouter': { avgLatencyMs: 0, requests: 0, failures: 0, lastUpdated: 0 },
+  'cerebras': { avgLatencyMs: 0, requests: 0, failures: 0, lastUpdated: 0 },
+  'mistral': { avgLatencyMs: 0, requests: 0, failures: 0, lastUpdated: 0 },
   'lovable': { avgLatencyMs: 0, requests: 0, failures: 0, lastUpdated: 0 },
 };
 
@@ -123,7 +131,22 @@ const PROVIDERS: AIProviderConfig[] = [
     priority: 1,
     maxTokens: 8000,
     costPerMToken: 0,
-    weight: 40,
+    weight: 30,
+  },
+  {
+    name: 'cerebras',
+    displayName: 'Cerebras',
+    baseUrl: 'https://api.cerebras.ai/v1/chat/completions',
+    model: 'llama-3.3-70b',
+    headers: () => ({
+      'Authorization': `Bearer ${Deno.env.get('CEREBRAS_API_KEY')}`,
+      'Content-Type': 'application/json',
+    }),
+    enabled: () => !!Deno.env.get('CEREBRAS_API_KEY'),
+    priority: 2,
+    maxTokens: 8192,
+    costPerMToken: 0,
+    weight: 20,
   },
   {
     name: 'openrouter',
@@ -137,10 +160,10 @@ const PROVIDERS: AIProviderConfig[] = [
       'X-Title': 'CyberShield',
     }),
     enabled: () => !!Deno.env.get('OPENROUTER_API_KEY'),
-    priority: 2,
+    priority: 3,
     maxTokens: 8192,
     costPerMToken: 0,
-    weight: 25,
+    weight: 15,
   },
   {
     name: 'google-gemini',
@@ -151,10 +174,25 @@ const PROVIDERS: AIProviderConfig[] = [
       'Content-Type': 'application/json',
     }),
     enabled: () => !!Deno.env.get('GOOGLE_GEMINI_API_KEY'),
-    priority: 3,
+    priority: 4,
     maxTokens: 8192,
     costPerMToken: 0.075,
-    weight: 25,
+    weight: 15,
+  },
+  {
+    name: 'mistral',
+    displayName: 'Mistral AI',
+    baseUrl: 'https://api.mistral.ai/v1/chat/completions',
+    model: 'mistral-small-latest',
+    headers: () => ({
+      'Authorization': `Bearer ${Deno.env.get('MISTRAL_API_KEY')}`,
+      'Content-Type': 'application/json',
+    }),
+    enabled: () => !!Deno.env.get('MISTRAL_API_KEY'),
+    priority: 5,
+    maxTokens: 8192,
+    costPerMToken: 0,
+    weight: 10,
   },
   {
     name: 'lovable',
@@ -166,7 +204,7 @@ const PROVIDERS: AIProviderConfig[] = [
       'Content-Type': 'application/json',
     }),
     enabled: () => !!Deno.env.get('LOVABLE_API_KEY'),
-    priority: 4,
+    priority: 6,
     maxTokens: 8192,
     costPerMToken: 0.15,
     weight: 10,
@@ -311,7 +349,7 @@ async function callProvider(
   if (config.name === 'google-gemini') {
     return callGoogleGemini(config, messages, maxTokens);
   }
-  // Groq, OpenRouter, and Lovable all use OpenAI-compatible API
+  // Groq, Cerebras, OpenRouter, Mistral, and Lovable all use OpenAI-compatible API
   return callOpenAICompatible(config, messages, maxTokens);
 }
 
@@ -358,7 +396,7 @@ function selectBestProviderByScore(): AIProviderConfig | null {
 
 /**
  * Select provider using weighted round-robin.
- * Weights: Groq=40, OpenRouter=25, Gemini=25, Lovable=10
+ * Weights: Groq=30, Cerebras=20, OpenRouter=15, Gemini=15, Mistral=10, Lovable=10
  * Total=100, so over 100 requests we get the exact distribution.
  */
 function selectByWeightedRoundRobin(): AIProviderConfig | null {
@@ -409,7 +447,6 @@ function getAvailableProviders(): AIProviderConfig[] {
 
 function selectNextProvider(): AIProviderConfig | null {
   if (useScoreBasedRouting) {
-    // Use score-based when we have enough data, otherwise weighted round-robin
     const hasEnoughData = Object.values(providerStats).some(s => s.requests >= 5);
     if (hasEnoughData) {
       return selectBestProviderByScore();

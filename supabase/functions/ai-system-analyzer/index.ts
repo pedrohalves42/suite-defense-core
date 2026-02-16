@@ -314,6 +314,29 @@ Deno.serve(async (req) => {
             console.log(`[ai-system-analyzer] Generated ${suggestedActions.length} suggested actions`);
           }
         }
+
+        // FASE 2: Dispatch insights to ai-insight-dispatcher pipeline
+        for (const insight of insertedInsights) {
+          try {
+            const dispatchResponse = await supabase.functions.invoke('ai-insight-dispatcher', {
+              body: {
+                insight: {
+                  ...insight,
+                  auto_action_mode: insight.severity === 'critical' ? 'auto_with_approval' : 'suggest',
+                  recommended_actions: [],
+                },
+                source: 'ai-system-analyzer',
+              },
+            });
+            
+            if (dispatchResponse.error) {
+              console.warn(`[ai-system-analyzer] Dispatch failed for insight ${insight.id}:`, dispatchResponse.error);
+            }
+          } catch (dispatchErr) {
+            console.warn('[ai-system-analyzer] Insight dispatch error:', dispatchErr);
+          }
+        }
+        console.log(`[ai-system-analyzer] Dispatched ${insertedInsights.length} insights to pipeline`);
       }
     } else {
       console.log('[ai-system-analyzer] No insights generated');

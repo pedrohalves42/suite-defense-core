@@ -226,8 +226,10 @@ schedule = "*/30 * * * *"
 verify_jwt = false
 schedule = "0 * * * *"
 
+# Network Anomalies Analysis (every 6 hours - cron mode)
 [functions.analyze-network-anomalies]
-verify_jwt = true
+verify_jwt = false
+schedule = "0 */6 * * *"
 
 [functions.check-production-health]
 verify_jwt = false
@@ -449,7 +451,8 @@ schedule = "0 */2 * * *"
 
 # === AI Quality & Governance (P2/P3) ===
 [functions.ai-quality-check]
-verify_jwt = true
+verify_jwt = false
+schedule = "0 8 * * *"
 
 # === Auto Report Generation ===
 [functions.auto-generate-report]
@@ -712,3 +715,27 @@ verify_jwt = false
 
 [functions.calculate-compliance]
 verify_jwt = false
+
+# === AI Insight Dispatcher (Phase 2) ===
+[functions.ai-insight-dispatcher]
+verify_jwt = false
+
+# === AI Provider Status ===
+[functions.ai-provider-status]
+verify_jwt = false
+
+# === Phase 3: AI Prediction & Correlation Functions ===
+# Predict agent failures (every 30 minutes)
+[functions.ai-predict-agent-failure]
+verify_jwt = false
+schedule = "*/30 * * * *"
+
+# Correlate alerts for RCA (every 2 hours)
+[functions.ai-correlate-alerts]
+verify_jwt = false
+schedule = "0 */2 * * *"
+
+# Behavioral anomaly detection (every 15 minutes)
+[functions.ai-behavioral-anomaly-detector]
+verify_jwt = false
+schedule = "*/15 * * * *"
