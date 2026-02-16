@@ -6,10 +6,15 @@ import { ConnectivityIndicator } from '@/components/ConnectivityIndicator';
 import { GlobalJobWatcher } from '@/components/GlobalJobWatcher';
 import { GlobalKillSwitchBanner } from '@/components/layout/GlobalKillSwitchBanner';
 import { SimpleModeProvider } from '@/components/layout/SimpleModeProvider';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export const AppLayout = () => {
+  const isMobile = useIsMobile();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved === 'true';
@@ -33,7 +38,7 @@ export const AppLayout = () => {
   return (
     <SimpleModeProvider>
       <div className="min-h-screen bg-background relative">
-        {/* Enterprise background pattern - muito sutil */}
+        {/* Enterprise background pattern */}
         <div 
           className="fixed inset-0 pointer-events-none"
           style={{
@@ -44,7 +49,6 @@ export const AppLayout = () => {
           }}
         />
         
-        {/* Content with relative positioning */}
         <div className="relative">
           {/* Global background listeners */}
           <GlobalJobWatcher />
@@ -52,13 +56,35 @@ export const AppLayout = () => {
           <ConnectivityIndicator />
           <GlobalKillSwitchBanner />
           
-          <AppSidebar />
-          <div className={cn('transition-all duration-300', collapsed ? 'pl-16' : 'pl-60')}>
-            <TopBar />
-            <main className="pt-16 p-6">
+          {/* Desktop sidebar - hidden on mobile */}
+          {!isMobile && <AppSidebar />}
+
+          {/* Mobile sidebar sheet */}
+          {isMobile && (
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetContent side="left" className="p-0 w-64">
+                <AppSidebar mobile onNavigate={() => setMobileMenuOpen(false)} />
+              </SheetContent>
+            </Sheet>
+          )}
+
+          <div className={cn(
+            'transition-all duration-300',
+            isMobile ? 'pl-0' : (collapsed ? 'pl-16' : 'pl-52')
+          )}>
+            <TopBar isMobile={isMobile} sidebarCollapsed={collapsed} onMobileMenuClick={() => setMobileMenuOpen(true)} />
+            <main className={cn(
+              "pt-14 p-4 md:p-6",
+              isMobile && "pb-20" // space for bottom nav
+            )}>
               <Outlet />
             </main>
           </div>
+
+          {/* Mobile bottom navigation */}
+          {isMobile && (
+            <MobileBottomNav onMenuClick={() => setMobileMenuOpen(true)} />
+          )}
         </div>
       </div>
     </SimpleModeProvider>

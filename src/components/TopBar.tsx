@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Bell, User, LogOut, Bug, Settings, Sun, Moon } from 'lucide-react';
+import { Bell, User, LogOut, Bug, Settings, Sun, Moon, Menu } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,8 +20,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import logoImage from '@/assets/logo-cybshield-new.png';
 
-export const TopBar = ({ alerts = 0 }: { alerts?: number }) => {
+interface TopBarProps {
+  alerts?: number;
+  isMobile?: boolean;
+  sidebarCollapsed?: boolean;
+  onMobileMenuClick?: () => void;
+}
+
+export const TopBar = ({ alerts = 0, isMobile = false, sidebarCollapsed = false, onMobileMenuClick }: TopBarProps) => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useIsAdmin();
   const { resolvedTheme, setTheme } = useTheme();
@@ -47,7 +54,7 @@ export const TopBar = ({ alerts = 0 }: { alerts?: number }) => {
 
   return (
     <>
-      {showDiagnostics && (
+      {showDiagnostics && !isMobile && (
         <Alert className="fixed top-0 right-0 left-60 z-50 rounded-none border-x-0 border-t-0 bg-yellow-500/10 border-yellow-500/50">
           <Bug className="h-4 w-4 text-yellow-600" />
           <AlertDescription className="text-xs flex gap-4 text-yellow-800 dark:text-yellow-200">
@@ -59,79 +66,107 @@ export const TopBar = ({ alerts = 0 }: { alerts?: number }) => {
       )}
       <header 
         className={cn(
-          "fixed top-0 right-0 left-60 h-14 z-30 flex items-center justify-end px-6 gap-4 transition-all duration-300",
+          "fixed top-0 right-0 h-14 z-30 flex items-center justify-between px-4 md:px-6 gap-2 md:gap-4 transition-all duration-300",
           "bg-card/80 backdrop-blur-xl border-b border-border/30",
           "shadow-sm",
-          showDiagnostics ? 'mt-10' : ''
+          isMobile ? 'left-0' : (sidebarCollapsed ? 'left-16' : 'left-52'),
+          showDiagnostics && !isMobile ? 'mt-10' : ''
         )}
       >
-        {/* Language Switcher */}
-        <LanguageSwitcher />
-
-        {/* Theme Toggle */}
-        <ThemeToggle className="btn-enterprise-ghost" />
-
-        {/* Notifications */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="relative btn-enterprise-ghost"
-        >
-          <Bell className="h-5 w-5 text-muted-foreground" />
-          {alerts > 0 && (
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-destructive">
-              {alerts}
-            </Badge>
-          )}
-        </Button>
-
-        {/* User Menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              variant="ghost" 
+        {/* Left side - mobile menu + logo */}
+        <div className="flex items-center gap-2">
+          {isMobile && (
+            <Button
+              variant="ghost"
               size="icon"
-              className="btn-enterprise-ghost"
+              className="shrink-0"
+              onClick={onMobileMenuClick}
             >
-              <User className="h-5 w-5 text-muted-foreground" />
+              <Menu className="h-5 w-5" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            align="end" 
-            className="w-56 bg-card/95 backdrop-blur-xl border-border/50 shadow-xl"
+          )}
+          {isMobile && (
+            <img src={logoImage} alt="CyberShield" className="h-7 w-auto object-contain" />
+          )}
+        </div>
+
+        {/* Right side - actions */}
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Language Switcher - hidden on small mobile */}
+          <div className="hidden sm:block">
+            <LanguageSwitcher />
+          </div>
+
+          {/* Theme Toggle */}
+          <ThemeToggle className="btn-enterprise-ghost" />
+
+          {/* Notifications */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="relative btn-enterprise-ghost"
           >
-            <DropdownMenuLabel>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">Minha Conta</span>
-                <span className="text-xs text-muted-foreground truncate">
-                  {user?.email}
-                </span>
+            <Bell className="h-5 w-5 text-muted-foreground" />
+            {alerts > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-destructive">
+                {alerts}
+              </Badge>
+            )}
+          </Button>
+
+          {/* User Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="btn-enterprise-ghost"
+              >
+                <User className="h-5 w-5 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              align="end" 
+              className="w-56 bg-card/95 backdrop-blur-xl border-border/50 shadow-xl"
+            >
+              <DropdownMenuLabel>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">Minha Conta</span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {user?.email}
+                  </span>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {/* Language switcher in menu for mobile */}
+              <div className="sm:hidden px-2 py-1.5">
+                <LanguageSwitcher variant="full" />
               </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate('/admin/my-account')}>
-              <User className="mr-2 h-4 w-4" />
-              Configurações da Conta
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/admin/tenant')}>
-              <Settings className="mr-2 h-4 w-4" />
-              Configurações da Empresa
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}>
-              {resolvedTheme === 'dark' ? (
-                <Sun className="mr-2 h-4 w-4" />
-              ) : (
-                <Moon className="mr-2 h-4 w-4" />
-              )}
-              Alternar Tema
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuSeparator className="sm:hidden" />
+              <DropdownMenuItem onClick={() => navigate('/admin/my-account')}>
+                <User className="mr-2 h-4 w-4" />
+                Configurações da Conta
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/admin/tenant')}>
+                <Settings className="mr-2 h-4 w-4" />
+                Configurações da Empresa
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}>
+                {resolvedTheme === 'dark' ? (
+                  <Sun className="mr-2 h-4 w-4" />
+                ) : (
+                  <Moon className="mr-2 h-4 w-4" />
+                )}
+                Alternar Tema
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </header>
     </>
   );

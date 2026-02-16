@@ -33,7 +33,12 @@ interface MenuItem {
   badge?: number;
 }
 
-export const AppSidebar = () => {
+interface AppSidebarProps {
+  mobile?: boolean;
+  onNavigate?: () => void;
+}
+
+export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const { isAdmin } = useIsAdmin();
   const { isSuperAdmin } = useSuperAdmin();
   const { data: criticalInsightsCount = 0 } = useCriticalInsights();
@@ -176,16 +181,19 @@ export const AppSidebar = () => {
     const isSuper = variant === 'super';
     const isActive = location.pathname === item.to || (item.to !== '/admin/dashboard' && location.pathname.startsWith(item.to));
     
+    const isCollapsed = !mobile && collapsed;
+
     const navContent = (
       <NavLink
         to={item.to}
         end={item.end}
+        onClick={onNavigate}
         className={cn(
           "flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground transition-all duration-200 relative",
           isSuper 
             ? "hover:bg-destructive/10 hover:text-destructive"
             : "hover:bg-muted hover:text-foreground",
-          collapsed && "justify-center px-2"
+          isCollapsed && "justify-center px-2"
         )}
         activeClassName={cn(
           "font-medium text-foreground",
@@ -199,7 +207,7 @@ export const AppSidebar = () => {
           <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-primary rounded-r" />
         )}
         <Icon className="h-4 w-4 shrink-0" />
-        {!collapsed && (
+        {!isCollapsed && (
           <>
             <span className="text-sm flex-1">{item.label}</span>
             {item.badge && item.badge > 0 && (
@@ -212,7 +220,7 @@ export const AppSidebar = () => {
       </NavLink>
     );
 
-    if (collapsed) {
+    if (isCollapsed) {
       return (
         <motion.div
           key={item.to}
@@ -260,7 +268,9 @@ export const AppSidebar = () => {
     const isOpen = sectionStates[sectionKey];
     const hasActiveItem = isRouteInSection(items);
     
-    if (collapsed) {
+    const isCollapsed = !mobile && collapsed;
+    
+    if (isCollapsed) {
       return (
         <div className="space-y-0.5">
           {items.map((item, idx) => renderNavItem(item, idx, variant))}
@@ -302,14 +312,15 @@ export const AppSidebar = () => {
     <TooltipProvider>
       <aside
         className={cn(
-          'fixed left-0 top-0 h-screen border-r border-border',
-          'bg-card transition-all duration-300 z-40 flex flex-col',
-          collapsed ? 'w-16' : 'w-52'
+          'h-screen border-r border-border',
+          'bg-card transition-all duration-300 flex flex-col',
+          mobile ? 'w-full relative' : 'fixed left-0 top-0 z-40',
+          !mobile && (collapsed ? 'w-16' : 'w-52')
         )}
       >
         {/* Logo CyberShield Cloud + Mode Badge */}
         <div className="h-14 flex items-center justify-between px-3 border-b border-border/30">
-          {!collapsed && (
+          {(!collapsed || mobile) && (
             <div className="flex items-center gap-2">
               <img 
                 src={logoImage} 
@@ -319,7 +330,7 @@ export const AppSidebar = () => {
               <AppModeBadge collapsed={false} />
             </div>
           )}
-          {collapsed && (
+          {!mobile && collapsed && (
             <div className="flex flex-col items-center gap-1 mx-auto">
               <img 
                 src={logoImage} 
@@ -329,32 +340,34 @@ export const AppSidebar = () => {
               <AppModeBadge collapsed={true} />
             </div>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCollapsed(!collapsed)}
-            className={cn("shrink-0 h-8 w-8 btn-enterprise-ghost", collapsed && "absolute right-1 top-3")}
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
+          {!mobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCollapsed(!collapsed)}
+              className={cn("shrink-0 h-8 w-8 btn-enterprise-ghost", collapsed && "absolute right-1 top-3")}
+            >
+              {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </Button>
+          )}
         </div>
 
         {/* Quick Search */}
-        {!collapsed && (
+        {(!collapsed || mobile) && (
           <div className="px-2 py-2 border-b border-border/30">
             <Button 
               variant="outline" 
               className="w-full justify-start text-muted-foreground/70 h-9 px-3 border-border/50 hover:bg-accent/30"
-              onClick={() => window.dispatchEvent(new CustomEvent('open-search'))}
+              onClick={() => { window.dispatchEvent(new CustomEvent('open-search')); onNavigate?.(); }}
             >
               <Search className="h-4 w-4 mr-2" />
               <span className="flex-1 text-left text-sm">Buscar...</span>
-              <kbd className="text-[10px] bg-muted/50 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
+              {!mobile && <kbd className="text-[10px] bg-muted/50 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>}
             </Button>
           </div>
         )}
 
-        {collapsed && (
+        {!mobile && collapsed && (
           <div className="px-2 py-2 border-b border-border/30">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -376,7 +389,7 @@ export const AppSidebar = () => {
 
         {/* Tenant Selector */}
         <div className="border-b border-border/30">
-          <SidebarTenantSelector collapsed={collapsed} />
+          <SidebarTenantSelector collapsed={mobile ? false : collapsed} />
         </div>
 
         {/* Navigation */}
@@ -418,7 +431,7 @@ export const AppSidebar = () => {
                 activeClassName="bg-accent text-accent-foreground font-medium"
               >
                 <Home className="h-4 w-4" />
-                {!collapsed && <span className="text-sm">Início</span>}
+                {(!collapsed || mobile) && <span className="text-sm">Início</span>}
               </NavLink>
               <NavLink
                 to="/agents"
@@ -426,7 +439,7 @@ export const AppSidebar = () => {
                 activeClassName="bg-accent text-accent-foreground font-medium"
               >
                 <Monitor className="h-4 w-4" />
-                {!collapsed && <span className="text-sm">Meus Computadores</span>}
+                {(!collapsed || mobile) && <span className="text-sm">Meus Computadores</span>}
               </NavLink>
             </div>
           )}
@@ -482,7 +495,7 @@ export const AppSidebar = () => {
 
         {/* Footer elegante */}
         <div className="border-t border-border/30 p-3">
-          {!collapsed ? (
+          {(!collapsed || mobile) ? (
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/50">
               <Shield className="h-3 w-3" />
               <span className="tracking-wide">v5.0.3</span>
