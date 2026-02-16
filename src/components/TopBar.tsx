@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Bell, User, LogOut, Bug, Settings, Sun, Moon } from 'lucide-react';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -63,6 +65,9 @@ export const TopBar = ({ alerts = 0 }: { alerts?: number }) => {
           showDiagnostics ? 'mt-10' : ''
         )}
       >
+        {/* Language Switcher */}
+        <LanguageSwitcher />
+
         {/* Theme Toggle */}
         <ThemeToggle className="btn-enterprise-ghost" />
 
