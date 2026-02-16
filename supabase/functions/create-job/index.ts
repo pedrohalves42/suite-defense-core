@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
     // SEMPRE buscar o agente para obter agent_id, tenant_id e status
     const { data: agentData, error: agentError } = await supabaseAdmin
       .from('agents')
-      .select('id, tenant_id, status, last_heartbeat')
+      .select('id, tenant_id, status, last_heartbeat, scheduling_paused, scheduling_paused_reason')
       .eq('agent_name', agentName)
       .limit(1)
       .maybeSingle();
@@ -174,6 +174,19 @@ Deno.serve(async (req) => {
           }
         }), 
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Block job creation for agents with scheduling paused (version incompatible)
+    if (agentData.scheduling_paused) {
+      return new Response(
+        JSON.stringify({ 
+          error: {
+            code: 'AGENT_PAUSED',
+            message: `Agente '${agentName}' está com agendamento pausado: ${agentData.scheduling_paused_reason || 'versão incompatível, aguardando atualização manual'}`
+          }
+        }), 
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
