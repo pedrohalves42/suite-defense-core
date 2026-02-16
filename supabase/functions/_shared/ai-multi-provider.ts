@@ -19,6 +19,10 @@
 
 import { createMetricsLogger, extractTokenUsage } from './ai-metrics.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { SupabaseAICacheAdapter } from './hexagonal/ai-cache-adapter.ts';
+import { AICacheUseCase } from './hexagonal/ai-cache-use-case.ts';
+import { SupabaseSmartRouterAdapter } from './hexagonal/smart-router-adapter.ts';
+import { SmartRouterUseCase } from './hexagonal/smart-router-use-case.ts';
 
 // ============ PROVIDER CONFIGURATION ============
 
@@ -114,6 +118,22 @@ const CIRCUIT_RESET_MS = 60000;
 // Weighted round-robin state
 let weightedCounter = 0;
 let useScoreBasedRouting = true;
+
+// Smart router singleton (lazy init)
+let smartRouterInstance: SmartRouterUseCase | null = null;
+
+function getSmartRouter(): SmartRouterUseCase | null {
+  if (smartRouterInstance) return smartRouterInstance;
+  try {
+    const url = Deno.env.get('SUPABASE_URL');
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (url && key) {
+      const client = createClient(url, key);
+      smartRouterInstance = new SmartRouterUseCase(new SupabaseSmartRouterAdapter(client));
+    }
+  } catch { /* ignore */ }
+  return smartRouterInstance;
+}
 
 // ============ PROVIDER DEFINITIONS ============
 
@@ -455,6 +475,37 @@ function selectNextProvider(): AIProviderConfig | null {
   return selectByWeightedRoundRobin();
 }
 
+/**
+ * Smart routing: selects provider based on task complexity + real metrics.
+ * Falls back to score-based or round-robin if smart router unavailable.
+ */
+async function selectSmartProvider(
+  functionName: string,
+  messages: AIMessage[],
+): Promise<AIProviderConfig | null> {
+  const router = getSmartRouter();
+  if (!router) return selectNextProvider();
+
+  try {
+    const available = getAvailableProviders().map((p) => p.name);
+    if (available.length === 0) return null;
+
+    const decision = await router.selectProvider(functionName, messages, available);
+    const config = PROVIDERS.find((p) => p.name === decision.selectedProvider);
+
+    if (config) {
+      console.log(
+        `[AI SmartRouter] Selected ${config.displayName} for ${decision.complexity} task (score: ${decision.score}, reason: ${decision.reason})`,
+      );
+      return config;
+    }
+  } catch (err) {
+    console.warn('[AI SmartRouter] Fallback to legacy routing:', err);
+  }
+
+  return selectNextProvider();
+}
+
 // ============ METRICS PERSISTENCE ============
 
 async function persistAIMetricsWithProvider(data: {
@@ -507,8 +558,54 @@ export async function aiComplete(
   
   const metrics = createMetricsLogger(functionName, 'multi-provider');
   metrics.logStart(tenantId);
-  
-  let provider = selectNextProvider();
+
+  // ─── Semantic Cache Lookup ──────────────────────────
+  let cacheUseCase: AICacheUseCase | null = null;
+  let cacheResult: Awaited<ReturnType<AICacheUseCase['lookup']>> | null = null;
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (supabaseUrl && serviceRoleKey) {
+      const cacheClient = createClient(supabaseUrl, serviceRoleKey);
+      const cacheAdapter = new SupabaseAICacheAdapter(cacheClient);
+      cacheUseCase = new AICacheUseCase(cacheAdapter);
+
+      cacheResult = await cacheUseCase.lookup(messages, functionName, tenantId);
+
+      if (cacheResult.hit && cacheResult.cached) {
+        const latencyMs = Date.now() - startTime;
+        console.log(`[AI Router] Cache HIT for ${functionName} (${latencyMs}ms, saved ~${cacheResult.cached.latencyMs}ms)`);
+
+        // Persist cache-hit metric
+        persistAIMetricsWithProvider({
+          function_name: functionName,
+          model: cacheResult.cached.model,
+          provider: cacheResult.cached.provider as AIProviderName,
+          latency_ms: latencyMs,
+          success: true,
+          tokens_total: 0,
+          tenant_id: tenantId,
+          used_fallback: false,
+          cost_usd: 0,
+        });
+
+        return {
+          content: cacheResult.cached.responseContent,
+          provider: cacheResult.cached.provider as AIProviderName,
+          model: cacheResult.cached.model,
+          tokensUsed: { total: 0 },
+          latencyMs,
+          usedFallback: false,
+        };
+      }
+    }
+  } catch (cacheErr) {
+    console.warn('[AI Router] Cache lookup failed, proceeding without cache:', cacheErr);
+  }
+
+  // ─── Smart Provider Routing ──────────────────────────
+  let provider = await selectSmartProvider(functionName, messages);
   let usedFallback = false;
   let lastError: string | undefined;
   const attemptedProviders: Set<AIProviderName> = new Set();
@@ -544,6 +641,23 @@ export async function aiComplete(
         used_fallback: usedFallback,
         cost_usd: costUsd,
       });
+
+      // ─── Store in Cache (fire-and-forget) ──────────
+      if (cacheUseCase && cacheResult && result.content) {
+        cacheUseCase.store({
+          promptHash: cacheResult.promptHash,
+          taskCategory: cacheResult.taskCategory,
+          ttlMinutes: cacheResult.ttlMinutes,
+          responseContent: result.content,
+          provider: provider.name,
+          model: provider.model,
+          tokensUsed,
+          costUsd,
+          tenantId,
+          functionName,
+          latencyMs,
+        }).catch((err) => console.warn('[AI Router] Cache store failed:', err));
+      }
       
       return {
         content: result.content,

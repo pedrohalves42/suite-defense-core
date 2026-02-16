@@ -6390,6 +6390,63 @@ export type Database = {
           },
         ]
       }
+      ai_response_cache: {
+        Row: {
+          cost_usd: number | null
+          created_at: string
+          expires_at: string
+          function_name: string | null
+          hit_count: number
+          id: string
+          last_hit_at: string | null
+          latency_ms: number | null
+          model: string
+          prompt_hash: string
+          provider: string
+          response_content: string
+          system_prompt_hash: string | null
+          task_category: string
+          tenant_id: string | null
+          tokens_used: number | null
+        }
+        Insert: {
+          cost_usd?: number | null
+          created_at?: string
+          expires_at?: string
+          function_name?: string | null
+          hit_count?: number
+          id?: string
+          last_hit_at?: string | null
+          latency_ms?: number | null
+          model: string
+          prompt_hash: string
+          provider: string
+          response_content: string
+          system_prompt_hash?: string | null
+          task_category?: string
+          tenant_id?: string | null
+          tokens_used?: number | null
+        }
+        Update: {
+          cost_usd?: number | null
+          created_at?: string
+          expires_at?: string
+          function_name?: string | null
+          hit_count?: number
+          id?: string
+          last_hit_at?: string | null
+          latency_ms?: number | null
+          model?: string
+          prompt_hash?: string
+          provider?: string
+          response_content?: string
+          system_prompt_hash?: string | null
+          task_category?: string
+          tenant_id?: string | null
+          tokens_used?: number | null
+        }
+        Relationships: []
+      }
       anomaly_events: {
         Row: {
           acknowledged_at: string | null
@@ -25091,6 +25148,7 @@ export type Database = {
       hash_agent_token: { Args: { p_token: string }; Returns: string }
       hash_enrollment_key: { Args: { p_key: string }; Returns: string }
       hash_enrollment_key_secure: { Args: { p_key: string }; Returns: string }
+      increment_ai_cache_hit: { Args: { cache_id: string }; Returns: undefined }
       installation_health_summary: {
         Args: never
         Returns: {
