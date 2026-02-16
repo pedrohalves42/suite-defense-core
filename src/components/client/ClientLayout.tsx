@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   LayoutDashboard, 
   Monitor, 
@@ -9,6 +10,7 @@ import {
   Menu,
   ShieldCheck
 } from 'lucide-react';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -18,17 +20,18 @@ import { useState } from 'react';
 import logoImage from '@/assets/logo-cybshield-new.png';
 
 const menuItems = [
-  { icon: ShieldCheck, label: 'Minha Proteção', path: '/client/protection' },
-  { icon: LayoutDashboard, label: 'Visão Geral', path: '/client/dashboard' },
-  { icon: Monitor, label: 'Meus Computadores', path: '/client/computers' },
-  { icon: Shield, label: 'Status de Segurança', path: '/client/security' },
-  { icon: FileText, label: 'Relatórios', path: '/client/reports' },
-  { icon: Globe, label: 'Atividade Web', path: '/client/activity' },
+  { icon: ShieldCheck, labelKey: 'client.myProtection', path: '/client/protection' },
+  { icon: LayoutDashboard, labelKey: 'client.overview', path: '/client/dashboard' },
+  { icon: Monitor, labelKey: 'client.myComputers', path: '/client/computers' },
+  { icon: Shield, labelKey: 'client.securityStatus', path: '/client/security' },
+  { icon: FileText, labelKey: 'client.reports', path: '/client/reports' },
+  { icon: Globe, labelKey: 'client.webActivity', path: '/client/activity' },
 ];
 
 const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
   const location = useLocation();
   const { tenant } = useClientAccess();
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -64,21 +67,22 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
               )}
             >
               <item.icon className="h-5 w-5" />
-              <span>{item.label}</span>
+              <span>{t(item.labelKey)}</span>
             </Link>
           );
         })}
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-border">
+      <div className="p-4 border-t border-border space-y-2">
+        <LanguageSwitcher variant="full" />
         <Button 
           variant="ghost" 
           className="w-full justify-start gap-3 text-muted-foreground"
           onClick={handleLogout}
         >
           <LogOut className="h-5 w-5" />
-          Sair
+          {t('common.logout')}
         </Button>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { ThemeProvider } from "next-themes";
 import { HelmetProvider } from "react-helmet-async";
 import { ActiveTenantProvider } from "./hooks/useActiveTenant";
 import App from "./App.tsx";
+import "./i18n";
 import "./index.css";
 
 // QueryClient with optimized cache configuration (APEX optimization)
