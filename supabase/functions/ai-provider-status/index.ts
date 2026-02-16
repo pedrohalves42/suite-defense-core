@@ -1,4 +1,4 @@
-import { getProviderStatus, getActiveProviders, resetProviderCircuit, type AIProviderName } from '../_shared/ai-multi-provider.ts';
+import { getProviderStatus, getActiveProviders, resetProviderCircuit, getProviderScores, type AIProviderName } from '../_shared/ai-multi-provider.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,7 +14,6 @@ Deno.serve(async (req) => {
     const providerStatus = getProviderStatus();
     const activeProviders = getActiveProviders();
     
-    // Handle POST for circuit reset
     if (req.method === 'POST') {
       const { provider, action } = await req.json();
       
@@ -30,7 +29,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Calculate health summary
     const enabledProviders = Object.entries(providerStatus).filter(([_, s]) => s.enabled);
     const healthyProviders = enabledProviders.filter(([_, s]) => !s.circuitOpen);
     const unhealthyProviders = enabledProviders.filter(([_, s]) => s.circuitOpen);
@@ -55,6 +53,7 @@ Deno.serve(async (req) => {
         ...status,
         status: !status.enabled ? 'disabled' : status.circuitOpen ? 'circuit_open' : 'healthy',
       })),
+      scores: getProviderScores(),
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -72,12 +71,10 @@ Deno.serve(async (req) => {
 
 function getDisplayName(provider: AIProviderName): string {
   const names: Record<AIProviderName, string> = {
-    'google-gemini': 'Google Gemini',
-    'groq': 'Groq',
-    'openrouter': 'OpenRouter',
-    'cloudflare': 'Cloudflare Workers AI',
-    'manus': 'Manus',
-    'lovable': 'Lovable AI (Fallback)',
+    'google-gemini': 'Google Gemini 2.5 Flash',
+    'groq': 'Groq (Llama 3.3-70B)',
+    'openrouter': 'OpenRouter (Gemini 2.0 Free)',
+    'lovable': 'Lovable AI (Gemini 2.5 Flash)',
   };
   return names[provider] || provider;
 }

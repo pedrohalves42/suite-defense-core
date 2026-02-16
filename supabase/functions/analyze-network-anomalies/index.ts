@@ -22,30 +22,37 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Use SERVICE_ROLE_KEY for admin queries (required for cron execution without auth header)
+    const authHeader = req.headers.get('Authorization');
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
+      authHeader ? Deno.env.get('SUPABASE_ANON_KEY') ?? '' : Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      authHeader ? {
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: authHeader },
         },
-      }
+      } : undefined
     );
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseClient.auth.getUser();
+    // Auth check: skip if called via cron (no auth header)
+    if (authHeader) {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabaseClient.auth.getUser();
 
-    if (authError || !user) {
-      console.error('Authentication error:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Nao autenticado' }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      if (authError || !user) {
+        console.error('Authentication error:', authError);
+        return new Response(
+          JSON.stringify({ error: 'Nao autenticado' }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+    } else {
+      console.log('[analyze-network-anomalies] Running in cron mode (no auth header)');
     }
 
     const { agentName, timeRangeHours = 24 }: AnalysisRequest = await req.json();
