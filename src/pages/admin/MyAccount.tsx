@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, User, Mail, Lock, Save, Shield } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 export default function MyAccount() {
   const { user } = useAuth();
@@ -265,12 +266,12 @@ export default function MyAccount() {
           <Separator />
           <div className="flex justify-between">
             <span className="text-muted-foreground">Conta criada em</span>
-            <span>{user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : 'N/A'}</span>
+            <span>{user?.created_at ? formatBrazilDateTime(user.created_at, 'date') : 'N/A'}</span>
           </div>
           <Separator />
           <div className="flex justify-between">
             <span className="text-muted-foreground">Último login</span>
-            <span>{user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString('pt-BR') : 'N/A'}</span>
+            <span>{user?.last_sign_in_at ? formatBrazilDateTime(user.last_sign_in_at, 'datetime') : 'N/A'}</span>
           </div>
         </CardContent>
       </Card>

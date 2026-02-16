@@ -11,6 +11,7 @@ import { CONTACT } from '@/constants/config';
 import { useEffect, useState } from 'react';
 import { logger } from '@/lib/logger';
 import { BillingPeriodSelector, type BillingPeriod, calculateSavings, PERIOD_CONFIG } from '@/components/admin/BillingPeriodSelector';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 interface Plan {
   id: string;
@@ -385,7 +386,7 @@ export default function PlanUpgradeNew() {
                 </CardDescription>
                 {subscription.trial_end && new Date(subscription.trial_end) > new Date() && (
                   <Badge variant="secondary" className="mt-2">
-                    Trial até {new Date(subscription.trial_end).toLocaleDateString('pt-BR')}
+                    Trial até {formatBrazilDateTime(subscription.trial_end, 'date')}
                   </Badge>
                 )}
               </div>
