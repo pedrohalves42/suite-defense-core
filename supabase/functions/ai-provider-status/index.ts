@@ -74,6 +74,8 @@ function getDisplayName(provider: AIProviderName): string {
     'google-gemini': 'Google Gemini 2.5 Flash',
     'groq': 'Groq (Llama 3.3-70B)',
     'openrouter': 'OpenRouter (Gemini 2.0 Free)',
+    'cerebras': 'Cerebras (Llama 3.3-70B)',
+    'mistral': 'Mistral AI (Small 3.1)',
     'lovable': 'Lovable AI (Gemini 2.5 Flash)',
   };
   return names[provider] || provider;
