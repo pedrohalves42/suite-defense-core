@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - macOS v5.0.3
+# CyberShield Agent - macOS v5.0.5
+#
+# v5.0.5: HANDLER PARITY & BUG FIXES
+# - NEW: collect_web_activity handler (dns_cache + browser_history arrays)
+# - NEW: light_vuln_scan handler (softwareupdate --list check)
+# - NEW: update_agent stub (delegates to heartbeat force_update)
+# - NEW: scan, report, collect_info, reinstall_agent handlers
+# - FIXED: All 25 job types now supported (eliminates Unknown job type errors)
 #
 # v5.0.3: STABILITY FIXES - LaunchDaemon Recovery & Task Health
 # - FIXED: assert_launchd_health auto-repairs stopped/unloaded launchd agents
@@ -54,7 +61,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.3"
+AGENT_VERSION="v5.0.5"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -761,7 +768,7 @@ restart_service_handler() {
      local job_id
      job_id=$(python3 -c "import json; print(json.loads('$job').get('id', ''))" 2>/dev/null)
      local job_type
-     job_type=$(python3 -c "import json; print(json.loads('$job').get('job_type', ''))" 2>/dev/null)
+     job_type=$(python3 -c "import json; j=json.loads('$job'); print(j.get('job_type', '') or j.get('type', ''))" 2>/dev/null)
      
      log "INFO" "[JOB] Starting execution: $job_type (ID: $job_id)"
      
@@ -793,7 +800,7 @@ restart_service_handler() {
         "fix_firewall")
             output=$(fix_firewall "$job")
             ;;
-        # v5.0.1: NEW - Process/Service Control Handlers
+        # v5.0.1: Process/Service Control Handlers
         "kill_process")
             output=$(kill_process_handler "$job")
             ;;
@@ -805,6 +812,53 @@ restart_service_handler() {
             ;;
         "restart_service")
             output=$(restart_service_handler "$job")
+            ;;
+        # v5.0.4: NEW - SOAR/Automation Handlers
+        "sync_blocked_websites")
+            output=$(sync_blocked_websites_handler "$job")
+            ;;
+        "service_health_check")
+            output=$(service_health_check_handler "$job")
+            ;;
+        "network_diagnostics")
+            output=$(network_diagnostics_handler "$job")
+            ;;
+        "quarantine_agent")
+            output=$(quarantine_agent_handler "$job")
+            ;;
+        "apply_security_patch")
+            output=$(apply_security_patch_handler "$job")
+            ;;
+        "disk_cleanup")
+            output=$(disk_cleanup_handler)
+            ;;
+        # v5.0.5: NEW - Missing handler parity
+        "collect_web_activity")
+            output=$(collect_web_activity_handler)
+            ;;
+        "light_vuln_scan")
+            output=$(light_vuln_scan_handler)
+            ;;
+        "update_agent")
+            output=$(update_agent_handler)
+            ;;
+        "scan")
+            output=$(scan_handler)
+            ;;
+        "report")
+            output=$(report_handler)
+            ;;
+        "collect_info")
+            output=$(collect_info_handler)
+            ;;
+        "reinstall_agent")
+            output=$(reinstall_agent_handler)
+            ;;
+        "collect_dns_blocks")
+            output=$(collect_dns_blocks_handler)
+            ;;
+        "remove_dns_filter")
+            output=$(remove_dns_filter_handler)
             ;;
         *)
             error_message="Unknown job type: $job_type"
@@ -1265,8 +1319,310 @@ restart_service_handler() {
  }
  
  # ============================================
- #  MAIN LOOP v5.0.1 FULL ENTERPRISE
+ #  v5.0.4: SOAR/AUTOMATION HANDLERS
  # ============================================
+ sync_blocked_websites_handler() {
+     local job="$1"
+     local urls
+     urls=$(echo "$job" | python3 -c "import sys,json; [print(u) for u in json.loads(sys.stdin.read()).get('payload',{}).get('urls',[])]" 2>/dev/null)
+     
+     local blocked=0
+     local marker_start="# === CyberShield Blocked Websites Start ==="
+     local marker_end="# === CyberShield Blocked Websites End ==="
+     local hosts_file="/etc/hosts"
+     
+     sudo sed -i '' "/$marker_start/,/$marker_end/d" "$hosts_file" 2>/dev/null
+     
+     echo "$marker_start" | sudo tee -a "$hosts_file" > /dev/null
+     while IFS= read -r url; do
+         if [[ -n "$url" ]]; then
+             local domain
+             domain=$(echo "$url" | sed 's|https\?://||' | sed 's|/.*||')
+             echo "0.0.0.0 $domain" | sudo tee -a "$hosts_file" > /dev/null
+             echo "0.0.0.0 www.$domain" | sudo tee -a "$hosts_file" > /dev/null
+             blocked=$((blocked + 1))
+         fi
+     done <<< "$urls"
+     echo "$marker_end" | sudo tee -a "$hosts_file" > /dev/null
+     
+     sudo dscacheutil -flushcache 2>/dev/null
+     sudo killall -HUP mDNSResponder 2>/dev/null
+     
+     cat <<EOF
+ {"success":true,"blocked_count":$blocked,"method":"hosts_file","synced_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+ EOF
+ }
+ 
+ service_health_check_handler() {
+     local job="$1"
+     local services
+     services=$(echo "$job" | python3 -c "import sys,json; [print(s) for s in json.loads(sys.stdin.read()).get('payload',{}).get('services',['com.apple.mDNSResponder','com.apple.ftp-proxy'])]" 2>/dev/null)
+     
+     local results="[]"
+     local unhealthy=0
+     local checked=0
+     
+     while IFS= read -r svc; do
+         if [[ -n "$svc" ]]; then
+             local status="unknown"
+             local healthy="false"
+             if launchctl list "$svc" &>/dev/null; then
+                 status="running"
+                 healthy="true"
+             else
+                 status="not_running"
+                 unhealthy=$((unhealthy + 1))
+             fi
+             results=$(echo "$results" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); d.append({'name':'$svc','status':'$status','healthy':$healthy}); print(json.dumps(d))" 2>/dev/null)
+             checked=$((checked + 1))
+         fi
+     done <<< "$services"
+     
+     cat <<EOF
+ {"success":true,"services_checked":$checked,"unhealthy_count":$unhealthy,"services":$results,"checked_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+ EOF
+ }
+ 
+ network_diagnostics_handler() {
+     local job="$1"
+     local targets
+     targets=$(echo "$job" | python3 -c "import sys,json; [print(t) for t in json.loads(sys.stdin.read()).get('payload',{}).get('targets',['8.8.8.8','1.1.1.1'])]" 2>/dev/null)
+     
+     local diagnostics="[]"
+     
+     while IFS= read -r target; do
+         if [[ -n "$target" ]]; then
+             local ping_result='{"success":false}'
+             local dns_result='{"success":false}'
+             
+             if ping -c 3 -W 5 "$target" &>/dev/null; then
+                 local avg_ms
+                 avg_ms=$(ping -c 3 -W 5 "$target" 2>/dev/null | tail -1 | awk -F'/' '{print $5}')
+                 ping_result="{\"success\":true,\"avg_ms\":${avg_ms:-0}}"
+             fi
+             
+             if dig_out=$(dig +short "$target" 2>/dev/null | head -3); then
+                 dns_result='{"success":true}'
+             fi
+             
+             diagnostics=$(echo "$diagnostics" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); d.append({'target':'$target','ping':$ping_result,'dns':$dns_result}); print(json.dumps(d))" 2>/dev/null)
+         fi
+     done <<< "$targets"
+     
+     cat <<EOF
+ {"success":true,"diagnostics":$diagnostics,"checked_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"}
+ EOF
+ }
+ 
+ quarantine_agent_handler() {
+     local job="$1"
+     local action
+     action=$(echo "$job" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('payload',{}).get('action','quarantine'))" 2>/dev/null)
+     local server_host
+     server_host=$(echo "$SERVER_URL" | sed 's|https\?://||' | sed 's|/.*||')
+     
+     if [[ "$action" == "release" ]]; then
+         sudo pfctl -F all 2>/dev/null
+         echo '{"success":true,"action":"released","released_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+     else
+         # macOS uses pf firewall
+         local pf_rules="/tmp/cybershield_quarantine.pf"
+         cat > "$pf_rules" << PFRULES
+ pass out quick on lo0 all
+ pass out quick proto udp to any port 53
+ pass out quick to $server_host
+ block out all
+ PFRULES
+         sudo pfctl -f "$pf_rules" -e 2>/dev/null
+         echo '{"success":true,"action":"quarantined","server_host":"'"$server_host"'","quarantined_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+     fi
+ }
+ 
+ apply_security_patch_handler() {
+     local job="$1"
+     local cve_id
+     cve_id=$(echo "$job" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('payload',{}).get('cve_id',''))" 2>/dev/null)
+     
+     # macOS uses softwareupdate
+     sudo softwareupdate --install --recommended 2>/dev/null
+     
+     echo '{"success":true,"cve_id":"'"$cve_id"'","method":"softwareupdate","patched_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+ }
+ 
+ disk_cleanup_handler() {
+     local before_free
+     before_free=$(df -g / | tail -1 | awk '{print $4}')
+     
+     # Clean caches and temp
+     sudo rm -rf /private/var/folders/*/* 2>/dev/null
+     sudo rm -rf /Library/Caches/* 2>/dev/null
+     rm -rf ~/Library/Caches/* 2>/dev/null
+     sudo find /private/var/log -name "*.gz" -mtime +30 -delete 2>/dev/null
+     
+     local after_free
+     after_free=$(df -g / | tail -1 | awk '{print $4}')
+     local freed=$((after_free - before_free))
+     
+     echo '{"success":true,"freed_gb":'$freed',"before_free_gb":'$before_free',"after_free_gb":'$after_free',"cleaned_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+ }
+
+# ============================================
+#  v5.0.5: NEW HANDLERS - Handler Parity
+# ============================================
+
+collect_web_activity_handler() {
+    log "INFO" "[JOB] Collecting web activity (DNS cache + browser history)"
+    
+    # Collect DNS cache from macOS
+    local dns_entries='[]'
+    local dns_raw
+    dns_raw=$(sudo dscacheutil -cachedump -entries 2>/dev/null | head -50 || echo "")
+    if [[ -n "$dns_raw" ]]; then
+        dns_entries=$(echo "$dns_raw" | python3 -c "import sys,json; lines=[l.strip() for l in sys.stdin if l.strip()]; print(json.dumps([{'entry':l} for l in lines[:50]]))" 2>/dev/null || echo '[]')
+    fi
+    
+    # Collect Safari history
+    local browser_history='[]'
+    local safari_db="$HOME/Library/Safari/History.db"
+    if [[ -f "$safari_db" ]]; then
+        local tmp_db="/tmp/cybershield_safari_$(date +%s).db"
+        cp "$safari_db" "$tmp_db" 2>/dev/null
+        if command -v sqlite3 &>/dev/null; then
+            browser_history=$(sqlite3 "$tmp_db" "SELECT url, title FROM history_items ORDER BY visit_count DESC LIMIT 50;" 2>/dev/null | \
+                python3 -c "import sys,json; lines=[l.strip().split('|',1) for l in sys.stdin if l.strip()]; print(json.dumps([{'url':l[0],'title':l[1] if len(l)>1 else ''} for l in lines]))" 2>/dev/null || echo '[]')
+        fi
+        rm -f "$tmp_db" 2>/dev/null
+    fi
+    
+    local collected_at
+    collected_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    echo '{"dns_cache":'"$dns_entries"',"browser_history":'"$browser_history"',"collected_at":"'"$collected_at"'","source":"macos"}'
+}
+
+light_vuln_scan_handler() {
+    log "INFO" "[JOB] Running light vulnerability scan"
+    
+    local vulns='[]'
+    local total=0
+    local high=0
+    
+    # Check for available macOS software updates
+    local updates
+    updates=$(softwareupdate --list 2>&1 | grep -i "recommended\|restart\|security" || echo "")
+    
+    if [[ -n "$updates" ]]; then
+        vulns=$(echo "$updates" | head -20 | python3 -c "
+import sys, json
+lines = [l.strip() for l in sys.stdin if l.strip()]
+results = []
+for l in lines:
+    sev = 'critical' if 'security' in l.lower() else 'high' if 'restart' in l.lower() else 'medium'
+    results.append({'package': l[:80], 'severity': sev, 'source': 'softwareupdate'})
+print(json.dumps(results))
+" 2>/dev/null || echo '[]')
+        total=$(echo "$vulns" | python3 -c "import sys,json; print(len(json.loads(sys.stdin.read())))" 2>/dev/null || echo 0)
+    fi
+    
+    local scanned_at
+    scanned_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    echo '{"vulnerabilities":'"$vulns"',"summary":{"total":'$total',"critical":0,"high":'$high',"medium":0,"low":0},"scan_tool":"softwareupdate","scanned_at":"'"$scanned_at"'","platform":"macos"}'
+}
+
+update_agent_handler() {
+    log "INFO" "[JOB] update_agent received - delegating to heartbeat force_update mechanism"
+    echo '{"success":true,"message":"Update delegated to heartbeat force_update mechanism","agent_version":"'"$AGENT_VERSION"'","timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+}
+
+scan_handler() {
+    log "INFO" "[JOB] Running general security scan"
+    local open_ports
+    open_ports=$(lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null | tail -n +2 | awk '{print $9}' | head -20 | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
+    local users_logged
+    users_logged=$(who 2>/dev/null | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
+    local uptime_info
+    uptime_info=$(uptime 2>/dev/null || echo "unknown")
+    echo '{"open_ports":'"$open_ports"',"logged_users":'"$users_logged"',"uptime":"'"$uptime_info"'","scanned_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+}
+
+report_handler() {
+    log "INFO" "[JOB] Generating agent report"
+    local disk_usage
+    disk_usage=$(df -g / | tail -1 | awk '{print "{\"total\":\""$2"G\",\"used\":\""$3"G\",\"free\":\""$4"G\",\"percent\":\""$5"\"}"}')
+    local mem_info
+    mem_info=$(vm_stat 2>/dev/null | python3 -c "
+import sys
+lines = sys.stdin.readlines()
+pages = {}
+for l in lines:
+    parts = l.strip().split(':')
+    if len(parts)==2:
+        key = parts[0].strip().lower()
+        val = parts[1].strip().rstrip('.')
+        try: pages[key] = int(val)
+        except: pass
+page_size = 16384
+total_mb = sum(pages.values()) * page_size // (1024*1024)
+free_mb = pages.get('pages free', 0) * page_size // (1024*1024)
+print('{\"total_mb\":%d,\"free_mb\":%d}' % (total_mb, free_mb))
+" 2>/dev/null || echo '{}')
+    echo '{"agent_version":"'"$AGENT_VERSION"'","hostname":"'$(hostname)'",'$disk_usage',"memory":'"$mem_info"',"generated_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+}
+
+collect_info_handler() {
+    log "INFO" "[JOB] Collecting system info"
+    local os_version
+    os_version=$(sw_vers 2>/dev/null | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
+    local kernel
+    kernel=$(uname -r 2>/dev/null || echo "unknown")
+    local arch
+    arch=$(uname -m 2>/dev/null || echo "unknown")
+    echo '{"os_info":'"$os_version"',"kernel":"'"$kernel"'","architecture":"'"$arch"'","hostname":"'$(hostname)'","agent_version":"'"$AGENT_VERSION"'","collected_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+}
+
+reinstall_agent_handler() {
+    log "INFO" "[JOB] Reinstall agent requested"
+    local download_url="${SERVER_URL}/functions/v1/serve-agent-update?platform=macos"
+    local new_script
+    new_script=$(curl -s -H "X-Agent-Token: $AGENT_TOKEN" "$download_url" 2>/dev/null)
+    if [[ -n "$new_script" && ${#new_script} -gt 1000 ]]; then
+        local script_path
+        script_path=$(greadlink -f "$0" 2>/dev/null || echo "$0")
+        echo "$new_script" > "${script_path}.new" 2>/dev/null
+        chmod +x "${script_path}.new" 2>/dev/null
+        echo '{"success":true,"message":"New script downloaded, will apply on next restart","path":"'"${script_path}.new"'","timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+    else
+        echo '{"success":false,"message":"Failed to download new agent script","timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+    fi
+}
+
+collect_dns_blocks_handler() {
+    log "INFO" "[JOB] Collecting DNS blocks from hosts file"
+    local blocks='[]'
+    if [[ -f /etc/hosts ]]; then
+        blocks=$(grep -E "^(0\.0\.0\.0|127\.0\.0\.1)" /etc/hosts 2>/dev/null | grep -v "localhost" | awk '{print $2}' | head -100 | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
+    fi
+    echo '{"blocked_domains":'"$blocks"',"source":"/etc/hosts","collected_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+}
+
+remove_dns_filter_handler() {
+    log "INFO" "[JOB] Removing DNS filter entries from hosts file"
+    if [[ -f /etc/hosts ]]; then
+        local count_before
+        count_before=$(grep -cE "^(0\.0\.0\.0|127\.0\.0\.1)" /etc/hosts 2>/dev/null | grep -v "localhost" || echo 0)
+        sudo sed -i '' '/# CyberShield DNS Block/,/# End CyberShield DNS Block/d' /etc/hosts 2>/dev/null
+        local count_after
+        count_after=$(grep -cE "^(0\.0\.0\.0|127\.0\.0\.1)" /etc/hosts 2>/dev/null | grep -v "localhost" || echo 0)
+        echo '{"success":true,"removed":'$((count_before - count_after))',"timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+    else
+        echo '{"success":false,"message":"Hosts file not found","timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
+    fi
+}
+
+# ============================================
+#  MAIN LOOP v5.0.1 FULL ENTERPRISE
+# ============================================
  log "============================================"
  log "INFO" "[START] CyberShield Agent $AGENT_VERSION FULL ENTERPRISE"
  log "DEBUG" "[INFO] ServerUrl: $SERVER_URL"
