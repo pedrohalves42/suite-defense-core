@@ -249,32 +249,32 @@ export function GovernanceHealthBanner() {
         transition={{ delay: showPersonalMFAWarning ? 0.1 : 0 }}
       >
         <Card className={cn("border", status.border, status.bg)}>
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={cn("p-2 rounded-full", status.bg)}>
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={cn("p-2 rounded-full shrink-0", status.bg)}>
                   {healthScore >= 60 ? (
-                    <Shield className={cn("h-6 w-6", status.color)} />
+                    <Shield className={cn("h-5 w-5", status.color)} />
                   ) : (
-                    <ShieldAlert className={cn("h-6 w-6", status.color)} />
+                    <ShieldAlert className={cn("h-5 w-5", status.color)} />
                   )}
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold">Saúde de Governança</h3>
-                    <Badge variant="outline" className={status.color}>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-sm">Saúde de Governança</h3>
+                    <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", status.color)}>
                       {status.label}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-4 mt-1">
-                    <div className="flex items-center gap-2 w-32">
-                      <Progress value={healthScore} className="h-2" />
-                      <span className={cn("text-sm font-bold", status.color)}>
+                  <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    <div className="flex items-center gap-2 w-28">
+                      <Progress value={healthScore} className="h-1.5" />
+                      <span className={cn("text-xs font-bold", status.color)}>
                         {healthScore}%
                       </span>
                     </div>
                     {metrics && (
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <KeyRound className="h-3 w-3" />
                           {metrics.usersWithMFA}/{metrics.totalUsers} MFA

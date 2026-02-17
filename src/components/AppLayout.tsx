@@ -77,7 +77,9 @@ export const AppLayout = () => {
               "pt-14 p-4 md:p-6",
               isMobile && "pb-20" // space for bottom nav
             )}>
-              <Outlet />
+              <div className="max-w-7xl mx-auto">
+                <Outlet />
+              </div>
             </main>
           </div>
 
