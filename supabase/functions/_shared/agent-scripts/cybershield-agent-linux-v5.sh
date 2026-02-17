@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - Linux v5.0.5
+# CyberShield Agent - Linux v5.0.8
+#
+# v5.0.8: HANDLER FIX - collect_dns_blocks & integration_test_v3 sync
+# - FIXED: Ensured collect_dns_blocks and integration_test_v3 handlers are included in DB release
+# - ALIGNED: Version parity with Windows v5.0.8
+#
+# v5.0.7: AUTO-UPDATE FIX - Force Update via Heartbeat
+# - NEW: apply_forced_update function (Base64 decode, SHA256 validation)
+# - IMPROVED: Heartbeat response processing for force_update command
 #
 # v5.0.6: HANDLER PARITY - integration_test_v3
 # - NEW: integration_test_v3 handler (simple pong response for connectivity tests)
@@ -65,7 +73,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.6"
+AGENT_VERSION="v5.0.8"
 BASE_DIR="/opt/cybershield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -1315,19 +1323,135 @@ restart_service_handler() {
      local payload
      payload=$(cat <<EOF
  {"agent_name":"$AGENT_NAME","agent_version":"$AGENT_VERSION","hostname":"$(hostname)","timestamp":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")","system_metrics":$metrics,"processes":$top_processes,"process_anomaly_count":$anomaly_count,"auto_repair_stats":{"disk_cleanups":$AUTO_REPAIR_DISK_CLEANUPS,"processes_killed":$AUTO_REPAIR_PROCESSES_KILLED,"last_disk_cleanup":"$AUTO_REPAIR_LAST_DISK_CLEANUP","last_process_kill":"$AUTO_REPAIR_LAST_PROCESS_KILL"},"state":"$CURRENT_STATE"}
- EOF
- )
+EOF
+)
      
      local result
      result=$(invoke_secure_request "POST" "/functions/v1/heartbeat" "$payload" 30 3)
+     local exit_code=$?
      
-     if [[ $? -eq 0 ]]; then
+     if [[ $exit_code -eq 0 ]]; then
          log "SUCCESS" "[HEARTBEAT] Sent successfully"
+         
+         # ============================================
+         # v5.0.8: FORCE UPDATE VIA HEARTBEAT RESPONSE
+         # Ported from Windows v5.0.7 - bypasses job system
+         # ============================================
+         if [[ -n "$result" ]]; then
+             local force_update
+             force_update=$(echo "$result" | jq -r '.force_update // false' 2>/dev/null)
+             
+             if [[ "$force_update" == "true" ]]; then
+                 log "WARN" "[FORCE UPDATE] Update forcado detectado via heartbeat!"
+                 local target_version
+                 target_version=$(echo "$result" | jq -r '.target_version // ""' 2>/dev/null)
+                 log "INFO" "[FORCE UPDATE] Target version: $target_version"
+                 
+                 apply_forced_update "$result"
+             fi
+         fi
+         
          return 0
      else
          log "ERROR" "[HEARTBEAT] Failed"
          return 1
      fi
+ }
+ 
+ # ============================================
+ #  v5.0.8: FORCE UPDATE - Auto-update sem restart
+ # ============================================
+ apply_forced_update() {
+     local response="$1"
+     
+     local target_version
+     target_version=$(echo "$response" | jq -r '.target_version // ""' 2>/dev/null)
+     local base64_content
+     base64_content=$(echo "$response" | jq -r '.script_content_base64 // ""' 2>/dev/null)
+     local expected_hash
+     expected_hash=$(echo "$response" | jq -r '.sha256 // ""' 2>/dev/null)
+     local reason
+     reason=$(echo "$response" | jq -r '.reason // "heartbeat_force_update"' 2>/dev/null)
+     
+     if [[ -z "$target_version" || -z "$base64_content" || -z "$expected_hash" ]]; then
+         log "ERROR" "[FORCE UPDATE] Dados incompletos no response"
+         return 1
+     fi
+     
+     log "INFO" "[FORCE UPDATE] Version: $target_version, Reason: $reason"
+     
+     # Decode Base64
+     local temp_script="/tmp/cybershield-force-update-${target_version}.sh"
+     echo "$base64_content" | base64 -d > "$temp_script" 2>/dev/null
+     
+     if [[ ! -s "$temp_script" ]]; then
+         log "ERROR" "[FORCE UPDATE] Base64 decode falhou"
+         rm -f "$temp_script"
+         return 1
+     fi
+     
+     local decoded_size
+     decoded_size=$(stat -c%s "$temp_script" 2>/dev/null || stat -f%z "$temp_script" 2>/dev/null)
+     log "DEBUG" "[FORCE UPDATE] Script decodificado: $decoded_size bytes"
+     
+     # Validate SHA256
+     local actual_hash
+     actual_hash=$(sha256sum "$temp_script" 2>/dev/null | awk '{print $1}')
+     
+     if [[ "${actual_hash,,}" != "${expected_hash,,}" ]]; then
+         log "ERROR" "[FORCE UPDATE] SHA256 mismatch! Esperado: $expected_hash, Obtido: $actual_hash"
+         rm -f "$temp_script"
+         return 1
+     fi
+     
+     log "SUCCESS" "[FORCE UPDATE] SHA256 validado: $actual_hash"
+     
+     # Anti-corruption: reject HTML content
+     local first_line
+     first_line=$(head -1 "$temp_script")
+     if [[ "$first_line" == *"<!DOCTYPE"* || "$first_line" == *"<html"* ]]; then
+         log "ERROR" "[FORCE UPDATE] Conteudo HTML detectado - rejeitando"
+         rm -f "$temp_script"
+         return 1
+     fi
+     
+     # Detect current script path
+     local current_script
+     current_script=$(readlink -f "$0" 2>/dev/null || echo "$0")
+     
+     # Backup current script
+     if [[ -f "$current_script" ]]; then
+         cp "$current_script" "${current_script}.backup" 2>/dev/null
+         log "INFO" "[FORCE UPDATE] Backup criado: ${current_script}.backup"
+     fi
+     
+     # Apply update
+     chmod +x "$temp_script"
+     cp "$temp_script" "$current_script" 2>/dev/null
+     rm -f "$temp_script"
+     
+     log "SUCCESS" "[FORCE UPDATE] Script instalado: $current_script"
+     
+     # Confirm on backend
+     local confirm_payload
+     confirm_payload="{\"agent_name\":\"$AGENT_NAME\",\"old_version\":\"$AGENT_VERSION\",\"new_version\":\"$target_version\",\"sha256\":\"$actual_hash\",\"method\":\"heartbeat_force_update\",\"platform\":\"linux\",\"timestamp\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}"
+     
+     invoke_secure_request "POST" "/functions/v1/confirm-force-update" "$confirm_payload" 10 1 2>/dev/null || true
+     
+     log "INFO" "[FORCE UPDATE] Reiniciando agente com nova versao..."
+     
+     # Restart via systemd (no PC restart needed)
+     if systemctl is-active cybershield-agent &>/dev/null; then
+         sudo systemctl restart cybershield-agent &
+     elif systemctl is-active --user cybershield-agent &>/dev/null; then
+         systemctl restart --user cybershield-agent &
+     else
+         # Fallback: exec into new script
+         exec "$current_script" --server-url "$SERVER_URL" --agent-token "$AGENT_TOKEN" --hmac-secret "$HMAC_SECRET" --agent-name "$AGENT_NAME" &
+     fi
+     
+     log "SUCCESS" "[FORCE UPDATE] Restart iniciado - saindo do processo atual"
+     exit 0
  }
  
  # ============================================
