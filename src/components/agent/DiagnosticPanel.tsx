@@ -86,6 +86,11 @@ export function DiagnosticPanel({
   }
 
   const displayedIssuesCount = filteredIssues.length;
+  
+  // Use summary totals for the count label to avoid inconsistency
+  // between "X problemas" and the severity badges
+  const summaryTotal = diagnostic.summary.critical + diagnostic.summary.high + diagnostic.summary.medium + diagnostic.summary.info;
+  const labelCount = intent === 'soc' ? displayedIssuesCount : summaryTotal;
 
   // Healthy
   if (diagnostic.isHealthy && displayedIssuesCount === 0) {
@@ -126,7 +131,7 @@ export function DiagnosticPanel({
           <div className="flex items-center gap-2">
             <Stethoscope className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">
-              {displayedIssuesCount} {displayedIssuesCount === 1 ? 'problema identificado' : 'problemas identificados'}
+              {labelCount} {labelCount === 1 ? 'problema identificado' : 'problemas identificados'}
             </span>
             {intent === 'soc' && (
               <span className="text-[10px] text-destructive font-medium uppercase tracking-wider">SOC</span>
@@ -173,7 +178,7 @@ export function DiagnosticPanel({
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {displayedIssuesCount} {displayedIssuesCount === 1 ? 'problema identificado' : 'problemas identificados'}
+              {labelCount} {labelCount === 1 ? 'problema identificado' : 'problemas identificados'}
               {intent === 'soc' ? ' — apenas ameaças críticas' : ''}
             </p>
           </div>

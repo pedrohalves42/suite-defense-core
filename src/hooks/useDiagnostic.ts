@@ -88,13 +88,17 @@ export function useDiagnostic(
         (SEVERITY_ORDER[a.severity] || 99) - (SEVERITY_ORDER[b.severity] || 99)
       );
 
-      // Calculate summary
+      // Calculate summary - ensure total = sum of individual counts
+      const critical = issues.filter(i => i.severity === 'critical').length;
+      const high = issues.filter(i => i.severity === 'high').length;
+      const medium = issues.filter(i => i.severity === 'medium').length;
+      const info = issues.filter(i => i.severity === 'info').length;
       const summary: DiagnosticSummary = {
-        critical: issues.filter(i => i.severity === 'critical').length,
-        high: issues.filter(i => i.severity === 'high').length,
-        medium: issues.filter(i => i.severity === 'medium').length,
-        info: issues.filter(i => i.severity === 'info').length,
-        total: issues.length,
+        critical,
+        high,
+        medium,
+        info,
+        total: critical + high + medium + info, // Sum of known severities, not issues.length
       };
 
       // Use canonical health rule - explicit input object
