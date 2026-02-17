@@ -94,8 +94,23 @@ serve(async (req) => {
 
     // Simple heuristic: processes running from temp/download folders
     const suspiciousPaths = ['\\temp\\', '\\tmp\\', '\\downloads\\', '\\appdata\\local\\temp\\'];
+    
+    // Whitelist: known safe processes that may run from flagged paths
+    const safeProcesses = [
+      'teamviewer_service.exe', 'teamviewer.exe',
+      'anydesk.exe', 'anydesk service.exe',
+      'chrome.exe', 'msedge.exe', 'firefox.exe', 'brave.exe',
+      'code.exe', 'devenv.exe',
+      'onedrive.exe', 'dropbox.exe',
+      'slack.exe', 'teams.exe', 'zoom.exe',
+      'windowsdefender.exe', 'msmpeng.exe',
+      'svchost.exe', 'explorer.exe', 'taskhostw.exe',
+    ];
+    
     suspiciousProcesses = processes.filter(p =>
-      p.command_line && suspiciousPaths.some(sp => p.command_line!.toLowerCase().includes(sp))
+      p.command_line && 
+      suspiciousPaths.some(sp => p.command_line!.toLowerCase().includes(sp)) &&
+      !safeProcesses.includes(p.name.toLowerCase())
     );
 
     const { error: insertError } = await supabase
