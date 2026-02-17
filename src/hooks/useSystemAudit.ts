@@ -64,17 +64,24 @@ export interface AuditResult {
   tokens_used: number;
 }
 
-// Fetch audit history
+// Fetch audit history (filtered by active tenant)
 export function useAuditHistory(limit = 10) {
+  const activeTenantId = localStorage.getItem('cybershield_active_tenant_id');
+  
   return useQuery({
-    queryKey: ['system-audits', limit],
+    queryKey: ['system-audits', limit, activeTenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('system_audits')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(limit);
 
+      if (activeTenantId) {
+        query = query.eq('tenant_id', activeTenantId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as SystemAudit[];
     },
@@ -132,18 +139,24 @@ export function useRunAudit() {
   return { runAudit, isRunning };
 }
 
-// Get latest audit
+// Get latest audit (filtered by active tenant)
 export function useLatestAudit() {
+  const activeTenantId = localStorage.getItem('cybershield_active_tenant_id');
+
   return useQuery({
-    queryKey: ['system-audits', 'latest'],
+    queryKey: ['system-audits', 'latest', activeTenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('system_audits')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
 
+      if (activeTenantId) {
+        query = query.eq('tenant_id', activeTenantId);
+      }
+
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
       return data as SystemAudit | null;
     },
