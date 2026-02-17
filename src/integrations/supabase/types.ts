@@ -14237,6 +14237,180 @@ export type Database = {
         }
         Relationships: []
       }
+      rollback_test_results: {
+        Row: {
+          agent_id: string | null
+          completed_at: string | null
+          created_at: string
+          dry_run: boolean
+          duration_ms: number | null
+          error_message: string | null
+          from_version: string | null
+          id: string
+          initiated_by: string | null
+          steps_executed: Json | null
+          steps_total: number | null
+          tenant_id: string
+          test_status: string
+          test_type: string
+          to_version: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          dry_run?: boolean
+          duration_ms?: number | null
+          error_message?: string | null
+          from_version?: string | null
+          id?: string
+          initiated_by?: string | null
+          steps_executed?: Json | null
+          steps_total?: number | null
+          tenant_id: string
+          test_status?: string
+          test_type?: string
+          to_version?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          dry_run?: boolean
+          duration_ms?: number | null
+          error_message?: string | null
+          from_version?: string | null
+          id?: string
+          initiated_by?: string | null
+          steps_executed?: Json | null
+          steps_total?: number | null
+          tenant_id?: string
+          test_status?: string
+          test_type?: string
+          to_version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rollback_test_results_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "rollback_test_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       runbooks: {
         Row: {
           anomaly_type: string
@@ -24372,6 +24546,10 @@ export type Database = {
           insight_ids: string[]
         }[]
       }
+      auto_approve_safe_actions: {
+        Args: { p_tenant_id?: string }
+        Returns: Json
+      }
       auto_cancel_archived_agent_jobs: { Args: never; Returns: number }
       auto_cancel_zombie_jobs: {
         Args: never
@@ -24923,6 +25101,10 @@ export type Database = {
       }
       execute_playbook_actions: {
         Args: { p_execution_id: string }
+        Returns: Json
+      }
+      execute_rollback_test: {
+        Args: { p_agent_id?: string; p_dry_run?: boolean; p_tenant_id: string }
         Returns: Json
       }
       execute_with_timeout: {

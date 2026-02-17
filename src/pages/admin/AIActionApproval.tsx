@@ -16,6 +16,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useApprovalMetrics } from '@/components/admin/AIApprovalMetrics';
 import { cn } from '@/lib/utils';
+import { AutoApprovalPanel } from '@/components/admin/AutoApprovalPanel';
+import { RollbackTestPanel } from '@/components/admin/RollbackTestPanel';
 
 interface AIAction {
   id: string;
@@ -301,6 +303,12 @@ export default function AIActionApproval() {
 
   return (
     <div className="space-y-6">
+      {/* Auto-Approval Panel */}
+      <AutoApprovalPanel />
+
+      {/* Rollback Test Panel */}
+      <RollbackTestPanel />
+
       {/* Header - LINGUAGEM HUMANA */}
       <div className="flex items-center justify-between">
         <div>
