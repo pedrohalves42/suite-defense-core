@@ -111,19 +111,18 @@ export function GovernanceHealthBanner() {
       const totalUsers = new Set(users?.map(u => u.user_id) || []).size;
       const privilegedUsers = users?.filter(u => u.role === 'admin' || u.role === 'super_admin').length || 0;
       
-      // For MFA count, we'd need to check auth.users which requires admin access
-      // For now, we use the audit metrics if available
+      // Get MFA coverage using dedicated RPC that queries auth.mfa_factors
       let usersWithMFA = 0;
       try {
-        const { data: auditData } = await supabase.rpc('get_audit_raw_metrics', {
+        const { data: mfaData } = await supabase.rpc('get_mfa_user_count', {
           p_tenant_id: tenant.id
         });
         
-        if (auditData && typeof auditData === 'object' && 'users_with_mfa' in auditData) {
-          usersWithMFA = (auditData as { users_with_mfa?: number }).users_with_mfa || 0;
+        if (mfaData && typeof mfaData === 'object' && 'users_with_mfa' in mfaData) {
+          usersWithMFA = (mfaData as { users_with_mfa: number }).users_with_mfa || 0;
         }
       } catch {
-        // Ignore errors from audit metrics
+        // Fallback: ignore errors
       }
 
       // Get critical alerts

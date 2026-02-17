@@ -24955,6 +24955,7 @@ export type Database = {
           uptime_seconds: number
         }[]
       }
+      get_mfa_user_count: { Args: { p_tenant_id: string }; Returns: Json }
       get_playbook_execution_breakdown: {
         Args: { p_days_back?: number; p_tenant_id: string }
         Returns: {
