@@ -363,11 +363,11 @@ export default function AIInsights() {
         <TabsList>
           <TabsTrigger value="pending" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
-            Aguardando ({pendingInsights.length})
+            Aguardando ({stats.pending})
           </TabsTrigger>
           <TabsTrigger value="acknowledged" className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
-            Resolvidos ({acknowledgedInsights.length})
+            Resolvidos ({stats.acknowledged})
           </TabsTrigger>
         </TabsList>
 
