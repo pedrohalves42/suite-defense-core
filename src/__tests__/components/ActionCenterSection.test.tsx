@@ -1,6 +1,21 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ActionCenterSection } from '@/components/action-center/ActionCenterSection';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Mock the suppressed alerts hook
+vi.mock('@/hooks/useSuppressedAlerts', () => ({
+  useSuppressedAlertsByArchive: () => ({ data: 0 }),
+}));
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+}
 
 describe('ActionCenterSection', () => {
   describe('Header Rendering', () => {
@@ -8,10 +23,11 @@ describe('ActionCenterSection', () => {
       render(
         <ActionCenterSection type="urgent" count={3}>
           <div>Test content</div>
-        </ActionCenterSection>
+        </ActionCenterSection>,
+        { wrapper: createWrapper() }
       );
 
-      expect(screen.getByText('Ações Urgentes')).toBeInTheDocument();
+      expect(screen.getByText('Críticos')).toBeInTheDocument();
       expect(screen.getByText('🔴')).toBeInTheDocument();
     });
 
@@ -19,10 +35,11 @@ describe('ActionCenterSection', () => {
       render(
         <ActionCenterSection type="recommended" count={2}>
           <div>Test content</div>
-        </ActionCenterSection>
+        </ActionCenterSection>,
+        { wrapper: createWrapper() }
       );
 
-      expect(screen.getByText('Ações Recomendadas')).toBeInTheDocument();
+      expect(screen.getByText('Médios')).toBeInTheDocument();
       expect(screen.getByText('🟡')).toBeInTheDocument();
     });
 
@@ -30,10 +47,11 @@ describe('ActionCenterSection', () => {
       render(
         <ActionCenterSection type="informational" count={5}>
           <div>Test content</div>
-        </ActionCenterSection>
+        </ActionCenterSection>,
+        { wrapper: createWrapper() }
       );
 
-      expect(screen.getByText('Informativo')).toBeInTheDocument();
+      expect(screen.getByText('Informativos')).toBeInTheDocument();
       expect(screen.getByText('🔵')).toBeInTheDocument();
     });
   });
@@ -43,7 +61,8 @@ describe('ActionCenterSection', () => {
       render(
         <ActionCenterSection type="urgent" count={7}>
           <div>Test content</div>
-        </ActionCenterSection>
+        </ActionCenterSection>,
+        { wrapper: createWrapper() }
       );
 
       expect(screen.getByText('7')).toBeInTheDocument();
@@ -53,7 +72,8 @@ describe('ActionCenterSection', () => {
       render(
         <ActionCenterSection type="recommended" count={1}>
           <div>Test content</div>
-        </ActionCenterSection>
+        </ActionCenterSection>,
+        { wrapper: createWrapper() }
       );
 
       expect(screen.getByText('1')).toBeInTheDocument();
@@ -63,7 +83,8 @@ describe('ActionCenterSection', () => {
       render(
         <ActionCenterSection type="informational" count={99}>
           <div>Test content</div>
-        </ActionCenterSection>
+        </ActionCenterSection>,
+        { wrapper: createWrapper() }
       );
 
       expect(screen.getByText('99')).toBeInTheDocument();
@@ -75,7 +96,8 @@ describe('ActionCenterSection', () => {
       const { container } = render(
         <ActionCenterSection type="urgent" count={0}>
           <div>Test content</div>
-        </ActionCenterSection>
+        </ActionCenterSection>,
+        { wrapper: createWrapper() }
       );
 
       expect(container.firstChild).toBeNull();
@@ -85,7 +107,8 @@ describe('ActionCenterSection', () => {
       render(
         <ActionCenterSection type="urgent" count={0}>
           <div data-testid="child-content">Should not appear</div>
-        </ActionCenterSection>
+        </ActionCenterSection>,
+        { wrapper: createWrapper() }
       );
 
       expect(screen.queryByTestId('child-content')).not.toBeInTheDocument();
@@ -97,20 +120,23 @@ describe('ActionCenterSection', () => {
       render(
         <ActionCenterSection type="urgent" count={1}>
           <div data-testid="child-content">Action card content</div>
-        </ActionCenterSection>
+        </ActionCenterSection>,
+        { wrapper: createWrapper() }
       );
 
+      // Urgent section is defaultOpen=true, so children are visible
       expect(screen.getByTestId('child-content')).toBeInTheDocument();
       expect(screen.getByText('Action card content')).toBeInTheDocument();
     });
 
     it('should render multiple children', () => {
       render(
-        <ActionCenterSection type="recommended" count={3}>
+        <ActionCenterSection type="urgent" count={3}>
           <div>Card 1</div>
           <div>Card 2</div>
           <div>Card 3</div>
-        </ActionCenterSection>
+        </ActionCenterSection>,
+        { wrapper: createWrapper() }
       );
 
       expect(screen.getByText('Card 1')).toBeInTheDocument();
@@ -124,11 +150,13 @@ describe('ActionCenterSection', () => {
       render(
         <ActionCenterSection type="urgent" count={1} className="custom-class">
           <div>Content</div>
-        </ActionCenterSection>
+        </ActionCenterSection>,
+        { wrapper: createWrapper() }
       );
 
-      const section = screen.getByText('Content').closest('section');
-      expect(section).toHaveClass('custom-class');
+      // The section element with custom class
+      const section = document.querySelector('section.custom-class');
+      expect(section).toBeInTheDocument();
     });
   });
 
@@ -137,31 +165,33 @@ describe('ActionCenterSection', () => {
       render(
         <ActionCenterSection type="urgent" count={1}>
           <div>Content</div>
-        </ActionCenterSection>
+        </ActionCenterSection>,
+        { wrapper: createWrapper() }
       );
 
-      // Check that the section renders (icon styling is applied via Tailwind)
-      expect(screen.getByText('Ações Urgentes')).toBeInTheDocument();
+      expect(screen.getByText('Críticos')).toBeInTheDocument();
     });
 
     it('should render with yellow icon for recommended', () => {
       render(
         <ActionCenterSection type="recommended" count={1}>
           <div>Content</div>
-        </ActionCenterSection>
+        </ActionCenterSection>,
+        { wrapper: createWrapper() }
       );
 
-      expect(screen.getByText('Ações Recomendadas')).toBeInTheDocument();
+      expect(screen.getByText('Médios')).toBeInTheDocument();
     });
 
     it('should render with blue icon for informational', () => {
       render(
         <ActionCenterSection type="informational" count={1}>
           <div>Content</div>
-        </ActionCenterSection>
+        </ActionCenterSection>,
+        { wrapper: createWrapper() }
       );
 
-      expect(screen.getByText('Informativo')).toBeInTheDocument();
+      expect(screen.getByText('Informativos')).toBeInTheDocument();
     });
   });
 });

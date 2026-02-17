@@ -216,7 +216,7 @@ describe('Input Validation', () => {
       
       const containsSqlInjection = (input: string) => {
         const sqlPatterns = [
-          /(\bDROP\b|\bDELETE\b|\bUPDATE\b|\bINSERT\b|\bUNION\b)/i,
+          /(\bDROP\b|\bDELETE\b|\bUPDATE\b|\bINSERT\b|\bUNION\b|\bOR\b)/i,
           /(--)|(;)|('.*'='.*')/,
         ];
         return sqlPatterns.some(pattern => pattern.test(input));
