@@ -4,12 +4,12 @@ import { APP_ROLES, isValidRole, assertValidRole, ROLE_PRIORITY } from './roles'
 describe('Role System', () => {
   describe('APP_ROLES', () => {
     it('deve conter todos os roles do banco de dados', () => {
-      const expectedRoles = ['viewer', 'operator', 'admin', 'super_admin'];
+      const expectedRoles = ['viewer', 'operator', 'analyst', 'admin', 'super_admin'];
       expect(APP_ROLES).toEqual(expectedRoles);
     });
 
-    it('deve ter 4 roles no total', () => {
-      expect(APP_ROLES).toHaveLength(4);
+    it('deve ter 5 roles no total', () => {
+      expect(APP_ROLES).toHaveLength(5);
     });
   });
 
@@ -17,6 +17,7 @@ describe('Role System', () => {
     it('deve aceitar todos os roles validos', () => {
       expect(isValidRole('viewer')).toBe(true);
       expect(isValidRole('operator')).toBe(true);
+      expect(isValidRole('analyst')).toBe(true);
       expect(isValidRole('admin')).toBe(true);
       expect(isValidRole('super_admin')).toBe(true);
     });
@@ -54,8 +55,9 @@ describe('Role System', () => {
     it('deve ter prioridades corretas', () => {
       expect(ROLE_PRIORITY.viewer).toBe(1);
       expect(ROLE_PRIORITY.operator).toBe(2);
-      expect(ROLE_PRIORITY.admin).toBe(3);
-      expect(ROLE_PRIORITY.super_admin).toBe(4);
+      expect(ROLE_PRIORITY.analyst).toBe(3);
+      expect(ROLE_PRIORITY.admin).toBe(4);
+      expect(ROLE_PRIORITY.super_admin).toBe(5);
     });
 
     it('super_admin deve ter maior prioridade', () => {

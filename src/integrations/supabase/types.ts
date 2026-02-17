@@ -23524,6 +23524,14 @@ export type Database = {
         Row: {
           admin_count: number | null
           analyst_count: number | null
+          distinct_roles: number | null
+          has_role_function: boolean | null
+          has_super_admin_function: boolean | null
+          has_tenant_access_function: boolean | null
+          has_tenant_id_function: boolean | null
+          operator_count: number | null
+          rbac_status: string | null
+          super_admin_count: number | null
           tenant_id: string | null
           total_users: number | null
           viewer_count: number | null
