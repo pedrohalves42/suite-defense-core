@@ -131,7 +131,7 @@ export default function AuditLogs() {
       // Build CSV
       const headers = ['Data/Hora', 'Usuário', 'Ação', 'Recurso', 'ID Recurso', 'Resultado', 'IP'];
       const rows = (data || []).map((log: any) => [
-        new Date(log.created_at).toLocaleString('pt-BR'),
+        formatBrazilDateTime(log.created_at, 'full'),
         log.actor?.full_name || 'Sistema',
         getActionLabel(log.action),
         getResourceLabel(log.resource_type),

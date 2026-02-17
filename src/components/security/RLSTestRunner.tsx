@@ -1,3 +1,4 @@
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -98,7 +99,7 @@ export function RLSTestRunner() {
           {lastRunTime && (
             <span className="text-sm text-muted-foreground flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              Última execução: {new Date(lastRunTime).toLocaleTimeString()}
+              Última execução: {formatBrazilDateTime(lastRunTime, 'time')}
             </span>
           )}
         </div>
@@ -143,7 +144,7 @@ export function RLSTestRunner() {
                 Último Teste: {latestResult.test_name}
               </h4>
               <span className="text-xs text-muted-foreground">
-                {new Date(latestResult.tested_at).toLocaleString()}
+                {formatBrazilDateTime(latestResult.tested_at, 'short')}
               </span>
             </div>
             
@@ -178,7 +179,7 @@ export function RLSTestRunner() {
                     <span>{result.test_name}</span>
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {new Date(result.tested_at).toLocaleDateString()}
+                    {formatBrazilDateTime(result.tested_at, 'date')}
                   </span>
                 </div>
               ))}

@@ -1,3 +1,4 @@
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import React from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -88,6 +89,7 @@ export default function Subscriptions() {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      timeZone: 'America/Sao_Paulo',
     });
   };
 
@@ -213,7 +215,7 @@ export default function Subscriptions() {
               <div>
                 <p className="text-sm text-muted-foreground">Próxima Renovação</p>
                 <p className="text-lg font-medium">
-                  {new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}
+                  {formatBrazilDateTime(new Date(subscription.current_period_end), 'date')}
                 </p>
               </div>
             )}

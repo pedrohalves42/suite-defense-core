@@ -3,6 +3,7 @@
  * Design: Enterprise premium, direto e assertivo
  */
 
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -111,7 +112,7 @@ export function DiagnosticPanel({
           </Button>
         </div>
         <p className="text-[11px] text-muted-foreground px-1">
-          Verificado às {new Date(diagnostic.lastCheck).toLocaleTimeString('pt-BR')}
+          Verificado às {formatBrazilDateTime(diagnostic.lastCheck, 'time')}
         </p>
       </div>
     );

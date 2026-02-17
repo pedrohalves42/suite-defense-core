@@ -1,3 +1,4 @@
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useState } from 'react';
 import { Trash2, AlertTriangle, CheckCircle, Clock, XCircle, Loader2, Zap, ShieldAlert } from 'lucide-react';
 import {
@@ -94,13 +95,7 @@ export function JobCleanupDialog({ onCleanupComplete }: JobCleanupDialogProps) {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return formatBrazilDateTime(dateStr, 'datetime');
   };
 
   return (

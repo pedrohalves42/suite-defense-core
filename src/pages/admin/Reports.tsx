@@ -395,7 +395,7 @@ export default function Reports() {
         const webData = reportData.data.web_activity.slice(0, 30).map((web: any) => [
           (web.domain || '-').substring(0, 40),
           web.source || '-',
-          new Date(web.visited_at).toLocaleDateString('pt-BR')
+          formatBrazilDateTime(web.visited_at, 'date')
         ]);
 
         autoTable(doc, {
@@ -475,10 +475,10 @@ export default function Reports() {
       validUntilDate.setDate(validUntilDate.getDate() + 30);
       
       const dateStrFull = generatedDate.toLocaleDateString('pt-BR', { 
-        day: '2-digit', month: 'long', year: 'numeric' 
+        day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo'
       });
       const validUntilStr = validUntilDate.toLocaleDateString('pt-BR', { 
-        day: '2-digit', month: 'long', year: 'numeric' 
+        day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo'
       });
 
       // Generate QR code for verification
@@ -999,7 +999,7 @@ export default function Reports() {
           formatValue(av.engine_name, 'Desconhecido'),
           formatValue(av.status, 'Desconhecido'),
           formatValue(av.threats_found, '0'),
-          av.last_update_at ? new Date(av.last_update_at).toLocaleDateString('pt-BR') : 'Não disponível'
+          av.last_update_at ? formatBrazilDateTime(av.last_update_at, 'date') : 'Não disponível'
         ]);
 
         autoTable(doc, {
@@ -1025,7 +1025,7 @@ export default function Reports() {
         const loginData = reportData.data.failed_login_attempts.slice(0, 15).map((f: any) => [
           formatValue(f.email, 'Não informado'),
           formatValue(f.ip_address, 'Não identificado'),
-          new Date(f.created_at).toLocaleString('pt-BR'),
+          formatBrazilDateTime(f.created_at, 'full'),
         ]);
 
         autoTable(doc, {
@@ -1218,7 +1218,7 @@ export default function Reports() {
       let csvContent = "";
       
       csvContent += "RELATÓRIO DE SEGURANÇA CYBERSHIELD\n";
-      csvContent += `Data de Geração:,${new Date(reportData.generated_at).toLocaleString("pt-BR")}\n`;
+      csvContent += `Data de Geração:,${formatBrazilDateTime(reportData.generated_at, 'full')}\n`;
       csvContent += `Filtro:,${reportData.agent_filter === "all" ? "Todos os Agentes" : reportData.agent_filter}\n\n`;
       
       csvContent += "ESTATÍSTICAS GERAIS\n";
@@ -1420,7 +1420,7 @@ export default function Reports() {
               <CardTitle className="flex items-center justify-between">
                 <span>Sumário do Relatório</span>
                 <Badge variant="outline">
-                  {new Date(report.generated_at).toLocaleString("pt-BR")}
+                  {formatBrazilDateTime(report.generated_at, 'full')}
                 </Badge>
               </CardTitle>
               <CardDescription>
