@@ -204,13 +204,17 @@ export default function AgentHealthMonitor() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-xl font-bold flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
             <Server className="h-5 w-5 text-primary" />
-            Status dos Computadores
-          </h1>
-          <p className="text-sm text-muted-foreground">Veja se todos os seus computadores estão funcionando bem</p>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Status dos Computadores
+            </h2>
+            <p className="text-sm text-muted-foreground">Veja se todos os seus computadores estão funcionando bem</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild>

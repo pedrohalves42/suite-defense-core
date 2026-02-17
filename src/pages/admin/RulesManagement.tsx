@@ -75,7 +75,7 @@ export default function RulesManagement() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="space-y-6">
         <Skeleton className="h-9 w-64" />
         <div className="grid gap-4">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-40 w-full" />)}
@@ -85,12 +85,19 @@ export default function RulesManagement() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Gerenciamento de Regras</h1>
-          <p className="text-muted-foreground">Configure as regras do motor de decisão automática</p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
+            <ShieldAlert className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Gerenciamento de Regras
+            </h2>
+            <p className="text-sm text-muted-foreground">Configure as regras do motor de decisão automática</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button 

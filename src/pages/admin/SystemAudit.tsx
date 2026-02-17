@@ -135,17 +135,21 @@ export default function SystemAudit() {
   const globalStatus = getGlobalStatus();
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
             <Shield className="h-5 w-5 text-primary" />
-            Verificação de Segurança
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Análise completa do sistema para garantir sua proteção
-          </p>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Verificação de Segurança
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Análise completa do sistema para garantir sua proteção
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button

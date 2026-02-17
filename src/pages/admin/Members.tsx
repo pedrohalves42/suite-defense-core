@@ -158,19 +158,26 @@ export default function Members() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            Gerenciar Membros
-            {tenant && (
-              <Badge variant="outline" className="font-normal text-base">
-                {tenant.name}
-              </Badge>
-            )}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Gerencie os membros do seu tenant
-          </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
+            <UserCog className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Gerenciar Membros
+              </h2>
+              {tenant && (
+                <Badge variant="outline" className="font-normal text-sm">
+                  {tenant.name}
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Gerencie os membros do seu tenant
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {!isUnlimited && isAtLimit && (

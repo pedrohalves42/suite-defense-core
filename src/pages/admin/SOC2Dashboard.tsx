@@ -47,12 +47,19 @@ export default function SOC2Dashboard() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Prontidão para Auditoria SOC 2</h1>
-          <p className="text-muted-foreground">Critérios de Confiança (Type I)</p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
+            <Shield className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Prontidão para Auditoria SOC 2
+            </h2>
+            <p className="text-sm text-muted-foreground">Critérios de Confiança (Type I)</p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <Button 

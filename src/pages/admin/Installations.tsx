@@ -10,12 +10,19 @@ const Installations = () => {
   const activeTab = searchParams.get('tab') || 'installer';
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Central de Instalações</h1>
-        <p className="text-muted-foreground">
-          Instale novos agentes e monitore a saúde do processo
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-start gap-3">
+        <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
+          <Package className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            Central de Instalações
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Instale novos agentes e monitore a saúde do processo
+          </p>
+        </div>
       </div>
 
       <Tabs 
