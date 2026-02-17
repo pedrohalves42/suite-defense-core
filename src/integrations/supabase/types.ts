@@ -25258,6 +25258,10 @@ export type Database = {
           version: number
         }[]
       }
+      get_zombie_threshold_minutes: {
+        Args: { p_job_type: string }
+        Returns: number
+      }
       hard_delete_agent: { Args: { p_agent_id: string }; Returns: Json }
       has_recent_playbook_execution: {
         Args: {

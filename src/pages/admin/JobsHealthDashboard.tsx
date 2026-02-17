@@ -11,7 +11,10 @@ import {
   TrendingUp,
   Timer,
   Inbox,
-  XCircle
+  XCircle,
+  PauseCircle,
+  ArrowUpCircle,
+  PieChart,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useJobsHealth } from '@/hooks/useJobsHealth';
@@ -23,6 +26,7 @@ import { JobSLOStatusCard } from '@/components/admin/jobs/JobSLOStatusCard';
 import { calculateRealSuccessRate } from '@/components/admin/JobStatusSimplified';
 import { SectionDivider } from '@/components/ui/section-divider';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 function KPICard({ 
   title, 
@@ -84,7 +88,7 @@ function KPICard({
 }
 
 export default function JobsHealthDashboard() {
-  const { summary, metrics, trends, stuckJobs, isLoading, refetch } = useJobsHealth();
+  const { summary, metrics, trends, stuckJobs, pausedAgents, outdatedAgents, failureBreakdown, isLoading, refetch } = useJobsHealth();
 
   const getSuccessRateColor = (rate: number): 'success' | 'warning' | 'error' => {
     if (rate >= 90) return 'success';
@@ -197,6 +201,117 @@ export default function JobsHealthDashboard() {
           color={summary.failedJobs > 0 ? 'warning' : 'muted'}
           isLoading={isLoading}
         />
+      </motion.div>
+
+      {/* Operational Visibility - Fase 5 */}
+      <SectionDivider label="Visibilidade Operacional" />
+      
+      <motion.div 
+        className="grid grid-cols-1 md:grid-cols-3 gap-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+      >
+        {/* Paused Agents */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <PauseCircle className="h-5 w-5 text-yellow-500" />
+              Agentes Pausados
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{pausedAgents.length}</p>
+            {pausedAgents.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {pausedAgents.slice(0, 3).map(a => (
+                  <TooltipProvider key={a.id}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="text-xs text-muted-foreground truncate cursor-help">
+                          {a.agent_name} <Badge variant="outline" className="ml-1 text-[10px]">{a.status}</Badge>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{a.scheduling_paused_reason || 'Sem motivo especificado'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ))}
+                {pausedAgents.length > 3 && (
+                  <p className="text-xs text-muted-foreground">+{pausedAgents.length - 3} mais</p>
+                )}
+              </div>
+            )}
+            {pausedAgents.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">Todos os agentes recebendo jobs</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Outdated Versions */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ArrowUpCircle className="h-5 w-5 text-orange-500" />
+              Versões Desatualizadas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{outdatedAgents.length}</p>
+            {outdatedAgents.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {outdatedAgents.slice(0, 3).map(a => (
+                  <div key={a.id} className="text-xs text-muted-foreground truncate">
+                    {a.agent_name} <Badge variant="secondary" className="ml-1 text-[10px]">{a.agent_version}</Badge>
+                  </div>
+                ))}
+                <p className="text-xs text-muted-foreground">Versão atual: <span className="font-medium">{outdatedAgents.length > 0 ? outdatedAgents[0].agent_version : ''}</span> → mais recente não instalada</p>
+              </div>
+            )}
+            {outdatedAgents.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">Todos os agentes ativos na versão mais recente</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Failure Breakdown */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <PieChart className="h-5 w-5 text-red-500" />
+              Causas de Falha (7d)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {failureBreakdown.length > 0 ? (
+              <div className="space-y-2">
+                {failureBreakdown.slice(0, 5).map(fb => {
+                  const total = failureBreakdown.reduce((s, f) => s + f.count, 0);
+                  const pct = total > 0 ? Math.round((fb.count / total) * 100) : 0;
+                  const barColor = fb.category === 'agent_offline' ? 'bg-yellow-500' 
+                    : fb.category === 'ttl_exceeded' ? 'bg-orange-500'
+                    : fb.category === 'zombie_stalled' ? 'bg-purple-500'
+                    : fb.category === 'unknown_handler' ? 'bg-blue-500'
+                    : 'bg-red-500';
+                  return (
+                    <div key={fb.category}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-muted-foreground">{fb.label}</span>
+                        <span className="font-medium">{fb.count} ({pct}%)</span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className={cn("h-full rounded-full", barColor)} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Nenhuma falha no período</p>
+            )}
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* Charts and Tables */}
