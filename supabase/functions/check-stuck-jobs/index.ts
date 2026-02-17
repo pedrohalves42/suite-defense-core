@@ -1,6 +1,6 @@
 /**
- * P1-01: Alerta de Jobs Stuck
- * Detecta jobs em status "delivered" por mais de 30 minutos e gera alertas
+ * P1-01: Alerta de Jobs Stuck (Enhanced with per-type zombie thresholds)
+ * Uses DB function get_zombie_threshold_minutes(type) for adaptive detection
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
@@ -14,24 +14,29 @@ interface StuckJob {
   minutes_stuck: number;
 }
 
+/** Per-type zombie thresholds (mirrors DB function get_zombie_threshold_minutes) */
+function getZombieThresholdMinutes(jobType: string): number {
+  if (jobType === 'health_check' || jobType === 'config') return 15;
+  if (jobType.startsWith('collect_') || jobType === 'light_vuln_scan' || jobType === 'integration_test_v3') return 30;
+  if (jobType === 'software_inventory_collect' || jobType === 'disk_cleanup') return 60;
+  if (jobType === 'update_agent' || jobType === 'apply_security_patch' || jobType === 'reinstall_agent') return 120;
+  return 45;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] Starting stuck jobs check`);
+  console.log(`[${requestId}] Starting stuck jobs check (adaptive thresholds)`);
 
-  // Validate internal secret for scheduled/internal calls
   const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
   const providedSecret = req.headers.get('X-Internal-Secret');
-  
-  // Allow both internal secret and scheduled execution (no auth header)
   const isScheduled = !providedSecret && req.headers.get('authorization') === null;
   const isInternal = providedSecret === INTERNAL_SECRET;
   
   if (!isScheduled && !isInternal) {
-    console.warn(`[${requestId}] Unauthorized access attempt`);
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -45,136 +50,121 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Jobs stuck for more than 30 minutes
-    const STUCK_THRESHOLD_MINUTES = 30;
-    const cutoffTime = new Date(Date.now() - STUCK_THRESHOLD_MINUTES * 60 * 1000).toISOString();
-
-    // Fetch stuck jobs
-    const { data: stuckJobs, error: fetchError } = await supabase
+    // Fetch ALL delivered jobs (we'll filter per-type threshold in code)
+    const { data: deliveredJobs, error: fetchError } = await supabase
       .from('jobs')
       .select('id, agent_name, type, delivered_at, tenant_id')
-      .eq('status', 'delivered')
-      .lt('delivered_at', cutoffTime);
+      .eq('status', 'delivered');
 
-    if (fetchError) {
-      console.error(`[${requestId}] Error fetching stuck jobs:`, fetchError);
-      throw fetchError;
-    }
+    if (fetchError) throw fetchError;
 
-    if (!stuckJobs || stuckJobs.length === 0) {
-      console.log(`[${requestId}] No stuck jobs found`);
+    if (!deliveredJobs || deliveredJobs.length === 0) {
+      console.log(`[${requestId}] No delivered jobs found`);
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          stuck_jobs: 0, 
-          alerts_created: 0,
-          timestamp: new Date().toISOString()
-        }),
+        JSON.stringify({ success: true, stuck_jobs: 0, alerts_created: 0, auto_failed: 0, timestamp: new Date().toISOString() }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[${requestId}] Found ${stuckJobs.length} stuck jobs`);
+    // Filter stuck jobs using per-type thresholds
+    const stuckJobs: StuckJob[] = [];
+    const autoFailIds: string[] = [];
 
-    // Calculate minutes stuck and group by tenant
-    const jobsByTenant: Record<string, StuckJob[]> = {};
-    
-    for (const job of stuckJobs) {
+    for (const job of deliveredJobs) {
       const deliveredAt = new Date(job.delivered_at);
       const minutesStuck = Math.floor((Date.now() - deliveredAt.getTime()) / (1000 * 60));
-      
-      const stuckJob: StuckJob = {
-        ...job,
-        minutes_stuck: minutesStuck
-      };
+      const threshold = getZombieThresholdMinutes(job.type);
 
-      if (!jobsByTenant[job.tenant_id]) {
-        jobsByTenant[job.tenant_id] = [];
+      if (minutesStuck >= threshold) {
+        stuckJobs.push({ ...job, minutes_stuck: minutesStuck });
+        
+        // Auto-fail jobs stuck > 2x threshold (clearly zombie)
+        if (minutesStuck >= threshold * 2) {
+          autoFailIds.push(job.id);
+        }
       }
-      jobsByTenant[job.tenant_id].push(stuckJob);
     }
 
-    // Create alerts for each tenant
-    let alertsCreated = 0;
-    const alertResults: { tenant_id: string; success: boolean; error?: string }[] = [];
+    // Auto-fail zombie jobs
+    let autoFailedCount = 0;
+    if (autoFailIds.length > 0) {
+      const { count } = await supabase
+        .from('jobs')
+        .update({
+          status: 'failed',
+          error_message: 'ZOMBIE_AUTO_FAILED: exceeded 2x zombie threshold without response',
+          completed_at: new Date().toISOString(),
+        })
+        .in('id', autoFailIds)
+        .eq('status', 'delivered');
+      
+      autoFailedCount = count || autoFailIds.length;
+      console.log(`[${requestId}] Auto-failed ${autoFailedCount} zombie jobs`);
+    }
 
+    if (stuckJobs.length === 0) {
+      console.log(`[${requestId}] No stuck jobs after per-type threshold filtering`);
+      return new Response(
+        JSON.stringify({ success: true, stuck_jobs: 0, alerts_created: 0, auto_failed: autoFailedCount, timestamp: new Date().toISOString() }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[${requestId}] Found ${stuckJobs.length} stuck jobs (${autoFailIds.length} auto-failed)`);
+
+    // Group by tenant and create alerts
+    const jobsByTenant: Record<string, StuckJob[]> = {};
+    for (const job of stuckJobs) {
+      if (!jobsByTenant[job.tenant_id]) jobsByTenant[job.tenant_id] = [];
+      jobsByTenant[job.tenant_id].push(job);
+    }
+
+    let alertsCreated = 0;
     for (const [tenantId, jobs] of Object.entries(jobsByTenant)) {
       try {
-        // Determine severity based on time stuck
         const maxMinutesStuck = Math.max(...jobs.map(j => j.minutes_stuck));
         let severity: 'low' | 'medium' | 'high' | 'critical' = 'medium';
-        
-        if (maxMinutesStuck >= 120) {
-          severity = 'critical';
-        } else if (maxMinutesStuck >= 60) {
-          severity = 'high';
-        }
+        if (maxMinutesStuck >= 120) severity = 'critical';
+        else if (maxMinutesStuck >= 60) severity = 'high';
 
-        // Create system alert
         const { error: alertError } = await supabase
           .from('system_alerts')
           .insert({
             tenant_id: tenantId,
             alert_type: 'stuck_jobs',
             severity,
-            message: `${jobs.length} job(s) travado(s) em estado "delivered" por mais de ${STUCK_THRESHOLD_MINUTES} minutos`,
+            message: `${jobs.length} job(s) travado(s) (thresholds adaptativos por tipo)`,
             metadata: {
               job_count: jobs.length,
+              auto_failed: autoFailIds.filter(id => jobs.some(j => j.id === id)).length,
               max_minutes_stuck: maxMinutesStuck,
-              jobs: jobs.map(j => ({
+              jobs: jobs.slice(0, 10).map(j => ({
                 id: j.id,
                 type: j.type,
                 agent_name: j.agent_name,
-                minutes_stuck: j.minutes_stuck
+                minutes_stuck: j.minutes_stuck,
+                threshold: getZombieThresholdMinutes(j.type),
               }))
             }
           });
 
-        if (alertError) {
-          console.error(`[${requestId}] Error creating alert for tenant ${tenantId}:`, alertError);
-          alertResults.push({ tenant_id: tenantId, success: false, error: alertError.message });
-        } else {
-          alertsCreated++;
-          alertResults.push({ tenant_id: tenantId, success: true });
-          console.log(`[${requestId}] Alert created for tenant ${tenantId}: ${jobs.length} stuck jobs`);
-        }
-
-        // Log security event
-        await supabase
-          .from('security_logs')
-          .insert({
-            tenant_id: tenantId,
-            event_type: 'stuck_jobs_detected',
-            severity,
-            details: {
-              job_count: jobs.length,
-              max_minutes_stuck: maxMinutesStuck,
-              job_ids: jobs.map(j => j.id)
-            }
-          });
-
+        if (!alertError) alertsCreated++;
       } catch (error) {
         console.error(`[${requestId}] Error processing tenant ${tenantId}:`, error);
-        alertResults.push({ 
-          tenant_id: tenantId, 
-          success: false, 
-          error: error instanceof Error ? error.message : 'Unknown error' 
-        });
       }
     }
 
     const result = {
       success: true,
       stuck_jobs: stuckJobs.length,
+      auto_failed: autoFailedCount,
       tenants_affected: Object.keys(jobsByTenant).length,
       alerts_created: alertsCreated,
-      alert_results: alertResults,
       timestamp: new Date().toISOString()
     };
 
     console.log(`[${requestId}] Check completed:`, result);
 
-    // Log observability
     await supabase.rpc('log_scheduled_job_run', {
       p_job_key: 'check-stuck-jobs',
       p_success: true,
@@ -192,11 +182,8 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error(`[${requestId}] Fatal error:`, error);
     
-    // Log error observability
     try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
+      const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
       await supabase.rpc('log_scheduled_job_run', {
         p_job_key: 'check-stuck-jobs',
         p_success: false,
@@ -209,11 +196,7 @@ Deno.serve(async (req) => {
     } catch {}
     
     return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
-      }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error', timestamp: new Date().toISOString() }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -3,6 +3,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { tenantQuery } from '@/lib/tenantQuery';
 
+export interface AgentOperationalInfo {
+  id: string;
+  agent_name: string;
+  status: string;
+  scheduling_paused: boolean;
+  scheduling_paused_reason: string | null;
+  agent_version: string | null;
+  last_heartbeat: string | null;
+}
+
+export interface FailureBreakdown {
+  category: string;
+  count: number;
+  label: string;
+}
+
 // Interface aligned with v_job_metrics_by_type view (ADR-026)
 export interface JobMetricsByType {
   tenant_id: string;
@@ -101,11 +117,86 @@ export const useJobsHealth = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: !loading && !!tenantId,  // ADR-029 CRIT-04: Guard with loading state
+    enabled: !loading && !!tenantId,
     refetchInterval: 30000,
   });
 
-  // Calculate summary from metrics (ADR-026 aligned with new view columns)
+  // Operational: paused agents & outdated versions
+  const agentOpsQuery = useQuery({
+    queryKey: ['agent-ops-info', tenantId],
+    queryFn: async (): Promise<AgentOperationalInfo[]> => {
+      if (!tenantId) return [];
+      
+      const { data, error } = await tenantQuery('agents', tenantId)
+        .select('id, agent_name, status, scheduling_paused, scheduling_paused_reason, agent_version, last_heartbeat');
+      
+      if (error) throw error;
+      return (data || []) as AgentOperationalInfo[];
+    },
+    enabled: !loading && !!tenantId,
+    refetchInterval: 60000,
+    staleTime: 30000,
+  });
+
+  // Failure breakdown by error category (last 7 days)
+  const failureBreakdownQuery = useQuery({
+    queryKey: ['failure-breakdown', tenantId],
+    queryFn: async (): Promise<FailureBreakdown[]> => {
+      if (!tenantId) return [];
+      
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await tenantQuery('jobs', tenantId)
+        .select('error_message')
+        .eq('status', 'failed')
+        .gte('created_at', sevenDaysAgo)
+        .limit(1000);
+      
+      if (error) throw error;
+      
+      // Categorize failures
+      const categories: Record<string, number> = {};
+      (data || []).forEach((job: any) => {
+        const msg = (job.error_message || '').toLowerCase();
+        let cat = 'other';
+        if (msg.includes('agent_offline') || msg.includes('auto_cancelled')) cat = 'agent_offline';
+        else if (msg.includes('ttl') || msg.includes('expired') || msg.includes('expirado')) cat = 'ttl_exceeded';
+        else if (msg.includes('zombie') || msg.includes('stuck') || msg.includes('stalled')) cat = 'zombie_stalled';
+        else if (msg.includes('unknown job type') || msg.includes('handler')) cat = 'unknown_handler';
+        else if (msg.includes('timeout')) cat = 'timeout';
+        
+        categories[cat] = (categories[cat] || 0) + 1;
+      });
+
+      const labels: Record<string, string> = {
+        agent_offline: 'Agente Offline/Inativo',
+        ttl_exceeded: 'TTL Expirado',
+        zombie_stalled: 'Zombie/Travado',
+        unknown_handler: 'Handler Desconhecido',
+        timeout: 'Timeout',
+        other: 'Outros',
+      };
+
+      return Object.entries(categories)
+        .map(([cat, count]) => ({ category: cat, count, label: labels[cat] || cat }))
+        .sort((a, b) => b.count - a.count);
+    },
+    enabled: !loading && !!tenantId,
+    refetchInterval: 120000,
+    staleTime: 60000,
+  });
+
+  // Compute operational metrics
+  const agents = agentOpsQuery.data || [];
+  const pausedAgents = agents.filter(a => a.scheduling_paused);
+  const latestVersion = agents.reduce((max, a) => {
+    if (!a.agent_version) return max;
+    return a.agent_version > max ? a.agent_version : max;
+  }, '');
+  const outdatedAgents = latestVersion 
+    ? agents.filter(a => a.status === 'active' && a.agent_version && a.agent_version < latestVersion)
+    : [];
+
+  // Calculate summary from metrics
   const summary: JobsHealthSummary = {
     totalJobs: 0,
     completedJobs: 0,
@@ -146,12 +237,17 @@ export const useJobsHealth = () => {
     trends: trendsQuery.data || [],
     stuckJobs: stuckJobsQuery.data || [],
     summary,
+    pausedAgents,
+    outdatedAgents,
+    failureBreakdown: failureBreakdownQuery.data || [],
     isLoading: metricsQuery.isLoading || trendsQuery.isLoading,
     isError: metricsQuery.isError || trendsQuery.isError,
     refetch: () => {
       metricsQuery.refetch();
       trendsQuery.refetch();
       stuckJobsQuery.refetch();
+      agentOpsQuery.refetch();
+      failureBreakdownQuery.refetch();
     },
   };
 };
