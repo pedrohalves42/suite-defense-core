@@ -74,7 +74,7 @@ export const AppLayout = () => {
           )}>
             <TopBar isMobile={isMobile} sidebarCollapsed={collapsed} onMobileMenuClick={() => setMobileMenuOpen(true)} />
             <main className={cn(
-              "pt-14 p-4 md:p-6",
+              "pt-14 p-4 md:p-6 relative z-0",
               isMobile && "pb-20" // space for bottom nav
             )}>
               <div className="max-w-7xl mx-auto">
