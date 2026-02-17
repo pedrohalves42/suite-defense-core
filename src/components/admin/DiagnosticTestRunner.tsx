@@ -138,11 +138,16 @@ export function DiagnosticTestRunner({
       } catch (error) {
         // Mark as failed with simplified error
         const errorInfo = formatError(error);
+        const errorMessage = typeof errorInfo === 'string' 
+          ? errorInfo 
+          : typeof errorInfo === 'object' && errorInfo !== null
+            ? (errorInfo as any).description || (errorInfo as any).message || JSON.stringify(errorInfo)
+            : String(error instanceof Error ? error.message : 'Erro desconhecido');
         const result: TestResult = {
           type: test.type,
           label: test.label,
           status: 'failed',
-          error: errorInfo.description,
+          error: errorMessage,
         };
         testResults.push(result);
         setResults(prev => [
