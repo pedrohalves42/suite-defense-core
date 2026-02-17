@@ -61,6 +61,7 @@ import SalesPipeline from "./pages/admin/super/SalesPipeline";
 import PitchDeck from "./pages/admin/super/PitchDeck";
 import RiskAnalysis from "./pages/admin/super/RiskAnalysis";
 import RolloutPolicies from "./pages/super-admin/RolloutPolicies";
+import TenantSuspensionManager from "./pages/admin/TenantSuspensionManager";
 import StripeSetup from "./pages/admin/StripeSetup";
 import DiagnosticsCenter from "./pages/admin/DiagnosticsCenter";
 import BuildHealthDashboard from "./pages/admin/BuildHealthDashboard";
@@ -288,6 +289,7 @@ const App = () => (
                 <Route path="pitch-deck" element={<PitchDeck />} />
                 <Route path="risk-analysis" element={<RiskAnalysis />} />
                 <Route path="rollout-policies" element={<RolloutPolicies />} />
+                <Route path="tenant-suspension" element={<TenantSuspensionManager />} />
               </Route>
 
               {/* Client Routes (Viewers/Operators) */}

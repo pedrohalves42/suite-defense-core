@@ -154,6 +154,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Percent, label: 'Rollout', to: '/super-admin/rollout-policies' },
     { icon: Users, label: 'Usuários', to: '/super-admin/users' },
     { icon: Shield, label: 'Funcionalidades', to: '/super-admin/features' },
+    { icon: Clock, label: 'Suspensão', to: '/super-admin/tenant-suspension' },
   ], []);
 
   // === SUPER ADMIN - Financeiro ===

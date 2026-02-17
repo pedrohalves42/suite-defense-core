@@ -17863,6 +17863,107 @@ export type Database = {
           },
         ]
       }
+      tenant_suspension_config: {
+        Row: {
+          cleanup_batch_size: number
+          deletion_days: number
+          exempt_tenant_ids: string[] | null
+          id: string
+          is_enabled: boolean
+          suspension_days: number
+          updated_at: string
+          updated_by: string | null
+          warning_days: number
+        }
+        Insert: {
+          cleanup_batch_size?: number
+          deletion_days?: number
+          exempt_tenant_ids?: string[] | null
+          id?: string
+          is_enabled?: boolean
+          suspension_days?: number
+          updated_at?: string
+          updated_by?: string | null
+          warning_days?: number
+        }
+        Update: {
+          cleanup_batch_size?: number
+          deletion_days?: number
+          exempt_tenant_ids?: string[] | null
+          id?: string
+          is_enabled?: boolean
+          suspension_days?: number
+          updated_at?: string
+          updated_by?: string | null
+          warning_days?: number
+        }
+        Relationships: []
+      }
+      tenant_suspension_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          new_status: string | null
+          performed_by: string | null
+          previous_status: string | null
+          reason: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          new_status?: string | null
+          performed_by?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          new_status?: string | null
+          performed_by?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_suspension_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_suspension_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_suspension_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_suspension_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           address: string | null
@@ -17876,7 +17977,9 @@ export type Database = {
           company_name: string | null
           contact_email: string | null
           created_at: string
+          deletion_scheduled_at: string | null
           id: string
+          last_activity_at: string | null
           mfa_policy: Json | null
           name: string
           owner_user_id: string
@@ -17885,6 +17988,10 @@ export type Database = {
           setup_completed: boolean | null
           slug: string
           state: string | null
+          suspended_at: string | null
+          suspension_reason: string | null
+          suspension_status: string
+          suspension_warning_sent_at: string | null
           updated_at: string
           zip_code: string | null
         }
@@ -17900,7 +18007,9 @@ export type Database = {
           company_name?: string | null
           contact_email?: string | null
           created_at?: string
+          deletion_scheduled_at?: string | null
           id?: string
+          last_activity_at?: string | null
           mfa_policy?: Json | null
           name: string
           owner_user_id: string
@@ -17909,6 +18018,10 @@ export type Database = {
           setup_completed?: boolean | null
           slug: string
           state?: string | null
+          suspended_at?: string | null
+          suspension_reason?: string | null
+          suspension_status?: string
+          suspension_warning_sent_at?: string | null
           updated_at?: string
           zip_code?: string | null
         }
@@ -17924,7 +18037,9 @@ export type Database = {
           company_name?: string | null
           contact_email?: string | null
           created_at?: string
+          deletion_scheduled_at?: string | null
           id?: string
+          last_activity_at?: string | null
           mfa_policy?: Json | null
           name?: string
           owner_user_id?: string
@@ -17933,6 +18048,10 @@ export type Database = {
           setup_completed?: boolean | null
           slug?: string
           state?: string | null
+          suspended_at?: string | null
+          suspension_reason?: string | null
+          suspension_status?: string
+          suspension_warning_sent_at?: string | null
           updated_at?: string
           zip_code?: string | null
         }
@@ -24559,6 +24678,10 @@ export type Database = {
         }[]
       }
       cleanup_stuck_pending_jobs: { Args: never; Returns: number }
+      cleanup_suspended_tenant_data: {
+        Args: { p_tenant_id: string }
+        Returns: Json
+      }
       collect_task_evidence: {
         Args: { p_agent_id: string; p_task_type: string }
         Returns: Json
@@ -25258,6 +25381,8 @@ export type Database = {
         }
         Returns: string
       }
+      process_tenant_suspensions: { Args: never; Returns: Json }
+      reactivate_tenant: { Args: { p_tenant_id: string }; Returns: Json }
       reconstruct_incident_timeline: {
         Args: { p_agent_id: string; p_end_time: string; p_start_time: string }
         Returns: Json
