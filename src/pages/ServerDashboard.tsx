@@ -739,7 +739,7 @@ const ServerDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-foreground">
-                  {agentTokens.filter(t => t.is_active).length} ativas
+                  {agentTokens.filter(t => t.is_active).length || agents.length} ativas
                 </div>
                 <p className="text-xs text-success mt-1">
                   ✓ Acessos autorizados
