@@ -20,6 +20,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { GlobalSearch } from '@/components/navigation/GlobalSearch';
+import { TenantSelector } from '@/components/TenantSelector';
+import { SimpleModeToggle } from '@/components/layout/SimpleModeToggle';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import logoImage from '@/assets/logo-cybshield-new.png';
 
 interface TopBarProps {
@@ -90,8 +94,18 @@ export const TopBar = ({ alerts = 0, isMobile = false, sidebarCollapsed = false,
           )}
         </div>
 
+        {/* Center - Admin controls */}
+        <div className="hidden md:flex items-center gap-2">
+          <TenantSelector />
+          <TooltipProvider>
+            <SimpleModeToggle />
+          </TooltipProvider>
+        </div>
+
         {/* Right side - actions */}
         <div className="flex items-center gap-2 md:gap-4">
+          <GlobalSearch />
+          
           {/* Language Switcher - hidden on small mobile */}
           <div className="hidden sm:block">
             <LanguageSwitcher />
