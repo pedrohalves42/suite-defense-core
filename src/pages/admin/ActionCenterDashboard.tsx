@@ -428,9 +428,9 @@ export default function ActionCenterDashboard() {
                 />
               )}
 
-              {/* Urgent Actions - Collapsible, always open by default */}
+              {/* Urgent Actions */}
               {filteredUrgent && filteredUrgent.length > 0 && (
-                <ActionCenterSection type="urgent" count={filteredUrgent.length} items={filteredUrgent}>
+                <ActionCenterSection type="urgent" count={filteredUrgent.length}>
                   {filteredUrgent.map((item) => (
                     <ActionCard 
                       key={item.item_id} 
@@ -441,9 +441,9 @@ export default function ActionCenterDashboard() {
                 </ActionCenterSection>
               )}
 
-              {/* Recommended Actions - Collapsible, closed by default */}
+              {/* Recommended Actions */}
               {filteredRecommended && filteredRecommended.length > 0 && (
-                <ActionCenterSection type="recommended" count={filteredRecommended.length} items={filteredRecommended}>
+                <ActionCenterSection type="recommended" count={filteredRecommended.length}>
                   {filteredRecommended.map((item) => (
                     <ActionCard 
                       key={item.item_id} 
@@ -454,9 +454,9 @@ export default function ActionCenterDashboard() {
                 </ActionCenterSection>
               )}
 
-              {/* Informational Actions - Collapsible, closed by default */}
+              {/* Informational Actions */}
               {filteredInformational && filteredInformational.length > 0 && (
-                <ActionCenterSection type="informational" count={filteredInformational.length} items={filteredInformational}>
+                <ActionCenterSection type="informational" count={filteredInformational.length}>
                   {filteredInformational.map((item) => (
                     <ActionCard 
                       key={item.item_id} 
