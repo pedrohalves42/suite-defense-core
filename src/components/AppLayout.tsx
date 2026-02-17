@@ -54,7 +54,6 @@ export const AppLayout = () => {
           <GlobalJobWatcher />
           <NotificationSystem />
           <ConnectivityIndicator />
-          <GlobalKillSwitchBanner />
           
           {/* Desktop sidebar - hidden on mobile */}
           {!isMobile && <AppSidebar />}
@@ -73,8 +72,11 @@ export const AppLayout = () => {
             isMobile ? 'pl-0' : (collapsed ? 'pl-16' : 'pl-52')
           )}>
             <TopBar isMobile={isMobile} sidebarCollapsed={collapsed} onMobileMenuClick={() => setMobileMenuOpen(true)} />
+            <div className="pt-14">
+              <GlobalKillSwitchBanner />
+            </div>
             <main className={cn(
-              "pt-14 p-4 md:p-6 relative z-0",
+              "p-4 md:p-6 relative z-0",
               isMobile && "pb-20" // space for bottom nav
             )}>
               <div className="max-w-7xl mx-auto">
