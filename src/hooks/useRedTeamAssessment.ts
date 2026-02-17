@@ -86,16 +86,22 @@ export function useRedTeamById(id: string | null) {
 }
 
 export function useLatestRedTeam() {
+  const activeTenantId = localStorage.getItem('cybershield_active_tenant_id');
+
   return useQuery({
-    queryKey: ['red-team-latest'],
+    queryKey: ['red-team-latest', activeTenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('red_team_assessments')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
 
+      if (activeTenantId) {
+        query = query.eq('tenant_id', activeTenantId);
+      }
+
+      const { data, error } = await query.single();
       if (error && error.code !== 'PGRST116') throw error;
       return data as unknown as RedTeamAssessment | null;
     },
