@@ -7,43 +7,29 @@ import { useTenant } from '@/hooks/useTenant';
 import { 
   Shield, Server, AlertTriangle, CheckCircle, WifiOff, 
   ArrowRight, Brain, Bug, ShieldAlert, ChevronRight,
-  Lightbulb
+  Lightbulb, Activity, Wrench, BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
-
 import { toast } from 'sonner';
 import { ProtectionTrendChart } from '@/components/admin/ProtectionTrendChart';
 import { GovernanceHealthBanner } from '@/components/admin/GovernanceHealthBanner';
 import { NotificationSetupBanner } from '@/components/admin/NotificationSetupBanner';
 import { OnboardingRequiredBanner } from '@/components/admin/OnboardingRequiredBanner';
-import { RBACMetricsCard } from '@/components/admin/RBACMetricsCard';
-import { SafeModeCounter } from '@/components/admin/SafeModeCounter';
-import { GapsSummaryCard } from '@/components/admin/GapsSummaryCard';
-import { SystemCyclesHealthCard } from '@/components/admin/SystemCyclesHealthCard';
-import { JobsHealthCard } from '@/components/dashboard/JobsHealthCard';
-import { IncidentGroupsCard } from '@/components/dashboard/IncidentGroupsCard';
 import { CompactAlert } from '@/components/ui/explainable-alert';
-import { getAlertExplanation } from '@/lib/leigo-translator';
-import { SectionDivider } from '@/components/ui/section-divider';
-import { PipelineHealthCard } from '@/components/pipeline/PipelineHealthCard';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BurningIssuesCard } from '@/components/dashboard/BurningIssuesCard';
 import { SimpleDashboard } from '@/components/dashboard/SimpleDashboard';
 import { useSimpleModeContext } from '@/hooks/useSimpleMode';
 
 export default function Dashboard() {
-  // V-FIX: Extract loading guard to prevent race conditions during tenant sync
   const { tenant, loading: tenantLoading } = useTenant();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showOnboarding, setShowOnboarding] = useState(false);
-  
-  // Simple Mode - para visualização simplificada para donos de negócio
   const { isSimple } = useSimpleModeContext();
 
   useEffect(() => {
@@ -55,19 +41,17 @@ export default function Dashboard() {
     }
   }, [searchParams, setSearchParams]);
 
-  // Fetch agents using the same RPC as AgentHealthMonitor for consistency
+  // Fetch agents
   const { data: agents, isLoading: agentsLoading, isFetched: agentsFetched } = useQuery({
-    queryKey: ['agent-health', tenant?.id], // Same queryKey as AgentHealthMonitor for cache sharing
+    queryKey: ['agent-health', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-      // Use get_agent_health_metrics for consistent data across all dashboard pages
       const { data, error } = await supabase.rpc('get_agent_health_metrics', {
         p_tenant_id: tenant.id
       });
       if (error) throw error;
       return data || [];
     },
-    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 30000,
   });
@@ -86,7 +70,6 @@ export default function Dashboard() {
       if (error) throw error;
       return data || [];
     },
-    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 30000,
   });
@@ -105,7 +88,6 @@ export default function Dashboard() {
       const critical = data?.filter(v => v.severity === 'critical' || v.severity === 'high').length || 0;
       return { total, critical };
     },
-    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
   });
 
@@ -122,10 +104,8 @@ export default function Dashboard() {
       if (error) throw error;
       return count || 0;
     },
-    // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
   });
-
 
   // Acknowledge alerts mutation
   const acknowledgeAllMutation = useMutation({
@@ -143,8 +123,9 @@ export default function Dashboard() {
     },
   });
 
-  // Calculate stats using health_status from RPC (same logic as AgentHealthMonitor)
+  // Calculate stats
   const hasAgentData = agentsFetched && agents && agents.length > 0;
+  const totalAgents = hasAgentData ? agents.length : 0;
   const onlineAgents = hasAgentData 
     ? agents.filter((a: any) => a.health_status === 'healthy' || a.health_status === 'critical').length 
     : 0;
@@ -153,7 +134,7 @@ export default function Dashboard() {
     : 0;
   const criticalAlerts = alerts?.filter(a => a.severity === 'critical' || a.severity === 'high').length || 0;
 
-  // Calculate security score (0-100) - Simplified without jobsStats
+  // Security score
   const calculateSecurityScore = () => {
     let score = 100;
     score -= Math.min(offlineAgents * 5, 25);
@@ -161,132 +142,47 @@ export default function Dashboard() {
     score -= Math.min((vulnStats?.critical || 0) * 5, 25);
     return Math.max(0, score);
   };
-
   const securityScore = calculateSecurityScore();
 
-  // Get global status
+  // Global status
   const getGlobalStatus = () => {
     if (securityScore >= 80 && criticalAlerts === 0) {
-      return {
-        emoji: '🟢',
-        title: 'Tudo sob controle',
-        description: 'Seus computadores estão protegidos. Continue trabalhando tranquilo.',
-        variant: 'success' as const
-      };
+      return { emoji: '🟢', title: 'Tudo sob controle', description: 'Seus computadores estão protegidos.', variant: 'success' as const };
     }
     if (securityScore >= 60 || criticalAlerts <= 2) {
-      return {
-        emoji: '🟡',
-        title: 'Atenção necessária',
-        description: 'Alguns computadores precisam de verificação.',
-        variant: 'warning' as const
-      };
+      return { emoji: '🟡', title: 'Atenção necessária', description: 'Alguns itens precisam de verificação.', variant: 'warning' as const };
     }
-    return {
-      emoji: '🔴',
-      title: 'Ação urgente',
-      description: 'Existe risco que pode impactar sua operação.',
-      variant: 'danger' as const
-    };
+    return { emoji: '🔴', title: 'Ação urgente', description: 'Existe risco que pode impactar sua operação.', variant: 'danger' as const };
   };
-
   const globalStatus = getGlobalStatus();
 
-  // Map problem type to alert type
-  const mapProblemToAlertType = (priority: 'high' | 'medium' | 'low', problemKey: string): string => {
-    if (problemKey === 'criticalAlerts') return 'security_threat';
-    if (problemKey === 'offlineAgents') return 'agents_offline';
-    if (problemKey === 'vulnCritical') return 'vulnerability_critical';
-    if (problemKey === 'aiInsights') return 'ai_insights_pending';
-    return 'security_threat';
-  };
-
-  // Build problems list with fear/consequence format
-  const problems: Array<{
-    icon: typeof AlertTriangle;
-    problem: string;
-    consequence: string;
-    to: string;
-    priority: 'high' | 'medium' | 'low';
-    alertType: string;
-  }> = [];
-  
-  if (criticalAlerts > 0) {
-    problems.push({
-      icon: AlertTriangle,
-      problem: `${criticalAlerts} alerta${criticalAlerts > 1 ? 's' : ''} crítico${criticalAlerts > 1 ? 's' : ''} ativo${criticalAlerts > 1 ? 's' : ''}`,
-      consequence: 'Podem indicar ameaças ativas no sistema',
-      to: '/admin/security-monitoring',
-      priority: 'high' as const,
-      alertType: 'security_threat',
-    });
-  }
-  
-  if (offlineAgents > 0) {
-    problems.push({
-      icon: WifiOff,
-      problem: `${offlineAgents} computador${offlineAgents > 1 ? 'es estão' : ' está'} desligado${offlineAgents > 1 ? 's' : ''}`,
-      consequence: 'Podem não receber atualizações de segurança',
-      to: '/admin/agent-health',
-      priority: 'medium' as const,
-      alertType: 'agents_offline',
-    });
-  }
-  
-  if ((vulnStats?.critical || 0) > 0) {
-    problems.push({
-      icon: Bug,
-      problem: `${vulnStats?.critical} vulnerabilidade${(vulnStats?.critical || 0) > 1 ? 's' : ''} crítica${(vulnStats?.critical || 0) > 1 ? 's' : ''} encontrada${(vulnStats?.critical || 0) > 1 ? 's' : ''}`,
-      consequence: 'Podem ser exploradas por atacantes',
-      to: '/admin/vulnerabilities',
-      priority: 'high' as const,
-      alertType: 'vulnerability_critical',
-    });
-  }
-  
-  if ((insightsCount || 0) > 0) {
-    problems.push({
-      icon: Brain,
-      problem: `${insightsCount} insight${(insightsCount || 0) > 1 ? 's' : ''} da IA aguardando`,
-      consequence: 'Recomendações para melhorar sua proteção',
-      to: '/admin/ai-insights',
-      priority: 'low' as const,
-      alertType: 'ai_insights_pending',
-    });
-  }
-
-  // Loading state: aguarda tenant E dados carregarem
+  // Loading state
   if (!tenant?.id || agentsLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-32 w-full" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Skeleton className="h-48" />
-          <Skeleton className="h-48 lg:col-span-2" />
+        <Skeleton className="h-24 w-full" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
         </div>
       </div>
     );
   }
 
-  // 🎯 MODO SIMPLES - Renderização específica para donos de negócio
+  // Simple mode
   if (isSimple) {
     return (
       <div className="space-y-6">
-        {/* Header simplificado */}
         <div className="page-header-enterprise">
           <h1>Minha Proteção</h1>
           <p>Status de segurança dos seus computadores</p>
         </div>
-
         <SimpleDashboard 
           globalStatus={globalStatus}
-          stats={{
-            totalAgents: agents?.length || 0,
-            onlineAgents,
-            offlineAgents,
-            criticalAlerts,
-          }}
+          stats={{ totalAgents, onlineAgents, offlineAgents, criticalAlerts }}
           isLoading={agentsLoading}
           tenantId={tenant?.id}
         />
@@ -294,347 +190,236 @@ export default function Dashboard() {
     );
   }
 
-  // 🔧 MODO TÉCNICO - Interface completa para TI
+  // Quick nav items
+  const quickNav = [
+    { icon: Activity, label: 'Tempo Real', to: '/admin/monitoring-advanced', color: 'text-blue-500' },
+    { icon: Brain, label: 'Insights IA', to: '/admin/ai-insights', color: 'text-purple-500', badge: insightsCount || 0 },
+    { icon: BarChart3, label: 'Relatórios', to: '/admin/reports', color: 'text-emerald-500' },
+    { icon: Wrench, label: 'Central de Ações', to: '/admin/action-center', color: 'text-amber-500' },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="page-header-enterprise">
-        <h1>Painel Principal</h1>
-        <p>Visão geral da proteção dos seus computadores</p>
-      </div>
-
-      {/* 🚀 ONBOARDING BANNER - Setup inicial obrigatório */}
+      {/* Banners - only show if needed */}
       <OnboardingRequiredBanner />
-
-      {/* 🔔 NOTIFICATION SETUP BANNER */}
       <NotificationSetupBanner />
-
-      {/* 🔐 GOVERNANCE HEALTH BANNER - MFA Enforcement + Metrics */}
       <GovernanceHealthBanner />
 
-      {/* 🔥 BURNING ISSUES - O que precisa de atenção AGORA (P2) */}
-      <BurningIssuesCard 
-        criticalAlerts={criticalAlerts}
-        offlineAgents={offlineAgents}
-        criticalVulns={vulnStats?.critical || 0}
-        pendingInsights={insightsCount || 0}
-      />
-
-      {/* TABS para organizar conteúdo (P2) */}
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full max-w-lg grid-cols-4">
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
-          <TabsTrigger value="cycles">Ciclos</TabsTrigger>
-          <TabsTrigger value="details">Detalhes</TabsTrigger>
-        </TabsList>
-
-        {/* OVERVIEW TAB */}
-        <TabsContent value="overview" className="mt-6 space-y-6">
-          {/* 🔐 CARD PRINCIPAL DE STATUS - Responde "Estou protegido?" em 3 segundos */}
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-            <Card className={cn(
-              "border-2",
-              globalStatus.variant === 'success' && "bg-green-500/5 border-green-500/30",
-              globalStatus.variant === 'warning' && "bg-amber-500/5 border-amber-500/30",
-              globalStatus.variant === 'danger' && "bg-red-500/5 border-red-500/30"
-            )}>
-              <CardContent className="py-6">
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "p-4 rounded-full",
-                    globalStatus.variant === 'success' && "bg-green-500/10",
-                    globalStatus.variant === 'warning' && "bg-amber-500/10",
-                    globalStatus.variant === 'danger' && "bg-red-500/10"
-                  )}>
-                    <Shield className={cn(
-                      "h-10 w-10",
-                      globalStatus.variant === 'success' && "text-green-500",
-                      globalStatus.variant === 'warning' && "text-amber-500",
-                      globalStatus.variant === 'danger' && "text-red-500"
-                    )} />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className={cn(
-                      "text-xl font-bold",
-                      globalStatus.variant === 'success' && "text-green-600 dark:text-green-400",
-                      globalStatus.variant === 'warning' && "text-amber-600 dark:text-amber-400",
-                      globalStatus.variant === 'danger' && "text-red-600 dark:text-red-400"
-                    )}>
-                      {globalStatus.emoji} {globalStatus.title}
-                    </h2>
-                    <p className="text-muted-foreground mt-1">
-                      {globalStatus.description}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className={cn(
-                      "text-3xl font-bold",
-                      securityScore >= 80 && "text-green-600",
-                      securityScore >= 60 && securityScore < 80 && "text-amber-600",
-                      securityScore < 60 && "text-red-600"
-                    )}>
-                      {securityScore}%
-                    </div>
-                    <div className="text-xs text-muted-foreground">Nível de proteção</div>
-                  </div>
+      {/* ═══════════════════════════════════════════
+          SEÇÃO 1: Status global + Score 
+          ═══════════════════════════════════════════ */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <Card className={cn(
+          "border-l-4",
+          globalStatus.variant === 'success' && "border-l-green-500 bg-green-500/5",
+          globalStatus.variant === 'warning' && "border-l-amber-500 bg-amber-500/5",
+          globalStatus.variant === 'danger' && "border-l-red-500 bg-red-500/5"
+        )}>
+          <CardContent className="py-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  "p-3 rounded-full",
+                  globalStatus.variant === 'success' && "bg-green-500/10",
+                  globalStatus.variant === 'warning' && "bg-amber-500/10",
+                  globalStatus.variant === 'danger' && "bg-red-500/10"
+                )}>
+                  <Shield className={cn(
+                    "h-7 w-7",
+                    globalStatus.variant === 'success' && "text-green-500",
+                    globalStatus.variant === 'warning' && "text-amber-500",
+                    globalStatus.variant === 'danger' && "text-red-500"
+                  )} />
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                <div>
+                  <h1 className="text-lg font-bold">{globalStatus.emoji} {globalStatus.title}</h1>
+                  <p className="text-sm text-muted-foreground">{globalStatus.description}</p>
+                </div>
+              </div>
+              <div className="text-right hidden sm:block">
+                <div className={cn(
+                  "text-3xl font-bold",
+                  securityScore >= 80 && "text-green-600",
+                  securityScore >= 60 && securityScore < 80 && "text-amber-600",
+                  securityScore < 60 && "text-red-600"
+                )}>
+                  {securityScore}%
+                </div>
+                <div className="text-[11px] text-muted-foreground">Nível de proteção</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
-          {/* 📈 CAMADA 3: Gráfico de Tendência */}
-          <ProtectionTrendChart />
+      {/* ═══════════════════════════════════════════
+          SEÇÃO 2: Métricas principais - 4 cards 
+          ═══════════════════════════════════════════ */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Computadores */}
+        <Link to="/admin/agent-health">
+          <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Server className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Computadores</span>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold text-green-600">{onlineAgents}</span>
+                <span className="text-xs text-muted-foreground">/ {totalAgents}</span>
+              </div>
+              {offlineAgents > 0 && (
+                <div className="flex items-center gap-1 mt-1">
+                  <WifiOff className="h-3 w-3 text-orange-500" />
+                  <span className="text-xs text-orange-500">{offlineAgents} offline</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
 
-          {/* Critical Alert Action (if any) */}
-          {criticalAlerts > 0 && (
-            <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-              <Card className="bg-destructive/5 border-destructive/20">
-                <CardContent className="py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className="h-5 w-5 text-destructive" />
-                    <span className="text-sm text-destructive font-medium">
-                      {criticalAlerts} alerta{criticalAlerts > 1 ? 's' : ''} crítico{criticalAlerts > 1 ? 's' : ''} aguardando ação
-                    </span>
-                  </div>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    className="border-destructive/30 text-destructive hover:bg-destructive/10"
-                    onClick={() => acknowledgeAllMutation.mutate()}
-                    disabled={acknowledgeAllMutation.isPending}
-                  >
-                    Reconhecer
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
+        {/* Alertas */}
+        <Link to="/admin/security-monitoring">
+          <Card className={cn(
+            "hover:bg-accent/50 transition-colors cursor-pointer h-full",
+            criticalAlerts > 0 && "ring-1 ring-red-500/20"
+          )}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Alertas</span>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <span className={cn(
+                  "text-2xl font-bold",
+                  criticalAlerts > 0 ? "text-red-500" : (alerts?.length || 0) > 0 ? "text-amber-500" : "text-green-600"
+                )}>
+                  {alerts?.length || 0}
+                </span>
+                <span className="text-xs text-muted-foreground">ativos</span>
+              </div>
+              {criticalAlerts > 0 && (
+                <span className="text-xs text-red-500 mt-1 block">{criticalAlerts} críticos</span>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
 
-          {/* Divisor visual */}
-          <SectionDivider label="Alertas e Resumo" />
+        {/* Vulnerabilidades */}
+        <Link to="/admin/vulnerabilities">
+          <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Bug className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Riscos</span>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <span className={cn(
+                  "text-2xl font-bold",
+                  (vulnStats?.critical || 0) > 0 ? "text-orange-500" : "text-green-600"
+                )}>
+                  {vulnStats?.total || 0}
+                </span>
+              </div>
+              {(vulnStats?.critical || 0) > 0 && (
+                <span className="text-xs text-orange-500 mt-1 block">{vulnStats?.critical} críticos</span>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
 
-          {/* Main Grid: Problems + Quick Stats */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* O que pode virar problema */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }} 
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.15 }}
-              className="lg:col-span-2"
-            >
-              <Card className="h-full">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                    O que pode virar problema se você ignorar
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {problems.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-10 text-center">
-                      <CheckCircle className="h-14 w-14 text-green-500 mb-4" />
-                      <p className="text-lg font-medium text-foreground">🎉 Nada para se preocupar!</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Todos os seus computadores estão protegidos
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {problems.slice(0, 3).map((item, idx) => (
-                        <CompactAlert
-                          key={idx}
-                          type={item.alertType}
-                          severity={item.priority === 'high' ? 'error' : item.priority === 'medium' ? 'warning' : 'info'}
-                          onClick={() => navigate(item.to)}
-                        />
-                      ))}
-                    </div>
+        {/* IA Insights */}
+        <Link to="/admin/ai-insights">
+          <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Brain className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Insights IA</span>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <span className={cn(
+                  "text-2xl font-bold",
+                  (insightsCount || 0) > 0 ? "text-purple-500" : "text-green-600"
+                )}>
+                  {insightsCount || 0}
+                </span>
+                <span className="text-xs text-muted-foreground">pendentes</span>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
+      {/* ═══════════════════════════════════════════
+          SEÇÃO 3: Alertas críticos inline (se houver)
+          ═══════════════════════════════════════════ */}
+      {criticalAlerts > 0 && (
+        <Card className="bg-destructive/5 border-destructive/20">
+          <CardContent className="py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <span className="text-sm text-destructive font-medium">
+                {criticalAlerts} alerta{criticalAlerts > 1 ? 's' : ''} crítico{criticalAlerts > 1 ? 's' : ''} aguardando ação
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                size="sm" variant="outline"
+                className="border-destructive/30 text-destructive hover:bg-destructive/10 h-8 text-xs"
+                onClick={() => acknowledgeAllMutation.mutate()}
+                disabled={acknowledgeAllMutation.isPending}
+              >
+                Reconhecer
+              </Button>
+              <Button 
+                size="sm" variant="destructive" className="h-8 text-xs"
+                onClick={() => navigate('/admin/action-center')}
+              >
+                Ver ações <ChevronRight className="h-3 w-3 ml-1" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══════════════════════════════════════════
+          SEÇÃO 4: Gráfico de tendência
+          ═══════════════════════════════════════════ */}
+      <ProtectionTrendChart />
+
+      {/* ═══════════════════════════════════════════
+          SEÇÃO 5: Navegação rápida
+          ═══════════════════════════════════════════ */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {quickNav.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link key={item.label} to={item.to}>
+              <Card className="hover:bg-accent/50 transition-all hover:scale-[1.02] cursor-pointer">
+                <CardContent className="py-3 px-4 flex items-center gap-3">
+                  <Icon className={cn("h-4 w-4", item.color)} />
+                  <span className="text-sm font-medium flex-1">{item.label}</span>
+                  {item.badge && item.badge > 0 && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{item.badge}</Badge>
                   )}
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                 </CardContent>
               </Card>
-            </motion.div>
+            </Link>
+          );
+        })}
+      </div>
 
-            {/* Quick Stats */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }} 
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="h-full">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Server className="h-4 w-4 text-muted-foreground" />
-                    Resumo rápido
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Computadores */}
-                  <Link to="/admin/agent-health" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Server className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Computadores</span>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-lg font-bold text-green-600">{onlineAgents}</span>
-                      <span className="text-sm text-muted-foreground">online</span>
-                      {offlineAgents > 0 && (
-                        <span className="text-sm text-red-500">• {offlineAgents} offline</span>
-                      )}
-                    </div>
-                  </Link>
-
-                  {/* Alertas */}
-                  <Link to="/admin/security-monitoring" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <ShieldAlert className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Alertas</span>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                      <span className={cn("text-lg font-bold", (alerts?.length || 0) > 0 ? "text-yellow-600" : "text-green-600")}>
-                        {alerts?.length || 0}
-                      </span>
-                      <span className="text-sm text-muted-foreground">ativos</span>
-                      {criticalAlerts > 0 && (
-                        <span className="text-sm text-red-500">• {criticalAlerts} críticos</span>
-                      )}
-                    </div>
-                  </Link>
-
-                  {/* Vulnerabilidades */}
-                  <Link to="/admin/vulnerabilities" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Bug className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Riscos detectados</span>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                      <span className={cn("text-xl font-bold", (vulnStats?.critical || 0) > 0 ? "text-orange-600" : "text-green-600")}>
-                        {vulnStats?.total || 0}
-                      </span>
-                      <span className="text-sm text-muted-foreground">total</span>
-                      {(vulnStats?.critical || 0) > 0 && (
-                        <span className="text-sm text-orange-500">• {vulnStats?.critical} críticos</span>
-                      )}
-                    </div>
-                  </Link>
-
-                  {/* Avisos da IA */}
-                  <Link to="/admin/ai-insights" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Brain className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Avisos da IA</span>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                      <span className={cn("text-lg font-bold", (insightsCount || 0) > 0 ? "text-blue-600" : "text-green-600")}>
-                        {insightsCount || 0}
-                      </span>
-                      <span className="text-sm text-muted-foreground">pendentes</span>
-                    </div>
-                  </Link>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
-
-          {/* Quick Links */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-              <Link to="/admin/ai-insights">
-                <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-                  <CardContent className="py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <Brain className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Insights da IA</p>
-                        <p className="text-sm text-muted-foreground">
-                          {insightsCount || 0} pendente{(insightsCount || 0) !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                  </CardContent>
-                </Card>
-              </Link>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-              <Link to="/admin/reports">
-                <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-                  <CardContent className="py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <Shield className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Relatórios de Segurança</p>
-                        <p className="text-sm text-muted-foreground">Visualizar laudos</p>
-                      </div>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                  </CardContent>
-                </Card>
-              </Link>
-            </motion.div>
-          </div>
-        </TabsContent>
-
-        {/* PIPELINE TAB */}
-        <TabsContent value="pipeline" className="mt-6 space-y-6">
-          {/* 🧭 P0 ANTI-SILÊNCIO - frescor das fontes de dados */}
-          <PipelineHealthCard tenantId={tenant.id} tenantLoading={tenantLoading} />
-          
-          {/* 📊 GAPS SUMMARY - Ciclos e pendências do sistema */}
-          <GapsSummaryCard />
-        </TabsContent>
-
-        {/* CYCLES TAB */}
-        <TabsContent value="cycles" className="mt-6 space-y-6">
-          {/* 🔄 CYCLES HEALTH - Saúde dos ciclos operacionais */}
-          <SystemCyclesHealthCard />
-
-          {/* 🔧 JOBS ENGINE HEALTH - Saúde do motor de jobs */}
-          <JobsHealthCard />
-
-          {/* 🔥 INCIDENT GROUPS - Padrões de falhas recorrentes (ADR-033) */}
-          <IncidentGroupsCard />
-        </TabsContent>
-
-        {/* DETAILS TAB */}
-        <TabsContent value="details" className="mt-6 space-y-6">
-          {/* 🛡️ RBAC Metrics + Safe Mode Counter */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <RBACMetricsCard />
-            <SafeModeCounter />
-          </div>
-
-          {/* 4️⃣ ÂNCORA DE SEGURO OPERACIONAL */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-            <Card className="bg-muted/20 border-dashed">
-              <CardContent className="py-4 flex items-center justify-center gap-3 text-center">
-                <Lightbulb className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                <p className="text-sm text-muted-foreground">
-                  O CyberShield monitora seus computadores automaticamente. 
-                  <span className="font-medium text-foreground"> Se algo crítico acontecer, você será avisado.</span>
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </TabsContent>
-      </Tabs>
+      {/* Reassurance */}
+      <Card className="bg-muted/20 border-dashed">
+        <CardContent className="py-3 flex items-center justify-center gap-2 text-center">
+          <Lightbulb className="h-4 w-4 text-muted-foreground shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            O CyberShield monitora seus computadores automaticamente. 
+            <span className="font-medium text-foreground"> Se algo crítico acontecer, você será avisado.</span>
+          </p>
+        </CardContent>
+      </Card>
 
       <OnboardingWizard open={showOnboarding} onComplete={() => setShowOnboarding(false)} />
     </div>
