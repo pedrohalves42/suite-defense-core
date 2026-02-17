@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Activity, 
   AlertTriangle, 
@@ -216,18 +217,11 @@ export default function SystemHealth() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-6">Saúde do Sistema</h1>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="space-y-6">
+        <Skeleton className="h-9 w-64" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map(i => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-4 bg-muted rounded w-1/2" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-8 bg-muted rounded w-3/4" />
-              </CardContent>
-            </Card>
+            <Skeleton key={i} className="h-32" />
           ))}
         </div>
       </div>
@@ -251,13 +245,20 @@ export default function SystemHealth() {
         : "critical";
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Saúde do Sistema</h1>
-          <p className="text-muted-foreground">
-            Última atualização: {format(new Date(), "HH:mm:ss", { locale: ptBR })}
-          </p>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
+            <Activity className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Saúde do Sistema
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Última atualização: {format(new Date(), "HH:mm:ss", { locale: ptBR })}
+            </p>
+          </div>
         </div>
         <Badge 
           variant={overallHealth === "healthy" ? "default" : overallHealth === "degraded" ? "secondary" : "destructive"}

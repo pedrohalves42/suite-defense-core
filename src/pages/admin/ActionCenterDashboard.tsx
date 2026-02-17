@@ -301,15 +301,17 @@ export default function ActionCenterDashboard() {
   const filteredInformational = filterItems(data?.informational);
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <Target className="h-6 w-6 text-primary" />
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
+            <Target className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Central de Ações</h1>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Central de Ações
+            </h2>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               {totalActions > 0 ? (
                 <span>{totalActions} {totalActions === 1 ? 'ação pendente' : 'ações pendentes'}</span>

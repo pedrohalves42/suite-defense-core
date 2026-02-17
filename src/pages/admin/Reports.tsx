@@ -1287,17 +1287,21 @@ export default function Reports() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <FileText className="h-8 w-8 text-primary" />
-            Relatórios de Segurança
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Gere relatórios consolidados de todos os dados de segurança coletados
-          </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
+            <FileText className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Relatórios de Segurança
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Gere relatórios consolidados de todos os dados de segurança coletados
+            </p>
+          </div>
         </div>
       </div>
 
