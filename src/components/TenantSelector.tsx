@@ -57,7 +57,7 @@ export const TenantSelector = () => {
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
+      <DropdownMenuContent align="end" side="bottom" className="w-64">
         <DropdownMenuLabel className="text-xs text-muted-foreground">
           Selecionar Tenant
         </DropdownMenuLabel>
