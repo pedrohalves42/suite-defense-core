@@ -266,7 +266,7 @@ export default function AgentReleases() {
         <h2 className="text-xl font-semibold">Versões Disponíveis</h2>
         <div className="grid gap-4">
           {releases.map((release, idx) => {
-            const sizeKB = Math.round(release.script_content.length / 1024);
+            const sizeKB = Math.round((release.script_content?.length || 0) / 1024);
             const minSizeKB = release.platform === 'windows' ? 40 : 20;
             const isValid = sizeKB > minSizeKB;
 
