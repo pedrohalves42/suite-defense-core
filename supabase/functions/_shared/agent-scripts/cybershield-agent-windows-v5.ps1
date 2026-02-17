@@ -1,5 +1,9 @@
 <#
-    CyberShield Agent - Windows v5.0.7 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.8 FULL ENTERPRISE
+
+    v5.0.8: HANDLER FIX - collect_dns_blocks & integration_test_v3 sync
+    - FIXED: Ensured collect_dns_blocks and integration_test_v3 handlers are included in DB release
+    - No code changes needed - handlers already existed in v5.0.7 codebase but were missing from DB sync
 
     v5.0.7: AUTO-UPDATE FIX - Force Update via Heartbeat (ported from v4)
     - NEW: Apply-ForcedUpdate function (Base64 decode, SHA256 validation, dynamic task detection)
@@ -111,7 +115,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.7"
+    [string]$AgentVersion = "v5.0.8"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
