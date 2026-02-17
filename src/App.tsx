@@ -133,6 +133,7 @@ import ConfidenceGapDashboardPage from "./pages/admin/ConfidenceGapDashboard";
 import Tasks from "./pages/admin/Tasks";
 import Governance from "./pages/admin/Governance";
 import GovernanceReports from "./pages/admin/GovernanceReports";
+import EvidenceBundlePage from "./pages/admin/EvidenceBundlePage";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 
 const App = () => (
@@ -258,6 +259,7 @@ const App = () => (
                 <Route path="tasks" element={<Tasks />} />
                 <Route path="governance" element={<Governance />} />
                 <Route path="governance-reports" element={<GovernanceReports />} />
+                <Route path="evidence-bundle" element={<EvidenceBundlePage />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) - Protected by MFA Guard */}
