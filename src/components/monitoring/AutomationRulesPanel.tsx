@@ -63,6 +63,7 @@ const OPERATOR_OPTIONS = [
 
 const ACTION_OPTIONS = [
   { value: 'send_alert', label: 'Enviar Alerta' },
+  { value: 'create_alert', label: 'Criar Alerta' },
   { value: 'create_job', label: 'Criar Job de Remediação' },
 ];
 
@@ -383,7 +384,15 @@ export function AutomationRulesPanel() {
                         </div>
                         <div className="text-sm text-muted-foreground mt-0.5 flex items-center gap-2">
                           <span>
-                            Se {getMetricLabel(conditions.metric || '')} {conditions.operator} {conditions.value}%
+                            {rule.trigger_type === 'metric_threshold' ? (
+                              <>Se {getMetricLabel(conditions.metric || '')} {conditions.operator} {conditions.value}{conditions.metric?.includes('percent') ? '%' : ''}</>
+                            ) : rule.trigger_type === 'anomaly_detection' ? (
+                              <>Detecção: {(conditions as any).eventType === 'suspicious_process' ? 'Processo Suspeito' : (conditions as any).eventType || 'anomalia'} {(conditions as any).severity ? `(${(conditions as any).severity})` : ''}</>
+                            ) : rule.trigger_type === 'agent_status' ? (
+                              <>Evento: {(conditions as any).eventType === 'agent_offline' ? `Agente offline > ${(conditions as any).duration_minutes || 10}min` : (conditions as any).eventType || 'status'}</>
+                            ) : (
+                              <>Tipo: {rule.trigger_type}</>
+                            )}
                           </span>
                           <span>→</span>
                           <span>{getActionLabel(rule.action_type)}</span>
