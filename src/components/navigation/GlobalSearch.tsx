@@ -47,6 +47,7 @@ const PAGES: SearchResult[] = [
   { id: 'software-inventory', type: 'page', title: 'Inventário de Software', description: 'Programas instalados', icon: <FileText className="h-4 w-4" />, path: '/admin/software-inventory', category: 'Inventário' },
   { id: 'vulnerabilities', type: 'page', title: 'Vulnerabilidades', description: 'CVEs detectadas', icon: <AlertTriangle className="h-4 w-4" />, path: '/admin/vulnerabilities', category: 'Segurança' },
   { id: 'reports', type: 'page', title: 'Relatórios', description: 'Gerar relatórios de segurança', icon: <FileText className="h-4 w-4" />, path: '/admin/reports', category: 'Relatórios' },
+  { id: 'evidence-bundle', type: 'page', title: 'Evidence Bundle', description: 'Pacote de evidências para auditoria', icon: <Shield className="h-4 w-4" />, path: '/admin/evidence-bundle', category: 'Relatórios' },
   { id: 'ai-insights', type: 'page', title: 'Insights IA', description: 'Sugestões inteligentes', icon: <Zap className="h-4 w-4" />, path: '/admin/ai-insights', category: 'IA' },
   { id: 'playbooks', type: 'page', title: 'Playbooks', description: 'Automações e regras', icon: <Zap className="h-4 w-4" />, path: '/admin/playbooks', category: 'Automação' },
   { id: 'notification-channels', type: 'page', title: 'Canais de Notificação', description: 'Email, WhatsApp, Telegram', icon: <Bell className="h-4 w-4" />, path: '/admin/notification-channels', category: 'Configurações' },
