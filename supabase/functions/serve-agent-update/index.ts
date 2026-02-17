@@ -162,9 +162,9 @@ Deno.serve(async (req) => {
       }
 
       // Normalizar script para Windows (via hexagonal shared module)
-      
       const normalizedScript = normalizeForWindows(forcedRelease.script_content);
-      const scriptBytes = encoder.encode(normalizedScript);
+      const forceEncoder = new TextEncoder();
+      const scriptBytes = forceEncoder.encode(normalizedScript);
       const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
