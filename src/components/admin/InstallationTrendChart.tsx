@@ -1,3 +1,4 @@
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useInstallationTrend } from '@/hooks/useInstallationTrend';
 import { TrendingUp, Loader2 } from 'lucide-react';
@@ -24,7 +25,7 @@ export function InstallationTrendChart() {
 
   const chartData = (trendData || []).map(item => ({
     ...item,
-    date: new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+    date: formatBrazilDateTime(item.date, 'day-month')
   }));
 
   return (

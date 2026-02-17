@@ -1,3 +1,4 @@
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -389,7 +390,7 @@ export function AgentQuickActions({
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             Existem registros de auditoria recentes. A exclusão permanente estará disponível 
-                            {deleteBlockedUntil ? ` após ${new Date(deleteBlockedUntil).toLocaleDateString('pt-BR')}` : ' em 30 dias'}.
+                            {deleteBlockedUntil ? ` após ${formatBrazilDateTime(deleteBlockedUntil, 'date')}` : ' em 30 dias'}.
                           </p>
                           <Button disabled className="mt-3 w-full" variant="outline">
                             Bloqueado por Auditoria

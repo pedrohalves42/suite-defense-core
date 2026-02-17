@@ -1,3 +1,4 @@
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -185,7 +186,7 @@ export function AuditTrailValidator({ integrity, isLoading }: AuditTrailValidato
                 <div key={action.id} className="flex justify-between p-2 bg-amber-500/5 rounded">
                   <span className="font-mono">{action.action_type}</span>
                   <span className="text-muted-foreground">
-                    {new Date(action.created_at).toLocaleDateString('pt-BR')}
+                    {formatBrazilDateTime(action.created_at, 'date')}
                   </span>
                 </div>
               ))}

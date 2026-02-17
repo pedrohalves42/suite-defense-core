@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { formatBrazilDateTime } from "@/lib/date-utils";
 import { logger } from "@/lib/logger";
 import { useMutation } from "@tanstack/react-query";
 import { getJobTypeLabel, getJobStatusLabel, JOB_TYPE_LABELS } from "@/lib/job-labels";
@@ -776,12 +777,7 @@ const JobCreator = () => {
                           </span>
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {new Date(job.created_at).toLocaleDateString('pt-BR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            {formatBrazilDateTime(job.created_at, 'short')}
                           </span>
                           {job.is_recurring && (
                             <Badge variant="outline" className="text-xs">

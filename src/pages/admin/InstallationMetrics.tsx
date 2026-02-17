@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, CheckCircle2, Clock, AlertTriangle, TrendingUp, TrendingDown, Server, Zap } from "lucide-react";
+import { formatBrazilDateTime } from "@/lib/date-utils";
 import {
   BarChart,
   Bar,
@@ -478,7 +479,7 @@ export default function InstallationMetrics() {
                         </Badge>
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        Tipo: {err.event_type} | Ultimo: {err.last_occurrence ? new Date(err.last_occurrence).toLocaleDateString('pt-BR') : 'N/A'}
+                        Tipo: {err.event_type} | Ultimo: {err.last_occurrence ? formatBrazilDateTime(err.last_occurrence, 'date') : 'N/A'}
                       </span>
                     </div>
                   ))}

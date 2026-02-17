@@ -1,3 +1,4 @@
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -451,7 +452,7 @@ export function AutomationRulesPanel() {
                       </span>
                     </div>
                     <span className="text-muted-foreground text-xs whitespace-nowrap">
-                      {new Date(exec.triggered_at).toLocaleString('pt-BR')}
+                      {formatBrazilDateTime(exec.triggered_at, 'short')}
                     </span>
                   </div>
                 );

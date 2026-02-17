@@ -1200,7 +1200,7 @@ const ServerDashboard = () => {
                                          "Com erro"}
                                       </Badge>
                                       <span className="text-xs text-muted-foreground">
-                                        {new Date(lastJob.created_at).toLocaleString()}
+                                        {formatBrazilDateTime(lastJob.created_at, 'short')}
                                       </span>
                                     </div>
                                   </div>
@@ -1243,7 +1243,7 @@ const ServerDashboard = () => {
                             <span className="text-sm font-mono text-foreground">{job.agent_name}</span>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Iniciado: {new Date(job.created_at).toLocaleString()}
+                            Iniciado: {formatBrazilDateTime(job.created_at, 'short')}
                           </p>
                         </div>
                         <div className="text-right">
@@ -1263,7 +1263,7 @@ const ServerDashboard = () => {
                           </Badge>
                           {job.completed_at && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              Finalizado: {new Date(job.completed_at).toLocaleString()}
+                              Finalizado: {formatBrazilDateTime(job.completed_at, 'short')}
                             </p>
                           )}
                         </div>
@@ -1305,7 +1305,7 @@ const ServerDashboard = () => {
                           </p>
                         </div>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(report.created_at).toLocaleString()}
+                          {formatBrazilDateTime(report.created_at, 'short')}
                         </span>
                       </div>
                     ))}

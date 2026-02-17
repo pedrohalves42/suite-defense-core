@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { 
   Bell, 
   Mail, 
@@ -946,7 +947,7 @@ export default function NotificationSettings() {
                       </div>
                       {report.last_sent_at && (
                         <div className="text-xs text-muted-foreground">
-                          Último envio: {new Date(report.last_sent_at).toLocaleString('pt-BR')}
+                          Último envio: {formatBrazilDateTime(report.last_sent_at, 'short')}
                         </div>
                       )}
                       <div className="flex gap-2 pt-2">
@@ -1025,7 +1026,7 @@ export default function NotificationSettings() {
                               )}
                             </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {new Date(log.created_at).toLocaleString('pt-BR')}
+                              {formatBrazilDateTime(log.created_at, 'short')}
                             </TableCell>
                           </TableRow>
                         );
