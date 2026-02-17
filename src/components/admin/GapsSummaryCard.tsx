@@ -20,6 +20,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useRiskScore } from '@/hooks/useRiskScore';
 import { useLatestConfidenceGap } from '@/hooks/useConfidenceGap';
+import { useTenant } from '@/hooks/useTenant';
 
 interface GapItem {
   label: string;
@@ -30,67 +31,79 @@ interface GapItem {
 }
 
 export function GapsSummaryCard() {
+  const { tenant } = useTenant();
   const { riskScore, isLoading: riskLoading } = useRiskScore();
   const { data: confidenceGap, isLoading: confidenceLoading } = useLatestConfidenceGap();
 
-  // Fetch critical alerts count (last 7 days only to avoid inflated counts)
+  // Fetch critical alerts count (last 7 days, filtered by tenant)
   const { data: alertsData, isLoading: alertsLoading } = useQuery({
-    queryKey: ['gaps-critical-alerts'],
+    queryKey: ['gaps-critical-alerts', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return 0;
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const { count } = await supabase
         .from('system_alerts')
         .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenant.id)
         .eq('resolved', false)
         .in('severity', ['high', 'critical'])
         .gte('created_at', sevenDaysAgo);
       return count || 0;
     },
+    enabled: !!tenant?.id,
     staleTime: 60000,
   });
 
-  // Fetch untriaged insights count
+  // Fetch untriaged insights count (filtered by tenant)
   const { data: insightsData, isLoading: insightsLoading } = useQuery({
-    queryKey: ['gaps-untriaged-insights'],
+    queryKey: ['gaps-untriaged-insights', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return 0;
       const { count } = await supabase
         .from('ai_insights')
         .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenant.id)
         .eq('acknowledged', false)
         .in('severity', ['high', 'critical']);
       return count || 0;
     },
+    enabled: !!tenant?.id,
     staleTime: 60000,
   });
 
-  // Fetch offline agents count
+  // Fetch offline agents count (filtered by tenant)
   const { data: offlineData, isLoading: offlineLoading } = useQuery({
-    queryKey: ['gaps-offline-agents'],
+    queryKey: ['gaps-offline-agents', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return 0;
       const threshold = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      // ADR-026: Use agents_safe view
       const { count } = await supabase
         .from('agents_safe')
         .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenant.id)
         .is('archived_at', null)
         .lt('last_heartbeat', threshold);
       return count || 0;
     },
+    enabled: !!tenant?.id,
     staleTime: 60000,
   });
 
-  // Fetch failed jobs in last 24h
+  // Fetch failed jobs in last 24h (filtered by tenant)
   const { data: jobsData, isLoading: jobsLoading } = useQuery({
-    queryKey: ['gaps-failed-jobs'],
+    queryKey: ['gaps-failed-jobs', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return 0;
       const threshold = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { count } = await supabase
         .from('scheduled_job_runs')
         .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenant.id)
         .eq('success', false)
         .gte('started_at', threshold);
       return count || 0;
     },
+    enabled: !!tenant?.id,
     staleTime: 60000,
   });
 
