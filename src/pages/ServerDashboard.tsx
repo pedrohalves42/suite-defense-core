@@ -928,7 +928,7 @@ const ServerDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Distribuição por Tipo de Tarefa */}
+          {/* Distribuição por Tipo de Tarefa — Barras horizontais */}
           <Card className="bg-gradient-card border-warning/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -955,54 +955,35 @@ const ServerDashboard = () => {
                     O gráfico aparecerá quando houver tarefas
                   </p>
                 </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <ResponsiveContainer width="100%" height={220}>
-                    <RechartsPieChart>
-                      <Pie
-                        data={jobTypeData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={55}
-                        outerRadius={95}
-                        labelLine={false}
-                        label={({ percent }) => percent > 0.04 ? `${(percent * 100).toFixed(0)}%` : ''}
-                        fill="hsl(217 91% 60%)"
-                        dataKey="value"
-                        paddingAngle={2}
-                        style={{ fontSize: '11px', fontWeight: 600, fill: 'hsl(0 0% 90%)' }}
-                      >
-                        {jobTypeData.map((_entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        formatter={(value: number, name: string) => [`${value} tarefas`, name]}
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(222 47% 11%)', 
-                          border: '1px solid hsl(215 20% 25%)', 
-                          borderRadius: '8px',
-                          padding: '8px 12px',
-                          fontSize: '12px'
-                        }} 
-                      />
-                    </RechartsPieChart>
-                  </ResponsiveContainer>
-                  {/* Legenda customizada em grid */}
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 px-2">
-                    {jobTypeData.map((entry, index) => (
-                      <div key={entry.name} className="flex items-center gap-2 text-xs truncate">
-                        <span 
-                          className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" 
-                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                        />
-                        <span className="text-muted-foreground truncate">{entry.name}</span>
-                        <span className="text-foreground font-medium ml-auto flex-shrink-0">{entry.value}</span>
-                      </div>
-                    ))}
+              ) : (() => {
+                const maxVal = Math.max(...jobTypeData.map(d => d.value));
+                return (
+                  <div className="space-y-2.5">
+                    {jobTypeData.map((entry, index) => {
+                      const pct = maxVal > 0 ? (entry.value / maxVal) * 100 : 0;
+                      const color = COLORS[index % COLORS.length];
+                      return (
+                        <div key={entry.name} className="group">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-muted-foreground truncate max-w-[65%]" title={entry.name}>
+                              {entry.name}
+                            </span>
+                            <span className="text-xs font-semibold text-foreground tabular-nums">
+                              {entry.value}
+                            </span>
+                          </div>
+                          <div className="h-2 rounded-full bg-muted/30 overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500 ease-out"
+                              style={{ width: `${pct}%`, backgroundColor: color }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </CardContent>
           </Card>
 
