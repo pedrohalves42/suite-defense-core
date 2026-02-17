@@ -126,7 +126,9 @@ export const TopBar = ({ alerts = 0, isMobile = false, sidebarCollapsed = false,
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent 
-              align="end" 
+              align="end"
+              side="bottom"
+              sideOffset={8}
               className="w-56 bg-card/95 backdrop-blur-xl border-border/50 shadow-xl"
             >
               <DropdownMenuLabel>
