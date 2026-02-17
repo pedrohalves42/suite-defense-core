@@ -70,7 +70,7 @@ export const TopBar = ({ alerts = 0, isMobile = false, sidebarCollapsed = false,
       )}
       <header 
         className={cn(
-          "fixed top-0 right-0 h-14 z-40 flex items-center justify-between px-4 md:px-6 gap-2 md:gap-4 transition-all duration-300",
+          "fixed top-0 right-0 h-14 z-50 flex items-center justify-between px-4 md:px-6 gap-2 md:gap-4 transition-all duration-300",
           "bg-card/80 backdrop-blur-xl border-b border-border/30",
           "shadow-sm",
           isMobile ? 'left-0' : (sidebarCollapsed ? 'left-16' : 'left-52'),
