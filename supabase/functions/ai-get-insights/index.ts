@@ -160,19 +160,30 @@ Deno.serve(async (req) => {
       throw error;
     }
 
-    // Buscar estatisticas gerais
-    const { data: stats } = await supabase
-      .from('ai_insights')
-      .select('severity, acknowledged')
-      .eq('tenant_id', tenantId);
+    // Buscar estatísticas usando contagens individuais para evitar limite de 1000 rows
+    const [
+      { count: totalCount },
+      { count: criticalCount },
+      { count: warningCount },
+      { count: infoCount },
+      { count: acknowledgedCount },
+      { count: pendingCount },
+    ] = await Promise.all([
+      supabase.from('ai_insights').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'open'),
+      supabase.from('ai_insights').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'open').eq('severity', 'critical'),
+      supabase.from('ai_insights').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'open').eq('severity', 'warning'),
+      supabase.from('ai_insights').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'open').eq('severity', 'info'),
+      supabase.from('ai_insights').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'open').eq('acknowledged', true),
+      supabase.from('ai_insights').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'open').eq('acknowledged', false),
+    ]);
 
     const statistics = {
-      total: stats?.length || 0,
-      critical: stats?.filter(s => s.severity === 'critical').length || 0,
-      warning: stats?.filter(s => s.severity === 'warning').length || 0,
-      info: stats?.filter(s => s.severity === 'info').length || 0,
-      acknowledged: stats?.filter(s => s.acknowledged).length || 0,
-      pending: stats?.filter(s => !s.acknowledged).length || 0,
+      total: totalCount || 0,
+      critical: criticalCount || 0,
+      warning: warningCount || 0,
+      info: infoCount || 0,
+      acknowledged: acknowledgedCount || 0,
+      pending: pendingCount || 0,
     };
 
     return new Response(
