@@ -1,6 +1,8 @@
 import { useState, useCallback, useMemo } from "react";
 import { useTenant } from "./useTenant";
 import { useTenantFeatures } from "./useTenantFeatures";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   PLAN_CONFIG, 
   isLegacyPlan, 
@@ -52,16 +54,56 @@ export const useUpgradeFlow = () => {
     featureName: undefined,
   });
 
-  // Get current plan from tenant subscription
+  // Fetch current plan from tenant_subscriptions
+  const { data: subscriptionData } = useQuery({
+    queryKey: ['tenant-subscription-plan', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return null;
+      const { data, error } = await supabase
+        .from('tenant_subscriptions')
+        .select('plan_id, is_legacy, subscription_plans(name)')
+        .eq('tenant_id', tenant.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenant?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { currentPlan, isLegacy } = useMemo(() => {
-    // TODO: Integrate with tenant_subscriptions when available
-    // For now, default to starter_compliance
-    const planName = "starter_compliance";
-    return {
-      currentPlan: planName as PlanType,
-      isLegacy: isLegacyPlan(planName),
+    const planName = (subscriptionData?.subscription_plans as any)?.name || "starter_compliance";
+    // Map plan names to PlanType categories
+    const planMapping: Record<string, PlanType> = {
+      starter_compliance: "starter_compliance",
+      starter: "starter_compliance",
+      starter_6m: "starter_compliance",
+      starter_12m: "starter_compliance",
+      starter_24m: "starter_compliance",
+      free: "starter_compliance",
+      home_basic: "starter_compliance",
+      home_complete: "starter_compliance",
+      home_advanced: "starter_compliance",
+      basico_residencial: "starter_compliance",
+      completo_residencial: "starter_compliance",
+      avancado_residencial: "starter_compliance",
+      business: "business",
+      pro: "business",
+      pro_6m: "business",
+      pro_12m: "business",
+      pro_24m: "business",
+      scale: "enterprise",
+      scale_6m: "enterprise",
+      scale_12m: "enterprise",
+      scale_24m: "enterprise",
+      enterprise: "enterprise",
     };
-  }, [tenant]);
+    const mapped = planMapping[planName] || "starter_compliance";
+    return {
+      currentPlan: mapped,
+      isLegacy: subscriptionData?.is_legacy ?? isLegacyPlan(planName),
+    };
+  }, [subscriptionData]);
   
   const planLimits = PLAN_LIMITS[currentPlan];
 
