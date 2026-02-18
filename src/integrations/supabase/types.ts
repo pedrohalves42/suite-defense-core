@@ -24868,6 +24868,7 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: Json
       }
+      cleanup_zombie_executions: { Args: never; Returns: Json }
       collect_task_evidence: {
         Args: { p_agent_id: string; p_task_type: string }
         Returns: Json
