@@ -5,8 +5,10 @@ import TenantInvites from "./tenant/TenantInvites";
 import TenantSecurity from "./tenant/TenantSecurity";
 import TenantLogs from "./tenant/TenantLogs";
 import TenantSettings from "./tenant/TenantSettings";
+import { useTranslation } from 'react-i18next';
 
 const Tenant = () => {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'invites';
 
@@ -18,10 +20,10 @@ const Tenant = () => {
         </div>
         <div>
           <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Gerenciar Tenant
+            {t('adminPages.tenant.title')}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Configurações e monitoramento completo do tenant
+            {t('adminPages.tenant.subtitle')}
           </p>
         </div>
       </div>
@@ -34,19 +36,19 @@ const Tenant = () => {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="invites">
             <Mail className="h-4 w-4 mr-2" />
-            Convites
+            {t('adminPages.tenant.invites')}
           </TabsTrigger>
           <TabsTrigger value="security">
             <Shield className="h-4 w-4 mr-2" />
-            Seguranca
+            {t('adminPages.tenant.security')}
           </TabsTrigger>
           <TabsTrigger value="logs">
             <ScrollText className="h-4 w-4 mr-2" />
-            Logs
+            {t('adminPages.tenant.logs')}
           </TabsTrigger>
           <TabsTrigger value="settings">
             <Settings className="h-4 w-4 mr-2" />
-            Configuracoes
+            {t('adminPages.tenant.settingsTab')}
           </TabsTrigger>
         </TabsList>
 

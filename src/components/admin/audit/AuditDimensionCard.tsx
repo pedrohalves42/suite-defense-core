@@ -7,6 +7,7 @@ import { ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus } from 'lucide-
 import { AuditDimension, DIMENSION_LABELS } from '@/hooks/useSystemAudit';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface AuditDimensionCardProps {
   dimensionKey: string;
@@ -16,6 +17,7 @@ interface AuditDimensionCardProps {
 
 export function AuditDimensionCard({ dimensionKey, dimension, previousScore }: AuditDimensionCardProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useTranslation();
   
   const label = DIMENSION_LABELS[dimensionKey] || { name: dimensionKey, description: '' };
   const trend = previousScore !== undefined ? dimension.score - previousScore : 0;
@@ -64,7 +66,7 @@ export function AuditDimensionCard({ dimensionKey, dimension, previousScore }: A
         <CardContent className="pt-0">
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground hover:text-foreground">
-              <span>{isOpen ? 'Ocultar análise' : 'Ver análise detalhada'}</span>
+              <span>{isOpen ? t('adminPages.audit.hideAnalysis') : t('adminPages.audit.showAnalysis')}</span>
               {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
           </CollapsibleTrigger>

@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 import { logger } from '@/lib/logger';
+import { useTranslation } from 'react-i18next';
 import { OutdatedAgentsBanner } from '@/components/OutdatedAgentsBanner';
 import { TenantSetupWizard } from '@/components/TenantSetupWizard';
 import { useTenantSetup } from '@/hooks/useTenantSetup';
@@ -14,6 +15,7 @@ export const AdminLayout = () => {
   const { isAdmin, loading } = useIsAdmin();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const { needsSetup, loading: setupLoading } = useTenantSetup();
 
   useEffect(() => {
@@ -25,8 +27,8 @@ export const AdminLayout = () => {
     
     if (!loading && !isAdmin) {
       toast({
-        title: "Acesso Negado",
-        description: "Voce nao tem permissoes de administrador.",
+        title: t('adminPages.layout.accessDenied'),
+        description: t('adminPages.layout.noAdminPermission'),
         variant: "destructive"
       });
     }
@@ -36,7 +38,7 @@ export const AdminLayout = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <p className="text-muted-foreground">Verificando permissões...</p>
+        <p className="text-muted-foreground">{t('adminPages.layout.checkingPermissions')}</p>
       </div>
     );
   }

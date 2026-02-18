@@ -16,6 +16,7 @@ import { logger } from '@/lib/logger';
 import { MFASettings } from '@/components/mfa/MFASettings';
 import { PasswordChangeCard } from '@/components/settings/PasswordChangeCard';
 import { AutomationSettings } from '@/components/settings/AutomationSettings';
+import { useTranslation } from 'react-i18next';
 
 interface TenantSettings {
   id: string;
@@ -35,6 +36,7 @@ interface TenantSettings {
 
 export default function Settings() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { tenant, loading: tenantLoading } = useTenant();
   const { canWrite, loading: roleLoading } = useUserRole();
@@ -283,32 +285,32 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold">Configurações</h2>
-        <p className="text-muted-foreground">Gerencie as configurações da sua empresa</p>
+        <h2 className="text-3xl font-bold">{t('adminPages.settings.title')}</h2>
+        <p className="text-muted-foreground">{t('adminPages.settings.subtitle')}</p>
       </div>
 
       <Tabs defaultValue="empresa" className="w-full">
         <TabsList>
-          <TabsTrigger value="empresa">Sua Empresa</TabsTrigger>
+          <TabsTrigger value="empresa">{t('adminPages.settings.companyTab')}</TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-1">
             <Shield className="h-4 w-4" />
-            Segurança
+            {t('adminPages.settings.securityTab')}
           </TabsTrigger>
-          <TabsTrigger value="alerts">Notificações</TabsTrigger>
-          <TabsTrigger value="integrations">Conexões</TabsTrigger>
-          <TabsTrigger value="features">Funcionalidades</TabsTrigger>
+          <TabsTrigger value="alerts">{t('adminPages.settings.alertsTab')}</TabsTrigger>
+          <TabsTrigger value="integrations">{t('adminPages.settings.integrationsTab')}</TabsTrigger>
+          <TabsTrigger value="features">{t('adminPages.settings.featuresTab')}</TabsTrigger>
         </TabsList>
 
         {/* Empresa Info Tab */}
         <TabsContent value="empresa" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Dados da Empresa</CardTitle>
-              <CardDescription>Configure as informações básicas da sua empresa</CardDescription>
+              <CardTitle>{t('adminPages.settings.companyData')}</CardTitle>
+              <CardDescription>{t('adminPages.settings.companyDataDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label>Nome da Empresa</Label>
+                <Label>{t('adminPages.settings.companyName')}</Label>
                 <Input 
                   value={tenantName || tenant?.name || ''}
                   onChange={(e) => setTenantName(e.target.value)}
@@ -317,18 +319,18 @@ export default function Settings() {
                 />
               </div>
               <div>
-                <Label>Slug</Label>
+                <Label>{t('adminPages.settings.slug')}</Label>
                 <Input 
                   value={tenant?.slug || ''}
                   disabled
                   className="bg-muted"
                 />
                 <p className="text-sm text-muted-foreground mt-1">
-                  O slug nao pode ser alterado
+                  {t('adminPages.settings.slugNotEditable')}
                 </p>
               </div>
               <div>
-                <Label>ID do Tenant</Label>
+                <Label>{t('adminPages.settings.tenantId')}</Label>
                 <Input 
                   value={tenant?.id || ''}
                   disabled
@@ -340,7 +342,7 @@ export default function Settings() {
                   onClick={() => updateTenant.mutate()}
                   disabled={updateTenant.isPending || !tenantName}
                 >
-                  Salvar Alteracoes
+                  {t('adminPages.settings.saveChanges')}
                 </Button>
               )}
             </CardContent>
@@ -348,16 +350,16 @@ export default function Settings() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Informações do Sistema</CardTitle>
-              <CardDescription>Detalhes técnicos da sua empresa</CardDescription>
+              <CardTitle>{t('adminPages.settings.systemInfo')}</CardTitle>
+              <CardDescription>{t('adminPages.settings.systemInfoDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Criado em</span>
+                <span className="text-muted-foreground">{t('adminPages.settings.createdAt')}</span>
                 <span>{tenant?.created_at ? new Date(tenant.created_at).toLocaleDateString('pt-BR') : '-'}</span>
               </div>
               <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Ultima atualizacao</span>
+                <span className="text-muted-foreground">{t('adminPages.settings.lastUpdate')}</span>
                 <span>{tenant?.updated_at ? new Date(tenant.updated_at).toLocaleDateString('pt-BR') : '-'}</span>
               </div>
             </CardContent>
@@ -368,12 +370,12 @@ export default function Settings() {
         <TabsContent value="alerts" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Configurações de Notificações</CardTitle>
-              <CardDescription>Configure emails, webhooks e limites para alertas</CardDescription>
+              <CardTitle>{t('adminPages.settings.alertSettings')}</CardTitle>
+              <CardDescription>{t('adminPages.settings.alertSettingsDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label>Email para Alertas</Label>
+                <Label>{t('adminPages.settings.alertEmail')}</Label>
                 <Input 
                   type="email"
                   value={settings.alert_email || ''}
@@ -382,12 +384,12 @@ export default function Settings() {
                   disabled={!canWrite}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
-                  Email que recebera notificacoes de seguranca
+                  {t('adminPages.settings.alertEmailDesc')}
                 </p>
               </div>
 
               <div>
-                <Label>Webhook URL</Label>
+                <Label>{t('adminPages.settings.webhookUrl')}</Label>
                 <Input 
                   type="url"
                   value={settings.alert_webhook_url || ''}
@@ -396,7 +398,7 @@ export default function Settings() {
                   disabled={!canWrite}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
-                  URL para receber notificacoes via webhook (POST requests com JSON payload)
+                  {t('adminPages.settings.webhookUrlDesc')}
                 </p>
               </div>
 
@@ -410,10 +412,10 @@ export default function Settings() {
                   {testingWebhook ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Enviando ping...
+                      {t('adminPages.settings.sendingPing')}
                     </>
                   ) : (
-                    'Testar Webhook (Ping/Pong)'
+                    t('adminPages.settings.testWebhook')
                   )}
                 </Button>
                 
@@ -424,7 +426,7 @@ export default function Settings() {
                     ) : (
                       <AlertCircle className="h-4 w-4" />
                     )}
-                    <AlertTitle>{webhookTestResult.success ? 'Sucesso' : 'Erro'}</AlertTitle>
+                    <AlertTitle>{webhookTestResult.success ? t('adminPages.settings.success') : t('adminPages.settings.error')}</AlertTitle>
                     <AlertDescription>
                       {webhookTestResult.message}
                       {webhookTestResult.details && (
@@ -441,7 +443,7 @@ export default function Settings() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label>Limiar de Virus Detectados</Label>
+                  <Label>{t('adminPages.settings.virusThreshold')}</Label>
                   <Input 
                     type="number"
                     min="1"
@@ -451,7 +453,7 @@ export default function Settings() {
                   />
                 </div>
                 <div>
-                  <Label>Limiar de Jobs Falhados</Label>
+                  <Label>{t('adminPages.settings.failedJobsThreshold')}</Label>
                   <Input 
                     type="number"
                     min="1"
@@ -461,7 +463,7 @@ export default function Settings() {
                   />
                 </div>
                 <div>
-                  <Label>Limiar de Agentes Offline</Label>
+                  <Label>{t('adminPages.settings.offlineAgentsThreshold')}</Label>
                   <Input 
                     type="number"
                     min="1"
@@ -477,7 +479,7 @@ export default function Settings() {
                   onClick={() => updateSettings.mutate(settings)}
                   disabled={updateSettings.isPending}
                 >
-                  Salvar Configuracoes de Alertas
+                  {t('adminPages.settings.saveAlertSettings')}
                 </Button>
               )}
             </CardContent>
@@ -489,14 +491,14 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle>VirusTotal</CardTitle>
-              <CardDescription>Integracao com VirusTotal para analise de malware</CardDescription>
+              <CardDescription>{t('adminPages.settings.integrationsDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Ativar VirusTotal</Label>
+                  <Label>{t('adminPages.settings.enableVirusTotal')}</Label>
                   <p className="text-sm text-muted-foreground">
-                    Usar VirusTotal API para analise de arquivos
+                    {t('adminPages.settings.virusTotalDesc')}
                   </p>
                 </div>
                 <Switch
@@ -506,7 +508,7 @@ export default function Settings() {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                A chave da API do VirusTotal e configurada globalmente nos secrets do projeto
+                {t('adminPages.settings.virusTotalKeyNote')}
               </p>
               
               <div className="pt-4 border-t">
@@ -519,10 +521,10 @@ export default function Settings() {
                   {testingVirusTotal ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Testando conexao...
+                      {t('adminPages.settings.testingConnection')}
                     </>
                   ) : (
-                    'Testar Conexao VirusTotal'
+                    t('adminPages.settings.testVirusTotal')
                   )}
                 </Button>
                 
@@ -533,7 +535,7 @@ export default function Settings() {
                     ) : (
                       <AlertCircle className="h-4 w-4" />
                     )}
-                    <AlertTitle>{virusTotalTestResult.success ? 'Sucesso' : 'Erro'}</AlertTitle>
+                    <AlertTitle>{virusTotalTestResult.success ? t('adminPages.settings.success') : t('adminPages.settings.error')}</AlertTitle>
                     <AlertDescription>
                       {virusTotalTestResult.message}
                       {virusTotalTestResult.details && (
@@ -553,14 +555,14 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle>Stripe</CardTitle>
-              <CardDescription>Integracao com Stripe para pagamentos (futuro)</CardDescription>
+              <CardDescription>{t('adminPages.settings.stripeIntegrationDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Ativar Stripe</Label>
+                  <Label>{t('adminPages.settings.enableStripe')}</Label>
                   <p className="text-sm text-muted-foreground">
-                    Habilitar funcionalidades de pagamento
+                    {t('adminPages.settings.stripeDesc')}
                   </p>
                 </div>
                 <Switch
@@ -580,10 +582,10 @@ export default function Settings() {
                   {testingStripe ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Testando conexao...
+                      {t('adminPages.settings.testingConnection')}
                     </>
                   ) : (
-                    'Testar Conexao Stripe'
+                    t('adminPages.settings.testStripe')
                   )}
                 </Button>
                 
@@ -594,7 +596,7 @@ export default function Settings() {
                     ) : (
                       <AlertCircle className="h-4 w-4" />
                     )}
-                    <AlertTitle>{stripeTestResult.success ? 'Sucesso' : 'Erro'}</AlertTitle>
+                    <AlertTitle>{stripeTestResult.success ? t('adminPages.settings.success') : t('adminPages.settings.error')}</AlertTitle>
                     <AlertDescription>
                       {stripeTestResult.message}
                       {stripeTestResult.details && (
@@ -616,7 +618,7 @@ export default function Settings() {
               onClick={() => updateSettings.mutate(settings)}
               disabled={updateSettings.isPending}
             >
-              Salvar Configuracoes de Integracoes
+              {t('adminPages.settings.saveIntegrations')}
             </Button>
           )}
         </TabsContent>
@@ -625,15 +627,15 @@ export default function Settings() {
         <TabsContent value="features" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Feature Flags</CardTitle>
-              <CardDescription>Ative ou desative funcionalidades especificas</CardDescription>
+              <CardTitle>{t('adminPages.settings.featureFlags')}</CardTitle>
+              <CardDescription>{t('adminPages.settings.featureFlagsDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between py-3 border-b">
                 <div>
-                  <Label>Alertas por Email</Label>
+                  <Label>{t('adminPages.settings.emailAlerts')}</Label>
                   <p className="text-sm text-muted-foreground">
-                    Enviar notificacoes por email
+                    {t('adminPages.settings.emailAlertsDesc')}
                   </p>
                 </div>
                 <Switch
@@ -645,9 +647,9 @@ export default function Settings() {
 
               <div className="flex items-center justify-between py-3 border-b">
                 <div>
-                  <Label>Alertas por Webhook</Label>
+                  <Label>{t('adminPages.settings.webhookAlerts')}</Label>
                   <p className="text-sm text-muted-foreground">
-                    Enviar notificacoes via webhook
+                    {t('adminPages.settings.webhookAlertsDesc')}
                   </p>
                 </div>
                 <Switch
@@ -660,19 +662,18 @@ export default function Settings() {
               <div className="flex items-center justify-between py-3 border-b">
                 <div className="flex-1 pr-4">
                   <div className="flex items-center gap-2">
-                    <Label>Quarentena Automatica</Label>
+                    <Label>{t('adminPages.settings.autoQuarantine')}</Label>
                     {settings.enable_auto_quarantine && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                        Ativo
+                        {t('common.status')}
                       </span>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Quando ativado, arquivos detectados como maliciosos pelo VirusTotal/Hybrid Analysis
-                    serao automaticamente movidos para quarentena sem intervencao manual.
+                    {t('adminPages.settings.autoQuarantineDesc')}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Requer integracao com VirusTotal ou Hybrid Analysis configurada.
+                    {t('adminPages.settings.autoQuarantineNote')}
                   </p>
                 </div>
                 <Switch
@@ -685,14 +686,13 @@ export default function Settings() {
               <div className="flex items-center justify-between py-3 border-b">
                 <div className="flex-1 pr-4">
                   <div className="flex items-center gap-2">
-                    <Label>Playbooks Automaticos</Label>
+                    <Label>{t('adminPages.settings.autoPlaybooks')}</Label>
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                      Configurado
+                      {t('adminPages.settings.autoPlaybooksConfigured')}
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Playbooks de notificacao (Computador Offline, DNS Bloqueado) executam automaticamente
-                    sem necessidade de aprovacao manual.
+                    {t('adminPages.settings.autoPlaybooksDesc')}
                   </p>
                 </div>
                 <Shield className="h-5 w-5 text-primary" />
@@ -706,19 +706,18 @@ export default function Settings() {
                     ) : (
                       <Eye className="h-5 w-5 text-muted-foreground" />
                     )}
-                    <Label>Shadow Mode (Dry Run)</Label>
+                    <Label>{t('adminPages.settings.shadowMode')}</Label>
                     {settings.enable_dry_run_mode && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                        Ativo
+                        {t('common.status')}
                       </span>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Quando ativado, playbooks sao avaliados mas <strong>nao executados automaticamente</strong>. 
-                    Ideal para testar regras do motor de risco sem impacto real.
+                    {t('adminPages.settings.shadowModeDesc')}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Todas as decisoes serao logadas para auditoria em <code className="bg-muted px-1 rounded">risk_decision_log</code>.
+                    {t('adminPages.settings.shadowModeNote')}
                   </p>
                 </div>
                 <Switch
@@ -734,7 +733,7 @@ export default function Settings() {
                   disabled={updateSettings.isPending}
                   className="mt-4"
                 >
-                  Salvar Feature Flags
+                  {t('adminPages.settings.saveFeatureFlags')}
                 </Button>
               )}
             </CardContent>
@@ -752,34 +751,34 @@ export default function Settings() {
           
           <Card>
             <CardHeader>
-              <CardTitle>Dicas de Segurança</CardTitle>
-              <CardDescription>Recomendações para manter sua conta segura</CardDescription>
+              <CardTitle>{t('adminPages.settings.securityTips')}</CardTitle>
+              <CardDescription>{t('adminPages.settings.securityTipsDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                 <Shield className="h-5 w-5 text-primary mt-0.5" />
                 <div>
-                  <p className="font-medium text-sm">Use senhas fortes</p>
+                  <p className="font-medium text-sm">{t('adminPages.settings.strongPasswords')}</p>
                   <p className="text-sm text-muted-foreground">
-                    Combine letras maiúsculas, minúsculas, números e símbolos.
+                    {t('adminPages.settings.strongPasswordsDesc')}
                   </p>
                 </div>
               </div>
               <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                 <Shield className="h-5 w-5 text-primary mt-0.5" />
                 <div>
-                  <p className="font-medium text-sm">Ative a autenticação de dois fatores</p>
+                  <p className="font-medium text-sm">{t('adminPages.settings.enable2FA')}</p>
                   <p className="text-sm text-muted-foreground">
-                    Adicione uma camada extra de segurança à sua conta.
+                    {t('adminPages.settings.enable2FADesc')}
                   </p>
                 </div>
               </div>
               <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                 <Shield className="h-5 w-5 text-primary mt-0.5" />
                 <div>
-                  <p className="font-medium text-sm">Mantenha seu email atualizado</p>
+                  <p className="font-medium text-sm">{t('adminPages.settings.keepEmailUpdated')}</p>
                   <p className="text-sm text-muted-foreground">
-                    Garanta que você tenha acesso ao email vinculado à conta.
+                    {t('adminPages.settings.keepEmailUpdatedDesc')}
                   </p>
                 </div>
               </div>

@@ -23,8 +23,10 @@ import { CreateUserForm } from '@/components/members/CreateUserForm';
 import { AppRole } from '@/types/roles';
 import { Member, TenantSubscription } from '@/types/user';
 import { getMemberLimit } from '@/lib/subscriptionLimits';
+import { useTranslation } from 'react-i18next';
 
 export default function Members() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -166,7 +168,7 @@ export default function Members() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Gerenciar Membros
+                {t('adminPages.members.title')}
               </h2>
               {tenant && (
                 <Badge variant="outline" className="font-normal text-sm">
@@ -175,14 +177,14 @@ export default function Members() {
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              Gerencie os membros do seu tenant
+              {t('adminPages.members.subtitle')}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {!isUnlimited && isAtLimit && (
             <Badge variant="destructive" className="text-sm">
-              Limite de membros atingido ({memberLimit})
+              {t('adminPages.members.memberLimitReached')} ({memberLimit})
             </Badge>
           )}
           <Button 
@@ -191,14 +193,14 @@ export default function Members() {
             disabled={isAtLimit}
           >
             <UserCog className="h-4 w-4 mr-2" />
-            Criar Usuário
+            {t('adminPages.members.createUser')}
           </Button>
           <Button 
             onClick={() => navigate('/admin/invites')}
             disabled={isAtLimit}
           >
             <UserPlus className="h-4 w-4 mr-2" />
-            Convidar por Email
+            {t('adminPages.members.inviteByEmail')}
           </Button>
         </div>
       </div>
@@ -208,17 +210,16 @@ export default function Members() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="flex-1">
-                <p className="font-semibold text-destructive">Limite de membros atingido</p>
+                <p className="font-semibold text-destructive">{t('adminPages.members.memberLimitReached')}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Seu plano <Badge variant="secondary" className="mx-1">{planName}</Badge> 
-                  permite ate {memberLimit} membros. Para adicionar mais membros, faca upgrade do seu plano.
+                  {t('adminPages.members.limitReachedDesc', { plan: planName, limit: memberLimit })}
                 </p>
               </div>
               <Button 
                 onClick={() => navigate('/admin/plan-upgrade')}
                 variant="default"
               >
-                Fazer Upgrade
+                {t('adminPages.members.upgrade')}
               </Button>
             </div>
           </CardContent>
@@ -227,8 +228,8 @@ export default function Members() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Informacoes da Assinatura</CardTitle>
-          <CardDescription>Detalhes do seu plano e limites</CardDescription>
+          <CardTitle>{t('adminPages.members.subscriptionInfo')}</CardTitle>
+          <CardDescription>{t('adminPages.members.subscriptionInfoDesc')}</CardDescription>
           <div className="mt-2">
             <Badge variant="secondary">{planName}</Badge>
           </div>
@@ -236,13 +237,13 @@ export default function Members() {
         <CardContent>
           <div className="flex items-center gap-4">
             <div>
-              <p className="text-sm text-muted-foreground">Membros</p>
+              <p className="text-sm text-muted-foreground">{t('adminPages.members.membersCount')}</p>
               <p className="text-2xl font-bold" data-testid="member-count">
                 {currentUsersCount} / {isUnlimited ? '∞' : memberLimit}
               </p>
             </div>
             {!isUnlimited && isAtLimit && (
-              <Badge variant="destructive">Limite atingido</Badge>
+              <Badge variant="destructive">{t('adminPages.members.limitReached')}</Badge>
             )}
           </div>
         </CardContent>
@@ -250,21 +251,21 @@ export default function Members() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Membros do Tenant</CardTitle>
+          <CardTitle>{t('adminPages.members.tenantMembers')}</CardTitle>
           <CardDescription>
-            Lista de todos os usuarios com acesso ao seu tenant
+            {t('adminPages.members.tenantMembersDesc')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {(isLoading || tenantLoading) ? (
-            <p className="text-center text-muted-foreground py-8">Carregando membros...</p>
+            <p className="text-center text-muted-foreground py-8">{t('adminPages.members.loadingMembers')}</p>
           ) : members.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <p className="text-muted-foreground text-lg">
-                {tenant ? `O tenant "${tenant.name}" ainda nao possui membros.` : 'Nenhum membro encontrado.'}
+                {tenant ? t('adminPages.members.noMembersYet', { name: tenant.name }) : t('adminPages.members.noMembersFound')}
               </p>
               <p className="text-sm text-muted-foreground">
-                Clique em "Convidar Membro" acima para adicionar usuarios a sua organizacao.
+                {t('adminPages.members.inviteHint')}
               </p>
             </div>
           ) : (
@@ -290,20 +291,18 @@ export default function Members() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover membro?</AlertDialogTitle>
+            <AlertDialogTitle>{t('adminPages.members.removeMember')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja remover{' '}
-              <strong>{memberToRemove?.profiles?.full_name || memberToRemove?.email}</strong>{' '}
-              do tenant? Esta acao nao pode ser desfeita.
+              {t('adminPages.members.removeConfirm', { name: memberToRemove?.profiles?.full_name || memberToRemove?.email })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t('adminPages.members.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => memberToRemove && removeMember.mutate(memberToRemove.id)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Remover
+              {t('adminPages.members.remove')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

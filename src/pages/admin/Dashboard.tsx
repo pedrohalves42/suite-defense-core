@@ -23,8 +23,10 @@ import { OnboardingRequiredBanner } from '@/components/admin/OnboardingRequiredB
 import { CompactAlert } from '@/components/ui/explainable-alert';
 import { SimpleDashboard } from '@/components/dashboard/SimpleDashboard';
 import { useSimpleModeContext } from '@/hooks/useSimpleMode';
+import { useTranslation } from 'react-i18next';
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const { tenant, loading: tenantLoading } = useTenant();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -147,12 +149,12 @@ export default function Dashboard() {
   // Global status
   const getGlobalStatus = () => {
     if (securityScore >= 80 && criticalAlerts === 0) {
-      return { emoji: '🟢', title: 'Tudo sob controle', description: 'Seus computadores estão protegidos.', variant: 'success' as const };
+      return { emoji: '🟢', title: t('adminPages.dashboard.allUnderControl'), description: t('adminPages.dashboard.allProtected'), variant: 'success' as const };
     }
     if (securityScore >= 60 || criticalAlerts <= 2) {
-      return { emoji: '🟡', title: 'Atenção necessária', description: 'Alguns itens precisam de verificação.', variant: 'warning' as const };
+      return { emoji: '🟡', title: t('adminPages.dashboard.attentionNeeded'), description: t('adminPages.dashboard.someItemsNeedCheck'), variant: 'warning' as const };
     }
-    return { emoji: '🔴', title: 'Ação urgente', description: 'Existe risco que pode impactar sua operação.', variant: 'danger' as const };
+    return { emoji: '🔴', title: t('adminPages.dashboard.urgentAction'), description: t('adminPages.dashboard.riskImpact'), variant: 'danger' as const };
   };
   const globalStatus = getGlobalStatus();
 
@@ -177,8 +179,8 @@ export default function Dashboard() {
     return (
       <div className="space-y-6">
         <div className="page-header-enterprise">
-          <h1>Minha Proteção</h1>
-          <p>Status de segurança dos seus computadores</p>
+          <h1>{t('adminPages.dashboard.myProtection')}</h1>
+          <p>{t('adminPages.dashboard.securityStatus')}</p>
         </div>
         <SimpleDashboard 
           globalStatus={globalStatus}
@@ -192,10 +194,10 @@ export default function Dashboard() {
 
   // Quick nav items
   const quickNav = [
-    { icon: Activity, label: 'Tempo Real', to: '/admin/monitoring-advanced', color: 'text-blue-500' },
-    { icon: Brain, label: 'Insights IA', to: '/admin/ai-insights', color: 'text-purple-500', badge: insightsCount || 0 },
-    { icon: BarChart3, label: 'Relatórios', to: '/admin/reports', color: 'text-emerald-500' },
-    { icon: Wrench, label: 'Central de Ações', to: '/admin/action-center', color: 'text-amber-500' },
+    { icon: Activity, label: t('adminPages.dashboard.realTime'), to: '/admin/monitoring-advanced', color: 'text-blue-500' },
+    { icon: Brain, label: t('adminPages.dashboard.insightsAI'), to: '/admin/ai-insights', color: 'text-purple-500', badge: insightsCount || 0 },
+    { icon: BarChart3, label: t('adminPages.dashboard.reports'), to: '/admin/reports', color: 'text-emerald-500' },
+    { icon: Wrench, label: t('adminPages.dashboard.actionCenter'), to: '/admin/action-center', color: 'text-amber-500' },
   ];
 
   return (
@@ -245,7 +247,7 @@ export default function Dashboard() {
                 )}>
                   {securityScore}%
                 </div>
-                <div className="text-[11px] text-muted-foreground">Nível de proteção</div>
+                <div className="text-[11px] text-muted-foreground">{t('adminPages.dashboard.protectionLevel')}</div>
               </div>
             </div>
           </CardContent>
@@ -262,7 +264,7 @@ export default function Dashboard() {
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Server className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Computadores</span>
+                <span className="text-xs text-muted-foreground">{t('adminPages.dashboard.computers')}</span>
               </div>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-2xl font-bold text-green-600">{onlineAgents}</span>
@@ -271,7 +273,7 @@ export default function Dashboard() {
               {offlineAgents > 0 && (
                 <div className="flex items-center gap-1 mt-1">
                   <WifiOff className="h-3 w-3 text-orange-500" />
-                  <span className="text-xs text-orange-500">{offlineAgents} offline</span>
+                  <span className="text-xs text-orange-500">{offlineAgents} {t('adminPages.dashboard.offline')}</span>
                 </div>
               )}
             </CardContent>
@@ -287,7 +289,7 @@ export default function Dashboard() {
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <ShieldAlert className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Alertas</span>
+                <span className="text-xs text-muted-foreground">{t('adminPages.dashboard.alerts')}</span>
               </div>
               <div className="flex items-baseline gap-1.5">
                 <span className={cn(
@@ -296,10 +298,10 @@ export default function Dashboard() {
                 )}>
                   {alerts?.length || 0}
                 </span>
-                <span className="text-xs text-muted-foreground">ativos</span>
+                <span className="text-xs text-muted-foreground">{t('adminPages.dashboard.active')}</span>
               </div>
               {criticalAlerts > 0 && (
-                <span className="text-xs text-red-500 mt-1 block">{criticalAlerts} críticos</span>
+                <span className="text-xs text-red-500 mt-1 block">{criticalAlerts} {t('adminPages.dashboard.critical')}</span>
               )}
             </CardContent>
           </Card>
@@ -311,7 +313,7 @@ export default function Dashboard() {
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Bug className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Riscos</span>
+                <span className="text-xs text-muted-foreground">{t('adminPages.dashboard.risks')}</span>
               </div>
               <div className="flex items-baseline gap-1.5">
                 <span className={cn(
@@ -322,7 +324,7 @@ export default function Dashboard() {
                 </span>
               </div>
               {(vulnStats?.critical || 0) > 0 && (
-                <span className="text-xs text-orange-500 mt-1 block">{vulnStats?.critical} críticos</span>
+                <span className="text-xs text-orange-500 mt-1 block">{vulnStats?.critical} {t('adminPages.dashboard.critical')}</span>
               )}
             </CardContent>
           </Card>
@@ -334,7 +336,7 @@ export default function Dashboard() {
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Brain className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Insights IA</span>
+                <span className="text-xs text-muted-foreground">{t('adminPages.dashboard.aiInsights')}</span>
               </div>
               <div className="flex items-baseline gap-1.5">
                 <span className={cn(
@@ -343,7 +345,7 @@ export default function Dashboard() {
                 )}>
                   {insightsCount || 0}
                 </span>
-                <span className="text-xs text-muted-foreground">pendentes</span>
+                <span className="text-xs text-muted-foreground">{t('adminPages.dashboard.pending')}</span>
               </div>
             </CardContent>
           </Card>
@@ -359,7 +361,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-4 w-4 text-destructive" />
               <span className="text-sm text-destructive font-medium">
-                {criticalAlerts} alerta{criticalAlerts > 1 ? 's' : ''} crítico{criticalAlerts > 1 ? 's' : ''} aguardando ação
+                {t('adminPages.dashboard.criticalAlertsWaiting', { count: criticalAlerts })}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -369,13 +371,13 @@ export default function Dashboard() {
                 onClick={() => acknowledgeAllMutation.mutate()}
                 disabled={acknowledgeAllMutation.isPending}
               >
-                Reconhecer
-              </Button>
+                 {t('adminPages.dashboard.acknowledge')}
+               </Button>
               <Button 
                 size="sm" variant="destructive" className="h-8 text-xs"
                 onClick={() => navigate('/admin/action-center')}
               >
-                Ver ações <ChevronRight className="h-3 w-3 ml-1" />
+                {t('adminPages.dashboard.viewActions')} <ChevronRight className="h-3 w-3 ml-1" />
               </Button>
             </div>
           </CardContent>
@@ -415,8 +417,8 @@ export default function Dashboard() {
         <CardContent className="py-3 flex items-center justify-center gap-2 text-center">
           <Lightbulb className="h-4 w-4 text-muted-foreground shrink-0" />
           <p className="text-xs text-muted-foreground">
-            O CyberShield monitora seus computadores automaticamente. 
-            <span className="font-medium text-foreground"> Se algo crítico acontecer, você será avisado.</span>
+            {t('adminPages.dashboard.reassurance')}
+            <span className="font-medium text-foreground"> {t('adminPages.dashboard.reassuranceBold')}</span>
           </p>
         </CardContent>
       </Card>
