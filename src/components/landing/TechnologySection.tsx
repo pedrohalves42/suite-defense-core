@@ -1,10 +1,10 @@
 import { Server } from "lucide-react";
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { FeatureCard } from "./shared/FeatureCard";
 
 export function TechnologySection() {
-  const { technology } = LANDING_CONTENT;
+  const { technology } = useLandingContent();
 
   return (
     <section className="py-20">

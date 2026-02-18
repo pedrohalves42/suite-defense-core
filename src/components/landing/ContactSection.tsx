@@ -1,8 +1,8 @@
 import { ContactForm } from "@/components/ContactForm";
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 
 export function ContactSection() {
-  const { contact } = LANDING_CONTENT;
+  const { contact } = useLandingContent();
 
   return (
     <section id="contato" className="py-20">

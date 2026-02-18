@@ -1,12 +1,12 @@
 import { Zap, Crown, CheckCircle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { CONTACT } from "@/constants/config";
 
 export function PricingSection() {
-  const { pricing } = LANDING_CONTENT;
+  const { pricing } = useLandingContent();
   const whatsappLink = `${CONTACT.WHATSAPP_LINK}?text=${CONTACT.WHATSAPP_TEXT_DEFAULT}`;
 
   const planIcons = {

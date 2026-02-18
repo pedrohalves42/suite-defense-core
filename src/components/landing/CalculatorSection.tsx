@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 
 interface TierResult {
   price: number;
@@ -44,7 +44,7 @@ function calculateTier(devices: number): TierResult {
 }
 
 export function CalculatorSection() {
-  const { calculator } = LANDING_CONTENT;
+  const { calculator } = useLandingContent();
   const [deviceCount, setDeviceCount] = useState<number>(10);
   const tierResult = calculateTier(deviceCount);
 

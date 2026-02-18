@@ -1,4 +1,10 @@
 {
+  "nav": {
+    "home": "Inicio",
+    "features": "Recursos",
+    "pricing": "Precios",
+    "contact": "Contacto"
+  },
   "common": {
     "loading": "Cargando...",
     "save": "Guardar",

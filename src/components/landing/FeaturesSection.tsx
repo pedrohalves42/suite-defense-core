@@ -1,7 +1,7 @@
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 
 export function FeaturesSection() {
-  const { features } = LANDING_CONTENT;
+  const { features } = useLandingContent();
 
   return (
     <section className="py-20 bg-muted/30">

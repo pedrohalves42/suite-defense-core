@@ -1,9 +1,9 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 
 export function FAQSection() {
-  const { faq } = LANDING_CONTENT;
+  const { faq } = useLandingContent();
 
   return (
     <section className="py-20">

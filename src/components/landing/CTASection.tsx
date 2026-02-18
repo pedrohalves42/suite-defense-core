@@ -1,10 +1,10 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 
 export function CTASection() {
-  const { ctaFinal } = LANDING_CONTENT;
+  const { ctaFinal } = useLandingContent();
 
   return (
     <section className="py-16 bg-primary text-primary-foreground">

@@ -1,8 +1,8 @@
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 
 export function BenefitsSection() {
-  const { benefits } = LANDING_CONTENT;
+  const { benefits } = useLandingContent();
 
   return (
     <section id="recursos" className="py-20 bg-muted/30">

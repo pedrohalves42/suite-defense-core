@@ -2,10 +2,10 @@ import { Shield, ArrowRight, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { StatCard } from "./shared/StatCard";
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 
 export function HeroSection() {
-  const { hero } = LANDING_CONTENT;
+  const { hero } = useLandingContent();
 
   return (
     <section id="inicio" className="relative overflow-hidden" aria-labelledby="hero-heading">
