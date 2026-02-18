@@ -4,8 +4,10 @@ import { useSearchParams } from "react-router-dom";
 import AgentInstaller from "../AgentInstaller";
 import InstallationHealthOverview from "./InstallationHealthOverview";
 import InstallationLogsExplorer from "./InstallationLogsExplorer";
+import { useTranslation } from 'react-i18next';
 
 const Installations = () => {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'installer';
 
@@ -17,10 +19,10 @@ const Installations = () => {
         </div>
         <div>
           <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Central de Instalações
+            {t('adminPages.installations.title')}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Instale novos agentes e monitore a saúde do processo
+            {t('adminPages.installations.subtitle')}
           </p>
         </div>
       </div>
@@ -33,15 +35,15 @@ const Installations = () => {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="installer">
             <Package className="h-4 w-4 mr-2" />
-            Instalar Agentes
+            {t('adminPages.installations.installAgents')}
           </TabsTrigger>
           <TabsTrigger value="health">
             <HeartPulse className="h-4 w-4 mr-2" />
-            Saúde das Instalações
+            {t('adminPages.installations.installationHealth')}
           </TabsTrigger>
           <TabsTrigger value="logs">
             <AlertTriangle className="h-4 w-4 mr-2" />
-            Falhas e Logs
+            {t('adminPages.installations.failuresAndLogs')}
           </TabsTrigger>
         </TabsList>
 
