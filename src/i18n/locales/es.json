@@ -3,7 +3,41 @@
     "home": "Inicio",
     "features": "Recursos",
     "pricing": "Precios",
-    "contact": "Contacto"
+    "contact": "Contacto",
+    "login": "Iniciar sesión",
+    "whatsapp": "WhatsApp"
+  },
+  "contactForm": {
+    "talkToSales": "Habla con ventas",
+    "responseTime": "Respuesta en hasta 24 horas",
+    "fullName": "Nombre completo *",
+    "corporateEmail": "Email corporativo *",
+    "company": "Empresa",
+    "phone": "Teléfono",
+    "endpoints": "Número de endpoints",
+    "message": "Mensaje (opcional)",
+    "submit": "Solicitar contacto",
+    "sending": "Enviando...",
+    "successTitle": "¡Mensaje enviado!",
+    "successDescription": "Nuestro equipo se comunicará en hasta 24 horas.",
+    "errorTitle": "Error al enviar",
+    "errorDescription": "Intente nuevamente o envíe un email a gamehousetecnologia@gmail.com",
+    "validationErrorTitle": "Error de validación",
+    "validationErrorDescription": "Verifique los campos del formulario",
+    "rateLimitTitle": "Demasiados intentos",
+    "rateLimitDescription": "Espere un momento antes de intentar nuevamente.",
+    "validation": {
+      "nameShort": "Nombre muy corto",
+      "nameLong": "Nombre muy largo",
+      "nameInvalid": "Nombre contiene caracteres inválidos",
+      "emailInvalid": "Email inválido",
+      "emailLong": "Email muy largo",
+      "companyLong": "Nombre de la empresa muy largo",
+      "phoneInvalid": "Teléfono inválido",
+      "phoneLong": "Teléfono muy largo",
+      "endpointsInvalid": "El valor debe estar entre 1 y 100.000",
+      "messageLong": "Mensaje muy largo"
+    }
   },
   "common": {
     "loading": "Cargando...",

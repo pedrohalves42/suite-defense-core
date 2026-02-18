@@ -8,33 +8,38 @@ import { Loader2 } from "lucide-react";
 import logoImage from '@/assets/logo-cybshield-new.png';
 import { z } from "zod";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 
-const ContactFormSchema = z.object({
-  name: z.string()
-    .min(2, "Nome muito curto")
-    .max(100, "Nome muito longo")
-    .regex(/^[a-zA-Z\s'-]+$/, "Nome contem caracteres invalidos"),
-  email: z.string()
-    .email("Email invalido")
-    .max(255, "Email muito longo"),
-  company: z.string()
-    .max(200, "Nome da empresa muito longo")
-    .optional(),
-  phone: z.string()
-    .regex(/^[\d\s()+-]*$/, "Telefone invalido")
-    .max(20, "Telefone muito longo")
-    .optional(),
-  endpoints: z.string()
-    .refine((val) => val === "" || (!isNaN(Number(val)) && Number(val) >= 1 && Number(val) <= 100000), {
-      message: "Valor deve estar entre 1 e 100.000"
-    })
-    .optional(),
-  message: z.string()
-    .max(2000, "Mensagem muito longa")
-    .optional()
-});
+function useContactFormSchema() {
+  const { t } = useTranslation();
+  return z.object({
+    name: z.string()
+      .min(2, t('contactForm.validation.nameShort'))
+      .max(100, t('contactForm.validation.nameLong'))
+      .regex(/^[a-zA-ZÀ-ÿ\s'-]+$/, t('contactForm.validation.nameInvalid')),
+    email: z.string()
+      .email(t('contactForm.validation.emailInvalid'))
+      .max(255, t('contactForm.validation.emailLong')),
+    company: z.string()
+      .max(200, t('contactForm.validation.companyLong'))
+      .optional(),
+    phone: z.string()
+      .regex(/^[\d\s()+-]*$/, t('contactForm.validation.phoneInvalid'))
+      .max(20, t('contactForm.validation.phoneLong'))
+      .optional(),
+    endpoints: z.string()
+      .refine((val) => val === "" || (!isNaN(Number(val)) && Number(val) >= 1 && Number(val) <= 100000), {
+        message: t('contactForm.validation.endpointsInvalid')
+      })
+      .optional(),
+    message: z.string()
+      .max(2000, t('contactForm.validation.messageLong'))
+      .optional()
+  });
+}
 
 export const ContactForm = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
@@ -46,6 +51,7 @@ export const ContactForm = () => {
     message: "",
   });
   const { toast } = useToast();
+  const ContactFormSchema = useContactFormSchema();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +59,6 @@ export const ContactForm = () => {
     setErrors({});
 
     try {
-      // Validate form data
       const validation = ContactFormSchema.safeParse({
         ...formData,
         company: formData.company || undefined,
@@ -71,14 +76,13 @@ export const ContactForm = () => {
         });
         setErrors(fieldErrors);
         toast({
-          title: "Erro de validacao",
-          description: "Verifique os campos do formulario",
+          title: t('contactForm.validationErrorTitle'),
+          description: t('contactForm.validationErrorDescription'),
           variant: "destructive",
         });
         return;
       }
 
-      // Call the secure edge function
       const { error } = await supabase.functions.invoke('submit-contact', {
         body: {
           name: formData.name,
@@ -93,11 +97,10 @@ export const ContactForm = () => {
       if (error) {
         logger.error("Error submitting contact form", error);
         
-        // Handle rate limit error
         if (error.message?.includes('429') || error.message?.includes('Rate limit')) {
           toast({
-            title: "Muitas tentativas",
-            description: "Aguarde um momento antes de enviar novamente.",
+            title: t('contactForm.rateLimitTitle'),
+            description: t('contactForm.rateLimitDescription'),
             variant: "destructive",
           });
           return;
@@ -107,8 +110,8 @@ export const ContactForm = () => {
       }
 
       toast({
-        title: "Mensagem enviada!",
-        description: "Nossa equipe entrara em contato em ate 24 horas.",
+        title: t('contactForm.successTitle'),
+        description: t('contactForm.successDescription'),
       });
 
       setFormData({
@@ -122,8 +125,8 @@ export const ContactForm = () => {
     } catch (error) {
       logger.error("Error submitting contact form", error);
       toast({
-        title: "Erro ao enviar",
-        description: "Tente novamente ou envie um email para gamehousetecnologia@gmail.com",
+        title: t('contactForm.errorTitle'),
+        description: t('contactForm.errorDescription'),
         variant: "destructive",
       });
     } finally {
@@ -139,7 +142,6 @@ export const ContactForm = () => {
       ...prev,
       [name]: value,
     }));
-    // Clear error for this field when user types
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -158,8 +160,8 @@ export const ContactForm = () => {
         <div className="flex items-center gap-3 mb-6">
           <img src={logoImage} alt="CyberShield" className="h-10 w-10 object-contain" />
           <div>
-            <h3 className="text-2xl font-bold">Fale com vendas</h3>
-            <p className="text-muted-foreground">Resposta em ate 24 horas</p>
+            <h3 className="text-2xl font-bold">{t('contactForm.talkToSales')}</h3>
+            <p className="text-muted-foreground">{t('contactForm.responseTime')}</p>
           </div>
         </div>
 
@@ -168,7 +170,7 @@ export const ContactForm = () => {
             <div>
               <Input
                 name="name"
-                placeholder="Nome completo *"
+                placeholder={t('contactForm.fullName')}
                 value={formData.name}
                 onChange={handleChange}
                 required
@@ -180,7 +182,7 @@ export const ContactForm = () => {
               <Input
                 name="email"
                 type="email"
-                placeholder="Email corporativo *"
+                placeholder={t('contactForm.corporateEmail')}
                 value={formData.email}
                 onChange={handleChange}
                 required
@@ -194,7 +196,7 @@ export const ContactForm = () => {
             <div>
               <Input
                 name="company"
-                placeholder="Empresa"
+                placeholder={t('contactForm.company')}
                 value={formData.company}
                 onChange={handleChange}
                 className={`bg-background/50 border-border/50 focus:border-primary transition-colors ${errors.company ? 'border-destructive' : ''}`}
@@ -204,7 +206,7 @@ export const ContactForm = () => {
             <div>
               <Input
                 name="phone"
-                placeholder="Telefone"
+                placeholder={t('contactForm.phone')}
                 value={formData.phone}
                 onChange={handleChange}
                 className={`bg-background/50 border-border/50 focus:border-primary transition-colors ${errors.phone ? 'border-destructive' : ''}`}
@@ -217,7 +219,7 @@ export const ContactForm = () => {
             <Input
               name="endpoints"
               type="number"
-              placeholder="Numero de endpoints"
+              placeholder={t('contactForm.endpoints')}
               value={formData.endpoints}
               onChange={handleChange}
               className={`bg-background/50 border-border/50 focus:border-primary transition-colors ${errors.endpoints ? 'border-destructive' : ''}`}
@@ -228,7 +230,7 @@ export const ContactForm = () => {
           <div>
             <Textarea
               name="message"
-              placeholder="Mensagem (opcional)"
+              placeholder={t('contactForm.message')}
               value={formData.message}
               onChange={handleChange}
               rows={4}
@@ -245,10 +247,10 @@ export const ContactForm = () => {
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Enviando...
+                {t('contactForm.sending')}
               </>
             ) : (
-              "Solicitar contato"
+              t('contactForm.submit')
             )}
           </Button>
         </form>

@@ -119,11 +119,11 @@ export const Navbar = () => {
                 className="bg-success hover:bg-success/90 text-success-foreground"
               >
                 <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
-                  WhatsApp
+                  {t('nav.whatsapp')}
                 </a>
               </Button>
               <Button asChild variant="outline" size="sm">
-                <Link to="/login">Entrar</Link>
+                <Link to="/login">{t('nav.login')}</Link>
               </Button>
             </div>
 
@@ -170,11 +170,11 @@ export const Navbar = () => {
                 className="w-full bg-success hover:bg-success/90 text-success-foreground"
               >
                 <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
-                  WhatsApp
+                  {t('nav.whatsapp')}
                 </a>
               </Button>
               <Button asChild variant="outline" size="sm" className="w-full">
-                <Link to="/login">Entrar</Link>
+                <Link to="/login">{t('nav.login')}</Link>
               </Button>
             </div>
           </div>
