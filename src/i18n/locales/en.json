@@ -3,7 +3,41 @@
     "home": "Home",
     "features": "Features",
     "pricing": "Pricing",
-    "contact": "Contact"
+    "contact": "Contact",
+    "login": "Sign In",
+    "whatsapp": "WhatsApp"
+  },
+  "contactForm": {
+    "talkToSales": "Talk to Sales",
+    "responseTime": "Response within 24 hours",
+    "fullName": "Full name *",
+    "corporateEmail": "Corporate email *",
+    "company": "Company",
+    "phone": "Phone",
+    "endpoints": "Number of endpoints",
+    "message": "Message (optional)",
+    "submit": "Request contact",
+    "sending": "Sending...",
+    "successTitle": "Message sent!",
+    "successDescription": "Our team will contact you within 24 hours.",
+    "errorTitle": "Error sending",
+    "errorDescription": "Try again or send an email to gamehousetecnologia@gmail.com",
+    "validationErrorTitle": "Validation error",
+    "validationErrorDescription": "Please check the form fields",
+    "rateLimitTitle": "Too many attempts",
+    "rateLimitDescription": "Please wait a moment before trying again.",
+    "validation": {
+      "nameShort": "Name too short",
+      "nameLong": "Name too long",
+      "nameInvalid": "Name contains invalid characters",
+      "emailInvalid": "Invalid email",
+      "emailLong": "Email too long",
+      "companyLong": "Company name too long",
+      "phoneInvalid": "Invalid phone number",
+      "phoneLong": "Phone number too long",
+      "endpointsInvalid": "Value must be between 1 and 100,000",
+      "messageLong": "Message too long"
+    }
   },
   "common": {
     "loading": "Loading...",
