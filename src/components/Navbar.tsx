@@ -5,19 +5,24 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { CONTACT } from "@/constants/config";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 import logoImage from '@/assets/logo-cybshield-new.png';
 
-const NAV_SECTIONS = [
-  { id: "inicio", label: "Início" },
-  { id: "recursos", label: "Recursos" },
-  { id: "precos", label: "Preços" },
-  { id: "contato", label: "Contato" }
+const NAV_KEYS = [
+  { id: "inicio", key: "nav.home" },
+  { id: "recursos", key: "nav.features" },
+  { id: "precos", key: "nav.pricing" },
+  { id: "contato", key: "nav.contact" }
 ];
 
 export const Navbar = () => {
+  const { t } = useTranslation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("inicio");
+
+  const NAV_SECTIONS = NAV_KEYS.map(n => ({ id: n.id, label: t(n.key) }));
 
   useEffect(() => {
     const handleScroll = () => {
@@ -105,6 +110,7 @@ export const Navbar = () => {
 
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-3">
+              <LanguageSwitcher />
               <ThemeToggle className="h-9 w-9" />
               <Button 
                 asChild 
@@ -155,6 +161,7 @@ export const Navbar = () => {
               </button>
             ))}
             <div className="pt-3 border-t border-border space-y-2">
+              <LanguageSwitcher variant="full" />
               <ThemeToggle variant="outline" withLabel className="w-full justify-start" />
               <Button 
                 asChild 
