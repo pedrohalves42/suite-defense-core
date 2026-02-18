@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +45,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const { data: criticalInsightsCount = 0 } = useCriticalInsights();
   const { urgentCount } = useActionCenterCount();
   const location = useLocation();
+  const { t } = useTranslation();
   
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
@@ -99,83 +101,76 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
 
   // === VISÃO GERAL (sempre visível) ===
   const overviewItems = useMemo<MenuItem[]>(() => [
-    { icon: Target, label: 'Central de Ações', to: '/admin/action-center', end: true, badge: urgentCount > 0 ? urgentCount : undefined },
-    { icon: Home, label: 'Painel Geral', to: '/admin/dashboard' },
-    { icon: Activity, label: 'Tempo Real', to: '/admin/monitoring-advanced' },
-    { icon: Cpu, label: 'Meus Computadores', to: '/admin/agent-health' },
-  ], [urgentCount]);
+    { icon: Target, label: t('adminPages.sidebar.actionCenter'), to: '/admin/action-center', end: true, badge: urgentCount > 0 ? urgentCount : undefined },
+    { icon: Home, label: t('adminPages.sidebar.generalPanel'), to: '/admin/dashboard' },
+    { icon: Activity, label: t('adminPages.sidebar.realTime'), to: '/admin/monitoring-advanced' },
+    { icon: Cpu, label: t('adminPages.sidebar.myComputers'), to: '/admin/agent-health' },
+  ], [urgentCount, t]);
 
-  // === PROTEÇÃO (colapsável - expandido por padrão) ===
   const protectionItems = useMemo<MenuItem[]>(() => [
-    { icon: AlertTriangle, label: 'Alertas', to: '/admin/security-monitoring' },
-    { icon: ShieldCheck, label: 'Vulnerabilidades', to: '/admin/vulnerabilities' },
-    { icon: AlertCircle, label: 'Quarentena', to: '/quarantine' },
-    { icon: Globe, label: 'Navegação Web', to: '/admin/web-activity' },
-    { icon: FileSearch, label: 'Histórico', to: '/admin/agent-timeline' },
-  ], []);
+    { icon: AlertTriangle, label: t('adminPages.sidebar.alerts'), to: '/admin/security-monitoring' },
+    { icon: ShieldCheck, label: t('adminPages.sidebar.vulnerabilities'), to: '/admin/vulnerabilities' },
+    { icon: AlertCircle, label: t('adminPages.sidebar.quarantine'), to: '/quarantine' },
+    { icon: Globe, label: t('adminPages.sidebar.webNavigation'), to: '/admin/web-activity' },
+    { icon: FileSearch, label: t('adminPages.sidebar.history'), to: '/admin/agent-timeline' },
+  ], [t]);
 
-  // === GESTÃO (colapsável) ===
   const managementItems = useMemo<MenuItem[]>(() => [
-    { icon: Users, label: 'Grupos', to: '/admin/agent-groups' },
-    { icon: Shield, label: 'Políticas', to: '/admin/security-policies' },
-    { icon: AppWindow, label: 'Programas', to: '/admin/software-inventory' },
-    { icon: Crown, label: 'Equipe', to: '/admin/members' },
-    { icon: FileBarChart, label: 'Relatórios', to: '/admin/reports' },
-    { icon: Bell, label: 'Notificações', to: '/admin/notification-channels' },
-    { icon: Settings, label: 'Configurações', to: '/admin/tenant' },
-  ], []);
+    { icon: Users, label: t('adminPages.sidebar.groups'), to: '/admin/agent-groups' },
+    { icon: Shield, label: t('adminPages.sidebar.policies'), to: '/admin/security-policies' },
+    { icon: AppWindow, label: t('adminPages.sidebar.programs'), to: '/admin/software-inventory' },
+    { icon: Crown, label: t('adminPages.sidebar.team'), to: '/admin/members' },
+    { icon: FileBarChart, label: t('adminPages.sidebar.reports'), to: '/admin/reports' },
+    { icon: Bell, label: t('adminPages.sidebar.notifications'), to: '/admin/notification-channels' },
+    { icon: Settings, label: t('adminPages.sidebar.settings'), to: '/admin/tenant' },
+  ], [t]);
 
-  // === CONFORMIDADE (nova seção) ===
   const complianceItems = useMemo<MenuItem[]>(() => [
-    { icon: ClipboardCheck, label: 'SOC 2', to: '/admin/soc2-compliance' },
-    { icon: ScrollText, label: 'Auditoria', to: '/admin/system-audit' },
-    { icon: Scale, label: 'Compliance', to: '/admin/compliance-timeline' },
-    { icon: Brain, label: 'Regras IA', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
-  ], [criticalInsightsCount]);
+    { icon: ClipboardCheck, label: t('adminPages.sidebar.soc2'), to: '/admin/soc2-compliance' },
+    { icon: ScrollText, label: t('adminPages.sidebar.audit'), to: '/admin/system-audit' },
+    { icon: Scale, label: t('adminPages.sidebar.complianceLabel'), to: '/admin/compliance-timeline' },
+    { icon: Brain, label: t('adminPages.sidebar.aiRules'), to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
+  ], [criticalInsightsCount, t]);
 
-  // === AVANÇADO (colapsável - só técnico) ===
   const advancedItems = useMemo<MenuItem[]>(() => [
-    { icon: Download, label: 'Instalações', to: '/admin/installations' },
-    { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases' },
-    { icon: Terminal, label: 'Diagnóstico', to: '/admin/diagnostics' },
-    { icon: Clock, label: 'Automações', to: '/admin/automations' },
-    { icon: Gauge, label: 'Saúde Sistema', to: '/admin/system-health' },
-    { icon: Wrench, label: 'Saúde de Jobs', to: '/admin/job-health' },
-    { icon: Lightbulb, label: 'Triagem Insights', to: '/admin/insight-triage' },
-    { icon: TrendingUp, label: 'Gap de Confiança', to: '/admin/confidence-gap' },
-    { icon: AlertCircle, label: 'Resolução Alertas', to: '/admin/alert-resolution' },
-    { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
-  ], []);
+    { icon: Download, label: t('adminPages.sidebar.installations'), to: '/admin/installations' },
+    { icon: GitBranch, label: t('adminPages.sidebar.versions'), to: '/admin/agent-releases' },
+    { icon: Terminal, label: t('adminPages.sidebar.diagnostics'), to: '/admin/diagnostics' },
+    { icon: Clock, label: t('adminPages.sidebar.automations'), to: '/admin/automations' },
+    { icon: Gauge, label: t('adminPages.sidebar.systemHealth'), to: '/admin/system-health' },
+    { icon: Wrench, label: t('adminPages.sidebar.jobHealth'), to: '/admin/job-health' },
+    { icon: Lightbulb, label: t('adminPages.sidebar.insightTriage'), to: '/admin/insight-triage' },
+    { icon: TrendingUp, label: t('adminPages.sidebar.confidenceGap'), to: '/admin/confidence-gap' },
+    { icon: AlertCircle, label: t('adminPages.sidebar.alertResolution'), to: '/admin/alert-resolution' },
+    { icon: CreditCard, label: t('adminPages.sidebar.plans'), to: '/admin/plan-upgrade' },
+  ], [t]);
 
-  // === SUPER ADMIN - Operacional ===
   const superOpsItems = useMemo<MenuItem[]>(() => [
-    { icon: Server, label: 'Empresas', to: '/super-admin/tenants', end: true },
-    { icon: Key, label: 'Chaves de Cadastro', to: '/super-admin/enrollment-keys' },
-    { icon: Percent, label: 'Rollout', to: '/super-admin/rollout-policies' },
-    { icon: Users, label: 'Usuários', to: '/super-admin/users' },
-    { icon: Shield, label: 'Funcionalidades', to: '/super-admin/features' },
-    { icon: Clock, label: 'Suspensão', to: '/super-admin/tenant-suspension' },
-  ], []);
+    { icon: Server, label: t('adminPages.sidebar.companies'), to: '/super-admin/tenants', end: true },
+    { icon: Key, label: t('adminPages.sidebar.enrollmentKeys'), to: '/super-admin/enrollment-keys' },
+    { icon: Percent, label: t('adminPages.sidebar.rollout'), to: '/super-admin/rollout-policies' },
+    { icon: Users, label: t('adminPages.sidebar.users'), to: '/super-admin/users' },
+    { icon: Shield, label: t('adminPages.sidebar.features'), to: '/super-admin/features' },
+    { icon: Clock, label: t('adminPages.sidebar.suspension'), to: '/super-admin/tenant-suspension' },
+  ], [t]);
 
-  // === SUPER ADMIN - Financeiro ===
   const superFinanceItems = useMemo<MenuItem[]>(() => [
-    { icon: BarChart3, label: 'Métricas', to: '/super-admin/metrics' },
-    { icon: PieChart, label: 'Assinaturas', to: '/super-admin/subscription-analytics' },
-    { icon: DollarSign, label: 'Indicadores', to: '/super-admin/unit-economics' },
-    { icon: TrendingUp, label: 'Retenção', to: '/super-admin/cohort-analysis' },
-    { icon: Target, label: 'Projeções', to: '/super-admin/revenue-projections' },
-    { icon: Presentation, label: 'Pipeline', to: '/super-admin/sales-pipeline' },
-    { icon: Scale, label: 'Apresentação', to: '/super-admin/pitch-deck' },
-    { icon: AlertTriangle, label: 'Riscos', to: '/super-admin/risk-analysis' },
-    { icon: CreditCard, label: 'Pagamentos', to: '/super-admin/stripe-setup' },
-  ], []);
+    { icon: BarChart3, label: t('adminPages.sidebar.metrics'), to: '/super-admin/metrics' },
+    { icon: PieChart, label: t('adminPages.sidebar.subscriptions'), to: '/super-admin/subscription-analytics' },
+    { icon: DollarSign, label: t('adminPages.sidebar.indicators'), to: '/super-admin/unit-economics' },
+    { icon: TrendingUp, label: t('adminPages.sidebar.retention'), to: '/super-admin/cohort-analysis' },
+    { icon: Target, label: t('adminPages.sidebar.projections'), to: '/super-admin/revenue-projections' },
+    { icon: Presentation, label: t('adminPages.sidebar.pipeline'), to: '/super-admin/sales-pipeline' },
+    { icon: Scale, label: t('adminPages.sidebar.presentation'), to: '/super-admin/pitch-deck' },
+    { icon: AlertTriangle, label: t('adminPages.sidebar.risksLabel'), to: '/super-admin/risk-analysis' },
+    { icon: CreditCard, label: t('adminPages.sidebar.payments'), to: '/super-admin/stripe-setup' },
+  ], [t]);
 
-  // === SUPER ADMIN - Sistema ===
   const superSystemItems = useMemo<MenuItem[]>(() => [
-    { icon: ScrollText, label: 'Auditoria', to: '/super-admin/audit-logs' },
-    { icon: Activity, label: 'Logs', to: '/super-admin/system-logs' },
-    { icon: Settings, label: 'Configurações', to: '/super-admin/settings' },
-  ], []);
+    { icon: ScrollText, label: t('adminPages.sidebar.auditLogs'), to: '/super-admin/audit-logs' },
+    { icon: Activity, label: t('adminPages.sidebar.logs'), to: '/super-admin/system-logs' },
+    { icon: Settings, label: t('adminPages.sidebar.settingsLabel'), to: '/super-admin/settings' },
+  ], [t]);
 
   const renderNavItem = (item: MenuItem, idx: number, variant: 'default' | 'super' = 'default') => {
     const Icon = item.icon;
@@ -362,7 +357,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
               onClick={() => { window.dispatchEvent(new CustomEvent('open-search')); onNavigate?.(); }}
             >
               <Search className="h-4 w-4 mr-2" />
-              <span className="flex-1 text-left text-sm">Buscar...</span>
+              <span className="flex-1 text-left text-sm">{t('adminPages.sidebar.search')}</span>
               {!mobile && <kbd className="text-[10px] bg-muted/50 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>}
             </Button>
           </div>
@@ -382,7 +377,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right">
-                Buscar (⌘K)
+                {t('adminPages.sidebar.searchTooltip')}
               </TooltipContent>
             </Tooltip>
           </div>
@@ -405,22 +400,19 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
               <div className="my-2 mx-2 h-px bg-border/30" />
 
               {/* PROTEÇÃO */}
-              {renderCollapsibleSection('Proteção', 'protection', protectionItems)}
+              {renderCollapsibleSection(t('adminPages.sidebar.protection'), 'protection', protectionItems)}
 
               <div className="my-2" />
 
-              {/* GESTÃO */}
-              {renderCollapsibleSection('Gestão', 'management', managementItems)}
+              {renderCollapsibleSection(t('adminPages.sidebar.management'), 'management', managementItems)}
 
               <div className="my-2" />
 
-              {/* CONFORMIDADE */}
-              {renderCollapsibleSection('Conformidade', 'compliance', complianceItems)}
+              {renderCollapsibleSection(t('adminPages.sidebar.compliance'), 'compliance', complianceItems)}
 
               <div className="my-2" />
 
-              {/* AVANÇADO */}
-              {renderCollapsibleSection('Avançado', 'advanced', advancedItems)}
+              {renderCollapsibleSection(t('adminPages.sidebar.advanced'), 'advanced', advancedItems)}
             </>
           ) : (
             // Non-admin basic menu
@@ -432,7 +424,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                 activeClassName="bg-accent text-accent-foreground font-medium"
               >
                 <Home className="h-4 w-4" />
-                {(!collapsed || mobile) && <span className="text-sm">Início</span>}
+                {(!collapsed || mobile) && <span className="text-sm">{t('adminPages.sidebar.home')}</span>}
               </NavLink>
               <NavLink
                 to="/agents"
@@ -440,7 +432,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                 activeClassName="bg-accent text-accent-foreground font-medium"
               >
                 <Monitor className="h-4 w-4" />
-                {(!collapsed || mobile) && <span className="text-sm">Meus Computadores</span>}
+                {(!collapsed || mobile) && <span className="text-sm">{t('adminPages.sidebar.myComputersClient')}</span>}
               </NavLink>
             </div>
           )}
@@ -469,18 +461,15 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                   <CollapsibleContent>
                     <AnimatePresence>
                       <div className="space-y-1 mt-1">
-                        {/* Operacional */}
-                        {renderCollapsibleSection('Operacional', 'superOps', superOpsItems, 'super')}
+                        {renderCollapsibleSection(t('adminPages.sidebar.operational'), 'superOps', superOpsItems, 'super')}
                         
                         <div className="my-1" />
                         
-                        {/* Financeiro */}
-                        {renderCollapsibleSection('Financeiro', 'superFinance', superFinanceItems, 'super')}
+                        {renderCollapsibleSection(t('adminPages.sidebar.financial'), 'superFinance', superFinanceItems, 'super')}
                         
                         <div className="my-1" />
                         
-                        {/* Sistema */}
-                        {renderCollapsibleSection('Sistema', 'superSystem', superSystemItems, 'super')}
+                        {renderCollapsibleSection(t('adminPages.sidebar.system'), 'superSystem', superSystemItems, 'super')}
                       </div>
                     </AnimatePresence>
                   </CollapsibleContent>
