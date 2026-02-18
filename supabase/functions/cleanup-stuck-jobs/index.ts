@@ -137,7 +137,17 @@ Deno.serve(async (req) => {
       console.log(`[cleanup-stuck-jobs] Stuck delivered: ${failedDeliveredCount} failed, ${recreatedCount} recreated as new jobs, ${exhausted.length} exhausted`)
     }
 
-    // FASE 2: Jobs expirados (TTL exceeded) — queued or delivered
+    // FASE 2: Cleanup zombie job_executions (orphaned running)
+    let zombieCleaned = { orphaned_cleaned: 0, stale_cleaned: 0, total: 0 }
+    try {
+      const { data: zombieResult } = await supabase.rpc('cleanup_zombie_executions')
+      if (zombieResult) zombieCleaned = zombieResult as any
+      console.log(`[cleanup-stuck-jobs] Zombie executions cleaned: ${zombieCleaned.total}`)
+    } catch (e) {
+      console.error('[cleanup-stuck-jobs] Error cleaning zombie executions:', e)
+    }
+
+    // FASE 3: Jobs expirados (TTL exceeded) — queued or delivered
     const { data: expiredJobs, error: expiredError } = await supabase
       .from('jobs')
       .select('id, agent_name, type')
@@ -171,15 +181,16 @@ Deno.serve(async (req) => {
       success: true,
       timestamp: now,
       stuck_delivered_failed: failedDeliveredCount,
+      zombie_executions_cleaned: zombieCleaned.total,
       expired_failed: expiredCount,
-      total_cleaned: failedDeliveredCount + expiredCount,
+      total_cleaned: failedDeliveredCount + expiredCount + zombieCleaned.total,
       config: {
         max_delivery_attempts: MAX_DELIVERY_ATTEMPTS,
         stuck_timeout_minutes: STUCK_TIMEOUT_MINUTES
       }
     }
 
-    console.log(`[cleanup-stuck-jobs] Summary: ${failedDeliveredCount} delivered→failed, ${expiredCount} expired→failed`)
+    console.log(`[cleanup-stuck-jobs] Summary: ${failedDeliveredCount} delivered→failed, ${zombieCleaned.total} zombie executions, ${expiredCount} expired→failed`)
 
     // Log observability
     try {
