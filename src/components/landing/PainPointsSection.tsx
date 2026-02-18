@@ -1,12 +1,12 @@
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { FeatureCard } from "./shared/FeatureCard";
 
 export function PainPointsSection() {
-  const { painPoints } = LANDING_CONTENT;
+  const { painPoints } = useLandingContent();
 
   return (
     <section className="py-16 border-y border-destructive/10 bg-destructive/[0.02]">

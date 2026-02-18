@@ -1,8 +1,8 @@
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 
 export function UseCasesSection() {
-  const { useCases } = LANDING_CONTENT;
+  const { useCases } = useLandingContent();
 
   return (
     <section className="py-20">

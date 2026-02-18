@@ -1,9 +1,9 @@
 import { CheckCircle } from "lucide-react";
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 
 export function DiagnosticPreviewSection() {
-  const { diagnostic } = LANDING_CONTENT;
+  const { diagnostic } = useLandingContent();
 
   return (
     <section className="py-16">

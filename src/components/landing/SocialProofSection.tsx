@@ -1,7 +1,7 @@
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 
 export function SocialProofSection() {
-  const { socialProof } = LANDING_CONTENT;
+  const { socialProof } = useLandingContent();
 
   return (
     <section className="py-12 border-y border-border bg-card">

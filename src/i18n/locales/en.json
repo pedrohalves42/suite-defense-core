@@ -1,4 +1,10 @@
 {
+  "nav": {
+    "home": "Home",
+    "features": "Features",
+    "pricing": "Pricing",
+    "contact": "Contact"
+  },
   "common": {
     "loading": "Loading...",
     "save": "Save",

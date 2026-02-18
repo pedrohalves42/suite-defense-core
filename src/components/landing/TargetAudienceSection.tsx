@@ -1,9 +1,9 @@
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 import { FeatureCard } from "./shared/FeatureCard";
 import { SectionHeader } from "./shared/SectionHeader";
 
 export function TargetAudienceSection() {
-  const { targetAudience } = LANDING_CONTENT;
+  const { targetAudience } = useLandingContent();
 
   return (
     <section className="py-16 bg-muted/30">

@@ -1,9 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { LANDING_CONTENT } from "@/constants/landing-content";
+import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 
 export function TestimonialsSection() {
-  const { testimonials } = LANDING_CONTENT;
+  const { testimonials } = useLandingContent();
 
   return (
     <section className="py-20 bg-muted/30">
