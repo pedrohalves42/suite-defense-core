@@ -85,7 +85,7 @@ serve(async (req) => {
       .from('ai_action_configs')
       .select('*')
       .eq('action_type', action.action_type)
-      .single();
+      .maybeSingle();
 
     if (configError || !actionConfig) {
       throw new Error(`Action type ${action.action_type} not found in whitelist`);
@@ -117,7 +117,7 @@ serve(async (req) => {
       .select('enabled')
       .eq('tenant_id', action.tenant_id)
       .eq('feature_key', 'ai_safe_mode')
-      .single();
+      .maybeSingle();
 
     if (safeMode?.enabled && actionConfig.risk_level === 'high') {
       throw new Error('Safe mode blocks high-risk actions');
@@ -150,10 +150,10 @@ serve(async (req) => {
               },
             })
             .select()
-            .single();
+            .maybeSingle();
 
           if (jobError) throw jobError;
-          executionResult = { job_id: job.id, agent_name: payload.agent_name };
+          executionResult = { job_id: job?.id, agent_name: payload.agent_name };
           break;
         }
 
@@ -175,10 +175,10 @@ serve(async (req) => {
               },
             })
             .select()
-            .single();
+            .maybeSingle();
 
           if (alertError) throw alertError;
-          executionResult = { alert_id: alert.id };
+          executionResult = { alert_id: alert?.id };
           break;
         }
 
@@ -282,7 +282,7 @@ serve(async (req) => {
             .select('id, agent_name, is_isolated')
             .eq('tenant_id', action.tenant_id)
             .eq('agent_name', payload.agent_name)
-            .single();
+            .maybeSingle();
 
           if (agentError || !agent) throw new Error(`Agent ${payload.agent_name} not found`);
 
@@ -328,7 +328,7 @@ serve(async (req) => {
             .select('id, agent_name')
             .eq('tenant_id', action.tenant_id)
             .eq('agent_name', payload.agent_name)
-            .single();
+            .maybeSingle();
 
           if (agentError || !agent) throw new Error(`Agent ${payload.agent_name} not found`);
 
@@ -379,7 +379,7 @@ serve(async (req) => {
             .select('id, agent_name')
             .eq('tenant_id', action.tenant_id)
             .eq('agent_name', payload.agent_name)
-            .single();
+            .maybeSingle();
 
           if (agentError || !agent) throw new Error(`Agent ${payload.agent_name} not found`);
 
@@ -451,7 +451,7 @@ serve(async (req) => {
               .select('id')
               .eq('tenant_id', action.tenant_id)
               .eq('agent_name', payload.agent_name)
-              .single();
+              .maybeSingle();
             
             if (agent) {
               jobPayload.agent_id = agent.id;
@@ -469,7 +469,7 @@ serve(async (req) => {
               payload: { action: 'block_ip', ...jobPayload },
             })
             .select()
-            .single();
+            .maybeSingle();
 
           if (jobError) throw jobError;
 
@@ -505,7 +505,7 @@ serve(async (req) => {
               },
             })
             .select()
-            .single();
+            .maybeSingle();
 
           if (jobError) throw jobError;
 
@@ -539,7 +539,7 @@ serve(async (req) => {
               },
             })
             .select()
-            .single();
+            .maybeSingle();
 
           if (jobError) throw jobError;
 
