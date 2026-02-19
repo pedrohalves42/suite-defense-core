@@ -1,72 +1,78 @@
 
-## Corrigir light_vuln_scan falhando nos agentes ativos
 
-### Diagnóstico (comprovado com dados)
+# Plano de Correção - Build e Estabilidade do Sistema
 
-**Causa raiz:** O script v5.0.4 armazenado na tabela `agent_releases` **não contém** o handler `light_vuln_scan` (POSITION retorna 0). Os 3 agentes ativos (SISTEMA, DESKTOP-UOABRHB, SERVIDOR) rodam v5.0.4 mas com um script que não reconhece esse tipo de job, gerando `[DLQ:BUG] Unknown job type: light_vuln_scan`.
+## Situacao Atual
 
-**Por que isso aconteceu:**
-- O codebase tem scripts v5.0.5 com o handler `light_vuln_scan` implementado
-- A release ativa no DB é v5.0.4 (criada em 14/02, 99KB)
-- O conteúdo do DB nunca foi atualizado para incluir o handler v5.0.5
-- Constraint de deploy do Lovable Cloud: arquivos `.ps1` não são bundled, então o DB é a fonte autoritativa
+### O que funcionou bem hoje
+- Todos os 12 agentes Genial Cred atualizaram para v5.0.8 com sucesso
+- 278 jobs completados sem erros de logica
+- Zero erros de autenticacao ou falhas de edge functions
+- Os 134 jobs "failed" sao todos por TTL expirado (maquinas desligadas no horario normal) -- comportamento esperado
 
-### Cadeia de falha
+### O que precisa de correcao
+O build esta quebrado por **7 erros** distribuidos em 2 categorias: arquivos de UI vazios e erros de tipagem em edge functions.
 
-```
-Cron agenda light_vuln_scan → Job criado (queued) → Agente v5.0.4 puxa job → 
-Agente não reconhece tipo → Reporta "Unknown job type" → Backend marca [DLQ:BUG]
-→ Cron cria novo job na hora seguinte → Loop infinito de falhas
-```
+---
 
-### Solução (3 passos)
+## Correcoes Necessarias
 
-#### Passo 1: Criar release v5.0.5 no banco de dados
+### 1. Restaurar `src/components/TopBar.tsx` (CRITICO - bloqueia build)
 
-Sincronizar o conteúdo do script Windows v5.0.5 do codebase (`supabase/functions/_shared/agent-scripts/cybershield-agent-windows-v5.ps1`) para a tabela `agent_releases`:
+O arquivo esta com 0 bytes. Precisa ser recriado com o componente TopBar que o `AppLayout.tsx` espera (props: `isMobile`, `sidebarCollapsed`, `onMobileMenuClick`).
 
-1. Ler o script v5.0.5 do codebase
-2. Inserir nova release v5.0.5 na tabela `agent_releases` com `is_active = true`
-3. Desativar release v5.0.4 (`is_active = false`)
-4. Inserir versão v5.0.5 na tabela `agent_versions`
+Sera criado um componente funcional com:
+- Barra superior fixa com altura padrao (h-14)
+- Botao de menu hamburger no mobile
+- Area para logo/titulo
+- Indicadores de status (notificacoes, perfil)
 
-**Opção A (via Edge Function):** Usar/criar a função `sync-agent-release-content` para popular o DB automaticamente.
+### 2. Restaurar `src/components/Navbar.tsx` (CRITICO - bloqueia build)
 
-**Opção B (manual):** Inserir diretamente via SQL com o conteúdo do script.
+Arquivo tambem vazio. Usado pela `Landing.tsx` como navbar da pagina publica.
 
-> **Preferido: Opção A** — o script tem ~100KB, inserir via SQL é impraticável.
+Sera criado com:
+- Logo CyberShield
+- Links de navegacao para secoes da landing page
+- Botao de login/CTA
+- Responsividade mobile
 
-#### Passo 2: Forçar atualização dos agentes ativos
+### 3. Corrigir `populate-releases/index.ts` - variavel duplicada
 
-Após a release v5.0.5 estar ativa no DB:
+**Problema**: `const isInternal` declarada duas vezes (linhas 36-37).
+**Solucao**: Remover a linha duplicada.
 
-1. O mecanismo de heartbeat `force_update` já compara a versão do agente com a versão ativa no DB
-2. Se o agente reportar v5.0.4 e a release ativa for v5.0.5, o heartbeat retorna `force_update: true` com o novo script
-3. Os 3 agentes ativos se auto-atualizam no próximo ciclo de heartbeat (~1 minuto)
+### 4. Corrigir `process-tenant-suspensions/index.ts` - tipo unknown
 
-**Verificação:** Confirmar que a função `process_heartbeat_v2` ou o endpoint de heartbeat compara versões e entrega o script atualizado.
+**Problema**: `error.message` acessado sem type guard no catch.
+**Solucao**: `(error instanceof Error ? error.message : 'Unknown error')`.
 
-#### Passo 3: Limpar jobs falhados e parar criação de novos até atualização
+### 5. Corrigir `sync-agent-release-content/index.ts` - propriedade inexistente
 
-1. Cancelar quaisquer jobs `light_vuln_scan` pendentes/enfileirados para evitar mais falhas
-2. Após confirmação de que os agentes atualizaram para v5.0.5, os novos jobs do cron passarão a funcionar
+**Problema**: `result.deactivated = deactivated` tenta atribuir propriedade nao declarada no tipo.
+**Solucao**: Expandir o tipo do `result` para incluir `deactivated` como propriedade opcional, ou usar spread/cast.
 
-### Arquivos envolvidos
+### 6. Corrigir `ai-multi-provider.ts` - propriedade latencyMs
 
-1. `supabase/functions/sync-agent-release-content/index.ts` — verificar se existe, se não, criar
-2. `supabase/functions/_shared/agent-scripts/cybershield-agent-windows-v5.ps1` — fonte do script v5.0.5
-3. `supabase/functions/process-heartbeat/index.ts` (ou equivalente) — verificar lógica de force_update
+**Problema**: `cacheResult.cached.latencyMs` nao existe no tipo `CachedAIResponse`.
+**Solucao**: Usar optional chaining ou adicionar a propriedade a interface, ou remover a referencia do log.
 
-### Verificação de sucesso
+### 7. Corrigir `maintenance-cron/integration_test.ts` - teste desatualizado
 
-- [ ] `agent_releases` tem v5.0.5 para Windows com `is_active = true` e `script_content` preenchido
-- [ ] `agent_versions` tem v5.0.5 para Windows
-- [ ] Os 3 agentes ativos reportam `agent_version = v5.0.5` após próximo heartbeat
-- [ ] Novos jobs `light_vuln_scan` completam com sucesso (status = `completed`)
-- [ ] Nenhum novo erro `[DLQ:BUG] Unknown job type: light_vuln_scan` nos logs
+**Problema**: Teste referencia `result.offlineAgentsProcessed` que foi removido da interface `MaintenanceResult`.
+**Solucao**: Remover a assertion do teste, pois o campo nao existe mais (a logica de auto-inativar agentes foi proibida).
 
-### Riscos
+---
 
-- **Nenhum downtime:** A atualização via heartbeat é transparente
-- **Rollback:** Se v5.0.5 causar problemas, reativar v5.0.4 no DB
-- **Agentes offline (v5.0.3):** Serão atualizados quando voltarem online na quinta-feira
+## Ordem de Execucao
+
+1. Restaurar TopBar.tsx e Navbar.tsx (desbloqueia build do frontend)
+2. Corrigir os 5 erros de edge functions em paralelo
+3. Validar build completo
+
+## Impacto
+
+- **Risco**: Baixo. Sao correcoes de tipagem e restauracao de componentes UI
+- **Tempo estimado**: 10-15 minutos
+- **Sem impacto nos agentes**: O backend (heartbeat, jobs, releases) continua operando normalmente via edge functions ja deployadas
+
