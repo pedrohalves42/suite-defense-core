@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
       .eq('platform', platform)
       .maybeSingle();
 
-    let result;
+  let result: Record<string, unknown>;
 
     if (existing) {
       // Update existing

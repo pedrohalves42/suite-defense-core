@@ -575,7 +575,7 @@ export async function aiComplete(
 
       if (cacheResult.hit && cacheResult.cached) {
         const latencyMs = Date.now() - startTime;
-        console.log(`[AI Router] Cache HIT for ${functionName} (${latencyMs}ms, saved ~${cacheResult.cached.latencyMs}ms)`);
+        console.log(`[AI Router] Cache HIT for ${functionName} (${latencyMs}ms)`);
 
         // Persist cache-hit metric
         persistAIMetricsWithProvider({

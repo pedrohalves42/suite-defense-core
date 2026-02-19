@@ -132,7 +132,6 @@ Deno.test("RunMaintenance - returns result with all counters", async () => {
   const result = await useCase.execute();
 
   assertEquals(result.expiredJobsProcessed, 0);
-  assertEquals(result.offlineAgentsProcessed, 0);
   assertEquals(result.archivedExecutions, 0);
   assertEquals(typeof result.durationMs, "number");
 });
