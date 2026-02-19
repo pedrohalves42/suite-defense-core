@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Shield, Server, Users, Briefcase, FileText, Download, Activity, TrendingUp, AlertCircle, Network, Zap, Clock, ShieldAlert, Key, Settings, BarChart3, PieChart, LineChart, CheckCircle2, XCircle, Info, Package } from "lucide-react";
 import { EvidenceBundleExport } from "@/components/admin/EvidenceBundleExport";
 import { IntegrityScoreCard } from "@/components/integrity/IntegrityScoreCard";
+import { JobWasteCard } from "@/components/dashboard/JobWasteCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -728,7 +729,7 @@ const ServerDashboard = () => {
         {isAdmin && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <IntegrityScoreCard />
-            
+            <JobWasteCard jobs={jobs} agents={agents} />
             {/* Card de credenciais de acesso - só para admin */}
             <Card className="bg-gradient-card border-primary/20">
               <CardHeader className="pb-2">

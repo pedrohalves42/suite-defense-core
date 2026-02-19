@@ -115,3 +115,35 @@ Deno.test('ProcessAgentUpdates logs observability on success', async () => {
   assertEquals(obs.logs[0].success, true);
   assertEquals(obs.logs[0].jobKey, 'process-agent-updates');
 });
+
+Deno.test('ProcessAgentUpdates rejects downgrade (agent newer than target)', async () => {
+  const vq = new FakeVersionQuery();
+  vq.latestVersions = [{ platform: Platform.WINDOWS, version: 'v5.0.7' }];
+  // Agent is at v5.0.8 but findOutdatedAgents returned it (simulating stale data)
+  vq.outdatedAgents = [
+    { id: 'a1', agentName: 'Agent1', agentVersion: 'v5.0.8', tenantId: 't1', platform: Platform.WINDOWS },
+  ];
+
+  const uj = new FakeUpdateJob();
+  const useCase = new ProcessAgentUpdatesUseCase(vq, uj, new FakeObservability(), new FakeEventDispatcher());
+  const result = await useCase.execute('test-req');
+
+  // Should NOT create any jobs — v5.0.8 >= v5.0.7
+  assertEquals(result.totalJobsCreated, 0);
+  assertEquals(uj.createdJobs.length, 0);
+});
+
+Deno.test('ProcessAgentUpdates rejects same version (no-op)', async () => {
+  const vq = new FakeVersionQuery();
+  vq.latestVersions = [{ platform: Platform.WINDOWS, version: 'v5.0.8' }];
+  vq.outdatedAgents = [
+    { id: 'a1', agentName: 'Agent1', agentVersion: 'v5.0.8', tenantId: 't1', platform: Platform.WINDOWS },
+  ];
+
+  const uj = new FakeUpdateJob();
+  const useCase = new ProcessAgentUpdatesUseCase(vq, uj, new FakeObservability(), new FakeEventDispatcher());
+  const result = await useCase.execute('test-req');
+
+  assertEquals(result.totalJobsCreated, 0);
+  assertEquals(uj.createdJobs.length, 0);
+});

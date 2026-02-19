@@ -1,6 +1,24 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
+/**
+ * Adaptive TTL per job type.
+ * Collection jobs use shorter TTL (1h) because stale data is useless.
+ * Update/recovery jobs keep 4h to give agents time to come online.
+ */
+const JOB_TTL_HOURS: Record<string, number> = {
+  collect_antivirus_status: 1,
+  software_inventory_collect: 1,
+  collect_web_activity: 1,
+  light_vuln_scan: 1,
+  collect_network_info: 1,
+  service_health_check: 1,
+  network_diagnostics: 1,
+  // Everything else defaults to 4h
+};
+
+const getTtlForType = (type: string): number => JOB_TTL_HOURS[type] ?? 4;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -173,7 +191,7 @@ Deno.serve(async (req) => {
               p_type: recurringJob.type,
               p_payload: recurringJob.payload || {},
               p_priority: recurringJob.priority || 5,
-              p_ttl_hours: 4
+              p_ttl_hours: getTtlForType(recurringJob.type)
             });
 
           if (insertError) {
