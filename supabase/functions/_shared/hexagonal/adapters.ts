@@ -44,7 +44,8 @@ export class SupabaseVersionQueryAdapter implements VersionQueryPort {
       .select('id, agent_name, agent_version, tenant_id')
       .eq('status', 'active')
       .eq('os_type', platform)
-      .not('agent_version', 'is', null);
+      .not('agent_version', 'is', null)
+      .or('scheduling_paused.is.null,scheduling_paused.eq.false');
 
     if (error) throw new Error(`Failed to fetch agents: ${error.message}`);
     if (!data) return [];
