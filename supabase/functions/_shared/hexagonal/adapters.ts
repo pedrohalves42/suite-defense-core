@@ -14,8 +14,21 @@ import type {
 import { Platform, type DomainEvent } from './types.ts';
 import { logger } from '../logger.ts';
 
-// ─── Helper ─────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────
 const normalizeVersion = (v: string | null): string => v?.replace(/^v/i, '') || '';
+
+/** Returns true if version `a` is strictly newer than `b` (semver comparison) */
+const isNewerThan = (a: string, b: string): boolean => {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const va = pa[i] ?? 0;
+    const vb = pb[i] ?? 0;
+    if (va > vb) return true;
+    if (va < vb) return false;
+  }
+  return false; // equal
+};
 
 // ─── VersionQueryAdapter ────────────────────────────────
 export class SupabaseVersionQueryAdapter implements VersionQueryPort {
@@ -45,13 +58,22 @@ export class SupabaseVersionQueryAdapter implements VersionQueryPort {
       .eq('status', 'active')
       .eq('os_type', platform)
       .not('agent_version', 'is', null)
+      .neq('agent_version', latestVersion)        // SQL guard: exclude exact match
+      .neq('agent_version', latestNorm)            // SQL guard: exclude without 'v' prefix
       .or('scheduling_paused.is.null,scheduling_paused.eq.false');
 
     if (error) throw new Error(`Failed to fetch agents: ${error.message}`);
     if (!data) return [];
 
+    // Double validation: semver-aware filter in application layer
     return data
-      .filter((agent) => normalizeVersion(agent.agent_version) !== latestNorm)
+      .filter((agent) => {
+        const agentNorm = normalizeVersion(agent.agent_version);
+        if (agentNorm === latestNorm) return false;
+        // Also reject if agent version is NEWER than target (prevent downgrade)
+        if (isNewerThan(agentNorm, latestNorm)) return false;
+        return true;
+      })
       .map((agent) => ({
         id: agent.id,
         agentName: agent.agent_name,
