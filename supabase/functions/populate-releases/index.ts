@@ -34,7 +34,6 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('authorization');
   const token = authHeader?.replace('Bearer ', '');
   const isInternal = token === INTERNAL_SECRET;
-  const isInternal = token === INTERNAL_SECRET;
   const isServiceRole = token === SUPABASE_SERVICE_ROLE_KEY;
   if (!isInternal && !isServiceRole) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
