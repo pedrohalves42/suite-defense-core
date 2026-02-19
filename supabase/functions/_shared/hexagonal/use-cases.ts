@@ -155,6 +155,17 @@ export class ProcessAgentUpdatesUseCase {
     agent: OutdatedAgentInfo,
     targetVersion: string,
   ): Promise<boolean> {
+    // ─── GUARD: Reject downgrade attempts ─────────────
+    if (this.isNewerOrEqual(agent.agentVersion, targetVersion)) {
+      logger.info('[ProcessAgentUpdates] Skipping — agent already at or above target version', {
+        requestId,
+        agentName: agent.agentName,
+        currentVersion: agent.agentVersion,
+        targetVersion,
+      });
+      return false;
+    }
+
     // Check for existing pending job
     const hasPending = await this.updateJob.hasPendingUpdateJob(agent.id);
     if (hasPending) {
@@ -204,5 +215,23 @@ export class ProcessAgentUpdatesUseCase {
       });
       return false;
     }
+  }
+
+  /**
+   * Semver-aware comparison: returns true if current >= target.
+   * Prevents downgrade jobs (e.g. v5.0.8 → v5.0.7).
+   */
+  private isNewerOrEqual(current: string, target: string): boolean {
+    const parse = (v: string): number[] =>
+      (v || '').replace(/^v/i, '').split('.').map(Number);
+    const c = parse(current);
+    const t = parse(target);
+    for (let i = 0; i < Math.max(c.length, t.length); i++) {
+      const cv = c[i] ?? 0;
+      const tv = t[i] ?? 0;
+      if (cv > tv) return true;
+      if (cv < tv) return false;
+    }
+    return true; // equal
   }
 }
