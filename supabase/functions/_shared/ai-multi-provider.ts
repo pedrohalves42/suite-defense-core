@@ -6,8 +6,8 @@
  * - Cerebras (Llama 3.3-70B) — 20% weight, ultra-fast, free
  * - OpenRouter (Gemini 2.0 Flash) — 15% weight, free
  * - Google Gemini (2.5 Flash) — 15% weight, free tier
- * - Mistral (Small 3.1) — 10% weight, free tier 1B tokens/month
- * - Lovable AI (Gemini 2.5 Flash) — 10% weight, included in plan
+  * - Mistral (Small 3.1) — 10% weight, free tier 1B tokens/month
+  * - Lovable AI (Gemini 3 Flash) — 0% weight, emergency-only fallback
  * 
  * Features:
  * - Weighted round-robin distribution for cost optimization
@@ -227,7 +227,7 @@ const PROVIDERS: AIProviderConfig[] = [
     priority: 6,
     maxTokens: 8192,
     costPerMToken: 0.10,
-    weight: 5, // Reduced: use Lovable AI only as last-resort fallback
+    weight: 0, // Emergency-only: never selected by round-robin, used only when all others fail
   },
 ];
 
