@@ -218,7 +218,7 @@ const PROVIDERS: AIProviderConfig[] = [
     name: 'lovable',
     displayName: 'Lovable AI',
     baseUrl: 'https://ai.gateway.lovable.dev/v1/chat/completions',
-    model: 'google/gemini-2.5-flash',
+    model: 'google/gemini-3-flash-preview',
     headers: () => ({
       'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
       'Content-Type': 'application/json',
@@ -226,8 +226,8 @@ const PROVIDERS: AIProviderConfig[] = [
     enabled: () => !!Deno.env.get('LOVABLE_API_KEY'),
     priority: 6,
     maxTokens: 8192,
-    costPerMToken: 0.15,
-    weight: 10,
+    costPerMToken: 0.10,
+    weight: 5, // Reduced: use Lovable AI only as last-resort fallback
   },
 ];
 
