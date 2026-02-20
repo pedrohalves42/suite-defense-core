@@ -1,0 +1,241 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { corsHeaders } from '../_shared/cors.ts';
+import { handleException } from '../_shared/error-handler.ts';
+import { createAuditLog } from '../_shared/audit.ts';
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+type ActionType = 'kill_process' | 'firewall_block' | 'patch_apply' | 'quarantine_file' | 'restart_service';
+
+interface RemediationRequest {
+  agent_id: string;
+  action_type: ActionType;
+  trigger_source: string;
+  trigger_details: Record<string, unknown>;
+  requires_approval?: boolean;
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const requestId = crypto.randomUUID();
+
+  try {
+    // Auth: internal secret or JWT
+    const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+    const authHeader = req.headers.get('X-Internal-Secret');
+    const jwtHeader = req.headers.get('Authorization');
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    let tenantId: string | null = null;
+    let userId: string | null = null;
+
+    if (authHeader && authHeader === internalSecret) {
+      // Internal call — tenant_id comes from body
+    } else if (jwtHeader) {
+      const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+        global: { headers: { Authorization: jwtHeader } },
+      });
+      const { data: { user }, error } = await userClient.auth.getUser();
+      if (error || !user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      userId = user.id;
+      const { data: role } = await supabase
+        .from('user_roles').select('tenant_id').eq('user_id', user.id).limit(1).maybeSingle();
+      tenantId = role?.tenant_id;
+    } else {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body: RemediationRequest = await req.json();
+    const { agent_id, action_type, trigger_source, trigger_details, requires_approval = false } = body;
+
+    if (!agent_id || !action_type || !trigger_source) {
+      return new Response(JSON.stringify({ error: 'agent_id, action_type, and trigger_source are required' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Get agent info
+    const { data: agent, error: agentErr } = await supabase
+      .from('agents').select('id, agent_name, tenant_id, status')
+      .eq('id', agent_id).single();
+
+    if (agentErr || !agent) {
+      return new Response(JSON.stringify({ error: 'Agent not found' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    tenantId = tenantId || agent.tenant_id;
+
+    // Create remediation action record
+    const { data: action, error: actionErr } = await supabase
+      .from('auto_remediation_actions')
+      .insert({
+        tenant_id: tenantId,
+        agent_id,
+        agent_name: agent.agent_name,
+        action_type,
+        trigger_source,
+        trigger_details,
+        requires_approval,
+        status: requires_approval ? 'pending' : 'executing',
+        executed_at: requires_approval ? null : new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+
+    if (actionErr) throw new Error(`Failed to create action: ${actionErr.message}`);
+
+    // If requires approval, stop here
+    if (requires_approval) {
+      await supabase.from('system_alerts').insert({
+        tenant_id: tenantId,
+        agent_id,
+        alert_type: 'remediation_approval',
+        severity: 'medium',
+        title: 'Aprovação de Remediação Necessária',
+        message: `Ação "${action_type}" no agente "${agent.agent_name}" aguarda aprovação`,
+        details: { action_id: action?.id, action_type, trigger_source, trigger_details },
+      });
+
+      return new Response(JSON.stringify({
+        success: true,
+        action_id: action?.id,
+        status: 'pending_approval',
+        message: 'Action requires approval before execution',
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Execute remediation via job
+    const jobPayload = buildJobPayload(action_type, trigger_details);
+
+    const { data: job, error: jobErr } = await supabase
+      .from('jobs')
+      .insert({
+        agent_id,
+        agent_name: agent.agent_name,
+        tenant_id: tenantId,
+        type: jobPayload.jobType,
+        status: 'pending',
+        payload: jobPayload.payload,
+        priority: 1,
+        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      })
+      .select('id')
+      .single();
+
+    // Update action with job reference
+    await supabase.from('auto_remediation_actions').update({
+      result: { job_id: job?.id },
+      status: job ? 'executing' : 'failed',
+      error_message: jobErr?.message,
+    }).eq('id', action?.id);
+
+    // Alert
+    await supabase.from('system_alerts').insert({
+      tenant_id: tenantId,
+      agent_id,
+      alert_type: 'auto_remediation',
+      severity: 'high',
+      title: 'Auto-Remediação Executada',
+      message: `Ação "${action_type}" executada no agente "${agent.agent_name}"`,
+      details: { action_id: action?.id, job_id: job?.id, action_type, trigger_source },
+    });
+
+    // Audit
+    await createAuditLog({
+      supabase,
+      tenantId: tenantId!,
+      action: 'auto_remediate',
+      resourceType: 'auto_remediation_actions',
+      resourceId: action?.id || '',
+      details: { action_type, agent_id, trigger_source, job_id: job?.id },
+      request: req,
+      success: true,
+    });
+
+    // Domain event
+    await supabase.from('domain_events').insert({
+      aggregate_id: agent_id,
+      aggregate_type: 'agent',
+      event_type: 'AutoRemediationExecuted',
+      payload: { action_id: action?.id, action_type, trigger_source, job_id: job?.id },
+      occurred_on: new Date().toISOString(),
+      tenant_id: tenantId,
+    });
+
+    return new Response(JSON.stringify({
+      success: true,
+      action_id: action?.id,
+      job_id: job?.id,
+      status: 'executing',
+      action_type,
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  } catch (error) {
+    return handleException(error, requestId, 'auto-remediate');
+  }
+});
+
+function buildJobPayload(actionType: ActionType, details: Record<string, unknown>) {
+  switch (actionType) {
+    case 'kill_process':
+      return {
+        jobType: 'service_health_check',
+        payload: {
+          action: 'kill_process',
+          process_name: details.process_name,
+          process_id: details.process_id,
+          reason: details.reason || 'auto_remediation',
+        },
+      };
+    case 'firewall_block':
+      return {
+        jobType: 'service_health_check',
+        payload: {
+          action: 'firewall_block',
+          ip_address: details.ip_address,
+          port: details.port,
+          direction: details.direction || 'inbound',
+          reason: details.reason || 'auto_remediation',
+        },
+      };
+    case 'patch_apply':
+      return {
+        jobType: 'service_health_check',
+        payload: {
+          action: 'apply_security_patch',
+          cve_id: details.cve_id,
+          patch_method: details.patch_method || 'automatic',
+        },
+      };
+    case 'quarantine_file':
+      return {
+        jobType: 'service_health_check',
+        payload: {
+          action: 'quarantine_file',
+          file_path: details.file_path,
+          file_hash: details.file_hash,
+          reason: details.reason || 'auto_remediation',
+        },
+      };
+    case 'restart_service':
+      return {
+        jobType: 'service_health_check',
+        payload: {
+          action: 'restart_service',
+          service_name: details.service_name,
+          reason: details.reason || 'auto_remediation',
+        },
+      };
+  }
+}
