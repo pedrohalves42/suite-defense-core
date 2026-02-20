@@ -25,6 +25,7 @@ import { useAgentActions } from '@/hooks/useAgentActions';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { DiagnosticPanel } from '@/components/agent/DiagnosticPanel';
 import { AgentProcessesPanel } from '@/components/agent/AgentProcessesPanel';
+import { AgentNetworkPanel } from '@/components/agent/AgentNetworkPanel';
 import { AgentSystemInfo } from '@/components/agent/AgentSystemInfo';
 import { AgentReinstallCommand } from '@/components/agent/AgentReinstallCommand';
 import { useAgentCausality } from '@/hooks/useAgentCausality';
@@ -42,6 +43,7 @@ import {
   ShieldOff,
   Eye,
   Activity,
+  Network,
   Zap,
   AlertCircle,
   RefreshCw,
@@ -175,21 +177,25 @@ export function AgentDetailsDrawer({
             </div>
           ) : (
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="overview" className="text-xs sm:text-sm">
-                  <Eye className="h-3.5 w-3.5 mr-1.5" />
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="overview" className="text-xs">
+                  <Eye className="h-3.5 w-3.5 mr-1" />
                   Geral
                 </TabsTrigger>
-                <TabsTrigger value="processes" className="text-xs sm:text-sm">
-                  <Activity className="h-3.5 w-3.5 mr-1.5" />
+                <TabsTrigger value="processes" className="text-xs">
+                  <Activity className="h-3.5 w-3.5 mr-1" />
                   Processos
                 </TabsTrigger>
-                <TabsTrigger value="diagnostic" className="text-xs sm:text-sm">
-                  <Stethoscope className="h-3.5 w-3.5 mr-1.5" />
+                <TabsTrigger value="network" className="text-xs">
+                  <Network className="h-3.5 w-3.5 mr-1" />
+                  Rede
+                </TabsTrigger>
+                <TabsTrigger value="diagnostic" className="text-xs">
+                  <Stethoscope className="h-3.5 w-3.5 mr-1" />
                   Diagnóstico
                 </TabsTrigger>
-                <TabsTrigger value="actions" className="text-xs sm:text-sm">
-                  <Zap className="h-3.5 w-3.5 mr-1.5" />
+                <TabsTrigger value="actions" className="text-xs">
+                  <Zap className="h-3.5 w-3.5 mr-1" />
                   Ações
                 </TabsTrigger>
               </TabsList>
@@ -288,6 +294,18 @@ export function AgentDetailsDrawer({
                   <div className="text-center py-8 text-muted-foreground">
                     <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">Selecione um computador para ver processos</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Tab: Rede */}
+              <TabsContent value="network" className="mt-4">
+                {agentId ? (
+                  <AgentNetworkPanel agentId={agentId} />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Network className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Selecione um computador para ver informações de rede</p>
                   </div>
                 )}
               </TabsContent>
