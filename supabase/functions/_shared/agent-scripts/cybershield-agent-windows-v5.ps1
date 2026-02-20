@@ -1265,6 +1265,7 @@ function Invoke-CollectSoftwareInventory {
 
 function Invoke-CollectAntivirusStatus {
     try {
+        # ── Phase 1: WMI SecurityCenter2 (detecta qualquer AV registrado no Windows) ──
         $avProducts = Get-WmiObject -Namespace "root\SecurityCenter2" -Class "AntiVirusProduct" -ErrorAction SilentlyContinue
         
         $avList = @()
@@ -1273,9 +1274,82 @@ function Invoke-CollectAntivirusStatus {
                 name = $av.displayName
                 state = $av.productState
                 path = $av.pathToSignedProductExe
+                source = "SecurityCenter2"
             }
         }
-        
+
+        # ── Phase 2: Detecção complementar de EDRs corporativos (não registram no SecurityCenter2) ──
+        $edrSignatures = @(
+            @{ Name = "CrowdStrike Falcon";    Services = @("CSFalconService","csagent");         Processes = @("CSFalconContainer.exe","CSFalconService.exe") },
+            @{ Name = "SentinelOne";            Services = @("SentinelAgent","SentinelOne");       Processes = @("SentinelAgent.exe","SentinelServiceHost.exe") },
+            @{ Name = "Carbon Black";           Services = @("CbDefense","CarbonBlack");           Processes = @("RepMgr.exe","cb.exe") },
+            @{ Name = "Cortex XDR";             Services = @("CortexXDR","cyserver");              Processes = @("cortex-xdr.exe","cytray.exe") },
+            @{ Name = "Microsoft Defender ATP"; Services = @("Sense","WdNisSvc");                  Processes = @("MsSense.exe","MsMpEng.exe") },
+            @{ Name = "Trend Micro Apex One";   Services = @("ntrtscan","TmListen","ds_agent");    Processes = @("ntrtscan.exe","PccNTMon.exe") },
+            @{ Name = "Sophos Intercept X";     Services = @("Sophos Endpoint Defense","SAVService"); Processes = @("SophosUI.exe","SSPService.exe") },
+            @{ Name = "Symantec Endpoint";      Services = @("SepMasterService","ccSvcHst");       Processes = @("ccSvcHst.exe","smc.exe") },
+            @{ Name = "ESET Endpoint";          Services = @("ekrn","ERAAgent");                   Processes = @("ekrn.exe","egui.exe") },
+            @{ Name = "Kaspersky Endpoint";     Services = @("AVP","klnagent");                    Processes = @("avp.exe","klnagent.exe") },
+            @{ Name = "Bitdefender GravityZone";Services = @("EPSecurityService","BDAuxSrv");      Processes = @("EPSecurityService.exe","bdagent.exe") },
+            @{ Name = "FortiClient";            Services = @("FortiClientMonitor","FA_Scheduler");  Processes = @("FortiClient.exe","FortiTray.exe") },
+            @{ Name = "Cylance";                Services = @("CylanceSvc");                        Processes = @("CylanceSvc.exe","CylanceUI.exe") },
+            @{ Name = "Malwarebytes EP";        Services = @("MBAMService");                       Processes = @("MBAMService.exe","mbamtray.exe") },
+            @{ Name = "Webroot";                Services = @("WRSVC");                             Processes = @("WRSA.exe") }
+        )
+
+        $knownNames = $avList | ForEach-Object { $_.name.ToLower() }
+
+        foreach ($edr in $edrSignatures) {
+            # Skip if already detected by SecurityCenter2
+            $alreadyDetected = $false
+            foreach ($known in $knownNames) {
+                if ($known -like "*$($edr.Name.Split(' ')[0].ToLower())*") {
+                    $alreadyDetected = $true
+                    break
+                }
+            }
+            if ($alreadyDetected) { continue }
+
+            # Check services
+            $foundService = $null
+            foreach ($svcName in $edr.Services) {
+                $svc = Get-Service -Name $svcName -ErrorAction SilentlyContinue
+                if ($svc) {
+                    $foundService = $svc
+                    break
+                }
+            }
+
+            # Check processes if no service found
+            $foundProcess = $null
+            if (-not $foundService) {
+                foreach ($procName in $edr.Processes) {
+                    $proc = Get-Process -Name ($procName -replace '\.exe$','') -ErrorAction SilentlyContinue
+                    if ($proc) {
+                        $foundProcess = $proc
+                        break
+                    }
+                }
+            }
+
+            if ($foundService -or $foundProcess) {
+                $status = "unknown"
+                if ($foundService) {
+                    $status = if ($foundService.Status -eq "Running") { "active" } else { "stopped" }
+                } elseif ($foundProcess) {
+                    $status = "active"
+                }
+
+                $avList += @{
+                    name   = $edr.Name
+                    state  = 0
+                    path   = if ($foundProcess) { $foundProcess.Path } elseif ($foundService) { $foundService.BinaryPathName } else { "" }
+                    source = "EDR_Process_Detection"
+                    status = $status
+                }
+            }
+        }
+
         return @{
             antivirus_products = $avList
             count = $avList.Count
