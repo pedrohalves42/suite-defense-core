@@ -139,6 +139,8 @@ import EvidenceBundlePage from "./pages/admin/EvidenceBundlePage";
 import AutoRemediation from "./pages/admin/AutoRemediation";
 import SiemExport from "./pages/admin/SiemExport";
 import WhiteLabelSettings from "./pages/admin/WhiteLabelSettings";
+import ItsmSettings from "./pages/admin/ItsmSettings";
+import PlatformManagement from "./pages/admin/PlatformManagement";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 
 const App = () => (
@@ -269,6 +271,8 @@ const App = () => (
                 <Route path="auto-remediation" element={<AutoRemediation />} />
                 <Route path="siem-export" element={<SiemExport />} />
                 <Route path="white-label" element={<WhiteLabelSettings />} />
+                <Route path="itsm" element={<ItsmSettings />} />
+                <Route path="platforms" element={<PlatformManagement />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) - Protected by MFA Guard */}

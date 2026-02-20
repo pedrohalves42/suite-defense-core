@@ -11482,6 +11482,200 @@ export type Database = {
         }
         Relationships: []
       }
+      itsm_integrations: {
+        Row: {
+          auth_type: string
+          auto_create_on_alert: boolean
+          auto_create_severity_threshold: string | null
+          base_url: string
+          created_at: string
+          created_by: string | null
+          credentials_encrypted: Json
+          default_issue_type: string | null
+          default_priority: string | null
+          display_name: string
+          field_mappings: Json | null
+          id: string
+          is_active: boolean
+          project_key: string | null
+          provider: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          auth_type?: string
+          auto_create_on_alert?: boolean
+          auto_create_severity_threshold?: string | null
+          base_url: string
+          created_at?: string
+          created_by?: string | null
+          credentials_encrypted?: Json
+          default_issue_type?: string | null
+          default_priority?: string | null
+          display_name?: string
+          field_mappings?: Json | null
+          id?: string
+          is_active?: boolean
+          project_key?: string | null
+          provider: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          auth_type?: string
+          auto_create_on_alert?: boolean
+          auto_create_severity_threshold?: string | null
+          base_url?: string
+          created_at?: string
+          created_by?: string | null
+          credentials_encrypted?: Json
+          default_issue_type?: string | null
+          default_priority?: string | null
+          display_name?: string
+          field_mappings?: Json | null
+          id?: string
+          is_active?: boolean
+          project_key?: string | null
+          provider?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itsm_integrations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itsm_integrations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "itsm_integrations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "itsm_integrations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      itsm_tickets: {
+        Row: {
+          agent_id: string | null
+          agent_name: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          external_status: string | null
+          external_ticket_id: string
+          external_ticket_key: string | null
+          external_ticket_url: string | null
+          id: string
+          integration_id: string
+          priority: string | null
+          provider: string
+          source_id: string | null
+          source_type: string
+          status: string | null
+          summary: string
+          synced_at: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          external_status?: string | null
+          external_ticket_id: string
+          external_ticket_key?: string | null
+          external_ticket_url?: string | null
+          id?: string
+          integration_id: string
+          priority?: string | null
+          provider: string
+          source_id?: string | null
+          source_type: string
+          status?: string | null
+          summary: string
+          synced_at?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          external_status?: string | null
+          external_ticket_id?: string
+          external_ticket_key?: string | null
+          external_ticket_url?: string | null
+          id?: string
+          integration_id?: string
+          priority?: string | null
+          provider?: string
+          source_id?: string | null
+          source_type?: string
+          status?: string | null
+          summary?: string
+          synced_at?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itsm_tickets_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "itsm_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itsm_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itsm_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "itsm_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "itsm_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       job_executions: {
         Row: {
           agent_id: string
@@ -13136,6 +13330,77 @@ export type Database = {
           },
           {
             foreignKeyName: "persistent_failure_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      platform_configs: {
+        Row: {
+          agent_binary_url: string | null
+          config_overrides: Json | null
+          created_at: string
+          default_install_path: string | null
+          id: string
+          install_command_template: string | null
+          is_enabled: boolean
+          platform: string
+          service_name: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          agent_binary_url?: string | null
+          config_overrides?: Json | null
+          created_at?: string
+          default_install_path?: string | null
+          id?: string
+          install_command_template?: string | null
+          is_enabled?: boolean
+          platform: string
+          service_name?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          agent_binary_url?: string | null
+          config_overrides?: Json | null
+          created_at?: string
+          default_install_path?: string | null
+          id?: string
+          install_command_template?: string | null
+          is_enabled?: boolean
+          platform?: string
+          service_name?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "platform_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "platform_configs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
