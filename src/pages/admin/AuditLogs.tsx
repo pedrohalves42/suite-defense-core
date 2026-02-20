@@ -18,6 +18,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { StateDiffViewer } from '@/components/admin/audit/StateDiffViewer';
 import { IntegrityBadge } from '@/components/admin/audit/IntegrityBadge';
+import { ChainHealthPanel } from '@/components/admin/audit/ChainHealthPanel';
 import { exportAuditLogsWithIntegrity, generateExportCertificate } from '@/lib/audit-integrity';
 
 const ITEMS_PER_PAGE = 20;
@@ -170,6 +171,10 @@ export default function AuditLogs() {
           <HelpTooltip term="auditoria" />
         </p>
       </div>
+
+      {activeTenant?.id && (
+        <ChainHealthPanel tenantId={activeTenant.id} />
+      )}
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <Card>
