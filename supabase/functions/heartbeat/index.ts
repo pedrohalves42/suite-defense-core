@@ -220,18 +220,27 @@ Deno.serve(async (req) => {
     // v5 agents send system_metrics with CPU/RAM/Disk data
     // ============================================================
     const systemMetrics = (osInfo as any).system_metrics
-    if (systemMetrics && typeof systemMetrics === 'object' && !systemMetrics.error) {
-      // Get tenant_id for the agent (single query, cached from token lookup would be better)
+    
+    // Get tenant_id once for all inserts
+    let cachedTenantId: string | null = null
+    const getTenantId = async (): Promise<string | null> => {
+      if (cachedTenantId) return cachedTenantId
       const { data: agentTenant } = await supabase
         .from('agents')
         .select('tenant_id')
         .eq('id', agent.id)
         .single()
+      cachedTenantId = agentTenant?.tenant_id || null
+      return cachedTenantId
+    }
 
-      if (agentTenant?.tenant_id) {
+    if (systemMetrics && typeof systemMetrics === 'object' && !systemMetrics.error) {
+      const tenantId = await getTenantId()
+
+      if (tenantId) {
         const metricsRow = {
           agent_id: agent.id,
-          tenant_id: agentTenant.tenant_id,
+          tenant_id: tenantId,
           cpu_usage_percent: systemMetrics.cpu_percent ?? null,
           cpu_name: systemMetrics.cpu_name ?? null,
           cpu_cores: systemMetrics.cpu_cores ?? null,
@@ -262,6 +271,67 @@ Deno.serve(async (req) => {
             agentName: agent.agent_name, 
             error: metricsError.message,
           })
+        }
+      }
+    }
+
+    // ============================================================
+    // SAVE PROCESS DATA from heartbeat payload → agent_processes
+    // v5 agents send processes { top_by_cpu, top_by_memory, total_processes }
+    // ============================================================
+    const processesPayload = (osInfo as any).processes
+    const processAnomalies = (osInfo as any).process_anomalies
+    if (processesPayload && typeof processesPayload === 'object' && !processesPayload.error) {
+      const tenantId = await getTenantId()
+
+      if (tenantId) {
+        // Flatten top_by_cpu + top_by_memory into deduplicated array
+        const allProcs: any[] = []
+        const seenPids = new Set<number>()
+        for (const p of [...(processesPayload.top_by_cpu || []), ...(processesPayload.top_by_memory || [])]) {
+          if (p.pid && !seenPids.has(p.pid)) {
+            seenPids.add(p.pid)
+            allProcs.push({
+              pid: p.pid,
+              name: p.name,
+              cpu_percent: p.cpu_seconds ?? 0,
+              memory_mb: p.memory_mb ?? 0,
+              user: p.user ?? '',
+              command_line: p.command_line,
+            })
+          }
+        }
+
+        const processRow = {
+          agent_id: agent.id,
+          tenant_id: tenantId,
+          processes: allProcs,
+          services: [],
+          total_processes: processesPayload.total_processes ?? allProcs.length,
+          total_services: 0,
+          services_running: 0,
+          services_stopped: 0,
+          new_processes: [],
+          suspicious_processes: Array.isArray(processAnomalies) ? processAnomalies : [],
+          collected_at: new Date().toISOString(),
+        }
+
+        const { error: procError } = await supabase
+          .from('agent_processes')
+          .insert(processRow)
+
+        if (procError) {
+          logger.error('PROCESS INSERT FAILED', { 
+            agentName: agent.agent_name, 
+            error: procError.message,
+          })
+        } else {
+          // Cleanup old snapshots (keep last 48h)
+          await supabase
+            .from('agent_processes')
+            .delete()
+            .eq('agent_id', agent.id)
+            .lt('collected_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
         }
       }
     }
