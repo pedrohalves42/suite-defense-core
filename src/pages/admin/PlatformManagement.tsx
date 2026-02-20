@@ -171,11 +171,9 @@ const PlatformManagement = () => {
                     </pre>
                   </div>
 
-                  {p.key !== 'windows' && (
-                    <Badge variant="outline" className="text-xs">
-                      {p.key === 'macos' ? 'Agente macOS em desenvolvimento' : 'Agente Linux em desenvolvimento'}
-                    </Badge>
-                  )}
+                  <Badge variant={isEnabled ? "default" : "outline"} className="text-xs">
+                    {isEnabled ? 'Plataforma ativa' : 'Plataforma desabilitada'}
+                  </Badge>
                 </CardContent>
               </Card>
             </TabsContent>

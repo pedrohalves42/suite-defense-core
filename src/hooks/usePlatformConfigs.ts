@@ -27,10 +27,9 @@ export const usePlatformConfigs = () => {
     queryFn: async () => {
       if (!tenant?.id) return { windows: 0, macos: 0, linux: 0 };
       const { data, error } = await supabase
-        .from('agents')
+        .from('active_agents')
         .select('os_type')
-        .eq('tenant_id', tenant.id)
-        .neq('status', 'archived');
+        .eq('tenant_id', tenant.id);
       if (error) throw error;
       const counts = { windows: 0, macos: 0, linux: 0 };
       for (const a of data || []) {
