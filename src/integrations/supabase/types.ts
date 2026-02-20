@@ -7817,6 +7817,183 @@ export type Database = {
           },
         ]
       }
+      auto_remediation_actions: {
+        Row: {
+          action_type: string
+          agent_id: string | null
+          agent_name: string | null
+          approved_at: string | null
+          approved_by: string | null
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          executed_at: string | null
+          id: string
+          requires_approval: boolean | null
+          result: Json | null
+          status: string | null
+          tenant_id: string
+          trigger_details: Json | null
+          trigger_source: string
+        }
+        Insert: {
+          action_type: string
+          agent_id?: string | null
+          agent_name?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          requires_approval?: boolean | null
+          result?: Json | null
+          status?: string | null
+          tenant_id: string
+          trigger_details?: Json | null
+          trigger_source: string
+        }
+        Update: {
+          action_type?: string
+          agent_id?: string | null
+          agent_name?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          requires_approval?: boolean | null
+          result?: Json | null
+          status?: string | null
+          tenant_id?: string
+          trigger_details?: Json | null
+          trigger_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_remediation_actions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "auto_remediation_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       automation_executions: {
         Row: {
           action_result: Json | null
@@ -15937,6 +16114,149 @@ export type Database = {
           },
         ]
       }
+      siem_export_configs: {
+        Row: {
+          api_key_hash: string | null
+          batch_size: number | null
+          created_at: string | null
+          export_interval_minutes: number | null
+          format: string
+          id: string
+          include_event_types: string[] | null
+          is_active: boolean | null
+          last_export_at: string | null
+          tenant_id: string
+          updated_at: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          api_key_hash?: string | null
+          batch_size?: number | null
+          created_at?: string | null
+          export_interval_minutes?: number | null
+          format?: string
+          id?: string
+          include_event_types?: string[] | null
+          is_active?: boolean | null
+          last_export_at?: string | null
+          tenant_id: string
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          api_key_hash?: string | null
+          batch_size?: number | null
+          created_at?: string | null
+          export_interval_minutes?: number | null
+          format?: string
+          id?: string
+          include_event_types?: string[] | null
+          is_active?: boolean | null
+          last_export_at?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "siem_export_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "siem_export_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "siem_export_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "siem_export_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      siem_export_history: {
+        Row: {
+          config_id: string
+          error_message: string | null
+          events_exported: number | null
+          exported_at: string | null
+          format: string
+          id: string
+          status: string | null
+          tenant_id: string
+        }
+        Insert: {
+          config_id: string
+          error_message?: string | null
+          events_exported?: number | null
+          exported_at?: string | null
+          format: string
+          id?: string
+          status?: string | null
+          tenant_id: string
+        }
+        Update: {
+          config_id?: string
+          error_message?: string | null
+          events_exported?: number | null
+          exported_at?: string | null
+          format?: string
+          id?: string
+          status?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "siem_export_history_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "siem_export_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "siem_export_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "siem_export_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "siem_export_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "siem_export_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       signed_documents: {
         Row: {
           algorithm: string
@@ -17721,6 +18041,95 @@ export type Database = {
             foreignKeyName: "tenant_action_policies_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      tenant_branding: {
+        Row: {
+          accent_color: string | null
+          company_address: string | null
+          company_cnpj: string | null
+          company_email: string | null
+          company_name: string | null
+          company_phone: string | null
+          company_website: string | null
+          created_at: string | null
+          custom_sections: Json | null
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          report_footer_text: string | null
+          report_header_text: string | null
+          secondary_color: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          company_address?: string | null
+          company_cnpj?: string | null
+          company_email?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          company_website?: string | null
+          created_at?: string | null
+          custom_sections?: Json | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          report_footer_text?: string | null
+          report_header_text?: string | null
+          secondary_color?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          company_address?: string | null
+          company_cnpj?: string | null
+          company_email?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          company_website?: string | null
+          created_at?: string | null
+          custom_sections?: Json | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          report_footer_text?: string | null
+          report_header_text?: string | null
+          secondary_color?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_branding_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_branding_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_branding_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_branding_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "v_tenant_plan_status"
             referencedColumns: ["tenant_id"]
           },
