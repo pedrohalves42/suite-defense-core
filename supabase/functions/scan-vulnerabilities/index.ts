@@ -307,7 +307,7 @@ Deno.serve(async (req) => {
 
     if (softwareError) {
       console.error(`[${requestId}] [SCAN-VULNS] Error fetching software:`, softwareError);
-      throw softwareError;
+      throw new Error(softwareError.message || 'Failed to fetch software inventory');
     }
 
     if (!software || software.length === 0) {
@@ -442,7 +442,11 @@ Deno.serve(async (req) => {
     );
 
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = error instanceof Error 
+      ? error.message 
+      : (typeof error === 'object' && error !== null && 'message' in error) 
+        ? String((error as any).message)
+        : JSON.stringify(error) || 'Unknown error';
     console.error(`[${requestId}] [SCAN-VULNS] Error:`, message);
     return new Response(
       JSON.stringify({ error: message }),
