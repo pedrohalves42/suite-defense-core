@@ -149,7 +149,7 @@ export default function SuperAdminTenants() {
       
       const tenantIds = tenants.map(t => t.id);
       const { data, error } = await supabase
-        .from('agents')
+        .from('active_agents')
         .select('tenant_id')
         .in('tenant_id', tenantIds);
       
@@ -203,7 +203,7 @@ export default function SuperAdminTenants() {
       
       // Count total agents across all tenants
       const { count: agentCount, error: agentError } = await supabase
-        .from('agents')
+        .from('active_agents')
         .select('*', { count: 'exact', head: true });
       
       if (agentError) throw agentError;
