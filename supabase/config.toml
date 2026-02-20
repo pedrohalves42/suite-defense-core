@@ -739,3 +739,7 @@ schedule = "0 */2 * * *"
 [functions.ai-behavioral-anomaly-detector]
 verify_jwt = false
 schedule = "*/15 * * * *"
+
+# === Phase 4: AI Security Copilot ===
+[functions.ai-security-copilot]
+verify_jwt = false
