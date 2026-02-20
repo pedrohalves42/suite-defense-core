@@ -55,8 +55,8 @@ export default function Users() {
       if (!response.ok) throw new Error('Failed to fetch users');
       const data = await response.json();
       
-      // list-all-users-admin returns array directly, list-users returns { users: [] }
-      return isSuperAdmin ? data : (data.users || []);
+      // Both endpoints may return { users: [] } or array directly
+      return Array.isArray(data) ? data : (data.users || []);
     },
   });
 
