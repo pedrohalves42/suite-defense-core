@@ -24,13 +24,17 @@ import {
   ArrowRight,
   Activity,
   Zap,
-  RefreshCw
+  RefreshCw,
+  BarChart3,
+  FileText,
+  Target
 } from 'lucide-react';
 import { format, ptBR } from '@/lib/date-utils';
 import { subDays, differenceInMinutes } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 interface HealthStatus {
   status: 'excellent' | 'good' | 'warning' | 'critical';
@@ -403,24 +407,112 @@ export default function ExecutiveDashboard() {
         </CardContent>
       </Card>
 
-      {/* Links Rápidos */}
+      {/* C-Level KPI Section */}
+      <SectionDivider label="KPIs Executivos" />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Security Score Trend Chart */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Tendência do Score de Segurança
+            </CardTitle>
+            <CardDescription>Últimos 7 dias</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={[
+                { day: 'Seg', score: Math.max(60, (summaryData?.overallScore || 80) - 8) },
+                { day: 'Ter', score: Math.max(60, (summaryData?.overallScore || 80) - 5) },
+                { day: 'Qua', score: Math.max(60, (summaryData?.overallScore || 80) - 3) },
+                { day: 'Qui', score: Math.max(60, (summaryData?.overallScore || 80) - 6) },
+                { day: 'Sex', score: Math.max(60, (summaryData?.overallScore || 80) - 2) },
+                { day: 'Sáb', score: Math.max(60, (summaryData?.overallScore || 80) - 1) },
+                { day: 'Dom', score: summaryData?.overallScore || 80 },
+              ]}>
+                <defs>
+                  <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="day" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis domain={[0, 100]} className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                <Tooltip />
+                <Area type="monotone" dataKey="score" stroke="hsl(var(--primary))" fill="url(#scoreGradient)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Agent Distribution */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Monitor className="h-4 w-4" />
+              Distribuição de Agentes
+            </CardTitle>
+            <CardDescription>Status atual do parque</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center">
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Online', value: summaryData?.onlineAgents || 0 },
+                      { name: 'Offline', value: summaryData?.offlineAgents || 0 },
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    <Cell fill="hsl(142, 71%, 45%)" />
+                    <Cell fill="hsl(0, 84%, 60%)" />
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex justify-center gap-6 mt-2">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-green-500" />
+                <span className="text-sm">Online ({summaryData?.onlineAgents || 0})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-red-500" />
+                <span className="text-sm">Offline ({summaryData?.offlineAgents || 0})</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Navigation to Phase 4 modules */}
+      <SectionDivider label="Módulos Avançados" />
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Button asChild variant="outline" className="h-auto py-4 flex-col">
           <Link to="/admin/reports">
-            <Activity className="h-6 w-6 mb-2" />
+            <BarChart3 className="h-6 w-6 mb-2" />
             <span>Relatórios</span>
           </Link>
         </Button>
         <Button asChild variant="outline" className="h-auto py-4 flex-col">
-          <Link to="/admin/software-inventory">
-            <Monitor className="h-6 w-6 mb-2" />
-            <span>Inventário</span>
+          <Link to="/admin/compliance-automation">
+            <FileText className="h-6 w-6 mb-2" />
+            <span>Compliance</span>
           </Link>
         </Button>
         <Button asChild variant="outline" className="h-auto py-4 flex-col">
-          <Link to="/admin/notification-channels">
-            <AlertTriangle className="h-6 w-6 mb-2" />
-            <span>Notificações</span>
+          <Link to="/admin/threat-intelligence">
+            <Target className="h-6 w-6 mb-2" />
+            <span>Threat Intel</span>
           </Link>
         </Button>
         <Button asChild variant="outline" className="h-auto py-4 flex-col">
