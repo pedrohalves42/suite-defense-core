@@ -26110,6 +26110,7 @@ export type Database = {
         Returns: {
           agent_id: string
           agent_name: string
+          agent_version: string
           cpu_usage_percent: number
           disk_usage_percent: number
           hostname: string

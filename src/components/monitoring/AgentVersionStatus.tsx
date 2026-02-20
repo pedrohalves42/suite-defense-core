@@ -111,7 +111,7 @@ export function AgentVersionStatus({ agents, tenantId, onRefresh }: AgentVersion
 
       toast({
         title: 'Atualização iniciada',
-        description: `${onlineOutdated.length} agente(s) serão atualizados para v${latestVersion}`,
+        description: `${onlineOutdated.length} agente(s) serão atualizados para ${latestVersion?.startsWith('v') ? latestVersion : `v${latestVersion}`}`,
       });
       
       onRefresh?.();
@@ -157,7 +157,7 @@ export function AgentVersionStatus({ agents, tenantId, onRefresh }: AgentVersion
                 </Badge>
               )}
               <span className="text-sm text-muted-foreground">
-                (última: v{latestVersion})
+                (última: {latestVersion?.startsWith('v') ? latestVersion : `v${latestVersion}`})
               </span>
             </div>
             <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
@@ -199,7 +199,7 @@ export function AgentVersionStatus({ agents, tenantId, onRefresh }: AgentVersion
                       <div key={agent.id} className="flex items-center justify-between text-sm">
                         <span>{agent.name}</span>
                         <Badge variant="outline" className="text-xs font-mono">
-                          {agent.agent_version || 'desconhecida'} → v{latestVersion}
+                          {agent.agent_version || 'desconhecida'} → {latestVersion?.startsWith('v') ? latestVersion : `v${latestVersion}`}
                         </Badge>
                       </div>
                     ))}
