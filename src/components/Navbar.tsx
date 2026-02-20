@@ -5,11 +5,11 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
-  { label: "Recursos", href: "#features" },
-  { label: "Preços", href: "#pricing" },
-  { label: "Depoimentos", href: "#testimonials" },
+  { label: "Recursos", href: "#recursos" },
+  { label: "Preços", href: "#precos" },
+  { label: "Depoimentos", href: "#depoimentos" },
   { label: "FAQ", href: "#faq" },
-  { label: "Contato", href: "#contact" },
+  { label: "Contato", href: "#contato" },
 ];
 
 export const Navbar = () => {
@@ -41,7 +41,7 @@ export const Navbar = () => {
               {link.label}
             </button>
           ))}
-          <Button size="sm" onClick={() => navigate("/auth")}>
+          <Button size="sm" onClick={() => navigate("/login")}>
             Entrar
           </Button>
         </div>
@@ -67,7 +67,7 @@ export const Navbar = () => {
               {link.label}
             </button>
           ))}
-          <Button className="w-full mt-2" size="sm" onClick={() => { setMobileOpen(false); navigate("/auth"); }}>
+          <Button className="w-full mt-2" size="sm" onClick={() => { setMobileOpen(false); navigate("/login"); }}>
             Entrar
           </Button>
         </div>
