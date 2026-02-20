@@ -140,6 +140,7 @@ Deno.serve(async (req) => {
         disk_usage: agent.disk_usage_percent ? parseFloat(agent.disk_usage_percent) : null,
         uptime_hours: agent.uptime_seconds ? Math.floor(agent.uptime_seconds / 3600) : null,
         metrics_age_minutes: agent.metrics_age_minutes,
+        agent_version: agent.agent_version || null,
       };
     });
 
