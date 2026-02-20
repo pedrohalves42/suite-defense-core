@@ -95,8 +95,8 @@ export default function AgentHealthMonitor() {
   const counts = useMemo(() => agentsHealth.reduce(
     (acc, agent) => {
       if (agent.health_status === 'healthy') acc.healthy++;
-      // Contar como critical se health_status é critical OU se tem alertas críticos
-      if (agent.health_status === 'critical' || agent.has_critical_alerts) acc.critical++;
+      // critical = NOT healthy (warning/offline/never_connected) or has active alerts while online
+      if (agent.health_status === 'warning' || agent.health_status === 'critical') acc.critical++;
       if (agent.health_status === 'offline') acc.offline++;
       if (agent.health_status === 'never_connected') acc.never_connected++;
       if (agent.is_throttled || agent.is_isolated || agent.is_in_safe_mode) acc.withProblems++;
@@ -408,8 +408,8 @@ export default function AgentHealthMonitor() {
 
                 // Determine health status for the card
                 const healthStatus: 'healthy' | 'warning' | 'critical' | undefined = 
-                  agent.health_status === 'critical' || agent.has_critical_alerts ? 'critical' :
-                  hasSpecialStatus ? 'warning' :
+                  agent.health_status === 'critical' ? 'critical' :
+                  agent.health_status === 'warning' || hasSpecialStatus ? 'warning' :
                   agent.health_status === 'healthy' ? 'healthy' : undefined;
 
                 return (
