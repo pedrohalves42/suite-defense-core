@@ -6,7 +6,7 @@ import {
   Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, 
   Heart, Search, Monitor, AppWindow, GitBranch,
   Download, Building2, FileText, Cpu, Network, Percent, ClipboardCheck, FileBarChart,
-  AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch
+  AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch, Tag
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -117,6 +117,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
 
   const managementItems = useMemo<MenuItem[]>(() => [
     { icon: Users, label: t('adminPages.sidebar.groups'), to: '/admin/agent-groups' },
+    { icon: Tag, label: 'Tags', to: '/admin/agent-tags' },
     { icon: Shield, label: t('adminPages.sidebar.policies'), to: '/admin/security-policies' },
     { icon: AppWindow, label: t('adminPages.sidebar.programs'), to: '/admin/software-inventory' },
     { icon: Crown, label: t('adminPages.sidebar.team'), to: '/admin/members' },
