@@ -141,6 +141,8 @@ import SiemExport from "./pages/admin/SiemExport";
 import WhiteLabelSettings from "./pages/admin/WhiteLabelSettings";
 import ItsmSettings from "./pages/admin/ItsmSettings";
 import PlatformManagement from "./pages/admin/PlatformManagement";
+import ComplianceAutomation from "./pages/admin/ComplianceAutomation";
+import ThreatIntelligence from "./pages/admin/ThreatIntelligence";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 
 const App = () => (
@@ -273,6 +275,8 @@ const App = () => (
                 <Route path="white-label" element={<WhiteLabelSettings />} />
                 <Route path="itsm" element={<ItsmSettings />} />
                 <Route path="platforms" element={<PlatformManagement />} />
+                <Route path="compliance-automation" element={<ComplianceAutomation />} />
+                <Route path="threat-intelligence" element={<ThreatIntelligence />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) - Protected by MFA Guard */}

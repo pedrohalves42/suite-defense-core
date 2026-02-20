@@ -6,7 +6,7 @@ import {
   Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, 
   Heart, Search, Monitor, AppWindow, GitBranch,
   Download, Building2, FileText, Cpu, Network, Percent, ClipboardCheck, FileBarChart,
-  AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch, Tag
+  AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch, Tag, Crosshair
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -130,6 +130,8 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: ClipboardCheck, label: t('adminPages.sidebar.soc2'), to: '/admin/soc2-compliance' },
     { icon: ScrollText, label: t('adminPages.sidebar.audit'), to: '/admin/system-audit' },
     { icon: Scale, label: t('adminPages.sidebar.complianceLabel'), to: '/admin/compliance-timeline' },
+    { icon: FileText, label: 'Compliance Automation', to: '/admin/compliance-automation' },
+    { icon: Crosshair, label: 'Threat Intelligence', to: '/admin/threat-intelligence' },
     { icon: Brain, label: t('adminPages.sidebar.aiRules'), to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
   ], [criticalInsightsCount, t]);
 
