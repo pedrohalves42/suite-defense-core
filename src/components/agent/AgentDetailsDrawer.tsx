@@ -209,23 +209,49 @@ export function AgentDetailsDrawer({
                 <AgentStateExplainer agentId={agentId} tenantId={tenantId} />
 
                 {/* Antivirus Status */}
-                {antivirusStatus && antivirusStatus.length > 0 && (
-                  <>
-                    <SectionDivider label="Antivírus" />
-                    <div className="p-3 rounded-lg bg-muted/30 border">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">{antivirusStatus[0].engine_name || 'Antivírus'}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {antivirusStatus[0].engine_version || 'Versão desconhecida'}
-                          </p>
+                <SectionDivider label="Antivírus" />
+                {antivirusStatus && antivirusStatus.length > 0 ? (
+                  <div className="space-y-2">
+                    {antivirusStatus.map((av, idx) => (
+                      <div key={av.id || idx} className="p-3 rounded-lg bg-muted/30 border">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">{av.engine_name || 'Antivírus'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {av.engine_version || 'Versão desconhecida'}
+                            </p>
+                          </div>
+                          <Badge variant={av.status === 'active' ? 'default' : 'destructive'}>
+                            {av.status || 'Desconhecido'}
+                          </Badge>
                         </div>
-                        <Badge variant={antivirusStatus[0].status === 'active' ? 'default' : 'destructive'}>
-                          {antivirusStatus[0].status || 'Status desconhecido'}
-                        </Badge>
+                        {av.last_scan_at && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Último scan: {new Date(av.last_scan_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        )}
+                        {(av.threats_found ?? 0) > 0 && (
+                          <div className="flex items-center gap-1.5 mt-1.5 text-destructive">
+                            <ShieldAlert className="h-3.5 w-3.5" />
+                            <span className="text-xs font-medium">{av.threats_found} ameaça(s) detectada(s)</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+                    <div className="flex items-start gap-3">
+                      <ShieldAlert className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">AV de terceiros inativo</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Não foi possível detectar nenhum antivírus de terceiros ativo em seu dispositivo. 
+                          Para se manter protegido, ative a Segurança do Windows.
+                        </p>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {/* Quick Links */}
