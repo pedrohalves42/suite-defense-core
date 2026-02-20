@@ -58,11 +58,14 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Get user's role and tenant
-    const { data: userRole, error: roleError } = await supabase
+    const { data: userRoles, error: roleError } = await supabase
       .from('user_roles')
       .select('role, tenant_id')
       .eq('user_id', user.id)
-      .single();
+      .order('role', { ascending: true }); // admin < super_admin alphabetically
+
+    // Pick the highest privilege role (super_admin > admin)
+    const userRole = userRoles?.find(r => r.role === 'super_admin') || userRoles?.[0] || null;
 
     if (roleError || !userRole) {
       logger.error('Failed to get user role', { userId: user.id, error: roleError });
