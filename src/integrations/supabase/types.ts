@@ -8827,6 +8827,54 @@ export type Database = {
           },
         ]
       }
+      cron_health: {
+        Row: {
+          avg_duration_ms: number | null
+          consecutive_failures: number
+          created_at: string
+          cron_name: string
+          id: string
+          last_duration_ms: number | null
+          last_error: string | null
+          last_failure_at: string | null
+          last_success_at: string | null
+          metadata: Json | null
+          total_failures: number
+          total_runs: number
+          updated_at: string
+        }
+        Insert: {
+          avg_duration_ms?: number | null
+          consecutive_failures?: number
+          created_at?: string
+          cron_name: string
+          id?: string
+          last_duration_ms?: number | null
+          last_error?: string | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          metadata?: Json | null
+          total_failures?: number
+          total_runs?: number
+          updated_at?: string
+        }
+        Update: {
+          avg_duration_ms?: number | null
+          consecutive_failures?: number
+          created_at?: string
+          cron_name?: string
+          id?: string
+          last_duration_ms?: number | null
+          last_error?: string | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          metadata?: Json | null
+          total_failures?: number
+          total_runs?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cron_health_checks: {
         Row: {
           consecutive_failures: number | null
@@ -26595,10 +26643,15 @@ export type Database = {
         Args: { p_agent_id: string; p_enabled: boolean; p_user_id: string }
         Returns: undefined
       }
-      update_cron_health: {
-        Args: { p_cron_name: string; p_error?: string; p_success: boolean }
-        Returns: undefined
-      }
+      update_cron_health:
+        | {
+            Args: { p_cron_name: string; p_details?: Json; p_success: boolean }
+            Returns: undefined
+          }
+        | {
+            Args: { p_cron_name: string; p_error?: string; p_success: boolean }
+            Returns: undefined
+          }
       update_job_heartbeat: {
         Args: { p_error?: string; p_job_key: string }
         Returns: undefined
