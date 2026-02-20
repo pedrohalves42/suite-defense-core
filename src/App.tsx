@@ -89,6 +89,7 @@ import DeadLetterQueue from "./pages/admin/DeadLetterQueue";
 import SecurityPolicies from "./pages/admin/SecurityPolicies";
 import SecurityPoliciesAutoActions from "./pages/admin/SecurityPoliciesAutoActions";
 import AgentGroups from "./pages/admin/AgentGroups";
+import AgentTags from "./pages/admin/AgentTags";
 import NotificationSettings from "./pages/admin/NotificationSettings";
 import SecurityMonitoring from "./pages/admin/SecurityMonitoring";
 import MassReinstall from "./pages/admin/MassReinstall";
@@ -230,6 +231,7 @@ const App = () => (
                 <Route path="security-policies" element={<SecurityPolicies />} />
                 <Route path="security-policies/auto-actions" element={<SecurityPoliciesAutoActions />} />
                 <Route path="agent-groups" element={<AgentGroups />} />
+                <Route path="agent-tags" element={<AgentTags />} />
                 <Route path="notification-settings" element={<NotificationSettings />} />
                 <Route path="security-monitoring" element={<SecurityMonitoring />} />
                 <Route path="mass-reinstall" element={<MassReinstall />} />
