@@ -50,7 +50,7 @@ export default function AgentVersionMonitor() {
     queryKey: ['latest-agent-release'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('agent_releases')
+        .from('agent_releases_public')
         .select('version')
         .eq('is_active', true)
         .eq('platform', 'windows')

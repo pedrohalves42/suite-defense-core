@@ -72,7 +72,7 @@ export default function RolloutPolicies() {
     queryKey: ['agent-releases-active'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('agent_releases')
+        .from('agent_releases_public')
         .select('version, platform')
         .eq('is_active', true)
         .order('created_at', { ascending: false });

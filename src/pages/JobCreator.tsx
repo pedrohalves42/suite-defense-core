@@ -122,7 +122,7 @@ const JobCreator = () => {
   const loadLatestVersion = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from("agent_releases")
+        .from("agent_releases_public")
         .select("version")
         .eq("platform", "windows")
         .eq("is_active", true)

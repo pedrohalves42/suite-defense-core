@@ -168,7 +168,7 @@ serve(async (req) => {
                   common_errors: commonErrors,
                   agent_name: agentName
                 },
-                status: 'pending',
+                status: 'open',
                 auto_generated: true
               });
             }
