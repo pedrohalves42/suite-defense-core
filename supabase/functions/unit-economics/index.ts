@@ -64,9 +64,9 @@ Deno.serve(async (req) => {
 
     subscriptions?.forEach((sub: any) => {
       if (sub.status === 'active') {
-        const pricePerDevice = sub.subscription_plans?.price_per_device || 0;
+        const pricePerDeviceCents = sub.subscription_plans?.price_per_device || 0;
         const quantity = sub.device_quantity || 1;
-        totalMrr += pricePerDevice * quantity;
+        totalMrr += (pricePerDeviceCents / 100) * quantity; // centavos -> reais
         activeCount++;
       }
     });
