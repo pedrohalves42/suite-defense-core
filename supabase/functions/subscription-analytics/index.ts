@@ -113,14 +113,16 @@ Deno.serve(async (req) => {
 
     const { data: auditLogs } = await auditQuery;
 
-    // Processar dados mensais
+    // Processar dados mensais - calcular MRR CUMULATIVO real
     const monthlyDataMap = new Map<string, MonthlyData>();
     
     // Inicializar ultimos 6 meses
+    const monthKeys: string[] = [];
     for (let i = 5; i >= 0; i--) {
       const date = new Date();
       date.setMonth(date.getMonth() - i);
       const monthKey = date.toISOString().substring(0, 7); // YYYY-MM
+      monthKeys.push(monthKey);
       monthlyDataMap.set(monthKey, {
         month: monthKey,
         mrr: 0,
@@ -129,24 +131,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Contar novos e cancelados por mes
+    // Contar novos por mes e trials
     let totalTrials = 0;
     let convertedTrials = 0;
 
     subscriptions?.forEach((sub: any) => {
       const createdDate = new Date(sub.created_at);
-      const monthKey = createdDate.toISOString().substring(0, 7);
+      const createdMonthKey = createdDate.toISOString().substring(0, 7);
       
-      if (monthlyDataMap.has(monthKey)) {
-        const monthData = monthlyDataMap.get(monthKey)!;
-        monthData.new++;
-        
-        // Calcular MRR historico (simplificado)
-        if (sub.status === 'active' || sub.status === 'trialing') {
-          const pricePerDevice = sub.subscription_plans.price_per_device || 0;
-          const quantity = sub.device_quantity || 1;
-          monthData.mrr += (pricePerDevice * quantity);
-        }
+      // Contar como "novo" no mes de criacao
+      if (monthlyDataMap.has(createdMonthKey)) {
+        monthlyDataMap.get(createdMonthKey)!.new++;
       }
 
       // Contar trials
@@ -154,6 +149,44 @@ Deno.serve(async (req) => {
         totalTrials++;
         if (sub.status === 'active') {
           convertedTrials++;
+        }
+      }
+
+      // Calcular MRR cumulativo: para cada mes, verificar se a subscription estava ativa
+      const pricePerDevice = sub.subscription_plans?.price_per_device || 0;
+      const quantity = sub.device_quantity || 1;
+      const subMrr = pricePerDevice * quantity;
+
+      if (subMrr === 0) return; // skip free plans
+
+      for (const monthKey of monthKeys) {
+        // Subscription contribui para o MRR se:
+        // - Foi criada antes ou durante esse mes
+        // - E nao foi cancelada/expirada antes desse mes
+        const monthStart = new Date(monthKey + '-01T00:00:00Z');
+        const monthEnd = new Date(monthStart);
+        monthEnd.setMonth(monthEnd.getMonth() + 1);
+
+        const wasCreatedBefore = createdDate < monthEnd;
+        
+        // Verificar se ainda estava ativa nesse mes
+        let wasActiveInMonth = false;
+        if (wasCreatedBefore) {
+          if (sub.status === 'active') {
+            wasActiveInMonth = true;
+          } else if (sub.status === 'trialing') {
+            // Trialing conta se o trial ainda nao expirou naquele mes
+            const trialEnd = sub.trial_end ? new Date(sub.trial_end) : null;
+            wasActiveInMonth = !trialEnd || trialEnd >= monthStart;
+          } else if (sub.status === 'canceled' || sub.status === 'expired') {
+            // Cancelada/expirada - verificar se foi cancelada depois desse mes
+            const updatedAt = new Date(sub.updated_at || sub.created_at);
+            wasActiveInMonth = updatedAt >= monthEnd;
+          }
+        }
+
+        if (wasActiveInMonth) {
+          monthlyDataMap.get(monthKey)!.mrr += subMrr;
         }
       }
     });
