@@ -215,7 +215,7 @@ const ServerDashboard = () => {
         supabase.rpc('get_agents_list', { p_tenant_id: tenant.id, p_include_archived: false }),
         supabase.from("jobs").select("*").eq("tenant_id", tenant.id).order("created_at", { ascending: false }).limit(100),
         supabase.from("reports").select("*").eq("tenant_id", tenant.id).order("created_at", { ascending: false }).limit(100),
-        supabase.from("agent_tokens" as any).select("*").eq("tenant_id", tenant.id).order("created_at", { ascending: false }),
+        supabase.from("agent_tokens" as any).select("*").order("created_at", { ascending: false }),
         supabase.from("rate_limits").select("*").order("last_request_at", { ascending: false }).limit(100),
         supabase.from("virus_scans").select("*").eq("tenant_id", tenant.id).order("scanned_at", { ascending: false }).limit(100),
         supabase.from("audit_logs").select("id, action, resource_type, created_at, success, user_id").order("created_at", { ascending: false }).limit(50),
