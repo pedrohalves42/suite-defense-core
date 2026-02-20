@@ -25897,6 +25897,7 @@ export type Database = {
           severity: string
         }[]
       }
+      diagnose_chain_health: { Args: { p_tenant_id?: string }; Returns: Json }
       drop_old_metrics_partitions: {
         Args: { retention_months?: number }
         Returns: {
@@ -26430,6 +26431,11 @@ export type Database = {
       }
       process_tenant_suspensions: { Args: never; Returns: Json }
       reactivate_tenant: { Args: { p_tenant_id: string }; Returns: Json }
+      reanchor_audit_log_chain: { Args: { p_tenant_id: string }; Returns: Json }
+      reanchor_execution_chains: {
+        Args: { p_agent_id?: string }
+        Returns: Json
+      }
       reconstruct_incident_timeline: {
         Args: { p_agent_id: string; p_end_time: string; p_start_time: string }
         Returns: Json
