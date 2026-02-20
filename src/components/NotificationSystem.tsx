@@ -5,6 +5,7 @@ import { ShieldAlert, FileWarning, AlertTriangle, Server, ShieldOff, WifiOff } f
 import { useTenant } from '@/hooks/useTenant';
 import { getJobTypeLabelNoEmoji } from '@/lib/job-labels';
 import { deriveAgentState, getStateDescription, type AgentState } from '@/lib/agent-state-machine';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface QuarantinedFile {
   id: string;
@@ -47,6 +48,7 @@ const STATE_NOTIFICATIONS: Record<AgentState, {
 export const NotificationSystem = () => {
   const { tenant, loading } = useTenant();
   const [quarantineCount, setQuarantineCount] = useState(0);
+  const { isGranted, showNotification } = usePushNotifications();
 
   useEffect(() => {
     if (!tenant?.id || loading) return;
@@ -76,6 +78,14 @@ export const NotificationSystem = () => {
               }
             }
           );
+          // Push notification for background alerts
+          if (isGranted) {
+            showNotification({
+              title: '🛡️ Arquivo Malicioso Detectado',
+              body: `${file.file_path} no agente ${file.agent_name}`,
+              tag: `quarantine-${file.id}`,
+            });
+          }
           setQuarantineCount(prev => prev + 1);
         }
       )
@@ -124,6 +134,15 @@ export const NotificationSystem = () => {
               duration: notification.type === 'error' ? 10000 : 6000
             }
           );
+          
+          // Push notification for critical/error states
+          if (isGranted && (notification.type === 'error' || notification.type === 'warning')) {
+            showNotification({
+              title: `⚠️ ${newAgent.agent_name}`,
+              body: `${stateDesc.label}: ${stateDesc.description}`,
+              tag: `agent-state-${newAgent.agent_name}`,
+            });
+          }
         }
       )
       .subscribe();
@@ -191,7 +210,7 @@ export const NotificationSystem = () => {
       supabase.removeChannel(scansChannel);
       supabase.removeChannel(jobsChannel);
     };
-  }, [tenant?.id, loading]);
+  }, [tenant?.id, loading, isGranted, showNotification]);
 
   return null; // Este componente nao renderiza nada, apenas gerencia notificacoes
 };
