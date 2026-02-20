@@ -1327,26 +1327,43 @@ Deno.serve(async (req) => {
             if (blockedAttempts.length > 0) {
               console.log(`[submit-job-result] Found ${blockedAttempts.length} blocked access attempts`)
               
-              // Inserir tentativas bloqueadas
-              const attemptsToInsert = blockedAttempts.map(attempt => ({
-                tenant_id: agent.tenant_id,
-                agent_id: job.agent_id,
-                agent_name: agent.agent_name,
-                domain: attempt.domain,
-                policy_id: attempt.policy_id,
-                attempted_at: new Date().toISOString(),
-                blocked_by: 'dns_monitoring',
-                source: 'collect_web_activity'
-              }))
-              
-              const { error: insertError } = await supabase
+              // DEDUP: Check which domains were already recorded in last 24h for this agent
+              const cutoff24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+              const { data: existingAttempts } = await supabase
                 .from('blocked_access_attempts')
-                .insert(attemptsToInsert)
+                .select('domain')
+                .eq('agent_id', job.agent_id)
+                .eq('source', 'collect_web_activity')
+                .gte('attempted_at', cutoff24h)
               
-              if (insertError) {
-                console.error('[submit-job-result] Error inserting blocked attempts:', insertError)
+              const existingDomains = new Set((existingAttempts || []).map((a: { domain: string }) => a.domain))
+              const newAttempts = blockedAttempts.filter(a => !existingDomains.has(a.domain))
+              
+              if (newAttempts.length === 0) {
+                console.log(`[submit-job-result] All ${blockedAttempts.length} blocked domains already recorded in last 24h, skipping`)
               } else {
-                console.log(`[submit-job-result] Successfully recorded ${blockedAttempts.length} blocked access attempts`)
+                console.log(`[submit-job-result] ${newAttempts.length} new blocked attempts (${blockedAttempts.length - newAttempts.length} deduped)`)
+                
+                const attemptsToInsert = newAttempts.map(attempt => ({
+                  tenant_id: agent.tenant_id,
+                  agent_id: job.agent_id,
+                  agent_name: agent.agent_name,
+                  domain: attempt.domain,
+                  policy_id: attempt.policy_id,
+                  attempted_at: new Date().toISOString(),
+                  blocked_by: 'dns_monitoring',
+                  source: 'collect_web_activity'
+                }))
+                
+                const { error: insertError } = await supabase
+                  .from('blocked_access_attempts')
+                  .insert(attemptsToInsert)
+                
+                if (insertError) {
+                  console.error('[submit-job-result] Error inserting blocked attempts:', insertError)
+                } else {
+                  console.log(`[submit-job-result] Successfully recorded ${newAttempts.length} blocked access attempts`)
+                }
               }
             } else {
               console.log('[submit-job-result] No blocked access attempts detected')
@@ -1463,25 +1480,42 @@ Deno.serve(async (req) => {
           }
           
           if (attemptsToInsert.length > 0) {
-            // Batch insert de 100 registros
-            const batchSize = 100
-            let insertedCount = 0
+            // DEDUP: Check which domains were already recorded in last 24h for this agent
+            const cutoff24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+            const { data: existingAttempts } = await supabase
+              .from('blocked_access_attempts')
+              .select('domain')
+              .eq('agent_id', job.agent_id || agent.id)
+              .eq('source', 'collect_dns_blocks')
+              .gte('attempted_at', cutoff24h)
             
-            for (let i = 0; i < attemptsToInsert.length; i += batchSize) {
-              const batch = attemptsToInsert.slice(i, i + batchSize)
+            const existingDomains = new Set((existingAttempts || []).map((a: { domain: string }) => a.domain))
+            const newAttempts = attemptsToInsert.filter(a => !existingDomains.has(a.domain))
+            
+            if (newAttempts.length === 0) {
+              console.log(`[submit-job-result] All ${attemptsToInsert.length} DNS blocked domains already recorded in last 24h, skipping`)
+            } else {
+              console.log(`[submit-job-result] ${newAttempts.length} new DNS blocked attempts (${attemptsToInsert.length - newAttempts.length} deduped)`)
               
-              const { error: insertError } = await supabase
-                .from('blocked_access_attempts')
-                .insert(batch)
+              const batchSize = 100
+              let insertedCount = 0
               
-              if (insertError) {
-                console.error(`[submit-job-result] Error inserting DNS blocked batch ${i}-${i + batch.length}:`, insertError)
-              } else {
-                insertedCount += batch.length
+              for (let i = 0; i < newAttempts.length; i += batchSize) {
+                const batch = newAttempts.slice(i, i + batchSize)
+                
+                const { error: insertError } = await supabase
+                  .from('blocked_access_attempts')
+                  .insert(batch)
+                
+                if (insertError) {
+                  console.error(`[submit-job-result] Error inserting DNS blocked batch ${i}-${i + batch.length}:`, insertError)
+                } else {
+                  insertedCount += batch.length
+                }
               }
+              
+              console.log(`[submit-job-result] Successfully recorded ${insertedCount}/${newAttempts.length} DNS blocked events`)
             }
-            
-            console.log(`[submit-job-result] Successfully recorded ${insertedCount}/${attemptsToInsert.length} DNS blocked events`)
           }
         }
       } catch (dnsErr) {
