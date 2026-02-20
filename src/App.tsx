@@ -136,6 +136,9 @@ import Tasks from "./pages/admin/Tasks";
 import Governance from "./pages/admin/Governance";
 import GovernanceReports from "./pages/admin/GovernanceReports";
 import EvidenceBundlePage from "./pages/admin/EvidenceBundlePage";
+import AutoRemediation from "./pages/admin/AutoRemediation";
+import SiemExport from "./pages/admin/SiemExport";
+import WhiteLabelSettings from "./pages/admin/WhiteLabelSettings";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 
 const App = () => (
@@ -263,6 +266,9 @@ const App = () => (
                 <Route path="governance" element={<Governance />} />
                 <Route path="governance-reports" element={<GovernanceReports />} />
                 <Route path="evidence-bundle" element={<EvidenceBundlePage />} />
+                <Route path="auto-remediation" element={<AutoRemediation />} />
+                <Route path="siem-export" element={<SiemExport />} />
+                <Route path="white-label" element={<WhiteLabelSettings />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) - Protected by MFA Guard */}
