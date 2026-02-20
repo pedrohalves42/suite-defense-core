@@ -1136,7 +1136,7 @@ $Global:PolicyContract = @{
         dns_service_running = $true
         agent_min_version = "v4.0.0"
         blocked_domains_synced = $true
-        heartbeat_interval_max = 120
+        heartbeat_interval_max = 300
         job_execution_enabled = $true
     }
     actual = @{}
