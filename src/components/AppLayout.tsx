@@ -7,6 +7,7 @@ import { GlobalJobWatcher } from '@/components/GlobalJobWatcher';
 import { GlobalKillSwitchBanner } from '@/components/layout/GlobalKillSwitchBanner';
 import { SimpleModeProvider } from '@/components/layout/SimpleModeProvider';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { PushNotificationBanner } from '@/components/mobile/PushNotificationBanner';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -77,9 +78,10 @@ export const AppLayout = () => {
             </div>
             <main className={cn(
               "p-4 md:p-6 relative z-0",
-              isMobile && "pb-20" // space for bottom nav
+              isMobile && "pb-20"
             )}>
               <div className="max-w-7xl mx-auto">
+                {isMobile && <PushNotificationBanner />}
                 <Outlet />
               </div>
             </main>
