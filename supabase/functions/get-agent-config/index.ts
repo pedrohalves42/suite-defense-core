@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
       // No config exists — return defaults (normal mode)
       return secureJsonResponse({
         light_mode_active: false,
-        collection_interval_seconds: 60,
+        collection_interval_seconds: 180,
         skip_process_collection: false,
         skip_network_collection: false,
         compress_payloads: false,
@@ -67,17 +67,17 @@ Deno.serve(async (req) => {
             activated_at: null,
             expires_at: null,
             reason: '',
-            collection_interval_seconds: 60,
-            skip_process_collection: false,
-            skip_network_collection: false,
-            compress_payloads: false,
-            active_media_processes: [],
+          collection_interval_seconds: 180,
+          skip_process_collection: false,
+          skip_network_collection: false,
+          compress_payloads: false,
+          active_media_processes: [],
           })
           .eq('id', config.id);
 
         return secureJsonResponse({
           light_mode_active: false,
-          collection_interval_seconds: 60,
+          collection_interval_seconds: 180,
           skip_process_collection: false,
           skip_network_collection: false,
           compress_payloads: false,
