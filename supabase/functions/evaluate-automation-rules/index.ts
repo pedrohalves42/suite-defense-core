@@ -63,7 +63,7 @@ async function executeAction(
           details: { ...triggerData, rule_id: rule.id },
         })
         .select('id')
-        .single();
+        .maybeSingle();
 
       if (alertError) throw alertError;
       return { status: 'executed', result: { alert_id: alertData?.id } };
@@ -86,7 +86,7 @@ async function executeAction(
           },
         })
         .select('id')
-        .single();
+        .maybeSingle();
 
       if (jobError) throw jobError;
       return { status: 'executed', result: { job_id: jobData?.id } };
