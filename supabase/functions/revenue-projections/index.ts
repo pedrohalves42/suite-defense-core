@@ -76,9 +76,9 @@ Deno.serve(async (req) => {
     let currentCustomers = 0;
 
     subscriptions?.forEach((sub: any) => {
-      const pricePerDevice = sub.subscription_plans?.price_per_device || 0;
+      const pricePerDeviceCents = sub.subscription_plans?.price_per_device || 0;
       const quantity = sub.device_quantity || 1;
-      currentMrr += pricePerDevice * quantity;
+      currentMrr += (pricePerDeviceCents / 100) * quantity; // centavos -> reais
       currentCustomers++;
     });
 
