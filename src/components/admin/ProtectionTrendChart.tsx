@@ -179,7 +179,8 @@ export function ProtectionTrendChart() {
                   backgroundColor: 'hsl(var(--card))',
                   border: '1px solid hsl(var(--border))',
                   borderRadius: '8px',
-                  fontSize: '12px'
+                  fontSize: '12px',
+                  color: 'hsl(var(--card-foreground))',
                 }}
                 formatter={(value: number) => [`${value}%`, 'Proteção']}
                 labelFormatter={(label) => `${label}`}
