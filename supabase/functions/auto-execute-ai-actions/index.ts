@@ -296,10 +296,10 @@ Deno.serve(async (req) => {
                 }
               })
               .select()
-              .single()
+              .maybeSingle()
 
             if (alertError) throw alertError
-            executionResult = { alert_id: alert.id }
+            executionResult = { alert_id: alert?.id || 'created' }
             break
           }
 
