@@ -65,7 +65,41 @@ async function executeAction(
         .select('id')
         .maybeSingle();
 
-      if (alertError) throw alertError;
+      if (alertError) throw new Error(alertError.message || JSON.stringify(alertError));
+
+      // ── SOAR Bridge: Dispatch playbook trigger for matching event types ──
+      const triggerTypeMap: Record<string, string> = {
+        'suspicious_process': 'suspicious_process',
+        'agent_offline': 'agent_offline',
+        'high_cpu': 'metric_threshold',
+        'low_disk': 'metric_threshold',
+      };
+      const eventType = triggerData.event_type || rule.trigger_type;
+      const playbookTrigger = triggerTypeMap[eventType];
+
+      if (playbookTrigger) {
+        try {
+          const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+          const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+          await fetch(`${supabaseUrl}/functions/v1/evaluate-playbook-triggers`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${serviceKey}`,
+            },
+            body: JSON.stringify({
+              tenant_id: tenantId,
+              trigger_type: playbookTrigger,
+              agent_id: agentId,
+              context: { ...triggerData, source: 'automation_rule', rule_id: rule.id },
+            }),
+          });
+        } catch (bridgeErr) {
+          console.warn('[SOAR Bridge] Failed to dispatch playbook trigger:', bridgeErr);
+          // Non-blocking: alert was already created successfully
+        }
+      }
+
       return { status: 'executed', result: { alert_id: alertData?.id } };
 
     } else if (rule.action_type === 'create_job') {
@@ -88,13 +122,14 @@ async function executeAction(
         .select('id')
         .maybeSingle();
 
-      if (jobError) throw jobError;
+      if (jobError) throw new Error(jobError.message || JSON.stringify(jobError));
       return { status: 'executed', result: { job_id: jobData?.id } };
     }
 
     return { status: 'skipped', result: { reason: `Unknown action: ${rule.action_type}` } };
   } catch (error: any) {
-    return { status: 'failed', result: { error: error.message } };
+    const errMsg = error?.message || (typeof error === 'string' ? error : JSON.stringify(error));
+    return { status: 'failed', result: { error: errMsg } };
   }
 }
 
