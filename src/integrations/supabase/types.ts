@@ -5434,6 +5434,88 @@ export type Database = {
           },
         ]
       }
+      ai_feedback: {
+        Row: {
+          action_id: string | null
+          comment: string | null
+          context: Json | null
+          created_at: string
+          feedback_type: string
+          id: string
+          insight_id: string | null
+          rating: number | null
+          tenant_id: string
+          user_id: string | null
+        }
+        Insert: {
+          action_id?: string | null
+          comment?: string | null
+          context?: Json | null
+          created_at?: string
+          feedback_type: string
+          id?: string
+          insight_id?: string | null
+          rating?: number | null
+          tenant_id: string
+          user_id?: string | null
+        }
+        Update: {
+          action_id?: string | null
+          comment?: string | null
+          context?: Json | null
+          created_at?: string
+          feedback_type?: string
+          id?: string
+          insight_id?: string | null
+          rating?: number | null
+          tenant_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_feedback_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "ai_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_insight_id_fkey"
+            columns: ["insight_id"]
+            isOneToOne: false
+            referencedRelation: "ai_insights"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       ai_inference_metrics: {
         Row: {
           circuit_breaker_state: string | null
@@ -16014,6 +16096,95 @@ export type Database = {
           },
           {
             foreignKeyName: "slo_measurements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      soar_playbooks: {
+        Row: {
+          actions: Json
+          auto_approve_critical: boolean
+          auto_execute: boolean
+          cooldown_minutes: number | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          execution_count: number | null
+          id: string
+          is_active: boolean
+          last_triggered_at: string | null
+          name: string
+          requires_approval: boolean
+          tenant_id: string
+          trigger_conditions: Json | null
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          actions?: Json
+          auto_approve_critical?: boolean
+          auto_execute?: boolean
+          cooldown_minutes?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          execution_count?: number | null
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          name: string
+          requires_approval?: boolean
+          tenant_id: string
+          trigger_conditions?: Json | null
+          trigger_type: string
+          updated_at?: string
+        }
+        Update: {
+          actions?: Json
+          auto_approve_critical?: boolean
+          auto_execute?: boolean
+          cooldown_minutes?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          execution_count?: number | null
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          name?: string
+          requires_approval?: boolean
+          tenant_id?: string
+          trigger_conditions?: Json | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soar_playbooks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soar_playbooks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "soar_playbooks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "soar_playbooks_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
