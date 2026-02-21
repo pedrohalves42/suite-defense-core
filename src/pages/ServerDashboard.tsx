@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Shield, Server, Users, Briefcase, FileText, Download, Activity, TrendingUp, AlertCircle, Network, Zap, Clock, ShieldAlert, Key, Settings, BarChart3, PieChart, LineChart, CheckCircle2, XCircle, Info, Package } from "lucide-react";
+import { Shield, Server, Users, Briefcase, FileText, Download, Activity, TrendingUp, AlertCircle, Network, Zap, Clock, ShieldAlert, Key, Settings, BarChart3, PieChart, LineChart, CheckCircle2, XCircle, Info, Package, Monitor, ArrowRight } from "lucide-react";
 import { EvidenceBundleExport } from "@/components/admin/EvidenceBundleExport";
 import { IntegrityScoreCard } from "@/components/integrity/IntegrityScoreCard";
 import { JobWasteCard } from "@/components/dashboard/JobWasteCard";
@@ -514,6 +514,90 @@ const ServerDashboard = () => {
         <div className="flex flex-col items-center gap-4">
           <Server className="h-12 w-12 text-primary animate-pulse" />
           <p className="text-muted-foreground">Carregando dados...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state: tenant has no agents yet
+  if (!loading && agents.length === 0) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-3xl mx-auto space-y-8 pt-12">
+          {/* Header */}
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
+              <Server className="h-8 w-8 text-primary animate-pulse-glow" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                Painel Principal
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {tenant.name}
+              </p>
+            </div>
+          </div>
+
+          {/* Empty State Card */}
+          <Card className="border-2 border-dashed border-primary/30 bg-primary/5">
+            <CardContent className="py-16 text-center">
+              <div className="inline-flex p-5 rounded-full bg-primary/10 mb-6">
+                <Monitor className="h-14 w-14 text-primary" />
+              </div>
+              
+              <h2 className="text-2xl font-bold text-foreground mb-3">
+                Nenhum computador cadastrado ainda
+              </h2>
+              
+              <p className="text-muted-foreground max-w-md mx-auto mb-8">
+                Para começar a monitorar e proteger seus computadores, instale o agente de proteção nos equipamentos da sua empresa.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button size="lg" onClick={() => navigate('/installer')} className="gap-2">
+                  <Download className="h-5 w-5" />
+                  Instalar Agente de Proteção
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Setup Steps */}
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Info className="h-5 w-5 text-primary" />
+                Como começar
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">1</div>
+                  <div>
+                    <p className="font-medium text-foreground">Instale o agente</p>
+                    <p className="text-sm text-muted-foreground">Baixe e execute o instalador nos computadores que deseja proteger</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">2</div>
+                  <div>
+                    <p className="font-medium text-foreground">Aguarde a conexão</p>
+                    <p className="text-sm text-muted-foreground">O agente se conectará automaticamente em poucos minutos</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">3</div>
+                  <div>
+                    <p className="font-medium text-foreground">Monitore tudo aqui</p>
+                    <p className="text-sm text-muted-foreground">Este painel mostrará o status de proteção em tempo real</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
