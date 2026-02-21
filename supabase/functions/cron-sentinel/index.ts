@@ -229,7 +229,7 @@ Deno.serve(async (req) => {
       duration_ms: duration,
       status_code: 200,
       metadata: { silent_jobs: unhealthyJobs.length, task_id: task?.id }
-    }).catch(() => {});
+    }).catch((e) => console.warn('[cron-sentinel] APM metric failed:', e));
 
     return new Response(
       JSON.stringify({

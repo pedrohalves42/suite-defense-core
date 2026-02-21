@@ -106,7 +106,7 @@ export class SmartRouterUseCase {
     };
 
     // Log decision (fire-and-forget)
-    this.router.logRoutingDecision(decision, functionName).catch(() => {});
+    this.router.logRoutingDecision(decision, functionName).catch((e) => console.warn('[SmartRouter] Log failed:', e));
 
     return decision;
   }

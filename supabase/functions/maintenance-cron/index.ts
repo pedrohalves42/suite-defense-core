@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
       duration_ms: duration,
       status_code: 200,
       metadata: result as Record<string, any>
-    }).catch(() => {});
+    }).catch((e) => console.warn('[maintenance-cron] APM metric failed:', e));
 
     return new Response(JSON.stringify({
       success: true,

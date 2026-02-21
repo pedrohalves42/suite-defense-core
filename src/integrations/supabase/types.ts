@@ -16103,6 +16103,97 @@ export type Database = {
           },
         ]
       }
+      soar_executions: {
+        Row: {
+          actions_taken: Json | null
+          agent_id: string | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          playbook_execution_id: string | null
+          playbook_id: string | null
+          result: Json | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+          trigger_type: string
+        }
+        Insert: {
+          actions_taken?: Json | null
+          agent_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          playbook_execution_id?: string | null
+          playbook_id?: string | null
+          result?: Json | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+          trigger_type: string
+        }
+        Update: {
+          actions_taken?: Json | null
+          agent_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          playbook_execution_id?: string | null
+          playbook_id?: string | null
+          result?: Json | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soar_executions_playbook_execution_id_fkey"
+            columns: ["playbook_execution_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_executions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soar_executions_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "soar_playbooks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soar_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soar_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "soar_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "soar_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       soar_playbooks: {
         Row: {
           actions: Json
@@ -24014,6 +24105,48 @@ export type Database = {
           tablename: unknown
         }
         Relationships: []
+      }
+      v_soar_execution_summary: {
+        Row: {
+          completed_count: number | null
+          execution_count: number | null
+          failed_count: number | null
+          last_execution: string | null
+          playbook_name: string | null
+          status: string | null
+          tenant_id: string | null
+          trigger_type: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soar_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soar_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "soar_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "soar_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       v_soc2_readiness: {
         Row: {
