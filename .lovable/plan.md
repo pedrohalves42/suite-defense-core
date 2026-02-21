@@ -1,78 +1,105 @@
+# 🔥 Plano de Remediação Zero-Gap — CyberShield v7+
 
-
-# Plano de Correção - Build e Estabilidade do Sistema
-
-## Situacao Atual
-
-### O que funcionou bem hoje
-- Todos os 12 agentes Genial Cred atualizaram para v5.0.8 com sucesso
-- 278 jobs completados sem erros de logica
-- Zero erros de autenticacao ou falhas de edge functions
-- Os 134 jobs "failed" sao todos por TTL expirado (maquinas desligadas no horario normal) -- comportamento esperado
-
-### O que precisa de correcao
-O build esta quebrado por **7 erros** distribuidos em 2 categorias: arquivos de UI vazios e erros de tipagem em edge functions.
+**Status**: Em execução  
+**Criado**: 2026-02-21  
+**Objetivo**: Eliminar todas as falhas silenciosas, ciclos abertos e afirmações não provadas.
 
 ---
 
-## Correcoes Necessarias
+## FASE 1 — Correção Crítica (Imediato)
 
-### 1. Restaurar `src/components/TopBar.tsx` (CRITICO - bloqueia build)
+### 1.1 Guards de Tenant nas RPCs SECURITY DEFINER
+- [ ] Auditar todas as RPCs `SECURITY DEFINER` que recebem IDs de recursos sem validar tenant
+- [ ] Criar função helper `_assert_caller_tenant(p_tenant_id uuid)` que valida `get_active_tenant_id()` ou `is_current_super_admin()`
+- [ ] Aplicar guard nas RPCs críticas: `can_hard_delete_agent`, `cleanup_problematic_agent`, `revoke_agent_signing_key`, `create_jobs_for_all_agents`, etc.
+- [ ] Logar tentativas cross-tenant em `security_logs`
 
-O arquivo esta com 0 bytes. Precisa ser recriado com o componente TopBar que o `AppLayout.tsx` espera (props: `isMobile`, `sidebarCollapsed`, `onMobileMenuClick`).
+### 1.2 Imutabilidade do Audit Trail (V-002)
+- [ ] Verificar se triggers `tr_prevent_audit_modification` existem em: `audit_logs`, `security_logs`, `agent_evidence_logs`, `poe_chain_breaks`
+- [ ] Garantir que `domain_events` e `job_executions` também são imutáveis
+- [ ] Revogar UPDATE/DELETE de `authenticated` e `anon` nessas tabelas
 
-Sera criado um componente funcional com:
-- Barra superior fixa com altura padrao (h-14)
-- Botao de menu hamburger no mobile
-- Area para logo/titulo
-- Indicadores de status (notificacoes, perfil)
+### 1.3 Corrigir 4 Crons Fantasma (V-004)
+- [ ] `auto-approve-safe-ai-actions-daily` — Verificar se cron schedule existe em `cron.job`; criar se ausente
+- [ ] `calculate-compliance-every-6h` — Idem
+- [ ] `rollback-test-weekly` — Idem
+- [ ] `seed-collection-jobs-every-3h` — Idem
+- [ ] Para cada: verificar se Edge Function existe e está deployada
+- [ ] Trigger manual de cada um para validar execução
 
-### 2. Restaurar `src/components/Navbar.tsx` (CRITICO - bloqueia build)
+### 1.4 Ativar SOAR Bridge (V-003)
+- [ ] Verificar se `evaluate-automation-rules` chama `execute_soar_playbook` quando condições são atendidas
+- [ ] Verificar se `process-heartbeat` envia eventos para o engine de automação
+- [ ] Criar trigger de teste: inserir processo suspeito → validar que playbook executa
+- [ ] Garantir que `soar_executions` recebe registros reais
 
-Arquivo tambem vazio. Usado pela `Landing.tsx` como navbar da pagina publica.
-
-Sera criado com:
-- Logo CyberShield
-- Links de navegacao para secoes da landing page
-- Botao de login/CTA
-- Responsividade mobile
-
-### 3. Corrigir `populate-releases/index.ts` - variavel duplicada
-
-**Problema**: `const isInternal` declarada duas vezes (linhas 36-37).
-**Solucao**: Remover a linha duplicada.
-
-### 4. Corrigir `process-tenant-suspensions/index.ts` - tipo unknown
-
-**Problema**: `error.message` acessado sem type guard no catch.
-**Solucao**: `(error instanceof Error ? error.message : 'Unknown error')`.
-
-### 5. Corrigir `sync-agent-release-content/index.ts` - propriedade inexistente
-
-**Problema**: `result.deactivated = deactivated` tenta atribuir propriedade nao declarada no tipo.
-**Solucao**: Expandir o tipo do `result` para incluir `deactivated` como propriedade opcional, ou usar spread/cast.
-
-### 6. Corrigir `ai-multi-provider.ts` - propriedade latencyMs
-
-**Problema**: `cacheResult.cached.latencyMs` nao existe no tipo `CachedAIResponse`.
-**Solucao**: Usar optional chaining ou adicionar a propriedade a interface, ou remover a referencia do log.
-
-### 7. Corrigir `maintenance-cron/integration_test.ts` - teste desatualizado
-
-**Problema**: Teste referencia `result.offlineAgentsProcessed` que foi removido da interface `MaintenanceResult`.
-**Solucao**: Remover a assertion do teste, pois o campo nao existe mais (a logica de auto-inativar agentes foi proibida).
+### 1.5 Error Messages em Automações (V-010)
+- [ ] Em `execute_automation_rule` RPC: garantir que `error_message` é populado em caso de falha
+- [ ] Auditar `automation_executions` com `success = false AND error_message IS NULL`
+- [ ] Corrigir para que toda falha tenha mensagem descritiva
 
 ---
 
-## Ordem de Execucao
+## FASE 2 — Blindagem Estrutural
 
-1. Restaurar TopBar.tsx e Navbar.tsx (desbloqueia build do frontend)
-2. Corrigir os 5 erros de edge functions em paralelo
-3. Validar build completo
+### 2.1 Substituir `.catch(() => {})` por Logging (V-009)
+- [ ] `maintenance-cron/index.ts` — `.catch(() => {})` → `.catch(e => console.warn(...))`
+- [ ] `security-cleanup-cron/index.ts` — idem
+- [ ] Buscar todas as ocorrências em Edge Functions e corrigir
 
-## Impacto
+### 2.2 Adicionar FK `tenant_id → tenants` (V-012)
+- [ ] Identificar tabelas com coluna `tenant_id` sem FK para `tenants`
+- [ ] Criar migration adicionando FKs (com `ON DELETE RESTRICT`)
+- [ ] Validar que não há dados órfãos antes de aplicar FK
 
-- **Risco**: Baixo. Sao correcoes de tipagem e restauracao de componentes UI
-- **Tempo estimado**: 10-15 minutos
-- **Sem impacto nos agentes**: O backend (heartbeat, jobs, releases) continua operando normalmente via edge functions ja deployadas
+### 2.3 Filtro de Tenant nas Views de AI Metrics (V-011)
+- [ ] `v_ai_function_performance` — adicionar filtro tenant
+- [ ] `v_ai_provider_comparison` — idem
+- [ ] Aplicar `security_invoker = on` e `security_barrier = true`
 
+### 2.4 Auditar `.single()` → `.maybeSingle()` (V-005)
+- [ ] Buscar todos os usos de `.single()` em Edge Functions
+- [ ] Migrar os perigosos para `.maybeSingle()` com tratamento de null
+
+### 2.5 Documentar Views SECURITY DEFINER (V-006)
+- [ ] Listar views que executam como owner
+- [ ] Adicionar `COMMENT ON VIEW` ou aplicar `security_invoker = on`
+
+---
+
+## FASE 3 — Testes de Caos & Idempotência
+
+### 3.1 Teste SOAR End-to-End
+- [ ] Inserir processo suspeito → validar playbook executa
+- [ ] Verificar registro em `soar_executions`
+
+### 3.2 Teste de Idempotência dos Crons
+- [ ] Chamar cada cron 2x → verificar que não duplica dados
+
+### 3.3 Teste de Falha Parcial
+- [ ] Simular timeout → verificar que `cron_health` registra falha
+
+---
+
+## FASE 4 — Monitoramento Preventivo
+
+### 4.1 Alerta para Crons que Nunca Executaram
+- [ ] Adicionar check no `cron-sentinel` para `last_success_at IS NULL`
+
+### 4.2 Dashboard SOAR Executions
+- [ ] Criar view `v_soar_execution_summary`
+- [ ] Adicionar componente no dashboard de segurança
+
+### 4.3 Validação Contínua de Invariantes
+- [ ] Check periódico de INV-001, INV-002, INV-005
+
+---
+
+## Progresso
+
+| Fase | Status | Itens | Completos |
+|------|--------|-------|-----------|
+| FASE 1 | 🔴 Pendente | 5 blocos | 0/5 |
+| FASE 2 | 🔴 Pendente | 5 blocos | 0/5 |
+| FASE 3 | 🔴 Pendente | 3 blocos | 0/3 |
+| FASE 4 | 🔴 Pendente | 3 blocos | 0/3 |
