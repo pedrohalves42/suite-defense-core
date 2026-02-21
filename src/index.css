@@ -318,4 +318,33 @@
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.3);
   }
+
+  /* Dark mode refinements */
+  .dark .card-enterprise,
+  .dark .card-enterprise-hover,
+  .dark .stats-card-enterprise {
+    border-color: hsl(var(--border));
+  }
+
+  .dark .recharts-cartesian-grid-horizontal line,
+  .dark .recharts-cartesian-grid-vertical line {
+    stroke: hsl(var(--border));
+  }
+
+  /* Mobile responsive helpers */
+  @media (max-width: 380px) {
+    .grid-cols-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Tables responsive scroll */
+  .table-responsive {
+    @apply overflow-x-auto -mx-4 px-4;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-responsive table {
+    min-width: 600px;
+  }
 }

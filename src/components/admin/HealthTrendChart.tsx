@@ -141,7 +141,8 @@ export function HealthTrendChart() {
                   backgroundColor: 'hsl(var(--card))',
                   border: '1px solid hsl(var(--border))',
                   borderRadius: '8px',
-                  fontSize: '12px'
+                  fontSize: '12px',
+                  color: 'hsl(var(--card-foreground))',
                 }}
                 formatter={(value: number, name: string) => {
                   if (name === 'percentage') return [`${value}%`, 'Online'];

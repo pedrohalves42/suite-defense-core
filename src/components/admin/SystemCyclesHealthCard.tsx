@@ -150,19 +150,19 @@ export function SystemCyclesHealthCard() {
     <Card className={cn(
       "border",
       overallHealth === 'critical' && "border-destructive/50",
-      overallHealth === 'warning' && "border-amber-500/50"
+      overallHealth === 'warning' && "border-warning/50"
     )}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <RefreshCw className={cn(
             "h-4 w-4",
-            overallHealth === 'healthy' && "text-green-500",
-            overallHealth === 'warning' && "text-amber-500",
+            overallHealth === 'healthy' && "text-success",
+            overallHealth === 'warning' && "text-warning",
             overallHealth === 'critical' && "text-destructive"
           )} />
           Saúde dos Ciclos Operacionais
           {allHealthy && (
-            <span className="ml-auto flex items-center gap-1 text-xs text-green-600">
+            <span className="ml-auto flex items-center gap-1 text-xs text-success">
               <CheckCircle2 className="h-3 w-3" />
               Todos fechados
             </span>
@@ -179,7 +179,7 @@ export function SystemCyclesHealthCard() {
                 className={cn(
                   "p-3 rounded-lg border",
                   cycle.status === 'healthy' && "bg-muted/30 border-border/50",
-                  cycle.status === 'warning' && "bg-amber-500/5 border-amber-500/30",
+                  cycle.status === 'warning' && "bg-warning/5 border-warning/30",
                   cycle.status === 'critical' && "bg-destructive/5 border-destructive/30"
                 )}
               >
@@ -187,13 +187,13 @@ export function SystemCyclesHealthCard() {
                   <Icon className={cn(
                     "h-4 w-4",
                     cycle.status === 'healthy' && "text-muted-foreground",
-                    cycle.status === 'warning' && "text-amber-600",
+                    cycle.status === 'warning' && "text-warning",
                     cycle.status === 'critical' && "text-destructive"
                   )} />
                   <span className={cn(
                     "text-lg font-bold",
                     cycle.status === 'healthy' && "text-foreground",
-                    cycle.status === 'warning' && "text-amber-600",
+                    cycle.status === 'warning' && "text-warning",
                     cycle.status === 'critical' && "text-destructive"
                   )}>
                     {cycle.count}
