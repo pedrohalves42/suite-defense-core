@@ -14,39 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _audit_orphan_profiles: {
-        Row: {
-          archive_reason: string | null
-          archived_at: string | null
-          created_at: string | null
-          full_name: string | null
-          id: string
-          updated_at: string | null
-          user_id: string | null
-          username: string | null
-        }
-        Insert: {
-          archive_reason?: string | null
-          archived_at?: string | null
-          created_at?: string | null
-          full_name?: string | null
-          id: string
-          updated_at?: string | null
-          user_id?: string | null
-          username?: string | null
-        }
-        Update: {
-          archive_reason?: string | null
-          archived_at?: string | null
-          created_at?: string | null
-          full_name?: string | null
-          id?: string
-          updated_at?: string | null
-          user_id?: string | null
-          username?: string | null
-        }
-        Relationships: []
-      }
       active_sessions: {
         Row: {
           expires_at: string
@@ -234,13 +201,6 @@ export type Database = {
             foreignKeyName: "agent_archive_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -368,13 +328,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_behavioral_baseline_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -575,13 +528,6 @@ export type Database = {
             foreignKeyName: "agent_builds_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_builds_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -760,13 +706,6 @@ export type Database = {
             foreignKeyName: "agent_certificates_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_certificates_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -922,13 +861,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -1093,13 +1025,6 @@ export type Database = {
             foreignKeyName: "agent_evidence_logs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -1234,13 +1159,6 @@ export type Database = {
             foreignKeyName: "agent_execution_chain_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: true
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -1368,13 +1286,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_file_integrity_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -1623,13 +1534,6 @@ export type Database = {
             foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: true
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_hmac_format_cache_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -1775,13 +1679,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: true
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_light_mode_configs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -2041,13 +1938,6 @@ export type Database = {
             foreignKeyName: "agent_network_info_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_network_info_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -2212,13 +2102,6 @@ export type Database = {
             foreignKeyName: "agent_network_metrics_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_network_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -2374,13 +2257,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_processes_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -2554,13 +2430,6 @@ export type Database = {
             foreignKeyName: "agent_quarantine_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_quarantine_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -2713,13 +2582,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_recovery_authorizations_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -2936,13 +2798,6 @@ export type Database = {
             foreignKeyName: "agent_rollback_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_rollback_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -3092,13 +2947,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_safe_mode_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -3263,13 +3111,6 @@ export type Database = {
             foreignKeyName: "agent_signing_keys_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_signing_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -3330,404 +3171,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      agent_system_metrics: {
-        Row: {
-          agent_id: string
-          collected_at: string
-          cpu_cores: number | null
-          cpu_name: string | null
-          cpu_usage_percent: number | null
-          created_at: string
-          disk_free_gb: number | null
-          disk_total_gb: number | null
-          disk_usage_percent: number | null
-          disk_used_gb: number | null
-          id: string
-          last_boot_time: string | null
-          memory_free_gb: number | null
-          memory_total_gb: number | null
-          memory_usage_percent: number | null
-          memory_used_gb: number | null
-          network_bytes_received: number | null
-          network_bytes_sent: number | null
-          tenant_id: string
-          uptime_seconds: number | null
-        }
-        Insert: {
-          agent_id: string
-          collected_at?: string
-          cpu_cores?: number | null
-          cpu_name?: string | null
-          cpu_usage_percent?: number | null
-          created_at?: string
-          disk_free_gb?: number | null
-          disk_total_gb?: number | null
-          disk_usage_percent?: number | null
-          disk_used_gb?: number | null
-          id?: string
-          last_boot_time?: string | null
-          memory_free_gb?: number | null
-          memory_total_gb?: number | null
-          memory_usage_percent?: number | null
-          memory_used_gb?: number | null
-          network_bytes_received?: number | null
-          network_bytes_sent?: number | null
-          tenant_id: string
-          uptime_seconds?: number | null
-        }
-        Update: {
-          agent_id?: string
-          collected_at?: string
-          cpu_cores?: number | null
-          cpu_name?: string | null
-          cpu_usage_percent?: number | null
-          created_at?: string
-          disk_free_gb?: number | null
-          disk_total_gb?: number | null
-          disk_usage_percent?: number | null
-          disk_used_gb?: number | null
-          id?: string
-          last_boot_time?: string | null
-          memory_free_gb?: number | null
-          memory_total_gb?: number | null
-          memory_usage_percent?: number | null
-          memory_used_gb?: number | null
-          network_bytes_received?: number | null
-          network_bytes_sent?: number | null
-          tenant_id?: string
-          uptime_seconds?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "active_agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agent_snapshots"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "hmac_agent_secrets"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_execution_health"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_lifecycle_state"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_state"
-            referencedColumns: ["agent_id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_agent_state"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "v_problematic_agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_isolation_metrics"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agent_system_metrics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      agent_system_metrics_2025_12: {
-        Row: {
-          agent_id: string
-          collected_at: string
-          cpu_cores: number | null
-          cpu_name: string | null
-          cpu_usage_percent: number | null
-          created_at: string
-          disk_free_gb: number | null
-          disk_total_gb: number | null
-          disk_usage_percent: number | null
-          disk_used_gb: number | null
-          id: string
-          last_boot_time: string | null
-          memory_free_gb: number | null
-          memory_total_gb: number | null
-          memory_usage_percent: number | null
-          memory_used_gb: number | null
-          network_bytes_received: number | null
-          network_bytes_sent: number | null
-          tenant_id: string
-          uptime_seconds: number | null
-        }
-        Insert: {
-          agent_id: string
-          collected_at?: string
-          cpu_cores?: number | null
-          cpu_name?: string | null
-          cpu_usage_percent?: number | null
-          created_at?: string
-          disk_free_gb?: number | null
-          disk_total_gb?: number | null
-          disk_usage_percent?: number | null
-          disk_used_gb?: number | null
-          id?: string
-          last_boot_time?: string | null
-          memory_free_gb?: number | null
-          memory_total_gb?: number | null
-          memory_usage_percent?: number | null
-          memory_used_gb?: number | null
-          network_bytes_received?: number | null
-          network_bytes_sent?: number | null
-          tenant_id: string
-          uptime_seconds?: number | null
-        }
-        Update: {
-          agent_id?: string
-          collected_at?: string
-          cpu_cores?: number | null
-          cpu_name?: string | null
-          cpu_usage_percent?: number | null
-          created_at?: string
-          disk_free_gb?: number | null
-          disk_total_gb?: number | null
-          disk_usage_percent?: number | null
-          disk_used_gb?: number | null
-          id?: string
-          last_boot_time?: string | null
-          memory_free_gb?: number | null
-          memory_total_gb?: number | null
-          memory_usage_percent?: number | null
-          memory_used_gb?: number | null
-          network_bytes_received?: number | null
-          network_bytes_sent?: number | null
-          tenant_id?: string
-          uptime_seconds?: number | null
-        }
-        Relationships: []
-      }
-      agent_system_metrics_2026_01: {
-        Row: {
-          agent_id: string
-          collected_at: string
-          cpu_cores: number | null
-          cpu_name: string | null
-          cpu_usage_percent: number | null
-          created_at: string
-          disk_free_gb: number | null
-          disk_total_gb: number | null
-          disk_usage_percent: number | null
-          disk_used_gb: number | null
-          id: string
-          last_boot_time: string | null
-          memory_free_gb: number | null
-          memory_total_gb: number | null
-          memory_usage_percent: number | null
-          memory_used_gb: number | null
-          network_bytes_received: number | null
-          network_bytes_sent: number | null
-          tenant_id: string
-          uptime_seconds: number | null
-        }
-        Insert: {
-          agent_id: string
-          collected_at?: string
-          cpu_cores?: number | null
-          cpu_name?: string | null
-          cpu_usage_percent?: number | null
-          created_at?: string
-          disk_free_gb?: number | null
-          disk_total_gb?: number | null
-          disk_usage_percent?: number | null
-          disk_used_gb?: number | null
-          id?: string
-          last_boot_time?: string | null
-          memory_free_gb?: number | null
-          memory_total_gb?: number | null
-          memory_usage_percent?: number | null
-          memory_used_gb?: number | null
-          network_bytes_received?: number | null
-          network_bytes_sent?: number | null
-          tenant_id: string
-          uptime_seconds?: number | null
-        }
-        Update: {
-          agent_id?: string
-          collected_at?: string
-          cpu_cores?: number | null
-          cpu_name?: string | null
-          cpu_usage_percent?: number | null
-          created_at?: string
-          disk_free_gb?: number | null
-          disk_total_gb?: number | null
-          disk_usage_percent?: number | null
-          disk_used_gb?: number | null
-          id?: string
-          last_boot_time?: string | null
-          memory_free_gb?: number | null
-          memory_total_gb?: number | null
-          memory_usage_percent?: number | null
-          memory_used_gb?: number | null
-          network_bytes_received?: number | null
-          network_bytes_sent?: number | null
-          tenant_id?: string
-          uptime_seconds?: number | null
-        }
-        Relationships: []
       }
       agent_system_metrics_2026_02: {
-        Row: {
-          agent_id: string
-          collected_at: string
-          cpu_cores: number | null
-          cpu_name: string | null
-          cpu_usage_percent: number | null
-          created_at: string
-          disk_free_gb: number | null
-          disk_total_gb: number | null
-          disk_usage_percent: number | null
-          disk_used_gb: number | null
-          id: string
-          last_boot_time: string | null
-          memory_free_gb: number | null
-          memory_total_gb: number | null
-          memory_usage_percent: number | null
-          memory_used_gb: number | null
-          network_bytes_received: number | null
-          network_bytes_sent: number | null
-          tenant_id: string
-          uptime_seconds: number | null
-        }
-        Insert: {
-          agent_id: string
-          collected_at?: string
-          cpu_cores?: number | null
-          cpu_name?: string | null
-          cpu_usage_percent?: number | null
-          created_at?: string
-          disk_free_gb?: number | null
-          disk_total_gb?: number | null
-          disk_usage_percent?: number | null
-          disk_used_gb?: number | null
-          id?: string
-          last_boot_time?: string | null
-          memory_free_gb?: number | null
-          memory_total_gb?: number | null
-          memory_usage_percent?: number | null
-          memory_used_gb?: number | null
-          network_bytes_received?: number | null
-          network_bytes_sent?: number | null
-          tenant_id: string
-          uptime_seconds?: number | null
-        }
-        Update: {
-          agent_id?: string
-          collected_at?: string
-          cpu_cores?: number | null
-          cpu_name?: string | null
-          cpu_usage_percent?: number | null
-          created_at?: string
-          disk_free_gb?: number | null
-          disk_total_gb?: number | null
-          disk_usage_percent?: number | null
-          disk_used_gb?: number | null
-          id?: string
-          last_boot_time?: string | null
-          memory_free_gb?: number | null
-          memory_total_gb?: number | null
-          memory_usage_percent?: number | null
-          memory_used_gb?: number | null
-          network_bytes_received?: number | null
-          network_bytes_sent?: number | null
-          tenant_id?: string
-          uptime_seconds?: number | null
-        }
-        Relationships: []
-      }
-      agent_system_metrics_2026_03: {
         Row: {
           agent_id: string
           collected_at: string
@@ -3907,13 +3352,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_tag_assignments_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -4113,13 +3551,6 @@ export type Database = {
             foreignKeyName: "agent_tokens_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_tokens_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -4238,13 +3669,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_update_decisions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -4479,13 +3903,6 @@ export type Database = {
             foreignKeyName: "agent_usb_devices_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_usb_devices_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -4692,13 +4109,6 @@ export type Database = {
             foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_vulnerabilities_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -4866,13 +4276,6 @@ export type Database = {
             foreignKeyName: "agent_vulnerability_scans_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_vulnerability_scans_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -5034,13 +4437,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_web_activity_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -5394,13 +4790,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_groups_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -6338,13 +5727,6 @@ export type Database = {
             foreignKeyName: "ai_insights_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_insights_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -6695,13 +6077,6 @@ export type Database = {
             foreignKeyName: "anomaly_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "anomaly_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -6851,13 +6226,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "antivirus_status_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -7274,13 +6642,6 @@ export type Database = {
             columns: ["target_agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "approval_requests_target_agent_id_fkey"
-            columns: ["target_agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -7898,13 +7259,6 @@ export type Database = {
             foreignKeyName: "auto_remediation_actions_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "auto_remediation_actions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -8057,13 +7411,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "automation_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -8383,13 +7730,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -9159,13 +8499,6 @@ export type Database = {
             foreignKeyName: "decision_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "decision_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -9508,13 +8841,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -9880,13 +9206,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -10322,13 +9641,6 @@ export type Database = {
             foreignKeyName: "forensic_snapshots_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "forensic_snapshots_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -10529,13 +9841,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "generated_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -11137,13 +10442,6 @@ export type Database = {
             foreignKeyName: "incident_timelines_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "incident_timelines_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -11308,13 +10606,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "installation_analytics_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -11832,13 +11123,6 @@ export type Database = {
             foreignKeyName: "job_executions_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "job_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -12224,13 +11508,6 @@ export type Database = {
             foreignKeyName: "jobs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -12515,13 +11792,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "network_anomalies_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -13289,13 +12559,6 @@ export type Database = {
             foreignKeyName: "persistent_failure_alerts_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "persistent_failure_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -13599,13 +12862,6 @@ export type Database = {
             foreignKeyName: "playbook_executions_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "playbook_executions_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -13845,13 +13101,6 @@ export type Database = {
             foreignKeyName: "poe_chain_breaks_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "poe_chain_breaks_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -14049,13 +13298,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -14686,13 +13928,6 @@ export type Database = {
             foreignKeyName: "risk_decision_log_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "risk_decision_log_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -14981,13 +14216,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rollback_test_results_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -15492,13 +14720,6 @@ export type Database = {
             foreignKeyName: "scheduled_jobs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scheduled_jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -15878,13 +15099,6 @@ export type Database = {
             foreignKeyName: "security_events_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -16254,13 +15468,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "security_reports_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -17047,13 +16254,6 @@ export type Database = {
             foreignKeyName: "software_inventory_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "software_inventory_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -17511,13 +16711,6 @@ export type Database = {
             foreignKeyName: "system_alerts_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "system_alerts_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -17899,39 +17092,6 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
-      }
-      system_liveness: {
-        Row: {
-          component_name: string
-          created_at: string | null
-          expected_interval_seconds: number
-          id: string
-          last_heartbeat: string | null
-          metadata: Json | null
-          status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          component_name: string
-          created_at?: string | null
-          expected_interval_seconds?: number
-          id?: string
-          last_heartbeat?: string | null
-          metadata?: Json | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          component_name?: string
-          created_at?: string | null
-          expected_interval_seconds?: number
-          id?: string
-          last_heartbeat?: string | null
-          metadata?: Json | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       system_state: {
         Row: {
@@ -18629,13 +17789,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -19696,13 +18849,6 @@ export type Database = {
             foreignKeyName: "vuln_findings_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vuln_findings_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -20306,125 +19452,6 @@ export type Database = {
           },
         ]
       }
-      agent_system_metrics_unified: {
-        Row: {
-          agent_id: string | null
-          collected_at: string | null
-          cpu_cores: number | null
-          cpu_name: string | null
-          cpu_usage_percent: number | null
-          created_at: string | null
-          disk_free_gb: number | null
-          disk_total_gb: number | null
-          disk_usage_percent: number | null
-          disk_used_gb: number | null
-          id: string | null
-          last_boot_time: string | null
-          memory_free_gb: number | null
-          memory_total_gb: number | null
-          memory_usage_percent: number | null
-          memory_used_gb: number | null
-          network_bytes_received: number | null
-          network_bytes_sent: number | null
-          tenant_id: string | null
-          uptime_seconds: number | null
-        }
-        Relationships: []
-      }
-      agent_timeline_events: {
-        Row: {
-          agent_id: string | null
-          data: Json | null
-          event_key: string | null
-          event_time: string | null
-          event_type: string | null
-          source_id: string | null
-          tenant_id: string | null
-        }
-        Relationships: []
-      }
-      agents_health_view: {
-        Row: {
-          agent_name: string | null
-          agent_state: string | null
-          agent_version: string | null
-          cpu_usage_percent: number | null
-          disk_usage_percent: number | null
-          display_name: string | null
-          enrolled_at: string | null
-          health_status: string | null
-          hostname: string | null
-          id: string | null
-          is_isolated: boolean | null
-          isolation_reason: string | null
-          last_heartbeat: string | null
-          memory_usage_percent: number | null
-          metrics_collected_at: string | null
-          os_type: string | null
-          os_version: string | null
-          status: string | null
-          tenant_id: string | null
-          uptime_seconds: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_isolation_metrics"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "agents_tenant_id_new_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_system_operations_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_isolation_metrics"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "fk_agents_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_plan_status"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
       agents_public: {
         Row: {
           agent_mode: string | null
@@ -20952,13 +19979,6 @@ export type Database = {
             foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -21114,13 +20134,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_keys_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -21715,13 +20728,6 @@ export type Database = {
             foreignKeyName: "jobs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -21920,13 +20926,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -22194,13 +21193,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_archive_events_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -23494,13 +22486,6 @@ export type Database = {
             foreignKeyName: "agent_execution_chain_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: true
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_execution_chain_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: true
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -24073,13 +23058,6 @@ export type Database = {
             foreignKeyName: "jobs_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
-            referencedRelation: "agents_health_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
             referencedRelation: "agents_public"
             referencedColumns: ["id"]
           },
@@ -24496,13 +23474,6 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
