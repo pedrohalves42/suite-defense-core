@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
       operation_type: 'edge_function',
       duration_ms: Date.now() - Date.now(),
       status_code: 200,
-    }).catch(() => {});
+    }).catch((e) => console.warn('[reset-daily-quotas] APM metric failed:', e));
 
     return new Response(
       JSON.stringify({ success: true, message: "Daily quotas reset successfully" }),

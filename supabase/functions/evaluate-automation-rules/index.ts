@@ -178,6 +178,7 @@ async function evaluateMetricThreshold(
         action_taken: rule.action_type,
         action_result: result,
         status,
+        error_message: status === 'failed' ? (result?.error || 'Unknown error') : null,
         executed_at: status === 'executed' ? new Date().toISOString() : null,
       });
     }
@@ -253,6 +254,7 @@ async function evaluateProcessAnomaly(
         action_taken: rule.action_type,
         action_result: result,
         status,
+        error_message: status === 'failed' ? (result?.error || 'Unknown error') : null,
         executed_at: status === 'executed' ? new Date().toISOString() : null,
       });
     }
@@ -315,6 +317,7 @@ async function evaluateAgentStatus(
         action_taken: rule.action_type,
         action_result: result,
         status,
+        error_message: status === 'failed' ? (result?.error || 'Unknown error') : null,
         executed_at: status === 'executed' ? new Date().toISOString() : null,
       });
     }

@@ -168,7 +168,7 @@ Deno.serve(async (req: Request) => {
         p_processed_count: 0,
         p_job_source: 'cron'
       });
-    } catch {}
+    } catch (logErr) { console.warn('[security-cleanup-cron] Failed to log error:', logErr); }
     
     return secureErrorResponse(
       'Security cleanup failed',

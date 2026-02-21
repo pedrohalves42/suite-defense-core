@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
       duration_ms: Date.now() - startedAt,
       status_code: 200,
       metadata: { slow_operations_count: slowOpCount }
-    }).catch(() => {});
+    }).catch((e) => console.warn('[monitor-slow-operations] APM metric failed:', e));
 
     return new Response(
       JSON.stringify(result),
