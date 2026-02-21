@@ -65,6 +65,7 @@ import TenantSuspensionManager from "./pages/admin/TenantSuspensionManager";
 import StripeSetup from "./pages/admin/StripeSetup";
 import DiagnosticsCenter from "./pages/admin/DiagnosticsCenter";
 import BuildHealthDashboard from "./pages/admin/BuildHealthDashboard";
+import CronHealthDashboard from "./pages/admin/CronHealthDashboard";
 import SystemLogs from "./pages/admin/SystemLogs";
 import AgentHealthMonitor from "./pages/admin/AgentHealthMonitor";
 import AIInsights from "./pages/admin/AIInsights";
@@ -277,6 +278,7 @@ const App = () => (
                 <Route path="platforms" element={<PlatformManagement />} />
                 <Route path="compliance-automation" element={<ComplianceAutomation />} />
                 <Route path="threat-intelligence" element={<ThreatIntelligence />} />
+                <Route path="cron-health" element={<CronHealthDashboard />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) - Protected by MFA Guard */}

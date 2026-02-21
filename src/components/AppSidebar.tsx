@@ -172,6 +172,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const superSystemItems = useMemo<MenuItem[]>(() => [
     { icon: ScrollText, label: t('adminPages.sidebar.auditLogs'), to: '/super-admin/audit-logs' },
     { icon: Activity, label: t('adminPages.sidebar.logs'), to: '/super-admin/system-logs' },
+    { icon: Clock, label: 'Saúde dos Crons', to: '/admin/cron-health' },
     { icon: Settings, label: t('adminPages.sidebar.settingsLabel'), to: '/super-admin/settings' },
   ], [t]);
 
