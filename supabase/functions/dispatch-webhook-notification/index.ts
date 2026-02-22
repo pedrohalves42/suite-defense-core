@@ -37,18 +37,38 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Fetch active webhook channels for this tenant
-    const { data: channels, error: channelsError } = await supabase
+    // Fetch active webhook configs for this tenant (primary source)
+    const { data: webhookConfigs } = await supabase
+      .from('webhook_configs')
+      .select('*')
+      .eq('tenant_id', tenant_id)
+      .eq('is_active', true)
+      .or(`event_types.cs.{${severity === 'critical' ? 'critical_alert' : 'security_alert'}},event_types.cs.{security_alert}`);
+
+    // Fallback: also check notification_channels for backward compatibility
+    const { data: channels } = await supabase
       .from('notification_channels')
       .select('*')
       .eq('tenant_id', tenant_id)
       .eq('channel_type', 'webhook')
       .eq('is_active', true);
 
-    if (channelsError) throw new Error(`Failed to fetch channels: ${channelsError.message}`);
-    if (!channels || channels.length === 0) {
-      console.log('[dispatch-webhook] No active webhook channels for tenant');
-      return new Response(JSON.stringify({ dispatched: 0, message: 'No active webhook channels' }), {
+    // Merge both sources
+    const allWebhooks: Array<{ name: string; url: string; secret?: string; headers?: Record<string, string> }> = [];
+    
+    for (const wc of webhookConfigs || []) {
+      allWebhooks.push({ name: wc.name, url: wc.url, secret: wc.secret, headers: wc.headers as Record<string, string> });
+    }
+    for (const ch of channels || []) {
+      const config = ch.config as { url?: string; headers?: Record<string, string>; secret?: string };
+      if (config?.url) {
+        allWebhooks.push({ name: ch.name, url: config.url, secret: config.secret, headers: config.headers });
+      }
+    }
+
+    if (allWebhooks.length === 0) {
+      console.log('[dispatch-webhook] No active webhook destinations for tenant');
+      return new Response(JSON.stringify({ dispatched: 0, message: 'No active webhook destinations' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -56,10 +76,7 @@ Deno.serve(async (req) => {
     let dispatched = 0;
     let failed = 0;
 
-    for (const channel of channels) {
-      const config = channel.config as { url?: string; headers?: Record<string, string>; secret?: string };
-      if (!config?.url) continue;
-
+    for (const webhook of allWebhooks) {
       const payload = {
         event: 'security_alert',
         timestamp: new Date().toISOString(),
@@ -75,14 +92,14 @@ Deno.serve(async (req) => {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'User-Agent': 'CyberShield-Webhook/1.0',
-        ...(config.headers || {}),
+        ...(webhook.headers || {}),
       };
 
-      if (config.secret) {
+      if (webhook.secret) {
         const encoder = new TextEncoder();
         const key = await crypto.subtle.importKey(
           'raw',
-          encoder.encode(config.secret),
+          encoder.encode(webhook.secret),
           { name: 'HMAC', hash: 'SHA-256' },
           false,
           ['sign']
@@ -96,21 +113,20 @@ Deno.serve(async (req) => {
       }
 
       try {
-        const response = await fetch(config.url, {
+        const response = await fetch(webhook.url, {
           method: 'POST',
           headers,
           body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(10000), // 10s timeout
+          signal: AbortSignal.timeout(10000),
         });
 
-        // Log delivery
         await supabase
           .from('notification_deliveries')
           .insert({
             tenant_id,
             alert_id: alert_id || null,
             channel: 'webhook',
-            recipient: config.url,
+            recipient: webhook.url,
             subject: title || 'CyberShield Alert',
             message: message || '',
             status: response.ok ? 'delivered' : 'failed',
@@ -121,11 +137,11 @@ Deno.serve(async (req) => {
         if (response.ok) {
           dispatched++;
         } else {
-          console.warn(`[dispatch-webhook] Channel ${channel.name}: HTTP ${response.status}`);
+          console.warn(`[dispatch-webhook] ${webhook.name}: HTTP ${response.status}`);
           failed++;
         }
       } catch (fetchError) {
-        console.error(`[dispatch-webhook] Channel ${channel.name}: ${String(fetchError)}`);
+        console.error(`[dispatch-webhook] ${webhook.name}: ${String(fetchError)}`);
         
         await supabase
           .from('notification_deliveries')
@@ -133,7 +149,7 @@ Deno.serve(async (req) => {
             tenant_id,
             alert_id: alert_id || null,
             channel: 'webhook',
-            recipient: config.url,
+            recipient: webhook.url,
             subject: title || 'CyberShield Alert',
             message: String(fetchError),
             status: 'failed',

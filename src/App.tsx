@@ -145,6 +145,7 @@ import PlatformManagement from "./pages/admin/PlatformManagement";
 import ComplianceAutomation from "./pages/admin/ComplianceAutomation";
 import ThreatIntelligence from "./pages/admin/ThreatIntelligence";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
+import AIFeedbackDashboard from "./pages/admin/AIFeedbackDashboard";
 
 const App = () => (
   <ErrorBoundary>
@@ -273,6 +274,7 @@ const App = () => (
                 <Route path="evidence-bundle" element={<EvidenceBundlePage />} />
                 <Route path="auto-remediation" element={<AutoRemediation />} />
                 <Route path="siem-export" element={<SiemExport />} />
+                <Route path="ai-feedback" element={<AIFeedbackDashboard />} />
                 <Route path="white-label" element={<WhiteLabelSettings />} />
                 <Route path="itsm" element={<ItsmSettings />} />
                 <Route path="platforms" element={<PlatformManagement />} />
