@@ -64,7 +64,7 @@ export default function RealTimeSecurityDashboard() {
         .from('playbook_executions')
         .select('id, status, auto_executed, dry_run')
         .eq('tenant_id', tenant.id)
-        .gte('created_at', today.toISOString());
+        .gte('triggered_at', today.toISOString());
       
       if (error) throw error;
       
