@@ -909,7 +909,7 @@ serve(async (req) => {
         try {
           const payload = JSON.parse(atob(token.split('.')[1]));
           if (payload.role === 'service_role') isServiceRole = true;
-        } catch { /* not JWT */ }
+        } catch (e) { console.warn('[evaluate-automation-rules] JWT parse failed:', e); }
 
         if (!isServiceRole) {
           const { data: { user }, error: authError } = await supabase.auth.getUser(token);
@@ -960,7 +960,7 @@ serve(async (req) => {
             p_success: true,
             p_details: { tenants: tenants.length, evaluated: totalEvaluated, triggered: totalTriggered, blocked: totalBlocked, decisions: totalDecisions },
           });
-        } catch { /* best effort */ }
+        } catch (e) { console.warn('[evaluate-automation-rules] Failed to update cron health:', e); }
       }
 
       console.log(`[Enterprise Engine v2] ${tenants.length} tenants | ${totalEvaluated} rules | ${totalTriggered} triggered | ${totalBlocked} blocked | ${totalDecisions} decisions`);

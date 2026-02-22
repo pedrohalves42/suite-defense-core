@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
         p_processed_count: totalCreated,
         p_job_source: 'cron',
       });
-    } catch (_) { /* non-critical */ }
+    } catch (e) { console.warn('[seed-collection-jobs] Failed to log job run:', e); }
 
     return new Response(JSON.stringify(result), {
       status: 200,

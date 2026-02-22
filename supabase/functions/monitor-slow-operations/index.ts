@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
         p_success: false,
         p_details: { error: errorMessage },
       });
-    } catch {}
+    } catch (e) { console.warn('[monitor-slow-operations] Failed to update cron health:', e); }
     
     return new Response(
       JSON.stringify({ error: errorMessage }),

@@ -122,7 +122,7 @@ Deno.serve(async () => {
         p_processed_count: 0,
         p_job_source: 'cron'
       });
-    } catch {}
+    } catch (e) { console.warn('[check-trial-expiration] Failed to log job run:', e); }
     
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),

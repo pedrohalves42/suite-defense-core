@@ -266,7 +266,7 @@ Deno.serve(async (req) => {
         p_success: false,
         p_error: error instanceof Error ? error.message : 'Unknown error'
       });
-    } catch {}
+    } catch (e) { console.warn('[cron-sentinel] Failed to update cron health:', e); }
 
     return new Response(
       JSON.stringify({
