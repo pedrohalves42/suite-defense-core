@@ -8706,6 +8706,86 @@ export type Database = {
         }
         Relationships: []
       }
+      dlq_exhaustion_alerts: {
+        Row: {
+          acknowledged: boolean
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          agent_id: string | null
+          alert_sent: boolean
+          alert_sent_at: string | null
+          created_at: string
+          dlq_item_id: string
+          failure_class: string
+          id: string
+          job_id: string | null
+          last_error: string | null
+          tenant_id: string
+          total_retries: number
+        }
+        Insert: {
+          acknowledged?: boolean
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          agent_id?: string | null
+          alert_sent?: boolean
+          alert_sent_at?: string | null
+          created_at?: string
+          dlq_item_id: string
+          failure_class: string
+          id?: string
+          job_id?: string | null
+          last_error?: string | null
+          tenant_id: string
+          total_retries?: number
+        }
+        Update: {
+          acknowledged?: boolean
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          agent_id?: string | null
+          alert_sent?: boolean
+          alert_sent_at?: string | null
+          created_at?: string
+          dlq_item_id?: string
+          failure_class?: string
+          id?: string
+          job_id?: string | null
+          last_error?: string | null
+          tenant_id?: string
+          total_retries?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dlq_exhaustion_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dlq_exhaustion_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "dlq_exhaustion_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "dlq_exhaustion_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       domain_events: {
         Row: {
           aggregate_id: string
@@ -19267,6 +19347,92 @@ export type Database = {
           },
           {
             foreignKeyName: "web_access_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      webhook_configs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          event_types: string[] | null
+          failure_count: number
+          headers: Json | null
+          id: string
+          is_active: boolean
+          last_status_code: number | null
+          last_triggered_at: string | null
+          max_retries: number
+          name: string
+          secret: string | null
+          severity_filter: string[] | null
+          tenant_id: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          event_types?: string[] | null
+          failure_count?: number
+          headers?: Json | null
+          id?: string
+          is_active?: boolean
+          last_status_code?: number | null
+          last_triggered_at?: string | null
+          max_retries?: number
+          name: string
+          secret?: string | null
+          severity_filter?: string[] | null
+          tenant_id: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          event_types?: string[] | null
+          failure_count?: number
+          headers?: Json | null
+          id?: string
+          is_active?: boolean
+          last_status_code?: number | null
+          last_triggered_at?: string | null
+          max_retries?: number
+          name?: string
+          secret?: string | null
+          severity_filter?: string[] | null
+          tenant_id?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "webhook_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "webhook_configs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
