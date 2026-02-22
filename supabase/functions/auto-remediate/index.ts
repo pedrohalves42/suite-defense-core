@@ -6,7 +6,7 @@ import { createAuditLog } from '../_shared/audit.ts';
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-type ActionType = 'kill_process' | 'firewall_block' | 'patch_apply' | 'quarantine_file' | 'restart_service';
+type ActionType = 'kill_process' | 'firewall_block' | 'patch_apply' | 'quarantine_file' | 'restart_service' | 'enable_antivirus' | 'enable_firewall' | 'block_usb_device' | 'suggest_patch';
 
 interface RemediationRequest {
   agent_id: string;
@@ -235,6 +235,44 @@ function buildJobPayload(actionType: ActionType, details: Record<string, unknown
           action: 'restart_service',
           service_name: details.service_name,
           reason: details.reason || 'auto_remediation',
+        },
+      };
+    case 'enable_antivirus':
+      return {
+        jobType: 'service_health_check',
+        payload: {
+          action: 'enable_antivirus',
+          service_targets: details.service_targets || ['WinDefend', 'SecurityHealthService'],
+          reason: 'antivirus_inactive_auto_remediation',
+        },
+      };
+    case 'enable_firewall':
+      return {
+        jobType: 'service_health_check',
+        payload: {
+          action: 'enable_firewall',
+          targets: details.targets || ['DomainProfile', 'PrivateProfile', 'PublicProfile'],
+          reason: 'firewall_disabled_auto_remediation',
+        },
+      };
+    case 'block_usb_device':
+      return {
+        jobType: 'service_health_check',
+        payload: {
+          action: 'block_usb_device',
+          device_id: details.device_id,
+          revoke_driver: details.revoke_driver || true,
+          reason: details.reason || 'unauthorized_usb_auto_block',
+        },
+      };
+    case 'suggest_patch':
+      return {
+        jobType: 'service_health_check',
+        payload: {
+          action: 'suggest_patch',
+          vuln_ids: details.vuln_ids,
+          auto_apply: details.auto_apply || false,
+          reason: 'vulnerable_software_auto_patch',
         },
       };
   }

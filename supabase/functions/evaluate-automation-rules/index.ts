@@ -332,6 +332,157 @@ async function evaluateAgentStatus(
   return executions;
 }
 
+// ── Security Check Evaluator ──
+
+async function evaluateSecurityCheck(
+  supabase: any,
+  rule: any,
+  tenantId: string,
+  agents: any[]
+): Promise<any[]> {
+  const conditions = rule.trigger_conditions as any;
+  const executions: any[] = [];
+  const checkType = conditions.check;
+  const agentIds = agents.map((a: any) => a.id);
+
+  if (checkType === 'no_antivirus_detected' || checkType === 'antivirus_inactive') {
+    // Check antivirus_status for agents with inactive/missing AV
+    const { data: avData } = await supabase
+      .from('antivirus_status')
+      .select('agent_id, engine_name, status, last_update_at')
+      .in('agent_id', agentIds)
+      .order('collected_at', { ascending: false });
+
+    const latestAv = new Map<string, any>();
+    (avData || []).forEach((av: any) => {
+      if (!latestAv.has(av.agent_id)) latestAv.set(av.agent_id, av);
+    });
+
+    // Agents without AV data or with inactive status
+    for (const agent of agents) {
+      if (!matchesScope(rule, agent.id)) continue;
+      const av = latestAv.get(agent.id);
+      const isInactive = !av || av.status === 'inactive' || av.status === 'disabled';
+      
+      if (isInactive) {
+        const triggerData = {
+          event_type: 'antivirus_inactive',
+          check: checkType,
+          agent_name: agent.agent_name,
+          av_engine: av?.engine_name || 'none',
+          message: `Antivírus ${av ? 'inativo' : 'não detectado'} no agente '${agent.agent_name}'`,
+        };
+        const { status, result } = await executeAction(supabase, rule, agent.id, tenantId, triggerData, agents);
+        executions.push({
+          tenant_id: tenantId, rule_id: rule.id, agent_id: agent.id,
+          trigger_data: triggerData, action_taken: rule.action_type,
+          action_result: result, status,
+          error_message: status === 'failed' ? (result?.error || 'Unknown error') : null,
+          executed_at: status === 'executed' ? new Date().toISOString() : null,
+        });
+      }
+    }
+  } else if (checkType === 'firewall_disabled') {
+    // Check system_alerts or agent data for firewall status
+    // For now, check if there are recent firewall-related alerts
+    const { data: fwAlerts } = await supabase
+      .from('system_alerts')
+      .select('agent_id, title, details')
+      .eq('tenant_id', tenantId)
+      .eq('alert_type', 'firewall_disabled')
+      .eq('resolved', false)
+      .in('agent_id', agentIds);
+
+    for (const alert of (fwAlerts || [])) {
+      if (!matchesScope(rule, alert.agent_id)) continue;
+      const agent = agents.find((a: any) => a.id === alert.agent_id);
+      const triggerData = {
+        event_type: 'firewall_disabled',
+        check: checkType,
+        agent_name: agent?.agent_name || 'Unknown',
+        message: `Firewall desabilitado no agente '${agent?.agent_name}'`,
+      };
+      const { status, result } = await executeAction(supabase, rule, alert.agent_id, tenantId, triggerData, agents);
+      executions.push({
+        tenant_id: tenantId, rule_id: rule.id, agent_id: alert.agent_id,
+        trigger_data: triggerData, action_taken: rule.action_type,
+        action_result: result, status,
+        error_message: status === 'failed' ? (result?.error || 'Unknown error') : null,
+        executed_at: status === 'executed' ? new Date().toISOString() : null,
+      });
+    }
+  } else if (checkType === 'unauthorized_usb') {
+    // Check usb_devices for unblocked risky devices
+    const { data: usbDevices } = await supabase
+      .from('usb_devices')
+      .select('id, agent_id, device_id, device_type, vendor_id, is_blocked, risk_score')
+      .in('agent_id', agentIds)
+      .eq('is_blocked', false)
+      .gte('risk_score', 60);
+
+    for (const usb of (usbDevices || [])) {
+      if (!matchesScope(rule, usb.agent_id)) continue;
+      const agent = agents.find((a: any) => a.id === usb.agent_id);
+      const triggerData = {
+        event_type: 'unauthorized_usb',
+        check: checkType,
+        agent_name: agent?.agent_name || 'Unknown',
+        device_id: usb.device_id,
+        risk_score: usb.risk_score,
+        message: `USB de risco (score: ${usb.risk_score}) no agente '${agent?.agent_name}'`,
+      };
+      const { status, result } = await executeAction(supabase, rule, usb.agent_id, tenantId, triggerData, agents);
+      executions.push({
+        tenant_id: tenantId, rule_id: rule.id, agent_id: usb.agent_id,
+        trigger_data: triggerData, action_taken: rule.action_type,
+        action_result: result, status,
+        error_message: status === 'failed' ? (result?.error || 'Unknown error') : null,
+        executed_at: status === 'executed' ? new Date().toISOString() : null,
+      });
+    }
+  } else if (checkType === 'vulnerable_software') {
+    // Check vuln_findings for critical unresolved vulnerabilities
+    const minCvss = conditions.min_cvss || 7.0;
+    const { data: vulns } = await supabase
+      .from('vuln_findings')
+      .select('id, agent_id, check_key, title, severity')
+      .in('agent_id', agentIds)
+      .in('severity', ['critical', 'high'])
+      .is('acknowledged_at', null)
+      .limit(50);
+
+    // Deduplicate by agent
+    const agentVulns = new Map<string, any[]>();
+    (vulns || []).forEach((v: any) => {
+      if (!agentVulns.has(v.agent_id)) agentVulns.set(v.agent_id, []);
+      agentVulns.get(v.agent_id)!.push(v);
+    });
+
+    for (const [agentId, agentVulnList] of agentVulns) {
+      if (!matchesScope(rule, agentId)) continue;
+      const agent = agents.find((a: any) => a.id === agentId);
+      const triggerData = {
+        event_type: 'vulnerable_software',
+        check: checkType,
+        agent_name: agent?.agent_name || 'Unknown',
+        vuln_count: agentVulnList.length,
+        top_vulns: agentVulnList.slice(0, 3).map((v: any) => v.title),
+        message: `${agentVulnList.length} vulnerabilidade(s) crítica(s) no agente '${agent?.agent_name}'`,
+      };
+      const { status, result } = await executeAction(supabase, rule, agentId, tenantId, triggerData, agents);
+      executions.push({
+        tenant_id: tenantId, rule_id: rule.id, agent_id: agentId,
+        trigger_data: triggerData, action_taken: rule.action_type,
+        action_result: result, status,
+        error_message: status === 'failed' ? (result?.error || 'Unknown error') : null,
+        executed_at: status === 'executed' ? new Date().toISOString() : null,
+      });
+    }
+  }
+
+  return executions;
+}
+
 // ── Per-Tenant Evaluation Helper ──
 
 async function evaluateForTenant(
@@ -384,6 +535,8 @@ async function evaluateForTenant(
       ruleExecutions = await evaluateProcessAnomaly(supabase, rule, tenantId, agents);
     } else if (rule.trigger_type === 'agent_status') {
       ruleExecutions = await evaluateAgentStatus(supabase, rule, tenantId, agents);
+    } else if (rule.trigger_type === 'security_check') {
+      ruleExecutions = await evaluateSecurityCheck(supabase, rule, tenantId, agents);
     }
 
     allExecutions.push(...ruleExecutions);

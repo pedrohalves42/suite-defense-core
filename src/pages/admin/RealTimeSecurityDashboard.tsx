@@ -25,6 +25,8 @@ import { format, formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { RiskScoreCard } from '@/components/admin/RiskScoreCard';
 import { SoarExecutionsCard } from '@/components/admin/SoarExecutionsCard';
 import { AIInsightsTrendChart } from '@/components/admin/AIInsightsTrendChart';
+import { SecurityImpactFeed } from '@/components/admin/SecurityImpactFeed';
+import { TenantBaselineProfile } from '@/components/admin/TenantBaselineProfile';
 
 interface SecurityEvent {
   id: string;
@@ -516,6 +518,12 @@ export default function RealTimeSecurityDashboard() {
           {/* SOAR Executions */}
           <SoarExecutionsCard />
         </div>
+      </div>
+
+      {/* Security Impact Feed + Tenant Baseline */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SecurityImpactFeed />
+        <TenantBaselineProfile />
       </div>
 
       {/* AI Insights Trend Chart */}
