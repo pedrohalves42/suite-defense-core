@@ -3,13 +3,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsSecurityHeaders, secureJsonResponse, secureErrorResponse, secureCorsPreflightResponse } from '../_shared/security-headers.ts';
 
 /**
- * Evaluate Automation Rules — Enterprise-Grade Engine
+ * Evaluate Automation Rules — Enterprise-Grade Engine v2
  * 
- * Pipeline: Event → Rule Evaluator → Risk Engine → Cooldown Check → Rate Limit →
- *           Blast Radius → Circuit Breaker → Approval Gate → Execution → Audit + Metrics
+ * Pipeline: Event → Rule Evaluator → Dependency Check → Risk Engine → Cooldown →
+ *           Rate Limit → Blast Radius (Adaptive) → Circuit Breaker → Approval Gate →
+ *           Distributed Lock → Idempotency Check → Execution → Audit + Risk Score
  *
- * Protections: Anti-storm (debounce+rate limit), Circuit Breaker, Blast Radius,
- *              Shadow Mode, Dry Run, Approval Gate, Decision Audit Log
+ * v2 Additions:
+ *   🔥 1. Rule Dependency Graph (anti-loop)
+ *   🔥 2. Adaptive Blast Radius (severity + business hours)
+ *   🔥 3. Tenant Risk Score (recalculated per cycle)
+ *   🔥 4. Idempotency Keys (deduplication)
+ *   🔥 5. Distributed Locking (advisory locks per rule)
  */
 
 // ── Helpers ──
@@ -39,12 +44,43 @@ function matchesScope(rule: any, agentId: string): boolean {
   return true;
 }
 
+/**
+ * Generate a deterministic idempotency key for an agent+rule+time_window combination.
+ * Window is 1 hour — same key means "already executed this hour".
+ */
+function generateIdempotencyKey(agentId: string, ruleId: string): string {
+  const hourBucket = Math.floor(Date.now() / (60 * 60 * 1000));
+  return `${ruleId}:${agentId}:${hourBucket}`;
+}
+
 // ── Enterprise Protection Pipeline ──
 
 interface ProtectionResult {
   allowed: boolean;
   decision: string;
   reason: string;
+}
+
+/**
+ * Layer 0: Rule Dependency Check (anti-loop)
+ */
+async function checkRuleDependencies(
+  supabase: any, ruleId: string, tenantId: string
+): Promise<ProtectionResult> {
+  const { data } = await supabase.rpc('check_rule_dependencies', {
+    p_rule_id: ruleId,
+    p_tenant_id: tenantId,
+  });
+
+  if (data && data.length > 0) {
+    const blocker = data[0];
+    return {
+      allowed: false,
+      decision: 'blocked_dependency',
+      reason: `Blocked by rule "${blocker.blocking_rule_name}" (${blocker.relationship}), executed recently`,
+    };
+  }
+  return { allowed: true, decision: 'passed', reason: '' };
 }
 
 /**
@@ -106,13 +142,27 @@ async function checkCircuitBreaker(
 }
 
 /**
- * Layer 4: Blast Radius (% of fleet affected in last 10min)
+ * Layer 4: Adaptive Blast Radius (severity + business hours via RPC)
  */
 async function checkBlastRadius(
-  supabase: any, rule: any, tenantId: string, totalAgents: number
+  supabase: any, rule: any, tenantId: string, totalAgents: number, severity?: string
 ): Promise<ProtectionResult> {
-  const maxPercent = rule.max_affected_percentage || 30;
   if (totalAgents === 0) return { allowed: true, decision: 'passed', reason: '' };
+
+  // Get adaptive limit from RPC (considers severity + business hours)
+  let maxPercent = rule.max_affected_percentage || 30;
+  try {
+    const { data: adaptiveLimit } = await supabase.rpc('get_adaptive_blast_radius', {
+      p_tenant_id: tenantId,
+      p_action_type: rule.action_type || 'create_job',
+      p_severity: severity || 'medium',
+    });
+    if (adaptiveLimit != null) {
+      maxPercent = adaptiveLimit;
+    }
+  } catch {
+    // Fallback to static limit
+  }
 
   const { count } = await supabase
     .from('automation_execution_log')
@@ -123,37 +173,76 @@ async function checkBlastRadius(
 
   const impactPercent = ((count || 0) / totalAgents) * 100;
   if (impactPercent >= maxPercent) {
-    return { allowed: false, decision: 'blocked_blast_radius', reason: `Blast radius ${impactPercent.toFixed(1)}% >= limit ${maxPercent}%` };
+    return { allowed: false, decision: 'blocked_blast_radius', reason: `Blast radius ${impactPercent.toFixed(1)}% >= adaptive limit ${maxPercent}% (severity: ${severity || 'medium'})` };
   }
   return { allowed: true, decision: 'passed', reason: '' };
+}
+
+/**
+ * Layer 5: Idempotency Check (prevent duplicate execution in same window)
+ */
+async function checkIdempotency(
+  supabase: any, idempotencyKey: string
+): Promise<ProtectionResult> {
+  const { data } = await supabase
+    .from('automation_execution_log')
+    .select('id')
+    .eq('idempotency_key', idempotencyKey)
+    .limit(1);
+
+  if (data && data.length > 0) {
+    return { allowed: false, decision: 'blocked_idempotency', reason: `Duplicate execution prevented (key: ${idempotencyKey.substring(0, 20)}...)` };
+  }
+  return { allowed: true, decision: 'passed', reason: '' };
+}
+
+/**
+ * Layer 6: Distributed Lock (advisory lock per rule)
+ */
+async function tryAcquireRuleLock(supabase: any, ruleId: string): Promise<boolean> {
+  try {
+    const { data } = await supabase.rpc('try_acquire_rule_lock', { p_rule_id: ruleId });
+    return data === true;
+  } catch {
+    return true; // Fail open — don't block on lock failure
+  }
 }
 
 /**
  * Run full protection pipeline for an agent+rule pair before execution.
  */
 async function runProtectionPipeline(
-  supabase: any, rule: any, agentId: string, tenantId: string, totalAgents: number
-): Promise<ProtectionResult> {
+  supabase: any, rule: any, agentId: string, tenantId: string, totalAgents: number, severity?: string
+): Promise<ProtectionResult & { idempotencyKey?: string }> {
   // Mode check
   if (rule.mode === 'disabled') {
     return { allowed: false, decision: 'blocked_disabled', reason: 'Rule is disabled' };
   }
 
-  // Cooldown
+  // Layer 0: Dependency check
+  const deps = await checkRuleDependencies(supabase, rule.id, tenantId);
+  if (!deps.allowed) return deps;
+
+  // Layer 1: Cooldown
   const cooldown = await checkExecutionCooldown(supabase, agentId, rule.id, rule.execution_cooldown_minutes || 60);
   if (!cooldown.allowed) return cooldown;
 
-  // Rate limit
+  // Layer 2: Rate limit
   const rateLimit = await checkRateLimit(supabase, tenantId, rule.id, rule.max_executions_per_hour || 50);
   if (!rateLimit.allowed) return rateLimit;
 
-  // Circuit breaker
+  // Layer 3: Circuit breaker
   const circuit = await checkCircuitBreaker(supabase, rule);
   if (!circuit.allowed) return circuit;
 
-  // Blast radius
-  const blast = await checkBlastRadius(supabase, rule, tenantId, totalAgents);
+  // Layer 4: Adaptive blast radius
+  const blast = await checkBlastRadius(supabase, rule, tenantId, totalAgents, severity);
   if (!blast.allowed) return blast;
+
+  // Layer 5: Idempotency
+  const idempotencyKey = generateIdempotencyKey(agentId, rule.id);
+  const idemp = await checkIdempotency(supabase, idempotencyKey);
+  if (!idemp.allowed) return idemp;
 
   // Approval gate
   if (rule.requires_approval) {
@@ -170,7 +259,7 @@ async function runProtectionPipeline(
     return { allowed: false, decision: 'dry_run', reason: 'Rule in dry-run mode' };
   }
 
-  return { allowed: true, decision: 'passed', reason: '' };
+  return { allowed: true, decision: 'passed', reason: '', idempotencyKey };
 }
 
 /**
@@ -208,10 +297,11 @@ async function logDecision(
 }
 
 /**
- * Log execution to debounce table
+ * Log execution to debounce table (with idempotency key)
  */
 async function logExecution(
-  supabase: any, tenantId: string, agentId: string, ruleId: string, actionType: string, success: boolean, metadata?: any
+  supabase: any, tenantId: string, agentId: string, ruleId: string,
+  actionType: string, success: boolean, idempotencyKey?: string, metadata?: any
 ) {
   try {
     await supabase.from('automation_execution_log').insert({
@@ -220,6 +310,7 @@ async function logExecution(
       rule_id: ruleId,
       action_type: actionType,
       success,
+      idempotency_key: idempotencyKey || null,
       metadata,
     });
   } catch (e) {
@@ -342,7 +433,7 @@ async function executeAction(
   }
 }
 
-// ── Trigger Evaluators (return candidate trigger events, NOT executions) ──
+// ── Trigger Evaluators ──
 
 interface TriggerCandidate {
   agentId: string;
@@ -377,6 +468,7 @@ async function evaluateMetricThreshold(
           metric: conditions.metric,
           value: metricValue,
           threshold: conditions.value,
+          severity: metricValue >= 95 ? 'critical' : metricValue >= 80 ? 'high' : 'medium',
           message: `${conditions.metric} = ${metricValue}% (threshold: ${conditions.operator} ${conditions.value}%)`,
         },
       });
@@ -419,6 +511,7 @@ async function evaluateProcessAnomaly(
             event_type: 'suspicious_process',
             count: suspiciousCount,
             threshold,
+            severity: 'critical',
             processes: (p.suspicious_processes || []).slice(0, 5).map((sp: any) => sp.name),
             message: `${suspiciousCount} suspicious process(es) detected (threshold: ${threshold})`,
           },
@@ -434,6 +527,7 @@ async function evaluateProcessAnomaly(
             event_type: 'new_process_burst',
             count: newCount,
             threshold,
+            severity: 'high',
             message: `${newCount} new processes detected (threshold: ${threshold})`,
           },
         });
@@ -467,14 +561,16 @@ async function evaluateAgentStatus(
       const lastHb = agent.last_heartbeat ? new Date(agent.last_heartbeat).getTime() : 0;
       const offlineDuration = Date.now() - lastHb;
       if (offlineDuration > thresholdMs && agent.status !== 'archived') {
+        const offlineMin = Math.round(offlineDuration / 60000);
         candidates.push({
           agentId: agent.id,
           triggerData: {
             event_type: 'agent_offline',
             agent_name: agent.agent_name,
-            offline_minutes: Math.round(offlineDuration / 60000),
+            offline_minutes: offlineMin,
             threshold_minutes: durationMinutes,
-            message: `Agent '${agent.agent_name}' offline for ${Math.round(offlineDuration / 60000)} min (threshold: ${durationMinutes} min)`,
+            severity: offlineMin > 120 ? 'critical' : offlineMin > 60 ? 'high' : 'medium',
+            message: `Agent '${agent.agent_name}' offline for ${offlineMin} min (threshold: ${durationMinutes} min)`,
           },
         });
       }
@@ -516,6 +612,7 @@ async function evaluateSecurityCheck(
             check: checkType,
             agent_name: agent.agent_name,
             av_engine: av?.engine_name || 'none',
+            severity: 'critical',
             message: `Antivírus ${av ? 'inativo' : 'não detectado'} no agente '${agent.agent_name}'`,
           },
         });
@@ -554,6 +651,7 @@ async function evaluateSecurityCheck(
           event_type: 'firewall_disabled',
           check: checkType,
           agent_name: agent?.agent_name || 'Unknown',
+          severity: 'high',
           message: `Firewall desabilitado no agente '${agent?.agent_name}'`,
         },
       });
@@ -576,6 +674,7 @@ async function evaluateSecurityCheck(
           agent_name: agent?.agent_name || 'Unknown',
           device_id: usb.device_id,
           device_name: usb.device_name,
+          severity: 'high',
           message: `USB não autorizado (${usb.device_name || usb.device_id}) no agente '${agent?.agent_name}'`,
         },
       });
@@ -606,6 +705,7 @@ async function evaluateSecurityCheck(
           agent_name: agent?.agent_name || 'Unknown',
           vuln_count: agentVulnList.length,
           top_vulns: agentVulnList.slice(0, 3).map((v: any) => v.title),
+          severity: 'critical',
           message: `${agentVulnList.length} vulnerabilidade(s) crítica(s) no agente '${agent?.agent_name}'`,
         },
       });
@@ -615,12 +715,12 @@ async function evaluateSecurityCheck(
   return candidates;
 }
 
-// ── Per-Tenant Evaluation with Enterprise Pipeline ──
+// ── Per-Tenant Evaluation with Enterprise Pipeline v2 ──
 
 async function evaluateForTenant(
   supabase: any,
   tenantId: string
-): Promise<{ evaluated: number; triggered: number; blocked: number; decisions: number }> {
+): Promise<{ evaluated: number; triggered: number; blocked: number; decisions: number; risk_score?: number }> {
   const { data: rules } = await supabase
     .from('automation_rules')
     .select('*')
@@ -672,6 +772,14 @@ async function evaluateForTenant(
       continue;
     }
 
+    // 🔥 Layer 6: Distributed Lock — one evaluator per rule at a time
+    const lockAcquired = await tryAcquireRuleLock(supabase, rule.id);
+    if (!lockAcquired) {
+      totalDecisions++;
+      await logDecision(supabase, tenantId, rule, null, 'blocked_lock', 'Rule locked by another instance', null, false);
+      continue;
+    }
+
     // Get trigger candidates
     let candidates: TriggerCandidate[] = [];
 
@@ -690,20 +798,19 @@ async function evaluateForTenant(
       totalDecisions++;
 
       const protection = await runProtectionPipeline(
-        supabase, rule, candidate.agentId, tenantId, totalAgents
+        supabase, rule, candidate.agentId, tenantId, totalAgents,
+        candidate.triggerData?.severity
       );
 
       if (!protection.allowed) {
         totalBlocked++;
 
-        // Log the blocked decision
         await logDecision(
           supabase, tenantId, rule, candidate.agentId,
           protection.decision, protection.reason,
           candidate.triggerData, false
         );
 
-        // For approval-required, create approval request
         if (protection.decision === 'blocked_approval_required') {
           await createApprovalRequest(supabase, tenantId, rule, candidate.agentId, candidate.triggerData);
         }
@@ -718,8 +825,8 @@ async function evaluateForTenant(
 
       const success = status === 'executed';
 
-      // Log to debounce table
-      await logExecution(supabase, tenantId, candidate.agentId, rule.id, rule.action_type, success, {
+      // Log to debounce table with idempotency key
+      await logExecution(supabase, tenantId, candidate.agentId, rule.id, rule.action_type, success, protection.idempotencyKey, {
         ...result,
         execution_time_ms: execTimeMs,
       });
@@ -765,7 +872,16 @@ async function evaluateForTenant(
     }
   }
 
-  return { evaluated: rules.length, triggered: totalTriggered, blocked: totalBlocked, decisions: totalDecisions };
+  // 🔥 Recalculate tenant risk score at end of cycle
+  let riskScore: number | undefined;
+  try {
+    const { data: score } = await supabase.rpc('recalculate_tenant_risk_score', { p_tenant_id: tenantId });
+    riskScore = score;
+  } catch {
+    // Non-critical
+  }
+
+  return { evaluated: rules.length, triggered: totalTriggered, blocked: totalBlocked, decisions: totalDecisions, risk_score: riskScore };
 }
 
 // ── Main Handler ──
@@ -825,6 +941,7 @@ serve(async (req) => {
       }
 
       let totalEvaluated = 0, totalTriggered = 0, totalBlocked = 0, totalDecisions = 0;
+      const riskScores: Record<string, number> = {};
 
       for (const t of tenants) {
         const result = await evaluateForTenant(supabase, t.id);
@@ -832,6 +949,7 @@ serve(async (req) => {
         totalTriggered += result.triggered;
         totalBlocked += result.blocked;
         totalDecisions += result.decisions;
+        if (result.risk_score != null) riskScores[t.id] = result.risk_score;
       }
 
       // Update cron health
@@ -845,7 +963,7 @@ serve(async (req) => {
         } catch { /* best effort */ }
       }
 
-      console.log(`[Enterprise Engine] ${tenants.length} tenants | ${totalEvaluated} rules | ${totalTriggered} triggered | ${totalBlocked} blocked | ${totalDecisions} decisions`);
+      console.log(`[Enterprise Engine v2] ${tenants.length} tenants | ${totalEvaluated} rules | ${totalTriggered} triggered | ${totalBlocked} blocked | ${totalDecisions} decisions`);
 
       return secureJsonResponse({
         tenants_processed: tenants.length,
@@ -853,6 +971,7 @@ serve(async (req) => {
         triggered: totalTriggered,
         blocked: totalBlocked,
         decisions: totalDecisions,
+        risk_scores: riskScores,
       });
     }
 
@@ -870,7 +989,7 @@ serve(async (req) => {
       } catch { /* best effort */ }
     }
 
-    console.log(`[Enterprise Engine] tenant=${tenantId} | ${result.evaluated} rules | ${result.triggered} triggered | ${result.blocked} blocked | ${result.decisions} decisions`);
+    console.log(`[Enterprise Engine v2] tenant=${tenantId} | ${result.evaluated} rules | ${result.triggered} triggered | ${result.blocked} blocked | ${result.decisions} decisions | risk=${result.risk_score ?? 'n/a'}`);
 
     return secureJsonResponse(result);
 
