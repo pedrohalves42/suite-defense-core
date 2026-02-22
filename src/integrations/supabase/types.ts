@@ -18068,6 +18068,8 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           severity: string
+          source: string | null
+          status: string | null
           tenant_id: string
           title: string
         }
@@ -18093,6 +18095,8 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           severity: string
+          source?: string | null
+          status?: string | null
           tenant_id: string
           title: string
         }
@@ -18118,6 +18122,8 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           severity?: string
+          source?: string | null
+          status?: string | null
           tenant_id?: string
           title?: string
         }
