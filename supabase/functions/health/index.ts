@@ -6,6 +6,7 @@ import {
   validateSchema,
   addHealthHeaders
 } from '../_shared/health-probe.ts'
+import { requireSuperAdmin } from '../_shared/require-super-admin.ts'
 
 Deno.serve(async (req) => {
   const corsHeaders = {
@@ -26,6 +27,11 @@ Deno.serve(async (req) => {
     // Emergency script sync mode
     const url = new URL(req.url)
     if (url.searchParams.get('sync_script') === 'true') {
+      // SECURITY: Require super_admin authentication for script sync
+      const authResult = await requireSuperAdmin(req);
+      if (!authResult.success) {
+        return authResult.response!;
+      }
       // Accept POST body with script content
       if (req.method !== 'POST') {
         return new Response(JSON.stringify({
