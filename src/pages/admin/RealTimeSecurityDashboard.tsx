@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { RiskScoreCard } from '@/components/admin/RiskScoreCard';
+import { SoarExecutionsCard } from '@/components/admin/SoarExecutionsCard';
 
 interface SecurityEvent {
   id: string;
@@ -511,31 +512,8 @@ export default function RealTimeSecurityDashboard() {
             </CardContent>
           </Card>
 
-          {/* Playbook Executions */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Zap className="h-4 w-4 text-muted-foreground" />
-                Playbooks Hoje
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-4">
-                <p className="text-3xl font-bold text-primary">{playbookStats?.total || 0}</p>
-                <p className="text-xs text-muted-foreground mt-1">execuções</p>
-              </div>
-              <div className="flex items-center justify-center gap-4 text-xs">
-                <div className="flex items-center gap-1">
-                  <Zap className="h-3 w-3 text-green-500" />
-                  <span>{playbookStats?.autoExecuted || 0} auto</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-yellow-500" />
-                  <span>{playbookStats?.pending || 0} pendentes</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* SOAR Executions */}
+          <SoarExecutionsCard />
         </div>
       </div>
     </div>
