@@ -462,25 +462,55 @@ function Initialize-AgentKeys {
         Add-Type -AssemblyName System.Security
         
         $ecdsa = $null
-        try {
-            # Modern method (.NET 4.7+)
-            $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(
-                [System.Security.Cryptography.ECCurve]::NamedCurves.nistP256
-            )
-        } catch {
-            Write-Log "[KEYS] Modern ECDSA method failed, trying fallback: $($_.Exception.Message)" "WARN"
+        $maxKeyAttempts = 3
+        for ($attempt = 1; $attempt -le $maxKeyAttempts; $attempt++) {
             try {
-                # Fallback for .NET < 4.7
-                $cngKey = [System.Security.Cryptography.CngKey]::Create(
-                    [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
-                    $null,
-                    (New-Object System.Security.Cryptography.CngKeyCreationParameters)
+                # Modern method (.NET 4.7+)
+                $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(
+                    [System.Security.Cryptography.ECCurve]::NamedCurves.nistP256
                 )
-                $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
+                break  # Success
             } catch {
-                Write-Log "[KEYS] ECDSA fallback also failed: $($_.Exception.Message)" "ERROR"
-                Write-Log "[KEYS] Result signing will be DISABLED for this agent" "WARN"
-                return $false
+                $errMsg = $_.Exception.Message
+                Write-Log "[KEYS] ECDSA attempt $attempt/$maxKeyAttempts failed: $errMsg" "WARN"
+                
+                # "O objeto já existe" / "The object already exists" = stale CNG container
+                if ($errMsg -match "objeto.*existe|object.*exists|already exists") {
+                    Write-Log "[KEYS] Cleaning up stale CNG container before retry..." "WARN"
+                    try {
+                        # Delete orphaned ephemeral CNG key if it exists
+                        $staleKeys = [System.Security.Cryptography.CngKey]::Open(
+                            "ECDSA_P256", [System.Security.Cryptography.CngProvider]::MicrosoftSoftwareKeyStorageProvider)
+                        if ($staleKeys) { $staleKeys.Delete(); $staleKeys.Dispose() }
+                    } catch {
+                        # Key may not exist by name - try ephemeral approach
+                        Write-Log "[KEYS] No named stale key found, trying ephemeral generation" "DEBUG"
+                    }
+                }
+                
+                if ($attempt -eq $maxKeyAttempts) {
+                    # Final fallback: explicit ephemeral CNG key
+                    try {
+                        Write-Log "[KEYS] Final attempt: explicit ephemeral CNG key creation" "WARN"
+                        $creationParams = New-Object System.Security.Cryptography.CngKeyCreationParameters
+                        $creationParams.ExportPolicy = [System.Security.Cryptography.CngExportPolicies]::AllowPlaintextExport
+                        $creationParams.KeyCreationOptions = [System.Security.Cryptography.CngKeyCreationOptions]::None
+                        
+                        $cngKey = [System.Security.Cryptography.CngKey]::Create(
+                            [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
+                            $null,
+                            $creationParams
+                        )
+                        $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
+                        break  # Success on fallback
+                    } catch {
+                        Write-Log "[KEYS] All $maxKeyAttempts ECDSA attempts failed: $($_.Exception.Message)" "ERROR"
+                        Write-Log "[KEYS] Result signing will be DISABLED for this agent" "WARN"
+                        return $false
+                    }
+                }
+                
+                Start-Sleep -Seconds 1
             }
         }
         

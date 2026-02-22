@@ -59,15 +59,31 @@ Deno.serve(async (req) => {
     const agentsData = tokenData.agents as unknown as { id: string; tenant_id: string; agent_name: string };
     const body = await req.json();
 
-    if (!body.entries || !Array.isArray(body.entries) || body.entries.length === 0) {
+    // Support both formats: { entries: [...] } (batch) and flat { event_type, event_data } (auto-repair telemetry)
+    let entries: EvidenceEntry[];
+    if (body.entries && Array.isArray(body.entries) && body.entries.length > 0) {
+      entries = body.entries.slice(0, 100);
+    } else if (body.event_type || body.event_name) {
+      // Flat format from Send-AutoRepairTelemetry: convert to entries array
+      entries = [{
+        event_type: body.event_type || 'auto_repair',
+        event_data: {
+          event_name: body.event_name,
+          ...(body.event_data || {}),
+          hostname: body.hostname,
+          timestamp: body.timestamp,
+        },
+        evidence_hash: body.evidence_hash || 'auto_repair_telemetry',
+        severity: body.severity || 'info',
+      }];
+    } else {
       return new Response(
         JSON.stringify({ error: 'Missing or empty entries array' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const entries: EvidenceEntry[] = body.entries.slice(0, 100);
-    const validEventTypes = ['state_change', 'job_execution', 'dns_block', 'policy_sync', 'auto_recovery', 'heartbeat', 'update_applied', 'error', 'policy_drift', 'security_event'];
+    const validEventTypes = ['state_change', 'job_execution', 'dns_block', 'policy_sync', 'auto_recovery', 'heartbeat', 'update_applied', 'error', 'policy_drift', 'security_event', 'auto_repair'];
     const validSeverities = ['debug', 'info', 'warning', 'error', 'critical'];
 
     const records = entries.map(entry => ({
