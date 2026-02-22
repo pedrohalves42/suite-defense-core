@@ -82,6 +82,19 @@
 
 ---
 
+## FASE 5 — Auditoria Final (Linter) ✅ COMPLETA
+
+### 5.1 SECURITY DEFINER View — CORRIGIDO
+- [x] `agents_safe` tinha `security_invoker=off` → migrado para `security_invoker=on`
+
+### 5.2 Function Search Path — CORRIGIDO
+- [x] `handle_updated_at()` sem `search_path` → adicionado `SET search_path = public`
+
+### 5.3 RLS Policy Always True — FALSO POSITIVO (3x)
+- [x] Todas são policies "Service role" com `USING (true)` — intencional, service_role já bypassa RLS
+
+---
+
 ## Progresso
 
 | Fase | Status | Completos |
@@ -90,3 +103,4 @@
 | FASE 2 | ✅ Completa | 5/5 |
 | FASE 3 | ✅ Completa | 2/2 |
 | FASE 4 | ✅ Completa | 2/2 |
+| FASE 5 | ✅ Completa | 3/3 |
