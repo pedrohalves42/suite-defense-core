@@ -455,27 +455,50 @@ assert_service_health() {
  generate_signing_keypair() {
      log "INFO" "[KEYS] Generating new ECDSA P-256 keypair..."
      
-     # Backup previous key
-     if [[ -f "$PRIVATE_KEY_PATH" ]]; then
-         cp "$PRIVATE_KEY_PATH" "$PREVIOUS_KEY_PATH" 2>/dev/null || true
-     fi
+     local max_attempts=3
+     local attempt=1
      
-     # Generate private key
-     openssl ecparam -genkey -name prime256v1 -noout -out "$PRIVATE_KEY_PATH" 2>/dev/null
-     chmod 600 "$PRIVATE_KEY_PATH"
+     while [[ $attempt -le $max_attempts ]]; do
+         log "INFO" "[KEYS] ECDSA generation attempt $attempt/$max_attempts..."
+         
+         # Backup previous key
+         if [[ -f "$PRIVATE_KEY_PATH" ]]; then
+             cp "$PRIVATE_KEY_PATH" "$PREVIOUS_KEY_PATH" 2>/dev/null || true
+         fi
+         
+         # Clean up stale key files on retry
+         if [[ $attempt -gt 1 ]]; then
+             rm -f "$PRIVATE_KEY_PATH" "$PUBLIC_KEY_PATH" 2>/dev/null || true
+             sleep 1
+         fi
+         
+         # Generate private key
+         if openssl ecparam -genkey -name prime256v1 -noout -out "$PRIVATE_KEY_PATH" 2>/dev/null; then
+             chmod 600 "$PRIVATE_KEY_PATH"
+             
+             # Extract public key
+             if openssl ec -in "$PRIVATE_KEY_PATH" -pubout -out "$PUBLIC_KEY_PATH" 2>/dev/null; then
+                 # Calculate fingerprint
+                 local fingerprint
+                 fingerprint=$(openssl dgst -sha256 -binary "$PUBLIC_KEY_PATH" | xxd -p | tr -d '\n')
+                 echo "$fingerprint" > "$FINGERPRINT_PATH"
+                 
+                 SIGNING_FINGERPRINT="$fingerprint"
+                 log "SUCCESS" "[KEYS] Keypair generated on attempt $attempt (fingerprint: ${fingerprint:0:16}...)"
+                 echo "$fingerprint"
+                 return 0
+             else
+                 log "WARN" "[KEYS] Public key extraction failed on attempt $attempt"
+             fi
+         else
+             log "WARN" "[KEYS] Private key generation failed on attempt $attempt"
+         fi
+         
+         attempt=$((attempt + 1))
+     done
      
-     # Extract public key
-     openssl ec -in "$PRIVATE_KEY_PATH" -pubout -out "$PUBLIC_KEY_PATH" 2>/dev/null
-     
-     # Calculate fingerprint
-     local fingerprint
-     fingerprint=$(openssl dgst -sha256 -binary "$PUBLIC_KEY_PATH" | xxd -p | tr -d '\n')
-     echo "$fingerprint" > "$FINGERPRINT_PATH"
-     
-     SIGNING_FINGERPRINT="$fingerprint"
-     log "SUCCESS" "[KEYS] Keypair generated (fingerprint: ${fingerprint:0:16}...)"
-     
-     echo "$fingerprint"
+     log "ERROR" "[KEYS] All $max_attempts ECDSA generation attempts failed. Signing DISABLED."
+     return 1
  }
  
  initialize_agent_keys() {

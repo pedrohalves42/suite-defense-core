@@ -2758,7 +2758,7 @@ function Send-AutoRepairTelemetry {
         }
         
     } catch {
-        # Silent - telemetry should never crash the agent
+        Write-Log "[TELEMETRY] Error sending $Event event: $($_.Exception.Message)" "WARN"
     }
 }
 
