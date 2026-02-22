@@ -383,28 +383,45 @@ async function evaluateSecurityCheck(
       }
     }
   } else if (checkType === 'firewall_disabled') {
-    // Check system_alerts or agent data for firewall status
-    // For now, check if there are recent firewall-related alerts
+    // Check agent_evidence_logs for firewall-disabled events (agents report these directly)
+    // Also check system_alerts with security_threat type mentioning firewall
+    const recentWindow = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: fwEvidence } = await supabase
+      .from('agent_evidence_logs')
+      .select('agent_id, agent_name, event_type, event_data')
+      .eq('tenant_id', tenantId)
+      .in('agent_id', agentIds)
+      .in('event_type', ['firewall_disabled', 'firewall_off', 'security_config_change'])
+      .gte('created_at', recentWindow);
+
+    // Also check unresolved security_threat alerts mentioning firewall
     const { data: fwAlerts } = await supabase
       .from('system_alerts')
       .select('agent_id, title, details')
       .eq('tenant_id', tenantId)
-      .eq('alert_type', 'firewall_disabled')
+      .in('alert_type', ['security_threat', 'firewall_disabled'])
       .eq('resolved', false)
-      .in('agent_id', agentIds);
+      .in('agent_id', agentIds)
+      .ilike('title', '%firewall%');
 
-    for (const alert of (fwAlerts || [])) {
-      if (!matchesScope(rule, alert.agent_id)) continue;
-      const agent = agents.find((a: any) => a.id === alert.agent_id);
+    // Merge unique agent IDs from both sources
+    const affectedAgents = new Set<string>();
+    (fwEvidence || []).forEach((e: any) => affectedAgents.add(e.agent_id));
+    (fwAlerts || []).forEach((a: any) => affectedAgents.add(a.agent_id));
+
+    for (const agentId of affectedAgents) {
+      if (!matchesScope(rule, agentId)) continue;
+      const agent = agents.find((a: any) => a.id === agentId);
       const triggerData = {
         event_type: 'firewall_disabled',
         check: checkType,
         agent_name: agent?.agent_name || 'Unknown',
         message: `Firewall desabilitado no agente '${agent?.agent_name}'`,
       };
-      const { status, result } = await executeAction(supabase, rule, alert.agent_id, tenantId, triggerData, agents);
+      const { status, result } = await executeAction(supabase, rule, agentId, tenantId, triggerData, agents);
       executions.push({
-        tenant_id: tenantId, rule_id: rule.id, agent_id: alert.agent_id,
+        tenant_id: tenantId, rule_id: rule.id, agent_id: agentId,
         trigger_data: triggerData, action_taken: rule.action_type,
         action_result: result, status,
         error_message: status === 'failed' ? (result?.error || 'Unknown error') : null,
