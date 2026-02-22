@@ -5,7 +5,7 @@ import {
   SupabaseVersionQueryAdapter,
   SupabaseUpdateJobAdapter,
   SupabaseObservabilityAdapter,
-  LoggingEventDispatcherAdapter,
+  PersistingEventDispatcherAdapter,
   ProcessAgentUpdatesUseCase,
 } from '../_shared/hexagonal/index.ts';
 
@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
       new SupabaseVersionQueryAdapter(supabase),
       new SupabaseUpdateJobAdapter(supabase),
       new SupabaseObservabilityAdapter(supabase),
-      new LoggingEventDispatcherAdapter(),
+      new PersistingEventDispatcherAdapter(supabase),
     );
 
     // ─── Execute use case ─────────────────────────────

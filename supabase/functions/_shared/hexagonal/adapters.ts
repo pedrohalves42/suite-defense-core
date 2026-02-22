@@ -190,3 +190,47 @@ export class LoggingEventDispatcherAdapter implements EventDispatcherPort {
     });
   }
 }
+
+/**
+ * Persists domain events to the domain_events table AND logs them.
+ * Composite: logging + persistence in a single adapter.
+ */
+export class PersistingEventDispatcherAdapter implements EventDispatcherPort {
+  constructor(private readonly supabase: SupabaseClient) {}
+
+  async dispatch(event: DomainEvent): Promise<void> {
+    // Log first (always succeeds)
+    logger.info(`[DomainEvent] ${event.eventType}`, {
+      aggregateId: event.aggregateId,
+      payload: event.payload,
+      occurredOn: event.occurredOn.toISOString(),
+    });
+
+    // Persist (best-effort — never break business logic)
+    try {
+      const { error } = await this.supabase.from('domain_events').insert({
+        aggregate_id: event.aggregateId,
+        aggregate_type: this.inferAggregateType(event.eventType),
+        event_type: event.eventType,
+        payload: event.payload ?? {},
+        occurred_on: event.occurredOn.toISOString(),
+      });
+
+      if (error) {
+        logger.error('[DomainEvent] Persist failed', { error: error.message });
+      }
+    } catch (err) {
+      logger.error('[DomainEvent] Persist exception', { error: (err as Error).message });
+    }
+  }
+
+  private inferAggregateType(eventType: string): string {
+    if (eventType.startsWith('agent.') || eventType === 'UpdateJobCreated') return 'agent';
+    if (eventType.startsWith('job.')) return 'job';
+    if (eventType.startsWith('update.') || eventType.includes('Update')) return 'update_package';
+    if (eventType.startsWith('compliance.')) return 'compliance';
+    if (eventType.startsWith('lightmode.')) return 'light_mode';
+    if (eventType.startsWith('security.') || eventType.startsWith('certificate.')) return 'security';
+    return 'unknown';
+  }
+}
