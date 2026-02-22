@@ -69,14 +69,16 @@
 
 ---
 
-## FASE 4 — Monitoramento Preventivo 🔴 PENDENTE
+## FASE 4 — Monitoramento Preventivo ✅ COMPLETA
 
-### 4.1 Alerta para Crons Nunca Executados
-- [ ] Adicionar check no `cron-sentinel` para `last_success_at IS NULL`
+### 4.1 Alerta para Crons Nunca Executados ✅
+- [x] `cron-sentinel` já detecta NEVER_RAN via `deriveHealthStatus()` (line 43)
+- [x] Cria task P0 + audit log automaticamente
 
-### 4.2 Dashboard SOAR Executions
+### 4.2 Dashboard SOAR Executions ✅
 - [x] View `v_soar_execution_summary` criada
-- [ ] Componente React no dashboard
+- [x] Componente `SoarExecutionsCard` integrado no `RealTimeSecurityDashboard`
+- [x] Mostra total, pendentes, auto-executados, breakdown por trigger type, dry-run indicator
 
 ---
 
@@ -87,4 +89,4 @@
 | FASE 1 | ✅ Completa | 5/5 |
 | FASE 2 | ✅ Completa | 5/5 |
 | FASE 3 | ✅ Completa | 2/2 |
-| FASE 4 | 🟡 Parcial | 1/2 |
+| FASE 4 | ✅ Completa | 2/2 |
