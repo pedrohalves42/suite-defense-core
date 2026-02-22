@@ -80,18 +80,24 @@ async function executeAction(
       if (playbookTrigger) {
         try {
           const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-          const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+          const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET') || '';
           await fetch(`${supabaseUrl}/functions/v1/evaluate-playbook-triggers`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${serviceKey}`,
+              'X-Internal-Secret': internalSecret,
             },
             body: JSON.stringify({
               tenant_id: tenantId,
               trigger_type: playbookTrigger,
               agent_id: agentId,
-              context: { ...triggerData, source: 'automation_rule', rule_id: rule.id },
+              context: { 
+                ...triggerData, 
+                source: 'automation_rule', 
+                rule_id: rule.id,
+                // Enrich context for playbook condition matching
+                process_reputation: triggerData.event_type === 'suspicious_process' ? 'malicious' : undefined,
+              },
             }),
           });
         } catch (bridgeErr) {

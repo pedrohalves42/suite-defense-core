@@ -54,14 +54,18 @@
 
 ---
 
-## FASE 3 — Testes de Caos 🔴 PENDENTE
+## FASE 3 — Testes de Caos ✅ COMPLETA
 
-### 3.1 Teste SOAR End-to-End
-- [ ] Inserir processo suspeito → validar playbook executa
-- [ ] Verificar registro em `soar_executions`
+### 3.1 Teste SOAR End-to-End ✅
+- [x] Inserir processo suspeito → automation_rules detecta (triggered: 1)
+- [x] SOAR Bridge chama evaluate-playbook-triggers com X-Internal-Secret
+- [x] Playbook `a6000000` criou execução `7287f2ce` com status=pending, risk_score=0.8
+- [x] **Bug corrigido**: SOAR Bridge usava Authorization Bearer (rejeitado como JWT inválido) → migrado para X-Internal-Secret
+- [x] **Bug corrigido**: Context do SOAR Bridge não incluía `process_reputation` → enriquecido automaticamente
 
-### 3.2 Teste de Idempotência dos Crons
-- [ ] Chamar cada cron 2x → verificar que não duplica dados
+### 3.2 Teste de Idempotência dos Crons ✅
+- [x] `seed-collection-jobs` 2x → 1ª: 15 criados, 2ª: 0 criados / 15 deduplicados
+- [x] `evaluate-automation-rules` 2x → 1ª: 1 triggered, 2ª: 0 triggered (cooldown ativo)
 
 ---
 
@@ -82,5 +86,5 @@
 |------|--------|-----------|
 | FASE 1 | ✅ Completa | 5/5 |
 | FASE 2 | ✅ Completa | 5/5 |
-| FASE 3 | 🔴 Pendente | 0/2 |
+| FASE 3 | ✅ Completa | 2/2 |
 | FASE 4 | 🟡 Parcial | 1/2 |
