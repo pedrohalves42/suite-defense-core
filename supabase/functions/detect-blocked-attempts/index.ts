@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
           p_processed_count: 0,
           p_job_source: 'cron'
         });
-      } catch {}
+      } catch (e) { console.warn('[detect-blocked-attempts] Failed to log job run:', e); }
 
       return new Response(
         JSON.stringify({ 
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
         p_processed_count: insertedCount,
         p_job_source: 'cron'
       });
-    } catch {}
+    } catch (e) { console.warn('[detect-blocked-attempts] Failed to log job run:', e); }
 
     return new Response(
       JSON.stringify({ 
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
         p_processed_count: 0,
         p_job_source: 'cron'
       })
-    } catch {}
+    } catch (e) { console.warn('[detect-blocked-attempts] Failed to log error run:', e); }
     
     return new Response(
       JSON.stringify({ 

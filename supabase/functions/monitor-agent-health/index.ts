@@ -273,7 +273,7 @@ Deno.serve(async (req) => {
         p_success: true,
         p_error: null
       });
-    } catch (_) { /* best effort */ }
+    } catch (e) { console.warn('[monitor-agent-health] Failed to update cron health:', e); }
 
     return new Response(
       JSON.stringify(result),
@@ -298,7 +298,7 @@ Deno.serve(async (req) => {
         p_success: false,
         p_error: error.message
       });
-    } catch {}
+    } catch (e) { console.warn('[monitor-agent-health] Failed to log error run:', e); }
     
     return new Response(
       JSON.stringify({ error: error.message }),

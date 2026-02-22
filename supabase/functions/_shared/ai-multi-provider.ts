@@ -131,7 +131,7 @@ function getSmartRouter(): SmartRouterUseCase | null {
       const client = createClient(url, key);
       smartRouterInstance = new SmartRouterUseCase(new SupabaseSmartRouterAdapter(client));
     }
-  } catch { /* ignore */ }
+  } catch (e) { console.warn('[ai-multi-provider] SmartRouter init failed:', e); }
   return smartRouterInstance;
 }
 

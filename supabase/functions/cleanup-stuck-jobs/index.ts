@@ -202,7 +202,7 @@ Deno.serve(async (req) => {
         p_processed_count: failedDeliveredCount + expiredCount,
         p_job_source: 'cron'
       })
-    } catch {}
+    } catch (e) { console.warn('[cleanup-stuck-jobs] Failed to log job run:', e); }
 
     // Report cron health
     try {
@@ -211,7 +211,7 @@ Deno.serve(async (req) => {
         p_success: true,
         p_error_message: null
       })
-    } catch {}
+    } catch (e) { console.warn('[cleanup-stuck-jobs] Failed to update cron health:', e); }
 
     return new Response(
       JSON.stringify(summary),
@@ -229,7 +229,7 @@ Deno.serve(async (req) => {
         p_success: false,
         p_error_message: error instanceof Error ? error.message : 'Unknown error'
       })
-    } catch {}
+    } catch (e) { console.warn('[cleanup-stuck-jobs] Failed to update cron health on error:', e); }
     
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),

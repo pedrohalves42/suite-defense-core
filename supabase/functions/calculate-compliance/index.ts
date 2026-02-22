@@ -239,7 +239,7 @@ Deno.serve(async (req) => {
         p_processed_count: categories.length,
         p_job_source: 'api',
       });
-    } catch (_) { /* non-critical */ }
+    } catch (e) { console.warn('[calculate-compliance] Failed to log job run:', e); }
 
     console.log(`[${requestId}] [calc-compliance] Done: score=${overallScore} grade=${grade} drift=${hasDrift} in ${durationMs}ms`);
 

@@ -243,7 +243,7 @@ Deno.serve(async (req) => {
         p_processed_count: 0,
         p_job_source: 'cron'
       });
-    } catch {}
+    } catch (e) { console.warn('[watchdog-non-execution] Failed to log job run:', e); }
 
     return new Response(
       JSON.stringify({

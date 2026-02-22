@@ -188,7 +188,7 @@ serve(async (req: Request): Promise<Response> => {
         p_processed_count: 0,
         p_job_source: 'cron'
       });
-    } catch {}
+    } catch (e) { console.warn('[scheduled-report-generator] Failed to log job run:', e); }
     
     return new Response(JSON.stringify({
       success: false,

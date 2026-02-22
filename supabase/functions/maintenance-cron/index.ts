@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
         p_cron_name: 'maintenance-cron',
         p_error: err.message,
       });
-    } catch (_) { /* best effort */ }
+    } catch (e) { console.warn('[maintenance-cron] Failed to mark cron failure:', e); }
 
     return new Response(JSON.stringify({
       success: false,
