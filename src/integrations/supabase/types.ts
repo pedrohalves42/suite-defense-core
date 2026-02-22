@@ -85,6 +85,77 @@ export type Database = {
           },
         ]
       }
+      adaptive_blast_radius_config: {
+        Row: {
+          action_type: string
+          business_days: number[]
+          business_hours_end: string
+          business_hours_max_percent: number
+          business_hours_start: string
+          created_at: string
+          id: string
+          off_hours_max_percent: number
+          severity: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          business_days?: number[]
+          business_hours_end?: string
+          business_hours_max_percent?: number
+          business_hours_start?: string
+          created_at?: string
+          id?: string
+          off_hours_max_percent?: number
+          severity?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          business_days?: number[]
+          business_hours_end?: string
+          business_hours_max_percent?: number
+          business_hours_start?: string
+          created_at?: string
+          id?: string
+          off_hours_max_percent?: number
+          severity?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adaptive_blast_radius_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "adaptive_blast_radius_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "adaptive_blast_radius_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "adaptive_blast_radius_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       admin_ip_whitelist: {
         Row: {
           created_at: string | null
@@ -7609,6 +7680,7 @@ export type Database = {
           agent_id: string
           executed_at: string
           id: string
+          idempotency_key: string | null
           metadata: Json | null
           rule_id: string
           success: boolean | null
@@ -7619,6 +7691,7 @@ export type Database = {
           agent_id: string
           executed_at?: string
           id?: string
+          idempotency_key?: string | null
           metadata?: Json | null
           rule_id: string
           success?: boolean | null
@@ -7629,6 +7702,7 @@ export type Database = {
           agent_id?: string
           executed_at?: string
           id?: string
+          idempotency_key?: string | null
           metadata?: Json | null
           rule_id?: string
           success?: boolean | null
@@ -7830,6 +7904,65 @@ export type Database = {
           },
           {
             foreignKeyName: "automation_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      automation_rule_dependencies: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          depends_on_rule_id: string
+          id: string
+          relationship_type: string
+          rule_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          depends_on_rule_id: string
+          id?: string
+          relationship_type?: string
+          rule_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          depends_on_rule_id?: string
+          id?: string
+          relationship_type?: string
+          rule_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rule_dependencies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_rule_dependencies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "automation_rule_dependencies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "automation_rule_dependencies_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -25500,6 +25633,15 @@ export type Database = {
         }
         Returns: Json
       }
+      check_rule_dependencies: {
+        Args: { p_rule_id: string; p_tenant_id: string }
+        Returns: {
+          blocked: boolean
+          blocking_rule_id: string
+          blocking_rule_name: string
+          relationship: string
+        }[]
+      }
       check_security_thresholds: {
         Args: never
         Returns: {
@@ -25760,6 +25902,13 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      detect_rule_dependency_loops: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          loop_length: number
+          loop_path: string[]
+        }[]
+      }
       detect_silent_job_failures: {
         Args: never
         Returns: {
@@ -25931,6 +26080,14 @@ export type Database = {
       }
       get_action_center_feed: { Args: { p_tenant_id: string }; Returns: Json }
       get_active_tenant_id: { Args: never; Returns: string }
+      get_adaptive_blast_radius: {
+        Args: {
+          p_action_type: string
+          p_severity?: string
+          p_tenant_id: string
+        }
+        Returns: number
+      }
       get_agent_disk_details: {
         Args: { p_agent_id: string }
         Returns: {
@@ -26363,6 +26520,10 @@ export type Database = {
         Args: { p_agent_id?: string }
         Returns: Json
       }
+      recalculate_tenant_risk_score: {
+        Args: { p_tenant_id: string }
+        Returns: number
+      }
       reconstruct_incident_timeline: {
         Args: { p_agent_id: string; p_end_time: string; p_start_time: string }
         Returns: Json
@@ -26393,6 +26554,7 @@ export type Database = {
         }
         Returns: string
       }
+      release_rule_lock: { Args: { p_rule_id: string }; Returns: undefined }
       remove_agent_isolation: { Args: { p_agent_id: string }; Returns: boolean }
       remove_agent_throttle: { Args: { p_agent_id: string }; Returns: boolean }
       reprocess_job_outputs: {
@@ -26517,6 +26679,7 @@ export type Database = {
           table_name: string
         }[]
       }
+      try_acquire_rule_lock: { Args: { p_rule_id: string }; Returns: boolean }
       update_agent_web_consent: {
         Args: { p_agent_id: string; p_enabled: boolean; p_user_id: string }
         Returns: undefined
