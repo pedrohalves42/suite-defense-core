@@ -7430,6 +7430,248 @@ export type Database = {
           },
         ]
       }
+      automation_approvals: {
+        Row: {
+          agent_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          rule_id: string
+          second_approved_at: string | null
+          second_approved_by: string | null
+          status: string | null
+          tenant_id: string
+          trigger_data: Json | null
+        }
+        Insert: {
+          agent_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          rule_id: string
+          second_approved_at?: string | null
+          second_approved_by?: string | null
+          status?: string | null
+          tenant_id: string
+          trigger_data?: Json | null
+        }
+        Update: {
+          agent_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          rule_id?: string
+          second_approved_at?: string | null
+          second_approved_by?: string | null
+          status?: string | null
+          tenant_id?: string
+          trigger_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_approvals_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_approvals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_approvals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "automation_approvals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "automation_approvals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      automation_decision_log: {
+        Row: {
+          agent_id: string | null
+          blocked_reason: string | null
+          created_at: string | null
+          decision: string
+          executed: boolean | null
+          id: string
+          impact_percent: number | null
+          mode: string | null
+          reason: string | null
+          risk_score: number | null
+          rule_id: string
+          rule_name: string | null
+          severity: string | null
+          tenant_id: string
+          trigger_data: Json | null
+        }
+        Insert: {
+          agent_id?: string | null
+          blocked_reason?: string | null
+          created_at?: string | null
+          decision: string
+          executed?: boolean | null
+          id?: string
+          impact_percent?: number | null
+          mode?: string | null
+          reason?: string | null
+          risk_score?: number | null
+          rule_id: string
+          rule_name?: string | null
+          severity?: string | null
+          tenant_id: string
+          trigger_data?: Json | null
+        }
+        Update: {
+          agent_id?: string | null
+          blocked_reason?: string | null
+          created_at?: string | null
+          decision?: string
+          executed?: boolean | null
+          id?: string
+          impact_percent?: number | null
+          mode?: string | null
+          reason?: string | null
+          risk_score?: number | null
+          rule_id?: string
+          rule_name?: string | null
+          severity?: string | null
+          tenant_id?: string
+          trigger_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_decision_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_decision_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "automation_decision_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "automation_decision_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      automation_execution_log: {
+        Row: {
+          action_type: string
+          agent_id: string
+          executed_at: string
+          id: string
+          metadata: Json | null
+          rule_id: string
+          success: boolean | null
+          tenant_id: string
+        }
+        Insert: {
+          action_type: string
+          agent_id: string
+          executed_at?: string
+          id?: string
+          metadata?: Json | null
+          rule_id: string
+          success?: boolean | null
+          tenant_id: string
+        }
+        Update: {
+          action_type?: string
+          agent_id?: string
+          executed_at?: string
+          id?: string
+          metadata?: Json | null
+          rule_id?: string
+          success?: boolean | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_execution_log_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_execution_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_execution_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "automation_execution_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "automation_execution_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       automation_executions: {
         Row: {
           action_result: Json | null
@@ -7595,19 +7837,102 @@ export type Database = {
           },
         ]
       }
+      automation_rule_versions: {
+        Row: {
+          change_reason: string | null
+          changed_by: string | null
+          config: Json
+          created_at: string | null
+          id: string
+          rule_id: string
+          tenant_id: string
+          version: number
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_by?: string | null
+          config: Json
+          created_at?: string | null
+          id?: string
+          rule_id: string
+          tenant_id: string
+          version: number
+        }
+        Update: {
+          change_reason?: string | null
+          changed_by?: string | null
+          config?: Json
+          created_at?: string | null
+          id?: string
+          rule_id?: string
+          tenant_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rule_versions_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_rule_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_rule_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "automation_rule_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "automation_rule_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       automation_rules: {
         Row: {
           action_config: Json
           action_type: string
+          auto_execute_if_severity: string | null
+          circuit_breaker_threshold: number | null
+          circuit_breaker_window_minutes: number | null
+          circuit_opened_at: string | null
+          circuit_recovery_minutes: number | null
+          circuit_state: string | null
           cooldown_minutes: number
           created_at: string
           created_by: string | null
           description: string | null
+          dry_run: boolean | null
+          execution_cooldown_minutes: number | null
           id: string
           is_active: boolean
           last_triggered_at: string | null
+          max_affected_percentage: number | null
+          max_executions_per_hour: number | null
+          mode: string | null
           name: string
           priority: number
+          requires_approval: boolean | null
+          requires_dual_approval: boolean | null
+          risk_threshold: number | null
           target_ids: string[] | null
           target_scope: string
           tenant_id: string
@@ -7619,15 +7944,29 @@ export type Database = {
         Insert: {
           action_config: Json
           action_type: string
+          auto_execute_if_severity?: string | null
+          circuit_breaker_threshold?: number | null
+          circuit_breaker_window_minutes?: number | null
+          circuit_opened_at?: string | null
+          circuit_recovery_minutes?: number | null
+          circuit_state?: string | null
           cooldown_minutes?: number
           created_at?: string
           created_by?: string | null
           description?: string | null
+          dry_run?: boolean | null
+          execution_cooldown_minutes?: number | null
           id?: string
           is_active?: boolean
           last_triggered_at?: string | null
+          max_affected_percentage?: number | null
+          max_executions_per_hour?: number | null
+          mode?: string | null
           name: string
           priority?: number
+          requires_approval?: boolean | null
+          requires_dual_approval?: boolean | null
+          risk_threshold?: number | null
           target_ids?: string[] | null
           target_scope?: string
           tenant_id: string
@@ -7639,15 +7978,29 @@ export type Database = {
         Update: {
           action_config?: Json
           action_type?: string
+          auto_execute_if_severity?: string | null
+          circuit_breaker_threshold?: number | null
+          circuit_breaker_window_minutes?: number | null
+          circuit_opened_at?: string | null
+          circuit_recovery_minutes?: number | null
+          circuit_state?: string | null
           cooldown_minutes?: number
           created_at?: string
           created_by?: string | null
           description?: string | null
+          dry_run?: boolean | null
+          execution_cooldown_minutes?: number | null
           id?: string
           is_active?: boolean
           last_triggered_at?: string | null
+          max_affected_percentage?: number | null
+          max_executions_per_hour?: number | null
+          mode?: string | null
           name?: string
           priority?: number
+          requires_approval?: boolean | null
+          requires_dual_approval?: boolean | null
+          risk_threshold?: number | null
           target_ids?: string[] | null
           target_scope?: string
           tenant_id?: string
@@ -7680,6 +8033,81 @@ export type Database = {
           },
           {
             foreignKeyName: "automation_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      automation_sla_metrics: {
+        Row: {
+          avg_execution_time_ms: number | null
+          calculated_at: string | null
+          id: string
+          last_24h_blocked: number | null
+          last_24h_executions: number | null
+          last_24h_failures: number | null
+          p95_execution_time_ms: number | null
+          rule_id: string
+          success_rate: number | null
+          tenant_id: string
+        }
+        Insert: {
+          avg_execution_time_ms?: number | null
+          calculated_at?: string | null
+          id?: string
+          last_24h_blocked?: number | null
+          last_24h_executions?: number | null
+          last_24h_failures?: number | null
+          p95_execution_time_ms?: number | null
+          rule_id: string
+          success_rate?: number | null
+          tenant_id: string
+        }
+        Update: {
+          avg_execution_time_ms?: number | null
+          calculated_at?: string | null
+          id?: string
+          last_24h_blocked?: number | null
+          last_24h_executions?: number | null
+          last_24h_failures?: number | null
+          p95_execution_time_ms?: number | null
+          rule_id?: string
+          success_rate?: number | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_sla_metrics_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_sla_metrics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_sla_metrics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "automation_sla_metrics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "automation_sla_metrics_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -24995,6 +25423,15 @@ export type Database = {
           blocked_until: string
           is_blocked: boolean
         }[]
+      }
+      check_and_update_circuit_breaker: {
+        Args: {
+          p_recovery_minutes?: number
+          p_rule_id: string
+          p_threshold?: number
+          p_window_minutes?: number
+        }
+        Returns: Json
       }
       check_approval_complete: { Args: { p_request_id: string }; Returns: Json }
       check_execution_orphans: {
