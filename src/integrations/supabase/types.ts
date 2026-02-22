@@ -8083,7 +8083,6 @@ export type Database = {
           created_by: string | null
           description: string | null
           dry_run: boolean | null
-          execution_cooldown_minutes: number | null
           id: string
           is_active: boolean
           last_triggered_at: string | null
@@ -8117,7 +8116,6 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           dry_run?: boolean | null
-          execution_cooldown_minutes?: number | null
           id?: string
           is_active?: boolean
           last_triggered_at?: string | null
@@ -8151,7 +8149,6 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           dry_run?: boolean | null
-          execution_cooldown_minutes?: number | null
           id?: string
           is_active?: boolean
           last_triggered_at?: string | null
@@ -25449,6 +25446,20 @@ export type Database = {
           },
         ]
       }
+      v_zero_gap_dashboard: {
+        Row: {
+          checked_at: string | null
+          failed_jobs_no_error: number | null
+          orphan_tasks: number | null
+          secured_views: number | null
+          stale_crons: number | null
+          system_status: string | null
+          total_views: number | null
+          view_security_coverage_pct: number | null
+          zombie_jobs: number | null
+        }
+        Relationships: []
+      }
       v_zero_gap_health: {
         Row: {
           active_jobs: number | null
@@ -25545,6 +25556,7 @@ export type Database = {
           job_ids: string[]
         }[]
       }
+      auto_close_stale_orphan_tasks: { Args: never; Returns: undefined }
       auto_mark_agents_inactive: { Args: never; Returns: Json }
       auto_resolve_stale_tasks: { Args: never; Returns: Json }
       backfill_audit_log_hashes: {
