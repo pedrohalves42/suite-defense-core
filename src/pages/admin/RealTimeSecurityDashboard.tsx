@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { RiskScoreCard } from '@/components/admin/RiskScoreCard';
 import { SoarExecutionsCard } from '@/components/admin/SoarExecutionsCard';
+import { AIInsightsTrendChart } from '@/components/admin/AIInsightsTrendChart';
 
 interface SecurityEvent {
   id: string;
@@ -516,6 +517,9 @@ export default function RealTimeSecurityDashboard() {
           <SoarExecutionsCard />
         </div>
       </div>
+
+      {/* AI Insights Trend Chart */}
+      <AIInsightsTrendChart />
     </div>
   );
 }
