@@ -412,13 +412,12 @@ async function evaluateSecurityCheck(
       });
     }
   } else if (checkType === 'unauthorized_usb') {
-    // Check usb_devices for unblocked risky devices
+    // Check agent_usb_devices for unblocked devices
     const { data: usbDevices } = await supabase
-      .from('usb_devices')
-      .select('id, agent_id, device_id, device_type, vendor_id, is_blocked, risk_score')
+      .from('agent_usb_devices')
+      .select('id, agent_id, device_id, device_type, vendor_id, is_blocked, device_name')
       .in('agent_id', agentIds)
-      .eq('is_blocked', false)
-      .gte('risk_score', 60);
+      .eq('is_blocked', false);
 
     for (const usb of (usbDevices || [])) {
       if (!matchesScope(rule, usb.agent_id)) continue;
@@ -428,8 +427,8 @@ async function evaluateSecurityCheck(
         check: checkType,
         agent_name: agent?.agent_name || 'Unknown',
         device_id: usb.device_id,
-        risk_score: usb.risk_score,
-        message: `USB de risco (score: ${usb.risk_score}) no agente '${agent?.agent_name}'`,
+        device_name: usb.device_name,
+        message: `USB não autorizado (${usb.device_name || usb.device_id}) no agente '${agent?.agent_name}'`,
       };
       const { status, result } = await executeAction(supabase, rule, usb.agent_id, tenantId, triggerData, agents);
       executions.push({
@@ -508,11 +507,11 @@ async function evaluateForTenant(
 
   const agentIds = agents.map((a: any) => a.id);
 
-  const { data: metrics } = await supabase
-    .from('agent_system_metrics')
-    .select('*')
-    .in('agent_id', agentIds)
-    .order('collected_at', { ascending: false });
+    const { data: metrics } = await supabase
+      .from('agent_system_metrics_partitioned')
+      .select('*')
+      .in('agent_id', agentIds)
+      .order('collected_at', { ascending: false });
 
   const latestMetrics = new Map<string, any>();
   (metrics || []).forEach((m: any) => {
