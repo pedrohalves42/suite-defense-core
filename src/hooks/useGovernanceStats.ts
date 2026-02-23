@@ -59,6 +59,6 @@ export function useGovernanceStats() {
       } as GovernanceStats;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 }

@@ -108,7 +108,7 @@ export function usePendingPlaybookExecutions() {
       return (data || []) as unknown as PlaybookExecution[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000, // Refetch a cada 30 segundos
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 
   // Subscribe to realtime updates

@@ -65,7 +65,7 @@ export function usePendingApprovalRequests() {
       return (data || []) as ApprovalRequest[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 
   // Realtime subscription

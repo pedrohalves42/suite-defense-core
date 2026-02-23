@@ -119,7 +119,7 @@ export default function ExecutiveDashboard() {
     queryKey: ['executive-summary', tenantId],
     queryFn: () => tenantId ? fetchSummaryData(tenantId) : null,
     enabled: !tenantLoading && !!tenantId,
-    refetchInterval: 60000, // Atualiza a cada minuto
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
   });
 
   // Determinar status de saúde

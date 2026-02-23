@@ -72,7 +72,7 @@ export function useScheduledJobsHealth() {
       if (error) throw error;
       return (data || []) as unknown as ScheduledJobRun[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
     staleTime: 10000,
   });
 

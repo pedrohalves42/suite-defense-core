@@ -169,7 +169,7 @@ export const ClientDashboard = () => {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 
   // Generate next steps based on current status

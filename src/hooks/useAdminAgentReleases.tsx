@@ -18,7 +18,7 @@ export const useAdminAgentReleases = () => {
       if (error) throw error;
       return data?.releases || [];
     },
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
     refetchOnWindowFocus: true,
   });
 

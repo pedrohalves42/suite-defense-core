@@ -146,7 +146,7 @@ export default function MassReinstall() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000, // Atualizar a cada 30s
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 
   const copyToClipboard = (text: string, type: string) => {

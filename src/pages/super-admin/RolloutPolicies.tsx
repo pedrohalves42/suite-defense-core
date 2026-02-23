@@ -560,7 +560,7 @@ function RolloutTelemetryDashboard() {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 30000 // Refresh every 30s
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 
   // Calcular estatísticas
@@ -687,7 +687,7 @@ function RollbackEventsDashboard() {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 30000
+    refetchInterval: 300000 // COST-OPT: 30s → 5min
   });
 
   const safeModeAgents = rollbacks?.filter(r => r.safe_mode_triggered) || [];

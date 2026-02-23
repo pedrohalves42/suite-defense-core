@@ -100,7 +100,7 @@ export function useApprovalMetrics() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 60000,
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
   });
 }
 

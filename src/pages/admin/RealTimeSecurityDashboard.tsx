@@ -75,7 +75,7 @@ export default function RealTimeSecurityDashboard() {
       return { total, autoExecuted, pending };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 
   // Fetch blocked attempts
@@ -98,7 +98,7 @@ export default function RealTimeSecurityDashboard() {
       return { total: count || 0, today: count || 0 };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 
   // Fetch approval requests
@@ -126,7 +126,7 @@ export default function RealTimeSecurityDashboard() {
       return { pending, approved, rejected, expired };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 
   // Fetch agent protection status
@@ -158,7 +158,7 @@ export default function RealTimeSecurityDashboard() {
       return { total, protected: protected_, isolated, offline };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 
   // Fetch recent security logs for live feed
@@ -178,7 +178,7 @@ export default function RealTimeSecurityDashboard() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 10000,
+    refetchInterval: 120000, // COST-OPT: 10s → 2min
   });
 
   // Transform logs to events

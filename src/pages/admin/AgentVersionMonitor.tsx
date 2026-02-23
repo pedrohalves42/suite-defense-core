@@ -43,7 +43,7 @@ export default function AgentVersionMonitor() {
       return (data || []) as AgentWithCapabilities[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 
   const { data: latestRelease } = useQuery({
