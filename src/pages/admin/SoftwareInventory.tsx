@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Package, Search, RefreshCw, ShieldCheck, ShieldAlert, ShieldX, Shield, Eye } from 'lucide-react';
+import { AlertCircle, Package, Search, RefreshCw, ShieldCheck, ShieldAlert, ShieldX, Shield, Eye, Bell, ShieldBan } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
@@ -18,6 +18,8 @@ import { toast } from 'sonner';
 import { prepareJobForInsert } from '@/lib/job-utils';
 import { motion } from 'framer-motion';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
+import { useSoftwarePolicy, useUpdateSoftwarePolicy, type SoftwareProtectionMode } from '@/hooks/useSoftwarePolicy';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const getRiskVariant = (risk: string): "default" | "secondary" | "destructive" | "warning" | "success" => {
   switch (risk.toLowerCase()) {
@@ -54,6 +56,8 @@ export default function SoftwareInventory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [riskFilter, setRiskFilter] = useState<string>('all');
   const { tenant } = useTenant();
+  const { data: policy } = useSoftwarePolicy();
+  const updatePolicy = useUpdateSoftwarePolicy();
   
   // Query to get agents list for name lookup
   const { data: agents } = useQuery({
@@ -143,12 +147,64 @@ export default function SoftwareInventory() {
       description="Veja todos os programas instalados nos seus computadores protegidos"
     >
       <div className="space-y-6">
-        {/* Observation Label */}
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="gap-1 text-xs border-amber-500/50 text-amber-600 dark:text-amber-400">
-            <Eye className="h-3 w-3" />
-            Modo Observação — Não bloqueia instalação de software
-          </Badge>
+        {/* Protection Mode Selector */}
+        <div className="flex items-center gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={`gap-2 text-xs transition-colors ${
+                  policy?.mode === 'block'
+                    ? 'border-destructive/50 text-destructive'
+                    : policy?.mode === 'alert'
+                    ? 'border-primary/50 text-primary'
+                    : 'border-amber-500/50 text-amber-600 dark:text-amber-400'
+                }`}
+                disabled={updatePolicy.isPending}
+              >
+                {policy?.mode === 'block' ? (
+                  <><ShieldBan className="h-3.5 w-3.5" /> Modo Bloqueio — Impede software de risco</>
+                ) : policy?.mode === 'alert' ? (
+                  <><Bell className="h-3.5 w-3.5" /> Modo Alerta — Notifica sobre software de risco</>
+                ) : (
+                  <><Eye className="h-3.5 w-3.5" /> Modo Observação — Não bloqueia instalação de software</>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-72">
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer"
+                onClick={() => updatePolicy.mutate({ mode: 'observation' })}
+              >
+                <Eye className="h-4 w-4 text-amber-500" />
+                <div>
+                  <p className="font-medium">Observação</p>
+                  <p className="text-xs text-muted-foreground">Apenas monitora, sem ações automáticas</p>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer"
+                onClick={() => updatePolicy.mutate({ mode: 'alert' })}
+              >
+                <Bell className="h-4 w-4 text-primary" />
+                <div>
+                  <p className="font-medium">Alerta</p>
+                  <p className="text-xs text-muted-foreground">Gera alertas para software de risco</p>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer"
+                onClick={() => updatePolicy.mutate({ mode: 'block' })}
+              >
+                <ShieldBan className="h-4 w-4 text-destructive" />
+                <div>
+                  <p className="font-medium">Bloqueio</p>
+                  <p className="text-xs text-muted-foreground">Bloqueia execução de software crítico/alto</p>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Agent Selector */}
