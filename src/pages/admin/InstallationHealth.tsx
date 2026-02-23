@@ -50,7 +50,7 @@ export default function InstallationHealth() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Agentes problematicos - ADR-026: Use agents_safe view to protect hmac_secret
+      // ADR-026: Use RPC — note: InstallationHealth doesn't have tenant context yet
       const { data: agents, error: agentsError } = await supabase
         .from('agents_safe')
         .select('id, agent_name, status, enrolled_at, last_heartbeat')

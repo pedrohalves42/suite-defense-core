@@ -21,7 +21,7 @@ export default function PitchDeck() {
   const { data: metrics } = useQuery({
     queryKey: ['pitch-metrics'],
     queryFn: async () => {
-      // ADR-026: Use agents_safe view
+      // ADR-026: Super-admin context — cross-tenant aggregation is acceptable
       const [tenants, agents, jobs, subscriptions] = await Promise.all([
         supabase.from('tenants').select('id, created_at'),
         supabase.from('agents_safe').select('id, status'),

@@ -70,14 +70,14 @@ export function DynamicValidationSystem() {
       if (!user) throw new Error("Usuário não autenticado");
       if (!tenant) throw new Error("Tenant não selecionado");
 
-      // Get all active agents - ADR-026: Use agents_safe view
-      const { data: agentsData } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name, agent_version, last_heartbeat')
-        .eq('tenant_id', tenant.id)
-        .eq('status', 'active')
-        .is('archived_at', null)
-        .order('agent_name');
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
+      const agentsData = ((agentsRaw as unknown as Array<Record<string, unknown>>) || [])
+        .filter((a: any) => a.status === 'active')
+        .sort((a: any, b: any) => (a.agent_name || '').localeCompare(b.agent_name || ''));
 
       if (!agentsData) {
         setAgents([]);
@@ -86,12 +86,13 @@ export function DynamicValidationSystem() {
 
       // Check data completeness for each agent
       const agentsWithStatus = await Promise.all(
-        agentsData.map(async (agent) => {
+        agentsData.map(async (agent: any) => {
+          const agentId = agent.id as string;
           const [softwareInventory, antivirusStatus, webActivity, vulnerabilities] = await Promise.all([
-            supabase.from('software_inventory').select('id').eq('agent_id', agent.id).limit(1),
-            supabase.from('antivirus_status').select('id').eq('agent_id', agent.id).limit(1),
-            supabase.from('agent_web_activity').select('id').eq('agent_id', agent.id).limit(1),
-            supabase.from('vuln_findings').select('id').eq('agent_id', agent.id).limit(1),
+            supabase.from('software_inventory').select('id').eq('agent_id', agentId).limit(1),
+            supabase.from('antivirus_status').select('id').eq('agent_id', agentId).limit(1),
+            supabase.from('agent_web_activity').select('id').eq('agent_id', agentId).limit(1),
+            supabase.from('vuln_findings').select('id').eq('agent_id', agentId).limit(1),
           ]);
 
           return {

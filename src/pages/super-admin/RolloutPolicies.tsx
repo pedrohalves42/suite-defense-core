@@ -454,15 +454,16 @@ function AgentRolloutSimulator({ policies }: { policies: RolloutPolicy[] }) {
   const { data: agents } = useQuery({
     queryKey: ['agents-for-rollout'],
     queryFn: async () => {
-      // ADR-026: Use agents_safe view
-      const { data, error } = await supabase
+      // ADR-026: Use RPC — super-admin context, fetch all tenants' agents
+      // For rollout simulator, we need all active agents across tenants
+      const { data: rawData, error } = await supabase
         .from('agents_safe')
         .select('id, agent_name, os_type, agent_version, status')
         .eq('status', 'active')
         .is('archived_at', null);
       
       if (error) throw error;
-      return data;
+      return rawData;
     }
   });
 

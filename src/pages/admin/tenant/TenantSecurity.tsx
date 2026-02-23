@@ -57,11 +57,14 @@ export default function TenantSecurity() {
     queryFn: async () => {
       if (!tenant?.id) return { total: 0, active: 0, offline: 0 };
       
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data, error } = await supabase
-        .from("agents_safe")
-        .select("status")
-        .eq("tenant_id", tenant.id);
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: rawData, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
+
+      if (error) throw error;
+      const data = (rawData as unknown as Array<{ status: string }>) || [];
 
       if (error) throw error;
       

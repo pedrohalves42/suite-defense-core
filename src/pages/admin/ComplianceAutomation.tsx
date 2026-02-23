@@ -130,13 +130,13 @@ export default function ComplianceAutomation() {
       const sb = supabase as any;
 
       const [agentsRes, alertsRes, vulnsRes] = await Promise.all([
-        sb.from('agents_safe').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).is('archived_at', null),
+        sb.rpc('get_agents_list', { p_tenant_id: tenantId, p_include_archived: false }),
         sb.from('system_alerts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active'),
         sb.from('vulnerability_scans').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('remediation_status', 'pending'),
       ]);
 
       return {
-        agents: agentsRes.count || 0,
+        agents: ((agentsRes.data as unknown[]) || []).length,
         alerts: alertsRes.count || 0,
         vulns: vulnsRes.count || 0,
       };

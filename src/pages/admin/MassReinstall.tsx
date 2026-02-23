@@ -132,18 +132,19 @@ export default function MassReinstall() {
     queryKey: ['offline-agents-for-reinstall', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data, error } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name, hostname, agent_version, last_heartbeat, status')
-        .eq('tenant_id', tenant.id)
-        .or(`last_heartbeat.is.null,last_heartbeat.lt.${fiveMinutesAgo}`)
-        .order('agent_name');
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: rawData, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
       
       if (error) throw error;
-      return data || [];
+      const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const agents = ((rawData as unknown as Array<{id: string; agent_name: string; hostname: string; agent_version: string; last_heartbeat: string | null; status: string}>) || [])
+        .filter(a => !a.last_heartbeat || a.last_heartbeat < cutoff)
+        .sort((a, b) => (a.agent_name || '').localeCompare(b.agent_name || ''));
+      return agents;
     },
     enabled: !!tenant?.id,
     refetchInterval: 120000, // COST-OPT: 30s → 2min

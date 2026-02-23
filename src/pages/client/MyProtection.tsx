@@ -31,13 +31,12 @@ export const MyProtection = () => {
     queryFn: async () => {
       if (!tenant?.id) return null;
 
-      // Parallel fetches - ADR-026: Use agents_safe view to protect hmac_secret
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
       const [agentsRes, alertsRes, reportsRes, avRes] = await Promise.all([
-        supabase
-          .from('agents_safe')
-          .select('id, agent_name, last_heartbeat, status')
-          .eq('tenant_id', tenant.id)
-          .is('archived_at', null),
+        supabase.rpc('get_agents_list', {
+          p_tenant_id: tenant.id,
+          p_include_archived: false,
+        }),
         supabase
           .from('system_alerts')
           .select('id, severity, resolved')
@@ -56,7 +55,7 @@ export const MyProtection = () => {
           .neq('status', 'active')
       ]);
 
-      const agents = agentsRes.data || [];
+      const agents = (agentsRes.data as unknown as Array<{ id: string; agent_name: string; last_heartbeat: string | null; status: string }>) || [];
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
       const onlineAgents = agents.filter(a => a.last_heartbeat && new Date(a.last_heartbeat) > fiveMinutesAgo);
       const offlineAgents = agents.filter(a => !a.last_heartbeat || new Date(a.last_heartbeat) <= fiveMinutesAgo);

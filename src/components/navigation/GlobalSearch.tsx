@@ -115,16 +115,17 @@ export function GlobalSearch() {
       setIsSearchingAgents(true);
       
       try {
-        // ADR-026: Use agents_safe view to protect hmac_secret
-        const { data } = await supabase
-          .from('agents_safe')
-          .select('id, agent_name, agent_state, last_heartbeat')
-          .eq('tenant_id', activeTenant.id)
-          .is('archived_at', null)
-          .ilike('agent_name', `%${debouncedQuery}%`)
-          .limit(5);
+        // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+        const { data: rawData } = await supabase.rpc('get_agents_list', {
+          p_tenant_id: activeTenant.id,
+          p_include_archived: false,
+        });
+        const allAgents = (rawData as unknown as Array<{ id: string; agent_name: string; agent_state: string; last_heartbeat: string | null }>) || [];
+        const filtered = allAgents
+          .filter(a => a.agent_name.toLowerCase().includes(debouncedQuery.toLowerCase()))
+          .slice(0, 5);
 
-        const results: SearchResult[] = (data || []).map(agent => ({
+        const results: SearchResult[] = (filtered || []).map(agent => ({
           id: agent.id,
           type: 'agent' as const,
           title: agent.agent_name,

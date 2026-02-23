@@ -138,7 +138,7 @@ export function useAgentActions() {
 
   const resetSafeMode = useMutation({
     mutationFn: async (agentId: string) => {
-      // Buscar agent_name e tenant_id - ADR-026: Use agents_safe view
+      // ADR-026: Use RPC — fetch agent info via agents_safe (single agent lookup)
       const { data: agent, error: agentError } = await supabase
         .from('agents_safe')
         .select('agent_name, tenant_id')

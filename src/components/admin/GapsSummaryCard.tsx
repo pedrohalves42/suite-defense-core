@@ -77,13 +77,13 @@ export function GapsSummaryCard() {
     queryFn: async () => {
       if (!tenant?.id) return 0;
       const threshold = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { count } = await supabase
-        .from('agents_safe')
-        .select('*', { count: 'exact', head: true })
-        .eq('tenant_id', tenant.id)
-        .is('archived_at', null)
-        .lt('last_heartbeat', threshold);
-      return count || 0;
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
+      const agents = (agentsRaw as unknown as Array<{ last_heartbeat: string | null }>) || [];
+      return agents.filter(a => a.last_heartbeat && a.last_heartbeat < threshold).length;
     },
     enabled: !!tenant?.id,
     staleTime: 60000,

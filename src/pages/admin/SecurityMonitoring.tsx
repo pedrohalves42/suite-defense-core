@@ -107,15 +107,14 @@ export default function SecurityMonitoring() {
         .gte('created_at', since)
         .in('severity', ['high', 'critical']);
 
-      // Offline agents - usa threshold de alerta (1h) para segurança
-      // ADR-026: Use agents_safe view to protect hmac_secret
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
       const offlineAlertThreshold = subHours(new Date(), AGENT_STATUS_THRESHOLDS.OFFLINE_ALERT_HOURS).toISOString();
-      const { count: offlineAgents } = await supabase
-        .from('agents_safe')
-        .select('*', { count: 'exact' })
-        .eq('tenant_id', tenant.id)
-        .lt('last_heartbeat', offlineAlertThreshold)
-        .eq('status', 'active');
+      const allAgents = (agentsRaw as unknown as Array<{ last_heartbeat: string | null; status: string }>) || [];
+      const offlineAgents = allAgents.filter(a => a.status === 'active' && a.last_heartbeat && a.last_heartbeat < offlineAlertThreshold).length;
 
       return {
         rate_limit_breaches: rateLimits?.length || 0,

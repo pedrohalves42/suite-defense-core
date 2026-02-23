@@ -30,15 +30,14 @@ export function OrphanedJobsAlert({ tenantId, onRefresh }: OrphanedJobsAlertProp
 
     const fetchOrphanedJobs = async () => {
       try {
-        // Get offline agents (no heartbeat in last 30 minutes)
-        // ADR-026: Use agents_safe view to protect hmac_secret
+        // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+        const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
+          p_tenant_id: tenantId,
+          p_include_archived: false,
+        });
         const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-        
-        const { data: offlineAgents } = await supabase
-          .from('agents_safe')
-          .select('id, agent_name')
-          .eq('tenant_id', tenantId)
-          .or(`last_heartbeat.is.null,last_heartbeat.lt.${thirtyMinutesAgo}`);
+        const offlineAgents = ((agentsRaw as unknown as Array<{ id: string; agent_name: string; last_heartbeat: string | null }>) || [])
+          .filter(a => !a.last_heartbeat || a.last_heartbeat < thirtyMinutesAgo);
 
         if (!offlineAgents || offlineAgents.length === 0) {
           setOrphanedJobs([]);

@@ -51,12 +51,12 @@ export default function JobsV3Migration() {
         else stats.v1++;
       }
 
-      // Buscar heartbeats dos agentes - ADR-026: Use agents_safe view
-      const { data: agents } = await supabase
-        .from('agents_safe')
-        .select('agent_name, last_heartbeat')
-        .eq('tenant_id', tenant.id)
-        .is('archived_at', null);
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
+      const agents = (agentsRaw as unknown as Array<{ agent_name: string; last_heartbeat: string | null }>) || [];
 
       const agentHeartbeats = new Map(
         agents?.map((a) => [a.agent_name, a.last_heartbeat]) || []

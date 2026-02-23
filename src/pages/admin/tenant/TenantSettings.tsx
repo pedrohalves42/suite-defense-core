@@ -47,13 +47,13 @@ export default function TenantSettings() {
     queryKey: ["agent-count", tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return 0;
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { count, error } = await supabase
-        .from("agents_safe")
-        .select("*", { count: "exact", head: true })
-        .eq("tenant_id", tenant.id);
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
       if (error) throw error;
-      return count ?? 0;
+      return ((data as unknown[]) || []).length;
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
