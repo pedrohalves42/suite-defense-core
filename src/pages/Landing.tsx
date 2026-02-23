@@ -37,21 +37,14 @@ const Landing = () => {
 
         <main>
           <HeroSection />
-          <TargetAudienceSection />
           <PainPointsSection />
-          <SocialProofSection />
           <MiniDiagnosticSection />
           <ProductPreviewSection />
-          <DiagnosticPreviewSection />
           <BenefitsSection />
-          <TechnologySection />
-          <UseCasesSection />
           <HowItWorksSection />
-          <FeaturesSection />
           <PricingSection />
           <TestimonialsSection />
           <FAQSection />
-          <CalculatorSection />
           <CTASection />
           <ContactSection />
         </main>
