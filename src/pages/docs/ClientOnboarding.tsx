@@ -48,16 +48,28 @@ const ClientOnboarding = () => {
 
   const fetchAgentStats = async () => {
     try {
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data: agents } = await supabase
-        .from('agents_safe')
-        .select('id, status, last_heartbeat');
+      // ADR-026: Need tenant_id for RPC - get from user_roles as fallback
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
       
-      if (agents) {
-        setAgentCount(agents.length);
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-        setHasOnlineAgent(agents.some(a => a.last_heartbeat && a.last_heartbeat > fiveMinutesAgo));
-      }
+      const { data: role } = await supabase
+        .from('user_roles')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
+      
+      if (!role?.tenant_id) return;
+
+      const { data: agents } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: role.tenant_id,
+        p_include_archived: false
+      });
+      
+      const agentsList = (agents || []) as any[];
+      setAgentCount(agentsList.length);
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      setHasOnlineAgent(agentsList.some((a: any) => a.last_heartbeat && a.last_heartbeat > fiveMinutesAgo));
     } catch (error) {
       console.error('Error fetching agent stats:', error);
     }

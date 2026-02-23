@@ -171,15 +171,18 @@ export function OfflineAgentAlerts() {
 
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data, error } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name, last_heartbeat, hostname, os_type')
-        .eq('tenant_id', tenant.id)
-        .eq('status', 'active')
-        .is('archived_at', null)
-        .lt('last_heartbeat', oneHourAgo)
-        .order('last_heartbeat', { ascending: true });
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: agentsRaw, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false
+      });
+
+      if (error) throw error;
+
+      const data = ((agentsRaw || []) as any[])
+        .filter((a: any) => a.status === 'active' && a.last_heartbeat && a.last_heartbeat < oneHourAgo)
+        .map((a: any) => ({ id: a.id, agent_name: a.agent_name, last_heartbeat: a.last_heartbeat, hostname: a.hostname, os_type: a.os_type }))
+        .sort((a: any, b: any) => a.last_heartbeat.localeCompare(b.last_heartbeat));
 
       if (error) throw error;
 

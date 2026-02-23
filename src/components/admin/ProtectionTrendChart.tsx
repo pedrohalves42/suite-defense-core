@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useTenant } from '@/hooks/useTenant';
+import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -24,7 +24,7 @@ interface TrendData {
 }
 
 export function ProtectionTrendChart() {
-  const { tenant } = useTenant();
+  const { activeTenant: tenant, loading: tenantLoading } = useActiveTenant();
 
   const { data: trendData, isLoading } = useQuery({
     queryKey: ['protection-trend', tenant?.id],
@@ -34,12 +34,14 @@ export function ProtectionTrendChart() {
       const days = 7;
       const result: TrendData[] = [];
 
-      // Get agents for calculating protection score - ADR-026: Use agents_safe view
-      const { data: agents } = await supabase
-        .from('agents_safe')
-        .select('id, status, last_heartbeat')
-        .eq('tenant_id', tenant.id)
-        .is('archived_at', null);
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false
+      });
+      const agents = ((agentsRaw || []) as any[]).map((a: any) => ({
+        id: a.id, status: a.status, last_heartbeat: a.last_heartbeat
+      }));
 
       // Get alerts for score calculation
       const { data: alerts } = await supabase
@@ -109,7 +111,7 @@ export function ProtectionTrendChart() {
 
       return result;
     },
-    enabled: !!tenant?.id,
+    enabled: !tenantLoading && !!tenant?.id,
     staleTime: 5 * 60 * 1000,
   });
 

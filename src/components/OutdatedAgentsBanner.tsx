@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { AlertTriangle, X, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { useTenant } from '@/hooks/useTenant';
+import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { Link } from 'react-router-dom';
 
 interface OutdatedAgent {
@@ -11,7 +11,7 @@ interface OutdatedAgent {
 }
 
 export const OutdatedAgentsBanner = () => {
-  const { tenant } = useTenant();
+  const { activeTenant: tenant, loading: tenantLoading } = useActiveTenant();
   const [outdatedAgents, setOutdatedAgents] = useState<OutdatedAgent[]>([]);
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
@@ -19,7 +19,7 @@ export const OutdatedAgentsBanner = () => {
 
   useEffect(() => {
     const checkOutdatedAgents = async () => {
-      if (!tenant?.id) return;
+      if (!tenant?.id || tenantLoading) return;
       
       try {
         // SECURITY: Use agent_releases_public view (Phase 3 hardening - column privileges block script_content)
@@ -40,14 +40,14 @@ export const OutdatedAgentsBanner = () => {
           return;
         }
 
-        // Get agents with outdated versions - ADR-026: Use agents_safe view
-        const { data: agents } = await supabase
-          .from('agents_safe')
-          .select('agent_name, agent_version')
-          .eq('tenant_id', tenant?.id)
-          .eq('status', 'active')
-          .is('archived_at', null)
-          .not('agent_version', 'is', null);
+        // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+        const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
+          p_tenant_id: tenant.id,
+          p_include_archived: false
+        });
+        const agents = ((agentsRaw || []) as any[])
+          .filter((a: any) => a.status === 'active' && a.agent_version)
+          .map((a: any) => ({ agent_name: a.agent_name, agent_version: a.agent_version }));
 
         // Filter agents that need manual reinstallation (v3.10.21 and below have bootstrap problem)
         const outdated = (agents || []).filter(agent => {
@@ -76,7 +76,7 @@ export const OutdatedAgentsBanner = () => {
     };
 
     checkOutdatedAgents();
-  }, [tenant?.id]);
+  }, [tenant?.id, tenantLoading]);
 
   if (loading || dismissed || outdatedAgents.length === 0) {
     return null;
