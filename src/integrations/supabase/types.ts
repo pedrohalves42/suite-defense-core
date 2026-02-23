@@ -18078,7 +18078,7 @@ export type Database = {
           acknowledged_at?: string | null
           acknowledged_by?: string | null
           agent_id?: string | null
-          alert_type: string
+          alert_type?: string
           created_at?: string
           decision_event_id?: string | null
           details?: Json | null
