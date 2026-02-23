@@ -2,6 +2,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger } from './logger';
 
 /**
+ * Custom error class for Edge Function failures.
+ * Eliminates fragile string-matching for error re-throwing.
+ */
+export class EdgeFunctionError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly functionName: string
+  ) {
+    super(message);
+    this.name = 'EdgeFunctionError';
+  }
+}
+
+/**
  * FASE 2: Helper unificado para chamadas Edge Functions
  * Garante headers de autenticacao corretos e tratamento de erros padronizado
  */
@@ -74,25 +89,18 @@ export async function callEdgeFunction<T = any>(
       const errorMessage = errorData.error?.message || errorData.message || `HTTP ${response.status}`;
       
       // Mensagens amigaveis por status
-      switch (response.status) {
-        case 400:
-          throw new Error(`Requisicao invalida: ${errorMessage}`);
-        case 401:
-          throw new Error('Nao autorizado. Faca login novamente.');
-        case 403:
-          throw new Error('Acesso negado. Voce nao tem permissao para esta operacao.');
-        case 404:
-          throw new Error(`Funcao nao encontrada: ${functionName}`);
-        case 429:
-          throw new Error('Muitas requisicoes. Aguarde um momento e tente novamente.');
-        case 500:
-        case 502:
-        case 503:
-        case 504:
-          throw new Error(`Erro no servidor: ${errorMessage}`);
-        default:
-          throw new Error(errorMessage);
-      }
+      const friendlyMessages: Record<number, string> = {
+        400: `Requisicao invalida: ${errorMessage}`,
+        401: 'Nao autorizado. Faca login novamente.',
+        403: 'Acesso negado. Voce nao tem permissao para esta operacao.',
+        404: `Funcao nao encontrada: ${functionName}`,
+        429: 'Muitas requisicoes. Aguarde um momento e tente novamente.',
+      };
+      
+      const message = friendlyMessages[response.status] 
+        ?? (response.status >= 500 ? `Erro no servidor: ${errorMessage}` : errorMessage);
+      
+      throw new EdgeFunctionError(message, response.status, functionName);
     }
 
     const data = await response.json();
@@ -107,21 +115,17 @@ export async function callEdgeFunction<T = any>(
       stack: error.stack
     });
     
-    // Se ja for um erro que lancamos, re-throw
-    if (error.message.includes('Requisicao invalida') || 
-        error.message.includes('Nao autorizado') ||
-        error.message.includes('Acesso negado') ||
-        error.message.includes('Muitas requisicoes') ||
-        error.message.includes('Erro no servidor')) {
+    // Re-throw our own typed errors directly
+    if (error instanceof EdgeFunctionError) {
       throw error;
     }
     
-    // Se for erro de rede
+    // Network errors
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      throw new Error('Erro de conexao. Verifique sua internet e tente novamente.');
+      throw new EdgeFunctionError('Erro de conexao. Verifique sua internet e tente novamente.', 0, functionName);
     }
     
-    // Erro generico
-    throw new Error(`Erro ao executar ${functionName}: ${error.message}`);
+    // Generic
+    throw new EdgeFunctionError(`Erro ao executar ${functionName}: ${error.message}`, 0, functionName);
   }
 }

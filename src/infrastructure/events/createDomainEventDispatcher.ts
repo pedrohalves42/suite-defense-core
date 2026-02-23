@@ -4,16 +4,17 @@ import { PersistentDomainEventPublisher } from './PersistentDomainEventPublisher
 import { CompositeDomainEventDispatcher } from './CompositeDomainEventDispatcher';
 
 /**
- * Factory: Creates the default DomainEventDispatcher for the CyberShield application.
- * Wires both logging (observability) and persistence (audit trail) adapters.
- * 
- * Usage in composition root / hooks:
- *   const eventDispatcher = createDomainEventDispatcher();
- *   const useCase = new EnrollAgent(agentRepo, cryptoService, eventDispatcher);
+ * Factory (Singleton): Creates the default DomainEventDispatcher.
+ * Reuses the same instance to reduce memory allocations and GC pressure.
  */
+let instance: DomainEventDispatcher | null = null;
+
 export function createDomainEventDispatcher(): DomainEventDispatcher {
-  return new CompositeDomainEventDispatcher([
-    new LoggingEventDispatcher(),
-    new PersistentDomainEventPublisher(),
-  ]);
+  if (!instance) {
+    instance = new CompositeDomainEventDispatcher([
+      new LoggingEventDispatcher(),
+      new PersistentDomainEventPublisher(),
+    ]);
+  }
+  return instance;
 }

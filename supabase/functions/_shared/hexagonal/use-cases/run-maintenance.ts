@@ -49,21 +49,19 @@ export class RunMaintenanceUseCase {
 
     logger.info('[RunMaintenance] Completed', result);
 
-    // Report cron health
-    try {
-      await this.supabase.rpc('update_cron_health', {
-        p_cron_name: 'maintenance-cron',
-        p_success: true,
-        p_details: {
-          expired_jobs_processed: result.expiredJobsProcessed,
-          archived_executions: result.archivedExecutions,
-          stale_force_flags_cleaned: result.staleForceFlagsCleaned,
-          duration_ms: result.durationMs,
-        },
-      });
-    } catch (err) {
+    // Fire-and-forget: cron health update is non-critical, don't block the response
+    this.supabase.rpc('update_cron_health', {
+      p_cron_name: 'maintenance-cron',
+      p_success: true,
+      p_details: {
+        expired_jobs_processed: result.expiredJobsProcessed,
+        archived_executions: result.archivedExecutions,
+        stale_force_flags_cleaned: result.staleForceFlagsCleaned,
+        duration_ms: result.durationMs,
+      },
+    }).catch((err: unknown) => {
       logger.warn('[RunMaintenance] Failed to update cron health', { error: err });
-    }
+    });
 
     return result;
   }
