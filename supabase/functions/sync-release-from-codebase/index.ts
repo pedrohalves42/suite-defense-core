@@ -70,31 +70,16 @@ Deno.serve(async (req) => {
       const hash = Array.from(new Uint8Array(hashBuffer))
         .map(b => b.toString(16).padStart(2, '0')).join('');
 
-      // Upsert into agent_releases
-      const { data: existing } = await supabase.from('agent_releases')
-        .select('id')
-        .eq('version', version)
-        .eq('platform', platform)
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase.from('agent_releases')
-          .update({ script_content: normalized, sha256: hash, is_active: true })
-          .eq('id', existing.id);
-        
-        if (error) throw new Error(`Update ${platform} failed: ${error.message}`);
-        results[platform] = { action: 'updated', size: bytes.length, sha256: hash.substring(0, 16) + '...' };
-      } else {
-        const { error } = await supabase.from('agent_releases')
-          .insert({
-            version, platform, channel: 'stable',
-            script_content: normalized, sha256: hash, is_active: true,
-            release_notes: `Synced from codebase ${new Date().toISOString()}`,
-          });
-        
-        if (error) throw new Error(`Insert ${platform} failed: ${error.message}`);
-        results[platform] = { action: 'created', size: bytes.length, sha256: hash.substring(0, 16) + '...' };
-      }
+      // Single upsert replaces SELECT + conditional INSERT/UPDATE (saves 1 query per platform)
+      const { error } = await supabase.from('agent_releases')
+        .upsert({
+          version, platform, channel: 'stable',
+          script_content: normalized, sha256: hash, is_active: true,
+          release_notes: `Synced from codebase ${new Date().toISOString()}`,
+        }, { onConflict: 'version,platform' });
+      
+      if (error) throw new Error(`Upsert ${platform} failed: ${error.message}`);
+      results[platform] = { action: 'upserted', size: bytes.length, sha256: hash.substring(0, 16) + '...' };
     }
 
     return new Response(JSON.stringify({ success: true, version, results }), {

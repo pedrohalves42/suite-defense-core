@@ -16,17 +16,7 @@ Deno.serve(async (req) => {
   )
 
   try {
-    // Set a statement timeout to prevent the RPC from hanging
-    try {
-      await supabase.rpc('set_config', {
-        setting: 'statement_timeout',
-        value: '15000'
-      });
-    } catch {
-      // set_config may not exist, continue anyway
-    }
-
-    // Execute the correlation function with a timeout race
+    // Timeout is handled by the race below; removed redundant set_config RPC call
     const timeoutMs = 20000; // 20s total timeout
     const rpcPromise = supabase.rpc('detect_blocked_access_attempts');
     const timeoutPromise = new Promise((_, reject) =>
