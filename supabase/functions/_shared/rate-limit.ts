@@ -31,9 +31,10 @@ export async function checkRateLimit(
   });
 
   if (error) {
-    // Fail open on RPC error to avoid blocking legitimate requests
-    console.error('[RateLimit] RPC error, failing open:', error.message);
-    return { allowed: true, remainingRequests: config.maxRequests };
+    // FAIL CLOSED: Block requests when rate-limit check fails
+    // Prevents DDoS amplification when DB is under stress
+    console.error('[RateLimit] RPC error, failing CLOSED for safety:', error.message);
+    return { allowed: false, resetAt: new Date(Date.now() + 60_000) };
   }
 
   const result = data as { allowed: boolean; remaining?: number; reset_at?: string; reason?: string };
