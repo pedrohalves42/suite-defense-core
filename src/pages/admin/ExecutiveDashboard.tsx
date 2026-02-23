@@ -64,9 +64,9 @@ export default function ExecutiveDashboard() {
     // Using any to avoid TypeScript deep type instantiation issues
     const sb = supabase as any;
 
-    // Fetch agents - ADR-026: Use agents_safe view to protect hmac_secret
-    const agentsRes = await sb.from('agents_safe').select('id, agent_name, agent_state, last_heartbeat').eq('tenant_id', tid).is('archived_at', null);
-    const agents: Array<{ id: string; agent_name: string; agent_state: string; last_heartbeat: string | null }> = agentsRes.data || [];
+    // ADR-026 Zero-Gap: Use RPC with explicit tenant_id
+    const agentsRpc = await supabase.rpc('get_agents_list', { p_tenant_id: tid, p_include_archived: false });
+    const agents: Array<{ id: string; agent_name: string; agent_state: string; last_heartbeat: string | null }> = (agentsRpc.data as any[]) || [];
 
     // Fetch alerts count
     const alertsRes = await sb.from('system_alerts').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'active');

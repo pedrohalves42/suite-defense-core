@@ -137,26 +137,28 @@ export function useAgentActions() {
   });
 
   const resetSafeMode = useMutation({
-    mutationFn: async (agentId: string) => {
-      // ADR-026: Use RPC — fetch agent info via agents_safe (single agent lookup)
-      const { data: agent, error: agentError } = await supabase
-        .from('agents_safe')
-        .select('agent_name, tenant_id')
-        .eq('id', agentId)
-        .single();
-      
-      if (agentError || !agent) throw new Error('Agente não encontrado');
+    mutationFn: async ({ agentId, tenantId }: { agentId: string; tenantId: string }) => {
+      // ADR-026 Zero-Gap: Use RPC with explicit tenant_id
+      const { data: agentsList, error: rpcError } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenantId,
+        p_include_archived: false,
+      });
+      if (rpcError) throw rpcError;
+      const agent = (agentsList as unknown as Array<Record<string, unknown>>)?.find(
+        (a) => a.id === agentId
+      );
+      if (!agent) throw new Error('Agente não encontrado');
       
       // Criar job reset_safe_mode
       const job = await prepareJobForInsert({
-        agent_name: agent.agent_name,
+        agent_name: String(agent.agent_name),
         type: 'reset_safe_mode',
         payload: { triggered_by: 'admin_action', triggered_at: new Date().toISOString() },
-        tenant_id: agent.tenant_id,
+        tenant_id: tenantId,
         approved: true,
       });
       
-      const { error } = await tenantQuery('jobs', agent.tenant_id).insert(job);
+      const { error } = await tenantQuery('jobs', tenantId).insert(job);
       if (error) throw error;
     },
     onSuccess: () => {

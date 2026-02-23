@@ -36,18 +36,21 @@ export function SystemScanButton() {
   const { tenant } = useTenant();
 
   const { data: agents, isLoading: isLoadingAgents } = useQuery({
-    queryKey: ["active-agents"],
+    queryKey: ["active-agents", tenant?.id],
     queryFn: async () => {
-      // ADR-026: Use agents_safe (no tenant context available in this component)
-      const { data, error } = await supabase
-        .from("agents_safe")
-        .select("id, agent_name, status")
-        .eq("status", "active")
-        .order("agent_name");
-
+      if (!tenant?.id) return [];
+      // ADR-026 Zero-Gap: Use RPC with explicit tenant_id
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
       if (error) throw error;
-      return data as Agent[];
+      return ((data || []) as any[])
+        .filter((a: any) => a.status === 'active')
+        .map((a: any): Agent => ({ id: a.id, agent_name: a.agent_name, status: a.status }))
+        .sort((a: Agent, b: Agent) => a.agent_name.localeCompare(b.agent_name));
     },
+    enabled: !!tenant?.id,
   });
 
   const createSystemScan = useMutation({

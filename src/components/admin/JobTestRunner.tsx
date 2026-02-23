@@ -56,21 +56,24 @@ export default function JobTestRunner() {
 
   // Fetch active agents with recent heartbeat
   const { data: agents, isLoading: loadingAgents } = useQuery({
-    queryKey: ["job-test-agents"],
+    queryKey: ["job-test-agents", tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return [];
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       
-      // ADR-026: Use RPC — note: no tenant filter here as JobTestRunner is admin-scoped
-      const { data, error } = await supabase
-        .from("agents_safe")
-        .select("id, agent_name, hostname, last_heartbeat, status")
-        .eq("status", "active")
-        .gte("last_heartbeat", fiveMinutesAgo)
-        .order("agent_name");
+      // ADR-026 Zero-Gap: Use RPC with explicit tenant_id
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
       
       if (error) throw error;
-      return data as Agent[];
+      return ((data || []) as any[])
+        .filter((a: any) => a.status === 'active' && a.last_heartbeat && a.last_heartbeat >= fiveMinutesAgo)
+        .map((a: any): Agent => ({ id: a.id, agent_name: a.agent_name, hostname: a.hostname, last_heartbeat: a.last_heartbeat, status: a.status }))
+        .sort((a: Agent, b: Agent) => a.agent_name.localeCompare(b.agent_name));
     },
+    enabled: !!tenant?.id,
     refetchInterval: 30000,
   });
 

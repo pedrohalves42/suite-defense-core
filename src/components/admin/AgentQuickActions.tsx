@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 interface AgentQuickActionsProps {
   agentId: string;
   agentName: string;
+  tenantId?: string;
   isThrottled?: boolean | null;
   isIsolated?: boolean | null;
   isInSafeMode?: boolean | null;
@@ -31,6 +32,7 @@ interface AgentQuickActionsProps {
 export function AgentQuickActions({ 
   agentId, 
   agentName,
+  tenantId,
   isThrottled,
   isIsolated,
   isInSafeMode,
@@ -194,7 +196,7 @@ export function AgentQuickActions({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => resetSafeMode.mutate(agentId)}
+                  onClick={() => tenantId && resetSafeMode.mutate({ agentId, tenantId })}
                   disabled={resetSafeMode.isPending}
                   className="text-orange-600 hover:text-orange-700 hover:bg-orange-100 dark:hover:bg-orange-900/20"
                 >
