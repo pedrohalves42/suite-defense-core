@@ -26688,6 +26688,89 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_configs_safe: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          event_types: string[] | null
+          failure_count: number | null
+          headers: Json | null
+          id: string | null
+          is_active: boolean | null
+          last_status_code: number | null
+          last_triggered_at: string | null
+          max_retries: number | null
+          name: string | null
+          severity_filter: string[] | null
+          tenant_id: string | null
+          updated_at: string | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          event_types?: string[] | null
+          failure_count?: number | null
+          headers?: Json | null
+          id?: string | null
+          is_active?: boolean | null
+          last_status_code?: number | null
+          last_triggered_at?: string | null
+          max_retries?: number | null
+          name?: string | null
+          severity_filter?: string[] | null
+          tenant_id?: string | null
+          updated_at?: string | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          event_types?: string[] | null
+          failure_count?: number | null
+          headers?: Json | null
+          id?: string | null
+          is_active?: boolean | null
+          last_status_code?: number | null
+          last_triggered_at?: string | null
+          max_retries?: number | null
+          name?: string | null
+          severity_filter?: string[] | null
+          tenant_id?: string | null
+          updated_at?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "webhook_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "webhook_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
     }
     Functions: {
       _assert_service_role_or_super_admin: { Args: never; Returns: undefined }
