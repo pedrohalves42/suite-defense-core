@@ -52,13 +52,16 @@ export function SystemCyclesHealthCard() {
           .eq('status', 'delivered')
           .is('completed_at', null),
         
-        // Agents offline > 24h - ADR-026: Use agents_safe view
-        supabase
-          .from('agents_safe')
-          .select('id', { count: 'exact', head: true })
-          .eq('tenant_id', tenant.id)
-          .is('archived_at', null)
-          .lt('last_heartbeat', new Date(Date.now() - 86400000).toISOString()),
+        // Agents offline > 24h - ADR-026: Use RPC then filter client-side
+        (async () => {
+          const { data } = await supabase.rpc('get_agents_list', {
+            p_tenant_id: tenant.id,
+            p_include_archived: false
+          });
+          const threshold = new Date(Date.now() - 86400000).toISOString();
+          const count = ((data || []) as any[]).filter((a: any) => a.last_heartbeat && a.last_heartbeat < threshold).length;
+          return { count, error: null };
+        })(),
         
         // DLQ pending
         supabase

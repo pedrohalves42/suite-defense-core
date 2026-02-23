@@ -101,16 +101,20 @@ export default function DiagnosticsCenter() {
     queryKey: ['diagnostics-agents', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data, error } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name, tenant_id, status, enrolled_at, last_heartbeat, hostname, os_type, is_throttled, is_isolated, safe_mode_entered_at, throttle_reason, isolation_reason, safe_mode_reason')
-        .eq('tenant_id', tenant.id)
-        .is('archived_at', null)
-        .order('last_heartbeat', { ascending: false, nullsFirst: false });
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false
+      });
 
       if (error) throw error;
-      return data || [];
+      return ((data || []) as any[])
+        .sort((a: any, b: any) => {
+          if (!a.last_heartbeat && !b.last_heartbeat) return 0;
+          if (!a.last_heartbeat) return 1;
+          if (!b.last_heartbeat) return -1;
+          return b.last_heartbeat.localeCompare(a.last_heartbeat);
+        });
     },
     enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 120000, // COST-OPT: 30s → 2min

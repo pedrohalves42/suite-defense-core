@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileSearch, Loader2, HardDrive } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useActiveTenant } from '@/hooks/useActiveTenant';
 
 export function ScanFileDialog() {
   const [open, setOpen] = useState(false);
@@ -16,21 +17,25 @@ export function ScanFileDialog() {
   const [filePath, setFilePath] = useState('');
   const [scanFullSystem, setScanFullSystem] = useState(false);
   const queryClient = useQueryClient();
+  const { activeTenant, loading: tenantLoading } = useActiveTenant();
 
   const { data: agents, isLoading: agentsLoading } = useQuery({
-    queryKey: ['active-agents'],
+    queryKey: ['active-agents', activeTenant?.id],
     queryFn: async () => {
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data, error } = await supabase
-        .from('agents_safe')
-        .select('agent_name, status')
-        .eq('status', 'active')
-        .is('archived_at', null)
-        .order('agent_name');
+      if (!activeTenant?.id) return [];
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: activeTenant.id,
+        p_include_archived: false
+      });
       
       if (error) throw error;
-      return data;
+      return ((data || []) as any[])
+        .filter((a: any) => a.status === 'active')
+        .map((a: any) => ({ agent_name: a.agent_name, status: a.status }))
+        .sort((a: any, b: any) => a.agent_name.localeCompare(b.agent_name));
     },
+    enabled: !tenantLoading && !!activeTenant?.id,
   });
 
   const createScanJob = useMutation({

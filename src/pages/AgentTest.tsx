@@ -75,15 +75,14 @@ export default function AgentTest() {
     queryFn: async () => {
       if (!tenant?.id) return [];
       
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data, error } = await supabase
-        .from("agents_safe")
-        .select("*")
-        .eq("tenant_id", tenant.id)
-        .order("agent_name");
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false
+      });
       
       if (error) throw error;
-      return data;
+      return ((data || []) as any[]).sort((a: any, b: any) => a.agent_name.localeCompare(b.agent_name));
     },
     enabled: !!tenant?.id
   });

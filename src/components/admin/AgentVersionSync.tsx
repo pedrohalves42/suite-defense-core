@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { prepareJobForInsert } from "@/lib/job-utils";
-import { useTenant } from "@/hooks/useTenant";
+import { useActiveTenant } from "@/hooks/useActiveTenant";
 import {
   Collapsible,
   CollapsibleContent,
@@ -38,7 +38,7 @@ interface AgentVersionSyncProps {
 
 export function AgentVersionSync({ latestVersions }: AgentVersionSyncProps) {
   const queryClient = useQueryClient();
-  const { tenant } = useTenant();
+  const { activeTenant: tenant, loading: tenantLoading } = useActiveTenant();
   const [syncingAll, setSyncingAll] = useState(false);
   const [syncingAgent, setSyncingAgent] = useState<string | null>(null);
   const [nuclearLoading, setNuclearLoading] = useState(false);
@@ -53,18 +53,29 @@ export function AgentVersionSync({ latestVersions }: AgentVersionSyncProps) {
     queryFn: async () => {
       if (!tenant?.id) return [];
       
-      const { data, error } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name, agent_version, status, last_heartbeat, os_type, tenant_id')
-        .eq('tenant_id', tenant.id)
-        .eq('status', 'active')
-        .is('archived_at', null)
-        .order('agent_name');
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false
+      });
       
       if (error) throw error;
-      return (data || []).map(d => ({ ...d, force_update_version: null, force_update_delivered_count: 0 })) as Agent[];
+      return ((data || []) as any[])
+        .filter((a: any) => a.status === 'active')
+        .map((a: any): Agent => ({
+          id: a.id,
+          agent_name: a.agent_name,
+          agent_version: a.agent_version,
+          status: a.status,
+          last_heartbeat: a.last_heartbeat,
+          os_type: a.os_type,
+          tenant_id: a.tenant_id,
+          force_update_version: a.force_update_version,
+          force_update_delivered_count: a.force_update_delivered_count,
+        }))
+        .sort((a: Agent, b: Agent) => a.agent_name.localeCompare(b.agent_name));
     },
-    enabled: !!tenant?.id,
+    enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 30000
   });
 

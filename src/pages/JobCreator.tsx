@@ -18,7 +18,7 @@ import { logger } from "@/lib/logger";
 import { useMutation } from "@tanstack/react-query";
 import { getJobTypeLabel, getJobStatusLabel, JOB_TYPE_LABELS } from "@/lib/job-labels";
 import { getAgentDisplayName } from "@/lib/agent-utils";
-import { useTenant } from "@/hooks/useTenant";
+import { useActiveTenant } from "@/hooks/useActiveTenant";
 
 interface Agent {
   id: string;
@@ -45,7 +45,7 @@ interface Job {
 }
 
 const JobCreator = () => {
-  const { tenant } = useTenant();
+  const { activeTenant: tenant, loading: tenantLoading } = useActiveTenant();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
@@ -63,20 +63,29 @@ const JobCreator = () => {
   const [recurrencePattern, setRecurrencePattern] = useState<string>("0 * * * *");
 
   const loadAgents = useCallback(async () => {
+    if (!tenant?.id || tenantLoading) return;
     try {
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data, error } = await supabase
-        .from("agents_safe")
-        .select("id, agent_name, hostname, display_name, status, last_heartbeat")
-        .order("agent_name", { ascending: true });
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false
+      });
 
       if (error) throw error;
-      setAgents(data || []);
+      const mapped = ((data || []) as any[]).map((agent): Agent => ({
+        id: agent.id,
+        agent_name: agent.agent_name,
+        hostname: agent.hostname,
+        display_name: agent.display_name,
+        status: agent.status,
+        last_heartbeat: agent.last_heartbeat,
+      })).sort((a, b) => a.agent_name.localeCompare(b.agent_name));
+      setAgents(mapped);
     } catch (error) {
       logger.error("Erro ao carregar agentes", error);
       toast.error("Erro ao carregar lista de agentes");
     }
-  }, []);
+  }, [tenant?.id, tenantLoading]);
 
   const loadJobs = useCallback(async () => {
     try {

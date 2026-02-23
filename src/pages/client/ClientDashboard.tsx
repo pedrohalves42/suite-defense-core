@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useTenant } from '@/hooks/useTenant';
+import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -77,18 +77,21 @@ const HealthGauge = ({ score }: { score: number }) => {
 };
 
 export const ClientDashboard = () => {
-  const { tenant } = useTenant();
+  const { activeTenant: tenant, loading: tenantLoading } = useActiveTenant();
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['client-dashboard-stats', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return null;
 
-      // Fetch agents - ADR-026: Use agents_safe view to protect hmac_secret
-      const { data: agents } = await supabase
-        .from('agents_safe')
-        .select('id, status, last_heartbeat, agent_name')
-        .eq('tenant_id', tenant.id);
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false
+      });
+      const agents = ((agentsRaw || []) as any[]).map((a: any) => ({
+        id: a.id, status: a.status, last_heartbeat: a.last_heartbeat, agent_name: a.agent_name
+      }));
 
       // Fetch recent alerts
       const { data: alerts } = await supabase
@@ -168,7 +171,7 @@ export const ClientDashboard = () => {
         hasAvIssues: avDisabled > 0 || avThreats > 0
       };
     },
-    enabled: !!tenant?.id,
+    enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 
