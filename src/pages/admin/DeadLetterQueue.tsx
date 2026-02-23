@@ -175,8 +175,8 @@ export default function DeadLetterQueue() {
             .eq('id', entry.id);
           
           successCount++;
-        } catch {
-          // Continue with next entry
+        } catch (err) {
+          console.warn('[DLQ] Bulk retry failed for entry:', entry.id, err);
         }
       }
       

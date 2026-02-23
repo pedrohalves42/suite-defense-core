@@ -148,10 +148,12 @@ export default function SuperAdminTenants() {
       if (!tenants || tenants.length === 0) return {};
       
       const tenantIds = tenants.map(t => t.id);
+      // ADR-026 Zero-Gap: Use agents table directly with tenant filter (super-admin context)
       const { data, error } = await supabase
-        .from('active_agents')
+        .from('agents')
         .select('tenant_id')
-        .in('tenant_id', tenantIds);
+        .in('tenant_id', tenantIds)
+        .is('archived_at', null);
       
       if (error) throw error;
       
@@ -201,10 +203,11 @@ export default function SuperAdminTenants() {
       if (userError) throw userError;
       const uniqueUserIds = new Set(userRoles?.map(r => r.user_id) || []);
       
-      // Count total agents across all tenants
+      // Count total agents across all tenants (super-admin context)
       const { count: agentCount, error: agentError } = await supabase
-        .from('active_agents')
-        .select('*', { count: 'exact', head: true });
+        .from('agents')
+        .select('*', { count: 'exact', head: true })
+        .is('archived_at', null);
       
       if (agentError) throw agentError;
       

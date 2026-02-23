@@ -50,20 +50,25 @@ export default function InstallationHealth() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // ADR-026: Use RPC — note: InstallationHealth doesn't have tenant context yet
-      const { data: agents, error: agentsError } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name, status, enrolled_at, last_heartbeat')
-        .or('status.eq.pending,last_heartbeat.is.null')
-        .is('archived_at', null)
-        .gte('enrolled_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-        .order('enrolled_at', { ascending: false });
-
+      // ADR-026 Zero-Gap: Use RPC with explicit tenant_id
+      if (!activeTenant?.id) return;
+      const { data: rpcData, error: agentsError } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: activeTenant.id,
+        p_include_archived: false,
+      });
       if (agentsError) {
         console.error('Error fetching agents:', agentsError);
         toast.error('Erro ao carregar agentes problematicos');
-      } else {
-        const formatted: ProblematicAgent[] = (agents || []).map(a => ({
+      }
+      // Filter problematic agents client-side
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const agents = ((rpcData || []) as any[]).filter((a: any) =>
+        (a.status === 'pending' || !a.last_heartbeat) &&
+        a.enrolled_at && a.enrolled_at >= twentyFourHoursAgo
+      ).sort((a: any, b: any) => (b.enrolled_at || '').localeCompare(a.enrolled_at || ''));
+
+      if (!agentsError) {
+        const formatted: ProblematicAgent[] = (agents || []).map((a: any) => ({
           id: a.id,
           agent_name: a.agent_name,
           status: a.status,

@@ -137,14 +137,15 @@ export default function RealTimeSecurityDashboard() {
       
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
       
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data, error } = await supabase
-        .from('agents_safe')
-        .select('id, status, last_heartbeat, is_isolated')
-        .eq('tenant_id', tenant.id)
-        .is('archived_at', null);
-      
+      // ADR-026 Zero-Gap: Use RPC with explicit tenant_id
+      const { data: rpcData, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
       if (error) throw error;
+      const data = (rpcData as any[] || []).map((a: any) => ({
+        id: a.id, status: a.status, last_heartbeat: a.last_heartbeat, is_isolated: a.is_isolated,
+      }));
       
       const total = data?.length || 0;
       const protected_ = data?.filter(a => 

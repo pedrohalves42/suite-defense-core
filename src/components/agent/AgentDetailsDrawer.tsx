@@ -370,7 +370,7 @@ export function AgentDetailsDrawer({
                         {isInSafeMode && (
                           <>
                             <button
-                              onClick={() => agentActions.resetSafeMode.mutate(agentId)}
+                              onClick={() => tenantId && agentActions.resetSafeMode.mutate({ agentId, tenantId })}
                               disabled={agentActions.resetSafeMode.isPending}
                               className="w-full flex items-start gap-3 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 transition-colors text-left"
                             >
