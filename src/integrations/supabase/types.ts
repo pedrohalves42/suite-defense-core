@@ -27120,17 +27120,31 @@ export type Database = {
         }
         Returns: Json
       }
-      create_job_if_not_exists: {
-        Args: {
-          p_agent_id: string
-          p_payload?: Json
-          p_priority?: number
-          p_tenant_id: string
-          p_ttl_hours?: number
-          p_type: string
-        }
-        Returns: string
-      }
+      create_job_if_not_exists:
+        | {
+            Args: {
+              p_agent_id: string
+              p_idempotency_key?: string
+              p_job_type: string
+              p_max_retries?: number
+              p_payload?: Json
+              p_priority?: number
+              p_tenant_id: string
+              p_timeout_seconds?: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_agent_id: string
+              p_payload?: Json
+              p_priority?: number
+              p_tenant_id: string
+              p_ttl_hours?: number
+              p_type: string
+            }
+            Returns: string
+          }
       create_jobs_for_all_agents: {
         Args: { p_job_type: string; p_payload?: Json; p_tenant_id: string }
         Returns: number
@@ -27297,15 +27311,17 @@ export type Database = {
         }
         Returns: undefined
       }
-      enter_autonomous_safe_mode: {
-        Args: {
-          p_agent_id: string
-          p_failure_count: number
-          p_failure_type: string
-          p_reason: string
-        }
-        Returns: Json
-      }
+      enter_autonomous_safe_mode:
+        | { Args: { p_agent_id: string; p_reason?: string }; Returns: Json }
+        | {
+            Args: {
+              p_agent_id: string
+              p_failure_count: number
+              p_failure_type: string
+              p_reason: string
+            }
+            Returns: Json
+          }
       escalate_breached_sla_tasks: { Args: never; Returns: undefined }
       evaluate_decision_rules: { Args: never; Returns: Json }
       evaluate_job_slo: {
@@ -27350,25 +27366,37 @@ export type Database = {
         Args: { p_sql: string; p_timeout_ms?: number }
         Returns: Json
       }
-      finalize_job_execution: {
-        Args: {
-          p_agent_id: string
-          p_error_message?: string
-          p_execution_hash?: string
-          p_execution_id: string
-          p_execution_index?: number
-          p_execution_time_seconds?: number
-          p_finished_at?: string
-          p_job_id: string
-          p_output_hash?: string
-          p_previous_execution_hash?: string
-          p_result_signature?: string
-          p_signature_verified?: boolean
-          p_started_at?: string
-          p_status: string
-        }
-        Returns: Json
-      }
+      finalize_job_execution:
+        | {
+            Args: {
+              p_agent_id: string
+              p_error_message?: string
+              p_execution_hash?: string
+              p_execution_id: string
+              p_execution_index?: number
+              p_execution_time_seconds?: number
+              p_finished_at: string
+              p_job_id: string
+              p_output_hash?: string
+              p_previous_execution_hash?: string
+              p_result_signature?: string
+              p_signature_verified?: boolean
+              p_started_at: string
+              p_status: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_agent_id: string
+              p_error_message?: string
+              p_execution_id: string
+              p_exit_code?: number
+              p_output?: string
+              p_status: string
+            }
+            Returns: Json
+          }
       find_unsafe_definer_functions: {
         Args: never
         Returns: {
