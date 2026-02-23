@@ -986,7 +986,7 @@ serve(async (req) => {
           p_success: true,
           p_details: result,
         });
-      } catch { /* best effort */ }
+      } catch (e) { console.warn('[evaluate-automation-rules] cron health update failed:', e); }
     }
 
     console.log(`[Enterprise Engine v2] tenant=${tenantId} | ${result.evaluated} rules | ${result.triggered} triggered | ${result.blocked} blocked | ${result.decisions} decisions | risk=${result.risk_score ?? 'n/a'}`);
