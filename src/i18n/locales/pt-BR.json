@@ -187,12 +187,13 @@
   "landing": {
     "hero": {
       "badge": "🇧🇷 Empresa 100% Brasileira • Suporte em Português",
-      "title1": "Proteção Cibernética Inteligente",
-      "title2": "para PMEs Brasileiras",
-      "description": "Antivírus, monitoramento 24/7 e compliance LGPD em um só lugar.",
-      "descriptionBold": " Trial gratuito de 14 dias - sem cartão de crédito.",
-      "ctaButton": "Quero meu diagnóstico gratuito",
-      "reassurance": "Sem cartão de crédito • Resultado em até 48h • Suporte em português",
+      "title1": "Sua empresa pode parar amanhã",
+      "title2": "por um ataque que custava R$25/mês evitar.",
+      "description": "73% das PMEs brasileiras já sofreram algum incidente de segurança digital.",
+      "descriptionBold": " Descubra se a sua está vulnerável — diagnóstico gratuito em 48h.",
+      "ctaButton": "Descobrir se minha empresa está vulnerável",
+      "ctaSecondary": "Agendar diagnóstico gratuito de 15 min",
+      "reassurance": "Sem cartão de crédito • Resultado em até 48h • 100% em português",
       "stats": {
         "0": { "value": "até 48h", "label": "Diagnóstico gratuito" },
         "1": { "value": "24/7", "label": "Monitoramento contínuo" },
@@ -410,9 +411,10 @@
       "label": "Quantos dispositivos sua empresa possui?"
     },
     "ctaFinal": {
-      "title": "Veja como está a segurança da sua empresa",
-      "cta": "Fazer diagnóstico gratuito",
-      "subtitle": "Sem cartão de crédito • Resultado em até 48h"
+      "title": "Cada dia sem proteção é um dia que sua empresa corre risco",
+      "cta": "Descobrir se minha empresa está vulnerável",
+      "ctaSecondary": "Agendar diagnóstico gratuito de 15 min",
+      "subtitle": "Sem cartão de crédito • Resultado em até 48h • Mais de 500 empresas já fizeram"
     },
     "contact": {
       "title": "Fale Conosco"

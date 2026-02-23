@@ -21,6 +21,7 @@ export function useLandingContent() {
       description: t('landing.hero.description'),
       descriptionBold: t('landing.hero.descriptionBold'),
       ctaButton: t('landing.hero.ctaButton'),
+      ctaSecondary: t('landing.hero.ctaSecondary'),
       reassurance: t('landing.hero.reassurance'),
       stats: [
         { value: t('landing.hero.stats.0.value'), label: t('landing.hero.stats.0.label') },
@@ -196,6 +197,7 @@ export function useLandingContent() {
     ctaFinal: {
       title: t('landing.ctaFinal.title'),
       cta: t('landing.ctaFinal.cta'),
+      ctaSecondary: t('landing.ctaFinal.ctaSecondary'),
       subtitle: t('landing.ctaFinal.subtitle'),
     },
     contact: {

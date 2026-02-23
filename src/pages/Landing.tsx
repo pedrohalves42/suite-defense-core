@@ -17,7 +17,9 @@ import {
   FAQSection,
   CalculatorSection,
   CTASection,
-  ContactSection
+  ContactSection,
+  MiniDiagnosticSection,
+  ProductPreviewSection
 } from "@/components/landing";
 
 const Landing = () => {
@@ -38,6 +40,8 @@ const Landing = () => {
           <TargetAudienceSection />
           <PainPointsSection />
           <SocialProofSection />
+          <MiniDiagnosticSection />
+          <ProductPreviewSection />
           <DiagnosticPreviewSection />
           <BenefitsSection />
           <TechnologySection />

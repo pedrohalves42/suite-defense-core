@@ -14,3 +14,5 @@ export { FAQSection } from './FAQSection';
 export { CalculatorSection } from './CalculatorSection';
 export { CTASection } from './CTASection';
 export { ContactSection } from './ContactSection';
+export { MiniDiagnosticSection } from './MiniDiagnosticSection';
+export { ProductPreviewSection } from './ProductPreviewSection';
