@@ -191,7 +191,8 @@
       "title2": "for Small & Medium Businesses",
       "description": "Antivirus, 24/7 monitoring and regulatory compliance in one place.",
       "descriptionBold": " Free 14-day trial - no credit card required.",
-      "ctaButton": "Get my free security diagnostic",
+      "ctaButton": "Find out if my company is vulnerable",
+      "ctaSecondary": "Schedule free 15-min diagnostic",
       "reassurance": "No credit card • Results within 48h • Full support",
       "stats": {
         "0": { "value": "within 48h", "label": "Free diagnostic" },
@@ -410,9 +411,10 @@
       "label": "How many devices does your company have?"
     },
     "ctaFinal": {
-      "title": "See how your company's security stands",
-      "cta": "Get free diagnostic",
-      "subtitle": "No credit card • Results within 48h"
+      "title": "Every day without protection is a day your company is at risk",
+      "cta": "Find out if my company is vulnerable",
+      "ctaSecondary": "Schedule free 15-min diagnostic",
+      "subtitle": "No credit card • Results within 48h • 500+ companies already tested"
     },
     "contact": {
       "title": "Contact Us"

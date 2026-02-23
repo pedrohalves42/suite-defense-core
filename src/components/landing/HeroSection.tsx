@@ -61,10 +61,20 @@ export function HeroSection() {
               size="lg" 
               className="text-lg h-14 px-8 btn-enterprise"
             >
-              <Link to="/signup" aria-label="Iniciar diagnostico gratuito de seguranca">
+              <Link to="/signup" aria-label="Descobrir se minha empresa está vulnerável">
                 {hero.ctaButton}
                 <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />
               </Link>
+            </Button>
+            <Button 
+              asChild 
+              size="lg" 
+              variant="outline"
+              className="text-lg h-14 px-8"
+            >
+              <a href="#mini-diagnostico" aria-label="Agendar diagnóstico gratuito">
+                {hero.ctaSecondary || "Agendar diagnóstico gratuito de 15 min"}
+              </a>
             </Button>
           </div>
 

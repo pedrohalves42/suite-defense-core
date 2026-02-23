@@ -191,7 +191,8 @@
       "title2": "para Pequeñas y Medianas Empresas",
       "description": "Antivirus, monitoreo 24/7 y cumplimiento normativo en un solo lugar.",
       "descriptionBold": " Prueba gratuita de 14 días - sin tarjeta de crédito.",
-      "ctaButton": "Quiero mi diagnóstico gratuito",
+      "ctaButton": "Descubrir si mi empresa está vulnerable",
+      "ctaSecondary": "Agendar diagnóstico gratuito de 15 min",
       "reassurance": "Sin tarjeta de crédito • Resultado en hasta 48h • Soporte completo",
       "stats": {
         "0": { "value": "hasta 48h", "label": "Diagnóstico gratuito" },
@@ -410,9 +411,10 @@
       "label": "¿Cuántos dispositivos tiene su empresa?"
     },
     "ctaFinal": {
-      "title": "Vea cómo está la seguridad de su empresa",
-      "cta": "Hacer diagnóstico gratuito",
-      "subtitle": "Sin tarjeta de crédito • Resultado en hasta 48h"
+      "title": "Cada día sin protección es un día que su empresa corre riesgo",
+      "cta": "Descubrir si mi empresa está vulnerable",
+      "ctaSecondary": "Agendar diagnóstico gratuito de 15 min",
+      "subtitle": "Sin tarjeta de crédito • Resultado en hasta 48h • Más de 500 empresas ya lo hicieron"
     },
     "contact": {
       "title": "Contáctenos"
