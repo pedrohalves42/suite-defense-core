@@ -60,7 +60,7 @@ export default function AIInsights() {
       if (error) throw error;
       return data as { insights: AIInsight[]; statistics: Statistics };
     },
-    refetchInterval: 60000, // Atualizar a cada minuto
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
   });
 
   const acknowledgeMutation = useMutation({

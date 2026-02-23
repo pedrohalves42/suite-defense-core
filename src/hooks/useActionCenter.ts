@@ -63,7 +63,7 @@ export function useActionCenter() {
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
     staleTime: 10000,
   });
 

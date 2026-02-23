@@ -42,7 +42,7 @@ export const useAutoRemediation = () => {
       return data as RemediationAction[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 15000,
+    refetchInterval: 120000, // COST-OPT: 15s → 2min
   });
 
   const executeRemediation = useMutation({

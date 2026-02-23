@@ -100,7 +100,7 @@ export default function AIActionApproval() {
       if (error) throw error;
       return data as AIAction[];
     },
-    refetchInterval: 10000,
+    refetchInterval: 120000, // COST-OPT: 10s → 2min
   });
 
   // Buscar insights recentes (últimos 30 dias)

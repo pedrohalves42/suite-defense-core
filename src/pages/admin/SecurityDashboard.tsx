@@ -58,7 +58,7 @@ export default function SecurityDashboard() {
       if (error) throw error;
       return data as SecurityLog[];
     },
-    refetchInterval: 10000,
+    refetchInterval: 120000, // COST-OPT: 10s → 2min
   });
 
   const { data: stats } = useQuery({
@@ -82,7 +82,7 @@ export default function SecurityDashboard() {
         uniqueIps,
       };
     },
-    refetchInterval: 10000,
+    refetchInterval: 120000, // COST-OPT: 10s → 2min
   });
 
   const { data: blockedIPs } = useQuery({
@@ -97,7 +97,7 @@ export default function SecurityDashboard() {
       if (error) throw error;
       return data as BlockedIP[];
     },
-    refetchInterval: 10000,
+    refetchInterval: 120000, // COST-OPT: 10s → 2min
     enabled: isSuperAdmin,
   });
 
@@ -115,7 +115,7 @@ export default function SecurityDashboard() {
       if (error) throw error;
       return data as FailedAttempt[];
     },
-    refetchInterval: 10000,
+    refetchInterval: 120000, // COST-OPT: 10s → 2min
     enabled: isSuperAdmin,
   });
 

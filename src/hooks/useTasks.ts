@@ -102,7 +102,7 @@ export function useTasks(filters?: TaskFilters) {
       return data as Task[];
     },
     enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 }
 
@@ -160,7 +160,7 @@ export function useTaskStats() {
       } as TaskStats;
     },
     enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 }
 
@@ -282,7 +282,7 @@ export function useOpenTasksCount() {
       return count || 0;
     },
     enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
-    refetchInterval: 60000,
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
     staleTime: 30000,
   });
 }

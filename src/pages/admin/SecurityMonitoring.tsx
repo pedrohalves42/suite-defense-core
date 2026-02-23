@@ -127,7 +127,7 @@ export default function SecurityMonitoring() {
       } as SecurityMetrics;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 
   // Fetch recent security events
@@ -145,7 +145,7 @@ export default function SecurityMonitoring() {
       if (error) throw error;
       return data as SecurityEvent[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 
   // Fetch blocked IPs
@@ -162,7 +162,7 @@ export default function SecurityMonitoring() {
       if (error) throw error;
       return data as BlockedIP[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 
   // Fetch failed login stats by IP

@@ -63,7 +63,7 @@ export function SoarExecutionsCard() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 
   const executions = summaryData || [];

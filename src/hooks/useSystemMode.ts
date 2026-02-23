@@ -52,7 +52,7 @@ export function useSystemMode() {
         expires_at: null,
       } as SystemState;
     },
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
     staleTime: 10000,
   });
 }

@@ -46,7 +46,7 @@ export default function AgentReleases() {
       return data?.releases || [];
     },
     enabled: isSuperAdmin,
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
     refetchOnWindowFocus: true,
   });
 

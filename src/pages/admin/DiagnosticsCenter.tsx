@@ -113,7 +113,7 @@ export default function DiagnosticsCenter() {
       return data || [];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
   });
 
   // Query problematic agents
@@ -129,7 +129,7 @@ export default function DiagnosticsCenter() {
       if (error) throw error;
       return (data || []) as unknown as ProblematicAgent[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 120000, // COST-OPT: 30s → 2min
     enabled: !tenantLoading && !!tenant?.id,
   });
 
