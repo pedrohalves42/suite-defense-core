@@ -70,13 +70,12 @@ export function FirstTimeSetupWizard() {
       icon: <Monitor className="h-8 w-8" />,
       checkFn: async () => {
         if (!tenantId) return false;
-        // ADR-026: Use agents_safe view to protect hmac_secret
-        const { count } = await supabase
-          .from('agents_safe')
-          .select('*', { count: 'exact', head: true })
-          .eq('tenant_id', tenantId)
-          .is('archived_at', null);
-        return (count || 0) > 0;
+        // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+        const { data } = await supabase.rpc('get_agents_list', {
+          p_tenant_id: tenantId,
+          p_include_archived: false,
+        });
+        return ((data as unknown[]) || []).length > 0;
       },
       actionText: 'Instalar Agente',
       actionLink: '/installer',
@@ -89,15 +88,13 @@ export function FirstTimeSetupWizard() {
       icon: <Shield className="h-8 w-8" />,
       checkFn: async () => {
         if (!tenantId) return false;
-        // ADR-026: Use agents_safe view to protect hmac_secret
-        const { data } = await supabase
-          .from('agents_safe')
-          .select('last_heartbeat')
-          .eq('tenant_id', tenantId)
-          .is('archived_at', null)
-          .not('last_heartbeat', 'is', null)
-          .limit(1);
-        return (data?.length || 0) > 0;
+        // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+        const { data } = await supabase.rpc('get_agents_list', {
+          p_tenant_id: tenantId,
+          p_include_archived: false,
+        });
+        const agents = (data as unknown as Array<{ last_heartbeat: string | null }>) || [];
+        return agents.some(a => a.last_heartbeat !== null);
       },
       actionText: 'Ver Dashboard',
       actionLink: '/admin/executive',

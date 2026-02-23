@@ -36,11 +36,12 @@ export const OnboardingProgress = () => {
 
   const fetchProgress = async () => {
     try {
-      // Check agents - ADR-026: Use agents_safe view to protect hmac_secret
-      const { data: agents } = await supabase
-        .from('agents_safe')
-        .select('id, status, last_heartbeat')
-        .is('archived_at', null);
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: user?.id ? undefined as any : '', // fallback
+        p_include_archived: false,
+      });
+      const agents = (agentsRaw as unknown as Array<{ id: string; status: string; last_heartbeat: string | null }>) || [];
       
       if (agents) {
         setAgentCount(agents.length);

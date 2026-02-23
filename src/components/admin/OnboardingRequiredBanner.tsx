@@ -46,13 +46,11 @@ export function OnboardingRequiredBanner() {
           .from('enrollment_keys')
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id),
-        // ADR-026: Use agents_safe view to protect hmac_secret
-        supabase
-          .from('agents_safe')
-          .select('id, last_heartbeat')
-          .eq('tenant_id', tenant.id)
-          .is('archived_at', null)
-          .limit(1),
+        // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+        supabase.rpc('get_agents_list', {
+          p_tenant_id: tenant.id,
+          p_include_archived: false,
+        }),
         supabase
           .from('notification_channels')
           .select('id', { count: 'exact', head: true })
@@ -61,7 +59,7 @@ export function OnboardingRequiredBanner() {
       ]);
 
       const hasKey = (keyResult.count || 0) > 0;
-      const agents = agentResult.data || [];
+      const agents = ((agentResult.data as unknown as Array<{ id: string; last_heartbeat: string | null }>) || []);
       const hasAgent = agents.length > 0;
       const hasOnlineAgent = agents.some(a => a.last_heartbeat && 
         new Date(a.last_heartbeat) > new Date(Date.now() - 5 * 60 * 1000));

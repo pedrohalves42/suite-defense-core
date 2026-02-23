@@ -20,13 +20,14 @@ export function ValidationJobDispatcher() {
     try {
       if (!tenant) throw new Error("Tenant não selecionado");
 
-      // Get TESTEMIT agent - ADR-026: Use agents_safe view
-      const { data: testemitAgent, error: testemitError } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name')
-        .eq('agent_name', 'TESTEMIT')
-        .eq('tenant_id', tenant.id)
-        .single();
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
+      const allAgents = (agentsRaw as unknown as Array<{ id: string; agent_name: string }>) || [];
+      const testemitAgent = allAgents.find(a => a.agent_name === 'TESTEMIT');
+      const testemitError = !testemitAgent ? 'Not found' : null;
 
       if (testemitError || !testemitAgent) {
         toast.error("Agente TESTEMIT não encontrado");
@@ -54,13 +55,9 @@ export function ValidationJobDispatcher() {
         }
       }
 
-      // Get testepc2 agent - ADR-026: Use agents_safe view
-      const { data: testepc2Agent, error: testepc2Error } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name')
-        .eq('agent_name', 'testepc2')
-        .eq('tenant_id', tenant.id)
-        .single();
+      // Reuse the same RPC data for testepc2
+      const testepc2Agent = allAgents.find(a => a.agent_name === 'testepc2');
+      const testepc2Error = !testepc2Agent ? 'Not found' : null;
 
       if (testepc2Error || !testepc2Agent) {
         toast.error("Agente testepc2 não encontrado");

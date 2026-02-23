@@ -76,17 +76,24 @@ export const ClientComputers = () => {
     queryFn: async () => {
       if (!tenant?.id) return [];
 
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data: agentsData, error } = await supabase
-        .from('agents_safe')
-        .select('*')
-        .eq('tenant_id', tenant.id)
-        .order('last_heartbeat', { ascending: false, nullsFirst: false });
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: rawData, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: true,
+      });
+
+      if (error) throw error;
+      const agentsData = ((rawData as unknown as Array<Record<string, unknown>>) || [])
+        .sort((a: any, b: any) => {
+          const aHb = a.last_heartbeat || '';
+          const bHb = b.last_heartbeat || '';
+          return bHb.localeCompare(aHb);
+        });
 
       if (error) throw error;
 
       // Fetch latest metrics for each agent
-      const agentIds = agentsData?.map(a => a.id) || [];
+      const agentIds = agentsData?.map((a: any) => a.id as string) || [];
       
       if (agentIds.length === 0) return [];
 
@@ -104,7 +111,7 @@ export const ClientComputers = () => {
         }
       });
 
-      return agentsData?.map(agent => ({
+      return agentsData?.map((agent: any) => ({
         ...agent,
         metrics: latestMetrics[agent.id] || null
       })) || [];

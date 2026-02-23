@@ -28,7 +28,7 @@ export default function SuperAdminMetrics() {
   const { data: agentStats } = useQuery({
     queryKey: ['super-admin-agent-stats'],
     queryFn: async () => {
-      // ADR-026: Use agents_safe view
+      // ADR-026: Super-admin context — agents_safe is acceptable for cross-tenant aggregation
       const { data, error } = await supabase
         .from('agents_safe')
         .select('status, tenant_id')

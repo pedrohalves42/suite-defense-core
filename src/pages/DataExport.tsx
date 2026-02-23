@@ -32,7 +32,7 @@ export default function DataExport() {
       if (!tenant?.id) return null;
 
       const [agents, scans, jobs, quarantine, auditLogs] = await Promise.all([
-        supabase.from('agents_safe').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+        supabase.rpc('get_agents_list', { p_tenant_id: tenant.id, p_include_archived: true }),
         supabase.from('virus_scans').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
         supabase.from('jobs').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
         supabase.from('quarantined_files').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
@@ -40,7 +40,7 @@ export default function DataExport() {
       ]);
 
       return {
-        agents: agents.count || 0,
+        agents: ((agents.data as unknown[]) || []).length,
         scans: scans.count || 0,
         jobs: jobs.count || 0,
         quarantine: quarantine.count || 0,
@@ -71,18 +71,17 @@ export default function DataExport() {
       // Fetch data based on type
       switch (exportType) {
         case 'agents': {
-          const query = supabase
-            .from('agents_safe')
-            .select('*')
-            .eq('tenant_id', tenant.id)
-            .order('enrolled_at', { ascending: false });
+          // ADR-026: Use RPC with explicit tenant_id
+          const { data: agentsRaw, error: agentsErr } = await supabase.rpc('get_agents_list', {
+            p_tenant_id: tenant.id,
+            p_include_archived: true,
+          });
+          const agentsList = (agentsRaw as unknown as Array<Record<string, unknown>>) || [];
+          const agentsSorted = dateFilter 
+            ? agentsList.filter((a: any) => a.enrolled_at >= dateFilter)
+            : agentsList;
 
-          if (dateFilter) query.gte('enrolled_at', dateFilter);
-
-          const { data: agents, error } = await query;
-          if (error) throw error;
-
-          data = agents.map(a => ({
+          data = agentsSorted.map((a: any) => ({
             'Nome do Agente': a.agent_name,
             'Status': a.status,
             'Data de Registro': formatBrazilDateTime(a.enrolled_at, 'datetime'),

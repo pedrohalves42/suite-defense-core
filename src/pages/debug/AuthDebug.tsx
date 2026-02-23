@@ -72,11 +72,12 @@ export default function AuthDebug() {
 
   const testAgents = async () => {
     await testEndpoint('Agents', async () => {
-      const { data, error } = await supabase
-        .from('agents_safe')
-        .select('*')
-        .limit(1);
-      
+      if (!tenant?.id) throw new Error('Tenant não selecionado');
+      // ADR-026: Use RPC with explicit tenant_id
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
       if (error) throw error;
     });
   };

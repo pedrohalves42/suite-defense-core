@@ -71,14 +71,15 @@ export function AgentSystemInfo({ agentId, tenantId }: AgentSystemInfoProps) {
   const { data: info, isLoading } = useQuery({
     queryKey: ['agent-system-info', agentId],
     queryFn: async (): Promise<AgentInfo | null> => {
-      // Fetch agent basic data
-      const { data: agent, error } = await supabase
-        .from('agents_safe')
-        .select('agent_name, hostname, os_type, os_version, agent_version, agent_version_code, last_heartbeat, enrolled_at, poll_interval_seconds, agent_mode, display_name, status')
-        .eq('id', agentId)
-        .maybeSingle();
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenantId,
+        p_include_archived: true,
+      });
+      const agents = (agentsRaw as unknown as Array<Record<string, unknown>>) || [];
+      const agent = agents.find(a => a.id === agentId);
 
-      if (error || !agent) return null;
+      if (!agent) return null;
 
       // Fetch latest network info for public IP
       const { data: netInfo } = await supabase
@@ -90,9 +91,20 @@ export function AgentSystemInfo({ agentId, tenantId }: AgentSystemInfoProps) {
         .maybeSingle();
 
       return {
-        ...agent,
+        agent_name: agent.agent_name as string,
+        hostname: (agent.hostname as string) || null,
+        os_type: (agent.os_type as string) || null,
+        os_version: (agent.os_version as string) || null,
+        agent_version: (agent.agent_version as string) || null,
+        agent_version_code: (agent.agent_version_code as number) || null,
+        last_heartbeat: (agent.last_heartbeat as string) || null,
+        enrolled_at: (agent.enrolled_at as string) || null,
+        poll_interval_seconds: (agent.poll_interval_seconds as number) || null,
+        agent_mode: (agent.agent_mode as string) || null,
+        display_name: (agent.display_name as string) || null,
+        status: (agent.status as string) || null,
         public_ip: netInfo?.public_ip || null,
-      };
+      } as AgentInfo;
     },
     enabled: !!agentId,
     refetchInterval: 30000,

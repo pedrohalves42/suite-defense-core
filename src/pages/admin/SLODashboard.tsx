@@ -90,12 +90,12 @@ export default function SLODashboard() {
     
     setLoading(true);
     try {
-      // ADR-026: Use agents_safe view
-      const { data: agents } = await supabase
-        .from('agents_safe')
-        .select('id, status, last_heartbeat')
-        .eq('tenant_id', tenantId)
-        .is('archived_at', null);
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenantId,
+        p_include_archived: false,
+      });
+      const agents = (agentsRaw as unknown as Array<{ id: string; status: string; last_heartbeat: string | null }>) || [];
 
       const now = new Date();
       const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);

@@ -73,13 +73,12 @@ export const AutomatedOnboardingWizard = ({
         }
       }
 
-      // Check for agents - ADR-026: Use agents_safe view to protect hmac_secret
-      const { data: agents } = await supabase
-        .from('agents_safe')
-        .select('id, last_heartbeat')
-        .eq('tenant_id', tenant.id)
-        .is('archived_at', null)
-        .limit(1);
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
+      const agents = (agentsRaw as unknown as Array<{ id: string; last_heartbeat: string | null }>) || [];
       
       if (agents && agents.length > 0) {
         setHasAgent(true);

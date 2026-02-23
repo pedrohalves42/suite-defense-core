@@ -50,15 +50,16 @@ export default function TestComplianceGenerator() {
       
       setLoadingAgents(true);
       try {
-        // ADR-026: Use agents_safe view to protect hmac_secret
-        const { data, error } = await supabase
-          .from("agents_safe")
-          .select("id, agent_name, hostname, status, os_type, agent_version, last_heartbeat")
-          .eq("tenant_id", tenant.id)
-          .order("agent_name");
+        // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+        const { data: rawData, error } = await supabase.rpc('get_agents_list', {
+          p_tenant_id: tenant.id,
+          p_include_archived: false,
+        });
+        const data = ((rawData as unknown as Array<Record<string, unknown>>) || [])
+          .sort((a: any, b: any) => (a.agent_name || '').localeCompare(b.agent_name || ''));
         
         if (error) throw error;
-        setAgents(data || []);
+        setAgents((data || []) as unknown as AgentInfo[]);
 
         const onlineCount = (data || []).filter(a => a.status === "active").length;
         

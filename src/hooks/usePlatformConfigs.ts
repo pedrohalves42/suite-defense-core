@@ -26,11 +26,13 @@ export const usePlatformConfigs = () => {
     queryKey: ['agents-by-platform', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return { windows: 0, macos: 0, linux: 0 };
-      const { data, error } = await supabase
-        .from('active_agents')
-        .select('os_type')
-        .eq('tenant_id', tenant.id);
+      // ADR-026: Use RPC with explicit tenant_id
+      const { data: rawData, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
       if (error) throw error;
+      const data = (rawData as unknown as Array<{ os_type: string | null }>) || [];
       const counts = { windows: 0, macos: 0, linux: 0 };
       for (const a of data || []) {
         const os = (a.os_type || 'windows').toLowerCase();
