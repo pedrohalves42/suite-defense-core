@@ -27051,6 +27051,7 @@ export type Database = {
       }
       cleanup_old_update_decisions: { Args: never; Returns: undefined }
       cleanup_orphaned_agents: { Args: never; Returns: number }
+      cleanup_performance_metrics_monthly: { Args: never; Returns: Json }
       cleanup_problematic_agent: { Args: { p_agent_id: string }; Returns: Json }
       cleanup_stale_playbook_executions: { Args: never; Returns: number }
       cleanup_stale_queued_jobs: {
@@ -27323,7 +27324,9 @@ export type Database = {
             Returns: Json
           }
       escalate_breached_sla_tasks: { Args: never; Returns: undefined }
-      evaluate_decision_rules: { Args: never; Returns: Json }
+      evaluate_decision_rules:
+        | { Args: never; Returns: Json }
+        | { Args: { p_context?: Json; p_tenant_id: string }; Returns: Json }
       evaluate_job_slo: {
         Args: never
         Returns: {
@@ -27781,6 +27784,18 @@ export type Database = {
         }
         Returns: string
       }
+      log_security_violation: {
+        Args: {
+          p_attack_type: string
+          p_details?: Json
+          p_endpoint: string
+          p_ip_address: string
+          p_severity?: string
+          p_tenant_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       log_sensitive_access: {
         Args: {
           p_action: string
@@ -28044,14 +28059,19 @@ export type Database = {
         Args: { _session_id: string }
         Returns: undefined
       }
-      update_user_role: {
-        Args: {
-          _new_role: Database["public"]["Enums"]["app_role"]
-          _requester_id?: string
-          _target_user_id: string
-        }
-        Returns: Json
-      }
+      update_user_role:
+        | {
+            Args: {
+              _new_role: Database["public"]["Enums"]["app_role"]
+              _requester_id?: string
+              _target_user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: { p_role: string; p_tenant_id: string; p_user_id: string }
+            Returns: Json
+          }
       update_user_role_rpc: {
         Args: { p_new_role: string; p_user_id: string }
         Returns: undefined
