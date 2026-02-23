@@ -14,6 +14,7 @@ import { ComplianceReportGenerator } from "@/components/admin/ComplianceReportGe
 import { SecurityAuditReport } from "@/components/security/SecurityAuditReport";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { useTenant } from "@/hooks/useTenant";
+import { useActiveTenant } from "@/hooks/useActiveTenant";
 // jsPDF and autoTable imported dynamically to avoid test/build issues
 
 interface Agent {
@@ -83,23 +84,26 @@ export default function Reports() {
   const [selectedAgent, setSelectedAgent] = useState<string>("all");
   const [isGenerating, setIsGenerating] = useState(false);
   const { tenant } = useTenant();
+  const { activeTenant, loading: tenantLoading } = useActiveTenant();
 
+  // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
   const { data: agents } = useQuery({
-    queryKey: ["agents", tenant?.id],
+    queryKey: ["agents-list-reports", activeTenant?.id],
     queryFn: async () => {
-      if (!tenant?.id) return [];
-      // ADR-026: Use agents_safe view to protect hmac_secret
-      const { data, error } = await supabase
-        .from("agents_safe")
-        .select("id, agent_name, status")
-        .eq("tenant_id", tenant.id)
-        .eq("status", "active")
-        .order("agent_name");
+      if (!activeTenant?.id) return [];
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: activeTenant.id,
+        p_include_archived: false
+      });
 
       if (error) throw error;
-      return data as Agent[];
+      return ((data || []) as any[])
+        .filter((a: any) => a.status === 'active')
+        .map((a: any) => ({ id: a.id, agent_name: a.agent_name, status: a.status } as Agent))
+        .sort((a, b) => a.agent_name.localeCompare(b.agent_name));
     },
-    enabled: !!tenant?.id,
+    enabled: !tenantLoading && !!activeTenant?.id,
+    staleTime: 2 * 60 * 1000,
   });
 
   const { data: report, refetch: refetchReport, isLoading: isLoadingReport } = useQuery({
