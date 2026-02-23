@@ -263,7 +263,7 @@ Deno.serve(async (req) => {
         }
 
         const { error: metricsError } = await supabase
-          .from('agent_system_metrics')
+          .from('agent_system_metrics_partitioned')
           .insert(metricsRow)
 
         if (metricsError) {
