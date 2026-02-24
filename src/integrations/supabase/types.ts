@@ -12090,6 +12090,7 @@ export type Database = {
           id: string
           ip_address: string
           reason: string
+          tenant_id: string | null
         }
         Insert: {
           blocked_until: string
@@ -12097,6 +12098,7 @@ export type Database = {
           id?: string
           ip_address: string
           reason: string
+          tenant_id?: string | null
         }
         Update: {
           blocked_until?: string
@@ -12104,8 +12106,38 @@ export type Database = {
           id?: string
           ip_address?: string
           reason?: string
+          tenant_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ip_blocklist_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ip_blocklist_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ip_blocklist_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ip_blocklist_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       itsm_integrations: {
         Row: {
@@ -27662,6 +27694,7 @@ export type Database = {
       cleanup_orphaned_agents: { Args: never; Returns: number }
       cleanup_performance_metrics_monthly: { Args: never; Returns: Json }
       cleanup_problematic_agent: { Args: { p_agent_id: string }; Returns: Json }
+      cleanup_rls_test_results: { Args: never; Returns: undefined }
       cleanup_stale_playbook_executions: { Args: never; Returns: number }
       cleanup_stale_queued_jobs: {
         Args: { p_hours_threshold?: number }
