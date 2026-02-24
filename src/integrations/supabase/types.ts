@@ -3695,6 +3695,7 @@ export type Database = {
           platform: string
           rollout_percentage: number
           target_version: string
+          tenant_id: string | null
         }
         Insert: {
           agent_id?: string | null
@@ -3707,6 +3708,7 @@ export type Database = {
           platform: string
           rollout_percentage: number
           target_version: string
+          tenant_id?: string | null
         }
         Update: {
           agent_id?: string | null
@@ -3719,6 +3721,7 @@ export type Database = {
           platform?: string
           rollout_percentage?: number
           target_version?: string
+          tenant_id?: string | null
         }
         Relationships: [
           {
@@ -3804,6 +3807,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_problematic_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_update_decisions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_update_decisions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agent_update_decisions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agent_update_decisions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
           },
         ]
       }
