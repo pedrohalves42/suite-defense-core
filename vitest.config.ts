@@ -13,7 +13,7 @@ export default defineConfig({
     },
     globals: true,
     environment: 'jsdom',
-    setupFiles: '../src/test/setup.ts',
+    setupFiles: './src/test/setup.ts',
     testTimeout: 30000,
     hookTimeout: 30000,
     isolate: false,
@@ -22,6 +22,7 @@ export default defineConfig({
       'dist/**',
       'build/**',
       'e2e/**',
+      'contracts/**',
       '**/*.spec.ts',
       '**/*.spec.tsx',
     ],
@@ -38,7 +39,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '../src')
+      '@': path.resolve(__dirname, './src')
     }
   }
 })
