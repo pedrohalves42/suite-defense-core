@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
@@ -19,6 +20,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 const ITEMS_PER_PAGE = 15;
 
 export default function VirusScans() {
+  const { t } = useTranslation();
   const { tenant } = useTenant();
   const [page, setPage] = useState(0);
   const [agentFilter, setAgentFilter] = useState('all');
@@ -126,12 +128,12 @@ export default function VirusScans() {
 
   const getStatusBadge = (ismalicious: boolean | null, positives: number | null) => {
     if (ismalicious === null) {
-      return { variant: 'outline' as const, icon: FileSearch, text: 'Desconhecido' };
+      return { variant: 'outline' as const, icon: FileSearch, text: t('virusScansPage.unknown') };
     }
     if (ismalicious) {
-      return { variant: 'destructive' as const, icon: AlertTriangle, text: `Malicioso (${positives || 0})` };
+      return { variant: 'destructive' as const, icon: AlertTriangle, text: `${t('virusScansPage.malicious')} (${positives || 0})` };
     }
-    return { variant: 'default' as const, icon: CheckCircle2, text: 'Limpo' };
+    return { variant: 'default' as const, icon: CheckCircle2, text: t('virusScansPage.clean') };
   };
 
   const ScanDetailsDialog = ({ scan }: { scan: any }) => {
@@ -142,49 +144,49 @@ export default function VirusScans() {
       <Dialog>
         <DialogTrigger asChild>
           <Button variant="ghost" size="sm">
-            Detalhes
+            {t('virusScansPage.details')}
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-primary" />
-              Detalhes do Scan
+              {t('virusScansPage.scanDetails')}
             </DialogTitle>
             <DialogDescription>
-              Informacoes completas da analise do arquivo
+              {t('virusScansPage.scanDetailsDesc')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm font-semibold text-muted-foreground">Status</p>
+                <p className="text-sm font-semibold text-muted-foreground">{t('virusScansPage.status')}</p>
                 <Badge variant={status.variant} className="mt-1">
                   <StatusIcon className="h-3 w-3 mr-1" />
                   {status.text}
                 </Badge>
               </div>
               <div>
-                <p className="text-sm font-semibold text-muted-foreground">Computador</p>
+                <p className="text-sm font-semibold text-muted-foreground">{t('virusScansPage.computer')}</p>
                 <p className="text-sm mt-1 font-mono">{scan.agent_name}</p>
               </div>
               <div>
-                <p className="text-sm font-semibold text-muted-foreground">Data do Scan</p>
+                <p className="text-sm font-semibold text-muted-foreground">{t('virusScansPage.scanDate')}</p>
                 <p className="text-sm mt-1">{formatBrazilDateTime(scan.scanned_at, 'full')}</p>
               </div>
               <div>
-                <p className="text-sm font-semibold text-muted-foreground">Deteccoes</p>
+                <p className="text-sm font-semibold text-muted-foreground">{t('virusScansPage.detections')}</p>
                 <p className="text-sm mt-1">{scan.positives || 0} / {scan.total_scans || 0}</p>
               </div>
             </div>
 
             <div>
-              <p className="text-sm font-semibold text-muted-foreground">Caminho do Arquivo</p>
+              <p className="text-sm font-semibold text-muted-foreground">{t('virusScansPage.filePath')}</p>
               <p className="text-sm mt-1 font-mono break-all bg-secondary p-2 rounded">{scan.file_path}</p>
             </div>
 
             <div>
-              <p className="text-sm font-semibold text-muted-foreground">Hash do Arquivo</p>
+              <p className="text-sm font-semibold text-muted-foreground">{t('virusScansPage.fileHash')}</p>
               <p className="text-sm mt-1 font-mono break-all bg-secondary p-2 rounded">{scan.file_hash}</p>
             </div>
 
@@ -198,14 +200,14 @@ export default function VirusScans() {
                   className="w-full"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  Ver Relatorio Completo no VirusTotal
+                  {t('virusScansPage.viewVirusTotal')}
                 </Button>
               </div>
             )}
 
             {scan.scan_result && (
               <div>
-                <p className="text-sm font-semibold text-muted-foreground mb-2">Resultado Detalhado</p>
+                <p className="text-sm font-semibold text-muted-foreground mb-2">{t('virusScansPage.detailedResult')}</p>
                 <div className="bg-secondary p-3 rounded max-h-60 overflow-y-auto">
                   <pre className="text-xs font-mono whitespace-pre-wrap">
                     {JSON.stringify(scan.scan_result, null, 2)}
@@ -228,8 +230,8 @@ export default function VirusScans() {
               <Shield className="h-8 w-8 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold">Scans de Virus</h1>
-              <p className="text-muted-foreground">Resultados das analises do VirusTotal</p>
+              <h1 className="text-3xl font-bold">{t('virusScansPage.title')}</h1>
+              <p className="text-muted-foreground">{t('virusScansPage.subtitle')}</p>
             </div>
           </div>
         </div>
@@ -241,14 +243,14 @@ export default function VirusScans() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Filtros</CardTitle>
-            <CardDescription>Refine sua busca nos resultados de scans</CardDescription>
+            <CardTitle>{t('virusScansPage.filters')}</CardTitle>
+            <CardDescription>{t('virusScansPage.filtersDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <Input
-                  placeholder="Buscar por arquivo ou hash..."
+                  placeholder={t('virusScansPage.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => {
                     setSearchTerm(e.target.value);
@@ -262,10 +264,10 @@ export default function VirusScans() {
                   setPage(0);
                 }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Todos os computadores" />
+                    <SelectValue placeholder={t('virusScansPage.allComputers')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos os computadores</SelectItem>
+                    <SelectItem value="all">{t('virusScansPage.allComputers')}</SelectItem>
                     {agents?.map((agent) => (
                       <SelectItem key={agent} value={agent}>
                         {agent}
@@ -280,12 +282,12 @@ export default function VirusScans() {
                   setPage(0);
                 }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Todos os status" />
+                    <SelectValue placeholder={t('virusScansPage.allStatus')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos os status</SelectItem>
-                    <SelectItem value="malicious">Apenas Maliciosos</SelectItem>
-                    <SelectItem value="clean">Apenas Limpos</SelectItem>
+                    <SelectItem value="all">{t('virusScansPage.allStatus')}</SelectItem>
+                    <SelectItem value="malicious">{t('virusScansPage.maliciousOnly')}</SelectItem>
+                    <SelectItem value="clean">{t('virusScansPage.cleanOnly')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -324,7 +326,7 @@ export default function VirusScans() {
                   }}
                   className="w-full"
                 >
-                  Limpar Filtros
+                  {t('virusScansPage.clearFilters')}
                 </Button>
               </div>
             </div>
@@ -333,31 +335,31 @@ export default function VirusScans() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Resultados dos Scans</CardTitle>
+            <CardTitle>{t('virusScansPage.scanResults')}</CardTitle>
             <CardDescription>
-              Mostrando {scans?.data?.length || 0} de {scans?.count || 0} scans
+              {t('virusScansPage.showing', { shown: scans?.data?.length || 0, total: scans?.count || 0 })}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8">Carregando...</div>
+              <div className="text-center py-8">{t('virusScansPage.loading')}</div>
             ) : scans?.data?.length === 0 ? (
               <div className="text-center py-12">
                 <FileSearch className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                <p className="text-muted-foreground">Nenhum scan encontrado com os filtros aplicados</p>
+                <p className="text-muted-foreground">{t('virusScansPage.noScansFound')}</p>
               </div>
             ) : (
               <>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Data/Hora</TableHead>
-                      <TableHead>Computador</TableHead>
-                      <TableHead>Arquivo</TableHead>
-                      <TableHead>Hash</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Deteccoes</TableHead>
-                      <TableHead className="text-right">Acoes</TableHead>
+                      <TableHead>{t('virusScansPage.dateTime')}</TableHead>
+                      <TableHead>{t('virusScansPage.computer')}</TableHead>
+                      <TableHead>{t('virusScansPage.file')}</TableHead>
+                      <TableHead>{t('virusScansPage.hash')}</TableHead>
+                      <TableHead>{t('virusScansPage.status')}</TableHead>
+                      <TableHead>{t('virusScansPage.detections')}</TableHead>
+                      <TableHead className="text-right">{t('virusScansPage.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -412,10 +414,10 @@ export default function VirusScans() {
                       disabled={page === 0}
                     >
                       <ChevronLeft className="h-4 w-4 mr-2" />
-                      Anterior
+                      {t('virusScansPage.previous')}
                     </Button>
                     <span className="text-sm text-muted-foreground">
-                      Pagina {page + 1} de {totalPages}
+                      {t('virusScansPage.pageOf', { current: page + 1, total: totalPages })}
                     </span>
                     <Button
                       variant="outline"
@@ -423,7 +425,7 @@ export default function VirusScans() {
                       onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                       disabled={page >= totalPages - 1}
                     >
-                      Proxima
+                      {t('virusScansPage.next')}
                       <ChevronRight className="h-4 w-4 ml-2" />
                     </Button>
                   </div>
