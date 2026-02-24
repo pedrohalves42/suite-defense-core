@@ -141,12 +141,9 @@ export function ComplianceReportGenerator() {
       doc.rect(0, 0, pageWidth, pageHeight, "F");
 
       // Logo
-      doc.setFillColor(37, 99, 235);
-      doc.circle(pageWidth / 2, 40, 18, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("CS", pageWidth / 2, 44, { align: "center" });
+      const { loadLogoForPDF, addLogoToPDF } = await import('@/lib/pdfLogoHelper');
+      const logoDataUrl = await loadLogoForPDF();
+      addLogoToPDF(doc, logoDataUrl, pageWidth / 2, 20, 36);
 
       // Title
       doc.setFontSize(24);

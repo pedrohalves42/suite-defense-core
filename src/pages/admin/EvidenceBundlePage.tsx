@@ -38,17 +38,22 @@ const EVIDENCE_OPTIONS = [
   { key: 'auditLogs', label: 'Logs de Auditoria', icon: '📝', description: 'Trilha de auditoria imutável completa' },
 ] as const;
 
-function generatePDF(bundleData: Record<string, unknown>, result: ExportResult) {
+function generatePDF(bundleData: Record<string, unknown>, result: ExportResult, logoDataUrl?: string | null) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
-  // Header
+  // Header with logo
+  if (logoDataUrl) {
+    try {
+      doc.addImage(logoDataUrl, 'PNG', pageWidth / 2 - 10, 4, 20, 20);
+    } catch { /* fallback below */ }
+  }
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text('Evidence Bundle', pageWidth / 2, 25, { align: 'center' });
+  doc.text('Evidence Bundle', pageWidth / 2, 28, { align: 'center' });
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('Pacote de Evidências Criptograficamente Verificável', pageWidth / 2, 32, { align: 'center' });
+  doc.text('Pacote de Evidências Criptograficamente Verificável', pageWidth / 2, 35, { align: 'center' });
 
   // Separator line
   doc.setDrawColor(59, 130, 246);
@@ -224,9 +229,11 @@ export default function EvidenceBundlePage() {
     URL.revokeObjectURL(url);
   };
 
-  const downloadPDF = () => {
+  const downloadPDF = async () => {
     if (!exportResult?.bundle) return;
-    const doc = generatePDF(exportResult.bundle, exportResult);
+    const { loadLogoForPDF } = await import('@/lib/pdfLogoHelper');
+    const logoDataUrl = await loadLogoForPDF();
+    const doc = generatePDF(exportResult.bundle, exportResult, logoDataUrl);
     doc.save(`evidence-bundle-${exportResult.auditId}.pdf`);
   };
 
