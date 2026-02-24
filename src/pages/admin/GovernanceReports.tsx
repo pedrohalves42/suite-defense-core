@@ -76,8 +76,11 @@ ${weeklyMetrics.critical_open > 0 ? `🔴 ${weeklyMetrics.critical_open} tasks c
     const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     
+    const { loadLogoForPDF, addLogoToPDF } = await import('@/lib/pdfLogoHelper');
+    const logoDataUrl = await loadLogoForPDF();
+    addLogoToPDF(doc, logoDataUrl, 26, 6, 16);
     doc.setFontSize(18);
-    doc.text('Relatório de Governança', 20, 20);
+    doc.text('Relatório de Governança', 46, 20);
     
     doc.setFontSize(12);
     doc.text(`Período: ${format(new Date(report.period_start), "dd/MM/yyyy", { locale: ptBR })} - ${format(new Date(report.period_end), "dd/MM/yyyy", { locale: ptBR })}`, 20, 35);

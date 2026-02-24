@@ -188,10 +188,13 @@ const ComplianceTimeline: React.FC = () => {
       const { default: autoTable } = await import('jspdf-autotable');
       const doc = new jsPDF();
       
-      // Header
-      doc.setFontSize(18);
+      // Header with logo
+      const { loadLogoForPDF, addLogoToPDF } = await import('@/lib/pdfLogoHelper');
+      const logoDataUrl = await loadLogoForPDF();
+      addLogoToPDF(doc, logoDataUrl, 22, 6, 16);
+      doc.setFontSize(16);
       doc.setTextColor(0, 100, 180);
-      doc.text('Relatório de Compliance - Timeline de Evidências', 14, 20);
+      doc.text('Relatório de Compliance - Timeline de Evidências', 36, 20);
       
       doc.setFontSize(10);
       doc.setTextColor(100);

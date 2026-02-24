@@ -204,6 +204,8 @@ export default function Reports() {
       
       const { default: jsPDF } = await import('jspdf');
       const { default: autoTable } = await import('jspdf-autotable');
+      const { loadLogoForPDF, addLogoToPDF } = await import('@/lib/pdfLogoHelper');
+      const logoDataUrl = await loadLogoForPDF();
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -211,13 +213,16 @@ export default function Reports() {
 
       // Header with dark background
       doc.setFillColor(15, 23, 42); // slate-900
-      doc.rect(0, 0, pageWidth, 45, 'F');
+      doc.rect(0, 0, pageWidth, 50, 'F');
       
-      // Logo/Title
+      // Logo image
+      addLogoToPDF(doc, logoDataUrl, pageWidth / 2, 2, 16);
+      
+      // Title
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(28);
+      doc.setFontSize(22);
       doc.setFont('helvetica', 'bold');
-      doc.text('CYBERSHIELD', pageWidth / 2, 18, { align: 'center' });
+      doc.text('CYBERSHIELD', pageWidth / 2, 24, { align: 'center' });
       
       doc.setFontSize(14);
       doc.setFont('helvetica', 'normal');
@@ -511,20 +516,16 @@ export default function Reports() {
       const stats = reportData.statistics;
       const unprotected = reportData.unprotected_pcs || { no_antivirus: 0, outdated_av: 0, offline_agents: 0 };
 
+      const { loadLogoForPDF, addLogoToPDF } = await import('@/lib/pdfLogoHelper');
+      const logoDataUrl = await loadLogoForPDF();
+
       // ==================== PAGE 1: COVER ====================
       // Full dark background
       doc.setFillColor(15, 23, 42);
       doc.rect(0, 0, pageWidth, pageHeight, 'F');
       
-      // Logo area with shield icon
-      doc.setFillColor(37, 99, 235);
-      doc.circle(pageWidth / 2, 55, 22, 'F');
-      doc.setFillColor(59, 130, 246);
-      doc.circle(pageWidth / 2, 55, 18, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(20);
-      doc.setFont('helvetica', 'bold');
-      doc.text('CS', pageWidth / 2, 60, { align: 'center' });
+      // Logo image
+      addLogoToPDF(doc, logoDataUrl, pageWidth / 2, 30, 36);
       
       // Title
       doc.setFontSize(32);

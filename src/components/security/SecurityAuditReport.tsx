@@ -87,10 +87,10 @@ export function SecurityAuditReport() {
       doc.setFillColor(15, 23, 42);
       doc.rect(0, 0, pageWidth, 80, 'F');
 
-      // Shield icon simulation (using text)
-      doc.setTextColor(74, 222, 128); // green-400
-      doc.setFontSize(40);
-      doc.text('🛡️', pageWidth / 2, 30, { align: 'center' });
+      // Logo
+      const { loadLogoForPDF, addLogoToPDF } = await import('@/lib/pdfLogoHelper');
+      const logoDataUrl = await loadLogoForPDF();
+      addLogoToPDF(doc, logoDataUrl, pageWidth / 2, 8, 30);
 
       // Title
       doc.setTextColor(255, 255, 255);
