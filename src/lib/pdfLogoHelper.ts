@@ -1,6 +1,6 @@
 /**
  * Helper to load the CyberShield logo as a base64 data URL for use in jsPDF reports.
- * Loads the logo from /cybershield-logo.png (public folder).
+ * Loads the logo from /favicon-cybshield.png (public folder).
  */
 
 let cachedLogoDataUrl: string | null = null;
@@ -9,7 +9,7 @@ export async function loadLogoForPDF(): Promise<string | null> {
   if (cachedLogoDataUrl) return cachedLogoDataUrl;
 
   try {
-    const response = await fetch('/cybershield-logo.png');
+    const response = await fetch('/favicon-cybshield.png');
     if (!response.ok) return null;
     
     const blob = await response.blob();
