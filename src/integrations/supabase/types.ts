@@ -17854,7 +17854,7 @@ export type Database = {
           last_triggered_at: string | null
           name: string
           requires_approval: boolean
-          tenant_id: string
+          tenant_id: string | null
           trigger_conditions: Json | null
           trigger_type: string
           updated_at: string
@@ -17873,7 +17873,7 @@ export type Database = {
           last_triggered_at?: string | null
           name: string
           requires_approval?: boolean
-          tenant_id: string
+          tenant_id?: string | null
           trigger_conditions?: Json | null
           trigger_type: string
           updated_at?: string
@@ -17892,7 +17892,7 @@ export type Database = {
           last_triggered_at?: string | null
           name?: string
           requires_approval?: boolean
-          tenant_id?: string
+          tenant_id?: string | null
           trigger_conditions?: Json | null
           trigger_type?: string
           updated_at?: string
@@ -27340,6 +27340,7 @@ export type Database = {
           rows_inserted: number
         }[]
       }
+      alert_long_offline_agents: { Args: never; Returns: Json }
       apply_agent_isolation: {
         Args: { p_agent_id: string; p_reason?: string }
         Returns: boolean
