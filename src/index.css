@@ -124,6 +124,10 @@
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
   /* === Card Variants === */
   .card-intel {
     @apply bg-card border border-border rounded-xl relative;

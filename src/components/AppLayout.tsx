@@ -63,7 +63,7 @@ export const AppLayout = () => {
           {/* Mobile sidebar sheet */}
           {isMobile && (
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetContent side="left" className="p-0 w-64">
+              <SheetContent side="left" className="p-0 w-[280px] max-w-[85vw] [&>button:last-child]:hidden">
                 <AppSidebar mobile onNavigate={() => setMobileMenuOpen(false)} />
               </SheetContent>
             </Sheet>
@@ -79,7 +79,7 @@ export const AppLayout = () => {
             </div>
             <main className={cn(
               "p-4 md:p-6 relative z-0",
-              isMobile && "pb-20"
+              isMobile && "pb-24"
             )}>
               <div className="max-w-7xl mx-auto">
                 {isMobile && <PushNotificationBanner />}
