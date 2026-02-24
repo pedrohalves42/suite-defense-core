@@ -1,5 +1,5 @@
 import { ArrowRight, CheckCircle } from "lucide-react";
-import cybershieldLogo from "@/assets/cybershield-logo.png";
+import cybershieldLogo from "@/assets/logo-cybshield-new.png";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { StatCard } from "./shared/StatCard";
