@@ -1,4 +1,5 @@
-import { Menu, Bell, Shield } from "lucide-react";
+import { Menu, Bell } from "lucide-react";
+import cybershieldLogo from "@/assets/cybershield-logo.png";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +23,7 @@ export const TopBar = ({ isMobile, sidebarCollapsed, onMobileMenuClick }: TopBar
           </Button>
         )}
         <div className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-primary" />
+          <img src={cybershieldLogo} alt="CyberShield" className="h-7 w-7 object-contain" />
           <span className="font-semibold text-sm text-foreground hidden sm:inline">CyberShield</span>
         </div>
       </div>

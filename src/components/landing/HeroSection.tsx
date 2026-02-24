@@ -1,4 +1,5 @@
-import { Shield, ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowRight, CheckCircle } from "lucide-react";
+import cybershieldLogo from "@/assets/cybershield-logo.png";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { StatCard } from "./shared/StatCard";
@@ -16,7 +17,7 @@ export function HeroSection() {
         <div className="text-center space-y-8 animate-fade-in">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20">
-            <Shield className="w-4 h-4 text-accent" aria-hidden="true" />
+            <img src={cybershieldLogo} alt="" className="w-5 h-5 object-contain" aria-hidden="true" />
             <span className="text-sm font-medium text-foreground">{hero.badge}</span>
           </div>
 

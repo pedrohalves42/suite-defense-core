@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import cybershieldLogo from '@/assets/cybershield-logo.png';
 
 interface PitchSlideProps {
   slideNumber: number;
@@ -45,9 +46,7 @@ export const PitchSlide: React.FC<PitchSlideProps> = ({
       {/* Footer */}
       <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center">
-            <span className="text-primary font-bold text-sm">CS</span>
-          </div>
+          <img src={cybershieldLogo} alt="CyberShield" className="w-7 h-7 object-contain" />
           <span className="text-sm font-medium text-muted-foreground">CyberShield</span>
         </div>
         <span className="text-xs text-muted-foreground">Confidencial - Investidores</span>
