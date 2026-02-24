@@ -1,5 +1,5 @@
 import { Menu, Bell } from "lucide-react";
-import cybershieldLogo from "@/assets/cybershield-logo.png";
+import cybershieldLogo from "@/assets/logo-cybshield-new.png";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
