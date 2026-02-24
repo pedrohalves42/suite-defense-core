@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ type DateRange = '7' | '30' | '90' | 'all';
 type ExportFormat = 'csv' | 'excel';
 
 export default function DataExport() {
+  const { t } = useTranslation();
   const { tenant } = useTenant();
   const [exportType, setExportType] = useState<ExportType>('agents');
   const [dateRange, setDateRange] = useState<DateRange>('30');
@@ -52,7 +54,7 @@ export default function DataExport() {
 
   const exportData = async () => {
     if (!tenant?.id) {
-      toast.error('Tenant nao identificado');
+      toast.error(t('dataExportPage.tenantNotFound'));
       return;
     }
 
@@ -61,17 +63,13 @@ export default function DataExport() {
     try {
       let data: any[] = [];
       let filename = '';
-      const columns: string[] = [];
 
-      // Calculate date filter
       const dateFilter = dateRange === 'all' 
         ? null 
         : subDays(new Date(), parseInt(dateRange)).toISOString();
 
-      // Fetch data based on type
       switch (exportType) {
         case 'agents': {
-          // ADR-026: Use RPC with explicit tenant_id
           const { data: agentsRaw, error: agentsErr } = await supabase.rpc('get_agents_list', {
             p_tenant_id: tenant.id,
             p_include_archived: true,
@@ -211,21 +209,20 @@ export default function DataExport() {
       }
 
       if (data.length === 0) {
-        toast.error('Nenhum dado disponivel para exportar');
+        toast.error(t('dataExportPage.noDataAvailable'));
         return;
       }
 
-      // Export based on format
       if (exportFormat === 'csv') {
         exportToCSV(data, filename);
       } else {
         await exportToExcel(data, filename);
       }
 
-      toast.success(`${data.length} registros exportados com sucesso!`);
+      toast.success(t('dataExportPage.exportSuccess', { count: data.length }));
     } catch (error) {
       logger.error('Error exporting data', error);
-      toast.error('Erro ao exportar dados');
+      toast.error(t('dataExportPage.exportError'));
     } finally {
       setIsExporting(false);
     }
@@ -233,17 +230,12 @@ export default function DataExport() {
 
   const exportToCSV = (data: any[], filename: string) => {
     if (data.length === 0) return;
-
-    // Get headers from first object
     const headers = Object.keys(data[0]);
-    
-    // Create CSV content
     const csvContent = [
       headers.join(','),
       ...data.map(row => 
         headers.map(header => {
           const value = row[header];
-          // Escape quotes and wrap in quotes if contains comma or newline
           const stringValue = String(value || '');
           if (stringValue.includes(',') || stringValue.includes('\n') || stringValue.includes('"')) {
             return `"${stringValue.replace(/"/g, '""')}"`;
@@ -253,7 +245,6 @@ export default function DataExport() {
       )
     ].join('\n');
 
-    // Add BOM for Excel UTF-8 support
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -267,8 +258,6 @@ export default function DataExport() {
 
     if (data.length > 0) {
       const headers = Object.keys(data[0]);
-      
-      // Add columns with auto-width
       worksheet.columns = headers.map(key => ({
         header: key,
         key: key,
@@ -278,7 +267,6 @@ export default function DataExport() {
         ))
       }));
 
-      // Style header row
       worksheet.getRow(1).font = { bold: true };
       worksheet.getRow(1).fill = {
         type: 'pattern',
@@ -286,11 +274,9 @@ export default function DataExport() {
         fgColor: { argb: 'FFE0E0E0' }
       };
 
-      // Add data rows
       data.forEach(row => worksheet.addRow(row));
     }
 
-    // Generate and download file
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { 
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
@@ -303,12 +289,22 @@ export default function DataExport() {
   };
 
   const exportOptions = [
-    { value: 'agents', label: 'Agentes', count: stats?.agents || 0, icon: CheckCircle },
-    { value: 'scans', label: 'Scans de Virus', count: stats?.scans || 0, icon: FileText },
-    { value: 'jobs', label: 'Jobs', count: stats?.jobs || 0, icon: Calendar },
-    { value: 'quarantine', label: 'Quarentena', count: stats?.quarantine || 0, icon: Download },
-    { value: 'audit_logs', label: 'Logs de Auditoria', count: stats?.auditLogs || 0, icon: FileText },
+    { value: 'agents', label: t('dataExportPage.agents'), count: stats?.agents || 0, icon: CheckCircle },
+    { value: 'scans', label: t('dataExportPage.virusScans'), count: stats?.scans || 0, icon: FileText },
+    { value: 'jobs', label: t('dataExportPage.jobs'), count: stats?.jobs || 0, icon: Calendar },
+    { value: 'quarantine', label: t('dataExportPage.quarantine'), count: stats?.quarantine || 0, icon: Download },
+    { value: 'audit_logs', label: t('dataExportPage.auditLogs'), count: stats?.auditLogs || 0, icon: FileText },
   ];
+
+  const getAvailableText = () => {
+    switch (exportType) {
+      case 'agents': return t('dataExportPage.agentsAvailable', { count: stats?.agents || 0 });
+      case 'scans': return t('dataExportPage.scansAvailable', { count: stats?.scans || 0 });
+      case 'jobs': return t('dataExportPage.jobsAvailable', { count: stats?.jobs || 0 });
+      case 'quarantine': return t('dataExportPage.quarantineAvailable', { count: stats?.quarantine || 0 });
+      case 'audit_logs': return t('dataExportPage.auditLogsAvailable', { count: stats?.auditLogs || 0 });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -317,9 +313,9 @@ export default function DataExport() {
           <FileSpreadsheet className="h-8 w-8 text-primary" />
         </div>
         <div>
-          <h2 className="text-3xl font-bold">Exportacao de Dados</h2>
+          <h2 className="text-3xl font-bold">{t('dataExportPage.title')}</h2>
           <p className="text-muted-foreground">
-            Exporte dados para analise offline e integracao com ferramentas de BI
+            {t('dataExportPage.subtitle')}
           </p>
         </div>
       </div>
@@ -345,16 +341,15 @@ export default function DataExport() {
       {/* Export Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>Configuracao de Exportacao</CardTitle>
+          <CardTitle>{t('dataExportPage.exportConfig')}</CardTitle>
           <CardDescription>
-            Selecione o tipo de dados, periodo e formato para exportar
+            {t('dataExportPage.exportConfigDesc')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-6 md:grid-cols-3">
-            {/* Export Type */}
             <div className="space-y-2">
-              <Label>Tipo de Dados</Label>
+              <Label>{t('dataExportPage.dataType')}</Label>
               <Select value={exportType} onValueChange={(v) => setExportType(v as ExportType)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -369,25 +364,23 @@ export default function DataExport() {
               </Select>
             </div>
 
-            {/* Date Range */}
             <div className="space-y-2">
-              <Label>Periodo</Label>
+              <Label>{t('dataExportPage.period')}</Label>
               <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRange)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="7">Ultimos 7 dias</SelectItem>
-                  <SelectItem value="30">Ultimos 30 dias</SelectItem>
-                  <SelectItem value="90">Ultimos 90 dias</SelectItem>
-                  <SelectItem value="all">Todos os registros</SelectItem>
+                  <SelectItem value="7">{t('dataExportPage.last7Days')}</SelectItem>
+                  <SelectItem value="30">{t('dataExportPage.last30Days')}</SelectItem>
+                  <SelectItem value="90">{t('dataExportPage.last90Days')}</SelectItem>
+                  <SelectItem value="all">{t('dataExportPage.allRecords')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Format */}
             <div className="space-y-2">
-              <Label>Formato</Label>
+              <Label>{t('dataExportPage.format')}</Label>
               <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as ExportFormat)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -410,14 +403,9 @@ export default function DataExport() {
             </div>
           </div>
 
-          {/* Export Button */}
           <div className="flex items-center justify-between pt-4 border-t">
             <div className="text-sm text-muted-foreground">
-              {exportType === 'agents' && `${stats?.agents || 0} agentes disponiveis`}
-              {exportType === 'scans' && `${stats?.scans || 0} scans disponiveis`}
-              {exportType === 'jobs' && `${stats?.jobs || 0} jobs disponiveis`}
-              {exportType === 'quarantine' && `${stats?.quarantine || 0} arquivos em quarentena`}
-              {exportType === 'audit_logs' && `${stats?.auditLogs || 0} logs de auditoria`}
+              {getAvailableText()}
             </div>
             <Button 
               onClick={exportData} 
@@ -428,12 +416,12 @@ export default function DataExport() {
               {isExporting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Exportando...
+                  {t('dataExportPage.exporting')}
                 </>
               ) : (
                 <>
                   <Download className="h-4 w-4" />
-                  Exportar {exportFormat === 'csv' ? 'CSV' : 'Excel'}
+                  {t('dataExportPage.exportBtn', { format: exportFormat === 'csv' ? 'CSV' : 'Excel' })}
                 </>
               )}
             </Button>
@@ -445,25 +433,25 @@ export default function DataExport() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Formato CSV</CardTitle>
+            <CardTitle className="text-base">{t('dataExportPage.csvFormat')}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>? Compativel com Excel, Google Sheets e outras ferramentas</p>
-            <p>? Tamanho de arquivo menor</p>
-            <p>? Ideal para importacao em bancos de dados</p>
-            <p>? Codificacao UTF-8 com BOM para suporte completo de caracteres</p>
+            <p>✓ {t('dataExportPage.csvFeature1')}</p>
+            <p>✓ {t('dataExportPage.csvFeature2')}</p>
+            <p>✓ {t('dataExportPage.csvFeature3')}</p>
+            <p>✓ {t('dataExportPage.csvFeature4')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Formato Excel (XLSX)</CardTitle>
+            <CardTitle className="text-base">{t('dataExportPage.excelFormat')}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>? Formato nativo do Microsoft Excel</p>
-            <p>? Colunas com largura automatica</p>
-            <p>? Preserva formatacao e tipos de dados</p>
-            <p>? Ideal para analise avancada e graficos</p>
+            <p>✓ {t('dataExportPage.excelFeature1')}</p>
+            <p>✓ {t('dataExportPage.excelFeature2')}</p>
+            <p>✓ {t('dataExportPage.excelFeature3')}</p>
+            <p>✓ {t('dataExportPage.excelFeature4')}</p>
           </CardContent>
         </Card>
       </div>
@@ -471,36 +459,36 @@ export default function DataExport() {
       {/* Use Cases */}
       <Card>
         <CardHeader>
-          <CardTitle>Casos de Uso</CardTitle>
-          <CardDescription>Como utilizar os dados exportados</CardDescription>
+          <CardTitle>{t('dataExportPage.useCases')}</CardTitle>
+          <CardDescription>{t('dataExportPage.useCasesDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <h4 className="font-medium flex items-center gap-2">
                 <FileSpreadsheet className="h-4 w-4 text-primary" />
-                Analise Offline
+                {t('dataExportPage.offlineAnalysis')}
               </h4>
               <p className="text-sm text-muted-foreground">
-                Abra os dados no Excel ou Google Sheets para criar graficos personalizados e relatorios
+                {t('dataExportPage.offlineAnalysisDesc')}
               </p>
             </div>
             <div className="space-y-2">
               <h4 className="font-medium flex items-center gap-2">
                 <FileText className="h-4 w-4 text-primary" />
-                Integracao BI
+                {t('dataExportPage.biIntegration')}
               </h4>
               <p className="text-sm text-muted-foreground">
-                Importe para Power BI, Tableau, Looker ou outras ferramentas de Business Intelligence
+                {t('dataExportPage.biIntegrationDesc')}
               </p>
             </div>
             <div className="space-y-2">
               <h4 className="font-medium flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-primary" />
-                Conformidade
+                {t('dataExportPage.compliance')}
               </h4>
               <p className="text-sm text-muted-foreground">
-                Mantenha backups dos dados de auditoria para atender requisitos de compliance
+                {t('dataExportPage.complianceDesc')}
               </p>
             </div>
           </div>

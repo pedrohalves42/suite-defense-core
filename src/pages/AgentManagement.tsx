@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,6 +53,7 @@ type StatusFilter = 'all' | 'online' | 'offline' | 'pending' | 'disabled';
 type VersionFilter = 'all' | 'outdated' | 'current';
 
 export default function AgentManagement() {
+  const { t } = useTranslation();
   const { tenant } = useTenant();
   const { isAdmin, isSuperAdmin } = useUserRole();
   const canAccessProcessControl = isAdmin || isSuperAdmin;
@@ -196,15 +198,15 @@ export default function AgentManagement() {
   };
 
   const getTimeSince = (date: string | null): string => {
-    if (!date) return 'Nunca';
+    if (!date) return t('agentManagementPage.never');
     const diffMs = new Date().getTime() - new Date(date).getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));
-    if (diffMins < 1) return 'Agora';
-    if (diffMins < 60) return `${diffMins}min`;
+    if (diffMins < 1) return t('agentManagementPage.justNow');
+    if (diffMins < 60) return t('agentManagementPage.minutesAgo', { count: diffMins });
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h`;
+    if (diffHours < 24) return t('agentManagementPage.hoursAgo', { count: diffHours });
     const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d`;
+    return t('agentManagementPage.daysAgo', { count: diffDays });
   };
 
   // Filter agents
@@ -342,16 +344,16 @@ export default function AgentManagement() {
             <Server className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <h2 className="text-3xl font-bold">Meus Computadores</h2>
+            <h2 className="text-3xl font-bold">{t('agentManagementPage.title')}</h2>
             <p className="text-muted-foreground">
-              Controle e gerencie os computadores protegidos
+              {t('agentManagementPage.subtitle')}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Atualizar
+            {t('agentManagementPage.refresh')}
           </Button>
           <Button
             variant="destructive"
@@ -364,7 +366,7 @@ export default function AgentManagement() {
             ) : (
               <Trash className="h-4 w-4 mr-2" />
             )}
-            Limpar Inativos
+            {t('common.delete')}
           </Button>
         </div>
       </div>
@@ -404,7 +406,7 @@ export default function AgentManagement() {
               <Clock className="h-5 w-5 text-orange-500" />
               <span className="text-2xl font-bold text-orange-500">{stats.pending}</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Pendente</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('agentManagementPage.pending')}</p>
           </CardContent>
         </Card>
         <Card className={`cursor-pointer hover:border-muted-foreground/50 transition-colors ${statusFilter === 'disabled' ? 'border-muted-foreground' : ''}`} onClick={() => setStatusFilter('disabled')}>
@@ -422,7 +424,7 @@ export default function AgentManagement() {
               <ArrowUpCircle className="h-5 w-5 text-amber-500" />
               <span className="text-2xl font-bold text-amber-500">{stats.outdated}</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Desatualizado</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('agentManagementPage.outdated')}</p>
           </CardContent>
         </Card>
       </div>
@@ -483,7 +485,7 @@ export default function AgentManagement() {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nome ou hostname..."
+                placeholder={t('agentManagementPage.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -495,11 +497,11 @@ export default function AgentManagement() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os Status</SelectItem>
-                <SelectItem value="online">Online</SelectItem>
-                <SelectItem value="offline">Offline</SelectItem>
-                <SelectItem value="pending">Pendente</SelectItem>
-                <SelectItem value="disabled">Desativado</SelectItem>
+                <SelectItem value="all">{t('agentManagementPage.allStatus')}</SelectItem>
+                <SelectItem value="online">{t('agentManagementPage.online')}</SelectItem>
+                <SelectItem value="offline">{t('agentManagementPage.offline')}</SelectItem>
+                <SelectItem value="pending">{t('agentManagementPage.pending')}</SelectItem>
+                <SelectItem value="disabled">{t('agentManagementPage.disabled')}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={versionFilter} onValueChange={(v) => setVersionFilter(v as VersionFilter)}>
@@ -508,9 +510,9 @@ export default function AgentManagement() {
                 <SelectValue placeholder="Versão" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas Versões</SelectItem>
-                <SelectItem value="outdated">Desatualizados</SelectItem>
-                <SelectItem value="current">Atualizados</SelectItem>
+                <SelectItem value="all">{t('agentManagementPage.allVersions')}</SelectItem>
+                <SelectItem value="outdated">{t('agentManagementPage.outdated')}</SelectItem>
+                <SelectItem value="current">{t('agentManagementPage.current')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -574,9 +576,9 @@ export default function AgentManagement() {
                         {status === 'offline' && <XCircle className="h-3 w-3 mr-1" />}
                         {status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
                         {status === 'disabled' && <PowerOff className="h-3 w-3 mr-1" />}
-                        {status === 'online' ? 'Online' :
-                         status === 'offline' ? 'Offline' :
-                         status === 'pending' ? 'Pendente' : 'Desativado'}
+                        {status === 'online' ? t('agentManagementPage.online') :
+                         status === 'offline' ? t('agentManagementPage.offline') :
+                         status === 'pending' ? t('agentManagementPage.pending') : t('agentManagementPage.disabled')}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -586,7 +588,7 @@ export default function AgentManagement() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground flex items-center gap-1">
                         <HelpTooltip term="versão do agente" />
-                        Versão:
+                        {t('agentManagementPage.version')}:
                       </span>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className={`font-mono text-xs ${outdated ? 'border-amber-500 text-amber-500' : ''}`}>
@@ -605,7 +607,7 @@ export default function AgentManagement() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground flex items-center gap-1">
                         <HelpTooltip term="heartbeat" />
-                        Último sinal:
+                        {t('agentManagementPage.lastSeen')}:
                       </span>
                       <span className={status === 'offline' ? 'text-red-500' : ''}>
                         {getTimeSince(agent.last_heartbeat)}
@@ -716,7 +718,7 @@ export default function AgentManagement() {
                         ) : (
                           <RefreshCw className="h-4 w-4 mr-1" />
                         )}
-                        Verificar
+                        {t('agentManagementPage.checkHealth')}
                       </Button>
                       {status === 'disabled' ? (
                         <Button
@@ -726,7 +728,7 @@ export default function AgentManagement() {
                           onClick={() => disableAgentMutation.mutate({ agentId: agent.id, disable: false })}
                         >
                           <Power className="h-4 w-4 mr-1" />
-                          Reativar
+                          {t('common.edit')}
                         </Button>
                       ) : (
                         <Button
@@ -736,7 +738,7 @@ export default function AgentManagement() {
                           onClick={() => setAgentToDisable(agent)}
                         >
                           <PowerOff className="h-4 w-4 mr-1" />
-                          Desativar
+                           {t('agentManagementPage.disableAgent')}
                         </Button>
                       )}
                       <Button
@@ -761,11 +763,11 @@ export default function AgentManagement() {
           <div className="text-center space-y-4">
             <Server className="h-16 w-16 mx-auto text-muted-foreground/50" />
             <div>
-              <h3 className="text-lg font-medium">Nenhum computador encontrado</h3>
+              <h3 className="text-lg font-medium">{t('agentManagementPage.noComputers')}</h3>
               <p className="text-muted-foreground">
                 {searchTerm || statusFilter !== 'all' || versionFilter !== 'all' 
-                  ? 'Tente ajustar os filtros de busca'
-                  : 'Adicione computadores usando as chaves de instalação'}
+                  ? t('agentManagementPage.noComputersDesc')
+                  : t('agentManagementPage.installFirst')}
               </p>
             </div>
             {(searchTerm || statusFilter !== 'all' || versionFilter !== 'all') && (
@@ -785,19 +787,18 @@ export default function AgentManagement() {
       <AlertDialog open={!!agentToDelete} onOpenChange={() => setAgentToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Computador?</AlertDialogTitle>
+            <AlertDialogTitle>{t('agentManagementPage.deleteAgent')}</AlertDialogTitle>
             <AlertDialogDescription>
-              O computador <strong>{agentToDelete?.agent_name}</strong> será permanentemente removido.
-              O software instalado continuará tentando se conectar até ser desinstalado.
+              {t('agentManagementPage.deleteConfirm', { name: agentToDelete?.agent_name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+             <AlertDialogCancel>{t('agentManagementPage.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => agentToDelete && deleteAgentMutation.mutate(agentToDelete.id)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Excluir
+              {t('agentManagementPage.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -807,19 +808,17 @@ export default function AgentManagement() {
       <AlertDialog open={!!agentToDisable} onOpenChange={() => setAgentToDisable(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Desativar Computador?</AlertDialogTitle>
+            <AlertDialogTitle>{t('agentManagementPage.disableAgent')}</AlertDialogTitle>
             <AlertDialogDescription>
-              O computador <strong>{agentToDisable?.agent_name}</strong> será desativado.
-              Todos os acessos serão suspensos, mas os dados serão mantidos.
-              Você pode reativar a qualquer momento.
+              {t('agentManagementPage.disableConfirm', { name: agentToDisable?.agent_name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t('agentManagementPage.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => agentToDisable && disableAgentMutation.mutate({ agentId: agentToDisable.id, disable: true })}
             >
-              Desativar
+              {t('agentManagementPage.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
