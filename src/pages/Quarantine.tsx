@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +15,7 @@ import { toast } from 'sonner';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 
 export default function Quarantine() {
+  const { t } = useTranslation();
   const { tenant } = useTenant();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -53,7 +55,6 @@ export default function Quarantine() {
     enabled: !!tenant?.id
   });
 
-  // Restore file mutation
   const restoreMutation = useMutation({
     mutationFn: async (fileId: string) => {
       const { error } = await supabase
@@ -69,15 +70,14 @@ export default function Quarantine() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quarantined-files'] });
-      toast.success('Arquivo restaurado com sucesso');
+      toast.success(t('quarantinePage.restoreSuccess'));
       setActionDialogOpen(false);
     },
     onError: () => {
-      toast.error('Erro ao restaurar arquivo');
+      toast.error(t('quarantinePage.restoreError'));
     }
   });
 
-  // Delete file mutation
   const deleteMutation = useMutation({
     mutationFn: async (fileId: string) => {
       const { error } = await supabase
@@ -89,11 +89,11 @@ export default function Quarantine() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quarantined-files'] });
-      toast.success('Arquivo marcado como deletado');
+      toast.success(t('quarantinePage.deleteSuccess'));
       setActionDialogOpen(false);
     },
     onError: () => {
-      toast.error('Erro ao deletar arquivo');
+      toast.error(t('quarantinePage.deleteError'));
     }
   });
 
@@ -115,9 +115,9 @@ export default function Quarantine() {
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      quarantined: { variant: 'destructive' as const, icon: AlertTriangle, text: 'Em Quarentena' },
-      restored: { variant: 'default' as const, icon: CheckCircle, text: 'Restaurado' },
-      deleted: { variant: 'secondary' as const, icon: Trash2, text: 'Deletado' }
+      quarantined: { variant: 'destructive' as const, icon: AlertTriangle, text: t('quarantinePage.statusQuarantined') },
+      restored: { variant: 'default' as const, icon: CheckCircle, text: t('quarantinePage.statusRestored') },
+      deleted: { variant: 'secondary' as const, icon: Trash2, text: t('quarantinePage.statusDeleted') }
     };
     
     const config = variants[status as keyof typeof variants];
@@ -140,10 +140,10 @@ export default function Quarantine() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Shield className="h-8 w-8 text-primary" />
-            Arquivos em Quarentena
+            {t('quarantinePage.title')}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Gerencie arquivos maliciosos detectados automaticamente
+            {t('quarantinePage.subtitle')}
           </p>
         </div>
       </div>
@@ -152,7 +152,7 @@ export default function Quarantine() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Em Quarentena</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('quarantinePage.quarantined')}</CardTitle>
             <FileWarning className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
@@ -164,7 +164,7 @@ export default function Quarantine() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Restaurados</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('quarantinePage.restored')}</CardTitle>
             <RotateCcw className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
@@ -176,7 +176,7 @@ export default function Quarantine() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Deletados</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('quarantinePage.deleted')}</CardTitle>
             <Trash2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -190,8 +190,8 @@ export default function Quarantine() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-          <CardDescription>Filtre os arquivos em quarentena</CardDescription>
+          <CardTitle>{t('quarantinePage.filters')}</CardTitle>
+          <CardDescription>{t('quarantinePage.filtersDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4">
@@ -199,7 +199,7 @@ export default function Quarantine() {
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por caminho ou agente..."
+                  placeholder={t('quarantinePage.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8"
@@ -211,10 +211,10 @@ export default function Quarantine() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os Status</SelectItem>
-                <SelectItem value="quarantined">Em Quarentena</SelectItem>
-                <SelectItem value="restored">Restaurado</SelectItem>
-                <SelectItem value="deleted">Deletado</SelectItem>
+                <SelectItem value="all">{t('quarantinePage.allStatus')}</SelectItem>
+                <SelectItem value="quarantined">{t('quarantinePage.statusQuarantined')}</SelectItem>
+                <SelectItem value="restored">{t('quarantinePage.statusRestored')}</SelectItem>
+                <SelectItem value="deleted">{t('quarantinePage.statusDeleted')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -224,30 +224,30 @@ export default function Quarantine() {
       {/* Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Arquivos</CardTitle>
+          <CardTitle>{t('quarantinePage.files')}</CardTitle>
           <CardDescription>
-            Lista de arquivos maliciosos detectados ({quarantinedFiles?.count || 0} total)
+            {t('quarantinePage.filesDesc', { total: quarantinedFiles?.count || 0 })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8">Carregando...</div>
+            <div className="text-center py-8">{t('quarantinePage.loading')}</div>
           ) : quarantinedFiles?.data?.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <FileWarning className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>Nenhum arquivo em quarentena</p>
+              <p>{t('quarantinePage.noFiles')}</p>
             </div>
           ) : (
             <>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Arquivo</TableHead>
-                    <TableHead>Agente</TableHead>
-                    <TableHead>Deteccoes</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead className="text-right">Acoes</TableHead>
+                    <TableHead>{t('quarantinePage.fileCol')}</TableHead>
+                    <TableHead>{t('quarantinePage.agentCol')}</TableHead>
+                    <TableHead>{t('quarantinePage.detectionsCol')}</TableHead>
+                    <TableHead>{t('quarantinePage.statusCol')}</TableHead>
+                    <TableHead>{t('quarantinePage.dateCol')}</TableHead>
+                    <TableHead className="text-right">{t('quarantinePage.actionsCol')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -299,17 +299,17 @@ export default function Quarantine() {
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
                   >
-                    Anterior
+                    {t('quarantinePage.previous')}
                   </Button>
                   <span className="text-sm text-muted-foreground">
-                    Pagina {page} de {totalPages}
+                    {t('quarantinePage.pageOf', { current: page, total: totalPages })}
                   </span>
                   <Button
                     variant="outline"
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
                   >
-                    Proxima
+                    {t('quarantinePage.next')}
                   </Button>
                 </div>
               )}
@@ -323,18 +323,18 @@ export default function Quarantine() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {actionType === 'restore' ? 'Restaurar Arquivo' : 'Deletar Arquivo'}
+              {actionType === 'restore' ? t('quarantinePage.restoreFile') : t('quarantinePage.deleteFile')}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {actionType === 'restore'
-                ? 'Tem certeza que deseja restaurar este arquivo? Ele voltara a estar acessivel no sistema.'
-                : 'Tem certeza que deseja marcar este arquivo como deletado? Esta acao nao pode ser desfeita.'}
+                ? t('quarantinePage.restoreConfirm')
+                : t('quarantinePage.deleteConfirm')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t('quarantinePage.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmAction}>
-              Confirmar
+              {t('quarantinePage.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
