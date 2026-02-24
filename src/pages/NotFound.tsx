@@ -2,8 +2,11 @@ import { Link } from "react-router-dom";
 import { Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandSignature } from "@/components/auth/SecurityFooter";
+import { useTranslation } from "react-i18next";
 
 const NotFound = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background relative overflow-hidden">
       {/* Subtle enterprise background */}
@@ -16,12 +19,12 @@ const NotFound = () => {
         </div>
         
         <div className="space-y-3">
-          <h1 className="text-7xl font-bold text-foreground/10 tracking-tight">404</h1>
+          <h1 className="text-7xl font-bold text-foreground/10 tracking-tight">{t('notFoundPage.title')}</h1>
           <p className="text-lg text-muted-foreground/60 font-medium">
-            Área não encontrada
+            {t('notFoundPage.heading')}
           </p>
           <p className="text-sm text-muted-foreground/40 max-w-xs mx-auto">
-            A página solicitada não existe ou foi movida para outro local
+            {t('notFoundPage.description')}
           </p>
         </div>
         
@@ -31,7 +34,7 @@ const NotFound = () => {
           className="border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all duration-200"
         >
           <Link to="/login">
-            Retornar ao Acesso Seguro
+            {t('notFoundPage.backToLogin')}
           </Link>
         </Button>
         

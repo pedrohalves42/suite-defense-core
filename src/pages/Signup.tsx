@@ -13,6 +13,7 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import logoImage from '@/assets/logo-cybshield-new.png';
 import { logger } from '@/lib/logger';
 import { SecurityFooter, BrandSignature } from '@/components/auth/SecurityFooter';
+import { useTranslation } from 'react-i18next';
 
 const signupSchema = z.object({
   email: z.string()
@@ -36,6 +37,7 @@ const signupSchema = z.object({
 });
 
 export default function Signup() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -56,16 +58,16 @@ export default function Signup() {
         logger.error(`Social signup error (${provider})`, error);
         toast({
           variant: 'destructive',
-          title: 'Erro no login social',
-          description: `Não foi possível conectar com ${provider === 'google' ? 'Google' : 'Apple'}. Tente novamente.`,
+          title: t('signupPage.socialError'),
+          description: t('signupPage.socialFailed', { provider: provider === 'google' ? 'Google' : 'Apple' }),
         });
       }
     } catch (err) {
       logger.error(`Social signup exception (${provider})`, err);
       toast({
         variant: 'destructive',
-        title: 'Erro inesperado',
-        description: 'Ocorreu um erro ao tentar o login social.',
+        title: t('signupPage.unexpectedError'),
+        description: t('signupPage.socialException'),
       });
     } finally {
       setSocialLoading(null);
@@ -76,13 +78,12 @@ export default function Signup() {
     e.preventDefault();
     setLoading(true);
 
-    // Validate inputs
     const validation = signupSchema.safeParse({ email, password, fullName, deviceCount });
     if (!validation.success) {
       const firstError = validation.error.issues[0];
       toast({
         variant: 'destructive',
-        title: 'Erro de validacao',
+        title: t('signupPage.validationError'),
         description: firstError.message,
       });
       setLoading(false);
@@ -103,10 +104,8 @@ export default function Signup() {
       },
     });
 
-    // Send welcome email and create trial subscription
     if (!error && data.user) {
       try {
-        // Send welcome email
         await supabase.functions.invoke('send-welcome-email', {
           body: {
             email: validation.data.email,
@@ -115,7 +114,6 @@ export default function Signup() {
           },
         });
 
-        // Create trial subscription (14 days)
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData.session) {
           await supabase.functions.invoke('create-trial-subscription', {
@@ -126,12 +124,10 @@ export default function Signup() {
         }
       } catch (emailError) {
         logger.error('Failed to send welcome email or create trial', emailError);
-        // Don't block signup if these fail
       }
     }
 
     if (error) {
-      // Log detailed error for debugging (P1 - improved diagnostics)
       console.error('[Signup Error]', {
         message: error.message,
         status: (error as any).status,
@@ -140,23 +136,21 @@ export default function Signup() {
       });
       logger.error('Signup failed', { email: validation.data.email, error: error.message });
       
-      // Generic error messages to prevent account enumeration
       const message = error.message.includes('already registered') || error.message.includes('already exists')
-        ? 'Ja existe uma conta com este email'
-        : 'Erro ao processar seu cadastro. Tente novamente.';
+        ? t('signupPage.accountExists')
+        : t('signupPage.genericError');
       
       toast({
         variant: 'destructive',
-        title: 'Erro no cadastro',
+        title: t('signupPage.signupError'),
         description: message,
       });
     } else {
       toast({
-        title: 'Cadastro realizado com sucesso! 🎉',
-        description: 'Trial de 14 dias ativado. Redirecionando...',
+        title: t('signupPage.successTitle'),
+        description: t('signupPage.successDesc'),
       });
       
-      // Redirect to onboarding after 1.5s
       setTimeout(() => {
         navigate('/admin/dashboard?onboarding=true');
       }, 1500);
@@ -168,7 +162,6 @@ export default function Signup() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
       <Card className="w-full max-w-[460px] card-enterprise rounded-xl relative z-10 overflow-hidden">
-        {/* Top accent line */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent" />
         <CardHeader className="space-y-1 text-center pb-2 pt-8">
           <div className="flex justify-center mb-4">
@@ -177,20 +170,20 @@ export default function Signup() {
             </div>
           </div>
           <CardTitle className="text-xl font-semibold tracking-tight text-foreground">
-            Criar Conta Segura
+            {t('signupPage.title')}
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            Junte-se ao ambiente protegido CyberShield Cloud
+            {t('signupPage.subtitle')}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSignup}>
           <CardContent className="space-y-4 px-6">
             <div className="space-y-2">
-              <Label htmlFor="fullName" className="text-xs font-medium text-muted-foreground/80">Nome Completo</Label>
+              <Label htmlFor="fullName" className="text-xs font-medium text-muted-foreground/80">{t('signupPage.fullName')}</Label>
               <Input
                 id="fullName"
                 type="text"
-                placeholder="Seu nome"
+                placeholder={t('signupPage.fullNamePlaceholder')}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
@@ -200,11 +193,11 @@ export default function Signup() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-xs font-medium text-muted-foreground/80">Email</Label>
+              <Label htmlFor="email" className="text-xs font-medium text-muted-foreground/80">{t('signupPage.email')}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="seu@email.com"
+                placeholder={t('signupPage.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -213,22 +206,22 @@ export default function Signup() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="deviceCount" className="text-xs font-medium text-muted-foreground/80">Quantos computadores você quer proteger?</Label>
+              <Label htmlFor="deviceCount" className="text-xs font-medium text-muted-foreground/80">{t('signupPage.deviceCount')}</Label>
               <Select value={deviceCount} onValueChange={setDeviceCount}>
                 <SelectTrigger className="h-10 bg-background/50 border-border/50 focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all">
-                  <SelectValue placeholder="Selecione uma opção" />
+                  <SelectValue placeholder={t('signupPage.selectOption')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1-3">1 a 3 computadores</SelectItem>
-                  <SelectItem value="4-10">4 a 10 computadores</SelectItem>
-                  <SelectItem value="11-30">11 a 30 computadores</SelectItem>
-                  <SelectItem value="31-100">31 a 100 computadores</SelectItem>
-                  <SelectItem value="100+">Mais de 100 computadores</SelectItem>
+                  <SelectItem value="1-3">{t('signupPage.devices1to3')}</SelectItem>
+                  <SelectItem value="4-10">{t('signupPage.devices4to10')}</SelectItem>
+                  <SelectItem value="11-30">{t('signupPage.devices11to30')}</SelectItem>
+                  <SelectItem value="31-100">{t('signupPage.devices31to100')}</SelectItem>
+                  <SelectItem value="100+">{t('signupPage.devices100plus')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-xs font-medium text-muted-foreground/80">Senha</Label>
+              <Label htmlFor="password" className="text-xs font-medium text-muted-foreground/80">{t('signupPage.password')}</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -251,7 +244,7 @@ export default function Signup() {
                 </button>
               </div>
               <p className="text-[10px] text-muted-foreground/50 mt-1">
-                Minimo 8 caracteres, incluindo maiuscula, minuscula, numero e caractere especial
+                {t('signupPage.passwordHint')}
               </p>
             </div>
           </CardContent>
@@ -261,20 +254,18 @@ export default function Signup() {
               className="w-full h-10 bg-primary/90 hover:bg-primary text-primary-foreground font-medium transition-all duration-200" 
               disabled={loading}
             >
-              {loading ? 'Criando conta...' : 'Iniciar Diagnóstico Seguro'}
+              {loading ? t('signupPage.creating') : t('signupPage.submit')}
             </Button>
             
-            {/* Social Login Divider */}
             <div className="relative my-1">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-border/40" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-card px-3 text-muted-foreground/60">ou cadastre-se com</span>
+                <span className="bg-card px-3 text-muted-foreground/60">{t('signupPage.orSignUpWith')}</span>
               </div>
             </div>
 
-            {/* Social Login Buttons */}
             <div className="grid grid-cols-2 gap-3">
               <Button
                 type="button"
@@ -314,12 +305,12 @@ export default function Signup() {
             </div>
 
             <p className="text-[10px] text-center text-muted-foreground/50">
-              Planos a partir de R$ 150/mês após o diagnóstico.
+              {t('signupPage.pricingNote')}
             </p>
             <div className="text-xs text-center text-muted-foreground/60">
-              Ja tem uma conta?{' '}
+              {t('signupPage.hasAccount')}{' '}
               <Link to="/login" className="text-primary/80 hover:text-primary transition-colors">
-                Entrar
+                {t('signupPage.signIn')}
               </Link>
             </div>
             

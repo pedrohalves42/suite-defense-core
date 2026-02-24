@@ -17,6 +17,7 @@ import { formatBrazilDateTime } from '@/lib/date-utils';
 import { SecurityFooter, BrandSignature } from '@/components/auth/SecurityFooter';
 import { SecurityCheckScreen } from '@/components/auth/SecurityCheckScreen';
 import { SessionVerifiedScreen } from '@/components/auth/SessionVerifiedScreen';
+import { useTranslation } from 'react-i18next';
 import logoImage from '@/assets/logo-cybshield-new.png';
 const loginSchema = z.object({
   identifier: z.string()
@@ -39,6 +40,7 @@ function getLoginEmail(identifier: string): string {
 }
 
 export default function Login() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -64,16 +66,16 @@ export default function Login() {
         logger.error(`Social login error (${provider})`, error);
         toast({
           variant: 'destructive',
-          title: 'Erro no login social',
-          description: `Não foi possível conectar com ${provider === 'google' ? 'Google' : 'Apple'}. Tente novamente.`,
+          title: t('loginPage.socialLoginError'),
+          description: t('loginPage.socialLoginFailed', { provider: provider === 'google' ? 'Google' : 'Apple' }),
         });
       }
     } catch (err) {
       logger.error(`Social login exception (${provider})`, err);
       toast({
         variant: 'destructive',
-        title: 'Erro inesperado',
-        description: 'Ocorreu um erro ao tentar o login social.',
+        title: t('loginPage.unexpectedError'),
+        description: t('loginPage.socialLoginException'),
       });
     } finally {
       setSocialLoading(null);
@@ -92,8 +94,8 @@ export default function Login() {
         if (data.blocked) {
           toast({
             variant: 'destructive',
-            title: '? Acesso Bloqueado - Protecao Anti-Brute-Force',
-            description: `Seu IP foi bloqueado ate ${formatBrazilDateTime(data.blockedUntil, 'datetime')} (${data.attemptCount || 5}+ tentativas em 15 minutos). Contate o suporte se isso for um erro.`,
+            title: t('loginPage.ipBlocked'),
+            description: t('loginPage.ipBlockedDesc', { until: formatBrazilDateTime(data.blockedUntil, 'datetime'), count: data.attemptCount || 5 }),
             duration: 15000,
           });
           setLoading(true); // Desabilitar interface
@@ -138,8 +140,8 @@ export default function Login() {
     if (requiresCaptcha && !captchaToken) {
       toast({
         variant: 'destructive',
-        title: 'CAPTCHA obrigatorio',
-        description: 'Complete o CAPTCHA para continuar.',
+        title: t('loginPage.captchaRequired'),
+        description: t('loginPage.captchaRequired'),
       });
       setLoading(false);
       return;
@@ -151,7 +153,7 @@ export default function Login() {
       const firstError = validation.error.issues[0];
       toast({
         variant: 'destructive',
-        title: 'Erro de validação',
+        title: t('loginPage.validationError'),
         description: firstError.message,
       });
       setLoading(false);
@@ -193,17 +195,17 @@ export default function Login() {
       }
       
       // Mensagens seguras - não revela se usuário existe
-      let message = 'Não foi possível validar suas credenciais.';
+      let message = t('loginPage.credentialsFailed');
       let description = '';
       
       if (error.message.includes('Email not confirmed')) {
-        message = 'Email nao confirmado';
-        description = 'Verifique sua caixa de entrada para confirmar seu email.';
+        message = t('loginPage.emailNotConfirmed');
+        description = t('loginPage.checkInbox');
       } else if (error.message.includes('Invalid login credentials')) {
-        description = 'Verifique suas credenciais ou tente o login por email magico.';
+        description = t('loginPage.checkCredentials');
       } else if (error.status === 429) {
-        message = 'Muitas tentativas';
-        description = 'Aguarde alguns minutos antes de tentar novamente.';
+        message = t('loginPage.tooManyAttempts');
+        description = t('loginPage.waitBeforeRetry');
       }
       
       toast({
@@ -260,8 +262,8 @@ export default function Login() {
       if ((isAdmin || isSuperAdmin) && !hasMFA) {
         setVerifyingSession(false);
         toast({
-          title: 'Configuração de MFA obrigatória',
-          description: 'Administradores devem configurar autenticação de dois fatores.',
+          title: t('loginPage.mfaRequired'),
+          description: t('loginPage.mfaRequiredDesc'),
           variant: 'default',
         });
         navigate('/admin/setup-mfa-required');
@@ -290,8 +292,8 @@ export default function Login() {
     await supabase.auth.signOut();
     setShowMFADialog(false);
     toast({
-      title: 'Login cancelado',
-      description: 'Você precisa completar a verificação de dois fatores para entrar.',
+      title: t('loginPage.mfaCancelled'),
+      description: t('loginPage.mfaCancelledDesc'),
     });
   };
 
@@ -303,8 +305,8 @@ export default function Login() {
     if (!emailValidation.success) {
       toast({
         variant: 'destructive',
-        title: 'Email invalido',
-        description: 'Por favor, insira um email valido.',
+        title: t('loginPage.emailInvalid'),
+        description: t('loginPage.emailInvalidDesc'),
       });
       setLoading(false);
       return;
@@ -320,14 +322,14 @@ export default function Login() {
     if (error) {
       toast({
         variant: 'destructive',
-        title: 'Erro ao enviar link',
-        description: 'Nao foi possivel enviar o email. Tente novamente.',
+        title: t('loginPage.magicLinkError'),
+        description: t('loginPage.magicLinkErrorDesc'),
       });
     } else {
       setMagicLinkSent(true);
       toast({
-        title: 'Email enviado!',
-        description: 'Verifique sua caixa de entrada e clique no link para fazer login.',
+        title: t('loginPage.magicLinkSuccess'),
+        description: t('loginPage.magicLinkSuccessDesc'),
       });
     }
 
@@ -362,15 +364,15 @@ export default function Login() {
           </div>
           
           <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
-            CyberShield Cloud
+            {t('loginPage.title')}
           </CardTitle>
           
           <CardDescription className="text-sm text-muted-foreground flex items-center justify-center gap-2 pt-1">
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-medium">
               <Shield className="h-3 w-3" />
-              Enterprise
+              {t('loginPage.enterprise')}
             </span>
-            <span>Acesso seguro ao ambiente protegido</span>
+            <span>{t('loginPage.subtitle')}</span>
           </CardDescription>
         </CardHeader>
 
@@ -380,13 +382,13 @@ export default function Login() {
               value="password" 
               className="data-[state=active]:bg-primary/90 data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200 font-medium text-sm"
             >
-              Senha
+              {t('loginPage.passwordTab')}
             </TabsTrigger>
             <TabsTrigger 
               value="magic"
               className="data-[state=active]:bg-primary/90 data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200 font-medium text-sm"
             >
-              Email Mágico
+              {t('loginPage.magicTab')}
             </TabsTrigger>
           </TabsList>
 
@@ -397,8 +399,7 @@ export default function Login() {
                   <Alert className="border-warning/50 bg-warning/20 backdrop-blur-sm animate-slide-in">
                     <AlertCircle className="h-4 w-4 text-warning animate-pulse" />
                     <AlertDescription className="text-warning-foreground font-medium">
-                      [WARN] ⚠️ {attemptCount} tentativa{attemptCount > 1 ? 's' : ''} falhada{attemptCount > 1 ? 's' : ''} detectada{attemptCount > 1 ? 's' : ''}. 
-                      {3 - attemptCount} tentativa{3 - attemptCount > 1 ? 's' : ''} restante{3 - attemptCount > 1 ? 's' : ''} antes do CAPTCHA.
+                      {t('loginPage.attemptWarning', { count: attemptCount, remaining: 3 - attemptCount })}
                     </AlertDescription>
                   </Alert>
                 )}
@@ -406,19 +407,19 @@ export default function Login() {
                   <Alert variant="destructive" className="border-destructive/50 bg-destructive/15 backdrop-blur-sm animate-slide-in">
                     <AlertCircle className="h-4 w-4 animate-pulse" />
                     <AlertDescription className="font-medium">
-                      🛡️ Proteção ativada: {attemptCount} tentativas falhadas. Complete o CAPTCHA para continuar.
-                      {attemptCount >= 5 && ' Próximo bloqueio automático após mais falhas!'}
+                      {t('loginPage.protectionActivated', { count: attemptCount })}
+                      {attemptCount >= 5 && ` ${t('loginPage.nextBlockWarning')}`}
                     </AlertDescription>
                   </Alert>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-foreground font-medium tracking-wide">Email ou Username</Label>
+                  <Label htmlFor="email" className="text-foreground font-medium tracking-wide">{t('loginPage.emailOrUsername')}</Label>
                   <div className="relative group">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
                     <Input
                       id="email"
                       type="text"
-                      placeholder="seu@email.com ou username"
+                      placeholder={t('loginPage.emailPlaceholder')}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -428,7 +429,7 @@ export default function Login() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-foreground font-medium tracking-wide">Senha</Label>
+                  <Label htmlFor="password" className="text-foreground font-medium tracking-wide">{t('loginPage.password')}</Label>
                   <div className="relative group">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
                     <Input
@@ -464,10 +465,10 @@ export default function Login() {
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin opacity-80" />
-                      Verificando...
+                      {t('loginPage.verifying')}
                     </>
                   ) : (
-                    'Continuar com segurança'
+                    t('loginPage.continueSecurely')
                   )}
                 </Button>
                 {/* Social Login Divider */}
@@ -476,7 +477,7 @@ export default function Login() {
                     <span className="w-full border-t border-border/40" />
                   </div>
                   <div className="relative flex justify-center text-xs">
-                    <span className="bg-card px-3 text-muted-foreground/60">ou continue com</span>
+                    <span className="bg-card px-3 text-muted-foreground/60">{t('loginPage.orContinueWith')}</span>
                   </div>
                 </div>
 
@@ -525,16 +526,16 @@ export default function Login() {
                       to="/forgot-password" 
                       className="text-primary/80 hover:text-primary font-medium transition-colors duration-200"
                     >
-                      Esqueceu sua senha?
+                      {t('loginPage.forgotPassword')}
                     </Link>
                   </div>
                   <div>
-                    Não tem uma conta?{' '}
+                    {t('loginPage.noAccount')}{' '}
                     <Link 
                       to="/signup" 
                       className="text-primary/80 hover:text-primary font-medium transition-colors duration-200"
                     >
-                      Cadastre-se
+                      {t('loginPage.signUp')}
                     </Link>
                   </div>
                   <div className="pt-2 border-t border-border/30 mt-2">
@@ -542,7 +543,7 @@ export default function Login() {
                       to="/" 
                       className="text-muted-foreground/70 hover:text-primary/80 transition-colors duration-200 text-xs"
                     >
-                      ← Voltar para página inicial
+                      {t('loginPage.backToHome')}
                     </Link>
                   </div>
                 </div>
@@ -557,7 +558,7 @@ export default function Login() {
             <form onSubmit={handleMagicLink}>
               <CardContent className="space-y-5 pt-6">
                 <div className="space-y-2">
-                  <Label htmlFor="magic-email" className="text-foreground font-medium tracking-wide">Email</Label>
+                  <Label htmlFor="magic-email" className="text-foreground font-medium tracking-wide">{t('loginPage.magicLinkEmail')}</Label>
                   <div className="relative group">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
                     <Input
@@ -576,8 +577,7 @@ export default function Login() {
                   <p className="flex items-start gap-3">
                     <Mail className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary/70" />
                     <span className="leading-relaxed">
-                      Enviaremos um link de acesso único para seu email. 
-                      {' '}Ideal para redes corporativas com restrições.
+                      {t('loginPage.magicLinkDesc')}
                     </span>
                   </p>
                 </div>
@@ -585,7 +585,7 @@ export default function Login() {
                   <Alert className="border-success/50 bg-success/5 backdrop-blur-sm animate-slide-in">
                     <Mail className="h-4 w-4 text-success animate-pulse" />
                     <AlertDescription className="text-success-foreground font-medium">
-                      ✅ Email enviado! Verifique sua caixa de entrada.
+                      {t('loginPage.magicLinkSent')}
                     </AlertDescription>
                   </Alert>
                 )}
@@ -599,20 +599,20 @@ export default function Login() {
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin opacity-80" />
-                      Enviando...
+                      {t('loginPage.sending')}
                     </>
                   ) : (
-                    'Enviar Link Mágico'
+                    t('loginPage.sendMagicLink')
                   )}
                 </Button>
                 <div className="text-sm text-center text-muted-foreground/60 space-y-2">
                   <div>
-                    Não tem uma conta?{' '}
+                    {t('loginPage.noAccount')}{' '}
                     <Link 
                       to="/signup" 
                       className="text-primary/80 hover:text-primary font-medium transition-colors duration-200"
                     >
-                      Cadastre-se
+                      {t('loginPage.signUp')}
                     </Link>
                   </div>
                   <div className="pt-2 border-t border-border/30 mt-2">
@@ -620,7 +620,7 @@ export default function Login() {
                       to="/" 
                       className="text-muted-foreground/70 hover:text-primary/80 transition-colors duration-200 text-xs"
                     >
-                      ← Voltar para página inicial
+                      {t('loginPage.backToHome')}
                     </Link>
                   </div>
                 </div>
