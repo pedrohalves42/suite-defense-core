@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import cybershieldLogo from '@/assets/cybershield-logo.png';
+import cybershieldLogo from '@/assets/logo-cybshield-new.png';
 
 interface PitchSlideProps {
   slideNumber: number;
