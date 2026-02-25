@@ -523,7 +523,7 @@ Deno.serve(async (req) => {
                   sha256_base64: calculatedSha256,
                   reason: effectiveForceReason || 'Forced update via backend',
                   force_update_reason: effectiveForceReason || 'Forced update via backend',
-                  override_safe_mode: overrideValid,
+                  override_safe_mode: !!(forceCheck as any)?.force_update_override_safe_mode && (!(forceCheck as any)?.force_update_override_safe_mode_expires_at || new Date((forceCheck as any).force_update_override_safe_mode_expires_at) > new Date()),
                   // CONFIRMATION METADATA (closed-loop)
                   confirm_url: `${supabaseUrl}/functions/v1/confirm-force-update`,
                   confirm_method: 'POST',
