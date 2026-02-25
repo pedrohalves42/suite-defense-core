@@ -285,6 +285,33 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Deduplication: auto-resolve existing open insights with same title before inserting new ones
+    if (insights.length > 0) {
+      const newTitles = insights.map(i => i.title);
+      const tenantIds = [...new Set(insights.map(i => i.tenant_id))];
+      
+      for (const tid of tenantIds) {
+        const titlesForTenant = insights.filter(i => i.tenant_id === tid).map(i => i.title);
+        const { error: dedupError } = await supabase
+          .from('ai_insights')
+          .update({
+            status: 'resolved',
+            resolved_at: new Date().toISOString(),
+            resolution_method: 'manual_dismiss',
+            final_outcome: 'no_action_required',
+            acknowledged: true,
+            acknowledged_at: new Date().toISOString(),
+          })
+          .eq('tenant_id', tid)
+          .in('status', ['open', 'in_progress'])
+          .in('title', titlesForTenant);
+        
+        if (dedupError) {
+          console.warn('[ai-system-analyzer] Dedup error:', dedupError.message);
+        }
+      }
+    }
+
     // Salvar insights no banco
     if (insights.length > 0) {
       const { data: insertedInsights, error: insertError } = await supabase
@@ -297,7 +324,7 @@ Deno.serve(async (req) => {
         throw insertError;
       }
 
-      console.log(`[ai-system-analyzer] Successfully saved ${insights.length} insights`);
+      console.log(`[ai-system-analyzer] Successfully saved ${insights.length} insights (deduped old ones)`);
 
       // FASE 2: Gerar acoes sugeridas baseadas nos insights
       if (insertedInsights && insertedInsights.length > 0) {
