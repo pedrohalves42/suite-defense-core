@@ -178,6 +178,18 @@ Deno.serve(async (req) => {
         reason: agent.force_update_reason
       });
 
+      // Incrementar contador de entregas para detectar loops
+      await supabase
+        .from('agents')
+        .update({ 
+          force_update_delivery_count: (await supabase
+            .from('agents')
+            .select('force_update_delivery_count')
+            .eq('id', agent.id)
+            .single()).data?.force_update_delivery_count + 1 || 1
+        })
+        .eq('id', agent.id);
+
       return new Response(
         JSON.stringify({
           version: forcedRelease.version,
@@ -194,7 +206,16 @@ Deno.serve(async (req) => {
           // FLAGS ESPECIAIS PARA FORCE UPDATE
           force_update: true,
           bypass_jobs: true,
-          force_update_reason: agent.force_update_reason
+          force_update_reason: agent.force_update_reason,
+          // CONFIRMATION INSTRUCTIONS (critical for closing the loop)
+          confirm_url: `${SUPABASE_URL}/functions/v1/confirm-force-update`,
+          confirm_method: 'POST',
+          confirm_body_schema: {
+            new_version: forcedRelease.version,
+            old_version: agent.agent_version || 'unknown'
+          },
+          confirm_required_headers: ['X-Agent-Token', 'X-HMAC-Signature', 'X-Timestamp', 'X-Nonce'],
+          confirm_instructions: 'After applying the update and recreating the scheduled task, POST to confirm_url with confirm_body_schema and HMAC headers to clear the force_update flag. Without this call, the update will be re-delivered on next heartbeat.'
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -460,23 +481,27 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         version: release.version,
-        // BACKWARD COMPATIBLE: script_content como string + SHA256 do banco
-        // Agentes v3.10.37 e anteriores usam isso
-        script_content: finalScriptContent,      // ← Script original (sem normalização runtime)
-        sha256: legacySha256,                    // ← SHA256 com override para v3.10.39
-        // NOVO: Para agentes v3.10.39+ que suportam Base64
-        script_content_base64: base64Script,     // ← Base64 dos bytes CRLF-normalizados
-        sha256_base64: base64Sha256,             // ← SHA256 dos bytes Base64
-        // FASE 2: Assinatura criptográfica Ed25519
+        script_content: finalScriptContent,
+        sha256: legacySha256,
+        script_content_base64: base64Script,
+        sha256_base64: base64Sha256,
         signature_base64: release.signature_base64 || null,
         signed_at: release.signed_at || null,
         signed_by: release.signed_by || null,
         release_notes: release.release_notes,
         platform: platform,
         current_version: agent.agent_version,
-        // KILL-SWITCH: Flag para indicar agente legado
         legacy_agent_detected: isLegacyAgent,
-        self_healing_note: isLegacyAgent ? 'Script saved to disk. New version active after Windows reboot.' : null
+        self_healing_note: isLegacyAgent ? 'Script saved to disk. New version active after Windows reboot.' : null,
+        // CONFIRMATION INSTRUCTIONS (critical for closing the loop)
+        confirm_url: `${SUPABASE_URL}/functions/v1/confirm-force-update`,
+        confirm_method: 'POST',
+        confirm_body_schema: {
+          new_version: release.version,
+          old_version: agent.agent_version || 'unknown'
+        },
+        confirm_required_headers: ['X-Agent-Token', 'X-HMAC-Signature', 'X-Timestamp', 'X-Nonce'],
+        confirm_instructions: 'After applying the update, POST to confirm_url with confirm_body_schema and HMAC headers to register the new version.'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

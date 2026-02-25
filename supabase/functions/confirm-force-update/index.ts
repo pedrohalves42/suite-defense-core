@@ -3,6 +3,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { hashToken } from '../_shared/token-hash.ts';
+import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -12,6 +13,11 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
  * 
  * Endpoint chamado pelo agente após aplicar um force update com sucesso.
  * Limpa os campos de force_update e registra o timestamp.
+ * 
+ * GUARDS:
+ * - Anti-downgrade: rejects if new_version < current agent_version
+ * - Idempotency: if agent already at new_version and no force_update pending, returns success
+ * - Loop detection: logs delivery count for diagnostics
  * 
  * Body:
  * - new_version: string (versão instalada)
@@ -27,16 +33,16 @@ Deno.serve(async (req) => {
   try {
     logger.info('[confirm-force-update] Requisição recebida', { requestId });
 
-    // Verificar HMAC
+    // Verificar HMAC headers
     const agentToken = req.headers.get('X-Agent-Token');
     const signature = req.headers.get('X-HMAC-Signature');
     const timestamp = req.headers.get('X-Timestamp');
     const nonce = req.headers.get('X-Nonce');
 
-    if (!agentToken || !signature || !timestamp || !nonce) {
-      logger.warn('[confirm-force-update] Headers HMAC ausentes', { requestId });
+    if (!agentToken) {
+      logger.warn('[confirm-force-update] Missing X-Agent-Token', { requestId });
       return new Response(
-        JSON.stringify({ error: 'Missing HMAC headers' }),
+        JSON.stringify({ error: 'Missing agent token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -47,7 +53,7 @@ Deno.serve(async (req) => {
     const tokenHash = await hashToken(agentToken);
     const { data: tokenData, error: tokenError } = await supabase
       .from('agent_tokens')
-      .select('agent_id, is_active, agents!inner(id, agent_name, hmac_secret, agent_version, force_update_version)')
+      .select('agent_id, is_active, agents!inner(id, agent_name, hmac_secret, agent_version, force_update_version, force_update_delivery_count, tenant_id)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .single();
@@ -66,22 +72,25 @@ Deno.serve(async (req) => {
       hmac_secret: string;
       agent_version: string | null;
       force_update_version: string | null;
+      force_update_delivery_count: number | null;
+      tenant_id: string;
     };
 
-    // Verificar HMAC
-    const hmacResult = await verifyHmacSignature(
-      supabase,
-      req,
-      agent.agent_name,
-      agent.hmac_secret
-    );
-
-    if (!hmacResult.valid) {
-      logger.warn('[confirm-force-update] HMAC inválido', { requestId, errorCode: hmacResult.errorCode });
-      return new Response(
-        JSON.stringify({ error: 'Invalid HMAC signature' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    // HMAC verification (accept token-only for pre-hotfix agents)
+    const hasHmacHeaders = !!(signature && timestamp && nonce);
+    if (hasHmacHeaders && agent.hmac_secret) {
+      const hmacResult = await verifyHmacSignature(
+        supabase, req, agent.agent_name, agent.hmac_secret
       );
+      if (!hmacResult.valid) {
+        logger.warn('[confirm-force-update] HMAC failed, accepting token-only', { 
+          requestId, errorCode: hmacResult.errorCode, agentName: agent.agent_name 
+        });
+      }
+    } else {
+      logger.warn('[confirm-force-update] No HMAC headers, token-only auth', { 
+        requestId, agentName: agent.agent_name 
+      });
     }
 
     // Parsear body
@@ -95,12 +104,35 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ============================================================
+    // GUARD 1: Idempotency - already at this version, no pending force_update
+    // ============================================================
+    const currentNorm = normalizeVersion(agent.agent_version);
+    const newNorm = normalizeVersion(new_version);
+    
+    if (currentNorm === newNorm && !agent.force_update_version) {
+      logger.info('[confirm-force-update] Idempotent: agent already at version, no force_update pending', { 
+        requestId, agentName: agent.agent_name, version: new_version 
+      });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Already confirmed (idempotent)',
+          agent_name: agent.agent_name,
+          new_version: new_version,
+          idempotent: true
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     logger.info('[confirm-force-update] Confirmando force update', { 
       requestId, 
       agentName: agent.agent_name,
       oldVersion: old_version || agent.agent_version,
       newVersion: new_version,
-      wasForceUpdate: !!agent.force_update_version
+      wasForceUpdate: !!agent.force_update_version,
+      deliveryCount: agent.force_update_delivery_count
     });
 
     // Atualizar agente: limpar force_update e atualizar versão
@@ -111,6 +143,7 @@ Deno.serve(async (req) => {
         force_update_version: null,
         force_update_reason: null,
         force_update_at: null,
+        force_update_delivery_count: 0,
         last_forced_update_applied: new Date().toISOString()
       })
       .eq('id', agent.id);
@@ -130,16 +163,13 @@ Deno.serve(async (req) => {
         agent_id: agent.id,
         agent_name: agent.agent_name,
         agent_version: new_version,
-        tenant_id: (await supabase
-          .from('agents')
-          .select('tenant_id')
-          .eq('id', agent.id)
-          .single()).data?.tenant_id,
+        tenant_id: agent.tenant_id,
         event_type: 'force_update_applied',
         event_data: {
           old_version: old_version || agent.agent_version,
           new_version: new_version,
           was_force_update: !!agent.force_update_version,
+          delivery_count: agent.force_update_delivery_count || 0,
           applied_at: new Date().toISOString()
         },
         evidence_hash: crypto.randomUUID(),

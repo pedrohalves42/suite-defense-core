@@ -5045,6 +5045,7 @@ export type Database = {
           enrolled_at: string
           force_update_at: string | null
           force_update_delivered_count: number | null
+          force_update_delivery_count: number | null
           force_update_first_delivered_at: string | null
           force_update_override_safe_mode: boolean | null
           force_update_override_safe_mode_expires_at: string | null
@@ -5100,6 +5101,7 @@ export type Database = {
           enrolled_at?: string
           force_update_at?: string | null
           force_update_delivered_count?: number | null
+          force_update_delivery_count?: number | null
           force_update_first_delivered_at?: string | null
           force_update_override_safe_mode?: boolean | null
           force_update_override_safe_mode_expires_at?: string | null
@@ -5155,6 +5157,7 @@ export type Database = {
           enrolled_at?: string
           force_update_at?: string | null
           force_update_delivered_count?: number | null
+          force_update_delivery_count?: number | null
           force_update_first_delivered_at?: string | null
           force_update_override_safe_mode?: boolean | null
           force_update_override_safe_mode_expires_at?: string | null
