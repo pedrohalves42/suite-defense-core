@@ -16,7 +16,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { hToast } from '@/lib/humanized-toast';
 import { useTenant } from '@/hooks/useTenant';
-import type { Json } from '@/integrations/supabase/types';
 
 interface RejectInsightDialogProps {
   open: boolean;
@@ -52,64 +51,50 @@ export function RejectInsightDialog({
 
   const rejectMutation = useMutation({
     mutationFn: async () => {
-      // Validar que é um insight real da IA (não alertas de sistema como offline_UUID)
+      // Validar que é um insight real da IA (não alertas de sistema)
       if (insightId.startsWith('offline_') || insightId.startsWith('alert_') || insightId.startsWith('system_')) {
         throw new Error('Alertas de sistema não podem ser rejeitados como insights da IA. Use "Entendido" para marcá-los como revisados.');
       }
-      
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error('Usuário não autenticado');
 
-      const now = new Date().toISOString();
       const reasonLabel = REJECTION_REASONS.find(r => r.value === selectedReason)?.label || selectedReason;
       const fullReason = selectedReason === 'other' 
         ? customReason 
         : `${reasonLabel}${customReason ? `: ${customReason}` : ''}`;
 
-      // Update the insight with rejection info
-      const { error: updateError } = await supabase
-        .from('ai_insights')
-        .update({
-          rejected_at: now,
-          rejected_by: user.id,
-          rejection_reason: fullReason,
-          acknowledged: true,
-          acknowledged_at: now,
-          acknowledged_by: user.id,
-          status: 'rejected',
-        })
-        .eq('id', insightId);
-
-      if (updateError) throw updateError;
-
-      // Create decision event for audit trail
-      const evidence: Json = {
-        insight_id: insightId,
-        insight_type: insightType,
-        insight_title: insightTitle,
-        rejection_reason: fullReason,
-        rejection_category: selectedReason,
-        rejected_at: now,
-        rejected_by: user.id,
-        user_email: user.email,
-        agent_name: agentName,
-      };
-
-      await supabase.from('decision_events').insert({
-        tenant_id: tenant?.id,
-        rule_code: 'AI_INSIGHT_REJECTION',
-        action: 'reject_ai_insight',
-        evidence,
-        decision_source: 'human',
-        decision_type: 'rejection',
+      // Use the edge function handler for reject action (uses service role, handles audit trail)
+      const { data, error } = await supabase.functions.invoke('action-center-feed', {
+        method: 'POST',
+        headers: {
+          'x-tenant-id': tenant?.id || '',
+        },
+        body: {
+          item_id: insightId,
+          source_type: 'ai_insight',
+          action: 'reject',
+          reason: fullReason,
+          reason_category: selectedReason,
+        },
       });
 
-      return { success: true };
+      if (error) {
+        // Try to extract meaningful error from edge function response
+        let errorMsg = error.message || 'Erro ao rejeitar insight';
+        try {
+          if (error.context) {
+            const body = await error.context.json();
+            errorMsg = body?.error || errorMsg;
+          }
+        } catch { /* ignore parse errors */ }
+        throw new Error(errorMsg);
+      }
+
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['action-center'] });
       queryClient.invalidateQueries({ queryKey: ['ai-insights'] });
       queryClient.invalidateQueries({ queryKey: ['decision-events'] });
+      queryClient.invalidateQueries({ queryKey: ['critical-insights-count'] });
       hToast.success('Insight rejeitado e registrado para auditoria');
       onOpenChange(false);
       setSelectedReason('');
@@ -118,7 +103,7 @@ export function RejectInsightDialog({
     },
     onError: (error) => {
       console.error('[RejectInsightDialog] Error:', error);
-      hToast.error(error);
+      hToast.error(error instanceof Error ? error.message : 'Erro ao rejeitar insight');
     },
   });
 
