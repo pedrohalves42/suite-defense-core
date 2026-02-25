@@ -78,7 +78,7 @@ export default function RateLimitingStats() {
       
       return stats;
     },
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 
   const formatEndpoint = (endpoint: string) => {

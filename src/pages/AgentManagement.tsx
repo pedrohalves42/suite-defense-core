@@ -107,7 +107,7 @@ export default function AgentManagement() {
       return (result.data || []) as Agent[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 
   const { data: installationStatus } = useQuery<Record<string, boolean>>({
@@ -174,7 +174,7 @@ export default function AgentManagement() {
       return metricsMap;
     },
     enabled: !!tenant?.id && !!agents && agents.length > 0,
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
   });
 
   // Helper functions

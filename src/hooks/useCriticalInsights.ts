@@ -33,7 +33,7 @@ export function useCriticalInsights() {
       
       return count || 0;
     },
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
     staleTime: 30000,
   });
 }

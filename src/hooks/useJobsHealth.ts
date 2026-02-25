@@ -78,7 +78,7 @@ export const useJobsHealth = () => {
       }));
     },
     enabled: !loading && !!tenantId,  // ADR-029 CRIT-04: Guard with loading state
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
     staleTime: 10000,
   });
 
@@ -98,7 +98,7 @@ export const useJobsHealth = () => {
       return (data || []) as JobHourlyTrend[];
     },
     enabled: !loading && !!tenantId,  // ADR-029 CRIT-04: Guard with loading state
-    refetchInterval: 60000,
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
     staleTime: 30000,
   });
 
@@ -118,7 +118,7 @@ export const useJobsHealth = () => {
       return data || [];
     },
     enabled: !loading && !!tenantId,
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 
   // Operational: paused agents & outdated versions
@@ -134,7 +134,7 @@ export const useJobsHealth = () => {
       return (data || []) as AgentOperationalInfo[];
     },
     enabled: !loading && !!tenantId,
-    refetchInterval: 60000,
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
     staleTime: 30000,
   });
 

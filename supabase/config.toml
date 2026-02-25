@@ -154,10 +154,10 @@ verify_jwt = true
 [functions.cleanup-expired-enrollment-keys]
 verify_jwt = true
 
-# Auto-renew enrollment keys when all keys expire (every 30 minutes)
+# Auto-renew enrollment keys (every 2 hours) COST-OPT
 [functions.auto-renew-enrollment-keys]
 verify_jwt = false
-schedule = "*/30 * * * *"
+schedule = "0 */2 * * *"
 
 [functions.cleanup-orphaned-data]
 verify_jwt = true
@@ -176,11 +176,11 @@ verify_jwt = true
 
 [functions.cleanup-stuck-builds]
 verify_jwt = false
-schedule = "*/10 * * * *"
+schedule = "0 */2 * * *"
 
 [functions.build-watchdog]
 verify_jwt = false
-schedule = "*/5 * * * *"
+schedule = "*/30 * * * *"
 
 [functions.get-agent-dashboard-data]
 verify_jwt = true
@@ -206,20 +206,20 @@ verify_jwt = true
 # === Monitoring Functions ===
 [functions.monitor-agent-health]
 verify_jwt = false
-schedule = "*/5 * * * *"
+schedule = "*/30 * * * *"
 
 [functions.monitor-thresholds]
 verify_jwt = false
 
-# P1-01: Stuck Jobs Alert (every 15 minutes)
+# P1-01: Stuck Jobs Alert (every hour) COST-OPT
 [functions.check-stuck-jobs]
 verify_jwt = false
-schedule = "*/15 * * * *"
+schedule = "0 * * * *"
 
-# P1-01: Cleanup stuck jobs (every 30 minutes)  
+# P1-01: Cleanup stuck jobs (every 2 hours) COST-OPT
 [functions.cleanup-stuck-jobs]
 verify_jwt = false
-schedule = "*/30 * * * *"
+schedule = "0 */2 * * *"
 
 # P1-02: Cleanup jobs for offline agents (every hour)
 [functions.cleanup-offline-agents-jobs]
@@ -303,7 +303,7 @@ verify_jwt = false
 # === Monitoring Functions (FASE 4.1) ===
 [functions.monitor-slow-operations]
 verify_jwt = false
-schedule = "*/5 * * * *"
+schedule = "*/30 * * * *"
 
 # === Test Functions ===
 [functions.test-virustotal-integration]
@@ -340,7 +340,7 @@ schedule = "0 * * * *"
 
 [functions.monitor-stuck-agents]
 verify_jwt = false
-schedule = "*/10 * * * *"
+schedule = "0 * * * *"
 
 # === FASE 3+4: Agent Release Management ===
 [functions.register-agent-release]
@@ -466,10 +466,10 @@ verify_jwt = false
 verify_jwt = false
 schedule = "0 3 * * *"
 
-# === Blocked Access Detection ===
+# === Blocked Access Detection (every 30 minutes) COST-OPT ===
 [functions.detect-blocked-attempts]
 verify_jwt = false
-schedule = "*/5 * * * *"
+schedule = "*/30 * * * *"
 
 # === V4.0 Software Risk Engine ===
 # (Moved to line 107-108 with verify_jwt = false for cron access)
@@ -482,10 +482,10 @@ verify_jwt = true
 [functions.sync-release-from-repo]
 verify_jwt = false
 
-# === Zero Trust Integrity Sentinel (every 15 minutes) ===
+# === Zero Trust Integrity Sentinel (every hour) COST-OPT ===
 [functions.integrity-sentinel]
 verify_jwt = false
-schedule = "*/15 * * * *"
+schedule = "0 * * * *"
 
 # === Chaos Test (Zero Trust Validation) ===
 [functions.chaos-test]
@@ -536,15 +536,15 @@ verify_jwt = true
 [functions.register-agent-key]
 verify_jwt = false
 
-# === FASE 1: Autonomous SAFE_MODE (every 15 minutes) ===
+# === FASE 1: Autonomous SAFE_MODE (every hour) COST-OPT ===
 [functions.autonomous-safe-mode]
 verify_jwt = false
-schedule = "*/15 * * * *"
+schedule = "0 * * * *"
 
-# === Watchdog Non-Execution Detection (every 15 minutes) ===
+# === Watchdog Non-Execution Detection (every hour) COST-OPT ===
 [functions.watchdog-non-execution]
 verify_jwt = false
-schedule = "*/15 * * * *"
+schedule = "0 * * * *"
 
 # === Executive Report Generator (daily at 6:00 UTC) ===
 [functions.generate-executive-report]
@@ -564,10 +564,10 @@ verify_jwt = false
 [functions.verify-compliance-report]
 verify_jwt = false
 
-# === Auto Execute AI Actions (every 30 minutes) ===
+# === Auto Execute AI Actions (every 2 hours) COST-OPT ===
 [functions.auto-execute-ai-actions]
 verify_jwt = false
-schedule = "*/30 * * * *"
+schedule = "0 */2 * * *"
 
 # === AI System Audit (Ana Persona) ===
 [functions.ai-system-audit]
@@ -585,20 +585,20 @@ verify_jwt = true
 [functions.action-center-feed]
 verify_jwt = true
 
-# === Invoke Scheduled Jobs (CRON trigger) ===
+# === Invoke Scheduled Jobs (every 5 minutes) COST-OPT ===
 [functions.invoke-scheduled-jobs]
-verify_jwt = false
-schedule = "* * * * *"
-
-# === P0: Cleanup Stale Playbooks (every 5 minutes) ===
-[functions.cleanup-stale-playbooks]
 verify_jwt = false
 schedule = "*/5 * * * *"
 
-# === P0: Process Failed Jobs (every 10 minutes) ===
+# === P0: Cleanup Stale Playbooks (every 30 minutes) COST-OPT ===
+[functions.cleanup-stale-playbooks]
+verify_jwt = false
+schedule = "*/30 * * * *"
+
+# === P0: Process Failed Jobs (every hour) COST-OPT ===
 [functions.process-failed-jobs]
 verify_jwt = false
-schedule = "*/10 * * * *"
+schedule = "0 * * * *"
 
 # === P1: Cleanup Stale Reports (every hour) ===
 [functions.cleanup-stale-reports]
@@ -614,10 +614,10 @@ schedule = "0 * * * *"
 [functions.ai-execute-solution]
 verify_jwt = true
 
-# === Check Action Effectiveness (every 15 minutes) ===
+# === Check Action Effectiveness (every hour) COST-OPT ===
 [functions.check-action-effectiveness]
 verify_jwt = false
-schedule = "*/15 * * * *"
+schedule = "0 * * * *"
 
 # === Generate Explainable AI Report ===
 [functions.generate-explainable-report]
@@ -636,10 +636,10 @@ verify_jwt = true
 verify_jwt = false
 schedule = "0 4 * * *"
 
-# === Agent Integrity Check (every 15 minutes) ===
+# === Agent Integrity Check (every hour) COST-OPT ===
 [functions.check-agent-integrity]
 verify_jwt = false
-schedule = "*/15 * * * *"
+schedule = "0 * * * *"
 
 # === Job Failure Pattern Analysis ===
 [functions.analyze-job-failure-patterns]
@@ -663,26 +663,26 @@ schedule = "0 6 * * *"
 [functions.set-active-tenant]
 verify_jwt = false
 
-# === ADR-032: SLO Burn Rate Evaluation (every 5 minutes) ===
+# === ADR-032: SLO Burn Rate Evaluation (every 30 minutes) COST-OPT ===
 [functions.evaluate-job-slo]
-verify_jwt = false
-schedule = "*/5 * * * *"
-
-# === Task SLA Breach Check (every 5 minutes) ===
-[functions.check-task-sla-breach]
-verify_jwt = false
-schedule = "*/5 * * * *"
-
-# === Detect Stuck Installations (every 30 minutes) ===
-[functions.detect-stuck-installations]
 verify_jwt = false
 schedule = "*/30 * * * *"
 
-# === ADR-FINAL: Cron Sentinel (every 10 minutes) ===
+# === Task SLA Breach Check (every 30 minutes) COST-OPT ===
+[functions.check-task-sla-breach]
+verify_jwt = false
+schedule = "*/30 * * * *"
+
+# === Detect Stuck Installations (every 2 hours) COST-OPT ===
+[functions.detect-stuck-installations]
+verify_jwt = false
+schedule = "0 */2 * * *"
+
+# === ADR-FINAL: Cron Sentinel (every hour) COST-OPT ===
 # Detects cron jobs silent failures and creates P0 tasks
 [functions.cron-sentinel]
 verify_jwt = false
-schedule = "*/10 * * * *"
+schedule = "0 * * * *"
 
 # === Security Operations Framework ===
 # V-002 Fix: Allow cron calls without JWT (function validates internally via x-cron-source header)
@@ -725,20 +725,20 @@ verify_jwt = false
 verify_jwt = false
 
 # === Phase 3: AI Prediction & Correlation Functions ===
-# Predict agent failures (every 30 minutes)
+# Predict agent failures (every 2 hours) COST-OPT
 [functions.ai-predict-agent-failure]
-verify_jwt = false
-schedule = "*/30 * * * *"
-
-# Correlate alerts for RCA (every 2 hours)
-[functions.ai-correlate-alerts]
 verify_jwt = false
 schedule = "0 */2 * * *"
 
-# Behavioral anomaly detection (every 15 minutes)
+# Correlate alerts for RCA (every 4 hours) COST-OPT
+[functions.ai-correlate-alerts]
+verify_jwt = false
+schedule = "0 */4 * * *"
+
+# Behavioral anomaly detection (every hour) COST-OPT
 [functions.ai-behavioral-anomaly-detector]
 verify_jwt = false
-schedule = "*/15 * * * *"
+schedule = "0 * * * *"
 
 # === Phase 4: AI Security Copilot ===
 [functions.ai-security-copilot]

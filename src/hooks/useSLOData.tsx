@@ -198,6 +198,6 @@ export const useCalculatedSLOs = () => {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 60000 // Refresh every minute
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
   });
 };

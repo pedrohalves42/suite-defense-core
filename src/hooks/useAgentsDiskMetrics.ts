@@ -51,6 +51,6 @@ export function useAgentsDiskMetrics(agentIds: string[]) {
     },
     enabled: agentIds.length > 0,
     staleTime: 30000,
-    refetchInterval: 60000,
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
   });
 }

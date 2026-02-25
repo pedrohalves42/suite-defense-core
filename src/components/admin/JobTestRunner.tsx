@@ -74,7 +74,7 @@ export default function JobTestRunner() {
         .sort((a: Agent, b: Agent) => a.agent_name.localeCompare(b.agent_name));
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 
   // Create test job mutation

@@ -107,7 +107,7 @@ export function AgentSystemInfo({ agentId, tenantId }: AgentSystemInfoProps) {
       } as AgentInfo;
     },
     enabled: !!agentId,
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 
   if (isLoading) {

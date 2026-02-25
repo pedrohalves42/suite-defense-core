@@ -23,7 +23,7 @@ export default function BuildHealthDashboard() {
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 15000, // Atualizar a cada 15s
+    refetchInterval: 300000, // COST-OPT: 15s → 5min
   });
 
   const cleanupMutation = useMutation({

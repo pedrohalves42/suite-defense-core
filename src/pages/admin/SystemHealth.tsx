@@ -65,7 +65,7 @@ export default function SystemHealth() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 
   const { data: jobStats, isLoading: loadingJobs } = useQuery({
@@ -112,7 +112,7 @@ export default function SystemHealth() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 
   const { data: jobsOverTime, isLoading: loadingTimeline } = useQuery({

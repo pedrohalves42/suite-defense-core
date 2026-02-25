@@ -55,7 +55,7 @@ export function useScheduledJobsHealth() {
       if (error) throw error;
       return (data || []) as unknown as JobHealthStatus[];
     },
-    refetchInterval: 60000, // Every minute
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
     staleTime: 30000,
   });
 
@@ -95,7 +95,7 @@ export function useScheduledJobsHealth() {
         never_ran_jobs: 0,
       };
     },
-    refetchInterval: 60000,
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
     staleTime: 30000,
   });
 

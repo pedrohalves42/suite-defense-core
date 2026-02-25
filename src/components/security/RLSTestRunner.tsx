@@ -36,7 +36,7 @@ export function RLSTestRunner() {
       if (error) throw error;
       return data as RLSTestResult[];
     },
-    refetchInterval: 30000, // Atualizar a cada 30s
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 
   // Mutation para executar testes RLS

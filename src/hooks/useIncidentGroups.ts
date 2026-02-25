@@ -51,7 +51,7 @@ export const useIncidentGroups = (limit = 50) => {
       return (data || []) as unknown as IncidentGroup[];
     },
     enabled: !loading && !!activeTenant?.id, // ADR-030 CRIT-01
-    refetchInterval: 60000,
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
     staleTime: 30000,
   });
 };

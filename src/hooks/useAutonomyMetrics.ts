@@ -61,7 +61,7 @@ export const useAutonomyMetrics = (days: number = 7) => {
       return data as unknown as AutonomyMetrics;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 };
 
@@ -81,7 +81,7 @@ export const useAuditTrailIntegrity = () => {
       return data as unknown as AuditTrailIntegrity;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 60000,
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
   });
 };
 
@@ -104,7 +104,7 @@ export const useDecisionTimeline = (options?: { limit?: number; ruleCode?: strin
       return (data || []) as unknown as DecisionTimelineItem[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 };
 
