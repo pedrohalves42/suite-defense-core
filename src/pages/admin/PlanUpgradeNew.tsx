@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Zap, Crown, Loader2, Building2, AlertTriangle } from 'lucide-react';
+import { Check, Zap, Crown, Loader2, Building2, AlertTriangle, Monitor, Users, CalendarDays, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTenant } from '@/hooks/useTenant';
@@ -393,29 +393,61 @@ export default function PlanUpgradeNew() {
 
       {isSubscribed && subscription && (
         <Card className="border-primary">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Plano Atual: {subscription.plan_name.toUpperCase()}</CardTitle>
-                <CardDescription>
-                  Status: {subscription.status === 'trialing' ? 'Em período de teste' : subscription.status}
-                </CardDescription>
-                {subscription.trial_end && new Date(subscription.trial_end) > new Date() && (
-                  <Badge variant="secondary" className="mt-2">
-                    Trial até {formatBrazilDateTime(subscription.trial_end, 'date')}
-                  </Badge>
-                )}
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Plano Atual: {subscription.plan_name.toUpperCase()}</CardTitle>
+                  <CardDescription>
+                    Status: <Badge variant={subscription.status === 'active' ? 'default' : 'secondary'} className="ml-1 text-xs">
+                      {subscription.status === 'trialing' ? 'Em teste' : subscription.status === 'active' ? 'Ativo' : subscription.status}
+                    </Badge>
+                  </CardDescription>
+                </div>
               </div>
-              <Button
-                variant="outline"
-                onClick={() => openPortal.mutate()}
-                disabled={openPortal.isPending}
-              >
-                {openPortal.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                Gerenciar Assinatura
-              </Button>
             </div>
           </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-1 p-3 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Monitor className="h-3.5 w-3.5" />
+                  Agentes Instalados
+                </div>
+                <p className="text-xl font-bold">{subscription.installed_agents ?? '—'}</p>
+              </div>
+              <div className="space-y-1 p-3 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Users className="h-3.5 w-3.5" />
+                  Slots Disponíveis
+                </div>
+                <p className="text-xl font-bold text-primary">{subscription.available_slots ?? '—'}</p>
+              </div>
+              <div className="space-y-1 p-3 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Monitor className="h-3.5 w-3.5" />
+                  Máx. Dispositivos
+                </div>
+                <p className="text-xl font-bold">{subscription.max_devices ?? subscription.device_quantity ?? '—'}</p>
+              </div>
+              <div className="space-y-1 p-3 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  {subscription.trial_end && new Date(subscription.trial_end) > new Date() ? 'Trial até' : 'Expira em'}
+                </div>
+                <p className="text-sm font-bold">
+                  {subscription.trial_end && new Date(subscription.trial_end) > new Date()
+                    ? formatBrazilDateTime(subscription.trial_end, 'date')
+                    : subscription.current_period_end
+                      ? formatBrazilDateTime(subscription.current_period_end, 'date')
+                      : 'Sem expiração'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
         </Card>
       )}
 
