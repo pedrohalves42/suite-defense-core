@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Zap, Crown, Loader2, Building2, AlertTriangle, Monitor, Users, CalendarDays, Shield } from 'lucide-react';
+import { PLAN_CONFIG } from '@/constants/plans';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTenant } from '@/hooks/useTenant';
@@ -202,71 +203,37 @@ export default function PlanUpgradeNew() {
         'Status do antivírus',
       ],
     },
-    starter: {
+    starter_compliance: {
       icon: Zap,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
-      description: 'Ideal para micro-empresas',
-      price: 'R$ 150',
-      priceNote: '/mês • até 5 dispositivos',
-      features: [
-        'Até 5 dispositivos',
-        'Dashboard avançado',
-        'Relatórios de segurança',
-        'Suporte por email',
-        '14 dias de trial grátis',
-      ],
+      description: 'Ideal para pequenas empresas',
+      price: `R$ ${(PLAN_CONFIG.starter_compliance.basePriceCents / 100).toFixed(0)}`,
+      priceNote: `/mês • até ${PLAN_CONFIG.starter_compliance.baseDevices} dispositivos base`,
+      features: [...PLAN_CONFIG.starter_compliance.features],
       popular: true,
     },
-    pro: {
+    business: {
       icon: Crown,
       color: 'text-yellow-500',
       bgColor: 'bg-yellow-500/10',
-      description: 'Para pequenas empresas',
-      price: 'R$ 450',
-      priceNote: '/mês • até 25 dispositivos',
-      features: [
-        'Até 25 dispositivos',
-        'Scans ilimitados',
-        'Analytics avançado',
-        'Suporte prioritário',
-        'API access',
-        'Relatórios customizados',
-      ],
-    },
-    scale: {
-      icon: Crown,
-      color: 'text-purple-500',
-      bgColor: 'bg-purple-500/10',
-      description: 'Para médias empresas',
-      price: 'R$ 1.200',
-      priceNote: '/mês • até 100 dispositivos',
-      features: [
-        'Até 100 dispositivos',
-        'Todas as features Business',
-        'SLA garantido',
-        'Onboarding dedicado',
-        'Suporte telefônico',
-      ],
+      description: 'Para empresas em crescimento',
+      price: `R$ ${(PLAN_CONFIG.business.basePriceCents / 100).toFixed(0)}`,
+      priceNote: `/mês • até ${PLAN_CONFIG.business.baseDevices} dispositivos base`,
+      features: [...PLAN_CONFIG.business.features],
     },
     enterprise: {
       icon: Building2,
       color: 'text-red-500',
       bgColor: 'bg-red-500/10',
-      description: 'Para grandes organizações',
+      description: 'Para grandes organizações e MSPs',
       price: 'Sob consulta',
-      features: [
-        'Dispositivos ilimitados',
-        'Suporte 24/7',
-        'SLA personalizado',
-        'Integração customizada',
-        'Gerente de conta dedicado',
-      ],
+      features: [...PLAN_CONFIG.enterprise.features],
     },
   };
 
   // Order plans for display
-  const planOrder = ['free', 'starter', 'pro', 'scale', 'enterprise'];
+  const planOrder = ['free', 'starter_compliance', 'business', 'enterprise'];
   const orderedPlans = planOrder
     .map(name => allPlans.find(p => p.name === name))
     .filter(Boolean) as Plan[];
@@ -333,7 +300,7 @@ export default function PlanUpgradeNew() {
   }
 
   const needsSetup = allPlans.some(plan => 
-    !plan.stripe_price_id && ['starter', 'pro', 'scale'].includes(plan.name)
+    !plan.stripe_price_id && ['starter_compliance', 'business'].includes(plan.name)
   );
 
   return (
@@ -386,7 +353,7 @@ export default function PlanUpgradeNew() {
           <BillingPeriodSelector 
             value={billingPeriod} 
             onChange={setBillingPeriod} 
-            basePrice={15000} // Using starter plan as reference
+            basePrice={PLAN_CONFIG.starter_compliance.basePriceCents}
           />
         </div>
       </Card>
@@ -459,7 +426,7 @@ export default function PlanUpgradeNew() {
           const Icon = details.icon;
           const isCurrent = plan.name === currentPlanName;
           const isPopular = details.popular;
-          const isPaidPlan = ['starter', 'pro', 'scale'].includes(plan.name);
+          const isPaidPlan = ['starter_compliance', 'business'].includes(plan.name);
           const isEnterprise = plan.name === 'enterprise';
 
           return (
@@ -483,7 +450,7 @@ export default function PlanUpgradeNew() {
                 <div className={`w-10 h-10 rounded-lg ${details.bgColor} flex items-center justify-center mb-2`}>
                   <Icon className={`h-5 w-5 ${details.color}`} />
                 </div>
-                <CardTitle className="text-xl capitalize">{plan.name === 'pro' ? 'Business' : plan.name}</CardTitle>
+                <CardTitle className="text-xl capitalize">{plan.name === 'starter_compliance' ? 'Starter Compliance' : plan.name}</CardTitle>
                 <CardDescription className="text-xs">{details.description}</CardDescription>
                 
                 <div className="mt-2">
