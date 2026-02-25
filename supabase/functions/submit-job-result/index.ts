@@ -734,6 +734,137 @@ Deno.serve(async (req) => {
           console.error('[submit-job-result] Error processing web activity:', webErr)
         }
       }
+
+      // PROCESS ANTIVIRUS STATUS (ANTES do update)
+      if (job.type === 'collect_antivirus_status' && outputData.antivirus_products) {
+        try {
+          console.log('[submit-job-result] [ZERO_TRUST] Processing antivirus status BEFORE marking completed...')
+          const avProducts = outputData.antivirus_products as Array<Record<string, unknown>>
+          
+          if (Array.isArray(avProducts) && avProducts.length > 0) {
+            // Helper to decode WMI SecurityCenter2 product state
+            const decodeAvState = (state: number | string): { enabled: boolean; upToDate: boolean } => {
+              const s = typeof state === 'string' ? parseInt(state, 10) : state
+              if (isNaN(s)) return { enabled: false, upToDate: false }
+              // Bits 12-15: product state (0x1000 = on)
+              const enabled = ((s >> 12) & 0xF) === 1
+              // Bits 4-7: definition status (0x00 = up to date)
+              const upToDate = ((s >> 4) & 0xF) === 0
+              return { enabled, upToDate }
+            }
+
+            // Delete old records for this agent
+            const { error: deleteError } = await supabase
+              .from('antivirus_status')
+              .delete()
+              .eq('agent_id', job.agent_id)
+            
+            if (deleteError) {
+              console.error('[submit-job-result] Error clearing old AV status:', deleteError)
+            }
+
+            const collectedAt = outputData.collected_at
+              ? new Date(String(outputData.collected_at)).toISOString()
+              : new Date().toISOString()
+
+            const avRecords = avProducts.map((av) => {
+              const stateInfo = decodeAvState(av.state as number | string)
+              return {
+                tenant_id: agent.tenant_id,
+                agent_id: job.agent_id,
+                engine_name: String(av.name || av.displayName || 'Unknown'),
+                engine_version: av.version ? String(av.version) : null,
+                status: stateInfo.enabled ? 'active' : 'inactive',
+                last_update_at: stateInfo.upToDate ? collectedAt : null,
+                threats_found: 0,
+                raw_data: av,
+                collected_at: collectedAt,
+              }
+            })
+
+            const { error: insertError } = await supabase
+              .from('antivirus_status')
+              .insert(avRecords)
+            
+            if (insertError) {
+              console.error('[submit-job-result] Error inserting AV status:', insertError)
+            } else {
+              console.log(`[submit-job-result] [ZERO_TRUST] Inserted ${avRecords.length} AV status records`)
+              sideEffectsInserted = true
+              insertedRecordsCount = avRecords.length
+            }
+          }
+        } catch (avErr) {
+          console.error('[submit-job-result] Error processing antivirus status:', avErr)
+        }
+      }
+
+      // PROCESS NETWORK INFO (ANTES do update)
+      if (job.type === 'collect_network_info' && (outputData.adapters || outputData.ip_addresses)) {
+        try {
+          console.log('[submit-job-result] [ZERO_TRUST] Processing network info BEFORE marking completed...')
+          
+          const adapters = (outputData.adapters || []) as Array<Record<string, unknown>>
+          const ipAddresses = (outputData.ip_addresses || []) as Array<Record<string, unknown>>
+          const collectedAt = outputData.collected_at
+            ? new Date(String(outputData.collected_at)).toISOString()
+            : new Date().toISOString()
+
+          // Build network adapters array
+          const networkAdapters = adapters.map(a => ({
+            name: a.Name || a.name || '',
+            mac_address: a.MacAddress || a.mac_address || '',
+            speed: a.LinkSpeed || a.link_speed || '',
+            status: 'up',
+            ip_address: '',
+          }))
+
+          // Extract gateway and DNS from IP data
+          const privateIps = ipAddresses.filter((ip: any) => {
+            const addr = String(ip.ip || '')
+            return addr.startsWith('192.168.') || addr.startsWith('10.') || addr.startsWith('172.')
+          })
+
+          const networkRecord = {
+            agent_id: job.agent_id,
+            tenant_id: agent.tenant_id,
+            firewall_domain: outputData.firewall_domain ?? null,
+            firewall_private: outputData.firewall_private ?? null,
+            firewall_public: outputData.firewall_public ?? null,
+            open_ports: outputData.open_ports || [],
+            active_connections: outputData.active_connections || [],
+            network_adapters: networkAdapters,
+            dns_servers: outputData.dns_servers || [],
+            gateway_ip: outputData.gateway_ip || (privateIps.length > 0 ? String((privateIps[0] as any).ip) : null),
+            public_ip: outputData.public_ip || null,
+            dns_test_success: outputData.dns_test_success ?? null,
+            https_test_success: outputData.https_test_success ?? null,
+            collected_at: collectedAt,
+          }
+
+          const { error: insertError } = await supabase
+            .from('agent_network_info')
+            .insert(networkRecord)
+          
+          if (insertError) {
+            console.error('[submit-job-result] Error inserting network info:', insertError)
+          } else {
+            console.log('[submit-job-result] [ZERO_TRUST] Inserted network info record')
+            sideEffectsInserted = true
+            insertedRecordsCount += 1
+          }
+
+          // Cleanup old records (keep last 7 days)
+          await supabase
+            .from('agent_network_info')
+            .delete()
+            .eq('agent_id', job.agent_id)
+            .lt('collected_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+
+        } catch (netErr) {
+          console.error('[submit-job-result] Error processing network info:', netErr)
+        }
+      }
     }
     
     // ============================================================
