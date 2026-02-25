@@ -8,9 +8,8 @@ import { logger } from '../_shared/logger.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 import { hashToken } from '../_shared/token-hash.ts'
 import { normalizeVersion, normalizeForWindows } from '../_shared/hexagonal/update-decision-service.ts'
-import { AGENT_SCRIPT_WINDOWS_CONTENT } from '../_shared/agent-script-windows-content.ts'
-import { AGENT_SCRIPT_LINUX_SH } from '../_shared/agent-script-linux-content.ts'
-import { AGENT_SCRIPT_MACOS_SH } from '../_shared/agent-script-macos-content.ts'
+// NOTE: Codebase script imports removed - .ps1 files are NOT bundled in Deno Deploy
+// All script content is served exclusively from the agent_releases DB table
 // Domain event dispatch removed from hot path to reduce latency
 
 Deno.serve(async (req) => {
@@ -393,9 +392,10 @@ Deno.serve(async (req) => {
     }
 
     // Se tem force_update pendente, buscar release e incluir no response
-    // MIN_FORCE_UPDATE_VERSION guard: agents below v5.0.7 lack Get-RollbackState/Add-EvidenceEntry
-    // and cannot process force updates. Skip to prevent infinite loop.
-    const MIN_FORCE_UPDATE_VERSION = '5.0.7'
+    // MIN_FORCE_UPDATE_VERSION guard: agents below v4.5.0 lack heartbeat force_update processing.
+    // v4.5.0+ has Apply-ForcedUpdate in heartbeat response handler.
+    // v5.0.7+ has Get-RollbackState/Add-EvidenceEntry for full lifecycle.
+    const MIN_FORCE_UPDATE_VERSION = '4.5.0'
     const agentNorm = normalizeVersion(agentVersion || updateData.agent_version)
     const minNorm = normalizeVersion(MIN_FORCE_UPDATE_VERSION)
     
@@ -495,22 +495,9 @@ Deno.serve(async (req) => {
                 targetVersion: effectiveForceVersion,
               });
             } else {
-              // AUTHORITATIVE SOURCE: Use codebase scripts if available (same as serve-agent-update)
-              const codebaseScripts: Record<string, string> = {
-                windows: AGENT_SCRIPT_WINDOWS_CONTENT,
-                linux: AGENT_SCRIPT_LINUX_SH,
-                macos: AGENT_SCRIPT_MACOS_SH,
-              };
+              // AUTHORITATIVE SOURCE: Always use DB release content
+              // Codebase scripts are NOT available in Deno Deploy (.ps1 not bundled)
               let finalScript = release.script_content;
-              const codebaseScript = codebaseScripts[platform];
-              if (codebaseScript && codebaseScript.length > 1000) {
-                finalScript = codebaseScript;
-                logger.info('Using codebase script (authoritative) for force update delivery', {
-                  agentName: agent.agent_name,
-                  codebaseSize: codebaseScript.length,
-                  dbSize: release.script_content?.length || 0,
-                });
-              }
 
               // SAFETY: Version header validation - ensure script content matches target version
               const headerMatch = finalScript.match(/CyberShield\s+Agent\s*[-–]\s*\w+\s+v?([\d]+\.[\d]+)/i);
