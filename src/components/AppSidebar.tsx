@@ -443,10 +443,14 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
         {/* ─── Navigation ───────────────────── */}
         <nav className="relative z-20 flex-1 overflow-y-auto py-2 px-2 scrollbar-thin">
           {isAdmin ? (
-            <motion.div variants={containerVariants} initial="hidden" animate="show">
+            <motion.div variants={containerVariants} initial="show" animate="show">
               {/* OVERVIEW - always visible */}
               <div className="space-y-0.5 mb-2">
-                {overviewItems.map((item, idx) => renderNavItem(item, idx))}
+                {overviewItems.map((item, idx) => (
+                  <div key={item.to}>
+                    {renderNavItem(item, idx)}
+                  </div>
+                ))}
               </div>
 
               <div className="sidebar-divider-neon my-2 mx-2" />
