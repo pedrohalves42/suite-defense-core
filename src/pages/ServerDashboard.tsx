@@ -1715,6 +1715,8 @@ const ServerDashboard = () => {
         open={showOnboarding}
         onClose={() => {}}
         onComplete={completeOnboarding}
+        onDismiss7Days={dismissFor7Days}
+        onDismissForever={completeOnboarding}
       />
     </div>
   );
