@@ -54,7 +54,7 @@ export function usePipelineHealth(
   const enabled = opts?.enabled ?? true;
   const freshMinutes = opts?.freshMinutes ?? 5;
   const criticalMinutes = opts?.criticalMinutes ?? 30;
-  const refetchIntervalMs = opts?.refetchIntervalMs ?? 60000;
+  const refetchIntervalMs = opts?.refetchIntervalMs ?? 300000; // COST-OPT: 60s → 5min
 
   return useQuery({
     queryKey: ['pipeline-health', tenantId, freshMinutes, criticalMinutes],

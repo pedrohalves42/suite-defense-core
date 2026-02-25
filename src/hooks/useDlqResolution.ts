@@ -65,7 +65,7 @@ export function useDlqItems(options: { status?: string; limit?: number } = {}) {
       return (data || []) as DlqItem[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 }
 
@@ -84,7 +84,7 @@ export function useDlqPendingAttention() {
       return (data || []) as (DlqItem & { hours_pending: number })[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 60000,
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
   });
 }
 

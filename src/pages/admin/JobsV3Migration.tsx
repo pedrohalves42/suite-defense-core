@@ -82,7 +82,7 @@ export default function JobsV3Migration() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 60000, // Refetch a cada 1 minuto
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
   });
 
   if (isLoading || !migrationStats) {

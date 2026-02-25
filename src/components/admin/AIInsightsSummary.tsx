@@ -31,7 +31,7 @@ export function AIInsightsSummary() {
       return data;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 60000, // Atualiza a cada minuto
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
   });
 
   const { data: stats } = useQuery({

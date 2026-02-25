@@ -54,7 +54,7 @@ export const DiskMetricsPanel = ({ agentId, compact = false }: DiskMetricsPanelP
       return data as DiskMetric[];
     },
     enabled: !!agentId,
-    refetchInterval: 60000, // Atualizar a cada 1 minuto
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
     staleTime: 30000,
   });
 

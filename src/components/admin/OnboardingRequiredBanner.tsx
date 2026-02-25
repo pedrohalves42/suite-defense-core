@@ -75,7 +75,7 @@ export function OnboardingRequiredBanner() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000, // Check every 30s
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 
   // Auto-refresh when focus returns

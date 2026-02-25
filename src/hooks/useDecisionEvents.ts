@@ -55,7 +55,7 @@ export function useDecisionEvents(options: UseDecisionEventsOptions = {}) {
       return data as DecisionEvent[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 }
 

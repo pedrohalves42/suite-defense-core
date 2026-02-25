@@ -57,7 +57,7 @@ export function useAgentExecutionHealth() {
       if (error) throw error;
       return (data || []) as unknown as AgentExecutionHealth[];
     },
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
   });
 }
 
@@ -75,7 +75,7 @@ export function useUnhealthyAgents() {
       if (error) throw error;
       return (data || []) as AgentExecutionHealth[];
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 }
 
@@ -94,7 +94,7 @@ export function useNonExecutionAlerts() {
       if (error) throw error;
       return (data || []) as NonExecutionAlert[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
   });
 }
 

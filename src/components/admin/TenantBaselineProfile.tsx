@@ -46,7 +46,7 @@ export function TenantBaselineProfile() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 60000,
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
   });
 
   // Fetch current metrics for comparison
@@ -73,7 +73,7 @@ export function TenantBaselineProfile() {
       return { avgCpu: Math.round(avgCpu * 10) / 10, avgMem: Math.round(avgMem * 10) / 10 };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 60000,
+    refetchInterval: 300000, // COST-OPT: 60s → 5min
   });
 
   // Fetch active hours pattern

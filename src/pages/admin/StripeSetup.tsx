@@ -67,7 +67,7 @@ export default function StripeSetup() {
       if (error) throw error;
       return data as HealthCheckResponse;
     },
-    refetchInterval: 30000, // 30 seconds
+    refetchInterval: 300000, // COST-OPT: 30s → 5min
     refetchOnWindowFocus: true,
     staleTime: 20000,
   });
