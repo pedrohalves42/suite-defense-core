@@ -495,7 +495,7 @@ Deno.serve(async (req) => {
                 targetVersion: effectiveForceVersion,
               });
             } else {
-              // AUTHORITATIVE SOURCE: Use codebase scripts (same as serve-agent-update)
+              // AUTHORITATIVE SOURCE: Use codebase scripts if available (same as serve-agent-update)
               const codebaseScripts: Record<string, string> = {
                 windows: AGENT_SCRIPT_WINDOWS_CONTENT,
                 linux: AGENT_SCRIPT_LINUX_SH,
@@ -511,6 +511,21 @@ Deno.serve(async (req) => {
                   dbSize: release.script_content?.length || 0,
                 });
               }
+
+              // SAFETY: Version header validation - ensure script content matches target version
+              const headerMatch = finalScript.match(/CyberShield\s+Agent\s*[-–]\s*\w+\s+v?([\d]+\.[\d]+)/i);
+              const scriptMajor = headerMatch?.[1] || '';
+              const targetMajor = normalizeVersion(effectiveForceVersion)?.split('.').slice(0, 2).join('.') || '';
+              
+              if (headerMatch && scriptMajor !== targetMajor) {
+                logger.error('Script version mismatch! DB content does not match target version', {
+                  agentName: agent.agent_name,
+                  scriptHeader: scriptMajor,
+                  targetVersion: effectiveForceVersion,
+                  hint: 'Use upload-release-content to fix the script_content in agent_releases',
+                });
+                // Skip delivery - corrupted content
+              } else {
 
               // Normalizar script para Windows (via hexagonal shared module)
               const normalizedScript = normalizeForWindows(finalScript);
@@ -565,7 +580,8 @@ Deno.serve(async (req) => {
                   status: 200
                 }
               )
-            }
+              } // end else version match
+            } // end else HTML check
           } else {
             logger.warn('Force update version not found in agent_releases', {
               agentName: agent.agent_name,

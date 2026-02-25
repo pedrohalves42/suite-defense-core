@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { ScriptUploader } from '@/components/admin/ScriptUploader';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -354,6 +355,9 @@ export default function AgentVersionMonitor() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Script Upload */}
+        <ScriptUploader />
 
         {/* Version Distribution */}
         <Card>
