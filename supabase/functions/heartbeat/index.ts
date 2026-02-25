@@ -393,7 +393,32 @@ Deno.serve(async (req) => {
     }
 
     // Se tem force_update pendente, buscar release e incluir no response
-    if (effectiveForceVersion) {
+    // MIN_FORCE_UPDATE_VERSION guard: agents below v5.0.7 lack Get-RollbackState/Add-EvidenceEntry
+    // and cannot process force updates. Skip to prevent infinite loop.
+    const MIN_FORCE_UPDATE_VERSION = '5.0.7'
+    const agentNorm = normalizeVersion(agentVersion || updateData.agent_version)
+    const minNorm = normalizeVersion(MIN_FORCE_UPDATE_VERSION)
+    
+    if (effectiveForceVersion && agentNorm && minNorm && agentNorm < minNorm) {
+      logger.warn('Agent version too old for force_update, clearing flag', {
+        agentName: agent.agent_name,
+        agentVersion: agentNorm,
+        minRequired: MIN_FORCE_UPDATE_VERSION,
+        targetVersion: effectiveForceVersion,
+      })
+      await supabase
+        .from('agents')
+        .update({ 
+          force_update_version: null, 
+          force_update_reason: 'auto_cleared_version_too_old',
+          force_update_delivered_count: 0,
+          force_update_first_delivered_at: null,
+          force_update_override_safe_mode: false,
+          force_update_override_safe_mode_expires_at: null
+        })
+        .eq('id', agent.id)
+      // Fall through to normal heartbeat response (no force update)
+    } else if (effectiveForceVersion) {
       // PARTE 1: Verificar se agente JÁ está na versão alvo → limpar flag
       // Normalizar versões para comparação (strip "v" prefix e sufixos como "-hotfix")
       // Version comparison via hexagonal normalizeVersion
