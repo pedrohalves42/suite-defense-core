@@ -583,7 +583,7 @@ verify_jwt = true
 
 # === Action Center ===
 [functions.action-center-feed]
-verify_jwt = true
+verify_jwt = false
 
 # === Invoke Scheduled Jobs (every 5 minutes) COST-OPT ===
 [functions.invoke-scheduled-jobs]
