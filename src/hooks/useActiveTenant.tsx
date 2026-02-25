@@ -210,29 +210,49 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       // No change needed
       return;
     }
+
+    // Block UI while switching
+    setIsSyncing(true);
     
-    // FASE 3 FIX: Sync to backend FIRST (blocking) before updating local state
-    // This ensures atomicity: local state only updates if backend confirms
-    const synced = await syncActiveTenantToBackend(tenant.id);
-    
-    if (!synced) {
-      // Backend sync failed - do NOT update local state
-      toast.error('Erro ao trocar de empresa', {
-        description: 'Não foi possível sincronizar com o servidor. Tente novamente.'
+    try {
+      // 1. Call edge function to update app_metadata
+      const { error } = await supabase.functions.invoke('set-active-tenant', {
+        body: { tenant_id: tenant.id }
       });
-      return;
+
+      if (error) {
+        console.error('[setActiveTenant] Edge function error:', error);
+        toast.error('Erro ao trocar de empresa', {
+          description: 'Não foi possível sincronizar com o servidor. Tente novamente.'
+        });
+        return;
+      }
+
+      // 2. Refresh session to get new JWT with updated active_tenant_id
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.warn('[setActiveTenant] Session refresh warning:', refreshError);
+      }
+
+      // 3. Update local state AFTER JWT is confirmed updated
+      setActiveTenantId(tenant.id);
+      localStorage.setItem(ACTIVE_TENANT_KEY, tenant.id);
+
+      // 4. Clear all cached queries so they refetch with new tenant context
+      queryClient.clear();
+      queryClient.invalidateQueries();
+
+      toast.success(`Alterado para ${tenant.name}`, {
+        description: 'Dados atualizados para a nova empresa'
+      });
+    } catch (err) {
+      console.error('[setActiveTenant] Unexpected error:', err);
+      toast.error('Erro ao trocar de empresa', {
+        description: 'Erro inesperado. Tente novamente.'
+      });
+    } finally {
+      setIsSyncing(false);
     }
-    
-    // Backend confirmed - now safe to update local state
-    setActiveTenantId(tenant.id);
-    localStorage.setItem(ACTIVE_TENANT_KEY, tenant.id);
-    
-    // Invalidate all queries to force refetch with new tenant context
-    queryClient.invalidateQueries();
-    
-    toast.success(`Alterado para ${tenant.name}`, {
-      description: 'Dados atualizados para a nova empresa'
-    });
   }, [activeTenantId, queryClient]);
 
   return (
