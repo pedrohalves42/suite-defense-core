@@ -44,12 +44,42 @@ interface TestResult {
   jobId?: string;
 }
 
-const DIAGNOSTIC_TESTS = [
-  { type: 'ping', label: 'Testar conexão', icon: Wifi, description: 'Verifica se o computador responde' },
-  { type: 'collect_logs', label: 'Coletar registros', icon: FileText, description: 'Obtém logs do sistema' },
-  { type: 'health_report', label: 'Relatório de saúde', icon: Activity, description: 'Verifica estado geral' },
-  { type: 'check_services', label: 'Verificar serviços', icon: Settings, description: 'Checa serviços importantes' },
+type DiagnosticTestConfig = {
+  type: string;
+  jobType: string;
+  label: string;
+  icon: typeof Wifi;
+  description: string;
+};
+
+const DIAGNOSTIC_TESTS: DiagnosticTestConfig[] = [
+  { type: 'ping', jobType: 'network_diagnostics', label: 'Testar conexão', icon: Wifi, description: 'Verifica se o computador responde' },
+  { type: 'collect_logs', jobType: 'collect_info', label: 'Coletar registros', icon: FileText, description: 'Obtém logs do sistema' },
+  { type: 'health_report', jobType: 'service_health_check', label: 'Relatório de saúde', icon: Activity, description: 'Verifica estado geral' },
+  { type: 'check_services', jobType: 'service_health_check', label: 'Verificar serviços', icon: Settings, description: 'Checa serviços importantes' },
 ];
+
+function toErrorMessage(value: unknown): string {
+  if (!value) return 'Erro desconhecido';
+  if (typeof value === 'string') return value;
+  if (value instanceof Error) return value.message;
+
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    const nested = obj.message ?? obj.description ?? obj.error ?? obj.details ?? obj.hint;
+    if (nested && nested !== value) {
+      return toErrorMessage(nested);
+    }
+
+    try {
+      return JSON.stringify(obj);
+    } catch {
+      return String(obj);
+    }
+  }
+
+  return String(value);
+}
 
 export function DiagnosticTestRunner({ 
   agentId, 
@@ -119,7 +149,7 @@ export function DiagnosticTestRunner({
 
       try {
         const job = await createJobMutation.mutateAsync({ 
-          jobType: test.type, 
+          jobType: test.jobType,
           jobAgentName: currentAgentName 
         });
         
@@ -138,11 +168,7 @@ export function DiagnosticTestRunner({
       } catch (error) {
         // Mark as failed with simplified error
         const errorInfo = formatError(error);
-        const errorMessage = typeof errorInfo === 'string' 
-          ? errorInfo 
-          : typeof errorInfo === 'object' && errorInfo !== null
-            ? (errorInfo as any).description || (errorInfo as any).message || JSON.stringify(errorInfo)
-            : String(error instanceof Error ? error.message : 'Erro desconhecido');
+        const errorMessage = toErrorMessage(errorInfo) || toErrorMessage(error);
         const result: TestResult = {
           type: test.type,
           label: test.label,
