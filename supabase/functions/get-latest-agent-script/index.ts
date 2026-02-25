@@ -28,6 +28,20 @@ import { corsHeaders } from '../_shared/cors.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+function normalizeVersion(v: string | null | undefined): string {
+  return v?.replace(/^v/i, '').trim() || '';
+}
+
+function extractScriptVersion(content: string): string | null {
+  const headerMatch = content.match(/CyberShield\s+Agent\s*-\s*Windows\s+v?([\d]+\.[\d]+\.[\d]+)/i);
+  if (headerMatch?.[1]) return headerMatch[1];
+
+  const paramMatch = content.match(/\$AgentVersion\s*=\s*"v?([\d]+\.[\d]+\.[\d]+)"/i);
+  if (paramMatch?.[1]) return paramMatch[1];
+
+  return null;
+}
+
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   
@@ -96,6 +110,27 @@ Deno.serve(async (req) => {
           error: 'Invalid script content',
           message: 'Script content is missing or corrupted',
           requestId
+        }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Integrity guard: release.version must match embedded script version
+    const declaredVersion = normalizeVersion(release.version);
+    const embeddedVersion = extractScriptVersion(release.script_content);
+    if (embeddedVersion && normalizeVersion(embeddedVersion) !== declaredVersion) {
+      console.error(`[${requestId}] Release/script version mismatch`, {
+        releaseVersion: release.version,
+        embeddedVersion,
+        platform,
+      });
+      return new Response(
+        JSON.stringify({
+          error: 'Release version mismatch',
+          message: 'Active release metadata does not match script internal version',
+          release_version: release.version,
+          embedded_version: embeddedVersion,
+          requestId,
         }),
         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
