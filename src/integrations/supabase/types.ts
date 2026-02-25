@@ -25644,12 +25644,17 @@ export type Database = {
       v_job_health: {
         Row: {
           avg_duration_ms: number | null
-          failed_runs: number | null
+          failure_count_24h: number | null
+          health_status: string | null
           job_key: string | null
           job_source: string | null
-          last_run_at: string | null
-          successful_runs: number | null
-          total_runs: number | null
+          last_failure: string | null
+          last_run: string | null
+          last_success: string | null
+          max_duration_ms: number | null
+          severity: string | null
+          success_count_24h: number | null
+          total_runs_24h: number | null
         }
         Relationships: []
       }
