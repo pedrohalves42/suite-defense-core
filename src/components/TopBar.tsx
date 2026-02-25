@@ -13,7 +13,7 @@ export const TopBar = ({ isMobile, sidebarCollapsed, onMobileMenuClick }: TopBar
   return (
     <header className={cn(
       "fixed top-0 right-0 z-30 h-14 border-b border-border/40 bg-background/80 backdrop-blur-md flex items-center justify-between px-4",
-      isMobile ? "left-0" : (sidebarCollapsed ? "left-16" : "left-52"),
+      isMobile ? "left-0" : (sidebarCollapsed ? "left-[calc(4rem+16px)]" : "left-[calc(14rem+16px)]"),
       "transition-all duration-300"
     )}>
       <div className="flex items-center gap-3">

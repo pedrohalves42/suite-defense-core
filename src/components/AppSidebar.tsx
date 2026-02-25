@@ -6,7 +6,8 @@ import {
   Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, 
   Heart, Search, Monitor, AppWindow, GitBranch,
   Download, Building2, FileText, Cpu, Network, Percent, ClipboardCheck, FileBarChart,
-  AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch, Tag, Crosshair
+  AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch, Tag, Crosshair,
+  Zap, X
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -19,9 +20,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
 import { SidebarTenantSelector } from '@/components/SidebarTenantSelector';
 import { AppModeBadge } from '@/components/layout/AppModeBadge';
 import logoImage from '@/assets/cybershield-logo.png';
@@ -39,6 +38,29 @@ interface AppSidebarProps {
   onNavigate?: () => void;
 }
 
+// Stagger animation config
+const containerVariants = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.03 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, x: -12 },
+  show: { opacity: 1, x: 0, transition: { duration: 0.25, ease: [0.4, 0, 0.2, 1] as const } }
+};
+
+// Boot-up animation
+const bootVariants = {
+  hidden: { opacity: 0, scale: 0.97 },
+  show: { 
+    opacity: 1, 
+    scale: 1, 
+    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const } 
+  }
+};
+
 export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const { isAdmin } = useIsAdmin();
   const { isSuperAdmin } = useSuperAdmin();
@@ -52,7 +74,6 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     return saved === 'true';
   });
 
-  // Section collapse states - saved to localStorage
   const [sectionStates, setSectionStates] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem('sidebar-sections-v3');
     return saved ? JSON.parse(saved) : {
@@ -67,7 +88,8 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     };
   });
 
-  // Save section states
+  const [hovered, setHovered] = useState(false);
+
   useEffect(() => {
     localStorage.setItem('sidebar-sections-v3', JSON.stringify(sectionStates));
   }, [sectionStates]);
@@ -77,17 +99,14 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     window.dispatchEvent(new Event('sidebar-toggle'));
   }, [collapsed]);
 
-  // Toggle section
   const toggleSection = useCallback((section: string) => {
     setSectionStates(prev => ({ ...prev, [section]: !prev[section] }));
   }, []);
 
-  // Check if current route is in section
   const isRouteInSection = useCallback((items: MenuItem[]) => {
     return items.some(item => location.pathname.startsWith(item.to));
   }, [location.pathname]);
 
-  // Keyboard shortcut for search (Cmd+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -99,7 +118,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // === VISÃO GERAL (sempre visível) ===
+  // ─── Menu Items ───────────────────────────────────
   const overviewItems = useMemo<MenuItem[]>(() => [
     { icon: Target, label: t('adminPages.sidebar.actionCenter'), to: '/admin/action-center', end: true, badge: urgentCount > 0 ? urgentCount : undefined },
     { icon: Home, label: t('adminPages.sidebar.generalPanel'), to: '/admin/dashboard' },
@@ -176,12 +195,15 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Settings, label: t('adminPages.sidebar.settingsLabel'), to: '/super-admin/settings' },
   ], [t]);
 
+  // ─── Determine effective width ───────────────────
+  const isCollapsed = !mobile && collapsed && !hovered;
+  const effectiveWidth = mobile ? 'w-full' : (isCollapsed ? 'w-16' : 'w-56');
+
+  // ─── Render nav item ─────────────────────────────
   const renderNavItem = (item: MenuItem, idx: number, variant: 'default' | 'super' = 'default') => {
     const Icon = item.icon;
     const isSuper = variant === 'super';
     const isActive = location.pathname === item.to || (item.to !== '/admin/dashboard' && location.pathname.startsWith(item.to));
-    
-    const isCollapsed = !mobile && collapsed;
 
     const navContent = (
       <NavLink
@@ -189,76 +211,65 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
         end={item.end}
         onClick={onNavigate}
         className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground transition-all duration-200 relative",
-          isSuper 
-            ? "hover:bg-destructive/10 hover:text-destructive"
-            : "hover:bg-muted hover:text-foreground",
-          isCollapsed && "justify-center px-2"
+          "sidebar-item-neon flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group/item",
+          isSuper && "sidebar-item-neon-super",
+          isCollapsed && "justify-center px-2",
+          !isActive && "text-[hsl(220_14%_65%)]"
         )}
         activeClassName={cn(
-          "font-medium text-foreground",
-          isSuper 
-            ? "bg-destructive/10 text-destructive"
-            : "bg-primary/5"
+          "sidebar-item-neon-active",
+          isSuper && "sidebar-item-neon-super"
         )}
       >
-        {/* Barra vertical Graphite Green para item ativo */}
-        {isActive && !isSuper && (
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-primary rounded-r" />
-        )}
-        <Icon className="h-4 w-4 shrink-0" />
-        {!isCollapsed && (
-          <>
-            <span className="text-sm flex-1">{item.label}</span>
-            {item.badge && item.badge > 0 && (
-              <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-warning/10 text-warning border-0">
-                {item.badge}
-              </Badge>
-            )}
-          </>
-        )}
+        <Icon className={cn(
+          "sidebar-icon h-4 w-4 shrink-0 transition-all duration-300",
+          !isActive && "group-hover/item:text-[hsl(190_95%_65%)]",
+          isActive && !isSuper && "text-[hsl(190_95%_55%)]"
+        )} />
+        <AnimatePresence mode="wait">
+          {!isCollapsed && (
+            <motion.div
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: 'auto' }}
+              exit={{ opacity: 0, width: 0 }}
+              transition={{ duration: 0.2 }}
+              className="flex items-center gap-2 flex-1 overflow-hidden"
+            >
+              <span className={cn(
+                "sidebar-label text-sm whitespace-nowrap flex-1 transition-colors duration-200",
+                !isActive && "group-hover/item:text-[hsl(220_14%_85%)]"
+              )}>{item.label}</span>
+              {item.badge && item.badge > 0 && (
+                <span className="sidebar-badge-neon">{item.badge}</span>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </NavLink>
     );
 
     if (isCollapsed) {
       return (
-        <motion.div
-          key={item.to}
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.2, delay: idx * 0.02 }}
-        >
+        <motion.div key={item.to} variants={itemVariants}>
           <TooltipProvider delayDuration={0}>
             <Tooltip>
-              <TooltipTrigger asChild>
-                {navContent}
-              </TooltipTrigger>
-              <TooltipContent side="right" className="flex items-center gap-2">
-                {item.label}
-                {item.badge && item.badge > 0 && (
-                  <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                    {item.badge}
-                  </Badge>
-                )}
+              <TooltipTrigger asChild>{navContent}</TooltipTrigger>
+              <TooltipContent side="right" className="glass-panel text-[hsl(190_95%_70%)] border-[hsl(190_95%_55%_/_0.2)]">
+                <span className="flex items-center gap-2">
+                  {item.label}
+                  {item.badge && item.badge > 0 && <span className="sidebar-badge-neon">{item.badge}</span>}
+                </span>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </motion.div>
       );
     }
-    
-    return (
-      <motion.div
-        key={item.to}
-        initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.2, delay: idx * 0.02 }}
-      >
-        {navContent}
-      </motion.div>
-    );
+
+    return <motion.div key={item.to} variants={itemVariants}>{navContent}</motion.div>;
   };
 
+  // ─── Collapsible Section ─────────────────────────
   const renderCollapsibleSection = (
     title: string, 
     sectionKey: string,
@@ -268,246 +279,278 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     const isOpen = sectionStates[sectionKey];
     const hasActiveItem = isRouteInSection(items);
     
-    const isCollapsed = !mobile && collapsed;
-    
     if (isCollapsed) {
       return (
-        <div className="space-y-0.5">
+        <motion.div className="space-y-0.5" variants={containerVariants} initial="hidden" animate="show">
           {items.map((item, idx) => renderNavItem(item, idx, variant))}
-        </div>
+        </motion.div>
       );
     }
 
     return (
-      <Collapsible open={isOpen} onOpenChange={() => toggleSection(sectionKey)}>
-        <CollapsibleTrigger className="w-full">
-          <div className={cn(
-            "flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors",
-            hasActiveItem ? "bg-accent/50" : "hover:bg-accent/30"
+      <div>
+        <button 
+          onClick={() => toggleSection(sectionKey)} 
+          className="w-full flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors hover:bg-[hsl(var(--neon-cyan)_/_0.04)] group/section"
+        >
+          <span className={cn(
+            "sidebar-section-label transition-colors",
+            hasActiveItem && "!text-[hsl(var(--neon-cyan)_/_0.8)]"
           )}>
-            <span className={cn(
-              "text-xs font-medium uppercase tracking-wider",
-              hasActiveItem ? "text-primary" : "text-muted-foreground"
-            )}>
-              {title}
-            </span>
-            <ChevronDown className={cn(
-              "h-3 w-3 text-muted-foreground transition-transform duration-200",
-              isOpen && "rotate-180"
-            )} />
-          </div>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <AnimatePresence>
-            <div className="space-y-0.5 mt-1">
-              {items.map((item, idx) => renderNavItem(item, idx, variant))}
-            </div>
-          </AnimatePresence>
-        </CollapsibleContent>
-      </Collapsible>
+            {title}
+          </span>
+          <ChevronDown className={cn(
+            "h-3 w-3 text-[hsl(var(--neon-cyan)_/_0.3)] transition-all duration-300 group-hover/section:text-[hsl(var(--neon-cyan)_/_0.6)]",
+            isOpen && "rotate-180"
+          )} />
+        </button>
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              className="overflow-hidden"
+            >
+              <motion.div 
+                className="space-y-0.5 mt-1"
+                variants={containerVariants}
+                initial="hidden"
+                animate="show"
+              >
+                {items.map((item, idx) => renderNavItem(item, idx, variant))}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     );
   };
 
   return (
     <TooltipProvider>
-      <aside
+      <motion.aside
+        variants={bootVariants}
+        initial="hidden"
+        animate="show"
+        onMouseEnter={() => !mobile && collapsed && setHovered(true)}
+        onMouseLeave={() => !mobile && setHovered(false)}
         className={cn(
-          'h-screen border-r border-border',
-          'bg-card transition-all duration-300 flex flex-col',
-          mobile ? 'w-full relative' : 'fixed left-0 top-0 z-40',
-          !mobile && (collapsed ? 'w-16' : 'w-52')
+          'h-screen sidebar-futuristic sidebar-grid-bg',
+          'transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col relative overflow-hidden',
+          mobile ? 'w-full' : 'fixed left-0 top-0 z-40',
+          !mobile && effectiveWidth,
+          !mobile && 'sidebar-float'
         )}
       >
-        {/* Logo CyberShield Cloud + Mode Badge */}
-        <div className="h-14 flex items-center justify-between px-3 border-b border-border/30">
-          {(!collapsed || mobile) && (
-            <div className="flex items-center gap-2">
-              <img 
-                src={logoImage} 
-                alt="CyberShield Logo" 
-                className="h-8 w-auto object-contain"
-              />
+        {/* Scan line effect */}
+        <div 
+          className="absolute inset-0 pointer-events-none z-10 opacity-[0.02]"
+          style={{
+            background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, hsl(190 95% 55% / 0.1) 2px, hsl(190 95% 55% / 0.1) 4px)',
+          }}
+        />
+
+        {/* ─── Header ───────────────────────── */}
+        <div className="relative z-20 h-14 flex items-center justify-between px-3 border-b border-[hsl(var(--neon-cyan)_/_0.08)]">
+          {!isCollapsed && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center gap-2"
+            >
+              <div className="relative">
+                <img src={logoImage} alt="CyberShield" className="h-7 w-auto object-contain" />
+                {/* Neon glow behind logo */}
+                <div className="absolute inset-0 blur-lg neon-pulse" style={{ background: 'hsl(190 95% 55% / 0.15)' }} />
+              </div>
               <AppModeBadge collapsed={false} />
-            </div>
+            </motion.div>
           )}
-          {!mobile && collapsed && (
+          {isCollapsed && (
             <div className="flex flex-col items-center gap-1 mx-auto">
-              <img 
-                src={logoImage} 
-                alt="CyberShield Logo" 
-                className="h-6 w-auto object-contain"
-              />
-              <AppModeBadge collapsed={true} />
+              <div className="relative">
+                <img src={logoImage} alt="CyberShield" className="h-6 w-auto object-contain" />
+                <div className="absolute inset-0 blur-md neon-pulse" style={{ background: 'hsl(190 95% 55% / 0.12)' }} />
+              </div>
             </div>
           )}
           {!mobile && (
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setCollapsed(!collapsed)}
-              className={cn("shrink-0 h-8 w-8 btn-enterprise-ghost", collapsed && "absolute right-1 top-3")}
+              onClick={() => { setCollapsed(!collapsed); setHovered(false); }}
+              className={cn(
+                "shrink-0 h-7 w-7 rounded-md text-[hsl(var(--neon-cyan)_/_0.5)] hover:text-[hsl(var(--neon-cyan))] hover:bg-[hsl(var(--neon-cyan)_/_0.08)] transition-all duration-200",
+                isCollapsed && "absolute right-1 top-3.5"
+              )}
             >
-              {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              {collapsed && !hovered ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+            </Button>
+          )}
+          {mobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onNavigate}
+              className="h-7 w-7 rounded-md text-[hsl(var(--neon-cyan)_/_0.5)] hover:text-[hsl(var(--neon-cyan))] hover:bg-[hsl(var(--neon-cyan)_/_0.08)]"
+            >
+              <X className="h-4 w-4" />
             </Button>
           )}
         </div>
 
-        {/* Quick Search */}
-        {(!collapsed || mobile) && (
-          <div className="px-2 py-2 border-b border-border/30">
+        {/* ─── Search ───────────────────────── */}
+        {!isCollapsed && (
+          <div className="relative z-20 px-2 py-2 border-b border-[hsl(var(--neon-cyan)_/_0.06)]">
             <Button 
-              variant="outline" 
-              className="w-full justify-start text-muted-foreground/70 h-9 px-3 border-border/50 hover:bg-accent/30"
+              variant="ghost" 
+              className="w-full justify-start h-9 px-3 rounded-lg bg-[hsl(224_25%_10%)] border border-[hsl(var(--neon-cyan)_/_0.08)] hover:border-[hsl(var(--neon-cyan)_/_0.2)] hover:bg-[hsl(224_25%_12%)] text-[hsl(220_14%_50%)] transition-all duration-200"
               onClick={() => { window.dispatchEvent(new CustomEvent('open-search')); onNavigate?.(); }}
             >
-              <Search className="h-4 w-4 mr-2" />
-              <span className="flex-1 text-left text-sm">{t('adminPages.sidebar.search')}</span>
-              {!mobile && <kbd className="text-[10px] bg-muted/50 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>}
+              <Search className="h-3.5 w-3.5 mr-2 text-[hsl(var(--neon-cyan)_/_0.5)]" />
+              <span className="flex-1 text-left text-xs">{t('adminPages.sidebar.search')}</span>
+              {!mobile && <kbd className="text-[9px] bg-[hsl(var(--neon-cyan)_/_0.08)] text-[hsl(var(--neon-cyan)_/_0.5)] px-1.5 py-0.5 rounded font-mono border border-[hsl(var(--neon-cyan)_/_0.1)]">⌘K</kbd>}
             </Button>
           </div>
         )}
-
-        {!mobile && collapsed && (
-          <div className="px-2 py-2 border-b border-border/30">
+        {isCollapsed && (
+          <div className="relative z-20 px-2 py-2 border-b border-[hsl(var(--neon-cyan)_/_0.06)]">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
                   variant="ghost" 
                   size="icon"
-                  className="w-full h-9 btn-enterprise-ghost"
+                  className="w-full h-9 text-[hsl(var(--neon-cyan)_/_0.4)] hover:text-[hsl(var(--neon-cyan))] hover:bg-[hsl(var(--neon-cyan)_/_0.06)]"
                   onClick={() => window.dispatchEvent(new CustomEvent('open-search'))}
                 >
                   <Search className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right">
+              <TooltipContent side="right" className="glass-panel text-[hsl(190_95%_70%)] border-[hsl(190_95%_55%_/_0.2)]">
                 {t('adminPages.sidebar.searchTooltip')}
               </TooltipContent>
             </Tooltip>
           </div>
         )}
 
-        {/* Tenant Selector */}
-        <div className="border-b border-border/30">
-          <SidebarTenantSelector collapsed={mobile ? false : collapsed} />
+        {/* ─── Tenant Selector ──────────────── */}
+        <div className="relative z-20 border-b border-[hsl(var(--neon-cyan)_/_0.06)]">
+          <SidebarTenantSelector collapsed={mobile ? false : isCollapsed} />
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-2 px-2">
+        {/* ─── Navigation ───────────────────── */}
+        <nav className="relative z-20 flex-1 overflow-y-auto py-2 px-2 scrollbar-thin">
           {isAdmin ? (
-            <>
-              {/* VISÃO GERAL - sempre visível */}
-              <div className="space-y-0.5 mb-3">
+            <motion.div variants={containerVariants} initial="hidden" animate="show">
+              {/* OVERVIEW - always visible */}
+              <div className="space-y-0.5 mb-2">
                 {overviewItems.map((item, idx) => renderNavItem(item, idx))}
               </div>
 
-              <div className="my-2 mx-2 h-px bg-border/30" />
+              <div className="sidebar-divider-neon my-2 mx-2" />
 
-              {/* PROTEÇÃO */}
               {renderCollapsibleSection(t('adminPages.sidebar.protection'), 'protection', protectionItems)}
-
-              <div className="my-2" />
-
+              <div className="my-1.5" />
               {renderCollapsibleSection(t('adminPages.sidebar.management'), 'management', managementItems)}
-
-              <div className="my-2" />
-
+              <div className="my-1.5" />
               {renderCollapsibleSection(t('adminPages.sidebar.compliance'), 'compliance', complianceItems)}
-
-              <div className="my-2" />
-
+              <div className="my-1.5" />
               {renderCollapsibleSection(t('adminPages.sidebar.advanced'), 'advanced', advancedItems)}
-            </>
+            </motion.div>
           ) : (
-            // Non-admin basic menu
-            <div className="space-y-0.5">
-              <NavLink
-                to="/dashboard"
-                end
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                activeClassName="bg-accent text-accent-foreground font-medium"
-              >
-                <Home className="h-4 w-4" />
-                {(!collapsed || mobile) && <span className="text-sm">{t('adminPages.sidebar.home')}</span>}
-              </NavLink>
-              <NavLink
-                to="/agents"
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                activeClassName="bg-accent text-accent-foreground font-medium"
-              >
-                <Monitor className="h-4 w-4" />
-                {(!collapsed || mobile) && <span className="text-sm">{t('adminPages.sidebar.myComputersClient')}</span>}
-              </NavLink>
-            </div>
+            <motion.div className="space-y-0.5" variants={containerVariants} initial="hidden" animate="show">
+              <motion.div variants={itemVariants}>
+                <NavLink to="/dashboard" end onClick={onNavigate}
+                  className="sidebar-item-neon flex items-center gap-3 px-3 py-2 rounded-lg text-[hsl(220_14%_65%)]"
+                  activeClassName="sidebar-item-neon-active">
+                  <Home className="sidebar-icon h-4 w-4" />
+                  {!isCollapsed && <span className="sidebar-label text-sm">{t('adminPages.sidebar.home')}</span>}
+                </NavLink>
+              </motion.div>
+              <motion.div variants={itemVariants}>
+                <NavLink to="/agents" onClick={onNavigate}
+                  className="sidebar-item-neon flex items-center gap-3 px-3 py-2 rounded-lg text-[hsl(220_14%_65%)]"
+                  activeClassName="sidebar-item-neon-active">
+                  <Monitor className="sidebar-icon h-4 w-4" />
+                  {!isCollapsed && <span className="sidebar-label text-sm">{t('adminPages.sidebar.myComputersClient')}</span>}
+                </NavLink>
+              </motion.div>
+            </motion.div>
           )}
 
           {/* Super Admin */}
           {isSuperAdmin && (
             <>
-              <div className="my-3 mx-2 h-px bg-border/30" />
-              {!collapsed ? (
-                <Collapsible 
-                  open={sectionStates.superAdmin} 
-                  onOpenChange={() => toggleSection('superAdmin')}
-                >
-                  <CollapsibleTrigger className="w-full">
-                    <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-destructive/10 cursor-pointer">
-                      <span className="text-xs font-medium text-destructive uppercase tracking-wider flex items-center gap-1">
-                        <Crown className="h-3 w-3" />
-                        Super Admin
-                      </span>
-                      <ChevronDown className={cn(
-                        "h-3 w-3 text-destructive transition-transform duration-200",
-                        sectionStates.superAdmin && "rotate-180"
-                      )} />
-                    </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <AnimatePresence>
-                      <div className="space-y-1 mt-1">
-                        {renderCollapsibleSection(t('adminPages.sidebar.operational'), 'superOps', superOpsItems, 'super')}
-                        
-                        <div className="my-1" />
-                        
-                        {renderCollapsibleSection(t('adminPages.sidebar.financial'), 'superFinance', superFinanceItems, 'super')}
-                        
-                        <div className="my-1" />
-                        
-                        {renderCollapsibleSection(t('adminPages.sidebar.system'), 'superSystem', superSystemItems, 'super')}
-                      </div>
-                    </AnimatePresence>
-                  </CollapsibleContent>
-                </Collapsible>
-              ) : (
-                <div className="space-y-0.5">
-                  {superOpsItems.slice(0, 3).map((item, idx) => renderNavItem(item, idx, 'super'))}
+              <div className="sidebar-divider-neon my-3 mx-2" />
+              {!isCollapsed ? (
+                <div>
+                  <button 
+                    onClick={() => toggleSection('superAdmin')}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[hsl(var(--neon-purple)_/_0.06)] cursor-pointer group/super"
+                  >
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[hsl(var(--neon-purple)_/_0.6)] flex items-center gap-1.5">
+                      <Crown className="h-3 w-3" />
+                      <span className="text-shadow-[0_0_8px_hsl(var(--neon-purple)_/_0.3)]">Super Admin</span>
+                    </span>
+                    <ChevronDown className={cn(
+                      "h-3 w-3 text-[hsl(var(--neon-purple)_/_0.4)] transition-transform duration-300",
+                      sectionStates.superAdmin && "rotate-180"
+                    )} />
+                  </button>
+                  <AnimatePresence>
+                    {sectionStates.superAdmin && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-1 mt-1">
+                          {renderCollapsibleSection(t('adminPages.sidebar.operational'), 'superOps', superOpsItems, 'super')}
+                          <div className="my-1" />
+                          {renderCollapsibleSection(t('adminPages.sidebar.financial'), 'superFinance', superFinanceItems, 'super')}
+                          <div className="my-1" />
+                          {renderCollapsibleSection(t('adminPages.sidebar.system'), 'superSystem', superSystemItems, 'super')}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
+              ) : (
+                <motion.div className="space-y-0.5" variants={containerVariants} initial="hidden" animate="show">
+                  {superOpsItems.slice(0, 3).map((item, idx) => renderNavItem(item, idx, 'super'))}
+                </motion.div>
               )}
             </>
           )}
         </nav>
 
-        {/* Footer elegante */}
-        <div className="border-t border-border/30 p-3">
-          {(!collapsed || mobile) ? (
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/50">
-              <Shield className="h-3 w-3" />
-              <span className="tracking-wide">v5.0.3</span>
+        {/* ─── Footer ───────────────────────── */}
+        <div className="relative z-20 border-t border-[hsl(var(--neon-cyan)_/_0.08)] p-3">
+          {!isCollapsed ? (
+            <div className="flex items-center justify-center gap-2">
+              <Zap className="h-3 w-3 text-[hsl(var(--neon-cyan)_/_0.4)] neon-pulse" />
+              <span className="text-[10px] tracking-[0.1em] text-[hsl(var(--neon-cyan)_/_0.3)] font-mono uppercase">
+                CyberShield v5.0.3
+              </span>
             </div>
           ) : (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex justify-center py-1">
-                  <Shield className="h-3 w-3 text-muted-foreground/50" />
+                  <Zap className="h-3 w-3 text-[hsl(var(--neon-cyan)_/_0.4)] neon-pulse" />
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="right">
+              <TooltipContent side="right" className="glass-panel text-[hsl(190_95%_70%)] border-[hsl(190_95%_55%_/_0.2)]">
                 CyberShield v5.0.3
               </TooltipContent>
             </Tooltip>
           )}
         </div>
-      </aside>
+      </motion.aside>
     </TooltipProvider>
   );
 };
