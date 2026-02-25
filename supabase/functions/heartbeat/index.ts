@@ -352,22 +352,53 @@ Deno.serve(async (req) => {
     // ============================================================
     const { data: forceCheck } = await supabase
       .from('agents')
-      .select('force_update_version, force_update_reason, force_update_override_safe_mode, force_update_override_safe_mode_expires_at, force_update_delivered_count, force_update_first_delivered_at')
+      .select('force_update_version, force_update_reason, force_update_at, force_update_override_safe_mode, force_update_override_safe_mode_expires_at, force_update_delivered_count, force_update_first_delivered_at')
       .eq('id', agent.id)
       .single()
-    
-    // Calcular se override está válido (não expirado)
-    const overrideValid = forceCheck?.force_update_override_safe_mode && 
-      (!forceCheck?.force_update_override_safe_mode_expires_at || 
-       new Date(forceCheck.force_update_override_safe_mode_expires_at) > new Date())
+
+    // Self-heal: if force_update was scheduled without force_update_version, recover target from latest active release
+    const platform = updateData.os_type || 'windows'
+    let effectiveForceVersion = forceCheck?.force_update_version || null
+    let effectiveForceReason = forceCheck?.force_update_reason || null
+
+    if (!effectiveForceVersion && forceCheck?.force_update_at) {
+      const { data: latestActiveRelease } = await supabase
+        .from('agent_releases')
+        .select('version')
+        .eq('platform', platform)
+        .eq('channel', 'stable')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (latestActiveRelease?.version) {
+        effectiveForceVersion = latestActiveRelease.version
+        effectiveForceReason = effectiveForceReason || 'Recovered from pending force_update_at without version'
+
+        await supabase
+          .from('agents')
+          .update({
+            force_update_version: effectiveForceVersion,
+            force_update_reason: effectiveForceReason,
+          })
+          .eq('id', agent.id)
+
+        logger.warn('Recovered missing force_update_version from latest active release', {
+          agentName: agent.agent_name,
+          targetVersion: effectiveForceVersion,
+          platform,
+        })
+      }
+    }
 
     // Se tem force_update pendente, buscar release e incluir no response
-    if (forceCheck?.force_update_version) {
+    if (effectiveForceVersion) {
       // PARTE 1: Verificar se agente JÁ está na versão alvo → limpar flag
       // Normalizar versões para comparação (strip "v" prefix e sufixos como "-hotfix")
       // Version comparison via hexagonal normalizeVersion
       const currentVersion = agentVersion || updateData.agent_version
-      if (normalizeVersion(currentVersion) === normalizeVersion(forceCheck.force_update_version)) {
+      if (normalizeVersion(currentVersion) === normalizeVersion(effectiveForceVersion)) {
         logger.info('Agent already at target version, clearing force_update flag', {
           agentName: agent.agent_name,
           version: currentVersion
@@ -392,7 +423,7 @@ Deno.serve(async (req) => {
         if (deliveredCount >= 50) {
           logger.warn('Agent does not support force_update after 50 deliveries, clearing flag', {
             agentName: agent.agent_name,
-            targetVersion: forceCheck.force_update_version,
+            targetVersion: effectiveForceVersion,
             deliveredCount
           })
           await supabase
@@ -419,17 +450,14 @@ Deno.serve(async (req) => {
 
           logger.info('Force update detected for agent', { 
             agentName: agent.agent_name, 
-            targetVersion: forceCheck.force_update_version,
+            targetVersion: effectiveForceVersion,
             deliveryAttempt: deliveredCount + 1
           })
-          
-          // Determinar plataforma (default windows para retrocompatibilidade)
-          const platform = updateData.os_type || 'windows'
           
           const { data: release } = await supabase
             .from('agent_releases')
             .select('version, script_content, sha256')
-            .eq('version', forceCheck.force_update_version)
+            .eq('version', effectiveForceVersion)
             .eq('platform', platform)
             .eq('is_active', true)
             .single()
@@ -439,7 +467,7 @@ Deno.serve(async (req) => {
             if (release.script_content?.trimStart().startsWith('<!DOCTYPE') || release.script_content?.trimStart().startsWith('<html')) {
               logger.error('Force update script is corrupted HTML, skipping delivery', {
                 agentName: agent.agent_name,
-                targetVersion: forceCheck.force_update_version,
+                targetVersion: effectiveForceVersion,
               });
             } else {
               // AUTHORITATIVE SOURCE: Use codebase scripts (same as serve-agent-update)
@@ -485,13 +513,24 @@ Deno.serve(async (req) => {
                   ok: true,
                   agent: agent.agent_name,
                   timestamp: new Date().toISOString(),
-                  // FORCE UPDATE DATA
+                  // FORCE UPDATE DATA (compat: suporta formatos antigos e novos)
                   force_update: true,
                   target_version: release.version,
+                  version: release.version,
                   script_content_base64: base64Script,
+                  script_content: finalScript,
                   sha256: calculatedSha256,
-                  reason: forceCheck.force_update_reason || 'Forced update via backend',
+                  sha256_base64: calculatedSha256,
+                  reason: effectiveForceReason || 'Forced update via backend',
+                  force_update_reason: effectiveForceReason || 'Forced update via backend',
                   override_safe_mode: overrideValid,
+                  // CONFIRMATION METADATA (closed-loop)
+                  confirm_url: `${supabaseUrl}/functions/v1/confirm-force-update`,
+                  confirm_method: 'POST',
+                  confirm_body_schema: {
+                    new_version: release.version,
+                    old_version: currentVersion || 'unknown',
+                  },
                   // COST-OPT: Instruct agents to slow down polling
                   heartbeat_interval_seconds: 60,
                   poll_interval_seconds: 30,
@@ -505,7 +544,7 @@ Deno.serve(async (req) => {
           } else {
             logger.warn('Force update version not found in agent_releases', {
               agentName: agent.agent_name,
-              targetVersion: forceCheck.force_update_version,
+              targetVersion: effectiveForceVersion,
               platform
             })
           }
