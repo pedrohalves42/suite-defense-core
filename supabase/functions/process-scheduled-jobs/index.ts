@@ -12,6 +12,8 @@ const JOB_TTL_HOURS: Record<string, number> = {
   collect_web_activity: 1,
   light_vuln_scan: 1,
   collect_network_info: 1,
+  collect_certificates: 1,
+  collect_disk_metrics: 1,
   service_health_check: 1,
   network_diagnostics: 1,
   // Everything else defaults to 4h

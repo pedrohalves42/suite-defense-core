@@ -865,6 +865,115 @@ Deno.serve(async (req) => {
           console.error('[submit-job-result] Error processing network info:', netErr)
         }
       }
+
+      // PROCESS CERTIFICATES (ANTES do update)
+      if (job.type === 'collect_certificates' && (outputData.certificates || outputData.cert_store)) {
+        try {
+          console.log('[submit-job-result] [ZERO_TRUST] Processing certificates BEFORE marking completed...')
+          const certs = (outputData.certificates || outputData.cert_store || []) as Array<Record<string, unknown>>
+          
+          if (Array.isArray(certs) && certs.length > 0) {
+            const collectedAt = outputData.collected_at
+              ? new Date(String(outputData.collected_at)).toISOString()
+              : new Date().toISOString()
+
+            // Delete old records for this agent
+            await supabase
+              .from('agent_certificates')
+              .delete()
+              .eq('agent_id', job.agent_id)
+
+            const certRecords = certs.map((cert) => ({
+              agent_id: job.agent_id,
+              tenant_id: agent.tenant_id,
+              subject: String(cert.subject || cert.Subject || cert.name || 'Unknown'),
+              thumbprint: String(cert.thumbprint || cert.Thumbprint || cert.hash || crypto.randomUUID().replace(/-/g, '')),
+              issuer: cert.issuer ? String(cert.issuer) : (cert.Issuer ? String(cert.Issuer) : null),
+              valid_from: cert.valid_from || cert.NotBefore || cert.validFrom || null,
+              valid_until: cert.valid_until || cert.NotAfter || cert.validTo || null,
+              cert_store: String(cert.store || cert.StoreName || cert.cert_store || 'My'),
+              is_self_signed: cert.is_self_signed ?? (cert.subject === cert.issuer) ?? null,
+              serial_number: cert.serial_number ? String(cert.serial_number) : (cert.SerialNumber ? String(cert.SerialNumber) : null),
+              key_usage: Array.isArray(cert.key_usage) ? cert.key_usage : (cert.EnhancedKeyUsageList ? [String(cert.EnhancedKeyUsageList)] : null),
+              collected_at: collectedAt,
+            }))
+
+            // Deduplicate by thumbprint
+            const uniqueCerts = Array.from(
+              new Map(certRecords.map(r => [r.thumbprint, r])).values()
+            )
+
+            const { error: insertError } = await supabase
+              .from('agent_certificates')
+              .insert(uniqueCerts)
+            
+            if (insertError) {
+              console.error('[submit-job-result] Error inserting certificates:', insertError)
+            } else {
+              console.log(`[submit-job-result] [ZERO_TRUST] Inserted ${uniqueCerts.length} certificate records`)
+              sideEffectsInserted = true
+              insertedRecordsCount += uniqueCerts.length
+            }
+          }
+        } catch (certErr) {
+          console.error('[submit-job-result] Error processing certificates:', certErr)
+        }
+      }
+
+      // PROCESS DISK METRICS (ANTES do update)
+      if (job.type === 'collect_disk_metrics' && (outputData.drives || outputData.disks || outputData.disk_metrics)) {
+        try {
+          console.log('[submit-job-result] [ZERO_TRUST] Processing disk metrics BEFORE marking completed...')
+          const drives = (outputData.drives || outputData.disks || outputData.disk_metrics || []) as Array<Record<string, unknown>>
+          
+          if (Array.isArray(drives) && drives.length > 0) {
+            const collectedAt = outputData.collected_at
+              ? new Date(String(outputData.collected_at)).toISOString()
+              : new Date().toISOString()
+
+            // Delete old records for this agent
+            await supabase
+              .from('agent_disk_metrics')
+              .delete()
+              .eq('agent_id', job.agent_id)
+
+            const diskRecords = drives.map((drive) => {
+              const totalGb = Number(drive.total_gb || drive.TotalSize || drive.size || 0)
+              const freeGb = Number(drive.free_gb || drive.FreeSpace || drive.free || 0)
+              const usedGb = totalGb - freeGb
+              const usagePercent = totalGb > 0 ? Math.round((usedGb / totalGb) * 100 * 10) / 10 : 0
+
+              return {
+                agent_id: job.agent_id,
+                tenant_id: agent.tenant_id,
+                drive_letter: String(drive.drive_letter || drive.DeviceID || drive.mount || drive.letter || 'C:'),
+                drive_label: drive.drive_label ? String(drive.drive_label) : (drive.VolumeName ? String(drive.VolumeName) : null),
+                drive_type: drive.drive_type ? String(drive.drive_type) : (drive.DriveType ? String(drive.DriveType) : null),
+                total_gb: totalGb,
+                used_gb: usedGb,
+                free_gb: freeGb,
+                usage_percent: usagePercent,
+                is_system_drive: drive.is_system_drive ?? (String(drive.drive_letter || drive.DeviceID || '').toUpperCase().startsWith('C')) ?? null,
+                collected_at: collectedAt,
+              }
+            })
+
+            const { error: insertError } = await supabase
+              .from('agent_disk_metrics')
+              .insert(diskRecords)
+            
+            if (insertError) {
+              console.error('[submit-job-result] Error inserting disk metrics:', insertError)
+            } else {
+              console.log(`[submit-job-result] [ZERO_TRUST] Inserted ${diskRecords.length} disk metric records`)
+              sideEffectsInserted = true
+              insertedRecordsCount += diskRecords.length
+            }
+          }
+        } catch (diskErr) {
+          console.error('[submit-job-result] Error processing disk metrics:', diskErr)
+        }
+      }
     }
     
     // ============================================================

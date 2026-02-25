@@ -9,6 +9,8 @@
  * - collect_antivirus_status (a cada 6h)
  * - software_inventory_collect (a cada 12h)
  * - collect_network_info (a cada 6h)
+ * - collect_certificates (a cada 6h)
+ * - collect_disk_metrics (a cada 6h)
  * - service_health_check (a cada 4h)
  * - light_vuln_scan (a cada 24h)
  * 
@@ -56,6 +58,18 @@ const COLLECTION_TEMPLATES: CollectionJobTemplate[] = [
     priority: 6,
     ttl_hours: 2,
     payload: { source: 'auto-seed', scan_level: 'light' },
+  },
+  {
+    type: 'collect_certificates',
+    priority: 3,
+    ttl_hours: 1,
+    payload: { source: 'auto-seed' },
+  },
+  {
+    type: 'collect_disk_metrics',
+    priority: 3,
+    ttl_hours: 1,
+    payload: { source: 'auto-seed' },
   },
 ];
 
