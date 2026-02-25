@@ -1,5 +1,21 @@
 <#
-    CyberShield Agent - Windows v5.0.10 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.11 FULL ENTERPRISE
+
+    v5.0.11: LOCAL DETECTION + TOAST ALERTS + PUSH TO BACKEND
+    - NEW: Proactive Local Detection Module (runs every 5 min in main loop)
+      * Antivirus inactive detection (WMI SecurityCenter2 + EDR process scan)
+      * Firewall disabled detection (Get-NetFirewallProfile) + auto-reactivation
+      * Unauthorized USB device detection (Win32_DiskDrive USB)
+      * Suspicious process detection (baseline comparison)
+    - NEW: Windows Toast Notification System (BurntToast fallback to BalloonTip)
+      * Native Windows notifications for security events
+      * Severity-based icons (Shield, Warning, Error)
+    - NEW: Push Alert to Backend (Invoke-PushAlert)
+      * Sends local detections to submit-agent-evidence endpoint
+      * Deduplication via cooldown per alert type (default 30 min)
+    - NEW: Auto-Remediation Actions
+      * Auto-enable firewall when disabled
+      * Log USB events for audit trail
 
     v5.0.10: CLOSED-LOOP AUTO-UPDATE - Complete update lifecycle fix
     - FIXED: Invoke-UpdateAgent now applies updates directly (was only reporting availability)
@@ -126,7 +142,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.10"
+    [string]$AgentVersion = "v5.0.11"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -218,7 +234,19 @@ $Global:TaskHealthCheckIntervalSeconds = 300  # Check task every 5 min
 
 # v5.0.4: Log flood suppression
 $Global:ConsecutivePollErrors = 0
-$Global:TaskHealthCheckIntervalSeconds = 300  # Check task every 5 min
+
+# v5.0.11: Local Detection Module
+$Global:LocalDetectionIntervalSeconds = 300  # Run local checks every 5 min
+$Global:AlertCooldownSeconds = 1800  # 30 min cooldown per alert type
+$Global:AlertCooldownTracker = @{}  # Tracks last alert time per type
+$Global:LocalDetectionStats = @{
+    antivirus_checks = 0
+    firewall_checks = 0
+    usb_checks = 0
+    process_checks = 0
+    alerts_sent = 0
+    remediations_applied = 0
+}
 
 # v5.0.1: Hash Chain for execution
 $Global:ExecutionChain = @{
@@ -3522,13 +3550,480 @@ function Send-Heartbeat {
 }
 
 # ============================================
-#  MAIN LOOP v5.0.2 FULL ENTERPRISE
+#  v5.0.11: WINDOWS TOAST NOTIFICATION SYSTEM
+# ============================================
+function Show-SecurityToast {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Title,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$Message,
+        
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("Info", "Warning", "Error")]
+        [string]$Severity = "Warning",
+        
+        [Parameter(Mandatory = $false)]
+        [int]$DurationMs = 10000
+    )
+    
+    try {
+        # Method 1: BurntToast module (if available)
+        if (Get-Module -ListAvailable -Name BurntToast -ErrorAction SilentlyContinue) {
+            $icon = switch ($Severity) {
+                "Error"   { "Warning" }
+                "Warning" { "Warning" }
+                default   { "None" }
+            }
+            New-BurntToastNotification -Text $Title, $Message -AppLogo $null -Sound $icon -ErrorAction SilentlyContinue
+            Write-Log "[TOAST] BurntToast: $Title" "DEBUG"
+            return
+        }
+        
+        # Method 2: Windows BalloonTip (universal fallback)
+        Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+        
+        $balloon = New-Object System.Windows.Forms.NotifyIcon
+        $balloon.Icon = [System.Drawing.SystemIcons]::Shield
+        $balloon.BalloonTipTitle = $Title
+        $balloon.BalloonTipText = $Message
+        $balloon.BalloonTipIcon = switch ($Severity) {
+            "Error"   { [System.Windows.Forms.ToolTipIcon]::Error }
+            "Warning" { [System.Windows.Forms.ToolTipIcon]::Warning }
+            default   { [System.Windows.Forms.ToolTipIcon]::Info }
+        }
+        $balloon.Visible = $true
+        $balloon.ShowBalloonTip($DurationMs)
+        
+        # Cleanup after display
+        Start-Sleep -Milliseconds ($DurationMs + 500)
+        $balloon.Dispose()
+        
+        Write-Log "[TOAST] BalloonTip: $Title" "DEBUG"
+    } catch {
+        # Toast failures are non-critical - log and continue
+        Write-Log "[TOAST] Failed to show notification (non-critical): $($_.Exception.Message)" "DEBUG"
+    }
+}
+
+# ============================================
+#  v5.0.11: PUSH ALERT TO BACKEND
+# ============================================
+function Invoke-PushAlert {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$AlertType,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$AlertMessage,
+        
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("info", "warning", "critical")]
+        [string]$Severity = "warning",
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Details = @{}
+    )
+    
+    # Cooldown check - prevent alert flooding
+    $cooldownKey = $AlertType
+    $now = Get-Date
+    if ($Global:AlertCooldownTracker.ContainsKey($cooldownKey)) {
+        $lastAlert = $Global:AlertCooldownTracker[$cooldownKey]
+        $elapsed = ($now - $lastAlert).TotalSeconds
+        if ($elapsed -lt $Global:AlertCooldownSeconds) {
+            Write-Log "[PUSH-ALERT] Cooldown active for '$AlertType' (${elapsed}s / $($Global:AlertCooldownSeconds)s)" "DEBUG"
+            return $false
+        }
+    }
+    
+    try {
+        $evidenceData = @{
+            alert_type = $AlertType
+            alert_message = $AlertMessage
+            severity = $Severity
+            detected_at = $now.ToString("o")
+            hostname = $env:COMPUTERNAME
+            agent_version = $Global:AgentVersion
+            details = $Details
+        }
+        
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/submit-agent-evidence" `
+            -Method "POST" `
+            -Body @{
+                agent_name = $Global:AgentName
+                event_type = "local_detection_$AlertType"
+                event_data = $evidenceData
+                severity = $Severity
+            } `
+            -TimeoutSec 15
+        
+        if ($result.Success) {
+            $Global:AlertCooldownTracker[$cooldownKey] = $now
+            $Global:LocalDetectionStats.alerts_sent++
+            Write-Log "[PUSH-ALERT] Alert '$AlertType' sent to backend" "SUCCESS"
+            return $true
+        } else {
+            Write-Log "[PUSH-ALERT] Failed to send '$AlertType': $($result.Error)" "WARN"
+            return $false
+        }
+    } catch {
+        Write-Log "[PUSH-ALERT] Exception sending '$AlertType': $($_.Exception.Message)" "WARN"
+        return $false
+    }
+}
+
+# ============================================
+#  v5.0.11: LOCAL DETECTION - ANTIVIRUS CHECK
+# ============================================
+function Test-AntivirusStatus {
+    try {
+        $Global:LocalDetectionStats.antivirus_checks++
+        $avInactive = $false
+        $avDetails = @{}
+        
+        # Phase 1: WMI SecurityCenter2 (desktop/workstation)
+        try {
+            $avProducts = Get-CimInstance -Namespace "root/SecurityCenter2" -ClassName AntiVirusProduct -ErrorAction SilentlyContinue
+            
+            if ($avProducts) {
+                foreach ($av in $avProducts) {
+                    $productState = $av.productState
+                    $isEnabled = (($productState -shr 12) -band 1) -eq 1
+                    $isUpToDate = (($productState -shr 4) -band 1) -eq 0
+                    
+                    if (-not $isEnabled) {
+                        $avInactive = $true
+                        $avDetails = @{
+                            product_name = $av.displayName
+                            product_state = $productState
+                            is_enabled = $false
+                            is_up_to_date = $isUpToDate
+                            detection_method = "SecurityCenter2"
+                        }
+                        break
+                    }
+                }
+                
+                if (-not $avInactive) {
+                    Write-Log "[LOCAL-DETECT] Antivirus active: $($avProducts[0].displayName)" "DEBUG"
+                    return @{ status = "active"; product = $avProducts[0].displayName }
+                }
+            }
+        } catch {
+            # SecurityCenter2 not available on Server editions
+        }
+        
+        # Phase 2: EDR process detection (enterprise)
+        $edrProcesses = @(
+            @{ name = "CrowdStrike"; processes = @("csfalconservice", "CSFalconContainer") },
+            @{ name = "SentinelOne"; processes = @("SentinelAgent", "SentinelHelperService") },
+            @{ name = "Cortex XDR"; processes = @("cyserver", "CortexXDR") },
+            @{ name = "Carbon Black"; processes = @("cb", "CbDefense") },
+            @{ name = "Sophos"; processes = @("SophosHealth", "SSPService") },
+            @{ name = "ESET"; processes = @("ekrn", "egui") },
+            @{ name = "Kaspersky"; processes = @("avp", "klnagent") },
+            @{ name = "Bitdefender"; processes = @("bdagent", "vsserv") },
+            @{ name = "Trend Micro"; processes = @("coreServiceShell", "Ntrtscan") },
+            @{ name = "Cylance"; processes = @("CylanceSvc") },
+            @{ name = "Windows Defender"; processes = @("MsMpEng") }
+        )
+        
+        $edrFound = $false
+        foreach ($edr in $edrProcesses) {
+            foreach ($proc in $edr.processes) {
+                if (Get-Process -Name $proc -ErrorAction SilentlyContinue) {
+                    $edrFound = $true
+                    Write-Log "[LOCAL-DETECT] EDR active: $($edr.name) ($proc)" "DEBUG"
+                    return @{ status = "active"; product = $edr.name; detection_method = "process_scan" }
+                }
+            }
+        }
+        
+        if (-not $edrFound -and -not $avProducts) {
+            $avInactive = $true
+            $avDetails = @{
+                detection_method = "no_av_found"
+                checked_edrs = ($edrProcesses | ForEach-Object { $_.name }) -join ", "
+            }
+        }
+        
+        if ($avInactive) {
+            Write-Log "[LOCAL-DETECT] ANTIVIRUS INACTIVE DETECTED!" "ERROR"
+            
+            Show-SecurityToast `
+                -Title "CyberShield - Protecao Inativa!" `
+                -Message "Nenhum antivirus ativo detectado neste computador. Acao necessaria!" `
+                -Severity "Error"
+            
+            Invoke-PushAlert `
+                -AlertType "antivirus_inactive" `
+                -AlertMessage "Antivirus inativo detectado em $env:COMPUTERNAME" `
+                -Severity "critical" `
+                -Details $avDetails
+            
+            Add-EvidenceEntry -Type "local_detection" -Data @{
+                detection = "antivirus_inactive"
+                details = $avDetails
+            } -Severity "critical"
+            
+            return @{ status = "inactive"; details = $avDetails }
+        }
+        
+        return @{ status = "active" }
+    } catch {
+        Write-Log "[LOCAL-DETECT] Antivirus check error: $($_.Exception.Message)" "WARN"
+        return @{ status = "unknown"; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.11: LOCAL DETECTION - FIREWALL CHECK + AUTO-REMEDIATION
+# ============================================
+function Test-FirewallStatus {
+    try {
+        $Global:LocalDetectionStats.firewall_checks++
+        
+        $profiles = Get-NetFirewallProfile -ErrorAction SilentlyContinue
+        
+        if (-not $profiles) {
+            Write-Log "[LOCAL-DETECT] Could not query firewall profiles" "WARN"
+            return @{ status = "unknown" }
+        }
+        
+        $disabledProfiles = @()
+        foreach ($profile in $profiles) {
+            if ($profile.Enabled -eq $false) {
+                $disabledProfiles += $profile.Name
+            }
+        }
+        
+        if ($disabledProfiles.Count -gt 0) {
+            Write-Log "[LOCAL-DETECT] FIREWALL DISABLED on profiles: $($disabledProfiles -join ', ')" "ERROR"
+            
+            Show-SecurityToast `
+                -Title "CyberShield - Firewall Desativado!" `
+                -Message "Firewall desativado em: $($disabledProfiles -join ', '). Reativando automaticamente..." `
+                -Severity "Error"
+            
+            # AUTO-REMEDIATION: Re-enable disabled firewall profiles
+            $remediated = @()
+            foreach ($profileName in $disabledProfiles) {
+                try {
+                    Set-NetFirewallProfile -Name $profileName -Enabled True -ErrorAction Stop
+                    $remediated += $profileName
+                    Write-Log "[AUTO-REMEDIATE] Firewall re-enabled on profile: $profileName" "SUCCESS"
+                } catch {
+                    Write-Log "[AUTO-REMEDIATE] Failed to re-enable firewall on $profileName : $($_.Exception.Message)" "ERROR"
+                }
+            }
+            
+            $Global:LocalDetectionStats.remediations_applied++
+            
+            Invoke-PushAlert `
+                -AlertType "firewall_disabled" `
+                -AlertMessage "Firewall desativado em $env:COMPUTERNAME (profiles: $($disabledProfiles -join ', ')). Auto-remediado: $($remediated -join ', ')" `
+                -Severity "critical" `
+                -Details @{
+                    disabled_profiles = $disabledProfiles
+                    remediated_profiles = $remediated
+                    auto_remediated = ($remediated.Count -gt 0)
+                }
+            
+            Add-EvidenceEntry -Type "local_detection" -Data @{
+                detection = "firewall_disabled"
+                disabled_profiles = $disabledProfiles
+                remediated_profiles = $remediated
+            } -Severity "critical"
+            
+            if ($remediated.Count -gt 0) {
+                Show-SecurityToast `
+                    -Title "CyberShield - Firewall Reativado!" `
+                    -Message "Firewall reativado com sucesso em: $($remediated -join ', ')" `
+                    -Severity "Info"
+            }
+            
+            return @{ status = "remediated"; disabled = $disabledProfiles; remediated = $remediated }
+        }
+        
+        Write-Log "[LOCAL-DETECT] Firewall active on all profiles" "DEBUG"
+        return @{ status = "active" }
+    } catch {
+        Write-Log "[LOCAL-DETECT] Firewall check error: $($_.Exception.Message)" "WARN"
+        return @{ status = "unknown"; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.11: LOCAL DETECTION - USB DEVICE MONITORING
+# ============================================
+function Test-UsbDevices {
+    try {
+        $Global:LocalDetectionStats.usb_checks++
+        
+        $usbDrives = Get-CimInstance -ClassName Win32_DiskDrive -ErrorAction SilentlyContinue | 
+            Where-Object { $_.InterfaceType -eq "USB" }
+        
+        if ($usbDrives -and $usbDrives.Count -gt 0) {
+            foreach ($usb in $usbDrives) {
+                $usbInfo = @{
+                    device_id = $usb.DeviceID
+                    model = $usb.Model
+                    serial = $usb.SerialNumber
+                    size_gb = [math]::Round($usb.Size / 1GB, 2)
+                    interface = $usb.InterfaceType
+                }
+                
+                Write-Log "[LOCAL-DETECT] USB STORAGE DETECTED: $($usb.Model) ($([math]::Round($usb.Size / 1GB, 2))GB)" "WARN"
+                
+                Show-SecurityToast `
+                    -Title "CyberShield - Dispositivo USB Detectado" `
+                    -Message "USB conectado: $($usb.Model). Este evento foi registrado para auditoria." `
+                    -Severity "Warning"
+                
+                Invoke-PushAlert `
+                    -AlertType "unauthorized_usb" `
+                    -AlertMessage "Dispositivo USB de armazenamento detectado em $env:COMPUTERNAME : $($usb.Model)" `
+                    -Severity "warning" `
+                    -Details $usbInfo
+                
+                Add-EvidenceEntry -Type "local_detection" -Data @{
+                    detection = "usb_storage_connected"
+                    device = $usbInfo
+                } -Severity "warning"
+            }
+            
+            return @{ status = "detected"; count = $usbDrives.Count; devices = $usbDrives | ForEach-Object { $_.Model } }
+        }
+        
+        return @{ status = "none" }
+    } catch {
+        Write-Log "[LOCAL-DETECT] USB check error: $($_.Exception.Message)" "WARN"
+        return @{ status = "unknown"; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.11: LOCAL DETECTION - SUSPICIOUS PROCESS CHECK
+# ============================================
+function Test-SuspiciousProcesses {
+    try {
+        $Global:LocalDetectionStats.process_checks++
+        
+        $suspiciousPatterns = @(
+            @{ pattern = "mimikatz"; severity = "critical"; description = "Credential dumping tool" },
+            @{ pattern = "psexec"; severity = "warning"; description = "Remote execution tool" },
+            @{ pattern = "ncat"; severity = "warning"; description = "Netcat variant" },
+            @{ pattern = "nc.exe"; severity = "warning"; description = "Netcat" },
+            @{ pattern = "wireshark"; severity = "info"; description = "Network sniffer" },
+            @{ pattern = "keylogger"; severity = "critical"; description = "Potential keylogger" },
+            @{ pattern = "cobaltstrike"; severity = "critical"; description = "C2 framework" },
+            @{ pattern = "meterpreter"; severity = "critical"; description = "Exploitation framework" },
+            @{ pattern = "lazagne"; severity = "critical"; description = "Password recovery tool" },
+            @{ pattern = "bloodhound"; severity = "warning"; description = "AD enumeration tool" }
+        )
+        
+        $detected = @()
+        $processes = Get-Process -ErrorAction SilentlyContinue | Select-Object -Property Name, Id, Path
+        
+        foreach ($proc in $processes) {
+            foreach ($suspicious in $suspiciousPatterns) {
+                if ($proc.Name -match $suspicious.pattern) {
+                    $detected += @{
+                        process_name = $proc.Name
+                        process_id = $proc.Id
+                        process_path = $proc.Path
+                        pattern = $suspicious.pattern
+                        severity = $suspicious.severity
+                        description = $suspicious.description
+                    }
+                }
+            }
+        }
+        
+        if ($detected.Count -gt 0) {
+            foreach ($det in $detected) {
+                Write-Log "[LOCAL-DETECT] SUSPICIOUS PROCESS: $($det.process_name) (PID: $($det.process_id)) - $($det.description)" "ERROR"
+                
+                if ($det.severity -eq "critical") {
+                    Show-SecurityToast `
+                        -Title "CyberShield - Processo Suspeito!" `
+                        -Message "Processo perigoso detectado: $($det.process_name) - $($det.description)" `
+                        -Severity "Error"
+                }
+                
+                Invoke-PushAlert `
+                    -AlertType "suspicious_process" `
+                    -AlertMessage "Processo suspeito detectado em $env:COMPUTERNAME : $($det.process_name) - $($det.description)" `
+                    -Severity $det.severity `
+                    -Details $det
+                
+                Add-EvidenceEntry -Type "local_detection" -Data @{
+                    detection = "suspicious_process"
+                    process = $det
+                } -Severity $det.severity
+            }
+            
+            return @{ status = "detected"; count = $detected.Count; processes = $detected }
+        }
+        
+        return @{ status = "clean" }
+    } catch {
+        Write-Log "[LOCAL-DETECT] Process check error: $($_.Exception.Message)" "WARN"
+        return @{ status = "unknown"; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.11: LOCAL DETECTION ORCHESTRATOR
+# ============================================
+function Invoke-LocalDetection {
+    Write-Log "[LOCAL-DETECT] Running proactive security checks..." "INFO"
+    
+    $results = @{
+        timestamp = (Get-Date).ToString("o")
+        antivirus = $null
+        firewall = $null
+        usb = $null
+        processes = $null
+        threats_found = 0
+        remediations_applied = 0
+    }
+    
+    $results.antivirus = Test-AntivirusStatus
+    if ($results.antivirus.status -eq "inactive") { $results.threats_found++ }
+    
+    $results.firewall = Test-FirewallStatus
+    if ($results.firewall.status -eq "remediated") { 
+        $results.threats_found++
+        $results.remediations_applied++ 
+    }
+    
+    $results.usb = Test-UsbDevices
+    if ($results.usb.status -eq "detected") { $results.threats_found += $results.usb.count }
+    
+    $results.processes = Test-SuspiciousProcesses
+    if ($results.processes.status -eq "detected") { $results.threats_found += $results.processes.count }
+    
+    if ($results.threats_found -gt 0) {
+        Write-Log "[LOCAL-DETECT] Completed: $($results.threats_found) threat(s) found, $($results.remediations_applied) remediation(s) applied" "WARN"
+    } else {
+        Write-Log "[LOCAL-DETECT] Completed: System clean" "SUCCESS"
+    }
+    
+    return $results
+}
+
+# ============================================
+#  MAIN LOOP v5.0.11 FULL ENTERPRISE
 # ============================================
 Write-Log "============================================" "INFO"
 Write-Log "[START] CyberShield Agent $($Global:AgentVersion) FULL ENTERPRISE" "INFO"
 Write-Log "[INFO] ServerUrl: $Global:ServerUrl" "DEBUG"
 Write-Log "[INFO] AgentName: $Global:AgentName" "DEBUG"
-Write-Log "[INFO] Features: ECDSA-signing, Ed25519-verify, hash-chain, FSM, DNS-filter, auto-remediation" "INFO"
+Write-Log "[INFO] Features: ECDSA-signing, Ed25519-verify, hash-chain, FSM, DNS-filter, auto-remediation, LOCAL-DETECTION, TOAST-ALERTS" "INFO"
 Write-Log "============================================" "INFO"
 
 # ============================================
@@ -3605,7 +4100,12 @@ $lastAutoRepair = Get-Date
 $lastSoftwareCheck = Get-Date
 $lastJobPoll = Get-Date
 $lastDnsSync = Get-Date
+$lastLocalDetection = Get-Date
 $consecutiveNetworkFailures = 0
+
+# v5.0.11: Run initial local detection on startup
+Write-Log "[STARTUP] Running initial local security detection..." "INFO"
+Invoke-LocalDetection | Out-Null
 
 while ($true) {
     $now = Get-Date
@@ -3697,6 +4197,14 @@ while ($true) {
         if (($now - $lastDnsSync).TotalSeconds -ge 3600 -and $networkOk) {
             Sync-DnsBlocklist
             $lastDnsSync = Get-Date
+        }
+        
+        # ============================================
+        # v5.0.11: LOCAL DETECTION (every 5 min)
+        # ============================================
+        if (($now - $lastLocalDetection).TotalSeconds -ge $Global:LocalDetectionIntervalSeconds) {
+            Invoke-LocalDetection | Out-Null
+            $lastLocalDetection = Get-Date
         }
         
     } catch {
