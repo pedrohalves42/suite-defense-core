@@ -29,6 +29,8 @@ interface ThreatFeed {
   mitreAttackIds: string[];
   hasLocalMatch: boolean;
   matchedAgents: number;
+  agentNames: string[];
+  remediation?: string;
 }
 
 interface MitreAttack {
@@ -59,40 +61,94 @@ export default function ThreatIntelligence() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('cve-feed');
 
-  // Fetch vulnerability data to correlate with threat feeds
-  const { data: vulnData, isLoading } = useQuery({
+  // Fetch vulnerability data from vuln_findings (real agent scan data)
+  const { data: vulnData, isLoading, refetch } = useQuery({
     queryKey: ['threat-intel-vulns', tenantId],
     queryFn: async () => {
       if (!tenantId) return null;
-      const sb = supabase as any;
 
-      const { data: vulns } = await sb
-        .from('vulnerability_scans')
-        .select('id, cve_id, severity, cvss_score, software_name, remediation_status, detected_at, agent_id')
+      // Query vuln_findings with agent info
+      const { data: vulns } = await supabase
+        .from('vuln_findings')
+        .select('id, agent_id, severity, check_key, title, description, remediation, first_seen_at, last_seen_at')
         .eq('tenant_id', tenantId)
-        .order('detected_at', { ascending: false })
-        .limit(100);
+        .order('last_seen_at', { ascending: false });
 
-      const { data: alerts } = await sb
+      // Get agent names for correlation
+      const agentIds = [...new Set((vulns || []).map((v: any) => v.agent_id))];
+      const { data: agents } = await supabase
+        .from('agents')
+        .select('id, agent_name')
+        .in('id', agentIds.length > 0 ? agentIds : ['none']);
+
+      const agentMap = new Map((agents || []).map((a: any) => [a.id, a.agent_name]));
+
+      // Also get CVE-based scans from agent_vulnerability_scans
+      const { data: cveScans } = await supabase
+        .from('agent_vulnerability_scans')
+        .select('id, agent_id, cve_id, software_name, severity, cvss_score, remediation_status, detected_at')
+        .eq('tenant_id', tenantId)
+        .order('detected_at', { ascending: false });
+
+      // Get alerts for MITRE mapping
+      const { data: alerts } = await supabase
         .from('system_alerts')
-        .select('id, alert_type, severity, description, created_at')
+        .select('id, alert_type, severity, message, created_at')
         .eq('tenant_id', tenantId)
         .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(50);
 
-      return { vulns: vulns || [], alerts: alerts || [] };
+      return { vulns: vulns || [], cveScans: cveScans || [], alerts: alerts || [], agentMap };
     },
     enabled: !!tenantId,
   });
 
-  // Generate threat feed from actual vulnerability data
-  const threatFeeds: ThreatFeed[] = (vulnData?.vulns || [])
+  // Generate threat feed from vuln_findings (baseline checks)
+  const baselineFeeds: ThreatFeed[] = [];
+  const vulnsByKey = new Map<string, { ids: string[]; agents: Set<string>; finding: any }>();
+  
+  for (const v of (vulnData?.vulns || [])) {
+    // Group by check_key (same vuln across agents)
+    const baseKey = (v as any).check_key?.replace(/^baseline-/, '') || (v as any).title;
+    const existing = vulnsByKey.get(baseKey);
+    const agentName = vulnData?.agentMap?.get((v as any).agent_id) || 'Desconhecido';
+    if (existing) {
+      existing.ids.push((v as any).id);
+      existing.agents.add(agentName);
+    } else {
+      vulnsByKey.set(baseKey, { ids: [(v as any).id], agents: new Set([agentName]), finding: v });
+    }
+  }
+
+  for (const [key, group] of vulnsByKey) {
+    const v = group.finding;
+    const severityMap: Record<string, number> = { critical: 9.5, high: 7.5, medium: 5.0, low: 2.5 };
+    baselineFeeds.push({
+      id: group.ids[0],
+      cveId: v.check_key || key,
+      severity: v.severity || 'medium',
+      cvssScore: severityMap[v.severity] || 5.0,
+      description: v.title || v.description || '',
+      publishedAt: v.first_seen_at || v.last_seen_at,
+      affectedSoftware: [key.split('-').slice(0, 2).join(' ')],
+      mitreAttackIds: [],
+      hasLocalMatch: true,
+      matchedAgents: group.agents.size,
+      agentNames: [...group.agents],
+      remediation: v.remediation,
+    });
+  }
+
+  // Add CVE-based scans
+  const cveFeeds: ThreatFeed[] = (vulnData?.cveScans || [])
     .filter((v: any) => v.cve_id)
     .reduce((acc: ThreatFeed[], v: any) => {
       const existing = acc.find(f => f.cveId === v.cve_id);
+      const agentName = vulnData?.agentMap?.get(v.agent_id) || 'Desconhecido';
       if (existing) {
         existing.matchedAgents++;
+        if (!existing.agentNames.includes(agentName)) existing.agentNames.push(agentName);
         return acc;
       }
       acc.push({
@@ -106,15 +162,22 @@ export default function ThreatIntelligence() {
         mitreAttackIds: [],
         hasLocalMatch: true,
         matchedAgents: 1,
+        agentNames: [agentName],
       });
       return acc;
-    }, [])
-    .sort((a: ThreatFeed, b: ThreatFeed) => b.cvssScore - a.cvssScore);
+    }, []);
+
+  // Merge both sources, deduplicate
+  const threatFeeds = [...baselineFeeds, ...cveFeeds]
+    .sort((a, b) => {
+      const sevOrder: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+      return (sevOrder[b.severity] || 0) - (sevOrder[a.severity] || 0) || b.cvssScore - a.cvssScore;
+    });
 
   // Correlate alerts with MITRE tactics
   const mitreTactics = MITRE_TACTICS.map(tactic => {
     const relatedAlerts = (vulnData?.alerts || []).filter((a: any) => {
-      const desc = (a.description || '').toLowerCase();
+      const desc = (a.message || '').toLowerCase();
       if (tactic.id === 'T1059' && (desc.includes('script') || desc.includes('powershell'))) return true;
       if (tactic.id === 'T1486' && desc.includes('ransomware')) return true;
       if (tactic.id === 'T1078' && (desc.includes('credential') || desc.includes('login'))) return true;
@@ -223,20 +286,25 @@ export default function ThreatIntelligence() {
 
           <TabsContent value="cve-feed" className="mt-4">
             <Card>
-              <CardHeader>
+          <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Feed de Vulnerabilidades (CVE)</CardTitle>
                     <CardDescription>Vulnerabilidades correlacionadas com seus agentes</CardDescription>
                   </div>
-                  <div className="relative w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar CVE ou software..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9"
-                    />
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1">
+                      <RefreshCw className="h-4 w-4" /> Atualizar
+                    </Button>
+                    <div className="relative w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar CVE ou software..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -256,39 +324,39 @@ export default function ThreatIntelligence() {
                       >
                         <div className="flex items-center gap-3 flex-1">
                           <Badge className={cn('text-xs font-mono', severityColors[feed.severity])} variant="outline">
-                            {feed.cvssScore.toFixed(1)}
+                            {feed.severity.toUpperCase()}
                           </Badge>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-sm font-medium">{feed.cveId}</span>
-                              {feed.hasLocalMatch && (
-                                <Badge variant="destructive" className="text-xs">
-                                  <Crosshair className="h-3 w-3 mr-1" />
-                                  Match local
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium">{feed.description}</p>
+                            {feed.remediation && (
+                              <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">
+                                💊 {feed.remediation}
+                              </p>
+                            )}
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {feed.agentNames.map((name, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs">
+                                  {name}
                                 </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground">{feed.description}</p>
-                            <div className="flex gap-1 mt-1">
-                              {feed.affectedSoftware.map((sw, i) => (
-                                <Badge key={i} variant="outline" className="text-xs">{sw}</Badge>
                               ))}
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 shrink-0">
                           <span className="text-xs text-muted-foreground">
                             {feed.matchedAgents} agente{feed.matchedAgents > 1 ? 's' : ''}
                           </span>
-                          <Button variant="ghost" size="sm" asChild>
-                            <a
-                              href={`https://nvd.nist.gov/vuln/detail/${feed.cveId}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          </Button>
+                          {feed.cveId.startsWith('CVE-') && (
+                            <Button variant="ghost" size="sm" asChild>
+                              <a
+                                href={`https://nvd.nist.gov/vuln/detail/${feed.cveId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
