@@ -1,5 +1,11 @@
 <#
-    CyberShield Agent - Windows v5.0.9 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.10 FULL ENTERPRISE
+
+    v5.0.10: CLOSED-LOOP AUTO-UPDATE - Complete update lifecycle fix
+    - FIXED: Invoke-UpdateAgent now applies updates directly (was only reporting availability)
+    - FIXED: Response parsing uses $Content instead of $Body (Invoke-SecureRequest contract)
+    - IMPROVED: update_agent job handler calls Apply-ForcedUpdate directly with serve-agent-update data
+    - IMPROVED: Backend includes confirm_url and confirm_instructions in every update response
 
     v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
     - NEW: Agent reads heartbeat_interval_seconds and poll_interval_seconds from heartbeat response
@@ -120,7 +126,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.9"
+    [string]$AgentVersion = "v5.0.10"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -1892,7 +1898,7 @@ function Invoke-LightVulnScan {
 function Invoke-UpdateAgent {
     param([object]$Payload)
     
-    Write-Log "[UPDATE] Starting update_agent check..." "INFO"
+    Write-Log "[UPDATE] Starting update_agent via serve-agent-update..." "INFO"
     
     try {
         $updateResult = Invoke-SecureRequest `
@@ -1908,9 +1914,10 @@ function Invoke-UpdateAgent {
             }
         }
         
-        $data = $updateResult.Body | ConvertFrom-Json
+        $data = $updateResult.Content | ConvertFrom-Json
         
-        if ($data.message -eq "Already up to date") {
+        # Check if already up to date
+        if ($data.message -eq "Already up to date" -or $data.message -match "No update available") {
             Write-Log "[UPDATE] Already at latest version ($($data.current_version))" "INFO"
             return @{
                 status = "up_to_date"
@@ -1919,13 +1926,42 @@ function Invoke-UpdateAgent {
             }
         }
         
-        # If update available, let force_update handle it in next heartbeat
-        Write-Log "[UPDATE] Update available: $($data.version). Will apply via force_update." "INFO"
+        # If update data includes script content, apply it directly via Apply-ForcedUpdate
+        if ($data.script_content_base64 -and $data.version) {
+            Write-Log "[UPDATE] Update available: $($data.version). Applying directly..." "INFO"
+            
+            $updateResponse = @{
+                target_version = $data.version
+                script_content_base64 = $data.script_content_base64
+                sha256 = if ($data.sha256_base64) { $data.sha256_base64 } else { $data.sha256 }
+                reason = if ($data.force_update_reason) { $data.force_update_reason } else { "update_agent job" }
+                override_safe_mode = $false
+            }
+            
+            $applyResult = Apply-ForcedUpdate -Response ([PSCustomObject]$updateResponse)
+            
+            if ($applyResult.success) {
+                return @{
+                    status = "update_applied"
+                    current_version = $Global:AgentVersion
+                    new_version = $data.version
+                }
+            } else {
+                return @{
+                    status = "update_failed"
+                    error = $applyResult.error
+                    current_version = $Global:AgentVersion
+                    target_version = $data.version
+                }
+            }
+        }
+        
+        # No script content - just report availability
+        Write-Log "[UPDATE] Update metadata received but no script content. Version: $($data.version)" "WARN"
         return @{
-            status = "update_available"
+            status = "update_available_no_content"
             current_version = $Global:AgentVersion
             target_version = $data.version
-            message = "Update will be applied via heartbeat force_update mechanism"
         }
         
     } catch {
