@@ -58,8 +58,8 @@ export function ScriptUploader() {
     },
     onSuccess: (data) => {
       toast({
-        title: 'Release criada com sucesso!',
-        description: `${data.platform}/${data.version} - ${data.size} bytes`,
+        title: data.signed ? '✅ Release assinada e publicada!' : 'Release criada (sem assinatura)',
+        description: `${data.platform}/${data.version} - ${data.size} bytes${data.signed ? ' • ECDSA-P256 ✓' : ''}`,
       });
       setFileContent(null);
       setFileName('');
