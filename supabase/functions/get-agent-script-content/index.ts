@@ -4,11 +4,9 @@ import { corsHeaders } from '../_shared/cors.ts';
 /**
  * Get Agent Script Content
  * 
- * Busca o script do agente para registro de releases.
- * Prioridade:
- * 1. Buscar da tabela agent_releases (se existir release ativa com script completo)
- * 2. Tentar buscar do storage bucket 'agent-installers'
- * 3. Retornar erro instruindo a executar npm run sync:agent
+ * Supports two actions:
+ * 1. Default: Fetch script content for a specific platform (admin only)
+ * 2. list-all: List all releases with full metadata including signatures (admin only)
  */
 
 const MIN_SCRIPT_SIZE = {
@@ -25,109 +23,86 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Extract JWT from Authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Unauthorized: Missing or invalid authorization header',
-          requestId
-        }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ success: false, error: 'Unauthorized', requestId }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Parse request body for platform parameter
-    let platform: 'windows' | 'linux' | 'macos' = 'windows';
-    try {
-      if (req.method === 'POST') {
-        const body = await req.json();
-        if (body?.platform && ['windows', 'linux', 'macos'].includes(body.platform)) {
-          platform = body.platform as 'windows' | 'linux' | 'macos';
-        }
-      }
-    } catch {
-      // Default to windows if body parsing fails
-    }
-
-    // Create Supabase client with user's JWT for authentication
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: authHeader }
-      }
+      global: { headers: { Authorization: authHeader } }
     });
 
-    // Get authenticated user from JWT
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
     if (userError || !user) {
-      console.error(`[${requestId}] JWT validation failed:`, userError?.message);
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Unauthorized: Invalid or expired token',
-          requestId
-        }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ success: false, error: 'Unauthorized', requestId }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create admin client for role check (bypasses RLS)
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify user is super_admin using RPC
-    const { data: isSuperAdmin, error: roleError } = await supabaseAdmin.rpc('has_role', {
-      _user_id: user.id,
-      _role: 'super_admin'
+    const { data: isSuperAdmin } = await supabaseAdmin.rpc('has_role', {
+      _user_id: user.id, _role: 'super_admin'
     });
 
-    if (roleError) {
-      console.error(`[${requestId}] Role check failed:`, roleError.message);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Internal error checking permissions',
-          requestId
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
     if (!isSuperAdmin) {
-      console.warn(`[${requestId}] User ${user.id} attempted access without super_admin role`);
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Forbidden: Super admin access required',
-          requestId
-        }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ success: false, error: 'Forbidden', requestId }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[${requestId}] Super admin ${user.id} requesting agent script content for platform: ${platform}`);
+    // Parse body
+    let body: Record<string, unknown> = {};
+    try {
+      if (req.method === 'POST') {
+        body = await req.json();
+      }
+    } catch { /* default empty */ }
+
+    const action = body?.action as string | undefined;
+
+    // ===== ACTION: list-all — return all releases with signature metadata =====
+    if (action === 'list-all') {
+      const { data: releases, error: listError } = await supabaseAdmin
+        .from('agent_releases')
+        .select('id, version, platform, channel, sha256, script_content, release_notes, is_active, signature_base64, signed_at, signed_by, created_at')
+        .order('created_at', { ascending: false });
+
+      if (listError) {
+        console.error(`[${requestId}] list-all error:`, listError.message);
+        return new Response(
+          JSON.stringify({ success: false, error: listError.message, requestId }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ releases: releases || [] }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ===== DEFAULT: fetch script content for a platform =====
+    let platform: 'windows' | 'linux' | 'macos' = 'windows';
+    if (body?.platform && ['windows', 'linux', 'macos'].includes(body.platform as string)) {
+      platform = body.platform as 'windows' | 'linux' | 'macos';
+    }
+
+    console.log(`[${requestId}] Admin ${user.id} requesting script for ${platform}`);
 
     const minSize = MIN_SCRIPT_SIZE[platform];
     let scriptContent: string | null = null;
     let source = 'unknown';
 
-    // Strategy 1: Try to fetch from storage bucket
+    // Strategy 1: Storage bucket
     try {
       const scriptFileName = platform === 'windows' 
         ? 'cybershield-agent-windows-v3.ps1'
@@ -144,14 +119,11 @@ Deno.serve(async (req) => {
         if (text.length >= minSize) {
           scriptContent = text;
           source = 'storage';
-          console.log(`[${requestId}] Found script in storage: ${text.length} bytes`);
         }
       }
-    } catch (e) {
-      console.log(`[${requestId}] Storage lookup failed, trying next strategy...`);
-    }
+    } catch { /* next strategy */ }
 
-    // Strategy 2: Try to fetch from agent_releases table (existing release)
+    // Strategy 2: agent_releases table
     if (!scriptContent) {
       try {
         const { data: release } = await supabaseAdmin
@@ -166,35 +138,21 @@ Deno.serve(async (req) => {
         if (release?.script_content && release.script_content.length >= minSize) {
           scriptContent = release.script_content;
           source = 'agent_releases';
-          console.log(`[${requestId}] Found script in agent_releases (${release.version}): ${release.script_content.length} bytes`);
         }
-      } catch (e) {
-        console.log(`[${requestId}] agent_releases lookup failed`);
-      }
+      } catch { /* no release found */ }
     }
 
-    // If no valid script found, return helpful error
     if (!scriptContent || scriptContent.length < minSize) {
-      const platformLabel = platform === 'windows' ? 'Windows' : platform === 'linux' ? 'Linux' : 'macOS';
-      console.error(`[${requestId}] No valid script found for ${platform}. Size: ${scriptContent?.length || 0} bytes (min: ${minSize})`);
-      
       return new Response(
         JSON.stringify({
           success: false,
-          error: `Script ${platformLabel} não encontrado ou muito pequeno.`,
-          details: `Execute localmente: node scripts/sync-all-agents.js --${platform}`,
-          found_size: scriptContent?.length || 0,
-          min_size: minSize,
+          error: `Script ${platform} não encontrado ou muito pequeno.`,
           requestId
         }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Return the script content
     return new Response(
       JSON.stringify({
         success: true,
@@ -204,24 +162,14 @@ Deno.serve(async (req) => {
         source,
         requestId
       }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error(`[${requestId}] Error in get-agent-script-content:`, error);
+    console.error(`[${requestId}] Error:`, error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : 'Internal server error',
-        requestId
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      JSON.stringify({ success: false, error: 'Internal server error', requestId }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

@@ -298,8 +298,8 @@ Deno.serve(async (req) => {
         version,
         sha256,
         size_bytes: script_content.length,
-        signature_present: !!signature_base64,
-        signed_by: signature_base64 ? (signed_by || 'manual') : null
+        signature_present: !!finalSignature,
+        signed_by: finalSignedBy || null
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
