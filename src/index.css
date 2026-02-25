@@ -199,15 +199,166 @@
     @apply text-sm text-muted-foreground mt-1;
   }
 
-  /* === Sidebar Active === */
-  .sidebar-item-active {
-    @apply relative;
-  }
+  /* === Futuristic Sidebar System === */
   
-  .sidebar-item-active::before {
+  /* Neon glow tokens */
+  --neon-cyan: 190 95% 55%;
+  --neon-blue: 220 90% 60%;
+  --neon-purple: 270 85% 60%;
+  --neon-green: 150 90% 50%;
+  
+  .sidebar-futuristic {
+    background: linear-gradient(
+      180deg,
+      hsl(224 25% 6%) 0%,
+      hsl(228 22% 8%) 50%,
+      hsl(224 25% 6%) 100%
+    );
+    border-right: 1px solid hsl(var(--neon-cyan) / 0.12);
+    box-shadow:
+      inset -1px 0 0 hsl(var(--neon-cyan) / 0.06),
+      4px 0 24px -4px hsl(var(--neon-cyan) / 0.08);
+  }
+
+  .sidebar-futuristic::before {
     content: '';
-    @apply absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r;
-    background: hsl(var(--accent));
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 0%, hsl(var(--neon-cyan) / 0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 100%, hsl(var(--neon-purple) / 0.03) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Grid pattern overlay */
+  .sidebar-grid-bg {
+    background-image:
+      linear-gradient(hsl(var(--neon-cyan) / 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--neon-cyan) / 0.03) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Neon border glow for active items */
+  .sidebar-item-neon {
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebar-item-neon:hover {
+    background: hsl(var(--neon-cyan) / 0.06);
+  }
+
+  .sidebar-item-neon-active {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--neon-cyan) / 0.12) 0%,
+      hsl(var(--neon-cyan) / 0.04) 100%
+    ) !important;
+    border-left: 2px solid hsl(var(--neon-cyan));
+    box-shadow:
+      inset 3px 0 12px -3px hsl(var(--neon-cyan) / 0.3),
+      0 0 20px -4px hsl(var(--neon-cyan) / 0.15);
+  }
+
+  .sidebar-item-neon-active .sidebar-icon {
+    color: hsl(var(--neon-cyan));
+    filter: drop-shadow(0 0 4px hsl(var(--neon-cyan) / 0.5));
+  }
+
+  .sidebar-item-neon-active .sidebar-label {
+    color: hsl(var(--neon-cyan));
+    text-shadow: 0 0 12px hsl(var(--neon-cyan) / 0.3);
+  }
+
+  /* Neon section divider */
+  .sidebar-divider-neon {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(var(--neon-cyan) / 0.2) 30%,
+      hsl(var(--neon-cyan) / 0.4) 50%,
+      hsl(var(--neon-cyan) / 0.2) 70%,
+      transparent 100%
+    );
+  }
+
+  /* Sidebar section header */
+  .sidebar-section-label {
+    @apply text-[10px] uppercase tracking-[0.15em] font-semibold;
+    color: hsl(var(--neon-cyan) / 0.5);
+    text-shadow: 0 0 8px hsl(var(--neon-cyan) / 0.15);
+  }
+
+  /* Neon badge */
+  .sidebar-badge-neon {
+    background: hsl(var(--neon-cyan) / 0.15);
+    color: hsl(var(--neon-cyan));
+    border: 1px solid hsl(var(--neon-cyan) / 0.3);
+    box-shadow: 0 0 8px hsl(var(--neon-cyan) / 0.15);
+    @apply text-[10px] font-bold px-1.5 py-0.5 rounded-full;
+  }
+
+  /* Super admin neon variant */
+  .sidebar-item-neon-super:hover {
+    background: hsl(var(--neon-purple) / 0.06);
+  }
+
+  .sidebar-item-neon-super.sidebar-item-neon-active {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--neon-purple) / 0.12) 0%,
+      hsl(var(--neon-purple) / 0.04) 100%
+    ) !important;
+    border-left-color: hsl(var(--neon-purple));
+    box-shadow:
+      inset 3px 0 12px -3px hsl(var(--neon-purple) / 0.3),
+      0 0 20px -4px hsl(var(--neon-purple) / 0.15);
+  }
+
+  .sidebar-item-neon-super.sidebar-item-neon-active .sidebar-icon {
+    color: hsl(var(--neon-purple));
+    filter: drop-shadow(0 0 4px hsl(var(--neon-purple) / 0.5));
+  }
+
+  .sidebar-item-neon-super.sidebar-item-neon-active .sidebar-label {
+    color: hsl(var(--neon-purple));
+    text-shadow: 0 0 12px hsl(var(--neon-purple) / 0.3);
+  }
+
+  /* Floating sidebar effect */
+  .sidebar-float {
+    margin: 8px;
+    border-radius: 16px;
+    height: calc(100vh - 16px);
+    border: 1px solid hsl(var(--neon-cyan) / 0.1);
+    box-shadow:
+      0 0 40px -8px hsl(var(--neon-cyan) / 0.08),
+      0 8px 32px -4px hsl(0 0% 0% / 0.4);
+  }
+
+  /* Pulse animation for logo */
+  @keyframes neon-pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  @keyframes scan-line {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100vh); }
+  }
+
+  .neon-pulse {
+    animation: neon-pulse 3s ease-in-out infinite;
+  }
+
+  /* Glassmorphism overlay */
+  .glass-panel {
+    background: hsl(224 25% 8% / 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--neon-cyan) / 0.1);
   }
 
   /* === Status Indicators === */

@@ -63,7 +63,7 @@ export const AppLayout = () => {
           {/* Mobile sidebar sheet */}
           {isMobile && (
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetContent side="left" className="p-0 w-[280px] max-w-[85vw] [&>button:last-child]:hidden">
+              <SheetContent side="left" className="p-0 w-[300px] max-w-[85vw] bg-[hsl(224_25%_6%)] border-r-0 [&>button:last-child]:hidden">
                 <AppSidebar mobile onNavigate={() => setMobileMenuOpen(false)} />
               </SheetContent>
             </Sheet>
@@ -71,7 +71,7 @@ export const AppLayout = () => {
 
           <div className={cn(
             'transition-all duration-300',
-            isMobile ? 'pl-0' : (collapsed ? 'pl-16' : 'pl-52')
+            isMobile ? 'pl-0' : (collapsed ? 'pl-[calc(4rem+16px)]' : 'pl-[calc(14rem+16px)]')
           )}>
             <TopBar isMobile={isMobile} sidebarCollapsed={collapsed} onMobileMenuClick={() => setMobileMenuOpen(true)} />
             <div className="pt-14">
