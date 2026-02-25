@@ -146,7 +146,23 @@ export default function PlanUpgradeNew() {
           title: 'Redirecionando para o portal',
           description: 'Você será redirecionado para gerenciar sua assinatura.',
         });
-        window.location.href = data.url;
+        window.open(data.url, '_blank');
+      } else if (data.trial) {
+        toast({
+          title: 'Período de Avaliação',
+          description: data.error || 'Você está em período de avaliação. O portal estará disponível após escolher um plano.',
+        });
+      } else if (data.free) {
+        toast({
+          title: 'Plano Gratuito',
+          description: 'Faça upgrade para um plano pago para acessar o portal de cobrança.',
+        });
+      } else if (data.error) {
+        toast({
+          title: 'Aviso',
+          description: data.error,
+          variant: 'destructive',
+        });
       }
     },
     onError: (error: any) => {
