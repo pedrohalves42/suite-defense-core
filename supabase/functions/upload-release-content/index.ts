@@ -5,11 +5,48 @@ import { corsHeaders } from '../_shared/cors.ts';
  * upload-release-content
  * 
  * Safe, direct upload of script content to agent_releases.
- * Bypasses URL-based sync that can capture SPA HTML.
+ * Now includes ECDSA P-256 signing for supply chain integrity.
  * 
  * Auth: X-Internal-Secret (backend-to-backend) OR service-role Authorization
  * Body: { platform: string, version: string, content: string, release_notes?: string }
  */
+
+// ECDSA P-256 signing utilities (inline to avoid import issues in edge functions)
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+async function ecdsaSign(content: string, privateKeyBase64: string): Promise<string> {
+  const privateKeyBuffer = base64ToArrayBuffer(privateKeyBase64);
+  const privateKey = await crypto.subtle.importKey(
+    'pkcs8',
+    privateKeyBuffer,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign']
+  );
+  const data = new TextEncoder().encode(content);
+  const signature = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    privateKey,
+    data
+  );
+  return arrayBufferToBase64(signature);
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -24,7 +61,6 @@ Deno.serve(async (req) => {
     const isServiceRole = authHeader?.includes(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '___never___');
     
     if (!isInternalAuth && !isServiceRole) {
-      // Fallback: allow if called from Supabase dashboard/CLI (anon key + RLS won't work, so this is safe)
       console.warn('[upload-release-content] No internal auth, proceeding with caution');
     }
 
@@ -57,12 +93,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // SAFETY: Version mismatch guard - script header must reference the target version
-    // Extracts version from script header comment (e.g., "CyberShield Agent - Windows v5.0.11")
+    // SAFETY: Version mismatch guard
     const headerMatch = trimmed.match(/CyberShield\s+Agent\s*[-–]\s*\w+\s+v?([\d]+\.[\d]+\.[\d]+)/i);
     if (headerMatch) {
-      const scriptVersion = headerMatch[1]; // e.g., "5.0.11"
-      const targetVersion = version.replace(/^v/, ''); // e.g., "5.0.10" from input
+      const scriptVersion = headerMatch[1];
+      const targetVersion = version.replace(/^v/, '');
       const scriptMajorMinor = scriptVersion.split('.').slice(0, 2).join('.');
       const targetMajorMinor = targetVersion.split('.').slice(0, 2).join('.');
       
@@ -71,7 +106,7 @@ Deno.serve(async (req) => {
           error: `Version mismatch: script header says v${scriptVersion} but uploading as ${version}`,
           script_version: scriptVersion,
           target_version: version,
-          hint: 'The script content does not match the target version. Ensure you are uploading the correct file.'
+          hint: 'The script content does not match the target version.'
         }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -96,6 +131,24 @@ Deno.serve(async (req) => {
     const hash = Array.from(new Uint8Array(hashBuffer))
       .map(b => b.toString(16).padStart(2, '0')).join('');
 
+    // ECDSA Signing
+    let signature: string | null = null;
+    let signedAt: string | null = null;
+    const ecdsaPrivateKey = Deno.env.get('ECDSA_PRIVATE_KEY');
+    
+    if (ecdsaPrivateKey) {
+      try {
+        signature = await ecdsaSign(hash, ecdsaPrivateKey);
+        signedAt = new Date().toISOString();
+        console.log(`[upload-release-content] ECDSA signature generated for ${platform}/${version}`);
+      } catch (signErr) {
+        console.error('[upload-release-content] ECDSA signing failed:', (signErr as Error).message);
+        // Don't block upload if signing fails - log and continue
+      }
+    } else {
+      console.warn('[upload-release-content] ECDSA_PRIVATE_KEY not configured, skipping signing');
+    }
+
     // Deactivate old releases for same platform+version, then insert
     await supabase.from('agent_releases')
       .update({ is_active: false })
@@ -106,15 +159,20 @@ Deno.serve(async (req) => {
       version, platform, channel: 'stable',
       script_content: normalized, sha256: hash, is_active: true,
       release_notes: release_notes || `${version}: Direct upload ${new Date().toISOString()}`,
+      signature,
+      signed_at: signedAt,
+      signed_by: signature ? 'ecdsa-p256-server' : null,
     });
 
     if (error) throw new Error(error.message);
 
-    console.log(`[upload-release-content] Success: ${platform}/${version} (${bytes.length} bytes, sha256=${hash.substring(0, 16)}...)`);
+    console.log(`[upload-release-content] Success: ${platform}/${version} (${bytes.length} bytes, sha256=${hash.substring(0, 16)}..., signed=${!!signature})`);
 
     return new Response(JSON.stringify({
       success: true, platform, version,
       size: bytes.length, sha256: hash.substring(0, 16) + '...',
+      signed: !!signature,
+      signed_at: signedAt,
       header: normalized.substring(0, 80),
     }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (e) {
