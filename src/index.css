@@ -231,12 +231,17 @@
     z-index: 0;
   }
 
-  /* Grid pattern overlay */
-  .sidebar-grid-bg {
+  /* Grid pattern overlay - using ::after to avoid overriding sidebar-futuristic background */
+  .sidebar-grid-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
     background-image:
       linear-gradient(hsl(var(--neon-cyan) / 0.03) 1px, transparent 1px),
       linear-gradient(90deg, hsl(var(--neon-cyan) / 0.03) 1px, transparent 1px);
     background-size: 24px 24px;
+    pointer-events: none;
+    z-index: 0;
   }
 
   /* Neon border glow for active items */
