@@ -12487,6 +12487,7 @@ export type Database = {
           agent_version: string
           archived_at: string | null
           claimed_at: string
+          completed_at: string | null
           created_at: string
           error_message: string | null
           execution_hash: string | null
@@ -12514,6 +12515,7 @@ export type Database = {
           agent_version: string
           archived_at?: string | null
           claimed_at?: string
+          completed_at?: string | null
           created_at?: string
           error_message?: string | null
           execution_hash?: string | null
@@ -12541,6 +12543,7 @@ export type Database = {
           agent_version?: string
           archived_at?: string | null
           claimed_at?: string
+          completed_at?: string | null
           created_at?: string
           error_message?: string | null
           execution_hash?: string | null
@@ -28175,6 +28178,17 @@ export type Database = {
               p_result_signature?: string
               p_signature_verified?: boolean
               p_started_at: string
+              p_status: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_agent_id: string
+              p_error_message?: string
+              p_execution_id: string
+              p_exit_code?: number
+              p_output?: Json
               p_status: string
             }
             Returns: Json

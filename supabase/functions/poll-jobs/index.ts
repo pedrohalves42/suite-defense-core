@@ -393,8 +393,13 @@ Deno.serve(async (req) => {
     })
 
     // Retornar jobs ao agente
+    // COST-OPT: Wrap response with poll_interval to instruct agents
+    const responsePayload = {
+      jobs: jobsResponse,
+      poll_interval_seconds: 30,  // Poll every 30s instead of 2-3s
+    };
     return new Response(
-      JSON.stringify(jobsResponse),
+      JSON.stringify(responsePayload),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200

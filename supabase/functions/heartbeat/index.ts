@@ -471,7 +471,10 @@ Deno.serve(async (req) => {
                   script_content_base64: base64Script,
                   sha256: calculatedSha256,
                   reason: forceCheck.force_update_reason || 'Forced update via backend',
-                  override_safe_mode: overrideValid
+                  override_safe_mode: overrideValid,
+                  // COST-OPT: Instruct agents to slow down polling
+                  heartbeat_interval_seconds: 60,
+                  poll_interval_seconds: 30,
                 }),
                 {
                   headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -495,11 +498,15 @@ Deno.serve(async (req) => {
     // Event is dispatched but we don't wait for it
 
     // Response normal (sem force update)
+    // COST-OPT: Send poll_interval to agents to reduce call frequency
     return new Response(
       JSON.stringify({ 
         ok: true,
         agent: agent.agent_name,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        // COST-OPT: Instruct agents to slow down polling
+        heartbeat_interval_seconds: 60,   // Heartbeat every 60s (was ~2-3s)
+        poll_interval_seconds: 30,         // Poll jobs every 30s (was ~2-3s)
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
