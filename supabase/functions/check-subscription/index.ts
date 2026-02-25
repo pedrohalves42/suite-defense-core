@@ -125,18 +125,30 @@ Deno.serve(async (req) => {
           return acc;
         }, {});
 
+        // Count installed agents
+        const { count: installedAgents } = await supabaseClient
+          .from("agents")
+          .select("id", { count: 'exact', head: true })
+          .eq("tenant_id", tenantId)
+          .eq("status", "active");
+
+        const maxDevices = typedSubscription?.subscription_plans?.max_devices || (baseDevices + addonDevices);
+
         return new Response(
           JSON.stringify({
             subscribed: true,
             plan_name: planName,
-            is_legacy: isLegacy, // V4
-            base_devices: baseDevices, // V4
-            addon_devices: addonDevices, // V4
-            total_devices: baseDevices + addonDevices, // V4
+            is_legacy: isLegacy,
+            base_devices: baseDevices,
+            addon_devices: addonDevices,
+            total_devices: baseDevices + addonDevices,
             device_quantity: typedSubscription?.device_quantity || 0,
+            max_devices: maxDevices,
+            installed_agents: installedAgents || 0,
+            available_slots: Math.max(0, maxDevices - (installedAgents || 0)),
             status: typedSubscription?.status || 'active',
-            trial_end: null,
-            current_period_end: null,
+            trial_end: typedSubscription?.trial_end || null,
+            current_period_end: typedSubscription?.current_period_end || null,
             features: featuresMap,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }

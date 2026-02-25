@@ -12,6 +12,9 @@ interface SubscriptionData {
   subscribed: boolean;
   plan_name: string;
   device_quantity: number;
+  max_devices: number;
+  installed_agents: number;
+  available_slots: number;
   status: string;
   trial_end: string | null;
   current_period_end: string | null;
