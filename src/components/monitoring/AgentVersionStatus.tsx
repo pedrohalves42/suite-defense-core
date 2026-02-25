@@ -89,6 +89,15 @@ export function AgentVersionStatus({ agents, tenantId, onRefresh }: AgentVersion
         return;
       }
 
+      // Cancel stale update_agent jobs (delivered/pending/queued) for these agents to avoid dedup index conflict
+      const agentIds = onlineOutdated.map(a => a.id);
+      await supabase
+        .from('jobs')
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .in('agent_id', agentIds)
+        .eq('type', 'update_agent')
+        .in('status', ['pending', 'queued', 'delivered']);
+
       const jobs = onlineOutdated.map(agent => ({
         tenant_id: tenantId,
         agent_id: agent.id,
