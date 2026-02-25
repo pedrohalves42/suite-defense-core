@@ -3373,6 +3373,7 @@ function Apply-ForcedUpdate {
             } else {
                 Write-Log "[FORCE UPDATE] Confirmacao falhou: $($confirmResult.Error)" "WARN"
             }
+        } catch {
             Write-Log "[FORCE UPDATE] Falha ao confirmar no backend (nao critico): $($_.Exception.Message)" "WARN"
         }
         
