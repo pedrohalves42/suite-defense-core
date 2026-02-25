@@ -1,12 +1,52 @@
 /**
  * Structured logging utility for frontend applications
- * Logs to console in development and sends to monitoring service in production
+ * Logs to console in development and persists errors/warnings to backend in production
  */
+import { supabase } from '@/integrations/supabase/client';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 interface LogContext {
   [key: string]: any;
+}
+
+// Buffer to batch log entries and avoid excessive network calls
+const LOG_BUFFER: Array<{ level: LogLevel; message: string; context?: LogContext; timestamp: string }> = [];
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+const FLUSH_INTERVAL_MS = 10000; // Flush every 10 seconds
+const MAX_BUFFER_SIZE = 20;
+
+async function flushLogs() {
+  if (LOG_BUFFER.length === 0) return;
+
+  const entries = LOG_BUFFER.splice(0, MAX_BUFFER_SIZE);
+
+  try {
+    await supabase.from('domain_events').insert(
+      entries.map((entry) => ({
+        aggregate_id: 'frontend',
+        aggregate_type: 'frontend_log',
+        event_type: `FrontendLog_${entry.level}`,
+        payload: {
+          message: entry.message,
+          context: entry.context,
+          url: typeof window !== 'undefined' ? window.location.href : undefined,
+          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+        },
+        occurred_on: entry.timestamp,
+      }))
+    );
+  } catch {
+    // Best-effort — don't crash the app if logging fails
+  }
+}
+
+function scheduleFlush() {
+  if (flushTimer) return;
+  flushTimer = setTimeout(() => {
+    flushTimer = null;
+    flushLogs();
+  }, FLUSH_INTERVAL_MS);
 }
 
 class Logger {
@@ -20,11 +60,22 @@ class Logger {
   }
 
   private sendToMonitoring(level: LogLevel, message: string, context?: LogContext) {
-    // In production, send to monitoring service (Sentry, LogRocket, etc.)
-    if (!this.isDevelopment) {
-      // Placeholder for monitoring integration
-      // Example: Sentry.captureMessage(message, { level, extra: context });
-      // Example: LogRocket.log(level, message, context);
+    if (this.isDevelopment) return;
+
+    // Only persist warn and error in production to control costs
+    if (level !== 'warn' && level !== 'error') return;
+
+    LOG_BUFFER.push({
+      level,
+      message,
+      context,
+      timestamp: new Date().toISOString(),
+    });
+
+    if (LOG_BUFFER.length >= MAX_BUFFER_SIZE) {
+      flushLogs();
+    } else {
+      scheduleFlush();
     }
   }
 
