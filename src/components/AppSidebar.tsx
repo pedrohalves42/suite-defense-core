@@ -538,7 +538,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
             <div className="flex items-center justify-center gap-2">
               <Zap className="h-3 w-3 text-[hsl(var(--neon-cyan)_/_0.4)] neon-pulse" />
               <span className="text-[10px] tracking-[0.1em] text-[hsl(var(--neon-cyan)_/_0.3)] font-mono uppercase">
-                CyberShield v5.0.10
+                CyberShield v5.0.11
               </span>
             </div>
           ) : (
@@ -549,7 +549,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                 </div>
               </TooltipTrigger>
               <TooltipContent side="right" className="glass-panel text-[hsl(190_95%_70%)] border-[hsl(190_95%_55%_/_0.2)]">
-                CyberShield v5.0.10
+                CyberShield v5.0.11
               </TooltipContent>
             </Tooltip>
           )}
