@@ -13,6 +13,8 @@ export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
 export const LAST_UPDATED = '2025-12-25T00:00:00Z';
 
 export const CHANGES = [
+  '[v5.0.9] COST-OPT: Agent reads heartbeat_interval_seconds and poll_interval_seconds from server response',
+  '[v5.0.9] COST-OPT: Dynamic interval adjustment eliminates hardcoded polling frequencies',
   '[v4.1.7] PHASE 1: Process Control - kill_process, stop_service, disable_service handlers',
   '[v4.1.7] SECURITY: Protected processes/services lists (defense in depth)',
   '[v4.1.7] SECURITY: Agent-side validation prevents killing critical system processes',

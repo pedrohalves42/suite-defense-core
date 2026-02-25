@@ -1,5 +1,10 @@
 <#
-    CyberShield Agent - Windows v5.0.8 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.9 FULL ENTERPRISE
+
+    v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
+    - NEW: Agent reads heartbeat_interval_seconds and poll_interval_seconds from heartbeat response
+    - NEW: Dynamically adjusts $Global:PollIntervalSeconds and $Global:JobPollIntervalSeconds at runtime
+    - COST-OPT: Eliminates hardcoded 2-3s polling; server controls agent cadence
 
     v5.0.8: HANDLER FIX - collect_dns_blocks & integration_test_v3 sync
     - FIXED: Ensured collect_dns_blocks and integration_test_v3 handlers are included in DB release
@@ -115,7 +120,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.8"
+    [string]$AgentVersion = "v5.0.9"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -3420,10 +3425,29 @@ function Send-Heartbeat {
         if ($result.Success) {
             Write-Log "[HEARTBEAT] Sent successfully" "SUCCESS"
             
-            # Processar resposta do servidor (force update, rotate key, etc.)
+            # Processar resposta do servidor (force update, rotate key, intervals, etc.)
             if ($result.Content) {
                 try {
                     $response = $result.Content | ConvertFrom-Json
+                    
+                    # ============================================
+                    # DYNAMIC INTERVAL ADJUSTMENT (v5.0.9)
+                    # Server controls agent polling cadence
+                    # ============================================
+                    if ($response.heartbeat_interval_seconds -and $response.heartbeat_interval_seconds -ge 10) {
+                        $newHbInterval = [int]$response.heartbeat_interval_seconds
+                        if ($newHbInterval -ne $Global:PollIntervalSeconds) {
+                            Write-Log "[HEARTBEAT] Server adjusted heartbeat interval: $($Global:PollIntervalSeconds)s -> ${newHbInterval}s" "INFO"
+                            $Global:PollIntervalSeconds = $newHbInterval
+                        }
+                    }
+                    if ($response.poll_interval_seconds -and $response.poll_interval_seconds -ge 10) {
+                        $newJobInterval = [int]$response.poll_interval_seconds
+                        if ($newJobInterval -ne $Global:JobPollIntervalSeconds) {
+                            Write-Log "[HEARTBEAT] Server adjusted job poll interval: $($Global:JobPollIntervalSeconds)s -> ${newJobInterval}s" "INFO"
+                            $Global:JobPollIntervalSeconds = $newJobInterval
+                        }
+                    }
                     
                     # ============================================
                     # FORCE UPDATE VIA HEARTBEAT RESPONSE
