@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - Linux v5.0.9
+# CyberShield Agent - Linux v5.0.11
 #
+# v5.0.11: FULL ENTERPRISE - All functions (Get-RollbackState, Add-EvidenceEntry, Apply-ForcedUpdate)
 # v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
 # - NEW: Agent reads heartbeat_interval_seconds and poll_interval_seconds from heartbeat response
 # - NEW: Dynamically adjusts POLL_INTERVAL and JOB_POLL_INTERVAL at runtime
