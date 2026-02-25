@@ -969,13 +969,57 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Handle agent_offline execute action - treat as acknowledge
+      // Handle agent_offline execute action - create a reinstall/recovery job
       if (source_type === 'agent_offline' && action === 'execute') {
         const agentId = item_id.replace('offline_', '');
-        console.log('[action-center-feed] Execute on offline agent (treated as acknowledge):', agentId);
+        console.log('[action-center-feed] Execute recovery on offline agent:', agentId);
+
+        // Get agent info
+        const { data: agent } = await serviceClient
+          .from('agents')
+          .select('id, agent_name, tenant_id')
+          .eq('id', agentId)
+          .eq('tenant_id', tenantId)
+          .single();
+
+        if (agent) {
+          // Create a recovery job for the agent
+          const { data: job, error: jobErr } = await serviceClient
+            .from('jobs')
+            .insert({
+              agent_id: agent.id,
+              agent_name: agent.agent_name,
+              tenant_id: tenantId,
+              type: 'service_health_check',
+              status: 'pending',
+              payload: {
+                action: 'restart_service',
+                service_name: 'CyberShieldAgent',
+                reason: 'agent_offline_recovery',
+                triggered_by: user.id,
+              },
+              priority: 1,
+              expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+            })
+            .select('id')
+            .single();
+
+          if (jobErr) {
+            console.warn('[action-center-feed] Failed to create recovery job:', jobErr);
+          }
+
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'Recovery job created for offline agent',
+              job_id: job?.id || null,
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         
         return new Response(
-          JSON.stringify({ success: true, message: 'Offline status acknowledged' }),
+          JSON.stringify({ success: true, message: 'Agent not found for recovery' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -991,8 +1035,63 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Handle alert execute action - resolve the alert
+      // Handle alert execute action - dispatch remediation based on alert type, then resolve
       if (source_type === 'alert' && action === 'execute') {
+        // Fetch alert details to determine appropriate remediation
+        const { data: alert, error: alertFetchErr } = await serviceClient
+          .from('system_alerts')
+          .select('id, alert_type, severity, agent_id, details, title')
+          .eq('id', item_id)
+          .eq('tenant_id', tenantId)
+          .single();
+
+        if (alertFetchErr || !alert) {
+          console.error('[action-center-feed] Fetch alert error:', alertFetchErr);
+          return new Response(
+            JSON.stringify({ error: 'Alert not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        let remediationResult = null;
+
+        // Map alert types to remediation actions
+        const alertRemediationMap: Record<string, { action_type: string; trigger_source: string }> = {
+          'antivirus_inactive': { action_type: 'enable_antivirus', trigger_source: 'alert_execute' },
+          'firewall_disabled': { action_type: 'enable_firewall', trigger_source: 'alert_execute' },
+          'unauthorized_usb': { action_type: 'block_usb_device', trigger_source: 'alert_execute' },
+          'vulnerable_software': { action_type: 'suggest_patch', trigger_source: 'alert_execute' },
+          'suspicious_process': { action_type: 'kill_process', trigger_source: 'alert_execute' },
+          'malware_detected': { action_type: 'quarantine_file', trigger_source: 'alert_execute' },
+          'auto_remediation': { action_type: 'restart_service', trigger_source: 'alert_execute' },
+        };
+
+        const remediation = alertRemediationMap[alert.alert_type];
+
+        if (remediation && alert.agent_id) {
+          try {
+            const { data, error: remErr } = await supabase.functions.invoke('auto-remediate', {
+              body: {
+                agent_id: alert.agent_id,
+                action_type: remediation.action_type,
+                trigger_source: remediation.trigger_source,
+                trigger_details: {
+                  alert_id: alert.id,
+                  alert_type: alert.alert_type,
+                  severity: alert.severity,
+                  ...(alert.details as Record<string, unknown> || {}),
+                },
+                requires_approval: false,
+              },
+            });
+            remediationResult = data;
+            if (remErr) console.warn('[action-center-feed] Remediation invocation warning:', remErr);
+          } catch (remExc) {
+            console.warn('[action-center-feed] Remediation exception (non-blocking):', remExc);
+          }
+        }
+
+        // Resolve the alert
         const { error } = await serviceClient
           .from('system_alerts')
           .update({
@@ -1012,7 +1111,11 @@ Deno.serve(async (req) => {
         }
 
         return new Response(
-          JSON.stringify({ success: true }),
+          JSON.stringify({ 
+            success: true, 
+            remediation_dispatched: !!remediation && !!alert.agent_id,
+            remediation: remediationResult,
+          }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
