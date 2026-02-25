@@ -57,6 +57,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    // SAFETY: Version mismatch guard - script header must reference the target version
+    // Extracts version from script header comment (e.g., "CyberShield Agent - Windows v5.0.11")
+    const headerMatch = trimmed.match(/CyberShield\s+Agent\s*[-–]\s*\w+\s+v?([\d]+\.[\d]+\.[\d]+)/i);
+    if (headerMatch) {
+      const scriptVersion = headerMatch[1]; // e.g., "5.0.11"
+      const targetVersion = version.replace(/^v/, ''); // e.g., "5.0.10" from input
+      const scriptMajorMinor = scriptVersion.split('.').slice(0, 2).join('.');
+      const targetMajorMinor = targetVersion.split('.').slice(0, 2).join('.');
+      
+      if (scriptMajorMinor !== targetMajorMinor) {
+        return new Response(JSON.stringify({ 
+          error: `Version mismatch: script header says v${scriptVersion} but uploading as ${version}`,
+          script_version: scriptVersion,
+          target_version: version,
+          hint: 'The script content does not match the target version. Ensure you are uploading the correct file.'
+        }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      console.log(`[upload-release-content] Version check passed: script=v${scriptVersion}, target=${version}`);
+    } else {
+      console.warn('[upload-release-content] Could not extract version from script header, skipping version check');
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
