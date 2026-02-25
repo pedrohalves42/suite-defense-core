@@ -3,9 +3,8 @@ import { encodeBase64 } from 'https://deno.land/std@0.208.0/encoding/base64.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
-import { AGENT_SCRIPT_WINDOWS_CONTENT } from '../_shared/agent-script-windows-content.ts';
-import { AGENT_SCRIPT_LINUX_SH } from '../_shared/agent-script-linux-content.ts';
-import { AGENT_SCRIPT_MACOS_SH } from '../_shared/agent-script-macos-content.ts';
+// NOTE: Codebase script imports removed - .ps1 files are NOT bundled in Deno Deploy
+// All script content is served exclusively from the agent_releases DB table
 import { INSTALLER_VERSION } from '../_shared/installer-version.ts';
 import { hashToken } from '../_shared/token-hash.ts';
 import { updateDecisionService, normalizeVersion, normalizeForWindows, calculateSha256 } from '../_shared/hexagonal/update-decision-service.ts';
@@ -375,9 +374,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // AUTHORITATIVE SOURCE: Use codebase scripts for ALL platforms (always up-to-date with hotfixes)
-    // The script files in _shared/agent-scripts/ are the single source of truth
-    // This eliminates the agent_releases sync gap that caused hotfix delivery failures
+    // AUTHORITATIVE SOURCE: Always use DB release content
+    // Codebase scripts (.ps1 files) are NOT bundled in Deno Deploy
     let finalScriptContent = release.script_content;
     
     // SAFETY: Reject HTML content from DB (corrupted releases)
@@ -387,31 +385,11 @@ Deno.serve(async (req) => {
         platform,
         preview: finalScriptContent.substring(0, 100),
       });
-      finalScriptContent = '';  // Force fallback to codebase
+      finalScriptContent = '';
     }
-    
-    const codebaseScripts: Record<string, string> = {
-      windows: AGENT_SCRIPT_WINDOWS_CONTENT,
-      linux: AGENT_SCRIPT_LINUX_SH,
-      macos: AGENT_SCRIPT_MACOS_SH,
-    };
-    
-    const codebaseScript = codebaseScripts[platform];
-    if (codebaseScript && codebaseScript.length > 1000) {
-      const codebaseLen = codebaseScript.length;
-      const dbLen = finalScriptContent?.length || 0;
-      if (codebaseLen !== dbLen) {
-        logger.info('[serve-agent-update] Using codebase script (authoritative) instead of DB', {
-          requestId,
-          platform,
-          codebaseSize: codebaseLen,
-          dbSize: dbLen,
-          agentName: agent.agent_name
-        });
-      }
-      finalScriptContent = codebaseScript;
-    } else if (!finalScriptContent || finalScriptContent.length < 1000) {
-      logger.warn('[serve-agent-update] No valid script in codebase or DB', { 
+
+    if (!finalScriptContent || finalScriptContent.length < 1000) {
+      logger.warn('[serve-agent-update] No valid script content in DB', { 
         requestId, 
         platform,
         dbScriptSize: release.script_content?.length || 0
