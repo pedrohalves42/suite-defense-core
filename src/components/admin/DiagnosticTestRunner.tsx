@@ -167,8 +167,7 @@ export function DiagnosticTestRunner({
         ]);
       } catch (error) {
         // Mark as failed with simplified error
-        const errorInfo = formatError(error);
-        const errorMessage = toErrorMessage(errorInfo) || toErrorMessage(error);
+        const errorMessage = toErrorMessage(error);
         const result: TestResult = {
           type: test.type,
           label: test.label,
