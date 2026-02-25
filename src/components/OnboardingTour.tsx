@@ -10,6 +10,7 @@ interface OnboardingTourProps {
   onClose: () => void;
   onComplete: () => void;
   onDismiss7Days?: () => void;
+  onDismissForever?: () => void;
 }
 
 interface TourStep {
@@ -51,7 +52,7 @@ const tourSteps: TourStep[] = [
   },
 ];
 
-export const OnboardingTour = ({ open, onClose, onComplete, onDismiss7Days }: OnboardingTourProps) => {
+export const OnboardingTour = ({ open, onClose, onComplete, onDismiss7Days, onDismissForever }: OnboardingTourProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const progress = ((currentStep + 1) / tourSteps.length) * 100;
 
@@ -185,16 +186,27 @@ export const OnboardingTour = ({ open, onClose, onComplete, onDismiss7Days }: On
             </Button>
           </div>
           
-          {/* Dismiss for 7 days option */}
-          {onDismiss7Days && (
-            <Button
-              variant="link"
-              onClick={handleDismiss7Days}
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              Não mostrar por 7 dias
-            </Button>
-          )}
+          {/* Dismiss options */}
+          <div className="flex items-center justify-center gap-4">
+            {onDismiss7Days && (
+              <Button
+                variant="link"
+                onClick={handleDismiss7Days}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Não mostrar por 7 dias
+              </Button>
+            )}
+            {onDismissForever && (
+              <Button
+                variant="link"
+                onClick={() => { onDismissForever(); onClose(); }}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Não exibir mais
+              </Button>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
