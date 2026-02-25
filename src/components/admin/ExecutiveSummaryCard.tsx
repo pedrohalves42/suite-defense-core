@@ -1,17 +1,18 @@
 /**
- * Executive Summary Card - Clean, data-driven protection overview
+ * Executive Summary Card - Polished, data-driven protection overview
  */
 
 import { useTodayRiskDelta, useGenerateExecutiveReport, getDeltaInfo, formatCurrency } from '@/hooks/useRiskDelta';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { 
-  Shield, DollarSign, RefreshCw, 
-  Monitor, MonitorOff, ShieldCheck, TrendingDown, TrendingUp, Minus
+  DollarSign, RefreshCw, 
+  Monitor, MonitorOff, ShieldCheck, TrendingDown, TrendingUp, Minus, Activity
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -24,14 +25,15 @@ function useFleetStatus() {
     queryFn: async () => {
       if (!tenant?.id) return null;
 
-      const cutoff = new Date(Date.now() - 90 * 60 * 1000).toISOString(); // 1.5h
+      const cutoff = new Date(Date.now() - 90 * 60 * 1000).toISOString();
 
       const { data: agents } = await supabase
         .from('agents')
-        .select('status, last_heartbeat')
-        .eq('tenant_id', tenant.id);
+        .select('status, last_heartbeat, agent_name')
+        .eq('tenant_id', tenant.id)
+        .in('status', ['active', 'inactive']);
 
-      if (!agents) return { online: 0, offline: 0, total: 0 };
+      if (!agents || agents.length === 0) return { online: 0, offline: 0, total: 0 };
 
       const online = agents.filter(a => a.last_heartbeat && a.last_heartbeat > cutoff).length;
       const total = agents.length;
@@ -39,8 +41,8 @@ function useFleetStatus() {
       return { online, offline: total - online, total };
     },
     enabled: !!tenant?.id,
-    staleTime: 60 * 1000,
-    refetchInterval: 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchInterval: 30 * 1000,
   });
 }
 
@@ -51,17 +53,14 @@ export function ExecutiveSummaryCard() {
 
   if (isLoading || fleetLoading) {
     return (
-      <Card>
-        <CardHeader className="pb-3">
-          <Skeleton className="h-5 w-36" />
-          <Skeleton className="h-3 w-52" />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Skeleton className="h-14" />
+      <Card className="overflow-hidden">
+        <div className="p-5 space-y-4">
+          <Skeleton className="h-5 w-44" />
+          <Skeleton className="h-16" />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20" />)}
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-[88px]" />)}
           </div>
-        </CardContent>
+        </div>
       </Card>
     );
   }
@@ -71,128 +70,141 @@ export function ExecutiveSummaryCard() {
                     deltaInfo.icon === 'up' ? TrendingUp : Minus;
 
   const costAvoided = riskDelta?.estimated_cost_avoided ?? 0;
-  const threatsBlocked = riskDelta?.threats_blocked ?? 0;
   const incidentsPrevented = riskDelta?.incidents_prevented ?? 0;
+  const hasOnline = fleet && fleet.online > 0;
 
-  // Simple, human narrative
   const buildNarrative = () => {
+    if (riskDelta?.executive_summary && 
+        riskDelta.executive_summary !== 'Prezados, hoje não houve registro') {
+      return riskDelta.executive_summary;
+    }
+
     const parts: string[] = [];
 
-    if (fleet && fleet.online > 0) {
-      parts.push(`${fleet.online} de ${fleet.total} máquinas online agora`);
+    if (fleet && fleet.total > 0) {
+      if (fleet.online > 0) {
+        parts.push(`${fleet.online} de ${fleet.total} endpoints reportando em tempo real`);
+      }
       if (fleet.offline > 0) {
-        parts.push(`${fleet.offline} offline (fora do expediente)`);
+        parts.push(`${fleet.offline} fora do horário de expediente`);
       }
     }
 
     if (incidentsPrevented > 0) {
-      parts.push(`${incidentsPrevented} incidente${incidentsPrevented > 1 ? 's' : ''} neutralizado${incidentsPrevented > 1 ? 's' : ''} hoje`);
-    }
-
-    if (costAvoided > 0) {
-      parts.push(`${formatCurrency(costAvoided)} em prejuízos evitados`);
+      parts.push(`${incidentsPrevented} incidente${incidentsPrevented > 1 ? 's' : ''} neutralizado${incidentsPrevented > 1 ? 's' : ''}`);
     }
 
     if (parts.length === 0) {
-      if (fleet && fleet.total > 0) {
-        return `Monitorando ${fleet.total} dispositivos. Sem incidentes hoje — ambiente seguro.`;
-      }
-      return 'Configure agentes para iniciar a proteção.';
+      return fleet && fleet.total > 0
+        ? `Ambiente protegido — ${fleet.total} dispositivos monitorados, sem incidentes registrados hoje.`
+        : 'Nenhum dispositivo configurado ainda.';
     }
 
-    return parts.join('. ') + '.';
+    return parts.join(' · ') + '.';
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.25 }}
     >
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <ShieldCheck className="h-5 w-5 text-primary" />
-              <div>
-                <CardTitle className="text-sm font-semibold">Resumo Executivo</CardTitle>
-                <CardDescription className="text-xs">Visão de alto nível para gestores</CardDescription>
-              </div>
+      <Card className="overflow-hidden">
+        {/* Header bar */}
+        <div className="flex items-center justify-between px-5 pt-4 pb-2">
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
+              <ShieldCheck className="h-4 w-4 text-primary" />
             </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Resumo Executivo</h3>
+              <p className="text-[11px] text-muted-foreground">Proteção do ambiente</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {hasOnline && (
+              <Badge variant="outline" className="gap-1.5 text-[10px] font-medium h-6 border-green-500/30 text-green-500">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
+                </span>
+                Monitorando
+              </Badge>
+            )}
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
               onClick={() => generateReport.mutate(new Date().toISOString().split('T')[0])}
               disabled={generateReport.isPending}
+              title="Atualizar relatório"
             >
               <RefreshCw className={cn("h-3.5 w-3.5", generateReport.isPending && "animate-spin")} />
             </Button>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent className="space-y-4">
+        <CardContent className="px-5 pb-5 space-y-4">
           {/* Narrative */}
-          <p className="text-sm text-muted-foreground leading-relaxed px-0.5">
-            {riskDelta?.executive_summary && riskDelta.executive_summary !== 'Prezados, hoje não houve registro'
-              ? riskDelta.executive_summary
-              : buildNarrative()}
+          <p className="text-[13px] text-muted-foreground leading-relaxed">
+            {buildNarrative()}
           </p>
 
-          {/* Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {/* Risk Delta */}
-            <MetricCard
-              icon={<DeltaIcon className="h-4 w-4" />}
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+            <MetricTile
+              icon={<DeltaIcon className="h-3.5 w-3.5" />}
               label="Delta de Risco"
               value={deltaInfo.label}
-              detail={deltaInfo.description}
-              variant={deltaInfo.color === 'green' ? 'positive' : deltaInfo.color === 'red' ? 'negative' : 'neutral'}
+              sub={deltaInfo.description}
+              color={deltaInfo.color === 'green' ? 'green' : deltaInfo.color === 'red' ? 'red' : 'muted'}
             />
 
-            {/* Fleet Online */}
-            <MetricCard
-              icon={<Monitor className="h-4 w-4" />}
-              label="Online Agora"
+            <MetricTile
+              icon={<Monitor className="h-3.5 w-3.5" />}
+              label="Online"
               value={`${fleet?.online ?? 0}`}
-              detail={fleet?.total ? `de ${fleet.total} dispositivos` : 'Sem agentes'}
-              variant={fleet?.online && fleet.online > 0 ? 'positive' : 'neutral'}
+              sub={fleet?.total ? `de ${fleet.total} endpoints` : '—'}
+              color={hasOnline ? 'green' : 'muted'}
+              pulse={hasOnline}
             />
 
-            {/* Fleet Offline */}
-            <MetricCard
-              icon={<MonitorOff className="h-4 w-4" />}
+            <MetricTile
+              icon={<MonitorOff className="h-3.5 w-3.5" />}
               label="Offline"
               value={`${fleet?.offline ?? 0}`}
-              detail="Fora do expediente"
-              variant="neutral"
+              sub="Fora do expediente"
+              color="muted"
             />
 
-            {/* Cost Avoided */}
-            <MetricCard
-              icon={<DollarSign className="h-4 w-4" />}
+            <MetricTile
+              icon={<DollarSign className="h-3.5 w-3.5" />}
               label="Custo Evitado"
               value={formatCurrency(costAvoided)}
-              detail={costAvoided > 0 ? 'Em incidentes prevenidos' : 'Proteção contínua'}
-              variant={costAvoided > 0 ? 'highlight' : 'neutral'}
+              sub={costAvoided > 0 ? 'Incidentes prevenidos' : 'Sem incidentes'}
+              color={costAvoided > 0 ? 'emerald' : 'muted'}
             />
           </div>
 
           {/* Key Events */}
           {riskDelta?.key_events && riskDelta.key_events.length > 0 && (
-            <div className="pt-3 border-t border-border/40">
-              <p className="text-[11px] font-medium text-muted-foreground mb-2">Eventos do dia</p>
-              <div className="space-y-1">
+            <div className="pt-3 border-t border-border/30">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Activity className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[11px] font-medium text-muted-foreground">Atividade recente</span>
+              </div>
+              <div className="space-y-1.5">
                 {riskDelta.key_events.slice(0, 3).map((event, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div key={idx} className="flex items-start gap-2 text-xs">
                     <span className={cn(
-                      "inline-block w-1.5 h-1.5 rounded-full shrink-0",
+                      "mt-1.5 inline-block w-1.5 h-1.5 rounded-full shrink-0",
                       event.severity === 'critical' && "bg-red-500",
                       event.severity === 'high' && "bg-orange-500",
                       event.severity === 'medium' && "bg-yellow-500",
-                      (!event.severity || event.severity === 'low') && "bg-muted-foreground/40"
+                      (!event.severity || event.severity === 'low') && "bg-muted-foreground/30"
                     )} />
-                    <span className="truncate">{event.description}</span>
+                    <span className="text-muted-foreground leading-snug">{event.description}</span>
                   </div>
                 ))}
               </div>
@@ -204,30 +216,49 @@ export function ExecutiveSummaryCard() {
   );
 }
 
-function MetricCard({ icon, label, value, detail, variant }: {
+/* ─── Metric Tile ──────────────────────────────────────── */
+
+function MetricTile({ icon, label, value, sub, color, pulse }: {
   icon: React.ReactNode;
   label: string;
   value: string;
-  detail: string;
-  variant: 'positive' | 'negative' | 'neutral' | 'highlight';
+  sub: string;
+  color: 'green' | 'red' | 'emerald' | 'muted';
+  pulse?: boolean;
 }) {
-  const styles = {
-    positive: 'text-green-600',
-    negative: 'text-red-600',
-    highlight: 'text-emerald-600',
-    neutral: 'text-foreground',
-  };
+  const valueColor = {
+    green: 'text-green-500',
+    red: 'text-red-500',
+    emerald: 'text-emerald-500',
+    muted: 'text-foreground',
+  }[color];
+
+  const bgAccent = {
+    green: 'bg-green-500/5 border-green-500/15',
+    red: 'bg-red-500/5 border-red-500/15',
+    emerald: 'bg-emerald-500/5 border-emerald-500/15',
+    muted: 'bg-muted/30 border-border/40',
+  }[color];
 
   return (
-    <div className="p-3 rounded-lg border border-border/50 bg-muted/20">
-      <div className="flex items-center gap-1.5 mb-1.5">
+    <div className={cn(
+      "relative p-3 rounded-xl border transition-colors",
+      bgAccent
+    )}>
+      {pulse && (
+        <span className="absolute top-2.5 right-2.5 flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+        </span>
+      )}
+      <div className="flex items-center gap-1.5 mb-2">
         <span className="text-muted-foreground">{icon}</span>
-        <span className="text-[11px] text-muted-foreground font-medium">{label}</span>
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{label}</span>
       </div>
-      <p className={cn("text-lg font-semibold leading-tight", styles[variant])}>
+      <p className={cn("text-xl font-bold leading-none tracking-tight", valueColor)}>
         {value}
       </p>
-      <p className="text-[10px] text-muted-foreground mt-0.5">{detail}</p>
+      <p className="text-[10px] text-muted-foreground/70 mt-1">{sub}</p>
     </div>
   );
 }
