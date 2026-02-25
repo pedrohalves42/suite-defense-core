@@ -8,6 +8,9 @@ import { logger } from '../_shared/logger.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 import { hashToken } from '../_shared/token-hash.ts'
 import { normalizeVersion, normalizeForWindows } from '../_shared/hexagonal/update-decision-service.ts'
+import { AGENT_SCRIPT_WINDOWS_CONTENT } from '../_shared/agent-script-windows-content.ts'
+import { AGENT_SCRIPT_LINUX_SH } from '../_shared/agent-script-linux-content.ts'
+import { AGENT_SCRIPT_MACOS_SH } from '../_shared/agent-script-macos-content.ts'
 // Domain event dispatch removed from hot path to reduce latency
 
 Deno.serve(async (req) => {
@@ -439,8 +442,25 @@ Deno.serve(async (req) => {
                 targetVersion: forceCheck.force_update_version,
               });
             } else {
+              // AUTHORITATIVE SOURCE: Use codebase scripts (same as serve-agent-update)
+              const codebaseScripts: Record<string, string> = {
+                windows: AGENT_SCRIPT_WINDOWS_CONTENT,
+                linux: AGENT_SCRIPT_LINUX_SH,
+                macos: AGENT_SCRIPT_MACOS_SH,
+              };
+              let finalScript = release.script_content;
+              const codebaseScript = codebaseScripts[platform];
+              if (codebaseScript && codebaseScript.length > 1000) {
+                finalScript = codebaseScript;
+                logger.info('Using codebase script (authoritative) for force update delivery', {
+                  agentName: agent.agent_name,
+                  codebaseSize: codebaseScript.length,
+                  dbSize: release.script_content?.length || 0,
+                });
+              }
+
               // Normalizar script para Windows (via hexagonal shared module)
-              const normalizedScript = normalizeForWindows(release.script_content);
+              const normalizedScript = normalizeForWindows(finalScript);
               
               // Encode Base64 usando Deno std (consistente com serve-agent-update)
               const encoder = new TextEncoder()
