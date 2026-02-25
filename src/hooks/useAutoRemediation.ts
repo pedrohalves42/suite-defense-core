@@ -74,8 +74,16 @@ export const useAutoRemediation = () => {
 
   const approveAction = useMutation({
     mutationFn: async (actionId: string) => {
-      // Approve then re-dispatch
-      const { error } = await supabase
+      // 1. Fetch the original action details to re-dispatch
+      const { data: action, error: fetchErr } = await supabase
+        .from('auto_remediation_actions')
+        .select('*')
+        .eq('id', actionId)
+        .single();
+      if (fetchErr || !action) throw new Error('Ação não encontrada');
+
+      // 2. Mark as approved
+      const { error: updateErr } = await supabase
         .from('auto_remediation_actions')
         .update({
           status: 'executing',
@@ -83,11 +91,31 @@ export const useAutoRemediation = () => {
           executed_at: new Date().toISOString(),
         })
         .eq('id', actionId);
-      if (error) throw error;
+      if (updateErr) throw updateErr;
+
+      // 3. Actually dispatch the remediation job via edge function
+      const { data, error: invokeErr } = await supabase.functions.invoke('auto-remediate', {
+        body: {
+          agent_id: action.agent_id,
+          action_type: action.action_type,
+          trigger_source: `approved:${action.trigger_source}`,
+          trigger_details: {
+            ...(action.trigger_details as Record<string, unknown>),
+            original_action_id: actionId,
+            approved: true,
+          },
+          requires_approval: false, // Already approved, execute immediately
+        },
+      });
+      if (invokeErr) throw invokeErr;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['remediation-actions'] });
-      toast.success('Ação aprovada');
+      toast.success('Ação aprovada e executada com sucesso');
+    },
+    onError: (err: Error) => {
+      toast.error('Erro ao executar ação aprovada', { description: err.message });
     },
   });
 
