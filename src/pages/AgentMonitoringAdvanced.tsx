@@ -150,7 +150,11 @@ export default function AgentMonitoringAdvanced() {
         .update({ 
           acknowledged: true, 
           acknowledged_at: new Date().toISOString(),
-          acknowledged_by: (await supabase.auth.getUser()).data.user?.id 
+          acknowledged_by: (await supabase.auth.getUser()).data.user?.id,
+          resolved: true,
+          resolved_at: new Date().toISOString(),
+          resolved_by: (await supabase.auth.getUser()).data.user?.id,
+          status: 'resolved',
         })
         .eq('id', alertId);
 
@@ -227,6 +231,10 @@ export default function AgentMonitoringAdvanced() {
           resolved: true, 
           resolved_at: new Date().toISOString(),
           resolved_by: user.id,
+          acknowledged: true,
+          acknowledged_at: new Date().toISOString(),
+          acknowledged_by: user.id,
+          status: 'resolved',
         })
         .eq('alert_type', alertType)
         .eq('title', title)
