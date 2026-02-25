@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - Linux v5.0.8
+# CyberShield Agent - Linux v5.0.9
+#
+# v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
+# - NEW: Agent reads heartbeat_interval_seconds and poll_interval_seconds from heartbeat response
+# - NEW: Dynamically adjusts POLL_INTERVAL and JOB_POLL_INTERVAL at runtime
+# - COST-OPT: Eliminates hardcoded polling; server controls agent cadence
 #
 # v5.0.8: HANDLER FIX - collect_dns_blocks & integration_test_v3 sync
 # - FIXED: Ensured collect_dns_blocks and integration_test_v3 handlers are included in DB release
@@ -73,7 +78,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.8"
+AGENT_VERSION="v5.0.9"
 BASE_DIR="/opt/cybershield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -1370,11 +1375,29 @@ EOF
                  target_version=$(echo "$result" | jq -r '.target_version // ""' 2>/dev/null)
                  log "INFO" "[FORCE UPDATE] Target version: $target_version"
                  
-                 apply_forced_update "$result"
-             fi
-         fi
-         
-         return 0
+             apply_forced_update "$result"
+              fi
+              
+              # ============================================
+              # v5.0.9: DYNAMIC POLLING INTERVALS FROM SERVER
+              # Server controls agent cadence via heartbeat response
+              # ============================================
+              local new_hb_interval
+              new_hb_interval=$(echo "$result" | jq -r '.heartbeat_interval_seconds // 0' 2>/dev/null)
+              if [[ "$new_hb_interval" -ge 10 && "$new_hb_interval" != "$POLL_INTERVAL" ]]; then
+                  log "INFO" "[HEARTBEAT] Server adjusted heartbeat interval: ${POLL_INTERVAL}s -> ${new_hb_interval}s"
+                  POLL_INTERVAL=$new_hb_interval
+              fi
+              
+              local new_job_interval
+              new_job_interval=$(echo "$result" | jq -r '.poll_interval_seconds // 0' 2>/dev/null)
+              if [[ "$new_job_interval" -ge 10 && "$new_job_interval" != "$JOB_POLL_INTERVAL" ]]; then
+                  log "INFO" "[HEARTBEAT] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_job_interval}s"
+                  JOB_POLL_INTERVAL=$new_job_interval
+              fi
+          fi
+          
+          return 0
      else
          log "ERROR" "[HEARTBEAT] Failed"
          return 1
