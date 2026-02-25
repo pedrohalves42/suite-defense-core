@@ -46,15 +46,14 @@ async function fetchAgentNetworkInfo(agentId: string): Promise<NetworkInfo | nul
     .eq('agent_id', agentId)
     .order('collected_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    if (error.code === 'PGRST116') {
-      // No data found
-      return null;
-    }
+    console.error('[useAgentNetworkInfo] Error:', error);
     throw new Error(`Failed to fetch network info: ${error.message}`);
   }
+
+  if (!data) return null;
 
   // Parse JSON fields safely
   const rawData = data as Record<string, unknown>;
