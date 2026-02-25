@@ -248,6 +248,25 @@ function extractAgentFromTitle(title: string): string | null {
 
 function enrichActionItem(item: ActionItem): ActionItem & { humanized: typeof ACTION_COPY[string] | null } {
   const copy = ACTION_COPY[item.trigger_type] || null;
+
+  // For AI insights, prefer the real title/description from the database
+  // over the generic ACTION_COPY map (which only has generic labels like "Oportunidade de otimização")
+  if (item.source_type === 'ai_insight' && (item.title || item.description)) {
+    const recommendation = (item.context as any)?.recommendation;
+    return {
+      ...item,
+      humanized: {
+        title: item.title || copy?.title || 'Insight de IA',
+        description: item.description || copy?.description || '',
+        cta: copy?.cta || 'Ver detalhes',
+      },
+      // Add recommendation to description if available and description is short
+      description: recommendation && item.description && item.description.length < 120
+        ? `${item.description} — ${recommendation}`
+        : item.description,
+    };
+  }
+
   return {
     ...item,
     humanized: copy,
