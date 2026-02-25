@@ -23,7 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { SidebarTenantSelector } from '@/components/SidebarTenantSelector';
 import { AppModeBadge } from '@/components/layout/AppModeBadge';
-import logoImage from '@/assets/cybershield-logo.png';
+import logoImage from '@/assets/logo-cybshield-new.png';
 
 interface MenuItem {
   icon: any;
@@ -214,7 +214,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
           "sidebar-item-neon flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group/item",
           isSuper && "sidebar-item-neon-super",
           isCollapsed && "justify-center px-2",
-          !isActive && "text-[hsl(220_14%_65%)]"
+          !isActive && "text-[hsl(220_14%_76%)]"
         )}
         activeClassName={cn(
           "sidebar-item-neon-active",
@@ -463,7 +463,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
             <motion.div className="space-y-0.5" variants={containerVariants} initial="hidden" animate="show">
               <motion.div variants={itemVariants}>
                 <NavLink to="/dashboard" end onClick={onNavigate}
-                  className="sidebar-item-neon flex items-center gap-3 px-3 py-2 rounded-lg text-[hsl(220_14%_65%)]"
+                  className="sidebar-item-neon flex items-center gap-3 px-3 py-2 rounded-lg text-[hsl(220_14%_76%)]"
                   activeClassName="sidebar-item-neon-active">
                   <Home className="sidebar-icon h-4 w-4" />
                   {!isCollapsed && <span className="sidebar-label text-sm">{t('adminPages.sidebar.home')}</span>}
@@ -471,7 +471,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
               </motion.div>
               <motion.div variants={itemVariants}>
                 <NavLink to="/agents" onClick={onNavigate}
-                  className="sidebar-item-neon flex items-center gap-3 px-3 py-2 rounded-lg text-[hsl(220_14%_65%)]"
+                  className="sidebar-item-neon flex items-center gap-3 px-3 py-2 rounded-lg text-[hsl(220_14%_76%)]"
                   activeClassName="sidebar-item-neon-active">
                   <Monitor className="sidebar-icon h-4 w-4" />
                   {!isCollapsed && <span className="sidebar-label text-sm">{t('adminPages.sidebar.myComputersClient')}</span>}
@@ -534,7 +534,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
             <div className="flex items-center justify-center gap-2">
               <Zap className="h-3 w-3 text-[hsl(var(--neon-cyan)_/_0.4)] neon-pulse" />
               <span className="text-[10px] tracking-[0.1em] text-[hsl(var(--neon-cyan)_/_0.3)] font-mono uppercase">
-                CyberShield v5.0.3
+                CyberShield v5.0.10
               </span>
             </div>
           ) : (
@@ -545,7 +545,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                 </div>
               </TooltipTrigger>
               <TooltipContent side="right" className="glass-panel text-[hsl(190_95%_70%)] border-[hsl(190_95%_55%_/_0.2)]">
-                CyberShield v5.0.3
+                CyberShield v5.0.10
               </TooltipContent>
             </Tooltip>
           )}
