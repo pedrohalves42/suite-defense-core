@@ -1,5 +1,25 @@
 <#
-    CyberShield Agent - Windows v5.0.5 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.9 FULL ENTERPRISE
+
+    v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
+    - NEW: Agent reads heartbeat_interval_seconds and poll_interval_seconds from heartbeat response
+    - NEW: Dynamically adjusts $Global:PollIntervalSeconds and $Global:JobPollIntervalSeconds at runtime
+    - COST-OPT: Eliminates hardcoded 2-3s polling; server controls agent cadence
+
+    v5.0.8: HANDLER FIX - collect_dns_blocks & integration_test_v3 sync
+    - FIXED: Ensured collect_dns_blocks and integration_test_v3 handlers are included in DB release
+    - No code changes needed - handlers already existed in v5.0.7 codebase but were missing from DB sync
+
+    v5.0.7: AUTO-UPDATE FIX - Force Update via Heartbeat (ported from v4)
+    - NEW: Apply-ForcedUpdate function (Base64 decode, SHA256 validation, dynamic task detection)
+    - FIXED: Send-Heartbeat now processes force_update in heartbeat response
+    - FIXED: Dynamic Scheduled Task name detection (CyberShieldAgent-*, CyberShield Agent, etc.)
+    - FIXED: Confirm force update on backend after successful application
+
+    v5.0.6: HANDLER PARITY - collect_dns_blocks & integration_test_v3
+    - NEW: collect_dns_blocks handler (Windows hosts file DNS block collection)
+    - NEW: integration_test_v3 handler (simple pong response for connectivity tests)
+    - IMPROVED: Execute-Job switch covers all 27 supported job types
 
     v5.0.5: BUGFIXES - Handler Parity & Side-Effect Compliance
     - FIXED: collect_web_activity now returns dns_cache/browser_history format
@@ -100,7 +120,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.5"
+    [string]$AgentVersion = "v5.0.9"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -192,6 +212,7 @@ $Global:TaskHealthCheckIntervalSeconds = 300  # Check task every 5 min
 
 # v5.0.4: Log flood suppression
 $Global:ConsecutivePollErrors = 0
+$Global:TaskHealthCheckIntervalSeconds = 300  # Check task every 5 min
 
 # v5.0.1: Hash Chain for execution
 $Global:ExecutionChain = @{
@@ -446,25 +467,55 @@ function Initialize-AgentKeys {
         Add-Type -AssemblyName System.Security
         
         $ecdsa = $null
-        try {
-            # Modern method (.NET 4.7+)
-            $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(
-                [System.Security.Cryptography.ECCurve]::NamedCurves.nistP256
-            )
-        } catch {
-            Write-Log "[KEYS] Modern ECDSA method failed, trying fallback: $($_.Exception.Message)" "WARN"
+        $maxKeyAttempts = 3
+        for ($attempt = 1; $attempt -le $maxKeyAttempts; $attempt++) {
             try {
-                # Fallback for .NET < 4.7
-                $cngKey = [System.Security.Cryptography.CngKey]::Create(
-                    [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
-                    $null,
-                    (New-Object System.Security.Cryptography.CngKeyCreationParameters)
+                # Modern method (.NET 4.7+)
+                $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(
+                    [System.Security.Cryptography.ECCurve]::NamedCurves.nistP256
                 )
-                $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
+                break  # Success
             } catch {
-                Write-Log "[KEYS] ECDSA fallback also failed: $($_.Exception.Message)" "ERROR"
-                Write-Log "[KEYS] Result signing will be DISABLED for this agent" "WARN"
-                return $false
+                $errMsg = $_.Exception.Message
+                Write-Log "[KEYS] ECDSA attempt $attempt/$maxKeyAttempts failed: $errMsg" "WARN"
+                
+                # "O objeto já existe" / "The object already exists" = stale CNG container
+                if ($errMsg -match "objeto.*existe|object.*exists|already exists") {
+                    Write-Log "[KEYS] Cleaning up stale CNG container before retry..." "WARN"
+                    try {
+                        # Delete orphaned ephemeral CNG key if it exists
+                        $staleKeys = [System.Security.Cryptography.CngKey]::Open(
+                            "ECDSA_P256", [System.Security.Cryptography.CngProvider]::MicrosoftSoftwareKeyStorageProvider)
+                        if ($staleKeys) { $staleKeys.Delete(); $staleKeys.Dispose() }
+                    } catch {
+                        # Key may not exist by name - try ephemeral approach
+                        Write-Log "[KEYS] No named stale key found, trying ephemeral generation" "DEBUG"
+                    }
+                }
+                
+                if ($attempt -eq $maxKeyAttempts) {
+                    # Final fallback: explicit ephemeral CNG key
+                    try {
+                        Write-Log "[KEYS] Final attempt: explicit ephemeral CNG key creation" "WARN"
+                        $creationParams = New-Object System.Security.Cryptography.CngKeyCreationParameters
+                        $creationParams.ExportPolicy = [System.Security.Cryptography.CngExportPolicies]::AllowPlaintextExport
+                        $creationParams.KeyCreationOptions = [System.Security.Cryptography.CngKeyCreationOptions]::None
+                        
+                        $cngKey = [System.Security.Cryptography.CngKey]::Create(
+                            [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
+                            $null,
+                            $creationParams
+                        )
+                        $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
+                        break  # Success on fallback
+                    } catch {
+                        Write-Log "[KEYS] All $maxKeyAttempts ECDSA attempts failed: $($_.Exception.Message)" "ERROR"
+                        Write-Log "[KEYS] Result signing will be DISABLED for this agent" "WARN"
+                        return $false
+                    }
+                }
+                
+                Start-Sleep -Seconds 1
             }
         }
         
@@ -891,6 +942,18 @@ function Execute-Job {
             "collect_info" {
                 $output = Get-SystemInfo
             }
+            # v5.0.6: NEW - DNS Blocks & Integration Test
+            "collect_dns_blocks" {
+                $output = Invoke-CollectDnsBlocks
+            }
+            "integration_test_v3" {
+                $output = @{
+                    pong = $true
+                    agent_version = $Global:AgentVersion
+                    timestamp = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+                    hostname = $env:COMPUTERNAME
+                }
+            }
             default {
                 $error_message = "Unknown job type: $($Job.job_type)"
                 $status = "failed"
@@ -1237,6 +1300,7 @@ function Invoke-CollectSoftwareInventory {
 
 function Invoke-CollectAntivirusStatus {
     try {
+        # ── Phase 1: WMI SecurityCenter2 (detecta qualquer AV registrado no Windows) ──
         $avProducts = Get-WmiObject -Namespace "root\SecurityCenter2" -Class "AntiVirusProduct" -ErrorAction SilentlyContinue
         
         $avList = @()
@@ -1245,9 +1309,82 @@ function Invoke-CollectAntivirusStatus {
                 name = $av.displayName
                 state = $av.productState
                 path = $av.pathToSignedProductExe
+                source = "SecurityCenter2"
             }
         }
-        
+
+        # ── Phase 2: Detecção complementar de EDRs corporativos (não registram no SecurityCenter2) ──
+        $edrSignatures = @(
+            @{ Name = "CrowdStrike Falcon";    Services = @("CSFalconService","csagent");         Processes = @("CSFalconContainer.exe","CSFalconService.exe") },
+            @{ Name = "SentinelOne";            Services = @("SentinelAgent","SentinelOne");       Processes = @("SentinelAgent.exe","SentinelServiceHost.exe") },
+            @{ Name = "Carbon Black";           Services = @("CbDefense","CarbonBlack");           Processes = @("RepMgr.exe","cb.exe") },
+            @{ Name = "Cortex XDR";             Services = @("CortexXDR","cyserver");              Processes = @("cortex-xdr.exe","cytray.exe") },
+            @{ Name = "Microsoft Defender ATP"; Services = @("Sense","WdNisSvc");                  Processes = @("MsSense.exe","MsMpEng.exe") },
+            @{ Name = "Trend Micro Apex One";   Services = @("ntrtscan","TmListen","ds_agent");    Processes = @("ntrtscan.exe","PccNTMon.exe") },
+            @{ Name = "Sophos Intercept X";     Services = @("Sophos Endpoint Defense","SAVService"); Processes = @("SophosUI.exe","SSPService.exe") },
+            @{ Name = "Symantec Endpoint";      Services = @("SepMasterService","ccSvcHst");       Processes = @("ccSvcHst.exe","smc.exe") },
+            @{ Name = "ESET Endpoint";          Services = @("ekrn","ERAAgent");                   Processes = @("ekrn.exe","egui.exe") },
+            @{ Name = "Kaspersky Endpoint";     Services = @("AVP","klnagent");                    Processes = @("avp.exe","klnagent.exe") },
+            @{ Name = "Bitdefender GravityZone";Services = @("EPSecurityService","BDAuxSrv");      Processes = @("EPSecurityService.exe","bdagent.exe") },
+            @{ Name = "FortiClient";            Services = @("FortiClientMonitor","FA_Scheduler");  Processes = @("FortiClient.exe","FortiTray.exe") },
+            @{ Name = "Cylance";                Services = @("CylanceSvc");                        Processes = @("CylanceSvc.exe","CylanceUI.exe") },
+            @{ Name = "Malwarebytes EP";        Services = @("MBAMService");                       Processes = @("MBAMService.exe","mbamtray.exe") },
+            @{ Name = "Webroot";                Services = @("WRSVC");                             Processes = @("WRSA.exe") }
+        )
+
+        $knownNames = $avList | ForEach-Object { $_.name.ToLower() }
+
+        foreach ($edr in $edrSignatures) {
+            # Skip if already detected by SecurityCenter2
+            $alreadyDetected = $false
+            foreach ($known in $knownNames) {
+                if ($known -like "*$($edr.Name.Split(' ')[0].ToLower())*") {
+                    $alreadyDetected = $true
+                    break
+                }
+            }
+            if ($alreadyDetected) { continue }
+
+            # Check services
+            $foundService = $null
+            foreach ($svcName in $edr.Services) {
+                $svc = Get-Service -Name $svcName -ErrorAction SilentlyContinue
+                if ($svc) {
+                    $foundService = $svc
+                    break
+                }
+            }
+
+            # Check processes if no service found
+            $foundProcess = $null
+            if (-not $foundService) {
+                foreach ($procName in $edr.Processes) {
+                    $proc = Get-Process -Name ($procName -replace '\.exe$','') -ErrorAction SilentlyContinue
+                    if ($proc) {
+                        $foundProcess = $proc
+                        break
+                    }
+                }
+            }
+
+            if ($foundService -or $foundProcess) {
+                $status = "unknown"
+                if ($foundService) {
+                    $status = if ($foundService.Status -eq "Running") { "active" } else { "stopped" }
+                } elseif ($foundProcess) {
+                    $status = "active"
+                }
+
+                $avList += @{
+                    name   = $edr.Name
+                    state  = 0
+                    path   = if ($foundProcess) { $foundProcess.Path } elseif ($foundService) { $foundService.BinaryPathName } else { "" }
+                    source = "EDR_Process_Detection"
+                    status = $status
+                }
+            }
+        }
+
         return @{
             antivirus_products = $avList
             count = $avList.Count
@@ -1633,6 +1770,45 @@ function Invoke-CollectWebActivity {
 }
 
 # ============================================
+#  v5.0.6: COLLECT DNS BLOCKS (Windows hosts file)
+# ============================================
+function Invoke-CollectDnsBlocks {
+    Write-Log "[JOB] Collecting DNS blocks from hosts file" "INFO"
+    try {
+        $hostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
+        $blockedDomains = @()
+        
+        if (Test-Path $hostsPath) {
+            $lines = Get-Content $hostsPath -ErrorAction SilentlyContinue
+            foreach ($line in $lines) {
+                $trimmed = $line.Trim()
+                if ($trimmed -match "^(0\.0\.0\.0|127\.0\.0\.1)\s+(.+)" -and $trimmed -notmatch "localhost") {
+                    $domain = $Matches[2].Trim()
+                    if ($domain -and $blockedDomains.Count -lt 100) {
+                        $blockedDomains += $domain
+                    }
+                }
+            }
+        }
+        
+        return @{
+            blocked_domains = $blockedDomains
+            source = $hostsPath
+            collected_at = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+            count = $blockedDomains.Count
+        }
+    } catch {
+        Write-Log "[JOB] DNS blocks collection failed: $_" "WARN"
+        return @{
+            blocked_domains = @()
+            source = "error"
+            error = $_.ToString()
+            collected_at = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+        }
+    }
+}
+
+# ============================================
 #  v5.0.5: LIGHT VULN SCAN (Windows Update check)
 # ============================================
 function Invoke-LightVulnScan {
@@ -1732,7 +1908,7 @@ function Invoke-UpdateAgent {
             }
         }
         
-        $data = $updateResult.Content | ConvertFrom-Json
+        $data = $updateResult.Body | ConvertFrom-Json
         
         if ($data.message -eq "Already up to date") {
             Write-Log "[UPDATE] Already at latest version ($($data.current_version))" "INFO"
@@ -2587,7 +2763,7 @@ function Send-AutoRepairTelemetry {
         }
         
     } catch {
-        # Silent - telemetry should never crash the agent
+        Write-Log "[TELEMETRY] Error sending $Event event: $($_.Exception.Message)" "WARN"
     }
 }
 
@@ -3002,37 +3178,6 @@ function Invoke-ApplySecurityPatch {
 }
 
 # ============================================
-#  SYSTEM INFO (ported from v4)
-# ============================================
-function Get-SystemInfo {
-    try {
-        $os = Get-CimInstance Win32_OperatingSystem
-        $cs = Get-CimInstance Win32_ComputerSystem
-
-        return @{
-            os_type       = "windows"
-            os_name       = $os.Caption
-            os_version    = $os.Version
-            build_number  = $os.BuildNumber
-            hostname      = $env:COMPUTERNAME
-            domain        = $cs.Domain
-            total_ram_gb  = [Math]::Round($cs.TotalPhysicalMemory / 1GB, 2)
-            agent_name    = $Global:AgentName
-            agent_version = $Global:AgentVersion
-            state         = $Global:CurrentState
-        }
-    } catch {
-        return @{
-            os_type       = "windows"
-            hostname      = $env:COMPUTERNAME
-            agent_name    = $Global:AgentName
-            agent_version = $Global:AgentVersion
-            state         = $Global:CurrentState
-        }
-    }
-}
-
-# ============================================
 #  SYSTEM METRICS (Basic - inherited from v4)
 # ============================================
 function Get-SystemMetrics {
@@ -3058,7 +3203,13 @@ function Get-SystemMetrics {
 }
 
 # ============================================
-#  FORCE UPDATE VIA HEARTBEAT (from v4 VIKTOR METHOD)
+#  FORCE UPDATE VIA HEARTBEAT (v5.0.7 - Ported from v4)
+# ============================================
+# Esta funcao:
+# 1. NAO depende do job system
+# 2. Processa dados recebidos diretamente no heartbeat response
+# 3. Funciona com agentes antigos que nao tem update_agent funcionando
+# 4. Deteccao dinamica de Scheduled Task name
 # ============================================
 function Apply-ForcedUpdate {
     param(
@@ -3069,6 +3220,7 @@ function Apply-ForcedUpdate {
     try {
         Write-Log "[FORCE UPDATE] Iniciando aplicacao de update forcado..." "INFO"
         
+        # Extrair dados do response
         $targetVersion = $Response.target_version
         $base64Content = $Response.script_content_base64
         $expectedHash = $Response.sha256
@@ -3080,10 +3232,26 @@ function Apply-ForcedUpdate {
         
         Write-Log "[FORCE UPDATE] Version: $targetVersion, Reason: $reason" "INFO"
         
+        # SAFE MODE CHECK
+        $rollbackState = Get-RollbackState
+        if ($rollbackState.safe_mode) {
+            if ($Response.override_safe_mode -eq $true) {
+                Write-Log "[FORCE UPDATE] Safe mode override ativo - prosseguindo com update" "WARN"
+            } else {
+                Write-Log "[SAFE MODE] Updates desabilitados - rollback loop detectado" "ERROR"
+                Add-EvidenceEntry -Type "security_warning" -Data @{
+                    event = "force_update_blocked_safe_mode"
+                    target_version = $targetVersion
+                    rollback_count = $rollbackState.rollback_count
+                } -Severity "warning"
+                return @{ success = $false; error = "Safe mode active - updates disabled" }
+            }
+        }
+        
         # Criar arquivo temporario
         $tempScript = Join-Path $env:TEMP "cybershield-force-update-$targetVersion.ps1"
         
-        # Base64 decode
+        # CRITICAL: Base64 decode - preserva 100% dos bytes
         Write-Log "[FORCE UPDATE] Decodificando Base64..." "DEBUG"
         $bytes = [System.Convert]::FromBase64String($base64Content)
         [System.IO.File]::WriteAllBytes($tempScript, $bytes)
@@ -3098,7 +3266,7 @@ function Apply-ForcedUpdate {
         
         Write-Log "[FORCE UPDATE] SHA256 validado: $actualHash" "SUCCESS"
         
-        # Detectar script atual
+        # Detectar script atual e diretorio de instalacao
         $installDir = "C:\CyberShield"
         $targetScript = Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"
         
@@ -3106,6 +3274,8 @@ function Apply-ForcedUpdate {
         $possiblePaths = @(
             $PSCommandPath,
             (Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"),
+            (Join-Path $installDir "cybershield-agent-v5.ps1"),
+            (Join-Path $installDir "cybershield-agent-v4.ps1"),
             (Join-Path $installDir "cybershield-agent.ps1")
         )
         
@@ -3121,12 +3291,16 @@ function Apply-ForcedUpdate {
             if ($found) { $currentScript = $found.FullName }
         }
         
-        # BACKUP para rollback
+        # BACKUP para rollback estruturado
+        $previousPath = $Global:RollbackPaths.Previous
         if ($currentScript -and (Test-Path $currentScript)) {
             try {
-                $backupPath = Join-Path $installDir "cybershield-agent-backup.ps1"
-                Copy-Item -Path $currentScript -Destination $backupPath -Force
-                Write-Log "[FORCE UPDATE] Backup criado: $backupPath" "INFO"
+                Copy-Item -Path $currentScript -Destination $previousPath -Force
+                Write-Log "[FORCE UPDATE] Backup criado: $previousPath" "INFO"
+                
+                $rlbState = Get-RollbackState
+                $rlbState.previous_version = $Global:AgentVersion
+                Save-RollbackState -State $rlbState
             } catch {
                 Write-Log "[FORCE UPDATE] Backup falhou: $($_.Exception.Message)" "WARN"
             }
@@ -3137,7 +3311,17 @@ function Apply-ForcedUpdate {
         Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
         Write-Log "[FORCE UPDATE] Script instalado: $targetScript" "SUCCESS"
         
-        # Confirmar no backend
+        # Registrar evidencia
+        Add-EvidenceEntry -Type "force_update" -Data @{
+            old_version = $Global:AgentVersion
+            new_version = $targetVersion
+            target_path = $targetScript
+            sha256 = $actualHash
+            reason = $reason
+            method = "heartbeat_response"
+        } -Severity "info"
+        
+        # Confirmar no backend que force update foi aplicado
         try {
             $confirmResult = Invoke-SecureRequest `
                 -Path "/functions/v1/confirm-force-update" `
@@ -3152,52 +3336,62 @@ function Apply-ForcedUpdate {
                 Write-Log "[FORCE UPDATE] Confirmacao enviada ao backend" "SUCCESS"
             }
         } catch {
-            Write-Log "[FORCE UPDATE] Falha ao confirmar (nao critico): $($_.Exception.Message)" "WARN"
+            Write-Log "[FORCE UPDATE] Falha ao confirmar no backend (nao critico): $($_.Exception.Message)" "WARN"
         }
         
         Write-Log "[FORCE UPDATE] Update $targetVersion aplicado com sucesso!" "SUCCESS"
         
-        # Reiniciar Scheduled Task (detecção dinâmica do nome)
-        Write-Log "[FORCE UPDATE] Reiniciando Scheduled Task..." "INFO"
-        try {
-            $taskPatterns = @(
-                "CyberShieldAgent-$($Global:AgentName)",
-                "CyberShieldAgent",
-                "CyberShield Agent",
-                "CyberShield*"
-            )
-            $taskFound = $null
-            foreach ($tp in $taskPatterns) {
-                $taskFound = Get-ScheduledTask -TaskName $tp -ErrorAction SilentlyContinue | Select-Object -First 1
-                if ($taskFound) { break }
+        # DYNAMIC TASK DETECTION: Find the correct Scheduled Task name
+        Write-Log "[FORCE UPDATE] Detectando Scheduled Task..." "INFO"
+        $taskName = $null
+        $taskPatterns = @(
+            "CyberShieldAgent-$($Global:AgentName)",
+            "CyberShieldAgent",
+            "CyberShield Agent",
+            "CyberShield*"
+        )
+        
+        foreach ($pattern in $taskPatterns) {
+            $foundTask = Get-ScheduledTask -TaskName $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($foundTask) {
+                $taskName = $foundTask.TaskName
+                Write-Log "[FORCE UPDATE] Task encontrada: $taskName" "INFO"
+                break
             }
-            if ($taskFound) {
-                $taskFound | Stop-ScheduledTask -ErrorAction SilentlyContinue
-                Start-Sleep -Seconds 2
-                $taskFound | Start-ScheduledTask -ErrorAction SilentlyContinue
-                Write-Log "[FORCE UPDATE] Task '$($taskFound.TaskName)' reiniciada - nova versao ativa!" "SUCCESS"
-            } else {
-                Write-Log "[FORCE UPDATE] Nenhuma Scheduled Task encontrada - tentando restart via schtasks..." "WARN"
-                & schtasks /End /TN "CyberShieldAgent" 2>$null
-                Start-Sleep -Seconds 2
-                & schtasks /Run /TN "CyberShieldAgent" 2>$null
-            }
-        } catch {
-            Write-Log "[FORCE UPDATE] Restart task falhou: $($_.Exception.Message)" "WARN"
         }
         
-        # EXIT para nova versao iniciar
-        Write-Log "[FORCE UPDATE] Encerrando processo atual..." "INFO"
+        if ($taskName) {
+            try {
+                Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+                Start-Sleep -Seconds 2
+                Start-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+                Write-Log "[FORCE UPDATE] Task '$taskName' reiniciada - nova versao ativa!" "SUCCESS"
+            } catch {
+                Write-Log "[FORCE UPDATE] Restart task falhou, sera ativado no proximo boot: $($_.Exception.Message)" "WARN"
+            }
+        } else {
+            Write-Log "[FORCE UPDATE] Nenhuma Scheduled Task encontrada - nova versao ativa no proximo boot" "WARN"
+        }
+        
+        # EXIT para permitir novo script iniciar
+        Write-Log "[FORCE UPDATE] Encerrando processo atual para nova versao iniciar..." "INFO"
         exit 0
         
     } catch {
         Write-Log "[FORCE UPDATE] Erro: $($_.Exception.Message)" "ERROR"
+        
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "force_update_failed"
+            error = $_.Exception.Message
+            target_version = $Response.target_version
+        } -Severity "error"
+        
         return @{ success = $false; error = $_.Exception.Message }
     }
 }
 
 # ============================================
-#  IMPROVED HEARTBEAT (v5.0)
+#  IMPROVED HEARTBEAT (v5.0.7)
 # ============================================
 function Send-Heartbeat {
     try {
@@ -3231,12 +3425,34 @@ function Send-Heartbeat {
         if ($result.Success) {
             Write-Log "[HEARTBEAT] Sent successfully" "SUCCESS"
             
-            # Processar resposta do servidor
+            # Processar resposta do servidor (force update, rotate key, intervals, etc.)
             if ($result.Content) {
                 try {
                     $response = $result.Content | ConvertFrom-Json
                     
-                    # FORCE UPDATE via heartbeat response
+                    # ============================================
+                    # DYNAMIC INTERVAL ADJUSTMENT (v5.0.9)
+                    # Server controls agent polling cadence
+                    # ============================================
+                    if ($response.heartbeat_interval_seconds -and $response.heartbeat_interval_seconds -ge 10) {
+                        $newHbInterval = [int]$response.heartbeat_interval_seconds
+                        if ($newHbInterval -ne $Global:PollIntervalSeconds) {
+                            Write-Log "[HEARTBEAT] Server adjusted heartbeat interval: $($Global:PollIntervalSeconds)s -> ${newHbInterval}s" "INFO"
+                            $Global:PollIntervalSeconds = $newHbInterval
+                        }
+                    }
+                    if ($response.poll_interval_seconds -and $response.poll_interval_seconds -ge 10) {
+                        $newJobInterval = [int]$response.poll_interval_seconds
+                        if ($newJobInterval -ne $Global:JobPollIntervalSeconds) {
+                            Write-Log "[HEARTBEAT] Server adjusted job poll interval: $($Global:JobPollIntervalSeconds)s -> ${newJobInterval}s" "INFO"
+                            $Global:JobPollIntervalSeconds = $newJobInterval
+                        }
+                    }
+                    
+                    # ============================================
+                    # FORCE UPDATE VIA HEARTBEAT RESPONSE
+                    # Ported from v4 - bypasses job system completely
+                    # ============================================
                     if ($response.force_update -eq $true) {
                         Write-Log "[FORCE UPDATE] Update forcado detectado via heartbeat!" "WARN"
                         Write-Log "[FORCE UPDATE] Target version: $($response.target_version)" "INFO"
@@ -3244,6 +3460,7 @@ function Send-Heartbeat {
                         $updateResult = Apply-ForcedUpdate -Response $response
                         
                         if ($updateResult.success) {
+                            # Apply-ForcedUpdate will exit the process after restarting the task
                             return $true
                         } else {
                             Write-Log "[FORCE UPDATE] Falha ao aplicar: $($updateResult.error)" "ERROR"
