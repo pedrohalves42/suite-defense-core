@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
-import { Package, CheckCircle, AlertCircle, ShieldCheck, Loader2, Ban, ShieldOff } from "lucide-react";
+import { Package, CheckCircle, AlertCircle, ShieldCheck, Loader2 } from "lucide-react";
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -50,19 +50,6 @@ export default function AgentReleases() {
     refetchOnWindowFocus: true,
   });
 
-  // Fetch blocked versions
-  const { data: blockedVersions, refetch: refetchBlockedVersions } = useQuery({
-    queryKey: ['agent-versions', 'blocked'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('agent_versions')
-        .select('*')
-        .eq('is_blocked', true)
-        .order('blocked_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
 
   const handleSignReleases = async () => {
     if (!isSuperAdmin) {
@@ -207,59 +194,6 @@ export default function AgentReleases() {
       {/* Register New Release - Single Dynamic Component */}
       {isSuperAdmin && <RegisterLatestRelease />}
 
-      {/* Blocked Versions Section */}
-      {blockedVersions && blockedVersions.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2 text-destructive">
-            <Ban className="h-5 w-5" />
-            Versões Bloqueadas ({blockedVersions.length})
-          </h2>
-          <div className="grid gap-3">
-            {blockedVersions.map((version) => (
-              <Card key={version.id} className="border-destructive/50 bg-destructive/5">
-                <CardHeader className="py-3">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-3">
-                      <ShieldOff className="h-5 w-5 text-destructive" />
-                      <div>
-                        <CardTitle className="text-base flex items-center gap-2">
-                          {version.version}
-                          <Badge variant="secondary" className="text-xs">{version.platform}</Badge>
-                        </CardTitle>
-                        <p className="text-xs text-muted-foreground">
-                          Bloqueada em: {formatBrazilDateTime(version.blocked_at!, 'datetime')}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {version.blocked_reason && (
-                        <span className="text-xs text-muted-foreground max-w-xs truncate">
-                          {version.blocked_reason}
-                        </span>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          unblockVersion.mutate({ versionId: version.id });
-                          refetchBlockedVersions();
-                        }}
-                        disabled={unblockVersion.isPending}
-                        className="text-xs"
-                      >
-                        {unblockVersion.isPending ? (
-                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                        ) : null}
-                        Desbloquear
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Releases List */}
       <div className="space-y-4">
