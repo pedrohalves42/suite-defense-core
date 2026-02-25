@@ -3037,6 +3037,7 @@ export type Database = {
           release_notes: string | null
           script_content: string
           sha256: string
+          signature: string | null
           signature_base64: string | null
           signed_at: string | null
           signed_by: string | null
@@ -3052,6 +3053,7 @@ export type Database = {
           release_notes?: string | null
           script_content: string
           sha256: string
+          signature?: string | null
           signature_base64?: string | null
           signed_at?: string | null
           signed_by?: string | null
@@ -3067,6 +3069,7 @@ export type Database = {
           release_notes?: string | null
           script_content?: string
           sha256?: string
+          signature?: string | null
           signature_base64?: string | null
           signed_at?: string | null
           signed_by?: string | null

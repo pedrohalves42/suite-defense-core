@@ -1,6 +1,7 @@
 <#
-    CyberShield Agent - Windows v5.0.9 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.11 FULL ENTERPRISE
 
+    v5.0.11: FULL ENTERPRISE - All functions (Get-RollbackState, Add-EvidenceEntry, Apply-ForcedUpdate)
     v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
     - NEW: Agent reads heartbeat_interval_seconds and poll_interval_seconds from heartbeat response
     - NEW: Dynamically adjusts $Global:PollIntervalSeconds and $Global:JobPollIntervalSeconds at runtime
