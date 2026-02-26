@@ -100,6 +100,37 @@ if [[ "${CYBERSHIELD_ALLOW_INTERACTIVE:-}" != "1" ]]; then
 fi
 
 # ============================================
+#  v5.0.13-hardening: SELF-INTEGRITY VALIDATION
+#  Validates script SHA256 hash at startup (anti-tampering)
+# ============================================
+SCRIPT_PATH="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+HASH_CACHE_PATH="/opt/cybershield/data/expected_script_hash.txt"
+
+# 1. Code signature validation (if signed with gpg)
+SCRIPT_SIG_PATH="${SCRIPT_PATH}.sig"
+GPG_PUBKEY_PATH="/opt/cybershield/keys/release_signing.pub"
+if [[ -f "$SCRIPT_SIG_PATH" && -f "$GPG_PUBKEY_PATH" ]] && command -v gpg &>/dev/null; then
+    if ! gpg --no-default-keyring --keyring "$GPG_PUBKEY_PATH" --verify "$SCRIPT_SIG_PATH" "$SCRIPT_PATH" 2>/dev/null; then
+        logger -t CyberShield -p auth.err "INTEGRITY VIOLATION: GPG signature invalid on agent script"
+        echo "[SECURITY] CyberShield Agent script has invalid GPG signature"
+        exit 9002
+    fi
+fi
+
+# 2. SHA256 hash validation against server-known hash
+if [[ -f "$HASH_CACHE_PATH" ]]; then
+    expected_hash=$(cat "$HASH_CACHE_PATH" 2>/dev/null | tr -d '[:space:]')
+    if [[ -n "$expected_hash" && ${#expected_hash} -eq 64 ]]; then
+        current_hash=$(sha256sum "$SCRIPT_PATH" 2>/dev/null | awk '{print $1}')
+        if [[ "${current_hash,,}" != "${expected_hash,,}" ]]; then
+            logger -t CyberShield -p auth.err "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected: $expected_hash, Actual: $current_hash"
+            echo "[SECURITY] CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
+            exit 9003
+        fi
+    fi
+fi
+
+# ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
 AGENT_VERSION="v5.0.13"
@@ -434,6 +465,15 @@ assert_service_health() {
     
     return 0
 }
+
+# ============================================
+# ============================================
+#  v5.0.13-hardening: TLS CERTIFICATE PINNING
+#  Set TLS_PINNED_PUBKEY_HASH to enforce pinning (sha256 of server's SPKI)
+#  Format: "sha256//BASE64_HASH_HERE"
+#  When empty, standard TLS validation is used (dev mode)
+# ============================================
+TLS_PINNED_PUBKEY_HASH="${CYBERSHIELD_TLS_PIN:-}"
 
 # ============================================
 #  v5.0.1: SECURE REQUEST WITH EXPONENTIAL BACKOFF
@@ -1502,8 +1542,19 @@ EOF
               if [[ "$new_job_interval" -ge 10 && "$new_job_interval" != "$JOB_POLL_INTERVAL" ]]; then
                   log "INFO" "[HEARTBEAT] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_job_interval}s"
                   JOB_POLL_INTERVAL=$new_job_interval
-              fi
-          fi
+               fi
+               
+               # ============================================
+               # v5.0.13-hardening: CACHE EXPECTED SCRIPT HASH
+               # Server provides script_sha256 for integrity validation on next startup
+               # ============================================
+               local server_script_hash
+               server_script_hash=$(echo "$result" | jq -r '.script_sha256 // ""' 2>/dev/null)
+               if [[ -n "$server_script_hash" && ${#server_script_hash} -eq 64 ]]; then
+                   echo -n "${server_script_hash,,}" > "$DATA_DIR/expected_script_hash.txt" 2>/dev/null
+                   log "DEBUG" "[INTEGRITY] Cached expected script hash from server"
+               fi
+           fi
           
           return 0
      else
@@ -2200,8 +2251,11 @@ remove_dns_filter_handler() {
                  safe_mode_attempt=0
                  while [[ "$CURRENT_STATE" == "SAFE_MODE" && $safe_mode_attempt -lt 10 ]]; do
                      safe_mode_attempt=$((safe_mode_attempt + 1))
-                     log "INFO" "[SAFE_MODE] Recovery attempt $safe_mode_attempt/10 - waiting 120s..."
-                     sleep 120
+                     # v5.0.13-hardening: Jitter to prevent thundering herd (120s base + 0-30s random)
+                     jitter=$((RANDOM % 30))
+                     recovery_delay=$((120 + jitter))
+                     log "INFO" "[SAFE_MODE] Recovery attempt $safe_mode_attempt/10 - waiting ${recovery_delay}s (jitter: ${jitter}s)..."
+                     sleep "$recovery_delay"
                      if send_heartbeat; then
                          CONSECUTIVE_HEARTBEAT_FAILURES=0
                          if [[ "$SECURITY_DEGRADED" == "false" ]]; then
