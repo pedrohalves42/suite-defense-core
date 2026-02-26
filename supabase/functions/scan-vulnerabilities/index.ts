@@ -85,7 +85,7 @@ async function scanAgentVulnerabilities(
                 check_key: cve.cve_id,
                 title: `${cve.cve_id}: ${(cve.description || '').slice(0, 100)}...`,
                 description: cve.description,
-                severity: cve.severity || getSeverityFromScoreHelper(cve.cvss_score),
+                severity: normalizeSeverity(cve.severity || getSeverityFromScoreHelper(cve.cvss_score)),
                 remediation: `Update ${sw.name.split(/[\s\-_]/)[0]} to the latest version`,
                 first_seen_at: now,
                 last_seen_at: now
@@ -142,11 +142,11 @@ function isVersionAffectedHelper(installedVersion: string, affectedVersions: any
 }
 
 function getSeverityFromScoreHelper(score: number | null): string {
-  if (score === null) return 'UNKNOWN';
-  if (score >= 9.0) return 'CRITICAL';
-  if (score >= 7.0) return 'HIGH';
-  if (score >= 4.0) return 'MEDIUM';
-  return 'LOW';
+  if (score === null) return 'medium';
+  if (score >= 9.0) return 'critical';
+  if (score >= 7.0) return 'high';
+  if (score >= 4.0) return 'medium';
+  return 'low';
 }
 
 Deno.serve(async (req) => {
@@ -384,7 +384,7 @@ Deno.serve(async (req) => {
                 check_key: cve.cve_id,
                 title: `${cve.cve_id}: ${truncate(cve.description, 100)}`,
                 description: cve.description,
-                severity: cve.severity || getSeverityFromScore(cve.cvss_score),
+                severity: normalizeSeverity(cve.severity || getSeverityFromScore(cve.cvss_score)),
                 remediation: generateRemediation(sw.name, cve),
                 first_seen_at: now,
                 last_seen_at: now
@@ -570,12 +570,18 @@ function compareVersions(v1: number[], v2: number[]): number {
 }
 
 function getSeverityFromScore(score: number | null): string {
-  if (score === null) return 'UNKNOWN';
-  if (score >= 9.0) return 'CRITICAL';
-  if (score >= 7.0) return 'HIGH';
-  if (score >= 4.0) return 'MEDIUM';
-  if (score >= 0.1) return 'LOW';
-  return 'NONE';
+  if (score === null) return 'medium';
+  if (score >= 9.0) return 'critical';
+  if (score >= 7.0) return 'high';
+  if (score >= 4.0) return 'medium';
+  if (score >= 0.1) return 'low';
+  return 'low';
+}
+
+function normalizeSeverity(s: string | null | undefined): string {
+  const val = (s || 'medium').toLowerCase();
+  if (['low', 'medium', 'high', 'critical'].includes(val)) return val;
+  return 'medium';
 }
 
 function truncate(text: string, maxLength: number): string {
@@ -622,7 +628,7 @@ async function scanWithFallback(
         check_key: vuln.cve_id,
         title: vuln.title,
         description: vuln.description,
-        severity: vuln.severity,
+        severity: normalizeSeverity(vuln.severity),
         remediation: vuln.remediation,
         first_seen_at: now,
         last_seen_at: now
