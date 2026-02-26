@@ -65,10 +65,9 @@ export function useDNSFilter() {
 
       // Get agents with their DNS filter status
       const { data: agents, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, agent_name, display_name, last_heartbeat, last_block_sync_at, status')
         .eq('tenant_id', tenant.id)
-        .eq('status', 'active')
         .is('archived_at', null)
         .order('agent_name');
 
@@ -78,13 +77,15 @@ export function useDNSFilter() {
       }
 
       // Check pending jobs for each agent
-      const agentIds = agents?.map(a => a.id) || [];
-      const { data: pendingJobs } = await supabase
-        .from('jobs')
-        .select('agent_id, type')
-        .in('agent_id', agentIds)
-        .in('type', ['setup_dns_filter', 'sync_blocked_websites'])
-        .in('status', ['queued', 'pending', 'running']);
+      const agentIds = (agents?.map(a => a.id).filter((id): id is string => !!id)) || [];
+      const { data: pendingJobs } = agentIds.length
+        ? await supabase
+            .from('jobs')
+            .select('agent_id, type')
+            .in('agent_id', agentIds)
+            .in('type', ['setup_dns_filter', 'sync_blocked_websites'])
+            .in('status', ['queued', 'pending', 'running'])
+        : { data: [] as Array<{ agent_id: string; type: string }> };
 
       const pendingJobsMap = new Map<string, Set<string>>();
       pendingJobs?.forEach(job => {
@@ -166,9 +167,11 @@ export function useDNSFilter() {
       if (!tenant?.id) throw new Error('Tenant not found');
 
       const { data: agents } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, agent_name')
-        .in('id', agentIds);
+        .in('id', agentIds)
+        .eq('tenant_id', tenant.id)
+        .is('archived_at', null);
 
       if (!agents?.length) throw new Error('No agents found');
 
@@ -230,17 +233,20 @@ export function useDNSFilter() {
       let agents;
       if (agentIds?.length) {
         const { data } = await supabase
-          .from('agents')
+          .from('agents_safe')
           .select('id, agent_name')
-          .in('id', agentIds);
+          .in('id', agentIds)
+          .eq('tenant_id', tenant.id)
+          .is('archived_at', null);
         agents = data;
       } else {
         // Get all online agents
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
         const { data } = await supabase
-          .from('agents')
+          .from('agents_safe')
           .select('id, agent_name')
           .eq('tenant_id', tenant.id)
+          .is('archived_at', null)
           .gt('last_heartbeat', fiveMinutesAgo);
         agents = data;
       }
