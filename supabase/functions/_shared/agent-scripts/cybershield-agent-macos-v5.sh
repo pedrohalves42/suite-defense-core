@@ -79,7 +79,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.14"
+AGENT_VERSION="v5.0.15"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -640,8 +640,8 @@ assert_launchd_health() {
      fi
      
      # Validate Ed25519 signature format (64 bytes)
-     local sig_bytes
-     sig_bytes=$(echo -n "$signature" | base64 -d 2>/dev/null | wc -c | tr -d ' ')
+      local sig_bytes
+      sig_bytes=$(echo -n "$signature" | { base64 -d 2>/dev/null || base64 -D 2>/dev/null; } | wc -c | tr -d ' ')
      
      if [[ "$sig_bytes" -ne 64 ]]; then
          log "ERROR" "[VERIFY] Invalid Ed25519 signature length"
@@ -1543,27 +1543,50 @@ EOF
      cp "$temp_script" "$current_script" 2>/dev/null
      rm -f "$temp_script"
      
-     log "SUCCESS" "[FORCE UPDATE] Script instalado: $current_script"
-     
-     # Confirm on backend
-     local confirm_payload
-     confirm_payload="{\"agent_name\":\"$AGENT_NAME\",\"old_version\":\"$AGENT_VERSION\",\"new_version\":\"$target_version\",\"sha256\":\"$actual_hash\",\"method\":\"heartbeat_force_update\",\"platform\":\"macos\",\"timestamp\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}"
-     
-     invoke_secure_request "POST" "/functions/v1/confirm-force-update" "$confirm_payload" 10 1 2>/dev/null || true
-     
-     log "INFO" "[FORCE UPDATE] Reiniciando agente com nova versao..."
-     
-     # Restart via launchd (no Mac restart needed)
-     local plist_label="com.cybershield.agent"
-     if launchctl list "$plist_label" &>/dev/null; then
-         sudo launchctl kickstart -k "system/$plist_label" 2>/dev/null &
-     else
-         # Fallback: exec into new script
-         exec "$current_script" --server-url "$SERVER_URL" --agent-token "$AGENT_TOKEN" --hmac-secret "$HMAC_SECRET" --agent-name "$AGENT_NAME" &
-     fi
-     
-     log "SUCCESS" "[FORCE UPDATE] Restart iniciado - saindo do processo atual"
-     exit 0
+      log "SUCCESS" "[FORCE UPDATE] Script instalado: $current_script"
+      
+      # Confirm on backend
+      local confirm_payload
+      confirm_payload="{\"agent_name\":\"$AGENT_NAME\",\"old_version\":\"$AGENT_VERSION\",\"new_version\":\"$target_version\",\"sha256\":\"$actual_hash\",\"method\":\"heartbeat_force_update\",\"platform\":\"macos\",\"timestamp\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}"
+      
+      invoke_secure_request "POST" "/functions/v1/confirm-force-update" "$confirm_payload" 10 1 2>/dev/null || true
+      
+      log "INFO" "[FORCE UPDATE] Reiniciando agente com nova versao..."
+      
+      # v5.0.15-fix: Retry limit for update restart (max 3 attempts to prevent infinite loop)
+      local restart_attempt=0
+      local restart_max=3
+      local restart_success=false
+      
+      while [[ $restart_attempt -lt $restart_max ]]; do
+          restart_attempt=$((restart_attempt + 1))
+          log "INFO" "[FORCE UPDATE] Restart attempt $restart_attempt/$restart_max..."
+          
+          local plist_label="com.cybershield.agent"
+          if launchctl list "$plist_label" &>/dev/null; then
+              sudo launchctl kickstart -k "system/$plist_label" 2>/dev/null &
+              restart_success=true
+              break
+          else
+              # Fallback: exec into new script
+              exec "$current_script" --server-url "$SERVER_URL" --agent-token "$AGENT_TOKEN" --hmac-secret "$HMAC_SECRET" --agent-name "$AGENT_NAME" &
+              restart_success=true
+              break
+          fi
+          sleep 2
+      done
+      
+      if [[ "$restart_success" == "false" ]]; then
+          log "ERROR" "[FORCE UPDATE] All $restart_max restart attempts failed - rolling back"
+          if [[ -f "${current_script}.backup" ]]; then
+              cp "${current_script}.backup" "$current_script" 2>/dev/null
+              log "WARN" "[FORCE UPDATE] Rolled back to previous version"
+          fi
+          return 1
+      fi
+      
+      log "SUCCESS" "[FORCE UPDATE] Restart iniciado - saindo do processo atual"
+      exit 0
  }
  
  # ============================================
