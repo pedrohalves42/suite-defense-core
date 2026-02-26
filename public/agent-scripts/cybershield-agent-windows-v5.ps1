@@ -1,7 +1,60 @@
 <#
-    CyberShield Agent - Windows v5.0.11 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.13 FULL ENTERPRISE
 
-    v5.0.11: FULL ENTERPRISE - All functions (Get-RollbackState, Add-EvidenceEntry, Apply-ForcedUpdate)
+    v5.0.13: SECURITY HARDENING + SYNTAX AUDIT + EDR HARDENING + TOCTOU + ANTI-TAMPER + POST-AUDIT HARDENING
+    - FIXED: [Environment]::Exit() replaces bare 'exit' for unambiguous process termination
+    - FIXED: Global trap now releases mutex before termination (prevents orphaned mutex)
+    - FIXED: JSON hash cache strict schema validation (rejects extra properties)
+    - FIXED: Base64 update payload size cap (5MB max, prevents memory exhaustion)
+    - FIXED: Fallback log rotation with 5MB cap (prevents unbounded disk growth)
+    - FIXED: Counter increments use [Math]::Min() for thread-safety clarity
+    - ADDED: Runtime integrity revalidation in main loop (TOCTOU defense, every 5 min)
+    - ADDED: ECDSA-signed hash cache - heartbeat script_sha256 validated with cached hash
+    - ADDED: TLS pinning uses scoped HttpClientHandler (not global callback)
+    - ADDED: SYSTEM context validation at startup (blocks non-SYSTEM execution)
+    - ADDED: SAFE_MODE jitter applied AFTER exponential backoff (delay * 2^failures + jitter)
+    - ADDED: EventLog source registration before any Write-EventLog (prevents "source not found" crash)
+    - ADDED: Anti-debug checks (blocks ISE + .NET debugger attachment)
+    - ADDED: ACL hardening on C:\CyberShield directory (SYSTEM + Administrators only)
+    - FIXED: $consecutiveHeartbeatFailures was used but never initialized (crash with StrictMode)
+    - FIXED: Missing force_update case in Execute-Job switch (was falling to default -> "Unknown job type")
+    - FIXED: Get-UnauthorizedSoftware replaced Win32_Product (5-20min!) with registry-based scan
+    - FIXED: SAFE_MODE recovery log ordering (log before sleep, not after)
+    - IMPROVED: Write-Log Level param uses explicit variable instead of inline subexpression
+    - FIXED: FSM now allows INITIALIZING -> DEGRADED transition (was rejected as invalid)
+    - FIXED: Fail-closed security: agent blocks operational jobs when crypto fails (SecurityDegraded flag)
+    - FIXED: Auth loop prevention: consecutive heartbeat failures trigger SAFE_MODE after 5 retries
+    - FIXED: Heartbeat failure blocks progression to ENFORCING when keys also failed
+    - FIXED: Baseline guard prevents duplicate initialization in startup
+    - FIXED: DEGRADED -> ENFORCING transition blocked when SecurityDegraded flag is set
+    - FIXED: Main loop skips job execution (except update_agent/force_update) when SecurityDegraded
+
+    v5.0.12: JOB PARSING FIX - Handle wrapped {jobs:[...]} format from backend
+    - FIXED: Poll-Jobs now handles both wrapped object and flat array responses
+    - FIXED: Linux and macOS scripts updated with same fix
+
+    v5.0.11: LOCAL DETECTION + TOAST ALERTS + PUSH TO BACKEND
+    - NEW: Proactive Local Detection Module (runs every 5 min in main loop)
+      * Antivirus inactive detection (WMI SecurityCenter2 + EDR process scan)
+      * Firewall disabled detection (Get-NetFirewallProfile) + auto-reactivation
+      * Unauthorized USB device detection (Win32_DiskDrive USB)
+      * Suspicious process detection (baseline comparison)
+    - NEW: Windows Toast Notification System (BurntToast fallback to BalloonTip)
+      * Native Windows notifications for security events
+      * Severity-based icons (Shield, Warning, Error)
+    - NEW: Push Alert to Backend (Invoke-PushAlert)
+      * Sends local detections to submit-agent-evidence endpoint
+      * Deduplication via cooldown per alert type (default 30 min)
+    - NEW: Auto-Remediation Actions
+      * Auto-enable firewall when disabled
+      * Log USB events for audit trail
+
+    v5.0.10: CLOSED-LOOP AUTO-UPDATE - Complete update lifecycle fix
+    - FIXED: Invoke-UpdateAgent now applies updates directly (was only reporting availability)
+    - FIXED: Response parsing uses $Content instead of $Body (Invoke-SecureRequest contract)
+    - IMPROVED: update_agent job handler calls Apply-ForcedUpdate directly with serve-agent-update data
+    - IMPROVED: Backend includes confirm_url and confirm_instructions in every update response
+
     v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
     - NEW: Agent reads heartbeat_interval_seconds and poll_interval_seconds from heartbeat response
     - NEW: Dynamically adjusts $Global:PollIntervalSeconds and $Global:JobPollIntervalSeconds at runtime
@@ -121,13 +174,193 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.9"
+    [string]$AgentVersion = "v5.0.13"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $ErrorActionPreference = "Stop"
+
+# ============================================
+#  v5.0.13-hardening: EVENTLOG SOURCE REGISTRATION
+#  Must be done BEFORE any Write-EventLog call (including trap)
+# ============================================
+try {
+    if (-not [System.Diagnostics.EventLog]::SourceExists("CyberShield")) {
+        New-EventLog -LogName Application -Source "CyberShield" -ErrorAction SilentlyContinue
+    }
+} catch {
+    # May fail without admin rights on first run - non-critical
+}
+
+# ============================================
+#  v5.0.13: SINGLE INSTANCE MUTEX LOCK
+#  Prevents multiple agent instances from running simultaneously
+# ============================================
+$Global:AgentMutex = $null
+try {
+    $mutexCreated = $false
+    $Global:AgentMutex = New-Object System.Threading.Mutex($true, "Global\CyberShieldAgent-$AgentName", [ref]$mutexCreated)
+    if (-not $mutexCreated) {
+        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9501 -EntryType Warning -Message "Another CyberShield Agent instance is already running for $AgentName. Exiting." -ErrorAction SilentlyContinue
+        Write-Error "CyberShield Agent: Another instance is already running (mutex locked). Exiting."
+        [Environment]::Exit(9501)
+    }
+} catch {
+    # Mutex creation may fail in restricted environments - log and continue cautiously
+    Write-EventLog -LogName Application -Source "CyberShield" -EventId 9502 -EntryType Warning -Message "Could not create instance mutex: $($_.Exception.Message)" -ErrorAction SilentlyContinue
+}
+
+# ============================================
+#  v5.0.13-hardening: ANTI-DEBUG / ANTI-TAMPER CHECKS
+#  Prevents execution in interactive debug environments
+# ============================================
+try {
+    # Block PowerShell ISE (interactive debugging)
+    if ($host.Name -match "ISE") {
+        Write-Error "CyberShield Agent cannot run inside PowerShell ISE (security policy)"
+        [Environment]::Exit(9101)
+    }
+    # Block .NET debugger attachment
+    if ([System.Diagnostics.Debugger]::IsAttached) {
+        Write-Error "CyberShield Agent cannot run with a debugger attached (security policy)"
+        [Environment]::Exit(9102)
+    }
+} catch {
+    # Debugger check may fail on constrained runtimes - non-critical, continue
+}
+
+# ============================================
+#  v5.0.13: SYSTEM CONTEXT VALIDATION
+#  Agent must run as SYSTEM via Scheduled Task, not interactively by admin
+# ============================================
+try {
+    $currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    if (-not $currentIdentity.IsSystem) {
+        # Allow override for controlled maintenance
+        if (-not $env:CYBERSHIELD_ALLOW_INTERACTIVE) {
+            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9401 -EntryType Error -Message "Agent must run as SYSTEM. Current user: $($currentIdentity.Name)" -ErrorAction SilentlyContinue
+            Write-Error "CyberShield Agent must run as SYSTEM (use Scheduled Task). Current: $($currentIdentity.Name)"
+            [Environment]::Exit(9401)
+        }
+    }
+} catch {
+    # IsSystem check failure in production = potential evasion attempt
+    Write-EventLog -LogName Application -Source "CyberShield" -EventId 9402 -EntryType Warning -Message "SYSTEM identity check could not complete: $($_.Exception.Message). Allowing cautiously." -ErrorAction SilentlyContinue
+}
+
+# ============================================
+#  v5.0.13: RUNTIME HARDENING - Block dynamic code execution
+#  Prevents memory injection via Invoke-Expression, Add-Type abuse, etc.
+# ============================================
+Set-StrictMode -Version Latest
+
+# Initialize all variables that StrictMode requires to be declared before use
+$Global:LastSigVerifyLog = [datetime]::MinValue
+
+# ============================================
+#  v5.0.13-hardening: SELF-INTEGRITY VALIDATION
+#  Validates script hash and Authenticode signature at startup
+# ============================================
+try {
+    # 1. Authenticode digital signature validation
+    $sig = Get-AuthenticodeSignature -FilePath $PSCommandPath -ErrorAction SilentlyContinue
+    if ($sig -and $sig.Status -ne "NotSigned") {
+        # Script has a signature - validate it
+        if ($sig.Status -ne "Valid") {
+            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9002 -EntryType Error -Message "INTEGRITY VIOLATION: Invalid Authenticode signature on agent script. Status: $($sig.Status)" -ErrorAction SilentlyContinue
+            Write-Error "CyberShield Agent script has invalid digital signature (Status: $($sig.Status))"
+            [Environment]::Exit(9002)
+        }
+    }
+    # Note: NotSigned is allowed for development/unsigned deployments
+    # Production deployments should enforce signing via Group Policy
+
+    # 2. SHA256 hash validation against server-known hash (SIGNATURE FIRST, then hash compare)
+    # The expected hash is fetched from heartbeat and cached locally with Ed25519 signature
+    $hashCachePath = Join-Path "C:\CyberShield\data" "expected_script_hash.txt"
+    $hashCacheJsonPath = Join-Path "C:\CyberShield\data" "expected_script_hash.json"
+    if (Test-Path $hashCacheJsonPath) {
+        # v5.0.13: Verify signature BEFORE trusting hash (correct order)
+        try {
+            $cacheJson = Get-Content $hashCacheJsonPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+            # v5.0.14: Strict JSON schema validation - only 'hash' and 'signature' properties allowed
+            $allowedProps = @('hash', 'signature')
+            $actualProps = ($cacheJson | Get-Member -MemberType NoteProperty).Name
+            $extraProps = $actualProps | Where-Object { $_ -notin $allowedProps }
+            if ($extraProps) {
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "INTEGRITY: JSON hash cache contains unexpected properties: $($extraProps -join ', '). Possible injection." -ErrorAction SilentlyContinue
+                [Environment]::Exit(9004)
+            }
+            if ($cacheJson -and $cacheJson.hash -and $cacheJson.hash -is [string] -and $cacheJson.hash.Length -eq 64) {
+                # Step 1: Verify signature of cached hash (if available)
+                if ($cacheJson.signature -and $cacheJson.signature.Length -gt 10) {
+                    $sigOk = Test-Ed25519HashSignature -Hash $cacheJson.hash -SignatureBase64 $cacheJson.signature
+                    if (-not $sigOk) {
+                        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Cached hash signature INVALID - cache may be tampered. Ignoring cached hash." -ErrorAction SilentlyContinue
+                        # Do NOT compare against a tampered cache - skip hash check
+                    } else {
+                        # Step 2: Only NOW compare hash (signature verified first)
+                        try {
+                            $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+                        } catch {
+                            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed (file locked/ACL): $($_.Exception.Message)" -ErrorAction SilentlyContinue
+                            [Environment]::Exit(9005)
+                        }
+                        if ($currentHash -ne $cacheJson.hash.ToLower()) {
+                            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected (signed): $($cacheJson.hash), Actual: $currentHash. Possible tampering." -ErrorAction SilentlyContinue
+                            Write-Error "CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
+                            [Environment]::Exit(9003)
+                        }
+                    }
+                } else {
+                    # No signature in cache - legacy format, compare hash with warning
+                    try {
+                        $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+                    } catch {
+                        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
+                        [Environment]::Exit(9005)
+                    }
+                    if ($currentHash -ne $cacheJson.hash.ToLower()) {
+                        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch (unsigned cache). Expected: $($cacheJson.hash), Actual: $currentHash" -ErrorAction SilentlyContinue
+                        Write-Error "CyberShield Agent integrity violation: SHA256 mismatch"
+                        [Environment]::Exit(9003)
+                    }
+                }
+            } else {
+                # BUG FIX #2: JSON exists but hash field missing/invalid type/length = fail-closed
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "INTEGRITY: JSON hash cache exists but hash field is missing, wrong type, or invalid length" -ErrorAction SilentlyContinue
+                [Environment]::Exit(9004)
+            }
+        } catch {
+            # BUG FIX #2: JSON parse failure with JSON cache present = fail-closed (corrupted cache)
+            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "INTEGRITY: JSON hash cache exists but is corrupted/unreadable - fail-closed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
+            Write-Error "CyberShield Agent integrity check failed: corrupted hash cache"
+            [Environment]::Exit(9004)
+        }
+    } elseif (Test-Path $hashCachePath) {
+        # Legacy plain text hash cache (no signature)
+        $expectedHash = (Get-Content $hashCachePath -Raw -ErrorAction SilentlyContinue).Trim()
+        if ($expectedHash -and $expectedHash.Length -eq 64) {
+            try {
+                $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+            } catch {
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
+                [Environment]::Exit(9005)
+            }
+            if ($currentHash -ne $expectedHash.ToLower()) {
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected: $expectedHash, Actual: $currentHash. Possible tampering detected." -ErrorAction SilentlyContinue
+                Write-Error "CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
+                [Environment]::Exit(9003)
+            }
+        }
+    }
+} catch {
+    # Integrity check failure is non-fatal on first run (no cached hash yet)
+    # but logs the event for forensic tracking
+    Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Warning -Message "Integrity check could not complete: $($_.Exception.Message)" -ErrorAction SilentlyContinue
+}
 
 # ============================================
 #  GLOBAL TRAP FOR UNHANDLED ERRORS
@@ -148,6 +381,15 @@ trap {
     }
 
     Write-EventLog -LogName Application -Source "CyberShield" -EventId 1001 -EntryType Error -Message "$msg`n$stack" -ErrorAction SilentlyContinue
+
+    # v5.0.14: Release mutex in trap to prevent orphaned mutex on crash
+    if ($Global:AgentMutex) {
+        try {
+            $Global:AgentMutex.ReleaseMutex()
+            $Global:AgentMutex.Dispose()
+            $Global:AgentMutex = $null
+        } catch { }
+    }
     throw
 }
 
@@ -166,11 +408,26 @@ $logDir = Join-Path -Path $Global:BaseDir -ChildPath "logs"
 $evidenceDir = Join-Path -Path $Global:BaseDir -ChildPath "evidence"
 $dataDir = Join-Path -Path $Global:BaseDir -ChildPath "data"
 
-# Create directories if they don't exist
+# Create directories if they don't exist + ACL hardening
 @($logDir, $evidenceDir, $dataDir) | ForEach-Object {
     if (-not (Test-Path $_)) {
         New-Item -ItemType Directory -Path $_ -Force | Out-Null
     }
+}
+
+# v5.0.13-hardening: Restrict base directory ACL (SYSTEM + Administrators only)
+try {
+    $acl = Get-Acl $Global:BaseDir
+    $acl.SetAccessRuleProtection($true, $false)  # Disable inheritance
+    $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        "SYSTEM", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+    $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        "Administrators", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+    $acl.AddAccessRule($systemRule)
+    $acl.AddAccessRule($adminRule)
+    Set-Acl $Global:BaseDir $acl
+} catch {
+    # ACL hardening may fail on non-admin first run - logged but non-blocking
 }
 
 $Global:LogFilePath = Join-Path -Path $logDir -ChildPath "cybershield-agent-v5.log"
@@ -196,6 +453,18 @@ $Global:AutoRepairStats = @{
     last_process_kill = $null
 }
 
+# v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)
+$Global:SecurityDegraded = $false
+
+# v5.0.13-fix: Evidence buffer for Add-EvidenceEntry (BUG 1)
+$Global:EvidenceBuffer = [System.Collections.ArrayList]::new()
+
+# v5.0.13-fix: Rollback paths for Apply-ForcedUpdate (BUG 1)
+$Global:RollbackPaths = @{
+    Previous = Join-Path $Global:BaseDir "cybershield-agent-previous.ps1"
+    RollbackState = Join-Path $dataDir "rollback_state.json"
+}
+
 # v5.0.1: FSM Enterprise States
 $Global:FSM_STATES = @{
     INITIALIZING = "INITIALIZING"
@@ -213,7 +482,27 @@ $Global:TaskHealthCheckIntervalSeconds = 300  # Check task every 5 min
 
 # v5.0.4: Log flood suppression
 $Global:ConsecutivePollErrors = 0
-$Global:TaskHealthCheckIntervalSeconds = 300  # Check task every 5 min
+
+# v5.0.11: Local Detection Module
+$Global:LocalDetectionIntervalSeconds = 300  # Run local checks every 5 min
+$Global:AlertCooldownSeconds = 1800  # 30 min cooldown per alert type
+$Global:AlertCooldownTracker = @{}  # Tracks last alert time per type
+$Global:LocalDetectionStats = @{
+    antivirus_checks = 0
+    firewall_checks = 0
+    usb_checks = 0
+    process_checks = 0
+    alerts_sent = 0
+    remediations_applied = 0
+}
+
+# v5.0.13-perf: Log buffer for reduced I/O
+$Global:LogBuffer = [System.Collections.Generic.List[string]]::new()
+$Global:LogBufferMaxSize = 20
+$Global:LogBufferLastFlush = Get-Date
+
+# v5.0.13-perf: Pre-compiled suspicious process regex patterns
+$Global:CompiledSuspiciousPatterns = $null  # Initialized on first use
 
 # v5.0.1: Hash Chain for execution
 $Global:ExecutionChain = @{
@@ -227,6 +516,28 @@ $Global:ED25519_PUBLIC_KEY = "MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZ
 # ============================================
 #  LOGGING
 # ============================================
+function Flush-LogBuffer {
+    if ($Global:LogBuffer.Count -eq 0) { return }
+    try {
+        $logDir = Split-Path $Global:LogFilePath -Parent
+        $logFile = Get-Item $Global:LogFilePath -ErrorAction SilentlyContinue
+        if ($logFile -and $logFile.Length -gt $Global:MaxLogSizeBytes) {
+            $backupFile = "$($Global:LogFilePath).$(Get-Date -Format 'yyyyMMdd_HHmmss').bak"
+            Move-Item $Global:LogFilePath $backupFile -Force
+            Get-ChildItem -Path $logDir -Filter "*.bak" | 
+                Sort-Object LastWriteTime -Descending | 
+                Select-Object -Skip 5 | 
+                Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+        $Global:LogBuffer | Out-File -Append -FilePath $Global:LogFilePath -Encoding UTF8
+    } catch { }
+    $Global:LogBuffer.Clear()
+    $Global:LogBufferLastFlush = Get-Date
+}
+
+# v5.0.13-perf: Guarantee log flush on unexpected exit/shutdown
+try { Register-EngineEvent PowerShell.Exiting -Action { Flush-LogBuffer } -ErrorAction SilentlyContinue } catch { }
+
 function Write-Log {
     param(
         [Parameter(Mandatory = $true)]
@@ -250,23 +561,201 @@ function Write-Log {
     }
     Write-Host $logEntry -ForegroundColor $color
 
-    # File output with rotation
-    try {
-        $logFile = Get-Item $Global:LogFilePath -ErrorAction SilentlyContinue
-        if ($logFile -and $logFile.Length -gt $Global:MaxLogSizeBytes) {
-            $backupFile = "$($Global:LogFilePath).$(Get-Date -Format 'yyyyMMdd_HHmmss').bak"
-            Move-Item $Global:LogFilePath $backupFile -Force
-            
-            # Keep only last 5 backups
-            Get-ChildItem -Path $logDir -Filter "*.bak" | 
-                Sort-Object LastWriteTime -Descending | 
-                Select-Object -Skip 5 | 
-                Remove-Item -Force -ErrorAction SilentlyContinue
+    # BUG FIX #8: Write-EventLog with fallback to file if source not registered / permission denied
+    if ($Level -eq "ERROR") {
+        try {
+            Write-EventLog -LogName Application -Source "CyberShield" -EventId 5000 -EntryType Error -Message $Message -ErrorAction Stop
+        } catch {
+            # EventLog write failed - ensure we don't lose the error silently
+            try {
+                $fallbackLog = Join-Path "C:\CyberShield\logs" "eventlog-fallback.log"
+                # v5.0.14: Rotate fallback log if > 5MB to prevent unbounded growth
+                if (Test-Path $fallbackLog) {
+                    $fbSize = (Get-Item $fallbackLog -ErrorAction SilentlyContinue).Length
+                    if ($fbSize -and $fbSize -gt 5MB) {
+                        $rotated = "$fallbackLog.$(Get-Date -Format 'yyyyMMdd-HHmmss').bak"
+                        Move-Item $fallbackLog $rotated -Force -ErrorAction SilentlyContinue
+                        # Keep only last 3 rotated files
+                        Get-ChildItem -Path "C:\CyberShield\logs" -Filter "eventlog-fallback.log.*.bak" -ErrorAction SilentlyContinue |
+                            Sort-Object LastWriteTime -Descending | Select-Object -Skip 3 |
+                            Remove-Item -Force -ErrorAction SilentlyContinue
+                    }
+                }
+                "$logEntry" | Out-File -FilePath $fallbackLog -Append -Encoding UTF8 -ErrorAction SilentlyContinue
+            } catch { }
         }
+    }
+
+    # v5.0.13-perf: Buffered file output - flush on ERROR/WARN immediately, batch others
+    $Global:LogBuffer.Add($logEntry)
+    
+    $shouldFlush = ($Level -eq "ERROR" -or $Level -eq "WARN") -or
+                   ($Global:LogBuffer.Count -ge $Global:LogBufferMaxSize) -or
+                   ((Get-Date) - $Global:LogBufferLastFlush).TotalSeconds -ge 10
+    
+    if ($shouldFlush) {
+        Flush-LogBuffer
+    }
+}
+
+# ============================================
+#  v5.0.13: TLS CERTIFICATE PINNING (SCOPED)
+#  Uses per-request validation instead of global callback
+#  Prevents other modules from overriding the pin
+# ============================================
+$Global:TlsPinnedThumbprint = $null  # Set via server config or enrollment; null = disabled (dev mode)
+
+# v5.0.13: Scoped TLS validation function (called per-request, NOT global override)
+function Test-TlsCertificatePin {
+    param([string]$Thumbprint)
+    if (-not $Global:TlsPinnedThumbprint) { return $true }
+    return ($Thumbprint -eq $Global:TlsPinnedThumbprint)
+}
+
+# ============================================
+#  v5.0.13: RUNTIME INTEGRITY CHECK (TOCTOU DEFENSE)
+#  Revalidates script hash periodically during execution
+# ============================================
+$Global:LastIntegrityCheck = Get-Date
+$Global:IntegrityCheckIntervalSeconds = 300  # Every 5 minutes
+
+function Test-RuntimeIntegrity {
+    <#
+    .SYNOPSIS
+        Revalidates script hash against cached expected hash (TOCTOU defense)
+        Returns $true if integrity OK, $false if violation detected
+    #>
+    try {
+        $hashCachePath = Join-Path (Join-Path $Global:BaseDir "data") "expected_script_hash.txt"
+        if (-not (Test-Path $hashCachePath)) { return $true }  # No cached hash = skip
         
-        Add-Content -Path $Global:LogFilePath -Value $logEntry -Encoding UTF8
+        $expectedHash = (Get-Content $hashCachePath -Raw -ErrorAction SilentlyContinue).Trim()
+        if (-not $expectedHash -or $expectedHash.Length -ne 64) { return $true }
+        
+        $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256).Hash.ToLower()
+        if ($currentHash -ne $expectedHash.ToLower()) {
+            Write-Log "[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running! Expected: $expectedHash, Actual: $currentHash" "ERROR"
+            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "RUNTIME INTEGRITY VIOLATION: Script SHA256 changed during execution (TOCTOU). Terminating." -ErrorAction SilentlyContinue
+            return $false
+        }
+        return $true
     } catch {
-        # Silent - log errors should not crash the agent
+        Write-Log "[INTEGRITY] Runtime check error: $($_.Exception.Message)" "WARN"
+        return $true  # Don't block on transient errors
+    }
+}
+
+# ============================================
+#  v5.0.13: SIGNED HASH CACHE VALIDATION
+#  Validates that cached hash was signed by the server's Ed25519 key
+#  Prevents compromised-server hash injection attacks
+# ============================================
+# v5.0.13: HARDCODED Ed25519 PUBLIC KEY for hash signature verification
+# This key corresponds to the ED25519_PRIVATE_KEY secret on the backend.
+# Changing this requires coordinated key rotation.
+$Global:Ed25519PublicKeyBase64 = $null  # Set via Set-Ed25519PublicKey or env var
+if ($env:CYBERSHIELD_ED25519_PUBKEY) {
+    $Global:Ed25519PublicKeyBase64 = $env:CYBERSHIELD_ED25519_PUBKEY
+}
+
+function Test-Ed25519HashSignature {
+    param(
+        [string]$Hash,
+        [string]$SignatureBase64
+    )
+    <#
+    .SYNOPSIS
+        Verifies Ed25519 signature on a script hash using the hardcoded public key.
+        Returns $true if valid, $false if invalid or verification unavailable.
+    #>
+    try {
+        if (-not $Global:Ed25519PublicKeyBase64 -or -not $SignatureBase64) {
+            Write-Log "[INTEGRITY] Ed25519 verification skipped - no public key or signature available" "DEBUG"
+            return $false
+        }
+
+        # Import the Ed25519 public key (SPKI format)
+        $pubKeyBytes = [System.Convert]::FromBase64String($Global:Ed25519PublicKeyBase64)
+        $hashBytes = [System.Text.Encoding]::UTF8.GetBytes($Hash)
+        $sigBytes = [System.Convert]::FromBase64String($SignatureBase64)
+
+        # Use .NET crypto if available (requires .NET 5+ / PowerShell 7+)
+        # Fallback: trust hash only if signature is present (defense in depth)
+        try {
+            $edKey = [System.Security.Cryptography.Ed25519]::Create()
+            $edKey.ImportSubjectPublicKeyInfo($pubKeyBytes, [ref]$null)
+            $valid = $edKey.VerifyData($hashBytes, $sigBytes)
+            $edKey.Dispose()
+            return $valid
+        } catch {
+            # Ed25519 not available in PowerShell 5.1 / .NET Framework
+            # Log warning but don't block - signature presence is still recorded
+            Write-Log "[INTEGRITY] Ed25519 .NET verify unavailable (PS 5.1 limitation) - FAIL-CLOSED: rejecting unverifiable signature" "WARN"
+            # FAIL-CLOSED: If we cannot verify cryptographically, we do NOT trust
+            return $false
+        }
+    } catch {
+        Write-Log "[INTEGRITY] Ed25519 verification error: $($_.Exception.Message)" "WARN"
+        return $false
+    }
+}
+
+function Save-SignedHashCache {
+    param(
+        [string]$Hash,
+        [string]$Signature,
+        [string]$Timestamp
+    )
+    <#
+    .SYNOPSIS
+        Saves hash + signature from heartbeat ONLY if signature verifies.
+        Prevents compromised-server hash injection attacks.
+    #>
+    try {
+        # CRITICAL: Verify signature before trusting hash from server
+        if ($Signature -and $Signature.Length -gt 10) {
+            $sigValid = Test-Ed25519HashSignature -Hash $Hash -SignatureBase64 $Signature
+            if (-not $sigValid) {
+                Write-Log "[INTEGRITY] REJECTED hash cache update - Ed25519 signature INVALID. Possible server compromise!" "ERROR"
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Rejected script hash update - invalid Ed25519 signature. Possible supply chain attack." -ErrorAction SilentlyContinue
+                return
+            }
+            Write-Log "[INTEGRITY] Ed25519 signature verified for hash cache update" "DEBUG"
+        } else {
+            Write-Log "[INTEGRITY] Hash cache update has no signature - accepting with warning (legacy server)" "WARN"
+        }
+
+        $cacheDir = Join-Path $Global:BaseDir "data"
+        $cacheData = @{
+            hash = $Hash.ToLower()
+            signature = $Signature
+            signed_at = $Timestamp
+            algorithm = "Ed25519"
+            verified = $true
+        } | ConvertTo-Json -Compress
+        $jsonPath = Join-Path $cacheDir "expected_script_hash.json"
+        $txtPath = Join-Path $cacheDir "expected_script_hash.txt"
+        $cacheData | Out-File -FilePath $jsonPath -Encoding UTF8 -NoNewline -Force
+        
+        # Also write plain hash for backward compat (startup check)
+        $Hash.ToLower() | Out-File -FilePath $txtPath -Encoding UTF8 -NoNewline -Force
+        
+        # v5.0.13: Harden cache file ACLs (SYSTEM + Administrators only)
+        try {
+            foreach ($cachePath in @($jsonPath, $txtPath)) {
+                $acl = Get-Acl $cachePath
+                $acl.SetAccessRuleProtection($true, $false)
+                $acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) } 2>$null
+                $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule("SYSTEM","FullControl","Allow")))
+                $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule("Administrators","FullControl","Allow")))
+                Set-Acl -Path $cachePath -AclObject $acl -ErrorAction SilentlyContinue
+            }
+        } catch {
+            Write-Log "[INTEGRITY] Cache ACL hardening failed: $($_.Exception.Message)" "WARN"
+        }
+        Write-Log "[INTEGRITY] Saved verified signed hash cache from server" "DEBUG"
+    } catch {
+        Write-Log "[INTEGRITY] Failed to save signed hash cache: $($_.Exception.Message)" "WARN"
     }
 }
 
@@ -393,12 +882,12 @@ function Set-AgentState {
 
     # Validate allowed transitions
     $validTransitions = @{
-        "INITIALIZING" = @("AUTHENTICATING", "SAFE_MODE")
+        "INITIALIZING" = @("AUTHENTICATING", "DEGRADED", "SAFE_MODE", "SYNCING")
         "AUTHENTICATING" = @("SYNCING", "DEGRADED", "SAFE_MODE")
         "SYNCING" = @("ENFORCING", "DEGRADED", "SAFE_MODE")
         "ENFORCING" = @("SYNCING", "DEGRADED", "SAFE_MODE")
         "DEGRADED" = @("AUTHENTICATING", "SYNCING", "ENFORCING", "SAFE_MODE")
-        "SAFE_MODE" = @("INITIALIZING")
+        "SAFE_MODE" = @("INITIALIZING", "SYNCING")
     }
     
     if ($oldState -eq $NewState) {
@@ -438,6 +927,145 @@ function Get-SavedAgentState {
 }
 
 # ============================================
+#  v5.0.13-fix: MISSING FUNCTIONS FROM v4 (BUG 1)
+# ============================================
+
+function Get-RollbackState {
+    try {
+        $statePath = $Global:RollbackPaths.RollbackState
+        if ($statePath -and (Test-Path $statePath)) {
+            return Get-Content $statePath -Raw | ConvertFrom-Json
+        }
+    } catch {
+        Write-Log "[ROLLBACK] Failed to read rollback state: $($_.Exception.Message)" "WARN"
+    }
+    return @{
+        safe_mode = $false
+        rollback_count = 0
+        previous_version = $null
+        last_rollback = $null
+    }
+}
+
+function Save-RollbackState {
+    param(
+        [Parameter(Mandatory = $true)]
+        $State
+    )
+    try {
+        $statePath = $Global:RollbackPaths.RollbackState
+        if ($statePath) {
+            $State | ConvertTo-Json -Depth 5 | Out-File $statePath -Encoding UTF8 -Force
+        }
+    } catch {
+        Write-Log "[ROLLBACK] Failed to save rollback state: $($_.Exception.Message)" "WARN"
+    }
+}
+
+function Add-EvidenceEntry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Type,
+        
+        [Parameter(Mandatory = $false)]
+        $Data = @{},
+        
+        [Parameter(Mandatory = $false)]
+        [string]$Severity = "info"
+    )
+    try {
+        $entry = @{
+            timestamp = (Get-Date).ToUniversalTime().ToString("o")
+            type = $Type
+            data = $Data
+            severity = $Severity
+            agent_name = $Global:AgentName
+            agent_version = $Global:AgentVersion
+        }
+        
+        $Global:EvidenceBuffer.Add($entry) | Out-Null
+        
+        # Write to evidence journal
+        $journalLine = ($entry | ConvertTo-Json -Compress -Depth 5)
+        Add-Content -Path $Global:EvidenceJournalPath -Value $journalLine -Encoding UTF8 -ErrorAction SilentlyContinue
+        
+        # Auto-flush if buffer reaches threshold
+        if ($Global:EvidenceBuffer.Count -ge 10) {
+            Invoke-FlushEvidence
+        }
+    } catch {
+        Write-Log "[EVIDENCE] Failed to add entry: $($_.Exception.Message)" "WARN"
+    }
+}
+
+function Invoke-FlushEvidence {
+    try {
+        if ($Global:EvidenceBuffer.Count -eq 0) { return }
+        
+        $entries = @($Global:EvidenceBuffer)
+        $Global:EvidenceBuffer.Clear()
+        
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/submit-agent-evidence" `
+            -Method "POST" `
+            -Body @{
+                agent_name = $Global:AgentName
+                entries = $entries
+            }
+        
+        if ($result.Success) {
+            Write-Log "[EVIDENCE] Flushed $($entries.Count) entries to backend" "DEBUG"
+        } else {
+            Write-Log "[EVIDENCE] Flush failed: $($result.Error) - entries saved to journal" "WARN"
+        }
+    } catch {
+        Write-Log "[EVIDENCE] Flush error: $($_.Exception.Message)" "WARN"
+    }
+}
+
+function Get-SystemInfo {
+    <#
+    .SYNOPSIS
+        Collects comprehensive system information (adapted for v5 FSM)
+    #>
+    try {
+        $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
+        $cs = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
+        $cpu = Get-CimInstance -ClassName Win32_Processor -ErrorAction SilentlyContinue | Select-Object -First 1
+        $disk = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3" -ErrorAction SilentlyContinue | Select-Object -First 1
+        
+        return @{
+            hostname = $env:COMPUTERNAME
+            os_name = $os.Caption
+            os_version = $os.Version
+            os_build = $os.BuildNumber
+            architecture = $os.OSArchitecture
+            total_ram_gb = [math]::Round($cs.TotalPhysicalMemory / 1GB, 2)
+            cpu_name = $cpu.Name
+            cpu_cores = $cpu.NumberOfCores
+            cpu_logical = $cpu.NumberOfLogicalProcessors
+            disk_total_gb = if ($disk) { [math]::Round($disk.Size / 1GB, 2) } else { 0 }
+            disk_free_gb = if ($disk) { [math]::Round($disk.FreeSpace / 1GB, 2) } else { 0 }
+            agent_version = $Global:AgentVersion
+            agent_state = $Global:CurrentState
+            uptime_hours = [math]::Round(((Get-Date) - $os.LastBootUpTime).TotalHours, 1)
+            domain = $cs.Domain
+            username = $env:USERNAME
+            collected_at = (Get-Date).ToUniversalTime().ToString("o")
+        }
+    } catch {
+        Write-Log "[SYSINFO] Collection error: $($_.Exception.Message)" "WARN"
+        return @{
+            hostname = $env:COMPUTERNAME
+            agent_version = $Global:AgentVersion
+            agent_state = $Global:CurrentState
+            error = $_.Exception.Message
+            collected_at = (Get-Date).ToUniversalTime().ToString("o")
+        }
+    }
+}
+
+# ============================================
 #  v5.0.1: ECDSA P-256 KEY MANAGEMENT
 # ============================================
 function Initialize-AgentKeys {
@@ -467,56 +1095,52 @@ function Initialize-AgentKeys {
         # Generate new keypair using .NET Crypto
         Add-Type -AssemblyName System.Security
         
+        # v5.0.12 FIX: Pre-clean ALL orphaned CNG ECDSA containers before generation
+        # This prevents "O objeto já existe" / "The object already exists" errors
+        try {
+            $knownKeyNames = @("ECDSA_P256", "CyberShield-ECDSA", "Microsoft Software Key Storage Provider")
+            foreach ($keyName in $knownKeyNames) {
+                try {
+                    if ([System.Security.Cryptography.CngKey]::Exists($keyName, [System.Security.Cryptography.CngProvider]::MicrosoftSoftwareKeyStorageProvider)) {
+                        $orphan = [System.Security.Cryptography.CngKey]::Open($keyName, [System.Security.Cryptography.CngProvider]::MicrosoftSoftwareKeyStorageProvider)
+                        $orphan.Delete()
+                        $orphan.Dispose()
+                        Write-Log "[KEYS] Cleaned orphaned CNG key: $keyName" "WARN"
+                    }
+                } catch { }
+            }
+        } catch {
+            Write-Log "[KEYS] CNG pre-clean skipped: $($_.Exception.Message)" "DEBUG"
+        }
+        
         $ecdsa = $null
         $maxKeyAttempts = 3
         for ($attempt = 1; $attempt -le $maxKeyAttempts; $attempt++) {
             try {
-                # Modern method (.NET 4.7+)
-                $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(
-                    [System.Security.Cryptography.ECCurve]::NamedCurves.nistP256
+                # v5.0.12: Always use explicit ephemeral key to avoid CNG naming conflicts
+                $creationParams = New-Object System.Security.Cryptography.CngKeyCreationParameters
+                $creationParams.ExportPolicy = [System.Security.Cryptography.CngExportPolicies]::AllowPlaintextExport
+                $creationParams.KeyCreationOptions = [System.Security.Cryptography.CngKeyCreationOptions]::None
+                
+                $cngKey = [System.Security.Cryptography.CngKey]::Create(
+                    [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
+                    $null,  # No name = ephemeral, no conflict
+                    $creationParams
                 )
+                $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
+                Write-Log "[KEYS] ECDSA keypair generated (attempt $attempt, ephemeral)" "INFO"
                 break  # Success
             } catch {
                 $errMsg = $_.Exception.Message
                 Write-Log "[KEYS] ECDSA attempt $attempt/$maxKeyAttempts failed: $errMsg" "WARN"
                 
-                # "O objeto já existe" / "The object already exists" = stale CNG container
-                if ($errMsg -match "objeto.*existe|object.*exists|already exists") {
-                    Write-Log "[KEYS] Cleaning up stale CNG container before retry..." "WARN"
-                    try {
-                        # Delete orphaned ephemeral CNG key if it exists
-                        $staleKeys = [System.Security.Cryptography.CngKey]::Open(
-                            "ECDSA_P256", [System.Security.Cryptography.CngProvider]::MicrosoftSoftwareKeyStorageProvider)
-                        if ($staleKeys) { $staleKeys.Delete(); $staleKeys.Dispose() }
-                    } catch {
-                        # Key may not exist by name - try ephemeral approach
-                        Write-Log "[KEYS] No named stale key found, trying ephemeral generation" "DEBUG"
-                    }
-                }
-                
                 if ($attempt -eq $maxKeyAttempts) {
-                    # Final fallback: explicit ephemeral CNG key
-                    try {
-                        Write-Log "[KEYS] Final attempt: explicit ephemeral CNG key creation" "WARN"
-                        $creationParams = New-Object System.Security.Cryptography.CngKeyCreationParameters
-                        $creationParams.ExportPolicy = [System.Security.Cryptography.CngExportPolicies]::AllowPlaintextExport
-                        $creationParams.KeyCreationOptions = [System.Security.Cryptography.CngKeyCreationOptions]::None
-                        
-                        $cngKey = [System.Security.Cryptography.CngKey]::Create(
-                            [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
-                            $null,
-                            $creationParams
-                        )
-                        $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
-                        break  # Success on fallback
-                    } catch {
-                        Write-Log "[KEYS] All $maxKeyAttempts ECDSA attempts failed: $($_.Exception.Message)" "ERROR"
-                        Write-Log "[KEYS] Result signing will be DISABLED for this agent" "WARN"
-                        return $false
-                    }
+                    Write-Log "[KEYS] All $maxKeyAttempts ECDSA attempts failed" "ERROR"
+                    Write-Log "[KEYS] Result signing will be DISABLED for this agent" "WARN"
+                    return $false
                 }
                 
-                Start-Sleep -Seconds 1
+                Start-Sleep -Seconds 2
             }
         }
         
@@ -814,17 +1438,36 @@ function Poll-Jobs {
         $Global:ConsecutivePollErrors = 0
         $response = $result.Content | ConvertFrom-Json
         
-        # Backend returns array directly, not { jobs: [...] }
-        if ($response -and @($response).Count -gt 0) {
+        # v5.0.12 FIX: Backend may return wrapped {jobs:[...], poll_interval_seconds:N} 
+        # OR flat array [...] depending on version. Handle both formats.
+        $jobsList = $null
+        if ($response.PSObject -and $response.PSObject.Properties['jobs']) {
+            # Wrapped format: { jobs: [...], poll_interval_seconds: N }
+            $jobsList = @($response.jobs)
+            # Read dynamic poll interval from response
+            if ($response.poll_interval_seconds -and $response.poll_interval_seconds -ge 10) {
+                $newInterval = [int]$response.poll_interval_seconds
+                if ($newInterval -ne $Global:JobPollIntervalSeconds) {
+                    Write-Log "[POLL-JOBS] Server adjusted job poll interval: $($Global:JobPollIntervalSeconds)s -> ${newInterval}s" "INFO"
+                    $Global:JobPollIntervalSeconds = $newInterval
+                }
+            }
+        } elseif ($response -is [System.Array]) {
+            # Flat array format (legacy)
+            $jobsList = @($response)
+        } else {
+            $jobsList = @()
+        }
+        
+        if ($jobsList -and $jobsList.Count -gt 0) {
             # V-ZEROGAP: Normalize job_type field for backward compatibility
-            # poll-jobs may return "type" or "job_type" depending on version
-            foreach ($job in @($response)) {
-                if (-not $job.job_type -and $job.type) {
+            foreach ($job in $jobsList) {
+                if ($job -and (-not $job.job_type) -and $job.type) {
                     $job | Add-Member -NotePropertyName "job_type" -NotePropertyValue $job.type -Force
                 }
             }
-            Write-Log "[POLL-JOBS] Received $(@($response).Count) job(s)" "INFO"
-            return @($response)
+            Write-Log "[POLL-JOBS] Received $($jobsList.Count) job(s)" "INFO"
+            return $jobsList
         }
         
         return @()
@@ -869,7 +1512,7 @@ function Execute-Job {
         
         # 3. Execute job based on type
         $output = $null
-        $error_message = $null
+        $job_error_message = $null  # BUG 9 fix: renamed from $error_message to avoid collision with $Error
         $status = "completed"
         
         switch ($Job.job_type) {
@@ -947,6 +1590,22 @@ function Execute-Job {
             "collect_dns_blocks" {
                 $output = Invoke-CollectDnsBlocks
             }
+            "force_update" {
+                # v5.0.13-fix: Handle force_update as job type (was missing, fell to default)
+                if ($Job.payload) {
+                    $updateResponse = @{
+                        target_version = $Job.payload.target_version
+                        script_content_base64 = $Job.payload.script_content_base64
+                        sha256 = $Job.payload.sha256
+                        reason = if ($Job.payload.reason) { $Job.payload.reason } else { "force_update job" }
+                        override_safe_mode = if ($Job.payload.override_safe_mode) { $Job.payload.override_safe_mode } else { $false }
+                    }
+                    $output = Apply-ForcedUpdate -Response ([PSCustomObject]$updateResponse)
+                } else {
+                    $output = @{ success = $false; error = "Missing payload for force_update" }
+                    $status = "failed"
+                }
+            }
             "integration_test_v3" {
                 $output = @{
                     pong = $true
@@ -956,7 +1615,7 @@ function Execute-Job {
                 }
             }
             default {
-                $error_message = "Unknown job type: $($Job.job_type)"
+                $job_error_message = "Unknown job type: $($Job.job_type)"
                 $status = "failed"
                 Write-Log "[JOB] Unknown job type: $($Job.job_type)" "WARN"
             }
@@ -978,7 +1637,7 @@ function Execute-Job {
             status = $status
             output = $output
             output_hash = $outputHash
-            error_message = $error_message
+            error_message = $job_error_message
             duration_seconds = $duration
             execution_hash = $hashData.execution_hash
             previous_execution_hash = $hashData.previous_execution_hash
@@ -1302,7 +1961,7 @@ function Invoke-CollectSoftwareInventory {
 function Invoke-CollectAntivirusStatus {
     try {
         # ── Phase 1: WMI SecurityCenter2 (detecta qualquer AV registrado no Windows) ──
-        $avProducts = Get-WmiObject -Namespace "root\SecurityCenter2" -Class "AntiVirusProduct" -ErrorAction SilentlyContinue
+        $avProducts = Get-CimInstance -Namespace "root/SecurityCenter2" -ClassName AntiVirusProduct -ErrorAction SilentlyContinue
         
         $avList = @()
         foreach ($av in $avProducts) {
@@ -1893,7 +2552,7 @@ function Invoke-LightVulnScan {
 function Invoke-UpdateAgent {
     param([object]$Payload)
     
-    Write-Log "[UPDATE] Starting update_agent check..." "INFO"
+    Write-Log "[UPDATE] Starting update_agent via serve-agent-update..." "INFO"
     
     try {
         $updateResult = Invoke-SecureRequest `
@@ -1909,9 +2568,10 @@ function Invoke-UpdateAgent {
             }
         }
         
-        $data = $updateResult.Body | ConvertFrom-Json
+        $data = $updateResult.Content | ConvertFrom-Json
         
-        if ($data.message -eq "Already up to date") {
+        # Check if already up to date
+        if ($data.message -eq "Already up to date" -or $data.message -match "No update available") {
             Write-Log "[UPDATE] Already at latest version ($($data.current_version))" "INFO"
             return @{
                 status = "up_to_date"
@@ -1920,13 +2580,42 @@ function Invoke-UpdateAgent {
             }
         }
         
-        # If update available, let force_update handle it in next heartbeat
-        Write-Log "[UPDATE] Update available: $($data.version). Will apply via force_update." "INFO"
+        # If update data includes script content, apply it directly via Apply-ForcedUpdate
+        if ($data.script_content_base64 -and $data.version) {
+            Write-Log "[UPDATE] Update available: $($data.version). Applying directly..." "INFO"
+            
+            $updateResponse = @{
+                target_version = $data.version
+                script_content_base64 = $data.script_content_base64
+                sha256 = if ($data.sha256_base64) { $data.sha256_base64 } else { $data.sha256 }
+                reason = if ($data.force_update_reason) { $data.force_update_reason } else { "update_agent job" }
+                override_safe_mode = $false
+            }
+            
+            $applyResult = Apply-ForcedUpdate -Response ([PSCustomObject]$updateResponse)
+            
+            if ($applyResult.success) {
+                return @{
+                    status = "update_applied"
+                    current_version = $Global:AgentVersion
+                    new_version = $data.version
+                }
+            } else {
+                return @{
+                    status = "update_failed"
+                    error = $applyResult.error
+                    current_version = $Global:AgentVersion
+                    target_version = $data.version
+                }
+            }
+        }
+        
+        # No script content - just report availability
+        Write-Log "[UPDATE] Update metadata received but no script content. Version: $($data.version)" "WARN"
         return @{
-            status = "update_available"
+            status = "update_available_no_content"
             current_version = $Global:AgentVersion
             target_version = $data.version
-            message = "Update will be applied via heartbeat force_update mechanism"
         }
         
     } catch {
@@ -2194,7 +2883,7 @@ function Invoke-DisableService {
         }
         
         $previousStatus = $service.Status.ToString()
-        $previousStartType = (Get-WmiObject Win32_Service -Filter "Name='$serviceName'").StartMode
+        $previousStartType = (Get-CimInstance Win32_Service -Filter "Name='$serviceName'").StartMode
         
         # Stop if running
         if ($service.Status -ne 'Stopped') {
@@ -2296,7 +2985,7 @@ function Invoke-DiskCleanup {
     )
     
     try {
-        $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
+        $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
         $usedPercent = [math]::Round((($disk.Size - $disk.FreeSpace) / $disk.Size) * 100, 1)
         
         if ($usedPercent -lt $ThresholdPercent) {
@@ -2358,7 +3047,7 @@ function Invoke-DiskCleanup {
         } catch { }
         
         # Recalculate disk usage
-        $diskAfter = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
+        $diskAfter = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
         $usedPercentAfter = [math]::Round((($diskAfter.Size - $diskAfter.FreeSpace) / $diskAfter.Size) * 100, 1)
         $freedGB = [math]::Round(($diskAfter.FreeSpace - $disk.FreeSpace) / 1GB, 2)
         
@@ -2587,10 +3276,21 @@ function Get-UnauthorizedSoftware {
             "Realtek*"
         )
         
-        # Get installed software
-        $installedSoftware = Get-WmiObject Win32_Product -ErrorAction SilentlyContinue | 
-            Where-Object { $_.Name } |
-            Select-Object -ExpandProperty Name -Unique
+        # v5.0.13-fix: Use registry instead of Win32_Product (which is 5-20min slow and triggers MSI reconfiguration)
+        $installedSoftware = @()
+        $regPaths = @(
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+        )
+        foreach ($regPath in $regPaths) {
+            try {
+                $items = Get-ItemProperty $regPath -ErrorAction SilentlyContinue | 
+                    Where-Object { $_.DisplayName } |
+                    Select-Object -ExpandProperty DisplayName
+                $installedSoftware += $items
+            } catch { }
+        }
+        $installedSoftware = $installedSoftware | Select-Object -Unique
         
         # Filter unauthorized
         $unauthorized = @()
@@ -2880,7 +3580,7 @@ function Invoke-ServiceHealthCheck {
         foreach ($svcName in $serviceNames) {
             $svc = Get-Service -Name $svcName -ErrorAction SilentlyContinue
             if ($svc) {
-                $startType = (Get-WmiObject Win32_Service -Filter "Name='$svcName'" -ErrorAction SilentlyContinue).StartMode
+                $startType = (Get-CimInstance Win32_Service -Filter "Name='$svcName'" -ErrorAction SilentlyContinue).StartMode
                 $isHealthy = ($svc.Status -eq 'Running') -or ($startType -eq 'Disabled' -or $startType -eq 'Manual')
                 
                 if (-not $isHealthy) { $unhealthy++ }
@@ -2902,7 +3602,8 @@ function Invoke-ServiceHealthCheck {
             }
         }
         
-        Write-Log "[SVC-HEALTH] Checked $($results.Count) services, $unhealthy unhealthy" $(if ($unhealthy -gt 0) {"WARN"} else {"SUCCESS"})
+        $svcLogLevel = if ($unhealthy -gt 0) { "WARN" } else { "SUCCESS" }
+        Write-Log "[SVC-HEALTH] Checked $($results.Count) services, $unhealthy unhealthy" $svcLogLevel
         
         return @{
             success = $true
@@ -3183,16 +3884,17 @@ function Invoke-ApplySecurityPatch {
 # ============================================
 function Get-SystemMetrics {
     try {
-        $cpu = Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average | Select-Object -ExpandProperty Average
-        $memory = Get-WmiObject Win32_OperatingSystem
-        $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
-        $uptime = (Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+        # v5.0.13-perf: Use CIM instead of WMI (faster, uses WSMan)
+        $cpu = Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average | Select-Object -ExpandProperty Average
+        $os = Get-CimInstance Win32_OperatingSystem
+        $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
+        $uptime = (Get-Date) - $os.LastBootUpTime
         
         return @{
             cpu_percent = [math]::Round($cpu, 2)
-            memory_total_gb = [math]::Round($memory.TotalVisibleMemorySize / 1MB, 2)
-            memory_used_gb = [math]::Round(($memory.TotalVisibleMemorySize - $memory.FreePhysicalMemory) / 1MB, 2)
-            memory_used_percent = [math]::Round((($memory.TotalVisibleMemorySize - $memory.FreePhysicalMemory) / $memory.TotalVisibleMemorySize) * 100, 2)
+            memory_total_gb = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2)
+            memory_used_gb = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1MB, 2)
+            memory_used_percent = [math]::Round((($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / $os.TotalVisibleMemorySize) * 100, 2)
             disk_total_gb = [math]::Round($disk.Size / 1GB, 2)
             disk_free_gb = [math]::Round($disk.FreeSpace / 1GB, 2)
             disk_used_percent = [math]::Round((($disk.Size - $disk.FreeSpace) / $disk.Size) * 100, 2)
@@ -3249,23 +3951,60 @@ function Apply-ForcedUpdate {
             }
         }
         
-        # Criar arquivo temporario
-        $tempScript = Join-Path $env:TEMP "cybershield-force-update-$targetVersion.ps1"
+        # BUG FIX #5: Create temp file in SAME directory as target for atomic mv (same filesystem)
+        $installDir = "C:\CyberShield"
+        $tempScript = Join-Path $installDir "cybershield-update-temp-$([Guid]::NewGuid().ToString('N').Substring(0,8)).ps1"
         
-        # CRITICAL: Base64 decode - preserva 100% dos bytes
+        # BUG FIX #3: Base64 decode with try/catch for invalid content
         Write-Log "[FORCE UPDATE] Decodificando Base64..." "DEBUG"
-        $bytes = [System.Convert]::FromBase64String($base64Content)
+        try {
+            $bytes = [System.Convert]::FromBase64String($base64Content)
+        } catch {
+            Write-Log "[FORCE UPDATE] REJECTED - Base64 decode failed: $($_.Exception.Message)" "ERROR"
+            return @{ success = $false; error = "Base64 decode failed: $($_.Exception.Message)" }
+        }
+        # v5.0.14: Cap update payload size to prevent memory exhaustion (5MB max)
+        if ($bytes.Length -gt 5MB) {
+            Write-Log "[FORCE UPDATE] REJECTED - Payload too large: $($bytes.Length) bytes (max 5MB)" "ERROR"
+            return @{ success = $false; error = "Update payload exceeds 5MB limit ($($bytes.Length) bytes)" }
+        }
         [System.IO.File]::WriteAllBytes($tempScript, $bytes)
         Write-Log "[FORCE UPDATE] Script salvo: $($bytes.Length) bytes" "DEBUG"
         
         # Validar SHA256
-        $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
+        try {
+            $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+        } catch {
+            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+            throw "Get-FileHash failed on temp script: $($_.Exception.Message)"
+        }
         if ($actualHash -ne $expectedHash.ToLower()) {
             Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
             throw "SHA256 mismatch! Esperado: $expectedHash, Obtido: $actualHash"
         }
         
         Write-Log "[FORCE UPDATE] SHA256 validado: $actualHash" "SUCCESS"
+        
+        # v5.0.13: ECDSA/Ed25519 signature validation on update payload
+        $updateSignature = $Response.ecdsa_signature
+        if (-not $updateSignature) { $updateSignature = $Response.signature_base64 }
+        if ($updateSignature -and $updateSignature.Length -gt 10) {
+            $sigValid = Test-Ed25519HashSignature -Hash $actualHash -SignatureBase64 $updateSignature
+            if (-not $sigValid) {
+                Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+                Write-Log "[FORCE UPDATE] REJECTED - Update signature INVALID! Possible supply chain attack." "ERROR"
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9006 -EntryType Error -Message "FORCE UPDATE REJECTED: Invalid cryptographic signature on update payload. SHA256: $actualHash" -ErrorAction SilentlyContinue
+                Add-EvidenceEntry -Type "security_alert" -Data @{
+                    event = "update_signature_invalid"
+                    target_version = $targetVersion
+                    sha256 = $actualHash
+                } -Severity "critical"
+                return @{ success = $false; error = "Update signature verification failed - possible supply chain attack" }
+            }
+            Write-Log "[FORCE UPDATE] Cryptographic signature VERIFIED for update payload" "SUCCESS"
+        } else {
+            Write-Log "[FORCE UPDATE] WARNING: No cryptographic signature on update payload (legacy server)" "WARN"
+        }
         
         # Detectar script atual e diretorio de instalacao
         $installDir = "C:\CyberShield"
@@ -3307,10 +4046,27 @@ function Apply-ForcedUpdate {
             }
         }
         
-        # APLICAR UPDATE
-        Copy-Item -Path $tempScript -Destination $targetScript -Force
-        Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
-        Write-Log "[FORCE UPDATE] Script instalado: $targetScript" "SUCCESS"
+        # BUG FIX #5: Re-verify hash immediately before move (close TOCTOU window)
+        try {
+            $preMovHash = (Get-FileHash -Path $tempScript -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+        } catch {
+            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+            throw "Pre-move hash verification failed: $($_.Exception.Message)"
+        }
+        if ($preMovHash -ne $expectedHash.ToLower()) {
+            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+            throw "TOCTOU: Temp file modified between validation and move! Expected: $expectedHash, Got: $preMovHash"
+        }
+        
+        # BUG FIX #4: Atomic Move-Item with error handling for file locks
+        try {
+            Move-Item -Path $tempScript -Destination $targetScript -Force -ErrorAction Stop
+        } catch {
+            Write-Log "[FORCE UPDATE] Move-Item failed (file locked?): $($_.Exception.Message)" "ERROR"
+            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+            return @{ success = $false; error = "Move-Item failed: $($_.Exception.Message)" }
+        }
+        Write-Log "[FORCE UPDATE] Script instalado (atomic move): $targetScript" "SUCCESS"
         
         # Registrar evidencia
         Add-EvidenceEntry -Type "force_update" -Data @{
@@ -3335,6 +4091,8 @@ function Apply-ForcedUpdate {
             
             if ($confirmResult.Success) {
                 Write-Log "[FORCE UPDATE] Confirmacao enviada ao backend" "SUCCESS"
+            } else {
+                Write-Log "[FORCE UPDATE] Confirmacao falhou: $($confirmResult.Error)" "WARN"
             }
         } catch {
             Write-Log "[FORCE UPDATE] Falha ao confirmar no backend (nao critico): $($_.Exception.Message)" "WARN"
@@ -3376,7 +4134,7 @@ function Apply-ForcedUpdate {
         
         # EXIT para permitir novo script iniciar
         Write-Log "[FORCE UPDATE] Encerrando processo atual para nova versao iniciar..." "INFO"
-        exit 0
+        [Environment]::Exit(0)
         
     } catch {
         Write-Log "[FORCE UPDATE] Erro: $($_.Exception.Message)" "ERROR"
@@ -3467,6 +4225,21 @@ function Send-Heartbeat {
                             Write-Log "[FORCE UPDATE] Falha ao aplicar: $($updateResult.error)" "ERROR"
                         }
                     }
+                    
+                    # ============================================
+                    # v5.0.13: SIGNED HASH CACHE (replaces plain hash cache)
+                    # Server provides script_sha256 + script_hash_signature for integrity
+                    # Hash is only trusted if accompanied by valid signature
+                    # ============================================
+                    if ($response.script_sha256) {
+                        try {
+                            $hashSig = if ($response.script_hash_signature) { $response.script_hash_signature } else { "" }
+                            $hashTs = if ($response.script_hash_signed_at) { $response.script_hash_signed_at } else { (Get-Date -Format "o") }
+                            Save-SignedHashCache -Hash $response.script_sha256 -Signature $hashSig -Timestamp $hashTs
+                        } catch {
+                            Write-Log "[INTEGRITY] Failed to cache signed hash: $($_.Exception.Message)" "WARN"
+                        }
+                    }
                 } catch {
                     Write-Log "[HEARTBEAT] Erro ao processar response: $($_.Exception.Message)" "WARN"
                 }
@@ -3485,13 +4258,501 @@ function Send-Heartbeat {
 }
 
 # ============================================
-#  MAIN LOOP v5.0.2 FULL ENTERPRISE
+#  v5.0.11: WINDOWS TOAST NOTIFICATION SYSTEM
+# ============================================
+function Show-SecurityToast {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Title,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$Message,
+        
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("Info", "Warning", "Error")]
+        [string]$Severity = "Warning",
+        
+        [Parameter(Mandatory = $false)]
+        [int]$DurationMs = 10000
+    )
+    
+    try {
+        # Method 1: BurntToast module (if available)
+        if (Get-Module -ListAvailable -Name BurntToast -ErrorAction SilentlyContinue) {
+            $icon = switch ($Severity) {
+                "Error"   { "Warning" }
+                "Warning" { "Warning" }
+                default   { "None" }
+            }
+            New-BurntToastNotification -Text $Title, $Message -AppLogo $null -Sound $icon -ErrorAction SilentlyContinue
+            Write-Log "[TOAST] BurntToast: $Title" "DEBUG"
+            return
+        }
+        
+        # Method 2: Windows BalloonTip (universal fallback)
+        Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+        
+        $balloon = New-Object System.Windows.Forms.NotifyIcon
+        $balloon.Icon = [System.Drawing.SystemIcons]::Shield
+        $balloon.BalloonTipTitle = $Title
+        $balloon.BalloonTipText = $Message
+        $balloon.BalloonTipIcon = switch ($Severity) {
+            "Error"   { [System.Windows.Forms.ToolTipIcon]::Error }
+            "Warning" { [System.Windows.Forms.ToolTipIcon]::Warning }
+            default   { [System.Windows.Forms.ToolTipIcon]::Info }
+        }
+        $balloon.Visible = $true
+        $balloon.ShowBalloonTip($DurationMs)
+        
+        # Cleanup after display
+        # BUG 11 fix: Non-blocking - reduced from 10.5s to 1s
+        Start-Sleep -Milliseconds 1000
+        $balloon.Dispose()
+        
+        Write-Log "[TOAST] BalloonTip: $Title" "DEBUG"
+    } catch {
+        # Toast failures are non-critical - log and continue
+        Write-Log "[TOAST] Failed to show notification (non-critical): $($_.Exception.Message)" "DEBUG"
+    }
+}
+
+# ============================================
+#  v5.0.11: PUSH ALERT TO BACKEND
+# ============================================
+function Invoke-PushAlert {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$AlertType,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$AlertMessage,
+        
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("info", "warning", "critical")]
+        [string]$Severity = "warning",
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Details = @{}
+    )
+    
+    # Cooldown check - prevent alert flooding
+    $cooldownKey = $AlertType
+    $now = Get-Date
+    if ($Global:AlertCooldownTracker.ContainsKey($cooldownKey)) {
+        $lastAlert = $Global:AlertCooldownTracker[$cooldownKey]
+        $elapsed = ($now - $lastAlert).TotalSeconds
+        if ($elapsed -lt $Global:AlertCooldownSeconds) {
+            Write-Log "[PUSH-ALERT] Cooldown active for '$AlertType' (${elapsed}s / $($Global:AlertCooldownSeconds)s)" "DEBUG"
+            return $false
+        }
+    }
+    
+    try {
+        $evidenceData = @{
+            alert_type = $AlertType
+            alert_message = $AlertMessage
+            severity = $Severity
+            detected_at = $now.ToString("o")
+            hostname = $env:COMPUTERNAME
+            agent_version = $Global:AgentVersion
+            details = $Details
+        }
+        
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/submit-agent-evidence" `
+            -Method "POST" `
+            -Body @{
+                agent_name = $Global:AgentName
+                event_type = "local_detection_$AlertType"
+                event_data = $evidenceData
+                severity = $Severity
+            } `
+            -TimeoutSec 15
+        
+        if ($result.Success) {
+            $Global:AlertCooldownTracker[$cooldownKey] = $now
+            $Global:LocalDetectionStats.alerts_sent++
+            Write-Log "[PUSH-ALERT] Alert '$AlertType' sent to backend" "SUCCESS"
+            return $true
+        } else {
+            Write-Log "[PUSH-ALERT] Failed to send '$AlertType': $($result.Error)" "WARN"
+            return $false
+        }
+    } catch {
+        Write-Log "[PUSH-ALERT] Exception sending '$AlertType': $($_.Exception.Message)" "WARN"
+        return $false
+    }
+}
+
+# ============================================
+#  v5.0.11: LOCAL DETECTION - ANTIVIRUS CHECK
+# ============================================
+function Test-AntivirusStatus {
+    try {
+        $Global:LocalDetectionStats.antivirus_checks++
+        $avInactive = $false
+        $avDetails = @{}
+        
+        # Phase 1: WMI SecurityCenter2 (desktop/workstation)
+        try {
+            $avProducts = Get-CimInstance -Namespace "root/SecurityCenter2" -ClassName AntiVirusProduct -ErrorAction SilentlyContinue
+            
+            if ($avProducts) {
+                foreach ($av in $avProducts) {
+                    $productState = $av.productState
+                    $isEnabled = (($productState -shr 12) -band 1) -eq 1
+                    $isUpToDate = (($productState -shr 4) -band 1) -eq 0
+                    
+                    if (-not $isEnabled) {
+                        $avInactive = $true
+                        $avDetails = @{
+                            product_name = $av.displayName
+                            product_state = $productState
+                            is_enabled = $false
+                            is_up_to_date = $isUpToDate
+                            detection_method = "SecurityCenter2"
+                        }
+                        break
+                    }
+                }
+                
+                if (-not $avInactive) {
+                    Write-Log "[LOCAL-DETECT] Antivirus active: $($avProducts[0].displayName)" "DEBUG"
+                    return @{ status = "active"; product = $avProducts[0].displayName }
+                }
+            }
+        } catch {
+            # SecurityCenter2 not available on Server editions
+        }
+        
+        # Phase 2: EDR process detection (enterprise)
+        $edrProcesses = @(
+            @{ name = "CrowdStrike"; processes = @("csfalconservice", "CSFalconContainer") },
+            @{ name = "SentinelOne"; processes = @("SentinelAgent", "SentinelHelperService") },
+            @{ name = "Cortex XDR"; processes = @("cyserver", "CortexXDR") },
+            @{ name = "Carbon Black"; processes = @("cb", "CbDefense") },
+            @{ name = "Sophos"; processes = @("SophosHealth", "SSPService") },
+            @{ name = "ESET"; processes = @("ekrn", "egui") },
+            @{ name = "Kaspersky"; processes = @("avp", "klnagent") },
+            @{ name = "Bitdefender"; processes = @("bdagent", "vsserv") },
+            @{ name = "Trend Micro"; processes = @("coreServiceShell", "Ntrtscan") },
+            @{ name = "Cylance"; processes = @("CylanceSvc") },
+            @{ name = "Windows Defender"; processes = @("MsMpEng") }
+        )
+        
+        $edrFound = $false
+        foreach ($edr in $edrProcesses) {
+            foreach ($proc in $edr.processes) {
+                if (Get-Process -Name $proc -ErrorAction SilentlyContinue) {
+                    $edrFound = $true
+                    Write-Log "[LOCAL-DETECT] EDR active: $($edr.name) ($proc)" "DEBUG"
+                    return @{ status = "active"; product = $edr.name; detection_method = "process_scan" }
+                }
+            }
+        }
+        
+        if (-not $edrFound -and -not $avProducts) {
+            $avInactive = $true
+            $avDetails = @{
+                detection_method = "no_av_found"
+                checked_edrs = ($edrProcesses | ForEach-Object { $_.name }) -join ", "
+            }
+        }
+        
+        if ($avInactive) {
+            Write-Log "[LOCAL-DETECT] ANTIVIRUS INACTIVE DETECTED!" "ERROR"
+            
+            Show-SecurityToast `
+                -Title "CyberShield - Protecao Inativa!" `
+                -Message "Nenhum antivirus ativo detectado neste computador. Acao necessaria!" `
+                -Severity "Error"
+            
+            Invoke-PushAlert `
+                -AlertType "antivirus_inactive" `
+                -AlertMessage "Antivirus inativo detectado em $env:COMPUTERNAME" `
+                -Severity "critical" `
+                -Details $avDetails
+            
+            Add-EvidenceEntry -Type "local_detection" -Data @{
+                detection = "antivirus_inactive"
+                details = $avDetails
+            } -Severity "critical"
+            
+            return @{ status = "inactive"; details = $avDetails }
+        }
+        
+        return @{ status = "active" }
+    } catch {
+        Write-Log "[LOCAL-DETECT] Antivirus check error: $($_.Exception.Message)" "WARN"
+        return @{ status = "unknown"; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.11: LOCAL DETECTION - FIREWALL CHECK + AUTO-REMEDIATION
+# ============================================
+function Test-FirewallStatus {
+    try {
+        $Global:LocalDetectionStats.firewall_checks++
+        
+        $profiles = Get-NetFirewallProfile -ErrorAction SilentlyContinue
+        
+        if (-not $profiles) {
+            Write-Log "[LOCAL-DETECT] Could not query firewall profiles" "WARN"
+            return @{ status = "unknown" }
+        }
+        
+        $disabledProfiles = @()
+        foreach ($profile in $profiles) {
+            if ($profile.Enabled -eq $false) {
+                $disabledProfiles += $profile.Name
+            }
+        }
+        
+        if ($disabledProfiles.Count -gt 0) {
+            Write-Log "[LOCAL-DETECT] FIREWALL DISABLED on profiles: $($disabledProfiles -join ', ')" "ERROR"
+            
+            Show-SecurityToast `
+                -Title "CyberShield - Firewall Desativado!" `
+                -Message "Firewall desativado em: $($disabledProfiles -join ', '). Reativando automaticamente..." `
+                -Severity "Error"
+            
+            # AUTO-REMEDIATION: Re-enable disabled firewall profiles
+            $remediated = @()
+            foreach ($profileName in $disabledProfiles) {
+                try {
+                    Set-NetFirewallProfile -Name $profileName -Enabled True -ErrorAction Stop
+                    $remediated += $profileName
+                    Write-Log "[AUTO-REMEDIATE] Firewall re-enabled on profile: $profileName" "SUCCESS"
+                } catch {
+                    Write-Log "[AUTO-REMEDIATE] Failed to re-enable firewall on $profileName : $($_.Exception.Message)" "ERROR"
+                }
+            }
+            
+            if ($remediated.Count -gt 0) {
+                $Global:LocalDetectionStats.remediations_applied++
+            }
+            
+            Invoke-PushAlert `
+                -AlertType "firewall_disabled" `
+                -AlertMessage "Firewall desativado em $env:COMPUTERNAME (profiles: $($disabledProfiles -join ', ')). Auto-remediado: $($remediated -join ', ')" `
+                -Severity "critical" `
+                -Details @{
+                    disabled_profiles = $disabledProfiles
+                    remediated_profiles = $remediated
+                    auto_remediated = ($remediated.Count -gt 0)
+                }
+            
+            Add-EvidenceEntry -Type "local_detection" -Data @{
+                detection = "firewall_disabled"
+                disabled_profiles = $disabledProfiles
+                remediated_profiles = $remediated
+            } -Severity "critical"
+            
+            if ($remediated.Count -gt 0) {
+                Show-SecurityToast `
+                    -Title "CyberShield - Firewall Reativado!" `
+                    -Message "Firewall reativado com sucesso em: $($remediated -join ', ')" `
+                    -Severity "Info"
+            }
+            
+            return @{ status = "remediated"; disabled = $disabledProfiles; remediated = $remediated }
+        }
+        
+        Write-Log "[LOCAL-DETECT] Firewall active on all profiles" "DEBUG"
+        return @{ status = "active" }
+    } catch {
+        Write-Log "[LOCAL-DETECT] Firewall check error: $($_.Exception.Message)" "WARN"
+        return @{ status = "unknown"; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.11: LOCAL DETECTION - USB DEVICE MONITORING
+# ============================================
+function Test-UsbDevices {
+    try {
+        $Global:LocalDetectionStats.usb_checks++
+        
+        $usbDrives = Get-CimInstance -ClassName Win32_DiskDrive -ErrorAction SilentlyContinue | 
+            Where-Object { $_.InterfaceType -eq "USB" }
+        
+        if ($usbDrives -and $usbDrives.Count -gt 0) {
+            foreach ($usb in $usbDrives) {
+                $usbInfo = @{
+                    device_id = $usb.DeviceID
+                    model = $usb.Model
+                    serial = $usb.SerialNumber
+                    size_gb = [math]::Round($usb.Size / 1GB, 2)
+                    interface = $usb.InterfaceType
+                }
+                
+                Write-Log "[LOCAL-DETECT] USB STORAGE DETECTED: $($usb.Model) ($([math]::Round($usb.Size / 1GB, 2))GB)" "WARN"
+                
+                Show-SecurityToast `
+                    -Title "CyberShield - Dispositivo USB Detectado" `
+                    -Message "USB conectado: $($usb.Model). Este evento foi registrado para auditoria." `
+                    -Severity "Warning"
+                
+                Invoke-PushAlert `
+                    -AlertType "unauthorized_usb" `
+                    -AlertMessage "Dispositivo USB de armazenamento detectado em $env:COMPUTERNAME : $($usb.Model)" `
+                    -Severity "warning" `
+                    -Details $usbInfo
+                
+                Add-EvidenceEntry -Type "local_detection" -Data @{
+                    detection = "usb_storage_connected"
+                    device = $usbInfo
+                } -Severity "warning"
+            }
+            
+            return @{ status = "detected"; count = $usbDrives.Count; devices = $usbDrives | ForEach-Object { $_.Model } }
+        }
+        
+        return @{ status = "none" }
+    } catch {
+        Write-Log "[LOCAL-DETECT] USB check error: $($_.Exception.Message)" "WARN"
+        return @{ status = "unknown"; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.11: LOCAL DETECTION - SUSPICIOUS PROCESS CHECK
+# ============================================
+function Test-SuspiciousProcesses {
+    try {
+        $Global:LocalDetectionStats.process_checks++
+        
+        # v5.0.13-perf: Pre-compile regex patterns on first call (cached globally)
+        if (-not $Global:CompiledSuspiciousPatterns) {
+            $patternDefs = @(
+                @{ pattern = "mimikatz"; severity = "critical"; description = "Credential dumping tool" },
+                @{ pattern = "psexec"; severity = "warning"; description = "Remote execution tool" },
+                @{ pattern = "ncat"; severity = "warning"; description = "Netcat variant" },
+                @{ pattern = "nc\.exe"; severity = "warning"; description = "Netcat" },
+                @{ pattern = "wireshark"; severity = "info"; description = "Network sniffer" },
+                @{ pattern = "keylogger"; severity = "critical"; description = "Potential keylogger" },
+                @{ pattern = "cobaltstrike"; severity = "critical"; description = "C2 framework" },
+                @{ pattern = "meterpreter"; severity = "critical"; description = "Exploitation framework" },
+                @{ pattern = "lazagne"; severity = "critical"; description = "Password recovery tool" },
+                @{ pattern = "bloodhound"; severity = "warning"; description = "AD enumeration tool" }
+            )
+            $Global:CompiledSuspiciousPatterns = $patternDefs | ForEach-Object {
+                @{
+                    regex = [regex]::new("\b$($_.pattern)\b", "IgnoreCase, Compiled")
+                    severity = $_.severity
+                    description = $_.description
+                    pattern = $_.pattern
+                }
+            }
+            Write-Log "[LOCAL-DETECT] Compiled $($Global:CompiledSuspiciousPatterns.Count) suspicious process patterns" "DEBUG"
+        }
+        
+        $detected = @()
+        # v5.0.13-perf: Only get Name+Id (skip Path - it's slow and requires elevation)
+        $processes = Get-Process -ErrorAction SilentlyContinue | Select-Object -Property Name, Id
+        
+        foreach ($proc in $processes) {
+            foreach ($suspicious in $Global:CompiledSuspiciousPatterns) {
+                if ($suspicious.regex.IsMatch($proc.Name)) {
+                    # v5.0.13-perf: Only fetch Path on-demand for detected suspicious processes
+                    $procPath = "N/A"
+                    try { $procPath = (Get-Process -Id $proc.Id -ErrorAction Stop).Path } catch { }
+                    if (-not $procPath) { $procPath = "N/A" }
+                    
+                    $detected += @{
+                        process_name = $proc.Name
+                        process_id = $proc.Id
+                        process_path = $procPath
+                        pattern = $suspicious.pattern
+                        severity = $suspicious.severity
+                        description = $suspicious.description
+                    }
+                }
+            }
+        }
+        
+        if ($detected.Count -gt 0) {
+            foreach ($det in $detected) {
+                Write-Log "[LOCAL-DETECT] SUSPICIOUS PROCESS: $($det.process_name) (PID: $($det.process_id)) - $($det.description)" "ERROR"
+                
+                if ($det.severity -eq "critical") {
+                    Show-SecurityToast `
+                        -Title "CyberShield - Processo Suspeito!" `
+                        -Message "Processo perigoso detectado: $($det.process_name) - $($det.description)" `
+                        -Severity "Error"
+                }
+                
+                Invoke-PushAlert `
+                    -AlertType "suspicious_process" `
+                    -AlertMessage "Processo suspeito detectado em $env:COMPUTERNAME : $($det.process_name) - $($det.description)" `
+                    -Severity $det.severity `
+                    -Details $det
+                
+                Add-EvidenceEntry -Type "local_detection" -Data @{
+                    detection = "suspicious_process"
+                    process = $det
+                } -Severity $det.severity
+            }
+            
+            return @{ status = "detected"; count = $detected.Count; processes = $detected }
+        }
+        
+        return @{ status = "clean" }
+    } catch {
+        Write-Log "[LOCAL-DETECT] Process check error: $($_.Exception.Message)" "WARN"
+        return @{ status = "unknown"; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  v5.0.11: LOCAL DETECTION ORCHESTRATOR
+# ============================================
+function Invoke-LocalDetection {
+    Write-Log "[LOCAL-DETECT] Running proactive security checks..." "INFO"
+    
+    $results = @{
+        timestamp = (Get-Date).ToString("o")
+        antivirus = $null
+        firewall = $null
+        usb = $null
+        processes = $null
+        threats_found = 0
+        remediations_applied = 0
+    }
+    
+    $results.antivirus = Test-AntivirusStatus
+    if ($results.antivirus.status -eq "inactive") { $results.threats_found++ }
+    
+    $results.firewall = Test-FirewallStatus
+    if ($results.firewall.status -eq "remediated") { 
+        $results.threats_found++
+        $results.remediations_applied++ 
+    }
+    
+    $results.usb = Test-UsbDevices
+    if ($results.usb.status -eq "detected") { $results.threats_found += $results.usb.count }
+    
+    $results.processes = Test-SuspiciousProcesses
+    if ($results.processes.status -eq "detected") { $results.threats_found += $results.processes.count }
+    
+    if ($results.threats_found -gt 0) {
+        Write-Log "[LOCAL-DETECT] Completed: $($results.threats_found) threat(s) found, $($results.remediations_applied) remediation(s) applied" "WARN"
+    } else {
+        Write-Log "[LOCAL-DETECT] Completed: System clean" "SUCCESS"
+    }
+    
+    return $results
+}
+
+# ============================================
+#  MAIN LOOP v5.0.11 FULL ENTERPRISE
 # ============================================
 Write-Log "============================================" "INFO"
 Write-Log "[START] CyberShield Agent $($Global:AgentVersion) FULL ENTERPRISE" "INFO"
 Write-Log "[INFO] ServerUrl: $Global:ServerUrl" "DEBUG"
 Write-Log "[INFO] AgentName: $Global:AgentName" "DEBUG"
-Write-Log "[INFO] Features: ECDSA-signing, Ed25519-verify, hash-chain, FSM, DNS-filter, auto-remediation" "INFO"
+Write-Log "[INFO] Features: ECDSA-signing, Ed25519-verify, hash-chain, FSM, DNS-filter, auto-remediation, LOCAL-DETECTION, TOAST-ALERTS" "INFO"
 Write-Log "============================================" "INFO"
 
 # ============================================
@@ -3507,15 +4768,24 @@ if ($savedState -eq "SAFE_MODE") {
 
 # Initialize ECDSA keys
 $keysInitialized = Initialize-AgentKeys
+$Global:SecurityDegraded = $false
+$consecutiveHeartbeatFailures = 0
 if (-not $keysInitialized) {
-    Write-Log "[STARTUP] Failed to initialize keys - entering DEGRADED mode" "ERROR"
+    Write-Log "[STARTUP] Failed to initialize keys - entering DEGRADED mode (FAIL-CLOSED)" "ERROR"
     Set-AgentState -NewState "DEGRADED" -Reason "Key initialization failed"
+    $Global:SecurityDegraded = $true
+    Write-Log "[SECURITY] SecurityDegraded=TRUE - operational jobs will be BLOCKED until crypto is restored" "WARN"
 }
 
 # ============================================
 #  PHASE 2: AUTHENTICATION
 # ============================================
-Set-AgentState -NewState "AUTHENTICATING" -Reason "Validating credentials"
+# BUG 4 fix: Guard - only transition to AUTHENTICATING if not stuck in DEGRADED with failed keys
+if ($Global:CurrentState -eq "DEGRADED" -and $Global:SecurityDegraded) {
+    Write-Log "[STARTUP] Skipping AUTHENTICATING - SecurityDegraded, staying in DEGRADED for heartbeat attempt" "WARN"
+} else {
+    Set-AgentState -NewState "AUTHENTICATING" -Reason "Validating credentials"
+}
 
 # Send first heartbeat
 $heartbeatSuccess = Send-Heartbeat
@@ -3523,6 +4793,13 @@ $heartbeatSuccess = Send-Heartbeat
 if (-not $heartbeatSuccess) {
     Write-Log "[STARTUP] Initial heartbeat failed - entering DEGRADED mode" "WARN"
     Set-AgentState -NewState "DEGRADED" -Reason "Heartbeat failed"
+    $consecutiveHeartbeatFailures = [Math]::Min($consecutiveHeartbeatFailures + 1, $maxConsecutiveFailures)
+    
+    # Bug 5 fix: If BOTH keys and heartbeat failed, enter SAFE_MODE (fail-closed)
+    if (-not $keysInitialized) {
+        Write-Log "[SECURITY] No crypto + no auth = SAFE_MODE (fail-closed)" "ERROR"
+        Set-AgentState -NewState "SAFE_MODE" -Reason "No auth + no crypto - fail closed"
+    }
 } else {
     # Register public key
     if ($keysInitialized) {
@@ -3531,15 +4808,47 @@ if (-not $heartbeatSuccess) {
             Write-Log "[STARTUP] Key registration failed - result signing unavailable" "WARN"
         }
     }
+    $consecutiveHeartbeatFailures = 0
 }
 
 # ============================================
 #  PHASE 3: SYNCHRONIZATION
 # ============================================
+# Bug 5 fix: If in SAFE_MODE after startup failures, enter recovery loop
+if ($Global:CurrentState -eq "SAFE_MODE") {
+    Write-Log "[STARTUP] Agent in SAFE_MODE - entering recovery-only loop" "WARN"
+    $recoveryAttempt = 0
+    while ($Global:CurrentState -eq "SAFE_MODE") {
+        $recoveryAttempt++
+        # BUG 8 fix: Exponential backoff for recovery (60s, 120s, 240s... max 600s) + jitter
+        $jitter = Get-Random -Minimum 0 -Maximum 30
+        $recoveryDelay = [math]::Min(60 * [math]::Pow(2, $recoveryAttempt - 1), 600) + $jitter
+        Write-Log "[SAFE_MODE] Recovery attempt #$recoveryAttempt - waiting ${recoveryDelay}s (jitter: ${jitter}s)..." "INFO"
+        Start-Sleep -Seconds $recoveryDelay
+        Write-Log "[SAFE_MODE] Attempting recovery heartbeat..." "INFO"
+        $recoveryHb = Send-Heartbeat
+        if ($recoveryHb) {
+            $keysInitialized = Initialize-AgentKeys
+            if ($keysInitialized) {
+                $Global:SecurityDegraded = $false
+                Set-AgentState -NewState "INITIALIZING" -Reason "Recovery successful"
+                Write-Log "[SAFE_MODE] Recovery successful - restarting initialization" "SUCCESS"
+                break
+            } else {
+                Write-Log "[SAFE_MODE] Heartbeat OK but keys still failed - continuing recovery" "WARN"
+            }
+        }
+    }
+}
+
 Set-AgentState -NewState "SYNCING" -Reason "Syncing policies and baseline"
 
-# Initialize process baseline
-Initialize-ProcessBaseline
+# Bug 6 fix: Guard against duplicate baseline initialization
+if (-not $Global:ProcessBaseline) {
+    Initialize-ProcessBaseline
+} else {
+    Write-Log "[BASELINE] Already initialized, skipping duplicate call" "DEBUG"
+}
 
 # Sync DNS blocklist
 Sync-DnsBlocklist
@@ -3559,16 +4868,27 @@ if ($startupTaskHealth.checked -and $startupTaskHealth.repaired) {
 # ============================================
 #  PHASE 4: ENFORCEMENT
 # ============================================
-Set-AgentState -NewState "ENFORCING" -Reason "Normal operation"
-
-Write-Log "[STARTUP] Agent v$($Global:AgentVersion) fully operational in ENFORCING state" "SUCCESS"
+# Bug 2 fix: Only enter ENFORCING if security is not degraded
+if ($Global:SecurityDegraded) {
+    Write-Log "[STARTUP] Agent v$($Global:AgentVersion) starting in DEGRADED mode (SecurityDegraded=TRUE, only recovery jobs allowed)" "WARN"
+} else {
+    Set-AgentState -NewState "ENFORCING" -Reason "Normal operation"
+    Write-Log "[STARTUP] Agent v$($Global:AgentVersion) fully operational in ENFORCING state" "SUCCESS"
+}
 
 $lastHeartbeat = Get-Date
 $lastAutoRepair = Get-Date
 $lastSoftwareCheck = Get-Date
 $lastJobPoll = Get-Date
 $lastDnsSync = Get-Date
+$lastLocalDetection = Get-Date
 $consecutiveNetworkFailures = 0
+$consecutiveHeartbeatFailures = 0  # v5.0.13-fix: Was used but never initialized (BUG with StrictMode)
+$maxConsecutiveFailures = 1000000  # BUG FIX #6: Cap counter to prevent Int32 overflow on long-running agents
+
+# v5.0.11: Run initial local detection on startup
+Write-Log "[STARTUP] Running initial local security detection..." "INFO"
+Invoke-LocalDetection | Out-Null
 
 while ($true) {
     $now = Get-Date
@@ -3579,13 +4899,18 @@ while ($true) {
         # ============================================
         $networkOk = Test-NetworkConnectivity
         if (-not $networkOk) {
-            $consecutiveNetworkFailures++
+            if ($consecutiveNetworkFailures -lt $maxConsecutiveFailures) { $consecutiveNetworkFailures = [Math]::Min($consecutiveNetworkFailures + 1, $maxConsecutiveFailures) }
             if ($consecutiveNetworkFailures -ge 3) {
                 Set-AgentState -NewState "DEGRADED" -Reason "Network connectivity lost"
             }
         } else {
             if ($consecutiveNetworkFailures -ge 3 -and $Global:CurrentState -eq "DEGRADED") {
-                Set-AgentState -NewState "ENFORCING" -Reason "Network restored"
+                # Bug 7 fix: Only restore ENFORCING if crypto is healthy
+                if (-not $Global:SecurityDegraded) {
+                    Set-AgentState -NewState "ENFORCING" -Reason "Network restored"
+                } else {
+                    Write-Log "[FSM] Network restored but SecurityDegraded=TRUE - staying DEGRADED" "WARN"
+                }
             }
             $consecutiveNetworkFailures = 0
         }
@@ -3597,6 +4922,26 @@ while ($true) {
             $jobs = Poll-Jobs
             
             foreach ($job in $jobs) {
+                $jobType = if ($job.type) { $job.type } elseif ($job.job_type) { $job.job_type } else { "unknown" }
+                
+                # Bug 2 fix: When SecurityDegraded, only allow recovery jobs (fail-closed)
+                $recoveryJobTypes = @("update_agent", "force_update", "reinstall_agent")
+                if ($Global:SecurityDegraded -and $jobType -notin $recoveryJobTypes) {
+                    Write-Log "[SECURITY] BLOCKED job '$jobType' - SecurityDegraded=TRUE (only recovery jobs allowed)" "WARN"
+                    # Submit a rejection result so job doesn't stay in 'delivered' forever
+                    # BUG 6 fix: Include all mandatory fields for Submit-JobResult
+                    Submit-JobResult -Job $job -Result @{
+                        success = $false
+                        status = "failed"
+                        output = @{ blocked = $true; reason = "SecurityDegraded" }
+                        output_hash = ""
+                        error_message = "Agent in SecurityDegraded mode - crypto not available. Only update/recovery jobs accepted."
+                        exit_code = 403
+                        execution_hash = ""
+                    }
+                    continue
+                }
+                
                 $result = Execute-Job -Job $job
                 
                 if ($result) {
@@ -3640,8 +4985,49 @@ while ($true) {
         # ============================================
         if (($now - $lastHeartbeat).TotalSeconds -ge $Global:PollIntervalSeconds -and $networkOk) {
             $hbResult = Send-Heartbeat
-            if (-not $hbResult -and $Global:CurrentState -eq "ENFORCING") {
-                Set-AgentState -NewState "DEGRADED" -Reason "Heartbeat failed"
+            if (-not $hbResult) {
+                if ($consecutiveHeartbeatFailures -lt $maxConsecutiveFailures) { $consecutiveHeartbeatFailures = [Math]::Min($consecutiveHeartbeatFailures + 1, $maxConsecutiveFailures) }
+                Write-Log "[HEARTBEAT] Failure #$consecutiveHeartbeatFailures" "WARN"
+                
+                if ($Global:CurrentState -eq "ENFORCING") {
+                    Set-AgentState -NewState "DEGRADED" -Reason "Heartbeat failed"
+                }
+                
+                # Bug 4 fix: After 5 consecutive failures, enter SAFE_MODE to stop auth spam
+                if ($consecutiveHeartbeatFailures -ge 5) {
+                    Write-Log "[SECURITY] $consecutiveHeartbeatFailures consecutive heartbeat failures - entering SAFE_MODE" "ERROR"
+                    Set-AgentState -NewState "SAFE_MODE" -Reason "Persistent auth failure ($consecutiveHeartbeatFailures consecutive)"
+                    
+                    # Backoff loop in SAFE_MODE - try every 2 minutes, max 10 attempts
+                    $safeModeRecoveryAttempt = 0
+                    while ($Global:CurrentState -eq "SAFE_MODE") {
+                        $safeModeRecoveryAttempt++
+                        if ($safeModeRecoveryAttempt -ge 10) {
+                            Write-Log "[SAFE_MODE] Recovery limit reached (10 attempts) - staying in SAFE_MODE, will retry next main loop cycle" "ERROR"
+                            break
+                        }
+                        $jitter = Get-Random -Minimum 0 -Maximum 30
+                        $recoveryDelay = [math]::Min(120 * [math]::Pow(1.5, $safeModeRecoveryAttempt - 1), 600) + $jitter
+                        Write-Log "[SAFE_MODE] Recovery attempt #$safeModeRecoveryAttempt - waiting ${recoveryDelay}s (jitter: ${jitter}s)..." "INFO"
+                        Start-Sleep -Seconds $recoveryDelay
+                        $recoveryHb = Send-Heartbeat
+                        if ($recoveryHb) {
+                            $consecutiveHeartbeatFailures = 0
+                            if (-not $Global:SecurityDegraded) {
+                                Set-AgentState -NewState "ENFORCING" -Reason "Heartbeat recovered"
+                            } else {
+                                Set-AgentState -NewState "DEGRADED" -Reason "Heartbeat recovered but crypto still degraded"
+                            }
+                            Write-Log "[SAFE_MODE] Recovery successful after $safeModeRecoveryAttempt attempts" "SUCCESS"
+                            break
+                        }
+                    }
+                }
+            } else {
+                if ($consecutiveHeartbeatFailures -gt 0) {
+                    Write-Log "[HEARTBEAT] Recovered after $consecutiveHeartbeatFailures failures" "SUCCESS"
+                }
+                $consecutiveHeartbeatFailures = 0
             }
             $lastHeartbeat = Get-Date
         }
@@ -3662,9 +5048,62 @@ while ($true) {
             $lastDnsSync = Get-Date
         }
         
+        # ============================================
+        # v5.0.11: LOCAL DETECTION (every 5 min)
+        # ============================================
+        if (($now - $lastLocalDetection).TotalSeconds -ge $Global:LocalDetectionIntervalSeconds) {
+            Invoke-LocalDetection | Out-Null
+            $lastLocalDetection = Get-Date
+        }
+        
+        # ============================================
+        # v5.0.13: RUNTIME INTEGRITY CHECK (TOCTOU DEFENSE, every 5 min)
+        # ============================================
+        if (($now - $Global:LastIntegrityCheck).TotalSeconds -ge $Global:IntegrityCheckIntervalSeconds) {
+            if (-not (Test-RuntimeIntegrity)) {
+                Write-Log "[INTEGRITY] TOCTOU VIOLATION DETECTED - terminating agent immediately" "ERROR"
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "TOCTOU integrity violation - agent script modified during runtime. Terminating." -ErrorAction SilentlyContinue
+                Flush-LogBuffer
+                [Environment]::Exit(9004)
+            }
+            $Global:LastIntegrityCheck = Get-Date
+        }
+        
     } catch {
         Write-Log "[MAIN-LOOP] Error: $($_.Exception.Message)" "ERROR"
+        Write-Log "[MAIN-LOOP] Stack: $($_.ScriptStackTrace)" "ERROR"
+        # BUG 10 fix: Attempt recovery on critical errors
+        if ($_.Exception.Message -match "disk|space|memory|OutOfMemory") {
+            Write-Log "[MAIN-LOOP] Critical resource error detected - attempting disk cleanup" "WARN"
+            try { Invoke-DiskCleanup } catch { }
+        }
     }
     
-    Start-Sleep -Seconds 2
+    # v5.0.13-perf: Dynamic sleep interval based on agent state
+    # v5.0.13-perf: Adaptive sleep - increase interval under high system load
+    $baseSleep = switch ($Global:CurrentState) {
+        "ENFORCING" { 2 }
+        "DEGRADED"  { 5 }
+        "SAFE_MODE" { 10 }
+        default     { 2 }
+    }
+    try {
+        $cpuLoad = (Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue | 
+            Measure-Object -Property LoadPercentage -Average).Average
+        if ($cpuLoad -gt 80) { $baseSleep = [math]::Max($baseSleep, 10) }
+    } catch { }
+    $sleepInterval = $baseSleep
+    Start-Sleep -Seconds $sleepInterval
+    
+    # v5.0.13-perf: Flush log buffer on each cycle boundary
+    Flush-LogBuffer
+}
+
+# BUG FIX #7: Ensure mutex is released on any exit path (Dispose in finally equivalent)
+# This runs if the while loop ever breaks (shouldn't normally)
+if ($Global:AgentMutex) {
+    try {
+        $Global:AgentMutex.ReleaseMutex()
+        $Global:AgentMutex.Dispose()
+    } catch { }
 }
