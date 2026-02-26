@@ -230,6 +230,18 @@ $Global:AutoRepairStats = @{
     last_process_kill = $null
 }
 
+# v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)
+$Global:SecurityDegraded = $false
+
+# v5.0.13-fix: Evidence buffer for Add-EvidenceEntry (BUG 1)
+$Global:EvidenceBuffer = [System.Collections.ArrayList]::new()
+
+# v5.0.13-fix: Rollback paths for Apply-ForcedUpdate (BUG 1)
+$Global:RollbackPaths = @{
+    Previous = Join-Path $Global:BaseDir "cybershield-agent-previous.ps1"
+    RollbackState = Join-Path $dataDir "rollback_state.json"
+}
+
 # v5.0.1: FSM Enterprise States
 $Global:FSM_STATES = @{
     INITIALIZING = "INITIALIZING"
@@ -439,12 +451,12 @@ function Set-AgentState {
 
     # Validate allowed transitions
     $validTransitions = @{
-        "INITIALIZING" = @("AUTHENTICATING", "DEGRADED", "SAFE_MODE")
+        "INITIALIZING" = @("AUTHENTICATING", "DEGRADED", "SAFE_MODE", "SYNCING")
         "AUTHENTICATING" = @("SYNCING", "DEGRADED", "SAFE_MODE")
         "SYNCING" = @("ENFORCING", "DEGRADED", "SAFE_MODE")
         "ENFORCING" = @("SYNCING", "DEGRADED", "SAFE_MODE")
         "DEGRADED" = @("AUTHENTICATING", "SYNCING", "ENFORCING", "SAFE_MODE")
-        "SAFE_MODE" = @("INITIALIZING")
+        "SAFE_MODE" = @("INITIALIZING", "SYNCING")
     }
     
     if ($oldState -eq $NewState) {
@@ -481,6 +493,145 @@ function Get-SavedAgentState {
         }
     } catch { }
     return $null
+}
+
+# ============================================
+#  v5.0.13-fix: MISSING FUNCTIONS FROM v4 (BUG 1)
+# ============================================
+
+function Get-RollbackState {
+    try {
+        $statePath = $Global:RollbackPaths.RollbackState
+        if ($statePath -and (Test-Path $statePath)) {
+            return Get-Content $statePath -Raw | ConvertFrom-Json
+        }
+    } catch {
+        Write-Log "[ROLLBACK] Failed to read rollback state: $($_.Exception.Message)" "WARN"
+    }
+    return @{
+        safe_mode = $false
+        rollback_count = 0
+        previous_version = $null
+        last_rollback = $null
+    }
+}
+
+function Save-RollbackState {
+    param(
+        [Parameter(Mandatory = $true)]
+        $State
+    )
+    try {
+        $statePath = $Global:RollbackPaths.RollbackState
+        if ($statePath) {
+            $State | ConvertTo-Json -Depth 5 | Out-File $statePath -Encoding UTF8 -Force
+        }
+    } catch {
+        Write-Log "[ROLLBACK] Failed to save rollback state: $($_.Exception.Message)" "WARN"
+    }
+}
+
+function Add-EvidenceEntry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Type,
+        
+        [Parameter(Mandatory = $false)]
+        $Data = @{},
+        
+        [Parameter(Mandatory = $false)]
+        [string]$Severity = "info"
+    )
+    try {
+        $entry = @{
+            timestamp = (Get-Date).ToUniversalTime().ToString("o")
+            type = $Type
+            data = $Data
+            severity = $Severity
+            agent_name = $Global:AgentName
+            agent_version = $Global:AgentVersion
+        }
+        
+        $Global:EvidenceBuffer.Add($entry) | Out-Null
+        
+        # Write to evidence journal
+        $journalLine = ($entry | ConvertTo-Json -Compress -Depth 5)
+        Add-Content -Path $Global:EvidenceJournalPath -Value $journalLine -Encoding UTF8 -ErrorAction SilentlyContinue
+        
+        # Auto-flush if buffer reaches threshold
+        if ($Global:EvidenceBuffer.Count -ge 10) {
+            Invoke-FlushEvidence
+        }
+    } catch {
+        Write-Log "[EVIDENCE] Failed to add entry: $($_.Exception.Message)" "WARN"
+    }
+}
+
+function Invoke-FlushEvidence {
+    try {
+        if ($Global:EvidenceBuffer.Count -eq 0) { return }
+        
+        $entries = @($Global:EvidenceBuffer)
+        $Global:EvidenceBuffer.Clear()
+        
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/submit-agent-evidence" `
+            -Method "POST" `
+            -Body @{
+                agent_name = $Global:AgentName
+                entries = $entries
+            }
+        
+        if ($result.Success) {
+            Write-Log "[EVIDENCE] Flushed $($entries.Count) entries to backend" "DEBUG"
+        } else {
+            Write-Log "[EVIDENCE] Flush failed: $($result.Error) - entries saved to journal" "WARN"
+        }
+    } catch {
+        Write-Log "[EVIDENCE] Flush error: $($_.Exception.Message)" "WARN"
+    }
+}
+
+function Get-SystemInfo {
+    <#
+    .SYNOPSIS
+        Collects comprehensive system information (adapted for v5 FSM)
+    #>
+    try {
+        $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
+        $cs = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
+        $cpu = Get-CimInstance -ClassName Win32_Processor -ErrorAction SilentlyContinue | Select-Object -First 1
+        $disk = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3" -ErrorAction SilentlyContinue | Select-Object -First 1
+        
+        return @{
+            hostname = $env:COMPUTERNAME
+            os_name = $os.Caption
+            os_version = $os.Version
+            os_build = $os.BuildNumber
+            architecture = $os.OSArchitecture
+            total_ram_gb = [math]::Round($cs.TotalPhysicalMemory / 1GB, 2)
+            cpu_name = $cpu.Name
+            cpu_cores = $cpu.NumberOfCores
+            cpu_logical = $cpu.NumberOfLogicalProcessors
+            disk_total_gb = if ($disk) { [math]::Round($disk.Size / 1GB, 2) } else { 0 }
+            disk_free_gb = if ($disk) { [math]::Round($disk.FreeSpace / 1GB, 2) } else { 0 }
+            agent_version = $Global:AgentVersion
+            agent_state = $Global:CurrentState
+            uptime_hours = [math]::Round(((Get-Date) - $os.LastBootUpTime).TotalHours, 1)
+            domain = $cs.Domain
+            username = $env:USERNAME
+            collected_at = (Get-Date).ToUniversalTime().ToString("o")
+        }
+    } catch {
+        Write-Log "[SYSINFO] Collection error: $($_.Exception.Message)" "WARN"
+        return @{
+            hostname = $env:COMPUTERNAME
+            agent_version = $Global:AgentVersion
+            agent_state = $Global:CurrentState
+            error = $_.Exception.Message
+            collected_at = (Get-Date).ToUniversalTime().ToString("o")
+        }
+    }
 }
 
 # ============================================
@@ -930,7 +1081,7 @@ function Execute-Job {
         
         # 3. Execute job based on type
         $output = $null
-        $error_message = $null
+        $job_error_message = $null  # BUG 9 fix: renamed from $error_message to avoid collision with $Error
         $status = "completed"
         
         switch ($Job.job_type) {
@@ -1017,7 +1168,7 @@ function Execute-Job {
                 }
             }
             default {
-                $error_message = "Unknown job type: $($Job.job_type)"
+                $job_error_message = "Unknown job type: $($Job.job_type)"
                 $status = "failed"
                 Write-Log "[JOB] Unknown job type: $($Job.job_type)" "WARN"
             }
@@ -1039,7 +1190,7 @@ function Execute-Job {
             status = $status
             output = $output
             output_hash = $outputHash
-            error_message = $error_message
+            error_message = $job_error_message
             duration_seconds = $duration
             execution_hash = $hashData.execution_hash
             previous_execution_hash = $hashData.previous_execution_hash
@@ -3625,7 +3776,8 @@ function Show-SecurityToast {
         $balloon.ShowBalloonTip($DurationMs)
         
         # Cleanup after display
-        Start-Sleep -Milliseconds ($DurationMs + 500)
+        # BUG 11 fix: Non-blocking - reduced from 10.5s to 1s
+        Start-Sleep -Milliseconds 1000
         $balloon.Dispose()
         
         Write-Log "[TOAST] BalloonTip: $Title" "DEBUG"
@@ -4079,7 +4231,12 @@ if (-not $keysInitialized) {
 # ============================================
 #  PHASE 2: AUTHENTICATION
 # ============================================
-Set-AgentState -NewState "AUTHENTICATING" -Reason "Validating credentials"
+# BUG 4 fix: Guard - only transition to AUTHENTICATING if not stuck in DEGRADED with failed keys
+if ($Global:CurrentState -eq "DEGRADED" -and $Global:SecurityDegraded) {
+    Write-Log "[STARTUP] Skipping AUTHENTICATING - SecurityDegraded, staying in DEGRADED for heartbeat attempt" "WARN"
+} else {
+    Set-AgentState -NewState "AUTHENTICATING" -Reason "Validating credentials"
+}
 
 # Send first heartbeat
 $heartbeatSuccess = Send-Heartbeat
@@ -4111,8 +4268,13 @@ if (-not $heartbeatSuccess) {
 # Bug 5 fix: If in SAFE_MODE after startup failures, enter recovery loop
 if ($Global:CurrentState -eq "SAFE_MODE") {
     Write-Log "[STARTUP] Agent in SAFE_MODE - entering recovery-only loop" "WARN"
+    $recoveryAttempt = 0
     while ($Global:CurrentState -eq "SAFE_MODE") {
-        Start-Sleep -Seconds 60
+        $recoveryAttempt++
+        # BUG 8 fix: Exponential backoff for recovery (60s, 120s, 240s... max 600s)
+        $recoveryDelay = [math]::Min(60 * [math]::Pow(2, $recoveryAttempt - 1), 600)
+        Write-Log "[SAFE_MODE] Recovery attempt #$recoveryAttempt - waiting ${recoveryDelay}s..." "INFO"
+        Start-Sleep -Seconds $recoveryDelay
         Write-Log "[SAFE_MODE] Attempting recovery heartbeat..." "INFO"
         $recoveryHb = Send-Heartbeat
         if ($recoveryHb) {
@@ -4122,6 +4284,8 @@ if ($Global:CurrentState -eq "SAFE_MODE") {
                 Set-AgentState -NewState "INITIALIZING" -Reason "Recovery successful"
                 Write-Log "[SAFE_MODE] Recovery successful - restarting initialization" "SUCCESS"
                 break
+            } else {
+                Write-Log "[SAFE_MODE] Heartbeat OK but keys still failed - continuing recovery" "WARN"
             }
         }
     }
@@ -4213,10 +4377,15 @@ while ($true) {
                 if ($Global:SecurityDegraded -and $jobType -notin $recoveryJobTypes) {
                     Write-Log "[SECURITY] BLOCKED job '$jobType' - SecurityDegraded=TRUE (only recovery jobs allowed)" "WARN"
                     # Submit a rejection result so job doesn't stay in 'delivered' forever
+                    # BUG 6 fix: Include all mandatory fields for Submit-JobResult
                     Submit-JobResult -Job $job -Result @{
                         success = $false
-                        error = "Agent in SecurityDegraded mode - crypto not available. Only update/recovery jobs accepted."
+                        status = "failed"
+                        output = @{ blocked = $true; reason = "SecurityDegraded" }
+                        output_hash = ""
+                        error_message = "Agent in SecurityDegraded mode - crypto not available. Only update/recovery jobs accepted."
                         exit_code = 403
+                        execution_hash = ""
                     }
                     continue
                 }
@@ -4329,6 +4498,12 @@ while ($true) {
         
     } catch {
         Write-Log "[MAIN-LOOP] Error: $($_.Exception.Message)" "ERROR"
+        Write-Log "[MAIN-LOOP] Stack: $($_.ScriptStackTrace)" "ERROR"
+        # BUG 10 fix: Attempt recovery on critical errors
+        if ($_.Exception.Message -match "disk|space|memory|OutOfMemory") {
+            Write-Log "[MAIN-LOOP] Critical resource error detected - attempting disk cleanup" "WARN"
+            try { Invoke-DiskCleanup } catch { }
+        }
     }
     
     Start-Sleep -Seconds 2
