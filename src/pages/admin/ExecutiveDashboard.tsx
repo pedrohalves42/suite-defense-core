@@ -7,8 +7,10 @@ import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { ExecutiveSummaryCard } from '@/components/admin/ExecutiveSummaryCard';
+import { DailySummaryCard } from '@/components/admin/DailySummaryCard';
 import { SectionDivider } from '@/components/ui/section-divider';
 import { useRiskDeltaHistory } from '@/hooks/useRiskDelta';
+import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
 import { 
   Shield, 
   ShieldCheck, 
@@ -55,6 +57,10 @@ export default function ExecutiveDashboard() {
   const { activeTenant, loading: tenantLoading } = useActiveTenant();
   const tenantId = activeTenant?.id;
 
+  // ADR-026: Centralized agent snapshots - single source of truth
+  const { data: snapshots } = useAgentSnapshots();
+  const agentCounts = getAgentStatusCounts(snapshots);
+
   // Helper para evitar deep type instantiation
   const fetchSummaryData = async (tid: string) => {
     const now = new Date();
@@ -63,10 +69,6 @@ export default function ExecutiveDashboard() {
 
     // Using any to avoid TypeScript deep type instantiation issues
     const sb = supabase as any;
-
-    // ADR-026 Zero-Gap: Use RPC with explicit tenant_id
-    const agentsRpc = await supabase.rpc('get_agents_list', { p_tenant_id: tid, p_include_archived: false });
-    const agents: Array<{ id: string; agent_name: string; agent_state: string; last_heartbeat: string | null }> = (agentsRpc.data as any[]) || [];
 
     // Fetch alerts count
     const alertsRes = await sb.from('system_alerts').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'active');
@@ -84,13 +86,10 @@ export default function ExecutiveDashboard() {
     const blockedRes = await sb.from('blocked_access_attempts').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).gte('blocked_at', sevenDaysAgo.toISOString());
     const blockedThreats: number = blockedRes.count || 0;
 
-    // Calcular métricas
-    const totalAgents = agents.length;
-    const onlineAgents = agents.filter((a) => {
-      if (!a.last_heartbeat) return false;
-      return differenceInMinutes(now, new Date(a.last_heartbeat)) <= 15;
-    }).length;
-    const offlineAgents = totalAgents - onlineAgents;
+    // Use centralized agent counts
+    const totalAgents = agentCounts.total;
+    const onlineAgents = agentCounts.online;
+    const offlineAgents = agentCounts.offline + agentCounts.warning + agentCounts.never_connected;
 
     const totalJobs = recentJobs.length;
     const failedJobs = recentJobs.filter((j) => j.status === 'failed').length;
@@ -116,9 +115,9 @@ export default function ExecutiveDashboard() {
 
   // Buscar dados resumidos
   const { data: summaryData, isLoading, refetch } = useQuery({
-    queryKey: ['executive-summary', tenantId],
+    queryKey: ['executive-summary', tenantId, agentCounts.total, agentCounts.online],
     queryFn: () => tenantId ? fetchSummaryData(tenantId) : null,
-    enabled: !tenantLoading && !!tenantId,
+    enabled: !tenantLoading && !!tenantId && agentCounts.total >= 0,
     refetchInterval: 300000, // COST-OPT: 60s → 5min
   });
 
@@ -243,6 +242,9 @@ export default function ExecutiveDashboard() {
 
       {/* Executive Summary Card - Risk Delta */}
       <ExecutiveSummaryCard />
+
+      {/* Daily Summary Card */}
+      <DailySummaryCard />
 
       <SectionDivider label="Status de Proteção" />
 
