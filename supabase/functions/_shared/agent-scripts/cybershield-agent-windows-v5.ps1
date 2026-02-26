@@ -1,5 +1,14 @@
 <#
-    CyberShield Agent - Windows v5.0.12 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.13 FULL ENTERPRISE
+
+    v5.0.13: SECURITY HARDENING - 7 critical bug fixes (FSM, fail-closed, auth loop)
+    - FIXED: FSM now allows INITIALIZING -> DEGRADED transition (was rejected as invalid)
+    - FIXED: Fail-closed security: agent blocks operational jobs when crypto fails (SecurityDegraded flag)
+    - FIXED: Auth loop prevention: consecutive heartbeat failures trigger SAFE_MODE after 5 retries
+    - FIXED: Heartbeat failure blocks progression to ENFORCING when keys also failed
+    - FIXED: Baseline guard prevents duplicate initialization in startup
+    - FIXED: DEGRADED -> ENFORCING transition blocked when SecurityDegraded flag is set
+    - FIXED: Main loop skips job execution (except update_agent/force_update) when SecurityDegraded
 
     v5.0.12: JOB PARSING FIX - Handle wrapped {jobs:[...]} format from backend
     - FIXED: Poll-Jobs now handles both wrapped object and flat array responses
@@ -146,7 +155,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.12"
+    [string]$AgentVersion = "v5.0.13"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -430,7 +439,7 @@ function Set-AgentState {
 
     # Validate allowed transitions
     $validTransitions = @{
-        "INITIALIZING" = @("AUTHENTICATING", "SAFE_MODE")
+        "INITIALIZING" = @("AUTHENTICATING", "DEGRADED", "SAFE_MODE")
         "AUTHENTICATING" = @("SYNCING", "DEGRADED", "SAFE_MODE")
         "SYNCING" = @("ENFORCING", "DEGRADED", "SAFE_MODE")
         "ENFORCING" = @("SYNCING", "DEGRADED", "SAFE_MODE")
@@ -4058,9 +4067,13 @@ if ($savedState -eq "SAFE_MODE") {
 
 # Initialize ECDSA keys
 $keysInitialized = Initialize-AgentKeys
+$Global:SecurityDegraded = $false
+$consecutiveHeartbeatFailures = 0
 if (-not $keysInitialized) {
-    Write-Log "[STARTUP] Failed to initialize keys - entering DEGRADED mode" "ERROR"
+    Write-Log "[STARTUP] Failed to initialize keys - entering DEGRADED mode (FAIL-CLOSED)" "ERROR"
     Set-AgentState -NewState "DEGRADED" -Reason "Key initialization failed"
+    $Global:SecurityDegraded = $true
+    Write-Log "[SECURITY] SecurityDegraded=TRUE - operational jobs will be BLOCKED until crypto is restored" "WARN"
 }
 
 # ============================================
@@ -4074,6 +4087,13 @@ $heartbeatSuccess = Send-Heartbeat
 if (-not $heartbeatSuccess) {
     Write-Log "[STARTUP] Initial heartbeat failed - entering DEGRADED mode" "WARN"
     Set-AgentState -NewState "DEGRADED" -Reason "Heartbeat failed"
+    $consecutiveHeartbeatFailures++
+    
+    # Bug 5 fix: If BOTH keys and heartbeat failed, enter SAFE_MODE (fail-closed)
+    if (-not $keysInitialized) {
+        Write-Log "[SECURITY] No crypto + no auth = SAFE_MODE (fail-closed)" "ERROR"
+        Set-AgentState -NewState "SAFE_MODE" -Reason "No auth + no crypto - fail closed"
+    }
 } else {
     # Register public key
     if ($keysInitialized) {
@@ -4082,15 +4102,39 @@ if (-not $heartbeatSuccess) {
             Write-Log "[STARTUP] Key registration failed - result signing unavailable" "WARN"
         }
     }
+    $consecutiveHeartbeatFailures = 0
 }
 
 # ============================================
 #  PHASE 3: SYNCHRONIZATION
 # ============================================
+# Bug 5 fix: If in SAFE_MODE after startup failures, enter recovery loop
+if ($Global:CurrentState -eq "SAFE_MODE") {
+    Write-Log "[STARTUP] Agent in SAFE_MODE - entering recovery-only loop" "WARN"
+    while ($Global:CurrentState -eq "SAFE_MODE") {
+        Start-Sleep -Seconds 60
+        Write-Log "[SAFE_MODE] Attempting recovery heartbeat..." "INFO"
+        $recoveryHb = Send-Heartbeat
+        if ($recoveryHb) {
+            $keysInitialized = Initialize-AgentKeys
+            if ($keysInitialized) {
+                $Global:SecurityDegraded = $false
+                Set-AgentState -NewState "INITIALIZING" -Reason "Recovery successful"
+                Write-Log "[SAFE_MODE] Recovery successful - restarting initialization" "SUCCESS"
+                break
+            }
+        }
+    }
+}
+
 Set-AgentState -NewState "SYNCING" -Reason "Syncing policies and baseline"
 
-# Initialize process baseline
-Initialize-ProcessBaseline
+# Bug 6 fix: Guard against duplicate baseline initialization
+if (-not $Global:ProcessBaseline) {
+    Initialize-ProcessBaseline
+} else {
+    Write-Log "[BASELINE] Already initialized, skipping duplicate call" "DEBUG"
+}
 
 # Sync DNS blocklist
 Sync-DnsBlocklist
@@ -4110,9 +4154,13 @@ if ($startupTaskHealth.checked -and $startupTaskHealth.repaired) {
 # ============================================
 #  PHASE 4: ENFORCEMENT
 # ============================================
-Set-AgentState -NewState "ENFORCING" -Reason "Normal operation"
-
-Write-Log "[STARTUP] Agent v$($Global:AgentVersion) fully operational in ENFORCING state" "SUCCESS"
+# Bug 2 fix: Only enter ENFORCING if security is not degraded
+if ($Global:SecurityDegraded) {
+    Write-Log "[STARTUP] Agent v$($Global:AgentVersion) starting in DEGRADED mode (SecurityDegraded=TRUE, only recovery jobs allowed)" "WARN"
+} else {
+    Set-AgentState -NewState "ENFORCING" -Reason "Normal operation"
+    Write-Log "[STARTUP] Agent v$($Global:AgentVersion) fully operational in ENFORCING state" "SUCCESS"
+}
 
 $lastHeartbeat = Get-Date
 $lastAutoRepair = Get-Date
@@ -4141,7 +4189,12 @@ while ($true) {
             }
         } else {
             if ($consecutiveNetworkFailures -ge 3 -and $Global:CurrentState -eq "DEGRADED") {
-                Set-AgentState -NewState "ENFORCING" -Reason "Network restored"
+                # Bug 7 fix: Only restore ENFORCING if crypto is healthy
+                if (-not $Global:SecurityDegraded) {
+                    Set-AgentState -NewState "ENFORCING" -Reason "Network restored"
+                } else {
+                    Write-Log "[FSM] Network restored but SecurityDegraded=TRUE - staying DEGRADED" "WARN"
+                }
             }
             $consecutiveNetworkFailures = 0
         }
@@ -4153,6 +4206,21 @@ while ($true) {
             $jobs = Poll-Jobs
             
             foreach ($job in $jobs) {
+                $jobType = if ($job.type) { $job.type } elseif ($job.job_type) { $job.job_type } else { "unknown" }
+                
+                # Bug 2 fix: When SecurityDegraded, only allow recovery jobs (fail-closed)
+                $recoveryJobTypes = @("update_agent", "force_update", "reinstall_agent")
+                if ($Global:SecurityDegraded -and $jobType -notin $recoveryJobTypes) {
+                    Write-Log "[SECURITY] BLOCKED job '$jobType' - SecurityDegraded=TRUE (only recovery jobs allowed)" "WARN"
+                    # Submit a rejection result so job doesn't stay in 'delivered' forever
+                    Submit-JobResult -Job $job -Result @{
+                        success = $false
+                        error = "Agent in SecurityDegraded mode - crypto not available. Only update/recovery jobs accepted."
+                        exit_code = 403
+                    }
+                    continue
+                }
+                
                 $result = Execute-Job -Job $job
                 
                 if ($result) {
@@ -4196,8 +4264,41 @@ while ($true) {
         # ============================================
         if (($now - $lastHeartbeat).TotalSeconds -ge $Global:PollIntervalSeconds -and $networkOk) {
             $hbResult = Send-Heartbeat
-            if (-not $hbResult -and $Global:CurrentState -eq "ENFORCING") {
-                Set-AgentState -NewState "DEGRADED" -Reason "Heartbeat failed"
+            if (-not $hbResult) {
+                $consecutiveHeartbeatFailures++
+                Write-Log "[HEARTBEAT] Failure #$consecutiveHeartbeatFailures" "WARN"
+                
+                if ($Global:CurrentState -eq "ENFORCING") {
+                    Set-AgentState -NewState "DEGRADED" -Reason "Heartbeat failed"
+                }
+                
+                # Bug 4 fix: After 5 consecutive failures, enter SAFE_MODE to stop auth spam
+                if ($consecutiveHeartbeatFailures -ge 5) {
+                    Write-Log "[SECURITY] $consecutiveHeartbeatFailures consecutive heartbeat failures - entering SAFE_MODE" "ERROR"
+                    Set-AgentState -NewState "SAFE_MODE" -Reason "Persistent auth failure ($consecutiveHeartbeatFailures consecutive)"
+                    
+                    # Backoff loop in SAFE_MODE - try every 2 minutes instead of every cycle
+                    while ($Global:CurrentState -eq "SAFE_MODE") {
+                        Start-Sleep -Seconds 120
+                        Write-Log "[SAFE_MODE] Attempting recovery heartbeat..." "INFO"
+                        $recoveryHb = Send-Heartbeat
+                        if ($recoveryHb) {
+                            $consecutiveHeartbeatFailures = 0
+                            if (-not $Global:SecurityDegraded) {
+                                Set-AgentState -NewState "ENFORCING" -Reason "Heartbeat recovered"
+                            } else {
+                                Set-AgentState -NewState "DEGRADED" -Reason "Heartbeat recovered but crypto still degraded"
+                            }
+                            Write-Log "[SAFE_MODE] Recovery successful" "SUCCESS"
+                            break
+                        }
+                    }
+                }
+            } else {
+                if ($consecutiveHeartbeatFailures -gt 0) {
+                    Write-Log "[HEARTBEAT] Recovered after $consecutiveHeartbeatFailures failures" "SUCCESS"
+                }
+                $consecutiveHeartbeatFailures = 0
             }
             $lastHeartbeat = Get-Date
         }
