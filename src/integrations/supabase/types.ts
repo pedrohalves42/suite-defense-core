@@ -27572,6 +27572,7 @@ export type Database = {
           job_ids: string[]
         }[]
       }
+      auto_cleanup_stale_operations: { Args: never; Returns: Json }
       auto_close_stale_orphan_tasks: { Args: never; Returns: undefined }
       auto_mark_agents_inactive: { Args: never; Returns: Json }
       auto_resolve_stale_tasks: { Args: never; Returns: Json }
