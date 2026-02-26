@@ -79,7 +79,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.15"
+AGENT_VERSION="v5.0.13"
 BASE_DIR="/opt/cybershield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -219,7 +219,7 @@ declare -a PROCESS_BASELINE=()
  chmod 700 "$KEYS_DIR"
  
  # ============================================
- #  v5.0.14: DEPENDENCY VALIDATION AT STARTUP
+ #  v5.0.13: DEPENDENCY VALIDATION AT STARTUP
  # ============================================
  missing_deps=()
  for dep in jq openssl curl nc sha256sum base64; do
@@ -1552,7 +1552,7 @@ EOF
      
      log "INFO" "[FORCE UPDATE] Reiniciando agente com nova versao..."
      
-     # v5.0.14-fix: Retry limit for update restart (max 3 attempts to prevent infinite loop)
+     # v5.0.13-fix: Retry limit for update restart (max 3 attempts to prevent infinite loop)
      local restart_attempt=0
      local restart_max=3
      local restart_success=false
@@ -2081,7 +2081,7 @@ remove_dns_filter_handler() {
      if [[ $((now - last_job_poll)) -ge $JOB_POLL_INTERVAL && "$network_ok" == "true" ]]; then
          jobs=$(poll_jobs)
          
-         # v5.0.14-fix: Use process substitution instead of pipe to avoid subshell variable isolation
+         # v5.0.13-fix: Use process substitution instead of pipe to avoid subshell variable isolation
          while read -r job; do
              if [[ -n "$job" ]]; then
                  # v5.0.13-fix: When SecurityDegraded, only allow recovery jobs (fail-closed)
