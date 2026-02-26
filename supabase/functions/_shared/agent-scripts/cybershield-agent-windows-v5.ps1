@@ -1,14 +1,12 @@
 <#
     CyberShield Agent - Windows v5.0.13 FULL ENTERPRISE
 
-    v5.0.14: TOCTOU + SIGNED HASH + TLS SCOPED + SYSTEM VALIDATION
+    v5.0.13: SECURITY HARDENING + SYNTAX AUDIT + EDR HARDENING + TOCTOU + ANTI-TAMPER
     - ADDED: Runtime integrity revalidation in main loop (TOCTOU defense, every 5 min)
-    - ADDED: ECDSA-signed hash cache - heartbeat script_sha256 now requires server signature
-    - FIXED: TLS pinning uses scoped HttpClientHandler instead of global callback
+    - ADDED: ECDSA-signed hash cache - heartbeat script_sha256 validated with cached hash
+    - ADDED: TLS pinning uses scoped HttpClientHandler (not global callback)
     - ADDED: SYSTEM context validation at startup (blocks non-SYSTEM execution)
-    - ADDED: SAFE_MODE jitter now applied AFTER exponential backoff (delay * 2^failures + jitter)
-
-    v5.0.13: SECURITY HARDENING + SYNTAX AUDIT + EDR HARDENING
+    - ADDED: SAFE_MODE jitter applied AFTER exponential backoff (delay * 2^failures + jitter)
     - ADDED: EventLog source registration before any Write-EventLog (prevents "source not found" crash)
     - ADDED: Anti-debug checks (blocks ISE + .NET debugger attachment)
     - ADDED: ACL hardening on C:\CyberShield directory (SYSTEM + Administrators only)
@@ -170,7 +168,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.14"
+    [string]$AgentVersion = "v5.0.13"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -210,7 +208,7 @@ try {
 }
 
 # ============================================
-#  v5.0.14: SYSTEM CONTEXT VALIDATION
+#  v5.0.13: SYSTEM CONTEXT VALIDATION
 #  Agent must run as SYSTEM via Scheduled Task, not interactively by admin
 # ============================================
 try {
@@ -468,13 +466,13 @@ function Write-Log {
 }
 
 # ============================================
-#  v5.0.14: TLS CERTIFICATE PINNING (SCOPED)
+#  v5.0.13: TLS CERTIFICATE PINNING (SCOPED)
 #  Uses per-request validation instead of global callback
 #  Prevents other modules from overriding the pin
 # ============================================
 $Global:TlsPinnedThumbprint = $null  # Set via server config or enrollment; null = disabled (dev mode)
 
-# v5.0.14: Scoped TLS validation function (called per-request, NOT global override)
+# v5.0.13: Scoped TLS validation function (called per-request, NOT global override)
 function Test-TlsCertificatePin {
     param([string]$Thumbprint)
     if (-not $Global:TlsPinnedThumbprint) { return $true }
@@ -482,7 +480,7 @@ function Test-TlsCertificatePin {
 }
 
 # ============================================
-#  v5.0.14: RUNTIME INTEGRITY CHECK (TOCTOU DEFENSE)
+#  v5.0.13: RUNTIME INTEGRITY CHECK (TOCTOU DEFENSE)
 #  Revalidates script hash periodically during execution
 # ============================================
 $Global:LastIntegrityCheck = Get-Date
@@ -515,7 +513,7 @@ function Test-RuntimeIntegrity {
 }
 
 # ============================================
-#  v5.0.14: SIGNED HASH CACHE VALIDATION
+#  v5.0.13: SIGNED HASH CACHE VALIDATION
 #  Validates that cached hash was signed by the server's Ed25519 key
 #  Prevents compromised-server hash injection attacks
 # ============================================
@@ -3962,7 +3960,7 @@ function Send-Heartbeat {
                     }
                     
                     # ============================================
-                    # v5.0.14: SIGNED HASH CACHE (replaces plain hash cache)
+                    # v5.0.13: SIGNED HASH CACHE (replaces plain hash cache)
                     # Server provides script_sha256 + script_hash_signature for integrity
                     # Hash is only trusted if accompanied by valid signature
                     # ============================================
@@ -4791,7 +4789,7 @@ while ($true) {
         }
         
         # ============================================
-        # v5.0.14: RUNTIME INTEGRITY CHECK (TOCTOU DEFENSE, every 5 min)
+        # v5.0.13: RUNTIME INTEGRITY CHECK (TOCTOU DEFENSE, every 5 min)
         # ============================================
         if (($now - $Global:LastIntegrityCheck).TotalSeconds -ge $Global:IntegrityCheckIntervalSeconds) {
             if (-not (Test-RuntimeIntegrity)) {

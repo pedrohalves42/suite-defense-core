@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - macOS v5.0.14
+# CyberShield Agent - macOS v5.0.13
+#
+# v5.0.13: SECURITY HARDENING + TOCTOU + ANTI-TAMPER + EDR HARDENING
+# - ADDED: Runtime integrity revalidation in main loop (TOCTOU defense, every 5 min)
+# - ADDED: SHA256 hash validation at startup and runtime against cached server hash
+# - ADDED: Anti-debug (sysctl traced), anti-interactive (parent process check)
+# - ADDED: ACL hardening (root:wheel directory permissions)
+# - ADDED: Fail-closed security model (SecurityDegraded blocks operational jobs)
+# - ADDED: SAFE_MODE jitter after exponential backoff (anti-thundering herd)
+# - FIXED: FSM INITIALIZING -> DEGRADED transition
+# - FIXED: Consecutive heartbeat failure counter initialized
+# - FIXED: Process substitution for job loop (prevents subshell variable isolation)
 #
 # v5.0.11: FULL ENTERPRISE - All functions (Get-RollbackState, Add-EvidenceEntry, Apply-ForcedUpdate)
 # v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
@@ -136,7 +147,7 @@ fi
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.14"
+AGENT_VERSION="v5.0.13"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -1533,7 +1544,7 @@ EOF
                fi
 
                # ============================================
-                # v5.0.14: SIGNED HASH CACHE (replaces plain hash)
+                # v5.0.13: SIGNED HASH CACHE (replaces plain hash)
                 # Hash only trusted if accompanied by server signature
                 # ============================================
                 local server_script_hash
@@ -2046,9 +2057,12 @@ remove_dns_filter_handler() {
      recovery_attempt=0
      while [[ "$CURRENT_STATE" == "SAFE_MODE" ]]; do
          recovery_attempt=$((recovery_attempt + 1))
-         recovery_delay=$((60 * (2 ** (recovery_attempt - 1))))
-         [[ $recovery_delay -gt 600 ]] && recovery_delay=600
-         log "INFO" "[SAFE_MODE] Recovery attempt #$recovery_attempt - waiting ${recovery_delay}s..."
+          # Exponential backoff (60s, 120s, 240s... max 600s) + jitter (anti-thundering herd)
+          base_backoff=$((60 * (2 ** (recovery_attempt - 1))))
+          [[ $base_backoff -gt 600 ]] && base_backoff=600
+          jitter=$((RANDOM % 31))
+          recovery_delay=$((base_backoff + jitter))
+          log "INFO" "[SAFE_MODE] Recovery attempt #$recovery_attempt - waiting ${recovery_delay}s (backoff: ${base_backoff}s, jitter: ${jitter}s)..."
          sleep "$recovery_delay"
          log "INFO" "[SAFE_MODE] Attempting recovery heartbeat..."
          if send_heartbeat; then
@@ -2097,7 +2111,7 @@ remove_dns_filter_handler() {
       now=$(date +%s)
       
       # ============================================
-      # v5.0.14: RUNTIME INTEGRITY CHECK (TOCTOU DEFENSE, every 5 min)
+      # v5.0.13: RUNTIME INTEGRITY CHECK (TOCTOU DEFENSE, every 5 min)
       # ============================================
       if [[ $((now - last_integrity_check)) -ge 300 ]]; then
           if [[ -f "$HASH_CACHE_PATH" ]]; then
@@ -2221,7 +2235,7 @@ remove_dns_filter_handler() {
                  safe_mode_attempt=0
                  while [[ "$CURRENT_STATE" == "SAFE_MODE" && $safe_mode_attempt -lt 10 ]]; do
                      safe_mode_attempt=$((safe_mode_attempt + 1))
-                     # v5.0.14: Jitter AFTER exponential backoff (delay = base * 2^attempt + jitter)
+                     # v5.0.13: Jitter AFTER exponential backoff (delay = base * 2^attempt + jitter)
                      jitter=$((RANDOM % 30))
                      base_backoff=$((120 * (2 ** (safe_mode_attempt - 1))))
                      [[ $base_backoff -gt 600 ]] && base_backoff=600
