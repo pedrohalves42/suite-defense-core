@@ -112,11 +112,41 @@ if [[ "${CYBERSHIELD_ALLOW_INTERACTIVE:-}" != "1" ]]; then
 fi
 
 # ============================================
+#  v5.0.13: SINGLE INSTANCE LOCK
+#  Prevents multiple agent instances from running simultaneously
+#  macOS: uses mkdir as atomic lock (flock not available by default)
+# ============================================
+LOCK_DIR="/var/run/cybershield-agent.lock"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    # Check if lock holder is still alive
+    if [[ -f "$LOCK_DIR/pid" ]]; then
+        lock_pid=$(cat "$LOCK_DIR/pid" 2>/dev/null)
+        if kill -0 "$lock_pid" 2>/dev/null; then
+            echo "[SECURITY] Another CyberShield Agent instance (PID $lock_pid) is already running. Exiting."
+            logger -t CyberShield "Duplicate agent instance blocked (PID $lock_pid alive)"
+            exit 9501
+        else
+            # Stale lock - remove and retry
+            rm -rf "$LOCK_DIR"
+            mkdir "$LOCK_DIR" 2>/dev/null || { echo "[ERROR] Cannot acquire instance lock"; exit 9501; }
+        fi
+    else
+        rm -rf "$LOCK_DIR"
+        mkdir "$LOCK_DIR" 2>/dev/null || { echo "[ERROR] Cannot acquire instance lock"; exit 9501; }
+    fi
+fi
+echo $$ > "$LOCK_DIR/pid"
+# Cleanup lock on exit
+trap 'rm -rf "$LOCK_DIR"' EXIT
+
+# ============================================
 #  v5.0.13-hardening: SELF-INTEGRITY VALIDATION
 #  Validates script SHA256 hash at startup (anti-tampering)
+#  ORDER: Signature verification FIRST, then hash comparison
 # ============================================
 SCRIPT_PATH="$(greadlink -f "$0" 2>/dev/null || readlink -f "$0" 2>/dev/null || echo "$0")"
 HASH_CACHE_PATH="/Library/Application Support/CyberShield/data/expected_script_hash.txt"
+HASH_CACHE_JSON_PATH="/Library/Application Support/CyberShield/data/expected_script_hash.json"
 
 # 1. Code signature validation (macOS codesign)
 if command -v codesign &>/dev/null; then
@@ -128,20 +158,48 @@ if command -v codesign &>/dev/null; then
     fi
 fi
 
-# 2. SHA256 hash validation against server-known hash
-if [[ -f "$HASH_CACHE_PATH" ]]; then
-    expected_hash=$(cat "$HASH_CACHE_PATH" 2>/dev/null | tr -d '[:space:]')
-    if [[ -n "$expected_hash" && ${#expected_hash} -eq 64 ]]; then
-        current_hash=$(shasum -a 256 "$SCRIPT_PATH" 2>/dev/null | awk '{print $1}')
-        if [[ "${current_hash}" != "${expected_hash}" ]]; then
-            # Case-insensitive compare
+# 2. SHA256 hash validation - verify signature FIRST, then compare hash
+if [[ -f "$HASH_CACHE_JSON_PATH" ]] && command -v jq &>/dev/null; then
+    cached_hash=$(jq -r '.hash // ""' "$HASH_CACHE_JSON_PATH" 2>/dev/null)
+    cached_sig=$(jq -r '.signature // ""' "$HASH_CACHE_JSON_PATH" 2>/dev/null)
+    ed25519_pubkey_path="/Library/Application Support/CyberShield/keys/ed25519_server.pub"
+    
+    if [[ -n "$cached_hash" && ${#cached_hash} -eq 64 ]]; then
+        sig_trusted="true"
+        if [[ -n "$cached_sig" && ${#cached_sig} -gt 10 && -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
+            _tmp_hash=$(mktemp)
+            _tmp_sig=$(mktemp)
+            echo -n "$cached_hash" > "$_tmp_hash"
+            echo "$cached_sig" | base64 -d > "$_tmp_sig" 2>/dev/null || echo "$cached_sig" | base64 -D > "$_tmp_sig" 2>/dev/null
+            if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
+                -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
+                logger -t CyberShield "INTEGRITY: Cached hash signature INVALID - ignoring tampered cache"
+                sig_trusted="false"
+            fi
+            rm -f "$_tmp_hash" "$_tmp_sig"
+        fi
+        
+        if [[ "$sig_trusted" == "true" ]]; then
+            current_hash=$(shasum -a 256 "$SCRIPT_PATH" 2>/dev/null | awk '{print $1}')
             current_lower=$(echo "$current_hash" | tr '[:upper:]' '[:lower:]')
-            expected_lower=$(echo "$expected_hash" | tr '[:upper:]' '[:lower:]')
-            if [[ "$current_lower" != "$expected_lower" ]]; then
-                logger -t CyberShield "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected: $expected_hash, Actual: $current_hash"
+            cached_lower=$(echo "$cached_hash" | tr '[:upper:]' '[:lower:]')
+            if [[ "$current_lower" != "$cached_lower" ]]; then
+                logger -t CyberShield "INTEGRITY VIOLATION: Script SHA256 mismatch (signed). Expected: $cached_hash, Actual: $current_hash"
                 echo "[SECURITY] CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
                 exit 9003
             fi
+        fi
+    fi
+elif [[ -f "$HASH_CACHE_PATH" ]]; then
+    expected_hash=$(cat "$HASH_CACHE_PATH" 2>/dev/null | tr -d '[:space:]')
+    if [[ -n "$expected_hash" && ${#expected_hash} -eq 64 ]]; then
+        current_hash=$(shasum -a 256 "$SCRIPT_PATH" 2>/dev/null | awk '{print $1}')
+        current_lower=$(echo "$current_hash" | tr '[:upper:]' '[:lower:]')
+        expected_lower=$(echo "$expected_hash" | tr '[:upper:]' '[:lower:]')
+        if [[ "$current_lower" != "$expected_lower" ]]; then
+            logger -t CyberShield "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected: $expected_hash, Actual: $current_hash"
+            echo "[SECURITY] CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
+            exit 9003
         fi
     fi
 fi
@@ -1563,18 +1621,20 @@ EOF
                     local sig_verified="false"
                     local ed25519_pubkey_path="${BASE_DIR}/keys/ed25519_server.pub"
                     if [[ -n "$hash_sig" && ${#hash_sig} -gt 10 && -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
-                        echo -n "$hash_lower" > "/tmp/cs-hash-verify.txt"
-                        echo "$hash_sig" | base64 -d > "/tmp/cs-hash-sig.bin" 2>/dev/null
+                        local _tmp_hash _tmp_sig
+                        _tmp_hash=$(mktemp)
+                        _tmp_sig=$(mktemp)
+                        echo -n "$hash_lower" > "$_tmp_hash"
+                        echo "$hash_sig" | base64 -d > "$_tmp_sig" 2>/dev/null || echo "$hash_sig" | base64 -D > "$_tmp_sig" 2>/dev/null
                         if openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
-                            -sigfile "/tmp/cs-hash-sig.bin" -rawin -in "/tmp/cs-hash-verify.txt" 2>/dev/null; then
+                            -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
                             sig_verified="true"
                             log "DEBUG" "[INTEGRITY] Ed25519 signature VERIFIED for hash cache update"
                         else
                             log "ERROR" "[INTEGRITY] REJECTED hash cache update - Ed25519 signature INVALID!"
                             logger -t CyberShield "INTEGRITY: Rejected script hash - invalid signature"
-                            rm -f "/tmp/cs-hash-verify.txt" "/tmp/cs-hash-sig.bin"
                         fi
-                        rm -f "/tmp/cs-hash-verify.txt" "/tmp/cs-hash-sig.bin"
+                        rm -f "$_tmp_hash" "$_tmp_sig"
                     else
                         sig_verified="true"
                         if [[ -z "$hash_sig" || ${#hash_sig} -le 10 ]]; then
@@ -1658,17 +1718,20 @@ EOF
     if [[ -n "$update_signature" && ${#update_signature} -gt 10 ]]; then
         local ed25519_pubkey_path="${BASE_DIR}/keys/ed25519_server.pub"
         if [[ -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
-            echo -n "$actual_hash" > "/tmp/cs-update-hash.txt"
-            echo "$update_signature" | base64 -d > "/tmp/cs-update-sig.bin" 2>/dev/null || \
-                echo "$update_signature" | base64 -D > "/tmp/cs-update-sig.bin" 2>/dev/null
+            local _tmp_hash _tmp_sig
+            _tmp_hash=$(mktemp)
+            _tmp_sig=$(mktemp)
+            echo -n "$actual_hash" > "$_tmp_hash"
+            echo "$update_signature" | base64 -d > "$_tmp_sig" 2>/dev/null || \
+                echo "$update_signature" | base64 -D > "$_tmp_sig" 2>/dev/null
             if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
-                -sigfile "/tmp/cs-update-sig.bin" -rawin -in "/tmp/cs-update-hash.txt" 2>/dev/null; then
+                -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
                 log "ERROR" "[FORCE UPDATE] REJECTED - Update signature INVALID! Possible supply chain attack."
                 logger -t CyberShield "FORCE UPDATE REJECTED: Invalid cryptographic signature. SHA256: $actual_hash"
-                rm -f "$temp_script" "/tmp/cs-update-hash.txt" "/tmp/cs-update-sig.bin"
+                rm -f "$temp_script" "$_tmp_hash" "$_tmp_sig"
                 return 1
             fi
-            rm -f "/tmp/cs-update-hash.txt" "/tmp/cs-update-sig.bin"
+            rm -f "$_tmp_hash" "$_tmp_sig"
             log "SUCCESS" "[FORCE UPDATE] Cryptographic signature VERIFIED for update payload"
         else
             log "WARN" "[FORCE UPDATE] No Ed25519 public key available - signature present but not verified"
@@ -1695,10 +1758,9 @@ EOF
          log "INFO" "[FORCE UPDATE] Backup criado: ${current_script}.backup"
      fi
      
-     # Apply update
-     chmod +x "$temp_script"
-     cp "$temp_script" "$current_script" 2>/dev/null
-     rm -f "$temp_script"
+    # Apply update (atomic mv instead of cp to prevent partial write TOCTOU)
+    chmod +x "$temp_script"
+    mv -f "$temp_script" "$current_script" 2>/dev/null || { cp "$temp_script" "$current_script" && rm -f "$temp_script"; }
      
       log "SUCCESS" "[FORCE UPDATE] Script instalado: $current_script"
       

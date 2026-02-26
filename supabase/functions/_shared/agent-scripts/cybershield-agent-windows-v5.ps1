@@ -189,6 +189,24 @@ try {
 }
 
 # ============================================
+#  v5.0.13: SINGLE INSTANCE MUTEX LOCK
+#  Prevents multiple agent instances from running simultaneously
+# ============================================
+$Global:AgentMutex = $null
+try {
+    $mutexCreated = $false
+    $Global:AgentMutex = New-Object System.Threading.Mutex($true, "Global\CyberShieldAgent-$AgentName", [ref]$mutexCreated)
+    if (-not $mutexCreated) {
+        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9501 -EntryType Warning -Message "Another CyberShield Agent instance is already running for $AgentName. Exiting." -ErrorAction SilentlyContinue
+        Write-Error "CyberShield Agent: Another instance is already running (mutex locked). Exiting."
+        exit 9501
+    }
+} catch {
+    # Mutex creation may fail in restricted environments - log and continue cautiously
+    Write-EventLog -LogName Application -Source "CyberShield" -EventId 9502 -EntryType Warning -Message "Could not create instance mutex: $($_.Exception.Message)" -ErrorAction SilentlyContinue
+}
+
+# ============================================
 #  v5.0.13-hardening: ANTI-DEBUG / ANTI-TAMPER CHECKS
 #  Prevents execution in interactive debug environments
 # ============================================
@@ -232,6 +250,9 @@ try {
 # ============================================
 Set-StrictMode -Version Latest
 
+# Initialize all variables that StrictMode requires to be declared before use
+$Global:LastSigVerifyLog = [datetime]::MinValue
+
 # ============================================
 #  v5.0.13-hardening: SELF-INTEGRITY VALIDATION
 #  Validates script hash and Authenticode signature at startup
@@ -250,10 +271,45 @@ try {
     # Note: NotSigned is allowed for development/unsigned deployments
     # Production deployments should enforce signing via Group Policy
 
-    # 2. SHA256 hash validation against server-known hash
-    # The expected hash is fetched from heartbeat and cached locally
+    # 2. SHA256 hash validation against server-known hash (SIGNATURE FIRST, then hash compare)
+    # The expected hash is fetched from heartbeat and cached locally with Ed25519 signature
     $hashCachePath = Join-Path "C:\CyberShield\data" "expected_script_hash.txt"
-    if (Test-Path $hashCachePath) {
+    $hashCacheJsonPath = Join-Path "C:\CyberShield\data" "expected_script_hash.json"
+    if (Test-Path $hashCacheJsonPath) {
+        # v5.0.13: Verify signature BEFORE trusting hash (correct order)
+        try {
+            $cacheJson = Get-Content $hashCacheJsonPath -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
+            if ($cacheJson -and $cacheJson.hash -and $cacheJson.hash.Length -eq 64) {
+                # Step 1: Verify signature of cached hash (if available)
+                if ($cacheJson.signature -and $cacheJson.signature.Length -gt 10) {
+                    $sigOk = Test-Ed25519HashSignature -Hash $cacheJson.hash -SignatureBase64 $cacheJson.signature
+                    if (-not $sigOk) {
+                        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Cached hash signature INVALID - cache may be tampered. Ignoring cached hash." -ErrorAction SilentlyContinue
+                        # Do NOT compare against a tampered cache - skip hash check
+                    } else {
+                        # Step 2: Only NOW compare hash (signature verified first)
+                        $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256).Hash.ToLower()
+                        if ($currentHash -ne $cacheJson.hash.ToLower()) {
+                            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected (signed): $($cacheJson.hash), Actual: $currentHash. Possible tampering." -ErrorAction SilentlyContinue
+                            Write-Error "CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
+                            exit 9003
+                        }
+                    }
+                } else {
+                    # No signature in cache - legacy format, compare hash with warning
+                    $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256).Hash.ToLower()
+                    if ($currentHash -ne $cacheJson.hash.ToLower()) {
+                        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch (unsigned cache). Expected: $($cacheJson.hash), Actual: $currentHash" -ErrorAction SilentlyContinue
+                        Write-Error "CyberShield Agent integrity violation: SHA256 mismatch"
+                        exit 9003
+                    }
+                }
+            }
+        } catch {
+            # JSON parse failure - fall through to plain text cache
+        }
+    } elseif (Test-Path $hashCachePath) {
+        # Legacy plain text hash cache (no signature)
         $expectedHash = (Get-Content $hashCachePath -Raw -ErrorAction SilentlyContinue).Trim()
         if ($expectedHash -and $expectedHash.Length -eq 64) {
             $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256).Hash.ToLower()
@@ -3888,10 +3944,9 @@ function Apply-ForcedUpdate {
             }
         }
         
-        # APLICAR UPDATE
-        Copy-Item -Path $tempScript -Destination $targetScript -Force
-        Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
-        Write-Log "[FORCE UPDATE] Script instalado: $targetScript" "SUCCESS"
+        # APLICAR UPDATE (atomic Move-Item instead of Copy to prevent partial write TOCTOU)
+        Move-Item -Path $tempScript -Destination $targetScript -Force
+        Write-Log "[FORCE UPDATE] Script instalado (atomic move): $targetScript" "SUCCESS"
         
         # Registrar evidencia
         Add-EvidenceEntry -Type "force_update" -Data @{
