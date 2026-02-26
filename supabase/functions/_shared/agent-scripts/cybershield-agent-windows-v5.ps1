@@ -1,14 +1,12 @@
 <#
-    CyberShield Agent - Windows v5.0.15 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.13 FULL ENTERPRISE
 
-    v5.0.15: SYNTAX AUDIT - 6 bug fixes (force_update handler, Win32_Product perf, version parity)
+    v5.0.13: SECURITY HARDENING + SYNTAX AUDIT
     - FIXED: Missing force_update case in Execute-Job switch (was falling to default -> "Unknown job type")
     - FIXED: Get-UnauthorizedSoftware replaced Win32_Product (5-20min!) with registry-based scan
     - FIXED: SAFE_MODE recovery log ordering (log before sleep, not after)
-    - FIXED: Version bumped to v5.0.15 for parity with Linux/macOS agents
     - IMPROVED: Write-Log Level param uses explicit variable instead of inline subexpression
-
-    v5.0.13: SECURITY HARDENING - 7 critical bug fixes (FSM, fail-closed, auth loop)
+    - FIXED: FSM now allows INITIALIZING -> DEGRADED transition (was rejected as invalid)
     - FIXED: FSM now allows INITIALIZING -> DEGRADED transition (was rejected as invalid)
     - FIXED: Fail-closed security: agent blocks operational jobs when crypto fails (SecurityDegraded flag)
     - FIXED: Auth loop prevention: consecutive heartbeat failures trigger SAFE_MODE after 5 retries
@@ -162,7 +160,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.15"
+    [string]$AgentVersion = "v5.0.13"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -1189,7 +1187,7 @@ function Execute-Job {
                 $output = Invoke-CollectDnsBlocks
             }
             "force_update" {
-                # v5.0.15-fix: Handle force_update as job type (was missing, fell to default)
+                # v5.0.13-fix: Handle force_update as job type (was missing, fell to default)
                 if ($Job.payload) {
                     $updateResponse = @{
                         target_version = $Job.payload.target_version
@@ -2874,7 +2872,7 @@ function Get-UnauthorizedSoftware {
             "Realtek*"
         )
         
-        # v5.0.15-fix: Use registry instead of Win32_Product (which is 5-20min slow and triggers MSI reconfiguration)
+        # v5.0.13-fix: Use registry instead of Win32_Product (which is 5-20min slow and triggers MSI reconfiguration)
         $installedSoftware = @()
         $regPaths = @(
             "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",

@@ -79,7 +79,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.15"
+AGENT_VERSION="v5.0.13"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -220,7 +220,7 @@ declare -a PROCESS_BASELINE=()
  chmod 700 "$KEYS_DIR"
  
  # ============================================
- #  v5.0.14: DEPENDENCY VALIDATION AT STARTUP
+ #  v5.0.13: DEPENDENCY VALIDATION AT STARTUP
  # ============================================
  missing_deps=()
  for dep in jq openssl curl nc base64; do
@@ -543,7 +543,7 @@ assert_launchd_health() {
              
              # Extract public key
              if openssl ec -in "$PRIVATE_KEY_PATH" -pubout -out "$PUBLIC_KEY_PATH" 2>/dev/null; then
-                 # v5.0.14-fix: Use binary hash for fingerprint (parity with Linux)
+                 # v5.0.13-fix: Use binary hash for fingerprint (parity with Linux)
                  local fingerprint
                  fingerprint=$(openssl dgst -sha256 -binary "$PUBLIC_KEY_PATH" | xxd -p | tr -d '\n')
                  echo "$fingerprint" > "$FINGERPRINT_PATH"
@@ -843,7 +843,7 @@ restart_service_handler() {
          return 1
      fi
      
-      # v5.0.14: Migrated from python3 to jq
+      # v5.0.13: Migrated from python3 to jq
       local jobs_array
       if echo "$result" | jq -e '.jobs' &>/dev/null; then
           jobs_array=$(echo "$result" | jq -c '.jobs')
@@ -1553,7 +1553,7 @@ EOF
       
       log "INFO" "[FORCE UPDATE] Reiniciando agente com nova versao..."
       
-      # v5.0.15-fix: Retry limit for update restart (max 3 attempts to prevent infinite loop)
+      # v5.0.13-fix: Retry limit for update restart (max 3 attempts to prevent infinite loop)
       local restart_attempt=0
       local restart_max=3
       local restart_success=false
@@ -2027,7 +2027,7 @@ remove_dns_filter_handler() {
      if [[ $((now - last_job_poll)) -ge $JOB_POLL_INTERVAL && "$network_ok" == "true" ]]; then
          jobs=$(poll_jobs)
          
-         # v5.0.14-fix: Use process substitution instead of pipe to avoid subshell variable isolation
+         # v5.0.13-fix: Use process substitution instead of pipe to avoid subshell variable isolation
          while read -r job; do
              if [[ -n "$job" ]]; then
                  job_type=$(echo "$job" | jq -r '.type // .job_type // "unknown"' 2>/dev/null)
