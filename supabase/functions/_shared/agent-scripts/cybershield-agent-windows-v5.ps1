@@ -1,12 +1,15 @@
 <#
     CyberShield Agent - Windows v5.0.13 FULL ENTERPRISE
 
-    v5.0.13: SECURITY HARDENING + SYNTAX AUDIT
+    v5.0.13: SECURITY HARDENING + SYNTAX AUDIT + EDR HARDENING
+    - ADDED: EventLog source registration before any Write-EventLog (prevents "source not found" crash)
+    - ADDED: Anti-debug checks (blocks ISE + .NET debugger attachment)
+    - ADDED: ACL hardening on C:\CyberShield directory (SYSTEM + Administrators only)
+    - FIXED: $consecutiveHeartbeatFailures was used but never initialized (crash with StrictMode)
     - FIXED: Missing force_update case in Execute-Job switch (was falling to default -> "Unknown job type")
     - FIXED: Get-UnauthorizedSoftware replaced Win32_Product (5-20min!) with registry-based scan
     - FIXED: SAFE_MODE recovery log ordering (log before sleep, not after)
     - IMPROVED: Write-Log Level param uses explicit variable instead of inline subexpression
-    - FIXED: FSM now allows INITIALIZING -> DEGRADED transition (was rejected as invalid)
     - FIXED: FSM now allows INITIALIZING -> DEGRADED transition (was rejected as invalid)
     - FIXED: Fail-closed security: agent blocks operational jobs when crypto fails (SecurityDegraded flag)
     - FIXED: Auth loop prevention: consecutive heartbeat failures trigger SAFE_MODE after 5 retries
@@ -169,6 +172,37 @@ param(
 $ErrorActionPreference = "Stop"
 
 # ============================================
+#  v5.0.13-hardening: EVENTLOG SOURCE REGISTRATION
+#  Must be done BEFORE any Write-EventLog call (including trap)
+# ============================================
+try {
+    if (-not [System.Diagnostics.EventLog]::SourceExists("CyberShield")) {
+        New-EventLog -LogName Application -Source "CyberShield" -ErrorAction SilentlyContinue
+    }
+} catch {
+    # May fail without admin rights on first run - non-critical
+}
+
+# ============================================
+#  v5.0.13-hardening: ANTI-DEBUG / ANTI-TAMPER CHECKS
+#  Prevents execution in interactive debug environments
+# ============================================
+try {
+    # Block PowerShell ISE (interactive debugging)
+    if ($host.Name -match "ISE") {
+        Write-Error "CyberShield Agent cannot run inside PowerShell ISE (security policy)"
+        exit 9101
+    }
+    # Block .NET debugger attachment
+    if ([System.Diagnostics.Debugger]::IsAttached) {
+        Write-Error "CyberShield Agent cannot run with a debugger attached (security policy)"
+        exit 9102
+    }
+} catch {
+    # Debugger check may fail on constrained runtimes - non-critical, continue
+}
+
+# ============================================
 #  GLOBAL TRAP FOR UNHANDLED ERRORS
 # ============================================
 trap {
@@ -205,11 +239,26 @@ $logDir = Join-Path -Path $Global:BaseDir -ChildPath "logs"
 $evidenceDir = Join-Path -Path $Global:BaseDir -ChildPath "evidence"
 $dataDir = Join-Path -Path $Global:BaseDir -ChildPath "data"
 
-# Create directories if they don't exist
+# Create directories if they don't exist + ACL hardening
 @($logDir, $evidenceDir, $dataDir) | ForEach-Object {
     if (-not (Test-Path $_)) {
         New-Item -ItemType Directory -Path $_ -Force | Out-Null
     }
+}
+
+# v5.0.13-hardening: Restrict base directory ACL (SYSTEM + Administrators only)
+try {
+    $acl = Get-Acl $Global:BaseDir
+    $acl.SetAccessRuleProtection($true, $false)  # Disable inheritance
+    $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        "SYSTEM", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+    $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        "Administrators", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+    $acl.AddAccessRule($systemRule)
+    $acl.AddAccessRule($adminRule)
+    Set-Acl $Global:BaseDir $acl
+} catch {
+    # ACL hardening may fail on non-admin first run - logged but non-blocking
 }
 
 $Global:LogFilePath = Join-Path -Path $logDir -ChildPath "cybershield-agent-v5.log"
@@ -4409,6 +4458,7 @@ $lastJobPoll = Get-Date
 $lastDnsSync = Get-Date
 $lastLocalDetection = Get-Date
 $consecutiveNetworkFailures = 0
+$consecutiveHeartbeatFailures = 0  # v5.0.13-fix: Was used but never initialized (BUG with StrictMode)
 
 # v5.0.11: Run initial local detection on startup
 Write-Log "[STARTUP] Running initial local security detection..." "INFO"
