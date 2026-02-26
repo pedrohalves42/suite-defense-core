@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - Linux v5.0.11
+# CyberShield Agent - Linux v5.0.13
 #
 # v5.0.11: FULL ENTERPRISE - All functions (Get-RollbackState, Add-EvidenceEntry, Apply-ForcedUpdate)
 # v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
@@ -79,7 +79,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.12"
+AGENT_VERSION="v5.0.13"
 BASE_DIR="/opt/cybershield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -125,12 +125,12 @@ CURRENT_STATE="INITIALIZING"
 
 # Valid FSM transitions
 declare -A STATE_TRANSITIONS=(
-    ["INITIALIZING"]="AUTHENTICATING SAFE_MODE"
+    ["INITIALIZING"]="AUTHENTICATING DEGRADED SAFE_MODE SYNCING"
     ["AUTHENTICATING"]="SYNCING DEGRADED SAFE_MODE"
     ["SYNCING"]="ENFORCING DEGRADED SAFE_MODE"
     ["ENFORCING"]="SYNCING DEGRADED SAFE_MODE"
     ["DEGRADED"]="AUTHENTICATING SYNCING ENFORCING SAFE_MODE"
-    ["SAFE_MODE"]="INITIALIZING"
+    ["SAFE_MODE"]="INITIALIZING DEGRADED"
 )
 
 # v5.0.1: Hash Chain for execution
@@ -1882,6 +1882,7 @@ remove_dns_filter_handler() {
      keys_initialized=true
  else
      log "ERROR" "[STARTUP] Failed to initialize keys - entering DEGRADED mode"
+     set_agent_state "DEGRADED" "Key initialization failed"
  fi
  
  # ============================================
