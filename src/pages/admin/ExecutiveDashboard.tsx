@@ -1,237 +1,120 @@
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { ExecutiveSummaryCard } from '@/components/admin/ExecutiveSummaryCard';
-import { DailySummaryCard } from '@/components/admin/DailySummaryCard';
-import { SectionDivider } from '@/components/ui/section-divider';
-import { useRiskDeltaHistory } from '@/hooks/useRiskDelta';
 import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
+import { useTodayRiskDelta, getDeltaInfo, formatCurrency } from '@/hooks/useRiskDelta';
 import { 
-  Shield, 
-  ShieldCheck, 
-  ShieldAlert, 
-  ShieldX,
-  Monitor,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  ArrowRight,
-  Activity,
-  Zap,
-  RefreshCw,
-  BarChart3,
-  FileText,
-  Target
+  ShieldCheck, ShieldAlert, ShieldX, Shield,
+  Monitor, MonitorOff, AlertTriangle, CheckCircle2,
+  Clock, ArrowRight, Activity, Zap, RefreshCw,
+  DollarSign, TrendingDown, TrendingUp, Minus, XCircle,
+  CalendarDays, BarChart3, FileText, Target
 } from 'lucide-react';
 import { format, ptBR } from '@/lib/date-utils';
-import { subDays, differenceInMinutes } from 'date-fns';
+import { subDays } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-
-interface HealthStatus {
-  status: 'excellent' | 'good' | 'warning' | 'critical';
-  score: number;
-  message: string;
-  color: string;
-  icon: React.ReactNode;
-}
-
-interface TrendData {
-  current: number;
-  previous: number;
-  trend: 'up' | 'down' | 'stable';
-  percentage: number;
-}
+import { motion } from 'framer-motion';
 
 export default function ExecutiveDashboard() {
   const { activeTenant, loading: tenantLoading } = useActiveTenant();
   const tenantId = activeTenant?.id;
 
-  // ADR-026: Centralized agent snapshots - single source of truth
   const { data: snapshots, isLoading: snapshotsLoading } = useAgentSnapshots();
   const agentCounts = getAgentStatusCounts(snapshots);
+  const { data: riskDelta } = useTodayRiskDelta();
 
-  // Helper para evitar deep type instantiation
-  const fetchSummaryData = async (tid: string) => {
-    const now = new Date();
-    const oneDayAgo = subDays(now, 1);
-    const sevenDaysAgo = subDays(now, 7);
-
-    // Using any to avoid TypeScript deep type instantiation issues
-    const sb = supabase as any;
-
-    // Fetch alerts count
-    const alertsRes = await sb.from('system_alerts').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'active');
-    const pendingAlerts: number = alertsRes.count || 0;
-
-    // Fetch insights count
-    const insightsRes = await sb.from('ai_insights').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'pending');
-    const pendingInsights: number = insightsRes.count || 0;
-
-    // Fetch jobs
-    const jobsRes = await sb.from('jobs').select('status').eq('tenant_id', tid).gte('created_at', oneDayAgo.toISOString());
-    const recentJobs: Array<{ status: string }> = jobsRes.data || [];
-
-    // Fetch blocked attempts count
-    const blockedRes = await sb.from('blocked_access_attempts').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).gte('blocked_at', sevenDaysAgo.toISOString());
-    const blockedThreats: number = blockedRes.count || 0;
-
-    // Use centralized agent counts
-    const totalAgents = agentCounts.total;
-    const onlineAgents = agentCounts.online;
-    const offlineAgents = agentCounts.offline + agentCounts.warning + agentCounts.never_connected;
-
-    const totalJobs = recentJobs.length;
-    const failedJobs = recentJobs.filter((j) => j.status === 'failed').length;
-    const successRate = totalJobs > 0 ? Math.round(((totalJobs - failedJobs) / totalJobs) * 100) : 100;
-
-    // Calcular score de saúde geral
-    const agentHealthScore = totalAgents > 0 ? (onlineAgents / totalAgents) * 100 : 100;
-    const alertPenalty = Math.min(pendingAlerts * 5, 30);
-    const overallScore = Math.max(0, Math.round(agentHealthScore - alertPenalty));
-
-    return {
-      totalAgents,
-      onlineAgents,
-      offlineAgents,
-      pendingAlerts,
-      pendingInsights,
-      blockedThreats,
-      successRate,
-      overallScore,
-      lastUpdate: new Date()
-    };
-  };
-
-  // Buscar dados resumidos — placeholderData removido para evitar dados stale cross-tenant
   const { data: summaryData, isLoading, refetch } = useQuery({
     queryKey: ['executive-summary', tenantId],
-    queryFn: () => tenantId ? fetchSummaryData(tenantId) : null,
+    queryFn: async () => {
+      if (!tenantId) return null;
+      const now = new Date();
+      const today = new Date(now); today.setHours(0,0,0,0);
+      const todayISO = today.toISOString();
+      const sevenDaysAgo = subDays(now, 7).toISOString();
+
+      const sb = supabase as any;
+
+      const [alertsRes, jobsRes, blockedRes] = await Promise.all([
+        sb.from('system_alerts').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active'),
+        sb.from('jobs').select('status').eq('tenant_id', tenantId).gte('created_at', todayISO),
+        sb.from('blocked_access_attempts').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).gte('blocked_at', sevenDaysAgo),
+      ]);
+
+      const pendingAlerts: number = alertsRes.count || 0;
+      const recentJobs: Array<{ status: string }> = jobsRes.data || [];
+      const blockedThreats: number = blockedRes.count || 0;
+
+      const totalAgents = agentCounts.total;
+      const onlineAgents = agentCounts.online;
+      const offlineAgents = agentCounts.offline + agentCounts.warning + agentCounts.never_connected;
+
+      const totalJobs = recentJobs.length;
+      const failedJobs = recentJobs.filter((j) => j.status === 'failed').length;
+      const successRate = totalJobs > 0 ? Math.round(((totalJobs - failedJobs) / totalJobs) * 100) : 100;
+
+      const agentHealthScore = totalAgents > 0 ? (onlineAgents / totalAgents) * 100 : 100;
+      const alertPenalty = Math.min(pendingAlerts * 5, 30);
+      const overallScore = Math.max(0, Math.round(agentHealthScore - alertPenalty));
+
+      return {
+        totalAgents, onlineAgents, offlineAgents,
+        pendingAlerts, blockedThreats, successRate,
+        overallScore, totalJobs, failedJobs,
+        lastUpdate: new Date()
+      };
+    },
     enabled: !tenantLoading && !!tenantId && !snapshotsLoading,
-    refetchInterval: 300000, // COST-OPT: 5min
+    refetchInterval: 300000,
     staleTime: 60000,
   });
 
-  // Determinar status de saúde
-  const getHealthStatus = (score: number): HealthStatus => {
-    if (score >= 90) {
-      return {
-        status: 'excellent',
-        score,
-        message: 'Seus computadores estão totalmente protegidos',
-        color: 'text-green-600',
-        icon: <ShieldCheck className="h-12 w-12 text-green-500" />
-      };
-    } else if (score >= 70) {
-      return {
-        status: 'good',
-        score,
-        message: 'Proteção ativa com alguns pontos de atenção',
-        color: 'text-emerald-600',
-        icon: <Shield className="h-12 w-12 text-emerald-500" />
-      };
-    } else if (score >= 50) {
-      return {
-        status: 'warning',
-        score,
-        message: 'Atenção necessária em alguns itens',
-        color: 'text-amber-600',
-        icon: <ShieldAlert className="h-12 w-12 text-amber-500" />
-      };
-    } else {
-      return {
-        status: 'critical',
-        score,
-        message: 'Ação imediata necessária',
-        color: 'text-red-600',
-        icon: <ShieldX className="h-12 w-12 text-red-500" />
-      };
-    }
+  const getHealthStatus = (score: number) => {
+    if (score >= 90) return { status: 'excellent' as const, message: 'Ambiente protegido', color: 'text-green-500', bgClass: 'border-green-500/20 bg-green-500/5' };
+    if (score >= 70) return { status: 'good' as const, message: 'Proteção ativa', color: 'text-emerald-500', bgClass: 'border-emerald-500/20 bg-emerald-500/5' };
+    if (score >= 50) return { status: 'warning' as const, message: 'Atenção necessária', color: 'text-amber-500', bgClass: 'border-amber-500/20 bg-amber-500/5' };
+    return { status: 'critical' as const, message: 'Ação imediata', color: 'text-red-500', bgClass: 'border-red-500/20 bg-red-500/5' };
   };
 
   const healthStatus = summaryData ? getHealthStatus(summaryData.overallScore) : null;
+  const deltaInfo = getDeltaInfo(riskDelta?.delta ?? null);
+  const DeltaIcon = deltaInfo.icon === 'down' ? TrendingDown : deltaInfo.icon === 'up' ? TrendingUp : Minus;
+  const costAvoided = riskDelta?.estimated_cost_avoided ?? 0;
 
-  // Ações recomendadas
-  const getRecommendedActions = () => {
+  // Recommended actions
+  const actions = (() => {
     if (!summaryData) return [];
-    
-    const actions = [];
-    
-    if (summaryData.offlineAgents > 0) {
-      actions.push({
-        priority: 'high',
-        title: `${summaryData.offlineAgents} computador${summaryData.offlineAgents > 1 ? 'es' : ''} offline`,
-        description: 'Verificar conexão ou reinstalar agente',
-        link: '/admin/agent-health',
-        linkText: 'Ver detalhes'
-      });
-    }
-    
-    if (summaryData.pendingAlerts > 0) {
-      actions.push({
-        priority: 'medium',
-        title: `${summaryData.pendingAlerts} alerta${summaryData.pendingAlerts > 1 ? 's' : ''} pendente${summaryData.pendingAlerts > 1 ? 's' : ''}`,
-        description: 'Revisar e resolver alertas ativos',
-        link: '/admin/action-center',
-        linkText: 'Resolver agora'
-      });
-    }
-    
-    if (summaryData.pendingInsights > 0) {
-      actions.push({
-        priority: 'low',
-        title: `${summaryData.pendingInsights} sugestão${summaryData.pendingInsights > 1 ? 'ões' : ''} da IA`,
-        description: 'Analisar recomendações de melhoria',
-        link: '/admin/ai-insights',
-        linkText: 'Ver sugestões'
-      });
-    }
-    
-    if (actions.length === 0) {
-      actions.push({
-        priority: 'none',
-        title: 'Tudo em ordem!',
-        description: 'Nenhuma ação necessária no momento',
-        link: '/admin/dashboard',
-        linkText: 'Ver dashboard completo'
-      });
-    }
-    
-    return actions;
-  };
+    const list = [];
+    if (summaryData.offlineAgents > 0) list.push({ priority: 'high', title: `${summaryData.offlineAgents} computador${summaryData.offlineAgents > 1 ? 'es' : ''} offline`, link: '/admin/agent-health' });
+    if (summaryData.pendingAlerts > 0) list.push({ priority: 'medium', title: `${summaryData.pendingAlerts} alerta${summaryData.pendingAlerts > 1 ? 's' : ''} pendente${summaryData.pendingAlerts > 1 ? 's' : ''}`, link: '/admin/action-center' });
+    if (summaryData.failedJobs > 0) list.push({ priority: 'medium', title: `${summaryData.failedJobs} job${summaryData.failedJobs > 1 ? 's' : ''} com falha hoje`, link: '/admin/jobs' });
+    return list;
+  })();
 
-  const actions = getRecommendedActions();
-
-  if (isLoading) {
+  if (isLoading || snapshotsLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-48 w-full" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-40 w-full" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Visão Geral</h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Resumo executivo da proteção do seu ambiente
           </p>
         </div>
@@ -241,290 +124,208 @@ export default function ExecutiveDashboard() {
         </Button>
       </div>
 
-      {/* Executive Summary Card - Risk Delta */}
-      <ExecutiveSummaryCard />
-
-      {/* Daily Summary Card */}
-      <DailySummaryCard />
-
-      <SectionDivider label="Status de Proteção" />
-
-      {/* Card Principal - Status de Proteção */}
-      <Card className={cn(
-        "border-2",
-        healthStatus?.status === 'excellent' && "border-green-200 bg-green-50/50 dark:bg-green-950/20",
-        healthStatus?.status === 'good' && "border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20",
-        healthStatus?.status === 'warning' && "border-amber-200 bg-amber-50/50 dark:bg-amber-950/20",
-        healthStatus?.status === 'critical' && "border-red-200 bg-red-50/50 dark:bg-red-950/20"
-      )}>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-6">
-            {healthStatus?.icon}
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h2 className={cn("text-2xl font-bold", healthStatus?.color)}>
-                  {healthStatus?.message}
-                </h2>
-                <Badge variant={
-                  healthStatus?.status === 'excellent' ? 'default' :
-                  healthStatus?.status === 'good' ? 'secondary' :
-                  healthStatus?.status === 'warning' ? 'outline' : 'destructive'
-                }>
-                  {healthStatus?.score}% protegido
-                </Badge>
+      {/* === HERO: Protection Score + Key Metrics === */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+        <Card className={cn("border", healthStatus?.bgClass)}>
+          <CardContent className="pt-5 pb-5 space-y-4">
+            {/* Score row */}
+            <div className="flex items-center gap-4">
+              <div className={cn("flex items-center justify-center h-12 w-12 rounded-xl", healthStatus?.bgClass)}>
+                {healthStatus?.status === 'excellent' && <ShieldCheck className={cn("h-7 w-7", healthStatus.color)} />}
+                {healthStatus?.status === 'good' && <Shield className={cn("h-7 w-7", healthStatus.color)} />}
+                {healthStatus?.status === 'warning' && <ShieldAlert className={cn("h-7 w-7", healthStatus.color)} />}
+                {healthStatus?.status === 'critical' && <ShieldX className={cn("h-7 w-7", healthStatus.color)} />}
               </div>
-              <Progress 
-                value={healthStatus?.score || 0} 
-                className="h-3"
-              />
-              <p className="text-sm text-muted-foreground mt-2">
-                Última atualização: {summaryData?.lastUpdate ? format(summaryData.lastUpdate, "HH:mm", { locale: ptBR }) : '-'}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Métricas em Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Computadores</p>
-                <p className="text-3xl font-bold">{summaryData?.totalAgents || 0}</p>
-              </div>
-              <Monitor className="h-10 w-10 text-muted-foreground/30" />
-            </div>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                {summaryData?.onlineAgents || 0} online
-              </Badge>
-              {(summaryData?.offlineAgents || 0) > 0 && (
-                <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                  {summaryData?.offlineAgents} offline
-                </Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Ameaças Bloqueadas</p>
-                <p className="text-3xl font-bold text-green-600">{summaryData?.blockedThreats || 0}</p>
-              </div>
-              <ShieldCheck className="h-10 w-10 text-green-500/30" />
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Últimos 7 dias
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Taxa de Sucesso</p>
-                <p className="text-3xl font-bold">{summaryData?.successRate || 100}%</p>
-              </div>
-              <Activity className="h-10 w-10 text-muted-foreground/30" />
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Jobs nas últimas 24h
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Ações Pendentes</p>
-                <p className={cn(
-                  "text-3xl font-bold",
-                  (summaryData?.pendingAlerts || 0) > 0 ? "text-amber-600" : "text-green-600"
-                )}>
-                  {(summaryData?.pendingAlerts || 0) + (summaryData?.pendingInsights || 0)}
-                </p>
-              </div>
-              {(summaryData?.pendingAlerts || 0) > 0 ? (
-                <AlertTriangle className="h-10 w-10 text-amber-500/30" />
-              ) : (
-                <CheckCircle2 className="h-10 w-10 text-green-500/30" />
-              )}
-            </div>
-            <Link to="/admin/action-center" className="text-sm text-primary hover:underline mt-2 inline-block">
-              Ver detalhes →
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Próximas Ações Recomendadas */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-amber-500" />
-            Próximas Ações Recomendadas
-          </CardTitle>
-          <CardDescription>
-            O que fazer agora para manter seu ambiente seguro
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {actions.map((action, index) => (
-              <div 
-                key={index}
-                className={cn(
-                  "flex items-center justify-between p-4 rounded-lg border",
-                  action.priority === 'high' && "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800",
-                  action.priority === 'medium' && "bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800",
-                  action.priority === 'low' && "bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800",
-                  action.priority === 'none' && "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  {action.priority === 'high' && <AlertTriangle className="h-5 w-5 text-red-600" />}
-                  {action.priority === 'medium' && <Clock className="h-5 w-5 text-amber-600" />}
-                  {action.priority === 'low' && <Activity className="h-5 w-5 text-blue-600" />}
-                  {action.priority === 'none' && <CheckCircle2 className="h-5 w-5 text-green-600" />}
-                  <div>
-                    <p className="font-medium">{action.title}</p>
-                    <p className="text-sm text-muted-foreground">{action.description}</p>
-                  </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={cn("text-lg font-bold", healthStatus?.color)}>{healthStatus?.message}</span>
+                  <Badge variant="outline" className="text-[10px] font-medium">
+                    {summaryData?.overallScore}%
+                  </Badge>
+                  {agentCounts.online > 0 && (
+                    <Badge variant="outline" className="gap-1 text-[10px] border-green-500/30 text-green-500">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
+                      </span>
+                      Monitorando
+                    </Badge>
+                  )}
                 </div>
-                <Button asChild variant="ghost" size="sm">
-                  <Link to={action.link}>
-                    {action.linkText}
-                    <ArrowRight className="h-4 w-4 ml-1" />
-                  </Link>
-                </Button>
+                <Progress value={summaryData?.overallScore || 0} className="h-2" />
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </div>
 
-      {/* C-Level KPI Section */}
-      <SectionDivider label="KPIs Executivos" />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Security Score Trend Chart */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Tendência do Score de Segurança
-            </CardTitle>
-            <CardDescription>Últimos 7 dias</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={[
-                { day: 'Seg', score: Math.max(60, (summaryData?.overallScore || 80) - 8) },
-                { day: 'Ter', score: Math.max(60, (summaryData?.overallScore || 80) - 5) },
-                { day: 'Qua', score: Math.max(60, (summaryData?.overallScore || 80) - 3) },
-                { day: 'Qui', score: Math.max(60, (summaryData?.overallScore || 80) - 6) },
-                { day: 'Sex', score: Math.max(60, (summaryData?.overallScore || 80) - 2) },
-                { day: 'Sáb', score: Math.max(60, (summaryData?.overallScore || 80) - 1) },
-                { day: 'Dom', score: summaryData?.overallScore || 80 },
-              ]}>
-                <defs>
-                  <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="day" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis domain={[0, 100]} className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                <Tooltip />
-                <Area type="monotone" dataKey="score" stroke="hsl(var(--primary))" fill="url(#scoreGradient)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
+            {/* Metrics row */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              <MetricTile
+                icon={<Monitor className="h-3.5 w-3.5" />}
+                label="Online"
+                value={`${agentCounts.online}`}
+                sub={`de ${agentCounts.total}`}
+                color="green"
+                pulse={agentCounts.online > 0}
+              />
+              <MetricTile
+                icon={<MonitorOff className="h-3.5 w-3.5" />}
+                label="Offline"
+                value={`${agentCounts.offline + agentCounts.warning + agentCounts.never_connected}`}
+                sub="desconectados"
+                color={agentCounts.offline > 0 ? 'red' : 'muted'}
+              />
+              <MetricTile
+                icon={<DeltaIcon className="h-3.5 w-3.5" />}
+                label="Risco"
+                value={deltaInfo.label}
+                sub={deltaInfo.description}
+                color={deltaInfo.color === 'green' ? 'green' : deltaInfo.color === 'red' ? 'red' : 'muted'}
+              />
+              <MetricTile
+                icon={<ShieldCheck className="h-3.5 w-3.5" />}
+                label="Ameaças Bloqueadas"
+                value={`${summaryData?.blockedThreats || 0}`}
+                sub="últimos 7 dias"
+                color={summaryData?.blockedThreats ? 'green' : 'muted'}
+              />
+              <MetricTile
+                icon={<DollarSign className="h-3.5 w-3.5" />}
+                label="Custo Evitado"
+                value={formatCurrency(costAvoided)}
+                sub={costAvoided > 0 ? 'incidentes prevenidos' : 'sem incidentes'}
+                color={costAvoided > 0 ? 'emerald' : 'muted'}
+              />
+            </div>
           </CardContent>
         </Card>
+      </motion.div>
 
-        {/* Agent Distribution */}
+      {/* === TODAY: Jobs + Events === */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.08 }}>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Monitor className="h-4 w-4" />
-              Distribuição de Agentes
-            </CardTitle>
-            <CardDescription>Status atual do parque</CardDescription>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-semibold">Hoje</CardTitle>
+                <span className="text-[11px] text-muted-foreground">
+                  {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {summaryData?.totalJobs || 0} jobs executados
+                </span>
+                {summaryData?.successRate !== undefined && (
+                  <Badge variant="outline" className={cn(
+                    "text-[10px]",
+                    summaryData.successRate >= 80 ? "text-green-500 border-green-500/30" : 
+                    summaryData.successRate >= 50 ? "text-amber-500 border-amber-500/30" : 
+                    "text-red-500 border-red-500/30"
+                  )}>
+                    {summaryData.successRate}% sucesso
+                  </Badge>
+                )}
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-center">
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: 'Online', value: summaryData?.onlineAgents || 0 },
-                      { name: 'Offline', value: summaryData?.offlineAgents || 0 },
-                    ]}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
+          <CardContent className="pt-0">
+            {actions.length > 0 ? (
+              <div className="space-y-2">
+                {actions.map((action, idx) => (
+                  <Link
+                    key={idx}
+                    to={action.link}
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-lg border transition-colors hover:bg-muted/50",
+                      action.priority === 'high' && "border-red-500/20 bg-red-500/5",
+                      action.priority === 'medium' && "border-amber-500/20 bg-amber-500/5",
+                    )}
                   >
-                    <Cell fill="hsl(142, 71%, 45%)" />
-                    <Cell fill="hsl(0, 84%, 60%)" />
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex justify-center gap-6 mt-2">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-green-500" />
-                <span className="text-sm">Online ({summaryData?.onlineAgents || 0})</span>
+                    <div className="flex items-center gap-2.5">
+                      {action.priority === 'high' ? (
+                        <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                      )}
+                      <span className="text-sm font-medium">{action.title}</span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  </Link>
+                ))}
               </div>
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-red-500" />
-                <span className="text-sm">Offline ({summaryData?.offlineAgents || 0})</span>
+            ) : (
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-green-500/20 bg-green-500/5">
+                <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-green-500">Tudo em ordem</p>
+                  <p className="text-xs text-muted-foreground">Nenhuma ação necessária no momento</p>
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
-      {/* Quick Navigation to Phase 4 modules */}
-      <SectionDivider label="Módulos Avançados" />
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Button asChild variant="outline" className="h-auto py-4 flex-col">
-          <Link to="/admin/reports">
-            <BarChart3 className="h-6 w-6 mb-2" />
-            <span>Relatórios</span>
-          </Link>
-        </Button>
-        <Button asChild variant="outline" className="h-auto py-4 flex-col">
-          <Link to="/admin/compliance-automation">
-            <FileText className="h-6 w-6 mb-2" />
-            <span>Compliance</span>
-          </Link>
-        </Button>
-        <Button asChild variant="outline" className="h-auto py-4 flex-col">
-          <Link to="/admin/threat-intelligence">
-            <Target className="h-6 w-6 mb-2" />
-            <span>Threat Intel</span>
-          </Link>
-        </Button>
-        <Button asChild variant="outline" className="h-auto py-4 flex-col">
-          <Link to="/admin/playbooks">
-            <Zap className="h-6 w-6 mb-2" />
-            <span>Automações</span>
-          </Link>
-        </Button>
+      {/* === Quick Navigation === */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <NavButton to="/admin/dashboard" icon={<Activity className="h-5 w-5" />} label="Dashboard" />
+        <NavButton to="/admin/reports" icon={<BarChart3 className="h-5 w-5" />} label="Relatórios" />
+        <NavButton to="/admin/compliance-automation" icon={<FileText className="h-5 w-5" />} label="Compliance" />
+        <NavButton to="/admin/playbooks" icon={<Zap className="h-5 w-5" />} label="Automações" />
       </div>
     </div>
+  );
+}
+
+/* ─── Metric Tile ──────────────────────────── */
+
+function MetricTile({ icon, label, value, sub, color, pulse }: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub: string;
+  color: 'green' | 'red' | 'emerald' | 'muted';
+  pulse?: boolean;
+}) {
+  const valueColor = {
+    green: 'text-green-500', red: 'text-red-500',
+    emerald: 'text-emerald-500', muted: 'text-foreground',
+  }[color];
+
+  const bgAccent = {
+    green: 'bg-green-500/5 border-green-500/15',
+    red: 'bg-red-500/5 border-red-500/15',
+    emerald: 'bg-emerald-500/5 border-emerald-500/15',
+    muted: 'bg-muted/30 border-border/40',
+  }[color];
+
+  return (
+    <div className={cn("relative p-2.5 rounded-lg border", bgAccent)}>
+      {pulse && (
+        <span className="absolute top-2 right-2 flex h-1.5 w-1.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60" />
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
+        </span>
+      )}
+      <div className="flex items-center gap-1 mb-1">
+        <span className="text-muted-foreground">{icon}</span>
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium truncate">{label}</span>
+      </div>
+      <p className={cn("text-lg font-bold leading-none", valueColor)}>{value}</p>
+      <p className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">{sub}</p>
+    </div>
+  );
+}
+
+/* ─── Nav Button ──────────────────────────── */
+
+function NavButton({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+  return (
+    <Button asChild variant="outline" className="h-auto py-3.5 flex-col gap-1.5">
+      <Link to={to}>
+        {icon}
+        <span className="text-xs">{label}</span>
+      </Link>
+    </Button>
   );
 }
