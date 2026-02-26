@@ -194,17 +194,17 @@ export function TenantBaselineProfile() {
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-primary" />
-          Perfil Comportamental da Empresa
+          Perfil de Uso da Empresa
         </CardTitle>
         <CardDescription className="text-xs">
-          Baselines inteligentes com detecção de desvios
+          Comparação entre o uso normal e o uso atual dos computadores
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {profiles.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-30" />
-            <p className="text-xs">Baselines sendo calculados...</p>
+            <p className="text-xs">Coletando dados de uso...</p>
           </div>
         ) : (
           <>
@@ -240,7 +240,7 @@ export function TenantBaselineProfile() {
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div>
                       <p className="text-lg font-bold">{profile.mean}{profile.unit}</p>
-                      <p className="text-[10px] text-muted-foreground">Baseline</p>
+                      <p className="text-[10px] text-muted-foreground">Normal</p>
                     </div>
                     <div>
                       <p className="text-lg font-bold">
@@ -255,7 +255,7 @@ export function TenantBaselineProfile() {
                       )}>
                         {profile.driftPercent > 0 ? '+' : ''}{profile.driftPercent}%
                       </p>
-                      <p className="text-[10px] text-muted-foreground">Drift</p>
+                      <p className="text-[10px] text-muted-foreground">Variação</p>
                     </div>
                   </div>
 
