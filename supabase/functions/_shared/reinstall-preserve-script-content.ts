@@ -1,10 +1,10 @@
 // CyberShield Agent - Reinstall Preserve Script Content
 // Embedded version for Edge Function delivery
-// Version: 2.9.0 - Strategy 3 now uses auto-recover via enrollment key (no JWT prompt)
+// Version: 3.0.0 - Fully automatic, no prompts, built-in enrollment key
 
-export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v2.9.0
+export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v3.0.0
 # Preserves credentials (AgentName, Token, HMAC) during agent update
-# Strategy 3: Auto-recover via enrollment key (no JWT needed)
+# Strategy 3: Auto-recover via built-in enrollment key (zero prompts)
 # ASCII-safe, English-only for cross-locale compatibility
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ErrorActionPreference = "Stop"
@@ -22,7 +22,7 @@ function Write-Status {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " CyberShield - Reinstall Preserve v2.9.0" -ForegroundColor Cyan
+Write-Host " CyberShield - Reinstall Preserve v3.0.0" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -101,21 +101,15 @@ if (-not $AgentToken) {
     }
 }
 
-# Strategy 3: Auto-recover from server using get-reinstall-by-name (v2.9.0)
-# Falls back to full auto-recover script with credentials pre-loaded
+# Strategy 3: Auto-recover from server using get-reinstall-by-name (v3.0.0)
+# Uses built-in enrollment key - fully automatic, no prompts
 if (-not $AgentToken -and $AgentName) {
-    Write-Status "Local credentials not found - trying auto-recovery from server..." "WARN"
+    Write-Status "Local credentials not found - auto-recovering from server..." "WARN"
     
-    # Try to find enrollment key from environment or prompt
+    # Use environment variable if set, otherwise use built-in default key
     $enrollKey = $env:CYBERSHIELD_KEY
     if (-not $enrollKey) {
-        Write-Host ""
-        Write-Host "  Agent credentials were lost (task deleted or v4.x agent)." -ForegroundColor Yellow
-        Write-Host "  An enrollment key is needed to recover automatically." -ForegroundColor Yellow
-        Write-Host "  (Dashboard > Admin > Enrollment Keys)" -ForegroundColor Yellow
-        Write-Host ""
-        $enrollKey = Read-Host "  Paste your Enrollment Key (or press Enter to skip)"
-        $enrollKey = $enrollKey.Trim()
+        $enrollKey = "CSH-NCLR-7K9Q-2M4T"
     }
 
     if ($enrollKey -and $enrollKey.Length -gt 5) {
