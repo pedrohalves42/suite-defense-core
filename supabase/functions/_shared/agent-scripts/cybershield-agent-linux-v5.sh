@@ -79,7 +79,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.9"
+AGENT_VERSION="v5.0.12"
 BASE_DIR="/opt/cybershield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -805,15 +805,32 @@ restart_service_handler() {
          return 1
      fi
      
-     # Backend returns array directly, not { jobs: [...] }
+     # v5.0.12 FIX: Backend may return wrapped {jobs:[...]} or flat array [...]
+     # Extract jobs array from either format
+     local jobs_array
+     if echo "$result" | jq -e '.jobs' &>/dev/null; then
+         # Wrapped format: { jobs: [...], poll_interval_seconds: N }
+         jobs_array=$(echo "$result" | jq -c '.jobs')
+         # Read dynamic poll interval
+         local new_interval
+         new_interval=$(echo "$result" | jq -r '.poll_interval_seconds // 0' 2>/dev/null)
+         if [[ "$new_interval" -ge 10 && "$new_interval" != "$JOB_POLL_INTERVAL" ]]; then
+             log "INFO" "[POLL-JOBS] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_interval}s"
+             JOB_POLL_INTERVAL=$new_interval
+         fi
+     else
+         # Flat array format (legacy)
+         jobs_array="$result"
+     fi
+     
      local count
-     count=$(echo "$result" | jq 'length' 2>/dev/null || echo 0)
+     count=$(echo "$jobs_array" | jq 'length' 2>/dev/null || echo 0)
      
      if [[ "$count" -gt 0 ]]; then
          log "INFO" "[POLL-JOBS] Received $count job(s)"
      fi
      
-     echo "$result"
+     echo "$jobs_array"
  }
  
  execute_job() {

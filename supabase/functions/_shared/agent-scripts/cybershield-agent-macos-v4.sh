@@ -28,7 +28,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTES E VARIAVEIS GLOBAIS
 # ============================================
-AGENT_VERSION="v4.0.7"
+AGENT_VERSION="v4.0.8"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -692,9 +692,21 @@ poll_jobs() {
         return 1
     fi
     
-    # Check if result is valid JSON array with items
+    # v5.0.12 FIX: Backend may return wrapped {jobs:[...]} or flat array [...]
+    local jobs_data
+    jobs_data=$(echo "$result" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+if isinstance(data, dict) and 'jobs' in data:
+    print(json.dumps(data['jobs']))
+elif isinstance(data, list):
+    print(json.dumps(data))
+else:
+    print('[]')
+" 2>/dev/null || echo "[]")
+    
     local job_count
-    job_count=$(echo "$result" | python3 -c "import sys,json; data=json.load(sys.stdin); print(len(data) if isinstance(data, list) else 0)" 2>/dev/null || echo 0)
+    job_count=$(echo "$jobs_data" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo 0)
     
     if [[ "$job_count" == "0" ]]; then
         log "DEBUG" "[POLL] No jobs available"
@@ -706,7 +718,7 @@ poll_jobs() {
     # Process each job
     for i in $(seq 0 $((job_count - 1))); do
         local job
-        job=$(echo "$result" | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)[$i]))" 2>/dev/null)
+        job=$(echo "$jobs_data" | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)[$i]))" 2>/dev/null)
         if [[ -n "$job" ]]; then
             execute_job "$job"
         fi
