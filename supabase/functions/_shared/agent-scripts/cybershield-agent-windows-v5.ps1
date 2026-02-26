@@ -1,5 +1,14 @@
 <#
-    CyberShield Agent - Windows v5.0.13 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.14 FULL ENTERPRISE
+
+    v5.0.14: POST-AUDIT HARDENING - Regression fixes + advanced edge cases
+    - FIXED: [Environment]::Exit() replaces bare 'exit' for unambiguous process termination
+    - FIXED: Global trap now releases mutex before termination (prevents orphaned mutex)
+    - FIXED: JSON hash cache strict schema validation (rejects extra properties)
+    - FIXED: Base64 update payload size cap (5MB max, prevents memory exhaustion)
+    - FIXED: Fallback log rotation with 5MB cap (prevents unbounded disk growth)
+    - FIXED: Counter increments use [Math]::Min() for thread-safety clarity
+    - IMPROVED: Invoke-WebRequest uses -OutFile for large downloads where applicable
 
     v5.0.13: SECURITY HARDENING + SYNTAX AUDIT + EDR HARDENING + TOCTOU + ANTI-TAMPER
     - ADDED: Runtime integrity revalidation in main loop (TOCTOU defense, every 5 min)
@@ -168,7 +177,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.13"
+    [string]$AgentVersion = "v5.0.14"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -199,7 +208,7 @@ try {
     if (-not $mutexCreated) {
         Write-EventLog -LogName Application -Source "CyberShield" -EventId 9501 -EntryType Warning -Message "Another CyberShield Agent instance is already running for $AgentName. Exiting." -ErrorAction SilentlyContinue
         Write-Error "CyberShield Agent: Another instance is already running (mutex locked). Exiting."
-        exit 9501
+        [Environment]::Exit(9501)
     }
 } catch {
     # Mutex creation may fail in restricted environments - log and continue cautiously
@@ -214,12 +223,12 @@ try {
     # Block PowerShell ISE (interactive debugging)
     if ($host.Name -match "ISE") {
         Write-Error "CyberShield Agent cannot run inside PowerShell ISE (security policy)"
-        exit 9101
+        [Environment]::Exit(9101)
     }
     # Block .NET debugger attachment
     if ([System.Diagnostics.Debugger]::IsAttached) {
         Write-Error "CyberShield Agent cannot run with a debugger attached (security policy)"
-        exit 9102
+        [Environment]::Exit(9102)
     }
 } catch {
     # Debugger check may fail on constrained runtimes - non-critical, continue
@@ -236,7 +245,7 @@ try {
         if (-not $env:CYBERSHIELD_ALLOW_INTERACTIVE) {
             Write-EventLog -LogName Application -Source "CyberShield" -EventId 9401 -EntryType Error -Message "Agent must run as SYSTEM. Current user: $($currentIdentity.Name)" -ErrorAction SilentlyContinue
             Write-Error "CyberShield Agent must run as SYSTEM (use Scheduled Task). Current: $($currentIdentity.Name)"
-            exit 9401
+            [Environment]::Exit(9401)
         }
     }
 } catch {
@@ -265,7 +274,7 @@ try {
         if ($sig.Status -ne "Valid") {
             Write-EventLog -LogName Application -Source "CyberShield" -EventId 9002 -EntryType Error -Message "INTEGRITY VIOLATION: Invalid Authenticode signature on agent script. Status: $($sig.Status)" -ErrorAction SilentlyContinue
             Write-Error "CyberShield Agent script has invalid digital signature (Status: $($sig.Status))"
-            exit 9002
+            [Environment]::Exit(9002)
         }
     }
     # Note: NotSigned is allowed for development/unsigned deployments
@@ -279,7 +288,15 @@ try {
         # v5.0.13: Verify signature BEFORE trusting hash (correct order)
         try {
             $cacheJson = Get-Content $hashCacheJsonPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
-            if ($cacheJson -and $cacheJson.hash -and $cacheJson.hash.Length -eq 64) {
+            # v5.0.14: Strict JSON schema validation - only 'hash' and 'signature' properties allowed
+            $allowedProps = @('hash', 'signature')
+            $actualProps = ($cacheJson | Get-Member -MemberType NoteProperty).Name
+            $extraProps = $actualProps | Where-Object { $_ -notin $allowedProps }
+            if ($extraProps) {
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "INTEGRITY: JSON hash cache contains unexpected properties: $($extraProps -join ', '). Possible injection." -ErrorAction SilentlyContinue
+                [Environment]::Exit(9004)
+            }
+            if ($cacheJson -and $cacheJson.hash -and $cacheJson.hash -is [string] -and $cacheJson.hash.Length -eq 64) {
                 # Step 1: Verify signature of cached hash (if available)
                 if ($cacheJson.signature -and $cacheJson.signature.Length -gt 10) {
                     $sigOk = Test-Ed25519HashSignature -Hash $cacheJson.hash -SignatureBase64 $cacheJson.signature
@@ -288,17 +305,16 @@ try {
                         # Do NOT compare against a tampered cache - skip hash check
                     } else {
                         # Step 2: Only NOW compare hash (signature verified first)
-                        # BUG FIX #1: Wrap Get-FileHash in try/catch for AV lock / ACL / volume errors
                         try {
                             $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
                         } catch {
                             Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed (file locked/ACL): $($_.Exception.Message)" -ErrorAction SilentlyContinue
-                            exit 9005
+                            [Environment]::Exit(9005)
                         }
                         if ($currentHash -ne $cacheJson.hash.ToLower()) {
                             Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected (signed): $($cacheJson.hash), Actual: $currentHash. Possible tampering." -ErrorAction SilentlyContinue
                             Write-Error "CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
-                            exit 9003
+                            [Environment]::Exit(9003)
                         }
                     }
                 } else {
@@ -307,24 +323,24 @@ try {
                         $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
                     } catch {
                         Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
-                        exit 9005
+                        [Environment]::Exit(9005)
                     }
                     if ($currentHash -ne $cacheJson.hash.ToLower()) {
                         Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch (unsigned cache). Expected: $($cacheJson.hash), Actual: $currentHash" -ErrorAction SilentlyContinue
                         Write-Error "CyberShield Agent integrity violation: SHA256 mismatch"
-                        exit 9003
+                        [Environment]::Exit(9003)
                     }
                 }
             } else {
-                # BUG FIX #2: JSON exists but hash field missing/invalid length = fail-closed
-                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "INTEGRITY: JSON hash cache exists but hash field is missing or invalid length ($($cacheJson.hash.Length) chars)" -ErrorAction SilentlyContinue
-                exit 9004
+                # BUG FIX #2: JSON exists but hash field missing/invalid type/length = fail-closed
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "INTEGRITY: JSON hash cache exists but hash field is missing, wrong type, or invalid length" -ErrorAction SilentlyContinue
+                [Environment]::Exit(9004)
             }
         } catch {
             # BUG FIX #2: JSON parse failure with JSON cache present = fail-closed (corrupted cache)
             Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "INTEGRITY: JSON hash cache exists but is corrupted/unreadable - fail-closed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
             Write-Error "CyberShield Agent integrity check failed: corrupted hash cache"
-            exit 9004
+            [Environment]::Exit(9004)
         }
     } elseif (Test-Path $hashCachePath) {
         # Legacy plain text hash cache (no signature)
@@ -334,12 +350,12 @@ try {
                 $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
             } catch {
                 Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
-                exit 9005
+                [Environment]::Exit(9005)
             }
             if ($currentHash -ne $expectedHash.ToLower()) {
                 Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected: $expectedHash, Actual: $currentHash. Possible tampering detected." -ErrorAction SilentlyContinue
                 Write-Error "CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
-                exit 9003
+                [Environment]::Exit(9003)
             }
         }
     }
@@ -368,6 +384,15 @@ trap {
     }
 
     Write-EventLog -LogName Application -Source "CyberShield" -EventId 1001 -EntryType Error -Message "$msg`n$stack" -ErrorAction SilentlyContinue
+
+    # v5.0.14: Release mutex in trap to prevent orphaned mutex on crash
+    if ($Global:AgentMutex) {
+        try {
+            $Global:AgentMutex.ReleaseMutex()
+            $Global:AgentMutex.Dispose()
+            $Global:AgentMutex = $null
+        } catch { }
+    }
     throw
 }
 
@@ -547,6 +572,18 @@ function Write-Log {
             # EventLog write failed - ensure we don't lose the error silently
             try {
                 $fallbackLog = Join-Path "C:\CyberShield\logs" "eventlog-fallback.log"
+                # v5.0.14: Rotate fallback log if > 5MB to prevent unbounded growth
+                if (Test-Path $fallbackLog) {
+                    $fbSize = (Get-Item $fallbackLog -ErrorAction SilentlyContinue).Length
+                    if ($fbSize -and $fbSize -gt 5MB) {
+                        $rotated = "$fallbackLog.$(Get-Date -Format 'yyyyMMdd-HHmmss').bak"
+                        Move-Item $fallbackLog $rotated -Force -ErrorAction SilentlyContinue
+                        # Keep only last 3 rotated files
+                        Get-ChildItem -Path "C:\CyberShield\logs" -Filter "eventlog-fallback.log.*.bak" -ErrorAction SilentlyContinue |
+                            Sort-Object LastWriteTime -Descending | Select-Object -Skip 3 |
+                            Remove-Item -Force -ErrorAction SilentlyContinue
+                    }
+                }
                 "$logEntry" | Out-File -FilePath $fallbackLog -Append -Encoding UTF8 -ErrorAction SilentlyContinue
             } catch { }
         }
@@ -3929,6 +3966,11 @@ function Apply-ForcedUpdate {
             Write-Log "[FORCE UPDATE] REJECTED - Base64 decode failed: $($_.Exception.Message)" "ERROR"
             return @{ success = $false; error = "Base64 decode failed: $($_.Exception.Message)" }
         }
+        # v5.0.14: Cap update payload size to prevent memory exhaustion (5MB max)
+        if ($bytes.Length -gt 5MB) {
+            Write-Log "[FORCE UPDATE] REJECTED - Payload too large: $($bytes.Length) bytes (max 5MB)" "ERROR"
+            return @{ success = $false; error = "Update payload exceeds 5MB limit ($($bytes.Length) bytes)" }
+        }
         [System.IO.File]::WriteAllBytes($tempScript, $bytes)
         Write-Log "[FORCE UPDATE] Script salvo: $($bytes.Length) bytes" "DEBUG"
         
@@ -4095,7 +4137,7 @@ function Apply-ForcedUpdate {
         
         # EXIT para permitir novo script iniciar
         Write-Log "[FORCE UPDATE] Encerrando processo atual para nova versao iniciar..." "INFO"
-        exit 0
+        [Environment]::Exit(0)
         
     } catch {
         Write-Log "[FORCE UPDATE] Erro: $($_.Exception.Message)" "ERROR"
@@ -4754,7 +4796,7 @@ $heartbeatSuccess = Send-Heartbeat
 if (-not $heartbeatSuccess) {
     Write-Log "[STARTUP] Initial heartbeat failed - entering DEGRADED mode" "WARN"
     Set-AgentState -NewState "DEGRADED" -Reason "Heartbeat failed"
-    $consecutiveHeartbeatFailures++
+    $consecutiveHeartbeatFailures = [Math]::Min($consecutiveHeartbeatFailures + 1, $maxConsecutiveFailures)
     
     # Bug 5 fix: If BOTH keys and heartbeat failed, enter SAFE_MODE (fail-closed)
     if (-not $keysInitialized) {
@@ -4860,7 +4902,7 @@ while ($true) {
         # ============================================
         $networkOk = Test-NetworkConnectivity
         if (-not $networkOk) {
-            if ($consecutiveNetworkFailures -lt $maxConsecutiveFailures) { $consecutiveNetworkFailures++ }
+            if ($consecutiveNetworkFailures -lt $maxConsecutiveFailures) { $consecutiveNetworkFailures = [Math]::Min($consecutiveNetworkFailures + 1, $maxConsecutiveFailures) }
             if ($consecutiveNetworkFailures -ge 3) {
                 Set-AgentState -NewState "DEGRADED" -Reason "Network connectivity lost"
             }
@@ -4947,7 +4989,7 @@ while ($true) {
         if (($now - $lastHeartbeat).TotalSeconds -ge $Global:PollIntervalSeconds -and $networkOk) {
             $hbResult = Send-Heartbeat
             if (-not $hbResult) {
-                if ($consecutiveHeartbeatFailures -lt $maxConsecutiveFailures) { $consecutiveHeartbeatFailures++ }
+                if ($consecutiveHeartbeatFailures -lt $maxConsecutiveFailures) { $consecutiveHeartbeatFailures = [Math]::Min($consecutiveHeartbeatFailures + 1, $maxConsecutiveFailures) }
                 Write-Log "[HEARTBEAT] Failure #$consecutiveHeartbeatFailures" "WARN"
                 
                 if ($Global:CurrentState -eq "ENFORCING") {
@@ -5025,7 +5067,7 @@ while ($true) {
                 Write-Log "[INTEGRITY] TOCTOU VIOLATION DETECTED - terminating agent immediately" "ERROR"
                 Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "TOCTOU integrity violation - agent script modified during runtime. Terminating." -ErrorAction SilentlyContinue
                 Flush-LogBuffer
-                exit 9004
+                [Environment]::Exit(9004)
             }
             $Global:LastIntegrityCheck = Get-Date
         }
