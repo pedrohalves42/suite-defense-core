@@ -120,6 +120,9 @@ verify_jwt = false
 [functions.serve-installer]
 verify_jwt = false
 
+[functions.get-reinstall-by-name]
+verify_jwt = false
+
 [functions.track-installation-event]
 verify_jwt = false
 
