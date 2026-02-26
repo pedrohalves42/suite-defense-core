@@ -91,14 +91,30 @@ export function tenantQuery<T extends TableName>(
     );
   }
 
-  const query = supabase.from(table);
+  const queryBuilder = supabase.from(table);
 
-  // Apply tenant filter for multi-tenant tables
-  if (isMultiTenant && tenantId) {
-    return (query as any).eq('tenant_id', tenantId);
+  // For non-multi-tenant tables, return the builder directly
+  if (!isMultiTenant || !tenantId) {
+    return queryBuilder;
   }
 
-  return query;
+  // Use a Proxy to intercept .select(), .insert(), .update(), .delete(), .upsert()
+  // and automatically chain .eq('tenant_id', tenantId) AFTER them
+  const INTERCEPTED_METHODS = new Set(['select', 'insert', 'update', 'delete', 'upsert']);
+
+  return new Proxy(queryBuilder, {
+    get(target, prop, receiver) {
+      const original = Reflect.get(target, prop, receiver);
+      if (typeof original === 'function' && INTERCEPTED_METHODS.has(prop as string)) {
+        return (...args: unknown[]) => {
+          const result = (original as Function).apply(target, args);
+          // After select/insert/update/delete, the result is a FilterBuilder that has .eq()
+          return result.eq('tenant_id', tenantId);
+        };
+      }
+      return original;
+    },
+  }) as typeof queryBuilder;
 }
 
 /**
