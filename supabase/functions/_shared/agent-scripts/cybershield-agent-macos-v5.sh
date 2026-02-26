@@ -99,6 +99,41 @@ if [[ "${CYBERSHIELD_ALLOW_INTERACTIVE:-}" != "1" ]]; then
 fi
 
 # ============================================
+#  v5.0.13-hardening: SELF-INTEGRITY VALIDATION
+#  Validates script SHA256 hash at startup (anti-tampering)
+# ============================================
+SCRIPT_PATH="$(greadlink -f "$0" 2>/dev/null || readlink -f "$0" 2>/dev/null || echo "$0")"
+HASH_CACHE_PATH="/Library/Application Support/CyberShield/data/expected_script_hash.txt"
+
+# 1. Code signature validation (macOS codesign)
+if command -v codesign &>/dev/null; then
+    codesign_result=$(codesign --verify --deep --strict "$SCRIPT_PATH" 2>&1 || true)
+    if echo "$codesign_result" | grep -qi "invalid signature"; then
+        logger -t CyberShield "INTEGRITY VIOLATION: codesign verification failed on agent script"
+        echo "[SECURITY] CyberShield Agent script has invalid code signature"
+        exit 9002
+    fi
+fi
+
+# 2. SHA256 hash validation against server-known hash
+if [[ -f "$HASH_CACHE_PATH" ]]; then
+    expected_hash=$(cat "$HASH_CACHE_PATH" 2>/dev/null | tr -d '[:space:]')
+    if [[ -n "$expected_hash" && ${#expected_hash} -eq 64 ]]; then
+        current_hash=$(shasum -a 256 "$SCRIPT_PATH" 2>/dev/null | awk '{print $1}')
+        if [[ "${current_hash}" != "${expected_hash}" ]]; then
+            # Case-insensitive compare
+            current_lower=$(echo "$current_hash" | tr '[:upper:]' '[:lower:]')
+            expected_lower=$(echo "$expected_hash" | tr '[:upper:]' '[:lower:]')
+            if [[ "$current_lower" != "$expected_lower" ]]; then
+                logger -t CyberShield "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected: $expected_hash, Actual: $current_hash"
+                echo "[SECURITY] CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
+                exit 9003
+            fi
+        fi
+    fi
+fi
+
+# ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
 AGENT_VERSION="v5.0.13"
@@ -1496,6 +1531,17 @@ EOF
                    log "INFO" "[HEARTBEAT] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_job_interval}s"
                    JOB_POLL_INTERVAL=$new_job_interval
                fi
+
+               # ============================================
+               # v5.0.13-hardening: CACHE EXPECTED SCRIPT HASH
+               # Server provides script_sha256 in heartbeat response for integrity validation
+               # ============================================
+               local server_script_hash
+               server_script_hash=$(echo "$result" | jq -r '.script_sha256 // ""' 2>/dev/null)
+               if [[ -n "$server_script_hash" && ${#server_script_hash} -eq 64 ]]; then
+                   echo -n "${server_script_hash}" | tr '[:upper:]' '[:lower:]' > "${BASE_DIR}/data/expected_script_hash.txt" 2>/dev/null
+                   log "DEBUG" "[INTEGRITY] Cached expected script hash from server"
+               fi
           fi
           
           return 0
@@ -2144,8 +2190,11 @@ remove_dns_filter_handler() {
                  safe_mode_attempt=0
                  while [[ "$CURRENT_STATE" == "SAFE_MODE" && $safe_mode_attempt -lt 10 ]]; do
                      safe_mode_attempt=$((safe_mode_attempt + 1))
-                     log "INFO" "[SAFE_MODE] Recovery attempt $safe_mode_attempt/10 - waiting 120s..."
-                     sleep 120
+                     # v5.0.13-hardening: Jitter to prevent thundering herd (120s base + 0-30s random)
+                     jitter=$((RANDOM % 30))
+                     recovery_delay=$((120 + jitter))
+                     log "INFO" "[SAFE_MODE] Recovery attempt $safe_mode_attempt/10 - waiting ${recovery_delay}s (jitter: ${jitter}s)..."
+                     sleep "$recovery_delay"
                      if send_heartbeat; then
                          CONSECUTIVE_HEARTBEAT_FAILURES=0
                          if [[ "$SECURITY_DEGRADED" == "false" ]]; then

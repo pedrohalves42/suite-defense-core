@@ -203,6 +203,44 @@ try {
 }
 
 # ============================================
+#  v5.0.13-hardening: SELF-INTEGRITY VALIDATION
+#  Validates script hash and Authenticode signature at startup
+# ============================================
+try {
+    # 1. Authenticode digital signature validation
+    $sig = Get-AuthenticodeSignature -FilePath $PSCommandPath -ErrorAction SilentlyContinue
+    if ($sig -and $sig.Status -ne "NotSigned") {
+        # Script has a signature - validate it
+        if ($sig.Status -ne "Valid") {
+            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9002 -EntryType Error -Message "INTEGRITY VIOLATION: Invalid Authenticode signature on agent script. Status: $($sig.Status)" -ErrorAction SilentlyContinue
+            Write-Error "CyberShield Agent script has invalid digital signature (Status: $($sig.Status))"
+            exit 9002
+        }
+    }
+    # Note: NotSigned is allowed for development/unsigned deployments
+    # Production deployments should enforce signing via Group Policy
+
+    # 2. SHA256 hash validation against server-known hash
+    # The expected hash is fetched from heartbeat and cached locally
+    $hashCachePath = Join-Path "C:\CyberShield\data" "expected_script_hash.txt"
+    if (Test-Path $hashCachePath) {
+        $expectedHash = (Get-Content $hashCachePath -Raw -ErrorAction SilentlyContinue).Trim()
+        if ($expectedHash -and $expectedHash.Length -eq 64) {
+            $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256).Hash.ToLower()
+            if ($currentHash -ne $expectedHash.ToLower()) {
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected: $expectedHash, Actual: $currentHash. Possible tampering detected." -ErrorAction SilentlyContinue
+                Write-Error "CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
+                exit 9003
+            }
+        }
+    }
+} catch {
+    # Integrity check failure is non-fatal on first run (no cached hash yet)
+    # but logs the event for forensic tracking
+    Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Warning -Message "Integrity check could not complete: $($_.Exception.Message)" -ErrorAction SilentlyContinue
+}
+
+# ============================================
 #  GLOBAL TRAP FOR UNHANDLED ERRORS
 # ============================================
 trap {
@@ -401,6 +439,33 @@ function Write-Log {
     
     if ($shouldFlush) {
         Flush-LogBuffer
+    }
+}
+
+# ============================================
+# ============================================
+#  v5.0.13-hardening: TLS CERTIFICATE PINNING
+#  Validates server certificate thumbprint to prevent MITM
+#  Set $Global:TlsPinnedThumbprint to enforce pinning
+# ============================================
+$Global:TlsPinnedThumbprint = $null  # Set via server config or enrollment; null = disabled (dev mode)
+
+# v5.0.13-hardening: Certificate validation callback (installed once)
+if (-not $Global:_CertPinCallbackInstalled) {
+    $Global:_CertPinCallbackInstalled = $true
+    [Net.ServicePointManager]::ServerCertificateValidationCallback = {
+        param($sender, $cert, $chain, $sslPolicyErrors)
+        if (-not $Global:TlsPinnedThumbprint) {
+            # No pin configured - allow standard validation
+            return ($sslPolicyErrors -eq [System.Net.Security.SslPolicyErrors]::None)
+        }
+        # Pinned mode: validate thumbprint
+        $thumbprint = $cert.GetCertHashString("SHA256")
+        if ($thumbprint -eq $Global:TlsPinnedThumbprint) {
+            return $true
+        }
+        Write-Log "[TLS-PIN] Certificate thumbprint mismatch! Expected: $($Global:TlsPinnedThumbprint), Got: $thumbprint" "ERROR"
+        return $false
     }
 }
 
@@ -3816,6 +3881,20 @@ function Send-Heartbeat {
                             Write-Log "[FORCE UPDATE] Falha ao aplicar: $($updateResult.error)" "ERROR"
                         }
                     }
+                    
+                    # ============================================
+                    # v5.0.13-hardening: CACHE EXPECTED SCRIPT HASH
+                    # Server provides script_sha256 for integrity validation on next startup
+                    # ============================================
+                    if ($response.script_sha256) {
+                        try {
+                            $hashCachePath = Join-Path (Join-Path $Global:BaseDir "data") "expected_script_hash.txt"
+                            $response.script_sha256.ToLower() | Out-File -FilePath $hashCachePath -Encoding UTF8 -NoNewline -Force
+                            Write-Log "[INTEGRITY] Cached expected script hash from server" "DEBUG"
+                        } catch {
+                            Write-Log "[INTEGRITY] Failed to cache script hash: $($_.Exception.Message)" "WARN"
+                        }
+                    }
                 } catch {
                     Write-Log "[HEARTBEAT] Erro ao processar response: $($_.Exception.Message)" "WARN"
                 }
@@ -4396,9 +4475,10 @@ if ($Global:CurrentState -eq "SAFE_MODE") {
     $recoveryAttempt = 0
     while ($Global:CurrentState -eq "SAFE_MODE") {
         $recoveryAttempt++
-        # BUG 8 fix: Exponential backoff for recovery (60s, 120s, 240s... max 600s)
-        $recoveryDelay = [math]::Min(60 * [math]::Pow(2, $recoveryAttempt - 1), 600)
-        Write-Log "[SAFE_MODE] Recovery attempt #$recoveryAttempt - waiting ${recoveryDelay}s..." "INFO"
+        # BUG 8 fix: Exponential backoff for recovery (60s, 120s, 240s... max 600s) + jitter
+        $jitter = Get-Random -Minimum 0 -Maximum 30
+        $recoveryDelay = [math]::Min(60 * [math]::Pow(2, $recoveryAttempt - 1), 600) + $jitter
+        Write-Log "[SAFE_MODE] Recovery attempt #$recoveryAttempt - waiting ${recoveryDelay}s (jitter: ${jitter}s)..." "INFO"
         Start-Sleep -Seconds $recoveryDelay
         Write-Log "[SAFE_MODE] Attempting recovery heartbeat..." "INFO"
         $recoveryHb = Send-Heartbeat
@@ -4580,8 +4660,9 @@ while ($true) {
                             Write-Log "[SAFE_MODE] Recovery limit reached (10 attempts) - staying in SAFE_MODE, will retry next main loop cycle" "ERROR"
                             break
                         }
-                        $recoveryDelay = [math]::Min(120 * [math]::Pow(1.5, $safeModeRecoveryAttempt - 1), 600)
-                        Write-Log "[SAFE_MODE] Recovery attempt #$safeModeRecoveryAttempt - waiting ${recoveryDelay}s..." "INFO"
+                        $jitter = Get-Random -Minimum 0 -Maximum 30
+                        $recoveryDelay = [math]::Min(120 * [math]::Pow(1.5, $safeModeRecoveryAttempt - 1), 600) + $jitter
+                        Write-Log "[SAFE_MODE] Recovery attempt #$safeModeRecoveryAttempt - waiting ${recoveryDelay}s (jitter: ${jitter}s)..." "INFO"
                         Start-Sleep -Seconds $recoveryDelay
                         $recoveryHb = Send-Heartbeat
                         if ($recoveryHb) {
