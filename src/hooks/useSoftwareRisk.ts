@@ -65,7 +65,7 @@ export function useSoftwareByRisk(riskLevel?: string, limit = 50) {
 
       let query = tenantQuery('software_inventory', activeTenant.id)
         .select('*, agents(agent_name)')
-        .order('created_at', { ascending: false })
+        .order('last_seen_at', { ascending: false })
         .limit(limit);
 
       if (riskLevel) {
