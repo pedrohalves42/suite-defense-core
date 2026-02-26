@@ -278,7 +278,7 @@ try {
     if (Test-Path $hashCacheJsonPath) {
         # v5.0.13: Verify signature BEFORE trusting hash (correct order)
         try {
-            $cacheJson = Get-Content $hashCacheJsonPath -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
+            $cacheJson = Get-Content $hashCacheJsonPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
             if ($cacheJson -and $cacheJson.hash -and $cacheJson.hash.Length -eq 64) {
                 # Step 1: Verify signature of cached hash (if available)
                 if ($cacheJson.signature -and $cacheJson.signature.Length -gt 10) {
@@ -288,7 +288,13 @@ try {
                         # Do NOT compare against a tampered cache - skip hash check
                     } else {
                         # Step 2: Only NOW compare hash (signature verified first)
-                        $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256).Hash.ToLower()
+                        # BUG FIX #1: Wrap Get-FileHash in try/catch for AV lock / ACL / volume errors
+                        try {
+                            $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+                        } catch {
+                            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed (file locked/ACL): $($_.Exception.Message)" -ErrorAction SilentlyContinue
+                            exit 9005
+                        }
                         if ($currentHash -ne $cacheJson.hash.ToLower()) {
                             Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected (signed): $($cacheJson.hash), Actual: $currentHash. Possible tampering." -ErrorAction SilentlyContinue
                             Write-Error "CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
@@ -297,17 +303,26 @@ try {
                     }
                 } else {
                     # No signature in cache - legacy format, compare hash with warning
-                    $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256).Hash.ToLower()
+                    try {
+                        $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+                    } catch {
+                        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
+                        exit 9005
+                    }
                     if ($currentHash -ne $cacheJson.hash.ToLower()) {
                         Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch (unsigned cache). Expected: $($cacheJson.hash), Actual: $currentHash" -ErrorAction SilentlyContinue
                         Write-Error "CyberShield Agent integrity violation: SHA256 mismatch"
                         exit 9003
                     }
                 }
+            } else {
+                # BUG FIX #2: JSON exists but hash field missing/invalid length = fail-closed
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "INTEGRITY: JSON hash cache exists but hash field is missing or invalid length ($($cacheJson.hash.Length) chars)" -ErrorAction SilentlyContinue
+                exit 9004
             }
         } catch {
-            # JSON parse failure with JSON cache present = fail-closed (corrupted cache)
-            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "INTEGRITY: JSON hash cache exists but is corrupted/unreadable - fail-closed" -ErrorAction SilentlyContinue
+            # BUG FIX #2: JSON parse failure with JSON cache present = fail-closed (corrupted cache)
+            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "INTEGRITY: JSON hash cache exists but is corrupted/unreadable - fail-closed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
             Write-Error "CyberShield Agent integrity check failed: corrupted hash cache"
             exit 9004
         }
@@ -315,7 +330,12 @@ try {
         # Legacy plain text hash cache (no signature)
         $expectedHash = (Get-Content $hashCachePath -Raw -ErrorAction SilentlyContinue).Trim()
         if ($expectedHash -and $expectedHash.Length -eq 64) {
-            $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256).Hash.ToLower()
+            try {
+                $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+            } catch {
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
+                exit 9005
+            }
             if ($currentHash -ne $expectedHash.ToLower()) {
                 Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected: $expectedHash, Actual: $currentHash. Possible tampering detected." -ErrorAction SilentlyContinue
                 Write-Error "CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
@@ -518,6 +538,19 @@ function Write-Log {
         default   { "White" }
     }
     Write-Host $logEntry -ForegroundColor $color
+
+    # BUG FIX #8: Write-EventLog with fallback to file if source not registered / permission denied
+    if ($Level -eq "ERROR") {
+        try {
+            Write-EventLog -LogName Application -Source "CyberShield" -EventId 5000 -EntryType Error -Message $Message -ErrorAction Stop
+        } catch {
+            # EventLog write failed - ensure we don't lose the error silently
+            try {
+                $fallbackLog = Join-Path "C:\CyberShield\logs" "eventlog-fallback.log"
+                "$logEntry" | Out-File -FilePath $fallbackLog -Append -Encoding UTF8 -ErrorAction SilentlyContinue
+            } catch { }
+        }
+    }
 
     # v5.0.13-perf: Buffered file output - flush on ERROR/WARN immediately, batch others
     $Global:LogBuffer.Add($logEntry)
@@ -3884,17 +3917,28 @@ function Apply-ForcedUpdate {
             }
         }
         
-        # Criar arquivo temporario
-        $tempScript = Join-Path $env:TEMP "cybershield-force-update-$targetVersion.ps1"
+        # BUG FIX #5: Create temp file in SAME directory as target for atomic mv (same filesystem)
+        $installDir = "C:\CyberShield"
+        $tempScript = Join-Path $installDir "cybershield-update-temp-$([Guid]::NewGuid().ToString('N').Substring(0,8)).ps1"
         
-        # CRITICAL: Base64 decode - preserva 100% dos bytes
+        # BUG FIX #3: Base64 decode with try/catch for invalid content
         Write-Log "[FORCE UPDATE] Decodificando Base64..." "DEBUG"
-        $bytes = [System.Convert]::FromBase64String($base64Content)
+        try {
+            $bytes = [System.Convert]::FromBase64String($base64Content)
+        } catch {
+            Write-Log "[FORCE UPDATE] REJECTED - Base64 decode failed: $($_.Exception.Message)" "ERROR"
+            return @{ success = $false; error = "Base64 decode failed: $($_.Exception.Message)" }
+        }
         [System.IO.File]::WriteAllBytes($tempScript, $bytes)
         Write-Log "[FORCE UPDATE] Script salvo: $($bytes.Length) bytes" "DEBUG"
         
         # Validar SHA256
-        $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
+        try {
+            $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+        } catch {
+            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+            throw "Get-FileHash failed on temp script: $($_.Exception.Message)"
+        }
         if ($actualHash -ne $expectedHash.ToLower()) {
             Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
             throw "SHA256 mismatch! Esperado: $expectedHash, Obtido: $actualHash"
@@ -3963,8 +4007,26 @@ function Apply-ForcedUpdate {
             }
         }
         
-        # APLICAR UPDATE (atomic Move-Item instead of Copy to prevent partial write TOCTOU)
-        Move-Item -Path $tempScript -Destination $targetScript -Force
+        # BUG FIX #5: Re-verify hash immediately before move (close TOCTOU window)
+        try {
+            $preMovHash = (Get-FileHash -Path $tempScript -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+        } catch {
+            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+            throw "Pre-move hash verification failed: $($_.Exception.Message)"
+        }
+        if ($preMovHash -ne $expectedHash.ToLower()) {
+            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+            throw "TOCTOU: Temp file modified between validation and move! Expected: $expectedHash, Got: $preMovHash"
+        }
+        
+        # BUG FIX #4: Atomic Move-Item with error handling for file locks
+        try {
+            Move-Item -Path $tempScript -Destination $targetScript -Force -ErrorAction Stop
+        } catch {
+            Write-Log "[FORCE UPDATE] Move-Item failed (file locked?): $($_.Exception.Message)" "ERROR"
+            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+            return @{ success = $false; error = "Move-Item failed: $($_.Exception.Message)" }
+        }
         Write-Log "[FORCE UPDATE] Script instalado (atomic move): $targetScript" "SUCCESS"
         
         # Registrar evidencia
@@ -4783,6 +4845,7 @@ $lastDnsSync = Get-Date
 $lastLocalDetection = Get-Date
 $consecutiveNetworkFailures = 0
 $consecutiveHeartbeatFailures = 0  # v5.0.13-fix: Was used but never initialized (BUG with StrictMode)
+$maxConsecutiveFailures = 1000000  # BUG FIX #6: Cap counter to prevent Int32 overflow on long-running agents
 
 # v5.0.11: Run initial local detection on startup
 Write-Log "[STARTUP] Running initial local security detection..." "INFO"
@@ -4797,7 +4860,7 @@ while ($true) {
         # ============================================
         $networkOk = Test-NetworkConnectivity
         if (-not $networkOk) {
-            $consecutiveNetworkFailures++
+            if ($consecutiveNetworkFailures -lt $maxConsecutiveFailures) { $consecutiveNetworkFailures++ }
             if ($consecutiveNetworkFailures -ge 3) {
                 Set-AgentState -NewState "DEGRADED" -Reason "Network connectivity lost"
             }
@@ -4884,7 +4947,7 @@ while ($true) {
         if (($now - $lastHeartbeat).TotalSeconds -ge $Global:PollIntervalSeconds -and $networkOk) {
             $hbResult = Send-Heartbeat
             if (-not $hbResult) {
-                $consecutiveHeartbeatFailures++
+                if ($consecutiveHeartbeatFailures -lt $maxConsecutiveFailures) { $consecutiveHeartbeatFailures++ }
                 Write-Log "[HEARTBEAT] Failure #$consecutiveHeartbeatFailures" "WARN"
                 
                 if ($Global:CurrentState -eq "ENFORCING") {
@@ -4995,4 +5058,13 @@ while ($true) {
     
     # v5.0.13-perf: Flush log buffer on each cycle boundary
     Flush-LogBuffer
+}
+
+# BUG FIX #7: Ensure mutex is released on any exit path (Dispose in finally equivalent)
+# This runs if the while loop ever breaks (shouldn't normally)
+if ($Global:AgentMutex) {
+    try {
+        $Global:AgentMutex.ReleaseMutex()
+        $Global:AgentMutex.Dispose()
+    } catch { }
 }
