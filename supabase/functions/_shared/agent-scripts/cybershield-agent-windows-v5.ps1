@@ -1,5 +1,12 @@
 <#
-    CyberShield Agent - Windows v5.0.13 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.15 FULL ENTERPRISE
+
+    v5.0.15: SYNTAX AUDIT - 6 bug fixes (force_update handler, Win32_Product perf, version parity)
+    - FIXED: Missing force_update case in Execute-Job switch (was falling to default -> "Unknown job type")
+    - FIXED: Get-UnauthorizedSoftware replaced Win32_Product (5-20min!) with registry-based scan
+    - FIXED: SAFE_MODE recovery log ordering (log before sleep, not after)
+    - FIXED: Version bumped to v5.0.15 for parity with Linux/macOS agents
+    - IMPROVED: Write-Log Level param uses explicit variable instead of inline subexpression
 
     v5.0.13: SECURITY HARDENING - 7 critical bug fixes (FSM, fail-closed, auth loop)
     - FIXED: FSM now allows INITIALIZING -> DEGRADED transition (was rejected as invalid)
@@ -155,7 +162,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.13"
+    [string]$AgentVersion = "v5.0.15"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -1180,6 +1187,22 @@ function Execute-Job {
             # v5.0.6: NEW - DNS Blocks & Integration Test
             "collect_dns_blocks" {
                 $output = Invoke-CollectDnsBlocks
+            }
+            "force_update" {
+                # v5.0.15-fix: Handle force_update as job type (was missing, fell to default)
+                if ($Job.payload) {
+                    $updateResponse = @{
+                        target_version = $Job.payload.target_version
+                        script_content_base64 = $Job.payload.script_content_base64
+                        sha256 = $Job.payload.sha256
+                        reason = if ($Job.payload.reason) { $Job.payload.reason } else { "force_update job" }
+                        override_safe_mode = if ($Job.payload.override_safe_mode) { $Job.payload.override_safe_mode } else { $false }
+                    }
+                    $output = Apply-ForcedUpdate -Response ([PSCustomObject]$updateResponse)
+                } else {
+                    $output = @{ success = $false; error = "Missing payload for force_update" }
+                    $status = "failed"
+                }
             }
             "integration_test_v3" {
                 $output = @{
@@ -2851,10 +2874,21 @@ function Get-UnauthorizedSoftware {
             "Realtek*"
         )
         
-        # Get installed software
-        $installedSoftware = Get-CimInstance Win32_Product -ErrorAction SilentlyContinue | 
-            Where-Object { $_.Name } |
-            Select-Object -ExpandProperty Name -Unique
+        # v5.0.15-fix: Use registry instead of Win32_Product (which is 5-20min slow and triggers MSI reconfiguration)
+        $installedSoftware = @()
+        $regPaths = @(
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+        )
+        foreach ($regPath in $regPaths) {
+            try {
+                $items = Get-ItemProperty $regPath -ErrorAction SilentlyContinue | 
+                    Where-Object { $_.DisplayName } |
+                    Select-Object -ExpandProperty DisplayName
+                $installedSoftware += $items
+            } catch { }
+        }
+        $installedSoftware = $installedSoftware | Select-Object -Unique
         
         # Filter unauthorized
         $unauthorized = @()
@@ -3166,7 +3200,8 @@ function Invoke-ServiceHealthCheck {
             }
         }
         
-        Write-Log "[SVC-HEALTH] Checked $($results.Count) services, $unhealthy unhealthy" $(if ($unhealthy -gt 0) {"WARN"} else {"SUCCESS"})
+        $svcLogLevel = if ($unhealthy -gt 0) { "WARN" } else { "SUCCESS" }
+        Write-Log "[SVC-HEALTH] Checked $($results.Count) services, $unhealthy unhealthy" $svcLogLevel
         
         return @{
             success = $true
@@ -4497,9 +4532,9 @@ while ($true) {
                             Write-Log "[SAFE_MODE] Recovery limit reached (10 attempts) - staying in SAFE_MODE, will retry next main loop cycle" "ERROR"
                             break
                         }
-                        $recoveryDelay = [math]::Min(120 * [math]::Pow(1.5, $safeModeRecoveryAttempt - 1), 600)
-                        Start-Sleep -Seconds $recoveryDelay
-                        Write-Log "[SAFE_MODE] Recovery attempt #$safeModeRecoveryAttempt - waiting ${recoveryDelay}s..." "INFO"
+                    $recoveryDelay = [math]::Min(120 * [math]::Pow(1.5, $safeModeRecoveryAttempt - 1), 600)
+                    Write-Log "[SAFE_MODE] Recovery attempt #$safeModeRecoveryAttempt - waiting ${recoveryDelay}s..." "INFO"
+                    Start-Sleep -Seconds $recoveryDelay
                         $recoveryHb = Send-Heartbeat
                         if ($recoveryHb) {
                             $consecutiveHeartbeatFailures = 0
