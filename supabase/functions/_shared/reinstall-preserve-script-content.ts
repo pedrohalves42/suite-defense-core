@@ -1,10 +1,10 @@
 // CyberShield Agent - Reinstall Preserve Script Content
 // Embedded version for Edge Function delivery
-// Version: 2.8.0 - Added Strategy 3: Server-side credential recovery
+// Version: 2.9.0 - Strategy 3 now uses auto-recover via enrollment key (no JWT prompt)
 
-export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v2.8.0
+export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v2.9.0
 # Preserves credentials (AgentName, Token, HMAC) during agent update
-# Strategy 3: Server recovery when local credentials are lost
+# Strategy 3: Auto-recover via enrollment key (no JWT needed)
 # ASCII-safe, English-only for cross-locale compatibility
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ErrorActionPreference = "Stop"
@@ -22,7 +22,7 @@ function Write-Status {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " CyberShield - Reinstall Preserve v2.8.0" -ForegroundColor Cyan
+Write-Host " CyberShield - Reinstall Preserve v2.9.0" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -101,54 +101,52 @@ if (-not $AgentToken) {
     }
 }
 
-# Strategy 3: Recover credentials from server (NEW in v2.8.0)
+# Strategy 3: Auto-recover from server using get-reinstall-by-name (v2.9.0)
+# Falls back to full auto-recover script with credentials pre-loaded
 if (-not $AgentToken -and $AgentName) {
-    Write-Status "Local credentials not found - trying server recovery..." "WARN"
-    Write-Host ""
-    Write-Host "  Agent credentials were lost (task deleted or v4.x agent)." -ForegroundColor Yellow
-    Write-Host "  Enter your CyberShield dashboard JWT token to recover." -ForegroundColor Yellow
-    Write-Host "  (Dashboard > Profile icon > Copy Auth Token)" -ForegroundColor Yellow
-    Write-Host ""
-    if (-not $jwt) {
-        $jwt = Read-Host "  Paste your JWT token (or press Enter to skip)"
+    Write-Status "Local credentials not found - trying auto-recovery from server..." "WARN"
+    
+    # Try to find enrollment key from environment or prompt
+    $enrollKey = $env:CYBERSHIELD_KEY
+    if (-not $enrollKey) {
+        Write-Host ""
+        Write-Host "  Agent credentials were lost (task deleted or v4.x agent)." -ForegroundColor Yellow
+        Write-Host "  An enrollment key is needed to recover automatically." -ForegroundColor Yellow
+        Write-Host "  (Dashboard > Admin > Enrollment Keys)" -ForegroundColor Yellow
+        Write-Host ""
+        $enrollKey = Read-Host "  Paste your Enrollment Key (or press Enter to skip)"
+        $enrollKey = $enrollKey.Trim()
     }
-    $jwt = $jwt.Trim()
 
-    if ($jwt -and $jwt.Length -gt 20) {
-        Write-Status "Calling server recovery for agent: $AgentName" "INFO"
-        $recoveryUrl = "$ServerUrl/functions/v1/recover-agent-credentials"
-        $bodyJson = '{' + [char]34 + 'agent_name' + [char]34 + ':' + [char]34 + $AgentName + [char]34 + '}'
-        $headers = @{
-            "Authorization" = "Bearer $jwt"
-            "Content-Type" = "application/json"
-            "apikey" = "***REMOVED***"
-        }
-
+    if ($enrollKey -and $enrollKey.Length -gt 5) {
+        Write-Status "Calling auto-recover for agent: $AgentName" "INFO"
+        $recoverUrl = "$ServerUrl/functions/v1/get-reinstall-by-name/$AgentName?key=$enrollKey"
+        
         try {
-            $resp = Invoke-RestMethod -Uri $recoveryUrl -Method POST -Body $bodyJson -Headers $headers -TimeoutSec 30
-            if ($resp.agentToken) {
-                $AgentToken = $resp.agentToken
-                $HmacSecret = $resp.hmacSecret
-                if ($resp.agentName) { $AgentName = $resp.agentName }
-                Write-Status "Credentials recovered from server!" "SUCCESS"
-                Write-Status "AgentToken: recovered (prefix: $($AgentToken.Substring(0,8))...)" "SUCCESS"
-                Write-Status "HmacSecret: $(if($HmacSecret){'recovered'}else{'empty'})" "SUCCESS"
+            $recoverScript = Invoke-RestMethod -Uri $recoverUrl -Method GET -TimeoutSec 60
+            if ($recoverScript -and $recoverScript.Length -gt 1000 -and $recoverScript -match 'AgentToken') {
+                Write-Status "Auto-recover script received ($($recoverScript.Length) chars)" "SUCCESS"
+                Write-Status "Switching to auto-recover mode..." "INFO"
+                Write-Host ""
+                # Execute the recovered script directly (it has credentials baked in)
+                $tempRecover = "$env:TEMP\\cybershield-recover-$AgentName.ps1"
+                [System.IO.File]::WriteAllText($tempRecover, $recoverScript, [System.Text.Encoding]::UTF8)
+                & powershell.exe -ExecutionPolicy Bypass -File $tempRecover
+                exit 0
             } else {
-                Write-Status "Server returned no credentials" "ERROR"
+                Write-Status "Server returned invalid response" "ERROR"
             }
         } catch {
             $errMsg = $_.Exception.Message
-            Write-Status "Server recovery failed: $errMsg" "ERROR"
-            if ($errMsg -match '401|Unauthorized') {
-                Write-Status "Invalid or expired JWT token" "ERROR"
-            } elseif ($errMsg -match '403|Forbidden') {
-                Write-Status "Your user does not have admin/operator permissions" "ERROR"
+            Write-Status "Auto-recovery failed: $errMsg" "ERROR"
+            if ($errMsg -match '401') {
+                Write-Status "Invalid or expired enrollment key" "ERROR"
             } elseif ($errMsg -match '404') {
                 Write-Status "Agent '$AgentName' not found in your tenant" "ERROR"
             }
         }
     } else {
-        Write-Status "No JWT provided - skipping server recovery" "WARN"
+        Write-Status "No enrollment key provided - skipping auto-recovery" "WARN"
     }
 }
 
