@@ -55,7 +55,7 @@ type DiagnosticTestConfig = {
 const DIAGNOSTIC_TESTS: DiagnosticTestConfig[] = [
   { type: 'ping', jobType: 'network_diagnostics', label: 'Testar conexão', icon: Wifi, description: 'Verifica se o computador responde' },
   { type: 'collect_logs', jobType: 'collect_info', label: 'Coletar registros', icon: FileText, description: 'Obtém logs do sistema' },
-  { type: 'health_report', jobType: 'service_health_check', label: 'Relatório de saúde', icon: Activity, description: 'Verifica estado geral' },
+  { type: 'health_report', jobType: 'health_report', label: 'Relatório de saúde', icon: Activity, description: 'Verifica estado geral' },
   { type: 'check_services', jobType: 'service_health_check', label: 'Verificar serviços', icon: Settings, description: 'Checa serviços importantes' },
 ];
 
@@ -101,6 +101,17 @@ export function DiagnosticTestRunner({
   const createJobMutation = useMutation({
     mutationFn: async ({ jobType, jobAgentName }: { jobType: string; jobAgentName: string }) => {
       if (!tenant?.id || !agentId) throw new Error('Dados incompletos');
+      
+      // Cancel any stale active jobs of the same type for this agent to avoid dedup constraint
+      await supabase
+        .from('jobs')
+        .update({ 
+          status: 'cancelled', 
+          result_data: { cancelled_reason: 'superseded_by_diagnostic_test' } 
+        })
+        .eq('agent_id', agentId)
+        .eq('type', jobType)
+        .in('status', ['pending', 'queued', 'delivered']);
       
       const job = await prepareJobForInsert({
         tenant_id: tenant.id,
