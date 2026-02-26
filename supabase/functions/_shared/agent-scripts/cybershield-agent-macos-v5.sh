@@ -972,6 +972,18 @@ restart_service_handler() {
         "integration_test_v3")
             output='{"pong":true,"agent_version":"'"$AGENT_VERSION"'","timestamp":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","hostname":"'"$(hostname)"'"}'
             ;;
+        "force_update")
+            # v5.0.13-fix: Handle force_update as job type
+            local payload
+            payload=$(echo "$job" | jq -c '.payload // {}')
+            if apply_forced_update "$payload"; then
+                # Should not be reached on success as apply_forced_update exits
+                output='{"success":true,"message":"Update initiated"}'
+            else
+                status="failed"
+                error_message="Force update failed (check logs)"
+            fi
+            ;;
         *)
             error_message="Unknown job type: $job_type"
             status="failed"
