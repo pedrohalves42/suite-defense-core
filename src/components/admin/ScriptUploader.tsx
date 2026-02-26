@@ -75,7 +75,7 @@ export function ScriptUploader() {
   });
 
   const versionMismatch = headerVersion && version && 
-    headerVersion.split('.').slice(0, 2).join('.') !== version.replace(/^v/, '').split('.').slice(0, 2).join('.');
+    headerVersion !== version.replace(/^v/, '');
 
   return (
     <div className="space-y-4 rounded-lg border p-4">
