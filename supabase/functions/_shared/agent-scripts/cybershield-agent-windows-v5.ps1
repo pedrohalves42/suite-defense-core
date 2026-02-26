@@ -142,7 +142,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.11"
+    [string]$AgentVersion = "v5.0.12"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -500,56 +500,52 @@ function Initialize-AgentKeys {
         # Generate new keypair using .NET Crypto
         Add-Type -AssemblyName System.Security
         
+        # v5.0.12 FIX: Pre-clean ALL orphaned CNG ECDSA containers before generation
+        # This prevents "O objeto já existe" / "The object already exists" errors
+        try {
+            $knownKeyNames = @("ECDSA_P256", "CyberShield-ECDSA", "Microsoft Software Key Storage Provider")
+            foreach ($keyName in $knownKeyNames) {
+                try {
+                    if ([System.Security.Cryptography.CngKey]::Exists($keyName, [System.Security.Cryptography.CngProvider]::MicrosoftSoftwareKeyStorageProvider)) {
+                        $orphan = [System.Security.Cryptography.CngKey]::Open($keyName, [System.Security.Cryptography.CngProvider]::MicrosoftSoftwareKeyStorageProvider)
+                        $orphan.Delete()
+                        $orphan.Dispose()
+                        Write-Log "[KEYS] Cleaned orphaned CNG key: $keyName" "WARN"
+                    }
+                } catch { }
+            }
+        } catch {
+            Write-Log "[KEYS] CNG pre-clean skipped: $($_.Exception.Message)" "DEBUG"
+        }
+        
         $ecdsa = $null
         $maxKeyAttempts = 3
         for ($attempt = 1; $attempt -le $maxKeyAttempts; $attempt++) {
             try {
-                # Modern method (.NET 4.7+)
-                $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(
-                    [System.Security.Cryptography.ECCurve]::NamedCurves.nistP256
+                # v5.0.12: Always use explicit ephemeral key to avoid CNG naming conflicts
+                $creationParams = New-Object System.Security.Cryptography.CngKeyCreationParameters
+                $creationParams.ExportPolicy = [System.Security.Cryptography.CngExportPolicies]::AllowPlaintextExport
+                $creationParams.KeyCreationOptions = [System.Security.Cryptography.CngKeyCreationOptions]::None
+                
+                $cngKey = [System.Security.Cryptography.CngKey]::Create(
+                    [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
+                    $null,  # No name = ephemeral, no conflict
+                    $creationParams
                 )
+                $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
+                Write-Log "[KEYS] ECDSA keypair generated (attempt $attempt, ephemeral)" "INFO"
                 break  # Success
             } catch {
                 $errMsg = $_.Exception.Message
                 Write-Log "[KEYS] ECDSA attempt $attempt/$maxKeyAttempts failed: $errMsg" "WARN"
                 
-                # "O objeto já existe" / "The object already exists" = stale CNG container
-                if ($errMsg -match "objeto.*existe|object.*exists|already exists") {
-                    Write-Log "[KEYS] Cleaning up stale CNG container before retry..." "WARN"
-                    try {
-                        # Delete orphaned ephemeral CNG key if it exists
-                        $staleKeys = [System.Security.Cryptography.CngKey]::Open(
-                            "ECDSA_P256", [System.Security.Cryptography.CngProvider]::MicrosoftSoftwareKeyStorageProvider)
-                        if ($staleKeys) { $staleKeys.Delete(); $staleKeys.Dispose() }
-                    } catch {
-                        # Key may not exist by name - try ephemeral approach
-                        Write-Log "[KEYS] No named stale key found, trying ephemeral generation" "DEBUG"
-                    }
-                }
-                
                 if ($attempt -eq $maxKeyAttempts) {
-                    # Final fallback: explicit ephemeral CNG key
-                    try {
-                        Write-Log "[KEYS] Final attempt: explicit ephemeral CNG key creation" "WARN"
-                        $creationParams = New-Object System.Security.Cryptography.CngKeyCreationParameters
-                        $creationParams.ExportPolicy = [System.Security.Cryptography.CngExportPolicies]::AllowPlaintextExport
-                        $creationParams.KeyCreationOptions = [System.Security.Cryptography.CngKeyCreationOptions]::None
-                        
-                        $cngKey = [System.Security.Cryptography.CngKey]::Create(
-                            [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
-                            $null,
-                            $creationParams
-                        )
-                        $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
-                        break  # Success on fallback
-                    } catch {
-                        Write-Log "[KEYS] All $maxKeyAttempts ECDSA attempts failed: $($_.Exception.Message)" "ERROR"
-                        Write-Log "[KEYS] Result signing will be DISABLED for this agent" "WARN"
-                        return $false
-                    }
+                    Write-Log "[KEYS] All $maxKeyAttempts ECDSA attempts failed" "ERROR"
+                    Write-Log "[KEYS] Result signing will be DISABLED for this agent" "WARN"
+                    return $false
                 }
                 
-                Start-Sleep -Seconds 1
+                Start-Sleep -Seconds 2
             }
         }
         
@@ -847,17 +843,36 @@ function Poll-Jobs {
         $Global:ConsecutivePollErrors = 0
         $response = $result.Content | ConvertFrom-Json
         
-        # Backend returns array directly, not { jobs: [...] }
-        if ($response -and @($response).Count -gt 0) {
+        # v5.0.12 FIX: Backend may return wrapped {jobs:[...], poll_interval_seconds:N} 
+        # OR flat array [...] depending on version. Handle both formats.
+        $jobsList = $null
+        if ($response.PSObject -and $response.PSObject.Properties['jobs']) {
+            # Wrapped format: { jobs: [...], poll_interval_seconds: N }
+            $jobsList = @($response.jobs)
+            # Read dynamic poll interval from response
+            if ($response.poll_interval_seconds -and $response.poll_interval_seconds -ge 10) {
+                $newInterval = [int]$response.poll_interval_seconds
+                if ($newInterval -ne $Global:JobPollIntervalSeconds) {
+                    Write-Log "[POLL-JOBS] Server adjusted job poll interval: $($Global:JobPollIntervalSeconds)s -> ${newInterval}s" "INFO"
+                    $Global:JobPollIntervalSeconds = $newInterval
+                }
+            }
+        } elseif ($response -is [System.Array]) {
+            # Flat array format (legacy)
+            $jobsList = @($response)
+        } else {
+            $jobsList = @()
+        }
+        
+        if ($jobsList -and $jobsList.Count -gt 0) {
             # V-ZEROGAP: Normalize job_type field for backward compatibility
-            # poll-jobs may return "type" or "job_type" depending on version
-            foreach ($job in @($response)) {
-                if (-not $job.job_type -and $job.type) {
+            foreach ($job in $jobsList) {
+                if ($job -and (-not $job.job_type) -and $job.type) {
                     $job | Add-Member -NotePropertyName "job_type" -NotePropertyValue $job.type -Force
                 }
             }
-            Write-Log "[POLL-JOBS] Received $(@($response).Count) job(s)" "INFO"
-            return @($response)
+            Write-Log "[POLL-JOBS] Received $($jobsList.Count) job(s)" "INFO"
+            return $jobsList
         }
         
         return @()
