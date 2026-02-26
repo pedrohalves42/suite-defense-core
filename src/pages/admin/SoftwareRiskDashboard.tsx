@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,6 +89,7 @@ const POLICY_MODE_CONFIG: Record<string, { label: string; icon: typeof Eye; colo
 export default function SoftwareRiskDashboard() {
   const [selectedRisk, setSelectedRisk] = useState<string | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedAgent, setSelectedAgent] = useState<string>('all');
   
   const { data: summary, isLoading: summaryLoading, refetch } = useSoftwareRiskSummary();
   const { data: software, isLoading: softwareLoading } = useSoftwareByRisk(selectedRisk, 200);
@@ -100,6 +102,18 @@ export default function SoftwareRiskDashboard() {
   const classifiedCount = summary?.filter(s => s.risk_level !== 'unknown').reduce((acc, s) => acc + Number(s.count), 0) || 0;
   const unknownCount = Number(summary?.find(s => s.risk_level === 'unknown')?.count || 0);
 
+  // Extract unique agents from software list
+  const agentsList = useMemo(() => {
+    if (!software) return [];
+    const map = new Map<string, string>();
+    for (const item of software) {
+      if (item.agent_id && item.agents?.agent_name) {
+        map.set(item.agent_id, item.agents.agent_name);
+      }
+    }
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [software]);
+
   const chartData = summary?.map(s => ({
     name: RISK_CONFIG[s.risk_level]?.label || s.risk_level,
     value: Number(s.count),
@@ -107,6 +121,8 @@ export default function SoftwareRiskDashboard() {
   })) || [];
 
   const filteredSoftware = software?.filter(item => {
+    // Filter by agent
+    if (selectedAgent !== 'all' && item.agent_id !== selectedAgent) return false;
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (
@@ -375,35 +391,55 @@ export default function SoftwareRiskDashboard() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Monitor className="h-5 w-5" />
-                  {selectedRisk 
-                    ? `Software - ${RISK_CONFIG[selectedRisk]?.label || selectedRisk}`
-                    : 'Todos os Programas'}
-                  <Badge variant="secondary" className="ml-2">{filteredSoftware.length}</Badge>
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {selectedRisk && (
-                    <Button 
-                      variant="link" 
-                      className="p-0 h-auto text-sm"
-                      onClick={() => setSelectedRisk(undefined)}
-                    >
-                      Limpar filtro
-                    </Button>
-                  )}
-                </CardDescription>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Monitor className="h-5 w-5" />
+                    {selectedRisk 
+                      ? `Programas - ${RISK_CONFIG[selectedRisk]?.label || selectedRisk}`
+                      : 'Todos os Programas'}
+                    <Badge variant="secondary" className="ml-2">{filteredSoftware.length}</Badge>
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    {selectedRisk && (
+                      <Button 
+                        variant="link" 
+                        className="p-0 h-auto text-sm"
+                        onClick={() => setSelectedRisk(undefined)}
+                      >
+                        Limpar filtro de risco
+                      </Button>
+                    )}
+                  </CardDescription>
+                </div>
               </div>
-              <div className="relative w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nome, fornecedor, máquina..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
+              <div className="flex gap-3 items-center">
+                <div className="w-64">
+                  <Select value={selectedAgent} onValueChange={setSelectedAgent}>
+                    <SelectTrigger>
+                      <Laptop className="h-4 w-4 mr-2 shrink-0" />
+                      <SelectValue placeholder="Todos os computadores" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">🖥️ Todos os computadores</SelectItem>
+                      {agentsList.map(([id, name]) => (
+                        <SelectItem key={id} value={id}>
+                          💻 {name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, fornecedor..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -412,7 +448,7 @@ export default function SoftwareRiskDashboard() {
               <div className="text-center py-8 text-muted-foreground">Carregando...</div>
             ) : filteredSoftware.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {searchTerm ? 'Nenhum resultado para a busca' : 'Nenhum software encontrado'}
+                {searchTerm || selectedAgent !== 'all' ? 'Nenhum resultado para os filtros aplicados' : 'Nenhum software encontrado'}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -423,7 +459,7 @@ export default function SoftwareRiskDashboard() {
                       <TableHead>Versão</TableHead>
                       <TableHead>Fornecedor</TableHead>
                       <TableHead>Caminho</TableHead>
-                      <TableHead>Computador</TableHead>
+                      {selectedAgent === 'all' && <TableHead>Computador</TableHead>}
                       <TableHead>Visto</TableHead>
                       <TableHead>Risco</TableHead>
                     </TableRow>
@@ -461,11 +497,13 @@ export default function SoftwareRiskDashboard() {
                               <span className="text-xs text-muted-foreground/50">-</span>
                             )}
                           </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="font-normal text-xs">
-                              {item.agents?.agent_name || '-'}
-                            </Badge>
-                          </TableCell>
+                          {selectedAgent === 'all' && (
+                            <TableCell>
+                              <Badge variant="outline" className="font-normal text-xs">
+                                {item.agents?.agent_name || '-'}
+                              </Badge>
+                            </TableCell>
+                          )}
                           <TableCell>
                             <TooltipProvider>
                               <UITooltip>
