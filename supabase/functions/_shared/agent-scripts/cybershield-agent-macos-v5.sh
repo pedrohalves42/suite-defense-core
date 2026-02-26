@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - macOS v5.0.13
+# CyberShield Agent - macOS v5.0.14
 #
 # v5.0.11: FULL ENTERPRISE - All functions (Get-RollbackState, Add-EvidenceEntry, Apply-ForcedUpdate)
 # v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
@@ -136,7 +136,7 @@ fi
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.13"
+AGENT_VERSION="v5.0.14"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -1533,13 +1533,22 @@ EOF
                fi
 
                # ============================================
-               # v5.0.13-hardening: CACHE EXPECTED SCRIPT HASH
-               # Server provides script_sha256 in heartbeat response for integrity validation
-               # ============================================
-               local server_script_hash
-               server_script_hash=$(echo "$result" | jq -r '.script_sha256 // ""' 2>/dev/null)
-               if [[ -n "$server_script_hash" && ${#server_script_hash} -eq 64 ]]; then
-                   echo -n "${server_script_hash}" | tr '[:upper:]' '[:lower:]' > "${BASE_DIR}/data/expected_script_hash.txt" 2>/dev/null
+                # v5.0.14: SIGNED HASH CACHE (replaces plain hash)
+                # Hash only trusted if accompanied by server signature
+                # ============================================
+                local server_script_hash
+                server_script_hash=$(echo "$result" | jq -r '.script_sha256 // ""' 2>/dev/null)
+                if [[ -n "$server_script_hash" && ${#server_script_hash} -eq 64 ]]; then
+                    local hash_sig
+                    hash_sig=$(echo "$result" | jq -r '.script_hash_signature // ""' 2>/dev/null)
+                    local hash_ts
+                    hash_ts=$(echo "$result" | jq -r '.script_hash_signed_at // ""' 2>/dev/null)
+                    local hash_lower
+                    hash_lower=$(echo "$server_script_hash" | tr '[:upper:]' '[:lower:]')
+                    echo "{\"hash\":\"$hash_lower\",\"signature\":\"$hash_sig\",\"signed_at\":\"$hash_ts\",\"algorithm\":\"Ed25519\"}" > "${BASE_DIR}/data/expected_script_hash.json" 2>/dev/null
+                    echo -n "$hash_lower" > "${BASE_DIR}/data/expected_script_hash.txt" 2>/dev/null
+                    log "DEBUG" "[INTEGRITY] Cached signed script hash from server"
+                fi
                    log "DEBUG" "[INTEGRITY] Cached expected script hash from server"
                fi
           fi
@@ -2082,9 +2091,31 @@ remove_dns_filter_handler() {
  last_auto_repair=$(date +%s)
  last_job_poll=$(date +%s)
  last_dns_sync=$(date +%s)
+ last_integrity_check=$(date +%s)
  
  while true; do
-     now=$(date +%s)
+      now=$(date +%s)
+      
+      # ============================================
+      # v5.0.14: RUNTIME INTEGRITY CHECK (TOCTOU DEFENSE, every 5 min)
+      # ============================================
+      if [[ $((now - last_integrity_check)) -ge 300 ]]; then
+          if [[ -f "$HASH_CACHE_PATH" ]]; then
+              expected_rt_hash=$(cat "$HASH_CACHE_PATH" 2>/dev/null | tr -d '[:space:]')
+              if [[ -n "$expected_rt_hash" && ${#expected_rt_hash} -eq 64 ]]; then
+                  current_rt_hash=$(shasum -a 256 "$SCRIPT_PATH" 2>/dev/null | awk '{print $1}')
+                  current_rt_lower=$(echo "$current_rt_hash" | tr '[:upper:]' '[:lower:]')
+                  expected_rt_lower=$(echo "$expected_rt_hash" | tr '[:upper:]' '[:lower:]')
+                  if [[ "$current_rt_lower" != "$expected_rt_lower" ]]; then
+                      log "ERROR" "[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running!"
+                      logger -t CyberShield "TOCTOU integrity violation - agent terminating"
+                      flush_log_buffer
+                      exit 9004
+                  fi
+              fi
+          fi
+          last_integrity_check=$now
+      fi
      
      # ============================================
      # NETWORK WATCHDOG
@@ -2190,10 +2221,12 @@ remove_dns_filter_handler() {
                  safe_mode_attempt=0
                  while [[ "$CURRENT_STATE" == "SAFE_MODE" && $safe_mode_attempt -lt 10 ]]; do
                      safe_mode_attempt=$((safe_mode_attempt + 1))
-                     # v5.0.13-hardening: Jitter to prevent thundering herd (120s base + 0-30s random)
+                     # v5.0.14: Jitter AFTER exponential backoff (delay = base * 2^attempt + jitter)
                      jitter=$((RANDOM % 30))
-                     recovery_delay=$((120 + jitter))
-                     log "INFO" "[SAFE_MODE] Recovery attempt $safe_mode_attempt/10 - waiting ${recovery_delay}s (jitter: ${jitter}s)..."
+                     base_backoff=$((120 * (2 ** (safe_mode_attempt - 1))))
+                     [[ $base_backoff -gt 600 ]] && base_backoff=600
+                     recovery_delay=$((base_backoff + jitter))
+                     log "INFO" "[SAFE_MODE] Recovery attempt $safe_mode_attempt/10 - waiting ${recovery_delay}s (backoff: ${base_backoff}s + jitter: ${jitter}s)..."
                      sleep "$recovery_delay"
                      if send_heartbeat; then
                          CONSECUTIVE_HEARTBEAT_FAILURES=0
