@@ -151,12 +151,12 @@ export function SecurityImpactFeed() {
     ).length;
 
     return [
-      { icon: Bug, label: 'Processos Suspeitos Encerrados', count: processesKilled, color: 'text-red-500', bgColor: 'bg-red-500/10' },
+      { icon: Bug, label: 'Programas Suspeitos Encerrados', count: processesKilled, color: 'text-red-500', bgColor: 'bg-red-500/10' },
       { icon: Shield, label: 'Ameaças Bloqueadas', count: threatsPrevented, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
-      { icon: Activity, label: 'Anomalias Isoladas', count: anomaliesIsolated, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+      { icon: Activity, label: 'Comportamentos Anormais Isolados', count: anomaliesIsolated, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
       { icon: Cpu, label: 'Serviços Restaurados', count: servicesRestarted, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
-      { icon: Wifi, label: 'Agentes Recuperados', count: agentsRecovered, color: 'text-green-500', bgColor: 'bg-green-500/10' },
-      { icon: FileWarning, label: 'Patches Sugeridos', count: patchesSuggested, color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
+      { icon: Wifi, label: 'Computadores Recuperados', count: agentsRecovered, color: 'text-green-500', bgColor: 'bg-green-500/10' },
+      { icon: FileWarning, label: 'Atualizações Sugeridas', count: patchesSuggested, color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
     ];
   }, [remediationActions, automationExecs, playbookExecs]);
 
@@ -217,10 +217,10 @@ export function SecurityImpactFeed() {
           <div>
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Zap className="h-4 w-4 text-primary" />
-              Ações de Proteção Hoje
+              O que foi protegido hoje
             </CardTitle>
             <CardDescription className="text-xs">
-              Impacto real da segurança automatizada
+              Ações automáticas realizadas nos seus computadores
             </CardDescription>
           </div>
           <Badge variant="outline" className="text-xs">
