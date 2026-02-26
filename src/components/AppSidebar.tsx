@@ -162,12 +162,12 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const complianceItems = useMemo<MenuItem[]>(() => [
     { icon: ClipboardCheck, label: 'SOC 2', to: '/admin/soc2-compliance' },
     { icon: ScrollText, label: 'Auditoria', to: '/admin/system-audit' },
-    { icon: Scale, label: 'Conformidade', to: '/admin/compliance-timeline' },
+    { icon: Scale, label: 'Linha do Tempo', to: '/admin/compliance-timeline' },
     { icon: FileText, label: 'Automação', to: '/admin/compliance-automation' },
-    { icon: Crosshair, label: 'Inteligência de Ameaças', to: '/admin/threat-intelligence' },
+    { icon: Crosshair, label: 'Ameaças', to: '/admin/threat-intelligence' },
     { icon: Brain, label: 'Regras IA', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
     { icon: Eye, label: 'Governança', to: '/admin/governance' },
-    { icon: FileBarChart, label: 'Relatórios Gov.', to: '/admin/governance-reports' },
+    { icon: FileBarChart, label: 'Relatórios', to: '/admin/governance-reports' },
     { icon: BookOpen, label: 'Evidências', to: '/admin/evidence-bundle' },
     { icon: Workflow, label: 'Playbooks', to: '/admin/playbooks' },
     { icon: BarChart3, label: 'Score de Risco', to: '/admin/risk-score' },
@@ -178,19 +178,19 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases' },
     { icon: Terminal, label: 'Diagnóstico', to: '/admin/diagnostics' },
     { icon: Clock, label: 'Automações', to: '/admin/automations' },
-    { icon: Zap, label: 'Correção Automática', to: '/admin/auto-remediation' },
+    { icon: Zap, label: 'Correção Auto', to: '/admin/auto-remediation' },
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
   ], []);
 
   // ─── IA & Análise (Admin) ─────────────────────
   const aiAnalysisItems = useMemo<MenuItem[]>(() => [
-    { icon: BrainCircuit, label: 'Insights IA', to: '/admin/ai-insights' },
-    { icon: Sparkles, label: 'Ações IA', to: '/admin/ai-actions' },
+    { icon: BrainCircuit, label: 'Insights', to: '/admin/ai-insights' },
+    { icon: Sparkles, label: 'Ações', to: '/admin/ai-actions' },
     { icon: AlertTriangle, label: 'Anomalias', to: '/admin/ai-anomalies' },
-    { icon: ThumbsUp, label: 'Feedback IA', to: '/admin/ai-feedback' },
+    { icon: ThumbsUp, label: 'Feedback', to: '/admin/ai-feedback' },
     { icon: Lightbulb, label: 'Triagem', to: '/admin/insight-triage' },
-    { icon: TrendingUp, label: 'Confiança IA', to: '/admin/confidence-gap' },
-    { icon: FileSearch, label: 'Auditoria IA', to: '/admin/decision-audit' },
+    { icon: TrendingUp, label: 'Confiança', to: '/admin/confidence-gap' },
+    { icon: FileSearch, label: 'Auditoria', to: '/admin/decision-audit' },
     { icon: BookOpen, label: 'Base de Conhecimento', to: '/admin/software-knowledge-base' },
   ], []);
 
@@ -510,15 +510,15 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
 
               <div className="sidebar-divider-neon my-2 mx-2" />
 
-              {renderCollapsibleSection('Proteção', 'protection', protectionItems)}
+              {renderCollapsibleSection('🛡️ Proteção', 'protection', protectionItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection('Gestão', 'management', managementItems)}
+              {renderCollapsibleSection('⚙️ Gestão', 'management', managementItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection('Conformidade', 'compliance', complianceItems)}
+              {renderCollapsibleSection('📋 Conformidade', 'compliance', complianceItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection('Avançado', 'advanced', advancedItems)}
+              {renderCollapsibleSection('🔧 Avançado', 'advanced', advancedItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection('Inteligência Artificial', 'aiAnalysis', aiAnalysisItems)}
+              {renderCollapsibleSection('🤖 IA', 'aiAnalysis', aiAnalysisItems)}
             </motion.div>
           ) : (
             <motion.div className="space-y-0.5" variants={containerVariants} initial="hidden" animate="show">
