@@ -306,7 +306,10 @@ try {
                 }
             }
         } catch {
-            # JSON parse failure - fall through to plain text cache
+            # JSON parse failure with JSON cache present = fail-closed (corrupted cache)
+            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "INTEGRITY: JSON hash cache exists but is corrupted/unreadable - fail-closed" -ErrorAction SilentlyContinue
+            Write-Error "CyberShield Agent integrity check failed: corrupted hash cache"
+            exit 9004
         }
     } elseif (Test-Path $hashCachePath) {
         # Legacy plain text hash cache (no signature)
@@ -663,10 +666,26 @@ function Save-SignedHashCache {
             algorithm = "Ed25519"
             verified = $true
         } | ConvertTo-Json -Compress
-        $cacheData | Out-File -FilePath (Join-Path $cacheDir "expected_script_hash.json") -Encoding UTF8 -NoNewline -Force
+        $jsonPath = Join-Path $cacheDir "expected_script_hash.json"
+        $txtPath = Join-Path $cacheDir "expected_script_hash.txt"
+        $cacheData | Out-File -FilePath $jsonPath -Encoding UTF8 -NoNewline -Force
         
         # Also write plain hash for backward compat (startup check)
-        $Hash.ToLower() | Out-File -FilePath (Join-Path $cacheDir "expected_script_hash.txt") -Encoding UTF8 -NoNewline -Force
+        $Hash.ToLower() | Out-File -FilePath $txtPath -Encoding UTF8 -NoNewline -Force
+        
+        # v5.0.13: Harden cache file ACLs (SYSTEM + Administrators only)
+        try {
+            foreach ($cachePath in @($jsonPath, $txtPath)) {
+                $acl = Get-Acl $cachePath
+                $acl.SetAccessRuleProtection($true, $false)
+                $acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) } 2>$null
+                $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule("SYSTEM","FullControl","Allow")))
+                $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule("Administrators","FullControl","Allow")))
+                Set-Acl -Path $cachePath -AclObject $acl -ErrorAction SilentlyContinue
+            }
+        } catch {
+            Write-Log "[INTEGRITY] Cache ACL hardening failed: $($_.Exception.Message)" "WARN"
+        }
         Write-Log "[INTEGRITY] Saved verified signed hash cache from server" "DEBUG"
     } catch {
         Write-Log "[INTEGRITY] Failed to save signed hash cache: $($_.Exception.Message)" "WARN"

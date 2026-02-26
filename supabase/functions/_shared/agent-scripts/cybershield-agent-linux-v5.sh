@@ -146,8 +146,18 @@ if [[ -f "$SCRIPT_SIG_PATH" && -f "$GPG_PUBKEY_PATH" ]] && command -v gpg &>/dev
 fi
 
 # 2. SHA256 hash validation - verify signature FIRST, then compare hash
-if [[ -f "$HASH_CACHE_JSON_PATH" ]] && command -v jq &>/dev/null; then
+if [[ -f "$HASH_CACHE_JSON_PATH" ]]; then
+    if ! command -v jq &>/dev/null; then
+        logger -t CyberShield -p auth.err "INTEGRITY: JSON hash cache exists but jq not available - fail-closed"
+        echo "[SECURITY] CyberShield Agent integrity check failed: jq required for JSON hash cache"
+        exit 9004
+    fi
     cached_hash=$(jq -r '.hash // ""' "$HASH_CACHE_JSON_PATH" 2>/dev/null)
+    if [[ $? -ne 0 || -z "$cached_hash" ]]; then
+        logger -t CyberShield -p auth.err "INTEGRITY: JSON hash cache corrupted or unreadable - fail-closed"
+        echo "[SECURITY] CyberShield Agent integrity check failed: corrupted hash cache"
+        exit 9004
+    fi
     cached_sig=$(jq -r '.signature // ""' "$HASH_CACHE_JSON_PATH" 2>/dev/null)
     ed25519_pubkey_path="/opt/cybershield/keys/ed25519_server.pub"
     
@@ -1645,6 +1655,11 @@ EOF
                     if [[ "$sig_verified" == "true" ]]; then
                         echo "{\"hash\":\"${server_script_hash,,}\",\"signature\":\"$hash_sig\",\"signed_at\":\"$hash_ts\",\"algorithm\":\"Ed25519\",\"verified\":true}" > "$DATA_DIR/expected_script_hash.json" 2>/dev/null
                         echo -n "${server_script_hash,,}" > "$DATA_DIR/expected_script_hash.txt" 2>/dev/null
+                        # v5.0.13: Harden cache file permissions (root-only read/write)
+                        chmod 600 "$DATA_DIR/expected_script_hash.json" 2>/dev/null || true
+                        chmod 600 "$DATA_DIR/expected_script_hash.txt" 2>/dev/null || true
+                        chown root:root "$DATA_DIR/expected_script_hash.json" 2>/dev/null || true
+                        chown root:root "$DATA_DIR/expected_script_hash.txt" 2>/dev/null || true
                         log "DEBUG" "[INTEGRITY] Cached verified script hash from server"
                     fi
                 fi
@@ -1679,8 +1694,9 @@ EOF
      
      log "INFO" "[FORCE UPDATE] Version: $target_version, Reason: $reason"
      
-     # Decode Base64
-     local temp_script="/tmp/cybershield-force-update-${target_version}.sh"
+     # Decode Base64 (secure temp file via mktemp to prevent symlink/pre-creation attacks)
+     local temp_script
+     temp_script=$(mktemp /tmp/cybershield-force-update-XXXXXXXX.sh)
      echo "$base64_content" | base64 -d > "$temp_script" 2>/dev/null
      
      if [[ ! -s "$temp_script" ]]; then
@@ -1754,8 +1770,12 @@ EOF
      
      # Apply update
     # Apply update (atomic mv instead of cp to prevent partial write TOCTOU)
-    chmod +x "$temp_script"
+    chmod 750 "$temp_script"
+    chown root:root "$temp_script" 2>/dev/null || true
     mv -f "$temp_script" "$current_script" 2>/dev/null || { cp "$temp_script" "$current_script" && rm -f "$temp_script"; }
+    # v5.0.13: Harden permissions on installed script
+    chmod 750 "$current_script"
+    chown root:root "$current_script" 2>/dev/null || true
      rm -f "$temp_script"
      
      log "SUCCESS" "[FORCE UPDATE] Script instalado: $current_script"
