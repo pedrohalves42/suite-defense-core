@@ -4000,7 +4000,9 @@ function Test-FirewallStatus {
                 }
             }
             
-            $Global:LocalDetectionStats.remediations_applied++
+            if ($remediated.Count -gt 0) {
+                $Global:LocalDetectionStats.remediations_applied++
+            }
             
             Invoke-PushAlert `
                 -AlertType "firewall_disabled" `
@@ -4110,11 +4112,11 @@ function Test-SuspiciousProcesses {
         
         foreach ($proc in $processes) {
             foreach ($suspicious in $suspiciousPatterns) {
-                if ($proc.Name -match $suspicious.pattern) {
+                if ($proc.Name -match "(^|[^a-z])$($suspicious.pattern)([^a-z]|$)") {
                     $detected += @{
                         process_name = $proc.Name
                         process_id = $proc.Id
-                        process_path = $proc.Path
+                        process_path = if ($proc.Path) { $proc.Path } else { "N/A" }
                         pattern = $suspicious.pattern
                         severity = $suspicious.severity
                         description = $suspicious.description
@@ -4446,10 +4448,17 @@ while ($true) {
                     Write-Log "[SECURITY] $consecutiveHeartbeatFailures consecutive heartbeat failures - entering SAFE_MODE" "ERROR"
                     Set-AgentState -NewState "SAFE_MODE" -Reason "Persistent auth failure ($consecutiveHeartbeatFailures consecutive)"
                     
-                    # Backoff loop in SAFE_MODE - try every 2 minutes instead of every cycle
+                    # Backoff loop in SAFE_MODE - try every 2 minutes, max 10 attempts
+                    $safeModeRecoveryAttempt = 0
                     while ($Global:CurrentState -eq "SAFE_MODE") {
-                        Start-Sleep -Seconds 120
-                        Write-Log "[SAFE_MODE] Attempting recovery heartbeat..." "INFO"
+                        $safeModeRecoveryAttempt++
+                        if ($safeModeRecoveryAttempt -ge 10) {
+                            Write-Log "[SAFE_MODE] Recovery limit reached (10 attempts) - staying in SAFE_MODE, will retry next main loop cycle" "ERROR"
+                            break
+                        }
+                        $recoveryDelay = [math]::Min(120 * [math]::Pow(1.5, $safeModeRecoveryAttempt - 1), 600)
+                        Start-Sleep -Seconds $recoveryDelay
+                        Write-Log "[SAFE_MODE] Recovery attempt #$safeModeRecoveryAttempt - waiting ${recoveryDelay}s..." "INFO"
                         $recoveryHb = Send-Heartbeat
                         if ($recoveryHb) {
                             $consecutiveHeartbeatFailures = 0
@@ -4458,7 +4467,7 @@ while ($true) {
                             } else {
                                 Set-AgentState -NewState "DEGRADED" -Reason "Heartbeat recovered but crypto still degraded"
                             }
-                            Write-Log "[SAFE_MODE] Recovery successful" "SUCCESS"
+                            Write-Log "[SAFE_MODE] Recovery successful after $safeModeRecoveryAttempt attempts" "SUCCESS"
                             break
                         }
                     }
