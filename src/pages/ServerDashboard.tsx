@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { OFFLINE_THRESHOLD_MS } from '@/lib/agent-status-constants';
 import { Shield, Server, Users, Briefcase, FileText, Download, Activity, TrendingUp, AlertCircle, Network, Zap, Clock, ShieldAlert, Key, Settings, BarChart3, PieChart, LineChart, CheckCircle2, XCircle, Info, Package, Monitor, ArrowRight } from "lucide-react";
 import { EvidenceBundleExport } from "@/components/admin/EvidenceBundleExport";
 import { IntegrityScoreCard } from "@/components/integrity/IntegrityScoreCard";
@@ -300,8 +301,8 @@ const ServerDashboard = () => {
     };
   }, [tenant?.id, isOnline, loadDashboardData]);
 
-  // Cálculo robusto de agentes online (FASE 1)
-  const FIVE_MINUTES_MS = 5 * 60 * 1000;
+  // Cálculo robusto de agentes online - usa threshold centralizado
+  const OFFLINE_MS = OFFLINE_THRESHOLD_MS;
   
   const activeAgents = agents.filter(a => {
     if (!a.last_heartbeat) return false;
@@ -311,7 +312,7 @@ const ServerDashboard = () => {
       const now = new Date();
       const diffMs = now.getTime() - lastHeartbeat.getTime();
       
-      return diffMs >= 0 && diffMs < FIVE_MINUTES_MS;
+      return diffMs >= 0 && diffMs < OFFLINE_MS;
     } catch (err) {
       console.error(`[ERROR] Failed to parse last_heartbeat for ${a.agent_name}:`, err);
       return false;
@@ -355,7 +356,7 @@ const ServerDashboard = () => {
       
       // Verificar se está offline
       const isOffline = !agent.last_heartbeat || 
-        (new Date().getTime() - new Date(agent.last_heartbeat).getTime()) > FIVE_MINUTES_MS;
+        (new Date().getTime() - new Date(agent.last_heartbeat).getTime()) > OFFLINE_MS;
       if (isOffline) {
         stats[agent.tenant_id].offlineCount++;
       }

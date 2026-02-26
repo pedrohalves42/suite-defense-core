@@ -62,3 +62,57 @@ export const AGENT_STATUS_LABELS = {
 } as const;
 
 export type AgentStatusLabel = keyof typeof AGENT_STATUS_LABELS;
+
+// ========================================
+// Funções utilitárias centralizadas
+// USAR ESTAS em vez de cálculos inline
+// ========================================
+
+/**
+ * Determina se o agente está online baseado no heartbeat.
+ * USA OS THRESHOLDS CENTRALIZADOS - não hardcode 5*60*1000 em outros arquivos!
+ */
+export function isAgentOnline(lastHeartbeat: string | null | undefined): boolean {
+  if (!lastHeartbeat) return false;
+  const elapsed = Date.now() - new Date(lastHeartbeat).getTime();
+  return elapsed < AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES * 60 * 1000;
+}
+
+/**
+ * Retorna o status calculado do agente: 'online' | 'warning' | 'offline' | 'never_connected'
+ * Prioriza agent_state do banco quando disponível para consistência.
+ */
+export function getAgentOnlineStatus(
+  agent: { last_heartbeat?: string | null; status?: string; agent_state?: string }
+): 'online' | 'warning' | 'offline' | 'never_connected' {
+  // 1. Priorizar agent_state do banco
+  if (agent.agent_state) {
+    switch (agent.agent_state) {
+      case 'healthy':
+      case 'enforcing':
+        return 'online';
+      case 'degraded':
+      case 'recovery':
+      case 'safe_mode':
+      case 'updating':
+      case 'rollback':
+        return 'warning';
+      case 'offline':
+      case 'error':
+      case 'shutdown':
+      case 'isolated':
+      case 'quarantined':
+        return 'offline';
+    }
+  }
+
+  // 2. Fallback para cálculo por heartbeat
+  if (!agent.last_heartbeat) return 'never_connected';
+  const minutesSince = (Date.now() - new Date(agent.last_heartbeat).getTime()) / (1000 * 60);
+  if (minutesSince < AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES) return 'online';
+  if (minutesSince < AGENT_STATUS_THRESHOLDS.WARNING_MAX_MINUTES) return 'warning';
+  return 'offline';
+}
+
+/** Milliseconds for offline threshold - use in place of hardcoded 5*60*1000 */
+export const OFFLINE_THRESHOLD_MS = AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES * 60 * 1000;

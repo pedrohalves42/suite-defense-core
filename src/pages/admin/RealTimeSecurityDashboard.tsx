@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { isAgentOnline } from '@/lib/agent-status-constants';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
@@ -135,7 +136,6 @@ export default function RealTimeSecurityDashboard() {
     queryFn: async () => {
       if (!tenant?.id) return { total: 0, protected: 0, isolated: 0, offline: 0 };
       
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
       
       // ADR-026 Zero-Gap: Use RPC with explicit tenant_id
       const { data: rpcData, error } = await supabase.rpc('get_agents_list', {
@@ -150,8 +150,7 @@ export default function RealTimeSecurityDashboard() {
       const total = data?.length || 0;
       const protected_ = data?.filter(a => 
         a.status === 'active' && 
-        a.last_heartbeat && 
-        new Date(a.last_heartbeat) > fiveMinutesAgo
+        isAgentOnline(a.last_heartbeat)
       ).length || 0;
       const isolated = data?.filter(a => a.is_isolated).length || 0;
       const offline = total - protected_ - isolated;

@@ -1,3 +1,4 @@
+import { isAgentOnline } from '@/lib/agent-status-constants';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -92,10 +93,7 @@ export function AgentVersionSync({ latestVersions }: AgentVersionSyncProps) {
   };
 
   const isOnline = (agent: Agent): boolean => {
-    if (!agent.last_heartbeat) return false;
-    const lastHeartbeat = new Date(agent.last_heartbeat);
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    return lastHeartbeat > fiveMinutesAgo;
+    return isAgentOnline(agent.last_heartbeat);
   };
 
   const stuckAgents = agents.filter(a => 

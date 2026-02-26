@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { isAgentOnline } from '@/lib/agent-status-constants';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,9 +57,8 @@ export const MyProtection = () => {
       ]);
 
       const agents = (agentsRes.data as unknown as Array<{ id: string; agent_name: string; last_heartbeat: string | null; status: string }>) || [];
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      const onlineAgents = agents.filter(a => a.last_heartbeat && new Date(a.last_heartbeat) > fiveMinutesAgo);
-      const offlineAgents = agents.filter(a => !a.last_heartbeat || new Date(a.last_heartbeat) <= fiveMinutesAgo);
+      const onlineAgents = agents.filter(a => isAgentOnline(a.last_heartbeat));
+      const offlineAgents = agents.filter(a => !isAgentOnline(a.last_heartbeat));
 
       const activeAlerts = alertsRes.data || [];
       const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical').length;

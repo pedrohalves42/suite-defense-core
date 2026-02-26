@@ -1,4 +1,5 @@
 import { Entity } from '../shared/Entity';
+import { AGENT_STATUS_THRESHOLDS } from '@/lib/agent-status-constants';
 import { Result } from '../shared/Result';
 import { DomainError, BusinessRuleViolationError } from '../shared/DomainError';
 import { AgentId } from '../value-objects/AgentId';
@@ -179,8 +180,9 @@ export class Agent extends Entity<AgentId> {
   }
 
   isOffline(): boolean {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    return this._lastSeen < fiveMinutesAgo;
+    const thresholdMs = AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES * 60 * 1000;
+    const cutoff = new Date(Date.now() - thresholdMs);
+    return this._lastSeen < cutoff;
   }
 
   // ─── Light Mode ─────────────────────────────────────────
