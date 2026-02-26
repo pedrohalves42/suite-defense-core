@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
-import { tenantQuery } from '@/lib/tenantQuery';
 import { toast } from 'sonner';
 
 export interface SoftwareRiskSummary {
@@ -72,8 +71,10 @@ export function useSoftwareByRisk(riskLevel?: string, limit = 50) {
     queryFn: async () => {
       if (!activeTenant?.id) return [];
 
-      let query = tenantQuery('software_inventory', activeTenant.id)
+      let query = supabase
+        .from('software_inventory')
         .select('*, agents(agent_name)')
+        .eq('tenant_id', activeTenant.id)
         .order('last_seen_at', { ascending: false })
         .limit(limit);
 
@@ -97,8 +98,10 @@ export function useTopRiskySoftware(limit = 10) {
     queryFn: async () => {
       if (!activeTenant?.id) return [];
 
-      const { data, error } = await tenantQuery('software_inventory', activeTenant.id)
+      const { data, error } = await supabase
+        .from('software_inventory')
         .select('name, vendor, risk_level, agent_id, first_seen_at')
+        .eq('tenant_id', activeTenant.id)
         .in('risk_level', ['critical', 'high'])
         .order('last_seen_at', { ascending: false })
         .limit(500);
@@ -257,8 +260,10 @@ export function useReclassifySoftware() {
       if (!activeTenant?.id) throw new Error('No tenant');
 
       // Trigger reclassification by updating all software with unknown risk
-      const { error } = await tenantQuery('software_inventory', activeTenant.id)
+      const { error } = await supabase
+        .from('software_inventory')
         .update({ risk_level: 'unknown' })
+        .eq('tenant_id', activeTenant.id)
         .eq('risk_level', 'unknown');
 
       if (error) throw error;
