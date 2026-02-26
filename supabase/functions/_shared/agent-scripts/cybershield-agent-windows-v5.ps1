@@ -564,9 +564,9 @@ function Test-Ed25519HashSignature {
         } catch {
             # Ed25519 not available in PowerShell 5.1 / .NET Framework
             # Log warning but don't block - signature presence is still recorded
-            Write-Log "[INTEGRITY] Ed25519 .NET verify unavailable (PS 5.1 limitation) - signature recorded but not cryptographically verified" "WARN"
-            # Return $true if signature is non-empty (presence check as fallback)
-            return ($SignatureBase64.Length -gt 10)
+            Write-Log "[INTEGRITY] Ed25519 .NET verify unavailable (PS 5.1 limitation) - FAIL-CLOSED: rejecting unverifiable signature" "WARN"
+            # FAIL-CLOSED: If we cannot verify cryptographically, we do NOT trust
+            return $false
         }
     } catch {
         Write-Log "[INTEGRITY] Ed25519 verification error: $($_.Exception.Message)" "WARN"
