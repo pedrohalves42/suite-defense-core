@@ -4112,7 +4112,7 @@ function Test-SuspiciousProcesses {
         
         foreach ($proc in $processes) {
             foreach ($suspicious in $suspiciousPatterns) {
-                if ($proc.Name -match "(^|[^a-z])$($suspicious.pattern)([^a-z]|$)") {
+                if ($proc.Name -match "\b$($suspicious.pattern)\b") {
                     $detected += @{
                         process_name = $proc.Name
                         process_id = $proc.Id
