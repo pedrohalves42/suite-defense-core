@@ -152,6 +152,12 @@ NETWORK_TEST_HOST=""
 NETWORK_TEST_PORT=443
 CONSECUTIVE_NETWORK_FAILURES=0
 
+# v5.0.13-fix: SecurityDegraded flag (fail-closed security model)
+SECURITY_DEGRADED=false
+
+# v5.0.13-fix: Consecutive heartbeat failure counter (auth loop prevention)
+CONSECUTIVE_HEARTBEAT_FAILURES=0
+
 # v5.0.3: Service Health Check
 LAST_SERVICE_HEALTH_CHECK=0
 SERVICE_HEALTH_CHECK_INTERVAL=300
@@ -1905,17 +1911,26 @@ remove_dns_filter_handler() {
  
  # Initialize ECDSA keys
  keys_initialized=false
+ SECURITY_DEGRADED=false
+ CONSECUTIVE_HEARTBEAT_FAILURES=0
  if initialize_agent_keys; then
      keys_initialized=true
  else
-     log "ERROR" "[STARTUP] Failed to initialize keys - entering DEGRADED mode"
+     log "ERROR" "[STARTUP] Failed to initialize keys - entering DEGRADED mode (FAIL-CLOSED)"
      set_agent_state "DEGRADED" "Key initialization failed"
+     SECURITY_DEGRADED=true
+     log "WARN" "[SECURITY] SecurityDegraded=TRUE - operational jobs will be BLOCKED until crypto is restored"
  fi
  
  # ============================================
  #  PHASE 2: AUTHENTICATION
  # ============================================
- set_agent_state "AUTHENTICATING" "Validating credentials"
+ # v5.0.13-fix: Guard - only transition to AUTHENTICATING if not stuck in DEGRADED with failed keys
+ if [[ "$SECURITY_DEGRADED" == "true" ]]; then
+     log "WARN" "[STARTUP] Skipping AUTHENTICATING - SecurityDegraded, staying in DEGRADED for heartbeat attempt"
+ else
+     set_agent_state "AUTHENTICATING" "Validating credentials"
+ fi
  
  # Send first heartbeat
  heartbeat_success=false
@@ -1926,18 +1941,55 @@ remove_dns_filter_handler() {
      if [[ "$keys_initialized" == "true" ]]; then
          register_agent_key || log "WARN" "[STARTUP] Key registration failed"
      fi
+     CONSECUTIVE_HEARTBEAT_FAILURES=0
  else
      log "WARN" "[STARTUP] Initial heartbeat failed - entering DEGRADED mode"
      set_agent_state "DEGRADED" "Heartbeat failed"
+     CONSECUTIVE_HEARTBEAT_FAILURES=$((CONSECUTIVE_HEARTBEAT_FAILURES + 1))
+     
+     # v5.0.13-fix: If BOTH keys and heartbeat failed, enter SAFE_MODE (fail-closed)
+     if [[ "$keys_initialized" == "false" ]]; then
+         log "ERROR" "[SECURITY] No crypto + no auth = SAFE_MODE (fail-closed)"
+         set_agent_state "SAFE_MODE" "No auth + no crypto - fail closed"
+     fi
  fi
  
  # ============================================
  #  PHASE 3: SYNCHRONIZATION
  # ============================================
+ # v5.0.13-fix: If in SAFE_MODE after startup failures, enter recovery loop
+ if [[ "$CURRENT_STATE" == "SAFE_MODE" ]]; then
+     log "WARN" "[STARTUP] Agent in SAFE_MODE - entering recovery-only loop"
+     recovery_attempt=0
+     while [[ "$CURRENT_STATE" == "SAFE_MODE" ]]; do
+         recovery_attempt=$((recovery_attempt + 1))
+         # Exponential backoff (60s, 120s, 240s... max 600s)
+         recovery_delay=$((60 * (2 ** (recovery_attempt - 1))))
+         [[ $recovery_delay -gt 600 ]] && recovery_delay=600
+         log "INFO" "[SAFE_MODE] Recovery attempt #$recovery_attempt - waiting ${recovery_delay}s..."
+         sleep "$recovery_delay"
+         log "INFO" "[SAFE_MODE] Attempting recovery heartbeat..."
+         if send_heartbeat; then
+             if initialize_agent_keys; then
+                 SECURITY_DEGRADED=false
+                 set_agent_state "INITIALIZING" "Recovery successful"
+                 log "SUCCESS" "[SAFE_MODE] Recovery successful - restarting initialization"
+                 break
+             else
+                 log "WARN" "[SAFE_MODE] Heartbeat OK but keys still failed - continuing recovery"
+             fi
+         fi
+     done
+ fi
+
  set_agent_state "SYNCING" "Syncing policies and baseline"
  
- # Initialize process baseline
- initialize_process_baseline
+ # v5.0.13-fix: Guard against duplicate baseline initialization
+ if [[ ${#PROCESS_BASELINE[@]} -eq 0 ]]; then
+     initialize_process_baseline
+ else
+     log "DEBUG" "[BASELINE] Already initialized, skipping duplicate call"
+ fi
  
  # Sync DNS blocklist
  sync_dns_blocklist || true
@@ -1945,9 +1997,13 @@ remove_dns_filter_handler() {
  # ============================================
  #  PHASE 4: ENFORCEMENT
  # ============================================
- set_agent_state "ENFORCING" "Normal operation"
- 
- log "SUCCESS" "[STARTUP] Agent fully operational in ENFORCING state"
+ # v5.0.13-fix: Only enter ENFORCING if security is not degraded
+ if [[ "$SECURITY_DEGRADED" == "true" ]]; then
+     log "WARN" "[STARTUP] Agent v$AGENT_VERSION starting in DEGRADED mode (SecurityDegraded=TRUE, only recovery jobs allowed)"
+ else
+     set_agent_state "ENFORCING" "Normal operation"
+     log "SUCCESS" "[STARTUP] Agent v$AGENT_VERSION fully operational in ENFORCING state"
+ fi
  
  last_heartbeat=$(date +%s)
  last_auto_repair=$(date +%s)
@@ -1964,7 +2020,12 @@ remove_dns_filter_handler() {
      if test_network_connectivity; then
          network_ok=true
          if [[ $CONSECUTIVE_NETWORK_FAILURES -ge 3 && "$CURRENT_STATE" == "DEGRADED" ]]; then
-             set_agent_state "ENFORCING" "Network restored"
+             # v5.0.13-fix: Only restore ENFORCING if crypto is healthy
+             if [[ "$SECURITY_DEGRADED" == "false" ]]; then
+                 set_agent_state "ENFORCING" "Network restored"
+             else
+                 log "WARN" "[FSM] Network restored but SecurityDegraded=TRUE - staying DEGRADED"
+             fi
          fi
          CONSECUTIVE_NETWORK_FAILURES=0
      else
@@ -1983,6 +2044,22 @@ remove_dns_filter_handler() {
          # Process each job
          echo "$jobs" | jq -c '.[]' 2>/dev/null | while read -r job; do
              if [[ -n "$job" ]]; then
+                 # v5.0.13-fix: When SecurityDegraded, only allow recovery jobs (fail-closed)
+                 job_type=$(echo "$job" | jq -r '.type // .job_type // "unknown"' 2>/dev/null)
+                 if [[ "$SECURITY_DEGRADED" == "true" ]]; then
+                     case "$job_type" in
+                         update_agent|force_update|reinstall_agent)
+                             # Recovery jobs allowed
+                             ;;
+                         *)
+                             log "WARN" "[SECURITY] BLOCKED job '$job_type' - SecurityDegraded=TRUE (only recovery jobs allowed)"
+                             job_id=$(echo "$job" | jq -r '.id // ""' 2>/dev/null)
+                             submit_job_result "$job" '{"success":false,"status":"failed","error_message":"Agent in SecurityDegraded mode - only recovery jobs accepted","exit_code":403}'
+                             continue
+                             ;;
+                     esac
+                 fi
+                 
                  result=$(execute_job "$job")
                  submit_job_result "$job" "$result"
              fi
@@ -2026,9 +2103,41 @@ remove_dns_filter_handler() {
      # ============================================
      if [[ $((now - last_heartbeat)) -ge $POLL_INTERVAL && "$network_ok" == "true" ]]; then
          if ! send_heartbeat; then
+             CONSECUTIVE_HEARTBEAT_FAILURES=$((CONSECUTIVE_HEARTBEAT_FAILURES + 1))
+             log "WARN" "[HEARTBEAT] Failure #$CONSECUTIVE_HEARTBEAT_FAILURES"
+             
              if [[ "$CURRENT_STATE" == "ENFORCING" ]]; then
                  set_agent_state "DEGRADED" "Heartbeat failed"
              fi
+             
+             # v5.0.13-fix: After 5 consecutive failures, enter SAFE_MODE (auth loop prevention)
+             if [[ $CONSECUTIVE_HEARTBEAT_FAILURES -ge 5 ]]; then
+                 log "ERROR" "[SECURITY] $CONSECUTIVE_HEARTBEAT_FAILURES consecutive heartbeat failures - entering SAFE_MODE"
+                 set_agent_state "SAFE_MODE" "Persistent auth failure ($CONSECUTIVE_HEARTBEAT_FAILURES consecutive)"
+                 
+                 # Backoff loop in SAFE_MODE - try every 2 minutes, max 10 attempts
+                 safe_mode_attempt=0
+                 while [[ "$CURRENT_STATE" == "SAFE_MODE" && $safe_mode_attempt -lt 10 ]]; do
+                     safe_mode_attempt=$((safe_mode_attempt + 1))
+                     log "INFO" "[SAFE_MODE] Recovery attempt $safe_mode_attempt/10 - waiting 120s..."
+                     sleep 120
+                     if send_heartbeat; then
+                         CONSECUTIVE_HEARTBEAT_FAILURES=0
+                         if [[ "$SECURITY_DEGRADED" == "false" ]]; then
+                             set_agent_state "ENFORCING" "Heartbeat recovered"
+                         else
+                             set_agent_state "DEGRADED" "Heartbeat recovered but SecurityDegraded"
+                         fi
+                         log "SUCCESS" "[SAFE_MODE] Recovery successful after $safe_mode_attempt attempts"
+                         break
+                     fi
+                 done
+             fi
+         else
+             if [[ $CONSECUTIVE_HEARTBEAT_FAILURES -gt 0 ]]; then
+                 log "SUCCESS" "[HEARTBEAT] Recovered after $CONSECUTIVE_HEARTBEAT_FAILURES failures"
+             fi
+             CONSECUTIVE_HEARTBEAT_FAILURES=0
          fi
          last_heartbeat=$now
      fi
