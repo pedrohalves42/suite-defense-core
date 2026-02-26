@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
 
 /**
  * Hook for admin access to full agent release data including sensitive fields.
@@ -7,8 +8,11 @@ import { supabase } from '@/integrations/supabase/client';
  * SECURITY: Only accessible to authenticated admins via get-agent-script-content function.
  */
 export const useAdminAgentReleases = () => {
+  const { user } = useAuth();
+  
   const { data: releases = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['admin-agent-releases'],
+    queryKey: ['admin-agent-releases', user?.id],
+    enabled: !!user,
     queryFn: async () => {
       // Use Edge Function to get full release data for admin
       const { data, error } = await supabase.functions.invoke('get-agent-script-content', {
