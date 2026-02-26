@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - macOS v5.0.11
+# CyberShield Agent - macOS v5.0.13
 #
 # v5.0.11: FULL ENTERPRISE - All functions (Get-RollbackState, Add-EvidenceEntry, Apply-ForcedUpdate)
 # v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
@@ -79,7 +79,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.9"
+AGENT_VERSION="v5.0.13"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -125,12 +125,12 @@ CURRENT_STATE="INITIALIZING"
 
 # Valid FSM transitions
 declare -A STATE_TRANSITIONS=(
-    ["INITIALIZING"]="AUTHENTICATING SAFE_MODE"
+    ["INITIALIZING"]="AUTHENTICATING DEGRADED SAFE_MODE SYNCING"
     ["AUTHENTICATING"]="SYNCING DEGRADED SAFE_MODE"
     ["SYNCING"]="ENFORCING DEGRADED SAFE_MODE"
     ["ENFORCING"]="SYNCING DEGRADED SAFE_MODE"
     ["DEGRADED"]="AUTHENTICATING SYNCING ENFORCING SAFE_MODE"
-    ["SAFE_MODE"]="INITIALIZING"
+    ["SAFE_MODE"]="INITIALIZING DEGRADED"
 )
 
 # v5.0.1: Hash Chain for execution
@@ -630,78 +630,78 @@ PROTECTED_SERVICES="com.apple.sshd com.apple.windowserver com.apple.coreservices
 #  v5.0.1: KILL PROCESS HANDLER
 # ============================================
 kill_process_handler() {
-    local job="\$1"
+    local job="$1"
     local process_name
-    process_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('process_name',''))" 2>/dev/null)
+    process_name=$(echo "$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('process_name',''))" 2>/dev/null)
     local force
-    force=\$(echo "\$job" | python3 -c "import sys,json; print(str(json.load(sys.stdin).get('payload',{}).get('force',False)).lower())" 2>/dev/null)
+    force=$(echo "$job" | python3 -c "import sys,json; print(str(json.load(sys.stdin).get('payload',{}).get('force',False)).lower())" 2>/dev/null)
     
-    if [[ -z "\$process_name" ]]; then
+    if [[ -z "$process_name" ]]; then
         echo '{"success":false,"error":"Missing process_name in payload"}'
         return
     fi
     
     # Security check: Protected process list
     local normalized_name
-    normalized_name=\$(echo "\$process_name" | tr '[:upper:]' '[:lower:]')
+    normalized_name=$(echo "$process_name" | tr '[:upper:]' '[:lower:]')
     
-    if echo "\$PROTECTED_PROCESSES" | grep -qw "\$normalized_name"; then
-        log "WARN" "[KILL-PROCESS] BLOCKED: \$process_name is a protected process"
-        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: \$process_name is a protected system process\",\"blocked\":true}"
+    if echo "$PROTECTED_PROCESSES" | grep -qw "$normalized_name"; then
+        log "WARN" "[KILL-PROCESS] BLOCKED: $process_name is a protected process"
+        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: $process_name is a protected system process\",\"blocked\":true}"
         return
     fi
     
     # Find and kill processes
     local pids
-    pids=\$(pgrep -x "\$process_name" 2>/dev/null)
+    pids=$(pgrep -x "$process_name" 2>/dev/null)
     
-    if [[ -z "\$pids" ]]; then
-        echo "{\"success\":true,\"killed\":0,\"message\":\"Process not running: \$process_name\"}"
+    if [[ -z "$pids" ]]; then
+        echo "{\"success\":true,\"killed\":0,\"message\":\"Process not running: $process_name\"}"
         return
     fi
     
     local killed=0
     local total=0
     
-    for pid in \$pids; do
-        total=\$((total + 1))
-        if [[ "\$force" == "true" ]]; then
-            kill -9 "\$pid" 2>/dev/null && killed=\$((killed + 1))
+    for pid in $pids; do
+        total=$((total + 1))
+        if [[ "$force" == "true" ]]; then
+            kill -9 "$pid" 2>/dev/null && killed=$((killed + 1))
         else
-            kill "\$pid" 2>/dev/null && killed=\$((killed + 1))
+            kill "$pid" 2>/dev/null && killed=$((killed + 1))
         fi
     done
     
-    log "SUCCESS" "[KILL-PROCESS] Terminated \$killed/\$total instances of \$process_name"
-    echo "{\"success\":true,\"process_name\":\"\$process_name\",\"killed\":\$killed,\"total_found\":\$total,\"killed_at\":\"\$(date -Iseconds)\"}"
+    log "SUCCESS" "[KILL-PROCESS] Terminated $killed/$total instances of $process_name"
+    echo "{\"success\":true,\"process_name\":\"$process_name\",\"killed\":$killed,\"total_found\":$total,\"killed_at\":\"$(date -Iseconds)\"}"
 }
 
 # ============================================
 #  v5.0.1: STOP SERVICE HANDLER (launchctl)
 # ============================================
 stop_service_handler() {
-    local job="\$1"
+    local job="$1"
     local service_name
-    service_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
+    service_name=$(echo "$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
     
-    if [[ -z "\$service_name" ]]; then
+    if [[ -z "$service_name" ]]; then
         echo '{"success":false,"error":"Missing service_name in payload"}'
         return
     fi
     
     # Security check: Protected service list
-    if echo "\$PROTECTED_SERVICES" | grep -qw "\$service_name"; then
-        log "WARN" "[STOP-SERVICE] BLOCKED: \$service_name is a protected service"
-        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: \$service_name is a protected system service\",\"blocked\":true}"
+    if echo "$PROTECTED_SERVICES" | grep -qw "$service_name"; then
+        log "WARN" "[STOP-SERVICE] BLOCKED: $service_name is a protected service"
+        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: $service_name is a protected system service\",\"blocked\":true}"
         return
     fi
     
     # macOS uses launchctl
-    if launchctl stop "\$service_name" 2>/dev/null; then
-        log "SUCCESS" "[STOP-SERVICE] Stopped: \$service_name"
-        echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"stopped\",\"stopped_at\":\"\$(date -Iseconds)\"}"
+    if launchctl stop "$service_name" 2>/dev/null; then
+        log "SUCCESS" "[STOP-SERVICE] Stopped: $service_name"
+        echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"stopped\",\"stopped_at\":\"$(date -Iseconds)\"}"
     else
-        echo "{\"success\":false,\"error\":\"Failed to stop service: \$service_name\"}"
+        echo "{\"success\":false,\"error\":\"Failed to stop service: $service_name\"}"
     fi
 }
 
@@ -709,29 +709,29 @@ stop_service_handler() {
 #  v5.0.1: DISABLE SERVICE HANDLER (launchctl)
 # ============================================
 disable_service_handler() {
-    local job="\$1"
+    local job="$1"
     local service_name
-    service_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
+    service_name=$(echo "$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
     
-    if [[ -z "\$service_name" ]]; then
+    if [[ -z "$service_name" ]]; then
         echo '{"success":false,"error":"Missing service_name in payload"}'
         return
     fi
     
     # Security check: Protected service list
-    if echo "\$PROTECTED_SERVICES" | grep -qw "\$service_name"; then
-        log "WARN" "[DISABLE-SERVICE] BLOCKED: \$service_name is a protected service"
-        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: \$service_name is a protected system service\",\"blocked\":true}"
+    if echo "$PROTECTED_SERVICES" | grep -qw "$service_name"; then
+        log "WARN" "[DISABLE-SERVICE] BLOCKED: $service_name is a protected service"
+        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: $service_name is a protected system service\",\"blocked\":true}"
         return
     fi
     
     # macOS: stop and disable via launchctl
-    launchctl stop "\$service_name" 2>/dev/null
-    if launchctl disable "system/\$service_name" 2>/dev/null; then
-        log "SUCCESS" "[DISABLE-SERVICE] Disabled: \$service_name"
-        echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"stopped\",\"new_enabled\":\"disabled\",\"disabled_at\":\"\$(date -Iseconds)\"}"
+    launchctl stop "$service_name" 2>/dev/null
+    if launchctl disable "system/$service_name" 2>/dev/null; then
+        log "SUCCESS" "[DISABLE-SERVICE] Disabled: $service_name"
+        echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"stopped\",\"new_enabled\":\"disabled\",\"disabled_at\":\"$(date -Iseconds)\"}"
     else
-        echo "{\"success\":false,\"error\":\"Failed to disable service: \$service_name\"}"
+        echo "{\"success\":false,\"error\":\"Failed to disable service: $service_name\"}"
     fi
 }
 
@@ -739,33 +739,33 @@ disable_service_handler() {
 #  v5.0.1: RESTART SERVICE HANDLER (launchctl)
 # ============================================
 restart_service_handler() {
-    local job="\$1"
+    local job="$1"
     local service_name
-    service_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
+    service_name=$(echo "$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
     
-    if [[ -z "\$service_name" ]]; then
+    if [[ -z "$service_name" ]]; then
         echo '{"success":false,"error":"Missing service_name in payload"}'
         return
     fi
     
     # Allow restart of protected services (but log warning)
-    if echo "\$PROTECTED_SERVICES" | grep -qw "\$service_name"; then
-        log "WARN" "[RESTART-SERVICE] WARNING: Restarting protected service \$service_name"
+    if echo "$PROTECTED_SERVICES" | grep -qw "$service_name"; then
+        log "WARN" "[RESTART-SERVICE] WARNING: Restarting protected service $service_name"
     fi
     
     # macOS: kickstart restarts a service
-    if launchctl kickstart -k "system/\$service_name" 2>/dev/null; then
-        log "SUCCESS" "[RESTART-SERVICE] Restarted: \$service_name"
-        echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"running\",\"restarted_at\":\"\$(date -Iseconds)\"}"
+    if launchctl kickstart -k "system/$service_name" 2>/dev/null; then
+        log "SUCCESS" "[RESTART-SERVICE] Restarted: $service_name"
+        echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"running\",\"restarted_at\":\"$(date -Iseconds)\"}"
     else
         # Fallback: stop + start
-        launchctl stop "\$service_name" 2>/dev/null
+        launchctl stop "$service_name" 2>/dev/null
         sleep 1
-        if launchctl start "\$service_name" 2>/dev/null; then
-            log "SUCCESS" "[RESTART-SERVICE] Restarted (stop+start): \$service_name"
-            echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"running\",\"restarted_at\":\"\$(date -Iseconds)\"}"
+        if launchctl start "$service_name" 2>/dev/null; then
+            log "SUCCESS" "[RESTART-SERVICE] Restarted (stop+start): $service_name"
+            echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"running\",\"restarted_at\":\"$(date -Iseconds)\"}"
         else
-            echo "{\"success\":false,\"error\":\"Failed to restart service: \$service_name\"}"
+            echo "{\"success\":false,\"error\":\"Failed to restart service: $service_name\"}"
         fi
     fi
 }
@@ -782,21 +782,35 @@ restart_service_handler() {
      local result
      result=$(invoke_secure_request "POST" "/functions/v1/poll-jobs" "$poll_body" 15 2)
      
-     if [[ $? -ne 0 ]]; then
+      if [[ $? -ne 0 ]]; then
          log "WARN" "[POLL-JOBS] Failed to poll"
          echo "[]"
          return 1
      fi
      
-     # Backend returns array directly, not { jobs: [...] }
+     # v5.0.13 FIX: Support wrapped {jobs:[...]} or flat array [...] (parity with Linux)
+     local jobs_array
+     if python3 -c "import json; d=json.loads('''$result'''); assert 'jobs' in d" 2>/dev/null; then
+         jobs_array=$(python3 -c "import json; print(json.dumps(json.loads('''$result''')['jobs']))" 2>/dev/null)
+         # Read dynamic poll interval
+         local new_interval
+         new_interval=$(python3 -c "import json; print(json.loads('''$result''').get('poll_interval_seconds', 0))" 2>/dev/null || echo 0)
+         if [[ "$new_interval" -ge 10 && "$new_interval" != "$JOB_POLL_INTERVAL" ]]; then
+             log "INFO" "[POLL-JOBS] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_interval}s"
+             JOB_POLL_INTERVAL=$new_interval
+         fi
+     else
+         jobs_array="$result"
+     fi
+     
      local count
-     count=$(python3 -c "import json; print(len(json.loads('''$result''')))" 2>/dev/null || echo 0)
+     count=$(python3 -c "import json; print(len(json.loads('''$jobs_array''')))" 2>/dev/null || echo 0)
      
      if [[ "$count" -gt 0 ]]; then
          log "INFO" "[POLL-JOBS] Received $count job(s)"
      fi
      
-     echo "$result"
+     echo "$jobs_array"
  }
  
  execute_job() {
@@ -1831,6 +1845,7 @@ remove_dns_filter_handler() {
      keys_initialized=true
  else
      log "ERROR" "[STARTUP] Failed to initialize keys - entering DEGRADED mode"
+     set_agent_state "DEGRADED" "Key initialization failed"
  fi
  
  # ============================================
