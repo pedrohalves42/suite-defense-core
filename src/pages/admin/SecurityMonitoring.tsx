@@ -1,69 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Shield, 
-  AlertTriangle, 
-  Ban, 
-  Activity, 
-  RefreshCw, 
-  Clock,
-  Eye,
-  Lock,
-  Unlock,
-  TrendingUp,
-  TrendingDown,
-  CheckCircle
+  Shield, AlertTriangle, Ban, RefreshCw, Clock, Lock, Unlock,
+  CheckCircle, ShieldCheck, Activity, MonitorOff, XCircle
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
-import { subHours, subMinutes } from 'date-fns';
+import { subHours } from 'date-fns';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { AGENT_STATUS_THRESHOLDS } from '@/lib/agent-status-constants';
 import { UI_LABELS, getAttackTypeLabel, getSeverityInfo } from '@/lib/ui-dictionary';
-import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion } from 'framer-motion';
 import { useTenant } from '@/hooks/useTenant';
-
-interface SecurityMetrics {
-  rate_limit_breaches: number;
-  replay_attempts: number;
-  failed_logins: number;
-  blocked_ips: number;
-  critical_events: number;
-  agents_offline: number;
-}
-
-interface SecurityEvent {
-  id: string;
-  attack_type: string;
-  severity: string;
-  ip_address: string;
-  endpoint: string;
-  details: Record<string, unknown>;
-  created_at: string;
-  blocked: boolean;
-}
-
-interface BlockedIP {
-  id: string;
-  ip_address: string;
-  reason: string;
-  blocked_until: string;
-  created_at: string;
-}
-
-interface FailedLoginStat {
-  ip_address: string;
-  count: number;
-  last_attempt: string;
-}
+import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SecurityMonitoring() {
   const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('24h');
@@ -74,545 +31,362 @@ export default function SecurityMonitoring() {
     return subHours(new Date(), hours);
   }, [timeRange]);
 
-  // Fetch security metrics
-  const { data: metrics, isLoading: metricsLoading, refetch: refetchMetrics } = useQuery({
-    queryKey: ['security-metrics', timeRange, tenant?.id],
+  // === ALL DATA IN ONE QUERY ===
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['security-monitoring', timeRange, tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return null;
       const since = getTimeRangeDate().toISOString();
+      const sb = supabase as any;
+
+      const [rateLimitsRes, failedLoginsRes, blockedIpsRes, securityEventsRes, agentsRes] = await Promise.all([
+        sb.from('rate_limits').select('*', { count: 'exact', head: true }).gte('window_start', since).not('blocked_until', 'is', null),
+        sb.from('failed_login_attempts').select('ip_address, created_at').gte('created_at', since),
+        sb.from('ip_blocklist').select('*').gte('blocked_until', new Date().toISOString()).order('created_at', { ascending: false }).limit(20),
+        sb.from('security_logs').select('*').gte('created_at', since).order('created_at', { ascending: false }).limit(50),
+        supabase.rpc('get_agents_list', { p_tenant_id: tenant.id, p_include_archived: false }),
+      ]);
+
+      // Process security events
+      const events = (securityEventsRes.data || []) as Array<{
+        id: string; attack_type: string; severity: string; ip_address: string;
+        endpoint: string; details: Record<string, unknown>; created_at: string; blocked: boolean;
+      }>;
       
-      // Rate limit breaches
-      const { data: rateLimits } = await supabase
-        .from('rate_limits')
-        .select('*', { count: 'exact' })
-        .gte('window_start', since)
-        .not('blocked_until', 'is', null);
+      const criticalCount = events.filter(e => e.severity === 'high' || e.severity === 'critical').length;
 
-      // Failed logins
-      const { data: failedLogins, count: failedLoginCount } = await supabase
-        .from('failed_login_attempts')
-        .select('*', { count: 'exact' })
-        .gte('created_at', since);
+      // Process agents offline
+      const offlineThreshold = subHours(new Date(), AGENT_STATUS_THRESHOLDS.OFFLINE_ALERT_HOURS).toISOString();
+      const allAgents = (agentsRes.data as unknown as Array<{ last_heartbeat: string | null; status: string }>) || [];
+      const offlineAgents = allAgents.filter(a => a.status === 'active' && a.last_heartbeat && a.last_heartbeat < offlineThreshold).length;
 
-      // Blocked IPs
-      const { data: blockedIps, count: blockedIpCount } = await supabase
-        .from('ip_blocklist')
-        .select('*', { count: 'exact' })
-        .gte('blocked_until', new Date().toISOString());
-
-      // Critical security events
-      const { data: securityEvents, count: criticalCount } = await supabase
-        .from('security_logs')
-        .select('*', { count: 'exact' })
-        .gte('created_at', since)
-        .in('severity', ['high', 'critical']);
-
-      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
-      const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
-        p_tenant_id: tenant.id,
-        p_include_archived: false,
-      });
-      const offlineAlertThreshold = subHours(new Date(), AGENT_STATUS_THRESHOLDS.OFFLINE_ALERT_HOURS).toISOString();
-      const allAgents = (agentsRaw as unknown as Array<{ last_heartbeat: string | null; status: string }>) || [];
-      const offlineAgents = allAgents.filter(a => a.status === 'active' && a.last_heartbeat && a.last_heartbeat < offlineAlertThreshold).length;
-
-      return {
-        rate_limit_breaches: rateLimits?.length || 0,
-        replay_attempts: 0, // Would need HMAC signature analysis
-        failed_logins: failedLoginCount || 0,
-        blocked_ips: blockedIpCount || 0,
-        critical_events: criticalCount || 0,
-        agents_offline: offlineAgents || 0,
-      } as SecurityMetrics;
-    },
-    enabled: !!tenant?.id,
-    refetchInterval: 120000, // COST-OPT: 30s → 2min
-  });
-
-  // Fetch recent security events
-  const { data: recentEvents, isLoading: eventsLoading } = useQuery({
-    queryKey: ['security-events', timeRange],
-    queryFn: async () => {
-      const since = getTimeRangeDate().toISOString();
-      const { data, error } = await supabase
-        .from('security_logs')
-        .select('*')
-        .gte('created_at', since)
-        .order('created_at', { ascending: false })
-        .limit(50);
-      
-      if (error) throw error;
-      return data as SecurityEvent[];
-    },
-    refetchInterval: 120000, // COST-OPT: 30s → 2min
-  });
-
-  // Fetch blocked IPs
-  const { data: blockedIPs, isLoading: blockedLoading, refetch: refetchBlocked } = useQuery({
-    queryKey: ['blocked-ips'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ip_blocklist')
-        .select('*')
-        .gte('blocked_until', new Date().toISOString())
-        .order('created_at', { ascending: false })
-        .limit(20);
-      
-      if (error) throw error;
-      return data as BlockedIP[];
-    },
-    refetchInterval: 120000, // COST-OPT: 30s → 2min
-  });
-
-  // Fetch failed login stats by IP
-  const { data: failedLoginStats } = useQuery({
-    queryKey: ['failed-login-stats', timeRange],
-    queryFn: async () => {
-      const since = getTimeRangeDate().toISOString();
-      const { data, error } = await supabase
-        .from('failed_login_attempts')
-        .select('ip_address, created_at')
-        .gte('created_at', since);
-      
-      if (error) throw error;
-      
-      // Group by IP
+      // Process failed logins by IP
+      const failedLogins = (failedLoginsRes.data || []) as Array<{ ip_address: string; created_at: string }>;
       const ipCounts: Record<string, { count: number; last_attempt: string }> = {};
-      data?.forEach((attempt) => {
-        if (!ipCounts[attempt.ip_address]) {
-          ipCounts[attempt.ip_address] = { count: 0, last_attempt: attempt.created_at };
-        }
-        ipCounts[attempt.ip_address].count++;
-        if (attempt.created_at > ipCounts[attempt.ip_address].last_attempt) {
-          ipCounts[attempt.ip_address].last_attempt = attempt.created_at;
-        }
+      failedLogins.forEach((a) => {
+        if (!ipCounts[a.ip_address]) ipCounts[a.ip_address] = { count: 0, last_attempt: a.created_at };
+        ipCounts[a.ip_address].count++;
+        if (a.created_at > ipCounts[a.ip_address].last_attempt) ipCounts[a.ip_address].last_attempt = a.created_at;
       });
-      
-      return Object.entries(ipCounts)
+      const failedLoginStats = Object.entries(ipCounts)
         .map(([ip, stats]) => ({ ip_address: ip, ...stats }))
         .sort((a, b) => b.count - a.count)
-        .slice(0, 10) as FailedLoginStat[];
+        .slice(0, 10);
+
+      // Chart data
+      const chartMap: Record<string, { hour: string; eventos: number; bloqueados: number }> = {};
+      events.forEach(event => {
+        const h = `${String(new Date(event.created_at).getHours()).padStart(2, '0')}:00`;
+        if (!chartMap[h]) chartMap[h] = { hour: h, eventos: 0, bloqueados: 0 };
+        chartMap[h].eventos++;
+        if (event.blocked) chartMap[h].bloqueados++;
+      });
+
+      return {
+        metrics: {
+          rateLimitBreaches: rateLimitsRes.count || 0,
+          failedLogins: failedLogins.length,
+          blockedIps: (blockedIpsRes.data || []).length,
+          criticalEvents: criticalCount,
+          agentsOffline: offlineAgents,
+        },
+        events,
+        blockedIPs: (blockedIpsRes.data || []) as Array<{ id: string; ip_address: string; reason: string; blocked_until: string }>,
+        failedLoginStats,
+        chartData: Object.values(chartMap).slice(-12),
+      };
     },
+    enabled: !!tenant?.id,
+    refetchInterval: 120000,
   });
-
-  // Event timeline chart data
-  const chartData = recentEvents?.reduce((acc: Record<string, { hour: string; events: number; blocked: number }>, event: SecurityEvent) => {
-    const eventDate = new Date(event.created_at);
-    const hour = `${String(eventDate.getHours()).padStart(2, '0')}:00`;
-    if (!acc[hour]) {
-      acc[hour] = { hour, events: 0, blocked: 0 };
-    }
-    acc[hour].events++;
-    if (event.blocked) acc[hour].blocked++;
-    return acc;
-  }, {});
-
-  const timelineData = Object.values(chartData || {}).slice(-12);
 
   const handleUnblockIP = async (id: string, ip: string) => {
     try {
-      const { error } = await supabase
-        .from('ip_blocklist')
-        .delete()
-        .eq('id', id);
-      
+      const { error } = await supabase.from('ip_blocklist').delete().eq('id', id);
       if (error) throw error;
-      
-      toast.success(`IP ${ip} desbloqueado com sucesso`);
-      refetchBlocked();
-    } catch (error) {
-      toast.error('Erro ao desbloquear IP');
-    }
+      toast.success(`IP ${ip} desbloqueado`);
+      refetch();
+    } catch { toast.error('Erro ao desbloquear IP'); }
   };
 
-  const handleRunSecurityScan = async () => {
+  const handleRunScan = async () => {
     try {
       const { error } = await supabase.functions.invoke('security-alert-dispatcher');
       if (error) throw error;
       toast.success('Scan de segurança iniciado');
-      refetchMetrics();
-    } catch (error) {
-      toast.error('Erro ao iniciar scan');
-    }
+      refetch();
+    } catch { toast.error('Erro ao iniciar scan'); }
   };
 
-  const getSeverityBadge = (severity: string) => {
-    const info = getSeverityInfo(severity);
+  const m = data?.metrics;
+  const hasActivity = m && (m.rateLimitBreaches > 0 || m.failedLogins > 0 || m.criticalEvents > 0 || m.blockedIps > 0);
+  const hasCritical = m && m.criticalEvents > 0;
+
+  if (isLoading) {
     return (
-      <Badge className={info.badgeClass}>
-        {info.emoji} {severity === 'critical' ? 'Urgente' : severity === 'high' ? 'Importante' : severity === 'warning' ? 'Atenção' : 'Info'}
-      </Badge>
+      <AdminPageLayout title="Proteção em Tempo Real" description="Monitoramento de segurança do ambiente">
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-72" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </AdminPageLayout>
     );
-  };
-
-  // Contextual message based on metrics
-  const getContextMessage = () => {
-    if (!metrics) return null;
-    
-    if (metrics.rate_limit_breaches > 5 || metrics.failed_logins > 10) {
-      return {
-        type: 'warning',
-        message: UI_LABELS.context_help.rate_limits_high
-      };
-    }
-    
-    if (metrics.critical_events === 0 && metrics.blocked_ips === 0) {
-      return {
-        type: 'success',
-        message: UI_LABELS.context_help.all_secure
-      };
-    }
-    
-    return null;
-  };
-
-  const contextMessage = getContextMessage();
+  }
 
   return (
     <AdminPageLayout
       title={UI_LABELS.pages.security_monitoring.title}
       description={UI_LABELS.pages.security_monitoring.description}
     >
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Controls */}
         <div className="flex justify-between items-center">
           <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as typeof timeRange)}>
             <TabsList>
-              <TabsTrigger value="1h">1 hora</TabsTrigger>
-              <TabsTrigger value="6h">6 horas</TabsTrigger>
-              <TabsTrigger value="24h">24 horas</TabsTrigger>
+              <TabsTrigger value="1h">1h</TabsTrigger>
+              <TabsTrigger value="6h">6h</TabsTrigger>
+              <TabsTrigger value="24h">24h</TabsTrigger>
               <TabsTrigger value="7d">7 dias</TabsTrigger>
             </TabsList>
           </Tabs>
-          
-          <Button onClick={handleRunSecurityScan} variant="outline" size="sm">
+          <Button onClick={handleRunScan} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
-            {UI_LABELS.actions.run_scan}
+            Verificar Agora
           </Button>
         </div>
 
-        {/* Contextual Status Message */}
-        {contextMessage && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-            <Card className={contextMessage.type === 'success' 
-              ? 'bg-green-500/10 border-green-500/20' 
-              : 'bg-yellow-500/10 border-yellow-500/20'
-            }>
-              <CardContent className="py-4 flex items-center gap-3">
-                {contextMessage.type === 'success' ? (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                ) : (
-                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                )}
-                <span className={contextMessage.type === 'success' 
-                  ? 'text-green-700 dark:text-green-400' 
-                  : 'text-yellow-700 dark:text-yellow-400'
-                }>
-                  {contextMessage.message}
-                </span>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-
-        {/* Metric Cards - Humanized */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-1">
-                {UI_LABELS.rate_limit.label}
-                <HelpTooltip term="rate_limit" />
-              </CardTitle>
-              <Ban className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics?.rate_limit_breaches || 0}</div>
-              <p className="text-xs text-muted-foreground">{UI_LABELS.rate_limit.description}</p>
+        {/* === STATUS BANNER === */}
+        <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className={cn(
+            "border",
+            hasCritical ? "border-red-500/20 bg-red-500/5" :
+            hasActivity ? "border-amber-500/20 bg-amber-500/5" :
+            "border-green-500/20 bg-green-500/5"
+          )}>
+            <CardContent className="py-4 flex items-center gap-3">
+              {hasCritical ? (
+                <>
+                  <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-red-500">
+                      {m.criticalEvents} evento{m.criticalEvents > 1 ? 's' : ''} crítico{m.criticalEvents > 1 ? 's' : ''} detectado{m.criticalEvents > 1 ? 's' : ''}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Revise os eventos abaixo para detalhes</p>
+                  </div>
+                </>
+              ) : hasActivity ? (
+                <>
+                  <Shield className="h-5 w-5 text-amber-500 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-500">Atividade detectada no período</p>
+                    <p className="text-xs text-muted-foreground">
+                      {m.failedLogins > 0 && `${m.failedLogins} tentativa${m.failedLogins > 1 ? 's' : ''} de login. `}
+                      {m.blockedIps > 0 && `${m.blockedIps} IP${m.blockedIps > 1 ? 's' : ''} bloqueado${m.blockedIps > 1 ? 's' : ''}. `}
+                      {m.rateLimitBreaches > 0 && `${m.rateLimitBreaches} limite${m.rateLimitBreaches > 1 ? 's' : ''} excedido${m.rateLimitBreaches > 1 ? 's' : ''}.`}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="h-5 w-5 text-green-500 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-green-500">Nenhuma ameaça detectada</p>
+                    <p className="text-xs text-muted-foreground">Seu ambiente está seguro no período selecionado</p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
+        </motion.div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-1">
-                {UI_LABELS.failed_logins.label}
-                <HelpTooltip term="failed_login" />
-              </CardTitle>
-              <Lock className="h-4 w-4 text-warning" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics?.failed_logins || 0}</div>
-              <p className="text-xs text-muted-foreground">{UI_LABELS.failed_logins.description}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-1">
-                {UI_LABELS.blocked_ips.label}
-                <HelpTooltip term="ip_blocklist" />
-              </CardTitle>
-              <Shield className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics?.blocked_ips || 0}</div>
-              <p className="text-xs text-muted-foreground">{UI_LABELS.blocked_ips.description}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-1">
-                {UI_LABELS.critical_events.label}
-                <HelpTooltip term="alerta" />
-              </CardTitle>
-              <AlertTriangle className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">{metrics?.critical_events || 0}</div>
-              <p className="text-xs text-muted-foreground">{UI_LABELS.critical_events.description}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-1">
-                {UI_LABELS.replay_attempts.label}
-                <HelpTooltip term="replay" />
-              </CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics?.replay_attempts || 0}</div>
-              <p className="text-xs text-muted-foreground">{UI_LABELS.replay_attempts.description}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-1">
-                {UI_LABELS.agents_offline.label}
-                <HelpTooltip term="heartbeat" />
-              </CardTitle>
-              <TrendingDown className="h-4 w-4 text-warning" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics?.agents_offline || 0}</div>
-              <p className="text-xs text-muted-foreground">{UI_LABELS.agents_offline.description}</p>
-            </CardContent>
-          </Card>
+        {/* === KEY METRICS (only show if there's data) === */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <MetricCard
+            label="Alertas Importantes"
+            value={m?.criticalEvents || 0}
+            icon={<AlertTriangle className="h-4 w-4" />}
+            color={m?.criticalEvents ? 'red' : 'muted'}
+          />
+          <MetricCard
+            label="Tentativas de Login"
+            value={m?.failedLogins || 0}
+            icon={<Lock className="h-4 w-4" />}
+            color={m?.failedLogins ? 'amber' : 'muted'}
+          />
+          <MetricCard
+            label="IPs Bloqueados"
+            value={m?.blockedIps || 0}
+            icon={<Ban className="h-4 w-4" />}
+            color={m?.blockedIps ? 'amber' : 'muted'}
+          />
+          <MetricCard
+            label="Computadores Offline"
+            value={m?.agentsOffline || 0}
+            icon={<MonitorOff className="h-4 w-4" />}
+            color={m?.agentsOffline ? 'red' : 'muted'}
+          />
         </div>
 
-        {/* Event Timeline Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{UI_LABELS.charts.events_timeline}</CardTitle>
-            <CardDescription>Eventos de segurança detectados e bloqueados automaticamente</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <AreaChart data={timelineData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="hour" className="text-xs" />
-                <YAxis className="text-xs" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
-                    border: '1px solid hsl(var(--border))' 
-                  }}
-                />
-                <Legend />
-                <Area 
-                  type="monotone" 
-                  dataKey="events" 
-                  stackId="1" 
-                  stroke="hsl(var(--primary))" 
-                  fill="hsl(var(--primary) / 0.3)" 
-                  name={UI_LABELS.charts.events_count}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="blocked" 
-                  stackId="2" 
-                  stroke="hsl(var(--destructive))" 
-                  fill="hsl(var(--destructive) / 0.3)" 
-                  name={UI_LABELS.charts.blocked_count}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Security Events */}
+        {/* === CHART (only if events exist) === */}
+        {data?.chartData && data.chartData.length > 0 && (
           <Card>
-            <CardHeader>
-              <CardTitle>O que aconteceu recentemente</CardTitle>
-              <CardDescription>Eventos de segurança detectados pelo sistema</CardDescription>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">Atividade nas últimas horas</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="max-h-[400px] overflow-y-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>O que foi</TableHead>
-                      <TableHead>Importância</TableHead>
-                      <TableHead>Origem</TableHead>
-                      <TableHead>Quando</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {eventsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center">Carregando...</TableCell>
-                      </TableRow>
-                    ) : recentEvents?.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8">
-                          <div className="flex flex-col items-center gap-2">
-                            <Shield className="h-10 w-10 text-success/50" />
-                            <p className="font-medium text-success">{UI_LABELS.empty_states.no_threats.title}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {UI_LABELS.empty_states.no_threats.description}
-                            </p>
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={data.chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="hour" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                  <Legend />
+                  <Area type="monotone" dataKey="eventos" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.2)" name="Eventos detectados" />
+                  <Area type="monotone" dataKey="bloqueados" stroke="hsl(var(--destructive))" fill="hsl(var(--destructive) / 0.2)" name="Bloqueados" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* === EVENTS + BLOCKED IPS === */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Recent Events */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">Eventos Recentes</CardTitle>
+              <CardDescription className="text-xs">Últimas detecções de segurança</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {data?.events && data.events.length > 0 ? (
+                <div className="max-h-[350px] overflow-y-auto space-y-2">
+                  {data.events.slice(0, 10).map((event) => {
+                    const info = getSeverityInfo(event.severity);
+                    return (
+                      <div key={event.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-muted/20">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className={cn(
+                            "w-2 h-2 rounded-full shrink-0",
+                            event.severity === 'critical' && "bg-red-500",
+                            event.severity === 'high' && "bg-amber-500",
+                            event.severity === 'medium' && "bg-yellow-500",
+                            (!event.severity || event.severity === 'low') && "bg-muted-foreground/30"
+                          )} />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{getAttackTypeLabel(event.attack_type)}</p>
+                            <p className="text-[11px] text-muted-foreground font-mono">{event.ip_address?.slice(0, 18)}</p>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      recentEvents?.slice(0, 10).map((event) => (
-                        <TableRow key={event.id}>
-                          <TableCell className="text-sm">
-                            {getAttackTypeLabel(event.attack_type)}
-                          </TableCell>
-                          <TableCell>{getSeverityBadge(event.severity)}</TableCell>
-                          <TableCell className="font-mono text-xs">
-                            {event.ip_address?.slice(0, 15)}
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            {formatBrazilDateTime(event.created_at, 'time')}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground shrink-0 ml-2">
+                          {formatBrazilDateTime(event.created_at, 'time')}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <EmptyCard icon={<ShieldCheck className="h-8 w-8 text-green-500/50" />} text="Nenhum evento no período" />
+              )}
             </CardContent>
           </Card>
 
           {/* Blocked IPs */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {UI_LABELS.blocked_ips.label}
-                <HelpTooltip term="ip_blocklist" />
-              </CardTitle>
-              <CardDescription>Origens bloqueadas por comportamento suspeito</CardDescription>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">IPs Bloqueados</CardTitle>
+              <CardDescription className="text-xs">Origens bloqueadas automaticamente</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="max-h-[400px] overflow-y-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Origem</TableHead>
-                      <TableHead>Motivo</TableHead>
-                      <TableHead>Expira</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {blockedLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center">Carregando...</TableCell>
-                      </TableRow>
-                    ) : blockedIPs?.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
-                          <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          {UI_LABELS.empty_states.no_blocked_ips.description}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      blockedIPs?.map((ip) => (
-                        <TableRow key={ip.id}>
-                          <TableCell className="font-mono text-xs">{ip.ip_address}</TableCell>
-                          <TableCell className="text-xs truncate max-w-[150px]">{ip.reason}</TableCell>
-                          <TableCell className="text-xs">
-                            <Badge variant="outline">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {formatBrazilDateTime(ip.blocked_until, 'time')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleUnblockIP(ip.id, ip.ip_address)}
-                            >
-                              <Unlock className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+              {data?.blockedIPs && data.blockedIPs.length > 0 ? (
+                <div className="max-h-[350px] overflow-y-auto space-y-2">
+                  {data.blockedIPs.map((ip) => (
+                    <div key={ip.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-muted/20">
+                      <div className="min-w-0">
+                        <p className="text-sm font-mono">{ip.ip_address}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{ip.reason}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <Badge variant="outline" className="text-[10px]">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {formatBrazilDateTime(ip.blocked_until, 'time')}
+                        </Badge>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleUnblockIP(ip.id, ip.ip_address)}>
+                          <Unlock className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyCard icon={<Shield className="h-8 w-8 text-muted-foreground/30" />} text="Nenhum IP bloqueado no momento" />
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Failed Login Stats */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Top IPs com Logins Falhos</CardTitle>
-            <CardDescription>IPs com maior número de tentativas de login malsucedidas</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>IP</TableHead>
-                  <TableHead>Tentativas</TableHead>
-                  <TableHead>Última Tentativa</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {failedLoginStats?.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
-                      Nenhuma tentativa de login falha no período
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  failedLoginStats?.map((stat) => (
-                    <TableRow key={stat.ip_address}>
-                      <TableCell className="font-mono">{stat.ip_address}</TableCell>
-                      <TableCell>
-                        <Badge variant={stat.count >= 10 ? 'destructive' : stat.count >= 5 ? 'secondary' : 'outline'}>
-                          {stat.count}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {formatBrazilDateTime(stat.last_attempt, 'short')}
-                      </TableCell>
-                      <TableCell>
-                        {stat.count >= 10 ? (
-                          <Badge variant="destructive">Alto Risco</Badge>
-                        ) : stat.count >= 5 ? (
-                          <Badge className="bg-yellow-500">Suspeito</Badge>
-                        ) : (
-                          <Badge variant="outline">Normal</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        {/* === FAILED LOGINS (only if data exists) === */}
+        {data?.failedLoginStats && data.failedLoginStats.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">IPs com Mais Tentativas de Login</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {data.failedLoginStats.map((stat) => (
+                  <div key={stat.ip_address} className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-muted/20">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-mono">{stat.ip_address}</span>
+                      <Badge variant={stat.count >= 10 ? 'destructive' : stat.count >= 5 ? 'secondary' : 'outline'} className="text-[10px]">
+                        {stat.count} tentativa{stat.count > 1 ? 's' : ''}
+                      </Badge>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">
+                      {formatBrazilDateTime(stat.last_attempt, 'short')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AdminPageLayout>
+  );
+}
+
+/* ─── Helpers ──────────────────────────── */
+
+function MetricCard({ label, value, icon, color }: {
+  label: string; value: number; icon: React.ReactNode;
+  color: 'red' | 'amber' | 'muted';
+}) {
+  const styles = {
+    red: 'border-red-500/20 bg-red-500/5',
+    amber: 'border-amber-500/20 bg-amber-500/5',
+    muted: 'bg-muted/30 border-border/40',
+  }[color];
+  const textColor = { red: 'text-red-500', amber: 'text-amber-500', muted: 'text-foreground' }[color];
+  const iconColor = { red: 'text-red-500', amber: 'text-amber-500', muted: 'text-muted-foreground' }[color];
+
+  return (
+    <Card className={cn("border", styles)}>
+      <CardContent className="p-3">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[11px] text-muted-foreground font-medium">{label}</span>
+          <span className={iconColor}>{icon}</span>
+        </div>
+        <p className={cn("text-2xl font-bold", textColor)}>{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyCard({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-10 text-center">
+      {icon}
+      <p className="text-sm text-muted-foreground mt-2">{text}</p>
+    </div>
   );
 }
