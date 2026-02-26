@@ -79,7 +79,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.13"
+AGENT_VERSION="v5.0.14"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -220,6 +220,25 @@ declare -a PROCESS_BASELINE=()
  chmod 700 "$KEYS_DIR"
  
  # ============================================
+ #  v5.0.14: DEPENDENCY VALIDATION AT STARTUP
+ # ============================================
+ missing_deps=()
+ for dep in jq openssl curl nc base64; do
+     if ! command -v "$dep" &>/dev/null; then
+         missing_deps+=("$dep")
+     fi
+ done
+ # macOS: shasum instead of sha256sum
+ if ! command -v shasum &>/dev/null; then
+     missing_deps+=("shasum")
+ fi
+ if [[ ${#missing_deps[@]} -gt 0 ]]; then
+     echo "[FATAL] Missing required dependencies: ${missing_deps[*]}"
+     echo "Install jq with: brew install jq"
+     exit 1
+ fi
+ 
+ # ============================================
  #  LOGGING - v5.0.13-perf: Buffered I/O (reduces disk writes by ~80%)
  # ============================================
  LOG_BUFFER=()
@@ -302,7 +321,7 @@ declare -a PROCESS_BASELINE=()
  
  get_saved_state() {
      if [[ -f "$STATE_PATH" ]]; then
-         python3 -c "import json; print(json.load(open('$STATE_PATH')).get('state', 'INITIALIZING'))" 2>/dev/null || echo "INITIALIZING"
+         jq -r '.state // "INITIALIZING"' "$STATE_PATH" 2>/dev/null || echo "INITIALIZING"
      else
          echo "INITIALIZING"
      fi
@@ -524,9 +543,9 @@ assert_launchd_health() {
              
              # Extract public key
              if openssl ec -in "$PRIVATE_KEY_PATH" -pubout -out "$PUBLIC_KEY_PATH" 2>/dev/null; then
-                 # Calculate fingerprint
+                 # v5.0.14-fix: Use binary hash for fingerprint (parity with Linux)
                  local fingerprint
-                 fingerprint=$(openssl dgst -sha256 "$PUBLIC_KEY_PATH" | awk '{print $2}')
+                 fingerprint=$(openssl dgst -sha256 -binary "$PUBLIC_KEY_PATH" | xxd -p | tr -d '\n')
                  echo "$fingerprint" > "$FINGERPRINT_PATH"
                  
                  SIGNING_FINGERPRINT="$fingerprint"
@@ -569,7 +588,7 @@ assert_launchd_health() {
      log "INFO" "[KEYS] Registering public key with server..."
      
      local public_key_b64
-     public_key_b64=$(base64 "$PUBLIC_KEY_PATH" 2>/dev/null | tr -d '\n')
+     public_key_b64=$(base64 < "$PUBLIC_KEY_PATH" 2>/dev/null | tr -d '\n')
      
      local body
      body=$(cat <<EOF
@@ -581,7 +600,7 @@ assert_launchd_health() {
      result=$(invoke_secure_request "POST" "/functions/v1/register-agent-key" "$body" 30)
      
      if [[ $? -eq 0 ]]; then
-         KEY_VERSION=$(python3 -c "import json; print(json.loads('$result').get('version', 1))" 2>/dev/null || echo 1)
+         KEY_VERSION=$(echo "$result" | jq -r '.version // 1' 2>/dev/null || echo 1)
          log "SUCCESS" "[KEYS] Public key registered successfully (version: $KEY_VERSION)"
          return 0
      else
@@ -613,7 +632,7 @@ assert_launchd_health() {
      local job="$1"
      
      local signature
-     signature=$(python3 -c "import json; print(json.loads('$job').get('payload_signature', ''))" 2>/dev/null)
+     signature=$(echo "$job" | jq -r '.payload_signature // empty' 2>/dev/null)
      
      if [[ -z "$signature" ]]; then
          log "ERROR" "[VERIFY] Job has no signature - REJECTED"
@@ -622,7 +641,7 @@ assert_launchd_health() {
      
      # Validate Ed25519 signature format (64 bytes)
      local sig_bytes
-     sig_bytes=$(echo -n "$signature" | base64 -D 2>/dev/null | wc -c | tr -d ' ')
+     sig_bytes=$(echo -n "$signature" | base64 -d 2>/dev/null | wc -c | tr -d ' ')
      
      if [[ "$sig_bytes" -ne 64 ]]; then
          log "ERROR" "[VERIFY] Invalid Ed25519 signature length"
@@ -668,9 +687,9 @@ PROTECTED_SERVICES="com.apple.sshd com.apple.windowserver com.apple.coreservices
 kill_process_handler() {
     local job="$1"
     local process_name
-    process_name=$(echo "$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('process_name',''))" 2>/dev/null)
-    local force
-    force=$(echo "$job" | python3 -c "import sys,json; print(str(json.load(sys.stdin).get('payload',{}).get('force',False)).lower())" 2>/dev/null)
+     process_name=$(echo "$job" | jq -r '.payload.process_name // empty' 2>/dev/null)
+     local force
+     force=$(echo "$job" | jq -r '.payload.force // false' 2>/dev/null)
     
     if [[ -z "$process_name" ]]; then
         echo '{"success":false,"error":"Missing process_name in payload"}'
@@ -718,7 +737,7 @@ kill_process_handler() {
 stop_service_handler() {
     local job="$1"
     local service_name
-    service_name=$(echo "$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
+     service_name=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
     
     if [[ -z "$service_name" ]]; then
         echo '{"success":false,"error":"Missing service_name in payload"}'
@@ -747,7 +766,7 @@ stop_service_handler() {
 disable_service_handler() {
     local job="$1"
     local service_name
-    service_name=$(echo "$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
+     service_name=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
     
     if [[ -z "$service_name" ]]; then
         echo '{"success":false,"error":"Missing service_name in payload"}'
@@ -777,7 +796,7 @@ disable_service_handler() {
 restart_service_handler() {
     local job="$1"
     local service_name
-    service_name=$(echo "$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
+    service_name=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
     
     if [[ -z "$service_name" ]]; then
         echo '{"success":false,"error":"Missing service_name in payload"}'
@@ -824,23 +843,22 @@ restart_service_handler() {
          return 1
      fi
      
-     # v5.0.13 FIX: Support wrapped {jobs:[...]} or flat array [...] (parity with Linux)
-     local jobs_array
-     if python3 -c "import json; d=json.loads('''$result'''); assert 'jobs' in d" 2>/dev/null; then
-         jobs_array=$(python3 -c "import json; print(json.dumps(json.loads('''$result''')['jobs']))" 2>/dev/null)
-         # Read dynamic poll interval
-         local new_interval
-         new_interval=$(python3 -c "import json; print(json.loads('''$result''').get('poll_interval_seconds', 0))" 2>/dev/null || echo 0)
-         if [[ "$new_interval" -ge 10 && "$new_interval" != "$JOB_POLL_INTERVAL" ]]; then
-             log "INFO" "[POLL-JOBS] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_interval}s"
-             JOB_POLL_INTERVAL=$new_interval
-         fi
-     else
-         jobs_array="$result"
-     fi
-     
-     local count
-     count=$(python3 -c "import json; print(len(json.loads('''$jobs_array''')))" 2>/dev/null || echo 0)
+      # v5.0.14: Migrated from python3 to jq
+      local jobs_array
+      if echo "$result" | jq -e '.jobs' &>/dev/null; then
+          jobs_array=$(echo "$result" | jq -c '.jobs')
+          local new_interval
+          new_interval=$(echo "$result" | jq -r '.poll_interval_seconds // 0' 2>/dev/null)
+          if [[ "$new_interval" -ge 10 && "$new_interval" != "$JOB_POLL_INTERVAL" ]]; then
+              log "INFO" "[POLL-JOBS] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_interval}s"
+              JOB_POLL_INTERVAL=$new_interval
+          fi
+      else
+          jobs_array="$result"
+      fi
+      
+      local count
+      count=$(echo "$jobs_array" | jq 'length' 2>/dev/null || echo 0)
      
      if [[ "$count" -gt 0 ]]; then
          log "INFO" "[POLL-JOBS] Received $count job(s)"
@@ -854,12 +872,12 @@ restart_service_handler() {
      local start_time
      start_time=$(date +%s)
      
-     local execution_id
-     execution_id=$(python3 -c "import json; print(json.loads('$job').get('execution_id', ''))" 2>/dev/null)
-     local job_id
-     job_id=$(python3 -c "import json; print(json.loads('$job').get('id', ''))" 2>/dev/null)
-     local job_type
-     job_type=$(python3 -c "import json; j=json.loads('$job'); print(j.get('job_type', '') or j.get('type', ''))" 2>/dev/null)
+      local execution_id
+      execution_id=$(echo "$job" | jq -r '.execution_id' 2>/dev/null)
+      local job_id
+      job_id=$(echo "$job" | jq -r '.id' 2>/dev/null)
+      local job_type
+      job_type=$(echo "$job" | jq -r '.job_type // .type' 2>/dev/null)
      
      log "INFO" "[JOB] Starting execution: $job_type (ID: $job_id)"
      
@@ -971,12 +989,12 @@ restart_service_handler() {
      
      log "SUCCESS" "[JOB] Completed $job_type in ${duration}s (status: $status)"
      
-     local exec_hash
-     exec_hash=$(python3 -c "import json; print(json.loads('$hash_data').get('execution_hash', ''))" 2>/dev/null)
-     local prev_hash
-     prev_hash=$(python3 -c "import json; print(json.loads('$hash_data').get('previous_execution_hash', ''))" 2>/dev/null)
-     local exec_index
-     exec_index=$(python3 -c "import json; print(json.loads('$hash_data').get('execution_index', 0))" 2>/dev/null)
+      local exec_hash
+      exec_hash=$(echo "$hash_data" | jq -r '.execution_hash')
+      local prev_hash
+      prev_hash=$(echo "$hash_data" | jq -r '.previous_execution_hash')
+      local exec_index
+      exec_index=$(echo "$hash_data" | jq -r '.execution_index')
      
      cat <<EOF
  {"success":true,"status":"$status","output":$output,"output_hash":"$output_hash","error_message":"$error_message","duration_seconds":$duration,"execution_hash":"$exec_hash","previous_execution_hash":"$prev_hash","execution_index":$exec_index}
@@ -987,31 +1005,31 @@ restart_service_handler() {
      local job="$1"
      local result="$2"
      
-     local execution_id
-     execution_id=$(python3 -c "import json; print(json.loads('$job').get('execution_id', ''))" 2>/dev/null)
-     local job_id
-     job_id=$(python3 -c "import json; print(json.loads('$job').get('id', ''))" 2>/dev/null)
-     local status
-     status=$(python3 -c "import json; print(json.loads('$result').get('status', ''))" 2>/dev/null)
-     local output_hash
-     output_hash=$(python3 -c "import json; print(json.loads('$result').get('output_hash', ''))" 2>/dev/null)
-     local finished_at
-     finished_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-     
-     # Sign result
-     local signature
-     signature=$(sign_execution_result "$execution_id" "$job_id" "$status" "$output_hash" "$finished_at")
-     
-     local output
-     output=$(python3 -c "import json; print(json.dumps(json.loads('$result').get('output', {})))" 2>/dev/null || echo '{}')
-     local error_message
-     error_message=$(python3 -c "import json; print(json.loads('$result').get('error_message', ''))" 2>/dev/null)
-     local exec_hash
-     exec_hash=$(python3 -c "import json; print(json.loads('$result').get('execution_hash', ''))" 2>/dev/null)
-     local prev_hash
-     prev_hash=$(python3 -c "import json; print(json.loads('$result').get('previous_execution_hash', ''))" 2>/dev/null)
-     local exec_index
-     exec_index=$(python3 -c "import json; print(json.loads('$result').get('execution_index', 0))" 2>/dev/null)
+      local execution_id
+      execution_id=$(echo "$job" | jq -r '.execution_id')
+      local job_id
+      job_id=$(echo "$job" | jq -r '.id')
+      local status
+      status=$(echo "$result" | jq -r '.status')
+      local output_hash
+      output_hash=$(echo "$result" | jq -r '.output_hash')
+      local finished_at
+      finished_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      
+      # Sign result
+      local signature
+      signature=$(sign_execution_result "$execution_id" "$job_id" "$status" "$output_hash" "$finished_at")
+      
+      local output
+      output=$(echo "$result" | jq -c '.output // {}')
+      local error_message
+      error_message=$(echo "$result" | jq -r '.error_message // ""')
+      local exec_hash
+      exec_hash=$(echo "$result" | jq -r '.execution_hash')
+      local prev_hash
+      prev_hash=$(echo "$result" | jq -r '.previous_execution_hash')
+      local exec_index
+      exec_index=$(echo "$result" | jq -r '.execution_index')
      
      local payload
      payload=$(cat <<EOF
@@ -1097,13 +1115,13 @@ restart_service_handler() {
  fix_firewall() {
      local job="$1"
      local payload
-     payload=$(python3 -c "import json; print(json.dumps(json.loads('$job').get('payload', {})))" 2>/dev/null || echo '{}')
+     payload=$(echo "$job" | jq -c '.payload // {}')
      
      local results='{}'
      
      # macOS Application Firewall
      local enable
-     enable=$(python3 -c "import json; print(json.loads('$payload').get('enable', False))" 2>/dev/null)
+     enable=$(echo "$payload" | jq -r '.enable // false')
      
      if [[ "$enable" == "True" || "$enable" == "true" ]]; then
          /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on 2>/dev/null || true
@@ -1130,7 +1148,7 @@ restart_service_handler() {
      fi
      
      local count
-     count=$(python3 -c "import json; print(len(json.loads('$result').get('domains', [])))" 2>/dev/null || echo 0)
+     count=$(echo "$result" | jq -r '[.domains // [] | length] | .[0]' 2>/dev/null || echo 0)
      
      if [[ "$count" -gt 0 ]]; then
          echo "$result" > "$DNS_BLOCKLIST_PATH"
@@ -1287,7 +1305,7 @@ restart_service_handler() {
          while IFS= read -r proc; do
              PROCESS_BASELINE+=("$proc")
              PROCESS_BASELINE_MAP["$proc"]=1
-         done < <(python3 -c "import json; [print(p['name']) for p in json.load(open('$PROCESS_BASELINE_PATH'))]" 2>/dev/null)
+         done < <(jq -r '.[].name' "$PROCESS_BASELINE_PATH" 2>/dev/null)
          log "INFO" "[BASELINE] Loaded baseline with ${#PROCESS_BASELINE[@]} processes"
      else
          log "INFO" "[BASELINE] Creating initial process baseline..."
@@ -1388,7 +1406,7 @@ restart_service_handler() {
      local anomalies
      anomalies=$(get_process_anomalies)
      local anomaly_count
-     anomaly_count=$(python3 -c "import json; print(json.loads('$anomalies').get('anomaly_count', 0))" 2>/dev/null || echo 0)
+     anomaly_count=$(echo "$anomalies" | jq -r '.anomaly_count' 2>/dev/null || echo 0)
      
      local payload
      payload=$(cat <<EOF
@@ -1408,35 +1426,35 @@ EOF
          # Ported from Windows v5.0.7 - bypasses job system
          # ============================================
          if [[ -n "$result" ]]; then
-             local force_update
-             force_update=$(python3 -c "import json; print(json.loads('''$result''').get('force_update', False))" 2>/dev/null || echo "False")
-             
-             if [[ "$force_update" == "True" ]]; then
-                 log "WARN" "[FORCE UPDATE] Update forcado detectado via heartbeat!"
-                 local target_version
-                 target_version=$(python3 -c "import json; print(json.loads('''$result''').get('target_version', ''))" 2>/dev/null)
-                 log "INFO" "[FORCE UPDATE] Target version: $target_version"
-                 
-                 apply_forced_update "$result"
-              fi
+              local force_update
+              force_update=$(echo "$result" | jq -r '.force_update // false' 2>/dev/null)
               
-              # ============================================
-              # v5.0.9: DYNAMIC POLLING INTERVALS FROM SERVER
-              # Server controls agent cadence via heartbeat response
-              # ============================================
-              local new_hb_interval
-              new_hb_interval=$(python3 -c "import json; print(json.loads('''$result''').get('heartbeat_interval_seconds', 0))" 2>/dev/null || echo 0)
-              if [[ "$new_hb_interval" -ge 10 && "$new_hb_interval" != "$POLL_INTERVAL" ]]; then
-                  log "INFO" "[HEARTBEAT] Server adjusted heartbeat interval: ${POLL_INTERVAL}s -> ${new_hb_interval}s"
-                  POLL_INTERVAL=$new_hb_interval
-              fi
-              
-              local new_job_interval
-              new_job_interval=$(python3 -c "import json; print(json.loads('''$result''').get('poll_interval_seconds', 0))" 2>/dev/null || echo 0)
-              if [[ "$new_job_interval" -ge 10 && "$new_job_interval" != "$JOB_POLL_INTERVAL" ]]; then
-                  log "INFO" "[HEARTBEAT] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_job_interval}s"
-                  JOB_POLL_INTERVAL=$new_job_interval
-              fi
+              if [[ "$force_update" == "true" ]]; then
+                  log "WARN" "[FORCE UPDATE] Update forcado detectado via heartbeat!"
+                  local target_version
+                  target_version=$(echo "$result" | jq -r '.target_version // ""' 2>/dev/null)
+                  log "INFO" "[FORCE UPDATE] Target version: $target_version"
+                  
+                  apply_forced_update "$result"
+               fi
+               
+               # ============================================
+               # v5.0.9: DYNAMIC POLLING INTERVALS FROM SERVER
+               # Server controls agent cadence via heartbeat response
+               # ============================================
+               local new_hb_interval
+               new_hb_interval=$(echo "$result" | jq -r '.heartbeat_interval_seconds // 0' 2>/dev/null)
+               if [[ "$new_hb_interval" -ge 10 && "$new_hb_interval" != "$POLL_INTERVAL" ]]; then
+                   log "INFO" "[HEARTBEAT] Server adjusted heartbeat interval: ${POLL_INTERVAL}s -> ${new_hb_interval}s"
+                   POLL_INTERVAL=$new_hb_interval
+               fi
+               
+               local new_job_interval
+               new_job_interval=$(echo "$result" | jq -r '.poll_interval_seconds // 0' 2>/dev/null)
+               if [[ "$new_job_interval" -ge 10 && "$new_job_interval" != "$JOB_POLL_INTERVAL" ]]; then
+                   log "INFO" "[HEARTBEAT] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_job_interval}s"
+                   JOB_POLL_INTERVAL=$new_job_interval
+               fi
           fi
           
           return 0
@@ -1452,14 +1470,14 @@ EOF
  apply_forced_update() {
      local response="$1"
      
-     local target_version
-     target_version=$(python3 -c "import json; print(json.loads('''$response''').get('target_version', ''))" 2>/dev/null)
-     local base64_content
-     base64_content=$(python3 -c "import json; print(json.loads('''$response''').get('script_content_base64', ''))" 2>/dev/null)
-     local expected_hash
-     expected_hash=$(python3 -c "import json; print(json.loads('''$response''').get('sha256', ''))" 2>/dev/null)
-     local reason
-     reason=$(python3 -c "import json; print(json.loads('''$response''').get('reason', 'heartbeat_force_update'))" 2>/dev/null)
+      local target_version
+      target_version=$(echo "$response" | jq -r '.target_version // ""' 2>/dev/null)
+      local base64_content
+      base64_content=$(echo "$response" | jq -r '.script_content_base64 // ""' 2>/dev/null)
+      local expected_hash
+      expected_hash=$(echo "$response" | jq -r '.sha256 // ""' 2>/dev/null)
+      local reason
+      reason=$(echo "$response" | jq -r '.reason // "heartbeat_force_update"' 2>/dev/null)
      
      if [[ -z "$target_version" || -z "$base64_content" || -z "$expected_hash" ]]; then
          log "ERROR" "[FORCE UPDATE] Dados incompletos no response"
@@ -1470,7 +1488,7 @@ EOF
      
      # Decode Base64
      local temp_script="/tmp/cybershield-force-update-${target_version}.sh"
-     echo "$base64_content" | base64 -D > "$temp_script" 2>/dev/null
+     echo "$base64_content" | base64 -d > "$temp_script" 2>/dev/null || echo "$base64_content" | base64 -D > "$temp_script" 2>/dev/null
      
      if [[ ! -s "$temp_script" ]]; then
          log "ERROR" "[FORCE UPDATE] Base64 decode falhou"
@@ -1554,7 +1572,7 @@ EOF
  sync_blocked_websites_handler() {
      local job="$1"
      local urls
-     urls=$(echo "$job" | python3 -c "import sys,json; [print(u) for u in json.loads(sys.stdin.read()).get('payload',{}).get('urls',[])]" 2>/dev/null)
+     urls=$(echo "$job" | jq -r '.payload.urls // [] | .[]' 2>/dev/null)
      
      local blocked=0
      local marker_start="# === CyberShield Blocked Websites Start ==="
@@ -1586,7 +1604,7 @@ EOF
  service_health_check_handler() {
      local job="$1"
      local services
-     services=$(echo "$job" | python3 -c "import sys,json; [print(s) for s in json.loads(sys.stdin.read()).get('payload',{}).get('services',['com.apple.mDNSResponder','com.apple.ftp-proxy'])]" 2>/dev/null)
+     services=$(echo "$job" | jq -r '.payload.services // ["com.apple.mDNSResponder","com.apple.ftp-proxy"] | .[]' 2>/dev/null)
      
      local results="[]"
      local unhealthy=0
@@ -1603,7 +1621,7 @@ EOF
                  status="not_running"
                  unhealthy=$((unhealthy + 1))
              fi
-             results=$(echo "$results" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); d.append({'name':'$svc','status':'$status','healthy':$healthy}); print(json.dumps(d))" 2>/dev/null)
+             results=$(echo "$results" | jq --arg n "$svc" --arg s "$status" --argjson h "$healthy" '. + [{"name":$n,"status":$s,"healthy":$h}]')
              checked=$((checked + 1))
          fi
      done <<< "$services"
@@ -1616,7 +1634,7 @@ EOF
  network_diagnostics_handler() {
      local job="$1"
      local targets
-     targets=$(echo "$job" | python3 -c "import sys,json; [print(t) for t in json.loads(sys.stdin.read()).get('payload',{}).get('targets',['8.8.8.8','1.1.1.1'])]" 2>/dev/null)
+     targets=$(echo "$job" | jq -r '.payload.targets // ["8.8.8.8","1.1.1.1"] | .[]' 2>/dev/null)
      
      local diagnostics="[]"
      
@@ -1635,7 +1653,7 @@ EOF
                  dns_result='{"success":true}'
              fi
              
-             diagnostics=$(echo "$diagnostics" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); d.append({'target':'$target','ping':$ping_result,'dns':$dns_result}); print(json.dumps(d))" 2>/dev/null)
+             diagnostics=$(echo "$diagnostics" | jq --arg t "$target" --argjson p "$ping_result" --argjson d "$dns_result" '. + [{"target":$t,"ping":$p,"dns":$d}]')
          fi
      done <<< "$targets"
      
@@ -1647,7 +1665,7 @@ EOF
  quarantine_agent_handler() {
      local job="$1"
      local action
-     action=$(echo "$job" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('payload',{}).get('action','quarantine'))" 2>/dev/null)
+     action=$(echo "$job" | jq -r '.payload.action // "quarantine"' 2>/dev/null)
      local server_host
      server_host=$(echo "$SERVER_URL" | sed 's|https\?://||' | sed 's|/.*||')
      
@@ -1671,7 +1689,7 @@ EOF
  apply_security_patch_handler() {
      local job="$1"
      local cve_id
-     cve_id=$(echo "$job" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('payload',{}).get('cve_id',''))" 2>/dev/null)
+     cve_id=$(echo "$job" | jq -r '.payload.cve_id // ""' 2>/dev/null)
      
      # macOS uses softwareupdate
      sudo softwareupdate --install --recommended 2>/dev/null
@@ -1708,7 +1726,7 @@ collect_web_activity_handler() {
     local dns_raw
     dns_raw=$(sudo dscacheutil -cachedump -entries 2>/dev/null | head -50 || echo "")
     if [[ -n "$dns_raw" ]]; then
-        dns_entries=$(echo "$dns_raw" | python3 -c "import sys,json; lines=[l.strip() for l in sys.stdin if l.strip()]; print(json.dumps([{'entry':l} for l in lines[:50]]))" 2>/dev/null || echo '[]')
+        dns_entries=$(echo "$dns_raw" | jq -R -s '[split("\n")[] | select(length > 0) | {entry: .}]' 2>/dev/null || echo '[]')
     fi
     
     # Collect Safari history
@@ -1719,7 +1737,7 @@ collect_web_activity_handler() {
         cp "$safari_db" "$tmp_db" 2>/dev/null
         if command -v sqlite3 &>/dev/null; then
             browser_history=$(sqlite3 "$tmp_db" "SELECT url, title FROM history_items ORDER BY visit_count DESC LIMIT 50;" 2>/dev/null | \
-                python3 -c "import sys,json; lines=[l.strip().split('|',1) for l in sys.stdin if l.strip()]; print(json.dumps([{'url':l[0],'title':l[1] if len(l)>1 else ''} for l in lines]))" 2>/dev/null || echo '[]')
+                awk -F'|' '{printf "{\"url\":\"%s\",\"title\":\"%s\"},", $1, ($2 ? $2 : "")}' | sed 's/,$//' | sed 's/^/[/' | sed 's/$/]/' 2>/dev/null || echo '[]')
         fi
         rm -f "$tmp_db" 2>/dev/null
     fi
@@ -1742,16 +1760,8 @@ light_vuln_scan_handler() {
     updates=$(softwareupdate --list 2>&1 | grep -i "recommended\|restart\|security" || echo "")
     
     if [[ -n "$updates" ]]; then
-        vulns=$(echo "$updates" | head -20 | python3 -c "
-import sys, json
-lines = [l.strip() for l in sys.stdin if l.strip()]
-results = []
-for l in lines:
-    sev = 'critical' if 'security' in l.lower() else 'high' if 'restart' in l.lower() else 'medium'
-    results.append({'package': l[:80], 'severity': sev, 'source': 'softwareupdate'})
-print(json.dumps(results))
-" 2>/dev/null || echo '[]')
-        total=$(echo "$vulns" | python3 -c "import sys,json; print(len(json.loads(sys.stdin.read())))" 2>/dev/null || echo 0)
+        vulns=$(echo "$updates" | head -20 | jq -R -s '[split("\n")[] | select(length > 0) | {package: .[:80], severity: (if (. | test("security";"i")) then "critical" elif (. | test("restart";"i")) then "high" else "medium" end), source: "softwareupdate"}]' 2>/dev/null || echo '[]')
+        total=$(echo "$vulns" | jq 'length' 2>/dev/null || echo 0)
     fi
     
     local scanned_at
@@ -1768,9 +1778,9 @@ update_agent_handler() {
 scan_handler() {
     log "INFO" "[JOB] Running general security scan"
     local open_ports
-    open_ports=$(lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null | tail -n +2 | awk '{print $9}' | head -20 | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
+    open_ports=$(lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null | tail -n +2 | awk '{print $9}' | head -20 | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
     local users_logged
-    users_logged=$(who 2>/dev/null | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
+    users_logged=$(who 2>/dev/null | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
     local uptime_info
     uptime_info=$(uptime 2>/dev/null || echo "unknown")
     echo '{"open_ports":'"$open_ports"',"logged_users":'"$users_logged"',"uptime":"'"$uptime_info"'","scanned_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
@@ -1781,29 +1791,21 @@ report_handler() {
     local disk_usage
     disk_usage=$(df -g / | tail -1 | awk '{print "{\"total\":\""$2"G\",\"used\":\""$3"G\",\"free\":\""$4"G\",\"percent\":\""$5"\"}"}')
     local mem_info
-    mem_info=$(vm_stat 2>/dev/null | python3 -c "
-import sys
-lines = sys.stdin.readlines()
-pages = {}
-for l in lines:
-    parts = l.strip().split(':')
-    if len(parts)==2:
-        key = parts[0].strip().lower()
-        val = parts[1].strip().rstrip('.')
-        try: pages[key] = int(val)
-        except: pass
-page_size = 16384
-total_mb = sum(pages.values()) * page_size // (1024*1024)
-free_mb = pages.get('pages free', 0) * page_size // (1024*1024)
-print('{\"total_mb\":%d,\"free_mb\":%d}' % (total_mb, free_mb))
-" 2>/dev/null || echo '{}')
+    mem_info=$(vm_stat 2>/dev/null | awk '
+        /Pages free/ { free=$3+0 }
+        /Pages active/ { active=$3+0 }
+        END {
+            ps=16384; total_mb=(free+active)*ps/1048576; free_mb=free*ps/1048576
+            printf "{\"total_mb\":%d,\"free_mb\":%d}", total_mb, free_mb
+        }
+    ' 2>/dev/null || echo '{}')
     echo '{"agent_version":"'"$AGENT_VERSION"'","hostname":"'$(hostname)'",'$disk_usage',"memory":'"$mem_info"',"generated_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
 }
 
 collect_info_handler() {
     log "INFO" "[JOB] Collecting system info"
     local os_version
-    os_version=$(sw_vers 2>/dev/null | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
+    os_version=$(sw_vers 2>/dev/null | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
     local kernel
     kernel=$(uname -r 2>/dev/null || echo "unknown")
     local arch
@@ -1831,7 +1833,7 @@ collect_dns_blocks_handler() {
     log "INFO" "[JOB] Collecting DNS blocks from hosts file"
     local blocks='[]'
     if [[ -f /etc/hosts ]]; then
-        blocks=$(grep -E "^(0\.0\.0\.0|127\.0\.0\.1)" /etc/hosts 2>/dev/null | grep -v "localhost" | awk '{print $2}' | head -100 | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
+        blocks=$(grep -E "^(0\.0\.0\.0|127\.0\.0\.1)" /etc/hosts 2>/dev/null | grep -v "localhost" | awk '{print $2}' | head -100 | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
     fi
     echo '{"blocked_domains":'"$blocks"',"source":"/etc/hosts","collected_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
 }
@@ -1853,12 +1855,12 @@ remove_dns_filter_handler() {
 # ============================================
 #  MAIN LOOP v5.0.1 FULL ENTERPRISE
 # ============================================
- log "============================================"
+ log "INFO" "============================================"
  log "INFO" "[START] CyberShield Agent $AGENT_VERSION FULL ENTERPRISE"
  log "DEBUG" "[INFO] ServerUrl: $SERVER_URL"
  log "DEBUG" "[INFO] AgentName: $AGENT_NAME"
  log "INFO" "[INFO] Features: ECDSA-signing, Ed25519-verify, hash-chain, FSM, DNS-filter, auto-remediation"
- log "============================================"
+ log "INFO" "============================================"
  
  # ============================================
  #  PHASE 1: INITIALIZATION
@@ -2002,11 +2004,10 @@ remove_dns_filter_handler() {
      if [[ $((now - last_job_poll)) -ge $JOB_POLL_INTERVAL && "$network_ok" == "true" ]]; then
          jobs=$(poll_jobs)
          
-         # Process each job
-         echo "$jobs" | python3 -c "import sys,json; [print(json.dumps(j)) for j in json.loads(sys.stdin.read())]" 2>/dev/null | while read -r job; do
+         # v5.0.14-fix: Use process substitution instead of pipe to avoid subshell variable isolation
+         while read -r job; do
              if [[ -n "$job" ]]; then
-                 # v5.0.13-fix: When SecurityDegraded, only allow recovery jobs (fail-closed)
-                 job_type=$(python3 -c "import json; print(json.loads('''$job''').get('type', json.loads('''$job''').get('job_type', 'unknown')))" 2>/dev/null || echo "unknown")
+                 job_type=$(echo "$job" | jq -r '.type // .job_type // "unknown"' 2>/dev/null)
                  if [[ "$SECURITY_DEGRADED" == "true" ]]; then
                      case "$job_type" in
                          update_agent|force_update|reinstall_agent)
@@ -2023,7 +2024,7 @@ remove_dns_filter_handler() {
                  result=$(execute_job "$job")
                  submit_job_result "$job" "$result"
              fi
-         done
+         done < <(echo "$jobs" | jq -c '.[]' 2>/dev/null)
          
          last_job_poll=$now
      fi
@@ -2032,8 +2033,8 @@ remove_dns_filter_handler() {
     # v5.0.3: LAUNCHD HEALTH CHECK (every 5 min)
     # ============================================
     launchd_health=$(assert_launchd_health)
-    if python3 -c "import json; exit(0 if json.loads('$launchd_health').get('repaired') else 1)" 2>/dev/null; then
-        repair_action=$(python3 -c "import json; print(json.loads('$launchd_health').get('repair_action', 'unknown'))" 2>/dev/null)
+    if echo "$launchd_health" | jq -e '.repaired == true' &>/dev/null; then
+        repair_action=$(echo "$launchd_health" | jq -r '.repair_action')
         log "INFO" "[MAIN-LOOP] LaunchDaemon repaired: $repair_action"
     fi
     
@@ -2043,14 +2044,14 @@ remove_dns_filter_handler() {
     if [[ $((now - last_auto_repair)) -ge 300 ]]; then
         # Disk cleanup
         disk_result=$(invoke_disk_cleanup)
-        if python3 -c "import json; exit(0 if json.loads('$disk_result').get('cleaned') else 1)" 2>/dev/null; then
-            freed=$(python3 -c "import json; print(json.loads('$disk_result').get('freed_percent', 0))" 2>/dev/null)
+        if echo "$disk_result" | jq -e '.cleaned == true' &>/dev/null; then
+            freed=$(echo "$disk_result" | jq -r '.freed_percent')
             log "SUCCESS" "[AUTO-REPAIR] Disk cleanup freed ${freed}%"
         fi
         
         # High CPU process check
         cpu_result=$(invoke_high_cpu_process_check)
-        killed=$(python3 -c "import json; print(json.loads('$cpu_result').get('killed_count', 0))" 2>/dev/null)
+        killed=$(echo "$cpu_result" | jq -r '.killed_count')
         if [[ "$killed" -gt 0 ]]; then
             log "SUCCESS" "[AUTO-REPAIR] Killed $killed high-CPU processes"
         fi
