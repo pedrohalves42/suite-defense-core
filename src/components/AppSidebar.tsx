@@ -349,7 +349,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
           className="w-full flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors hover:bg-[hsl(var(--neon-cyan)_/_0.04)] group/section"
         >
           <span className={cn(
-            "sidebar-section-label transition-colors",
+            "sidebar-section-label transition-colors flex items-center gap-2",
             hasActiveItem && "!text-[hsl(var(--neon-cyan)_/_0.8)]"
           )}>
             {title}
@@ -510,15 +510,15 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
 
               <div className="sidebar-divider-neon my-2 mx-2" />
 
-              {renderCollapsibleSection('🛡️ Proteção', 'protection', protectionItems)}
+              {renderCollapsibleSection('Proteção', 'protection', protectionItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection('⚙️ Gestão', 'management', managementItems)}
+              {renderCollapsibleSection('Gestão', 'management', managementItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection('📋 Conformidade', 'compliance', complianceItems)}
+              {renderCollapsibleSection('Conformidade', 'compliance', complianceItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection('🔧 Avançado', 'advanced', advancedItems)}
+              {renderCollapsibleSection('Avançado', 'advanced', advancedItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection('🤖 Inteligência Artificial', 'aiAnalysis', aiAnalysisItems)}
+              {renderCollapsibleSection('Inteligência Artificial', 'aiAnalysis', aiAnalysisItems)}
             </motion.div>
           ) : (
             <motion.div className="space-y-0.5" variants={containerVariants} initial="hidden" animate="show">
@@ -576,9 +576,9 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                           <div className="my-1" />
                           {renderCollapsibleSection('Sistema', 'superSystem', superSystemItems, 'super')}
                           <div className="my-1" />
-                          {renderCollapsibleSection('🤖 IA', 'superAI', superAIItems, 'super')}
+                          {renderCollapsibleSection('IA', 'superAI', superAIItems, 'super')}
                           <div className="my-1" />
-                          {renderCollapsibleSection('🔌 Integrações', 'superIntegrations', superIntegrationsItems, 'super')}
+                          {renderCollapsibleSection('Integrações', 'superIntegrations', superIntegrationsItems, 'super')}
                         </div>
                       </motion.div>
                     )}
