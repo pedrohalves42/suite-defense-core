@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
+import { AGENT_STATUS_THRESHOLDS } from '@/lib/agent-status-constants';
 
 export interface AgentSyncStatus {
   id: string;
@@ -32,7 +33,7 @@ export function useAgentSyncStatus() {
       }
 
       const now = new Date();
-      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+      const offlineThreshold = new Date(now.getTime() - AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES * 60 * 1000);
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
       // RPC returns jsonb objects, map to expected interface
@@ -42,7 +43,7 @@ export function useAgentSyncStatus() {
 
         let syncStatus: AgentSyncStatus['syncStatus'] = 'never';
 
-        if (!lastHeartbeat || lastHeartbeat < fiveMinutesAgo) {
+        if (!lastHeartbeat || lastHeartbeat < offlineThreshold) {
           syncStatus = 'offline';
         } else if (!lastBlockSync) {
           syncStatus = 'never';

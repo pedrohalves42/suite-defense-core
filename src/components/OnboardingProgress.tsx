@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { AGENT_STATUS_THRESHOLDS } from '@/lib/agent-status-constants';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -45,8 +46,8 @@ export const OnboardingProgress = () => {
       
       if (agents) {
         setAgentCount(agents.length);
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-        setHasOnlineAgent(agents.some(a => a.last_heartbeat && a.last_heartbeat > fiveMinutesAgo));
+        const onlineThresholdMs = AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES * 60 * 1000;
+        setHasOnlineAgent(agents.some(a => a.last_heartbeat && (Date.now() - new Date(a.last_heartbeat).getTime()) < onlineThresholdMs));
       }
 
       // Check security data (simplified check)

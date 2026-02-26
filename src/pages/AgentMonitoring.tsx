@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { getAgentOnlineStatus } from '@/lib/agent-status-constants';
 import { Activity, AlertTriangle, CheckCircle2, Clock, TrendingUp, Wifi, WifiOff, Zap, LineChart as LineChartIcon, BarChart3, Monitor, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,36 +40,9 @@ const AgentMonitoring = () => {
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  // Helper function to calculate agent status - PRIORIZA agent_state do banco para consistência
+  // Helper function - usa getAgentOnlineStatus centralizado
   const getAgentCalculatedStatus = (agent: Agent & { agent_state?: string }): 'online' | 'warning' | 'offline' | 'never_connected' => {
-    // PRIORIZAR agent_state do banco para consistência com AgentDetailsDrawer
-    if ((agent as any).agent_state) {
-      const state = (agent as any).agent_state;
-      switch (state) {
-        case 'healthy':
-        case 'enforcing':
-          return 'online';
-        case 'degraded':
-        case 'recovery':
-        case 'safe_mode':
-        case 'updating':
-        case 'rollback':
-          return 'warning';
-        case 'error':
-        case 'shutdown':
-        case 'isolated':
-        case 'quarantined':
-        case 'offline':
-          return 'offline';
-      }
-    }
-    
-    // Fallback para cálculo por heartbeat
-    if (!agent.last_heartbeat) return 'never_connected';
-    const minutesSince = (Date.now() - new Date(agent.last_heartbeat).getTime()) / 1000 / 60;
-    if (minutesSince < 2) return 'online';
-    if (minutesSince < 5) return 'warning';
-    return 'offline';
+    return getAgentOnlineStatus(agent as any);
   };
 
   // Manual refresh function

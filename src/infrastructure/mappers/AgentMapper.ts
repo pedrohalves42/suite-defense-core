@@ -1,4 +1,5 @@
 import { Agent, type AgentProps, AgentState, AgentStatus } from '@/domain/entities/Agent';
+import { AGENT_STATUS_THRESHOLDS } from '@/lib/agent-status-constants';
 
 /**
  * Maps between Supabase DB rows and Agent domain entities.
@@ -49,9 +50,10 @@ export class AgentMapper {
     if (dbStatus === 'decommissioned' || dbStatus === 'suspended') {
       return AgentStatus.OFFLINE;
     }
+    // Use centralized threshold from AGENT_STATUS_THRESHOLDS
     if (!lastSeen) return AgentStatus.OFFLINE;
     const elapsed = Date.now() - new Date(lastSeen).getTime();
-    if (elapsed > 5 * 60 * 1000) return AgentStatus.OFFLINE;
+    if (elapsed > AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES * 60 * 1000) return AgentStatus.OFFLINE;
     return AgentStatus.ONLINE;
   }
 }

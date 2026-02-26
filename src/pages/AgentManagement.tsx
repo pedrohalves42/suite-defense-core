@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { isAgentOnline } from '@/lib/agent-status-constants';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -180,12 +181,9 @@ export default function AgentManagement() {
   // Helper functions
   const getAgentStatus = (agent: Agent): 'online' | 'offline' | 'pending' | 'disabled' => {
     if (agent.status === 'disabled') return 'disabled';
-    // Só pending se nunca teve heartbeat E status ainda é 'pending'
     if (!agent.last_heartbeat && agent.status === 'pending') return 'pending';
-    // Fallback se heartbeat null mas status não é pending (agente provavelmente offline)
     if (!agent.last_heartbeat) return 'offline';
-    const diffMins = (new Date().getTime() - new Date(agent.last_heartbeat).getTime()) / (1000 * 60);
-    return diffMins < 5 ? 'online' : 'offline';
+    return isAgentOnline(agent.last_heartbeat) ? 'online' : 'offline';
   };
 
   const isVersionOutdated = (agent: Agent): boolean => {

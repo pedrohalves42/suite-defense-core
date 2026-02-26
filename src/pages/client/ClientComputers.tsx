@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { isAgentOnline } from '@/lib/agent-status-constants';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent } from '@/components/ui/card';
@@ -156,9 +157,7 @@ export const ClientComputers = () => {
   });
 
   const isOnline = (lastHeartbeat: string | null) => {
-    if (!lastHeartbeat) return false;
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    return new Date(lastHeartbeat) > fiveMinutesAgo;
+    return isAgentOnline(lastHeartbeat);
   };
 
   // Calculate summary stats
