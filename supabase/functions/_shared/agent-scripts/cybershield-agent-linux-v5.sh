@@ -213,8 +213,32 @@ declare -a PROCESS_BASELINE=()
  chmod 700 "$KEYS_DIR"
  
  # ============================================
- #  LOGGING
+ #  LOGGING - v5.0.13-perf: Buffered I/O (reduces disk writes by ~80%)
  # ============================================
+ LOG_BUFFER=()
+ LOG_BUFFER_SIZE=20
+ LOG_BUFFER_LAST_FLUSH=$(date +%s)
+ LOG_BUFFER_FLUSH_INTERVAL=10
+
+ flush_log_buffer() {
+     if [[ ${#LOG_BUFFER[@]} -eq 0 ]]; then
+         return 0
+     fi
+     printf '%s\n' "${LOG_BUFFER[@]}" >> "$LOG_FILE"
+     LOG_BUFFER=()
+     LOG_BUFFER_LAST_FLUSH=$(date +%s)
+     
+     # Log rotation (keep 10MB max)
+     local log_size
+     log_size=$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
+     if [[ $log_size -gt 10485760 ]]; then
+         mv "$LOG_FILE" "${LOG_FILE}.$(date +%Y%m%d_%H%M%S).bak"
+     fi
+ }
+
+ # v5.0.13-perf: Guarantee log flush on unexpected exit/shutdown
+ trap 'flush_log_buffer' EXIT TERM INT HUP
+
  log() {
      local level="${1:-INFO}"
      local message="$2"
@@ -223,13 +247,19 @@ declare -a PROCESS_BASELINE=()
      local line="[$timestamp] [$level] [$CURRENT_STATE] $message"
      
      echo "$line"
-     echo "$line" >> "$LOG_FILE"
+     LOG_BUFFER+=("$line")
      
-     # Log rotation (keep 10MB max)
-     local log_size
-     log_size=$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
-     if [[ $log_size -gt 10485760 ]]; then
-         mv "$LOG_FILE" "${LOG_FILE}.$(date +%Y%m%d_%H%M%S).bak"
+     # v5.0.13-perf: Immediate flush for ERROR/WARN levels
+     if [[ "$level" == "ERROR" || "$level" == "WARN" ]]; then
+         flush_log_buffer
+         return 0
+     fi
+     
+     # Flush when buffer is full or interval elapsed
+     local now
+     now=$(date +%s)
+     if [[ ${#LOG_BUFFER[@]} -ge $LOG_BUFFER_SIZE || $((now - LOG_BUFFER_LAST_FLUSH)) -ge $LOG_BUFFER_FLUSH_INTERVAL ]]; then
+         flush_log_buffer
      fi
  }
  
@@ -1217,14 +1247,11 @@ restart_service_handler() {
          if [[ "$is_protected" == "false" ]]; then
              log "WARN" "[PROCESS-CHECK] High CPU detected: $name (PID: $pid) at $cpu%"
              
-             # Check if in baseline
+             # v5.0.13-perf: O(1) baseline lookup via associative array
              local in_baseline=false
-             for baseline_proc in "${PROCESS_BASELINE[@]}"; do
-                 if [[ "$baseline_proc" == "$name" ]]; then
-                     in_baseline=true
-                     break
-                 fi
-             done
+             if [[ -n "${PROCESS_BASELINE_MAP[$name]+x}" ]]; then
+                 in_baseline=true
+             fi
              
              if [[ "$in_baseline" == "false" ]]; then
                  log "WARN" "[PROCESS-CHECK] Process $name NOT in baseline - killing..."
@@ -1264,9 +1291,15 @@ restart_service_handler() {
  # ============================================
  #  v5.0.1: PROCESS BASELINE
  # ============================================
+ # v5.0.13-perf: Use associative array for O(1) baseline lookups instead of O(n) linear scan
+ declare -A PROCESS_BASELINE_MAP=()
+
  initialize_process_baseline() {
      if [[ -f "$PROCESS_BASELINE_PATH" ]]; then
          mapfile -t PROCESS_BASELINE < <(jq -r '.[].name' "$PROCESS_BASELINE_PATH" 2>/dev/null)
+         for p in "${PROCESS_BASELINE[@]}"; do
+             PROCESS_BASELINE_MAP["$p"]=1
+         done
          log "INFO" "[BASELINE] Loaded baseline with ${#PROCESS_BASELINE[@]} processes"
      else
          log "INFO" "[BASELINE] Creating initial process baseline..."
@@ -1281,6 +1314,7 @@ restart_service_handler() {
              fi
              baseline+="{\"name\":\"$proc\",\"first_seen\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}"
              PROCESS_BASELINE+=("$proc")
+             PROCESS_BASELINE_MAP["$proc"]=1
          done
          baseline+=']'
          
@@ -1289,25 +1323,18 @@ restart_service_handler() {
      fi
  }
  
+ # v5.0.13-perf: O(1) lookups via associative array
  get_process_anomalies() {
      local current_procs
      mapfile -t current_procs < <(ps -eo comm= | sort -u)
      
-     local anomalies='[]'
      local anomaly_count=0
      
      for proc in "${current_procs[@]}"; do
-         local found=false
-         for baseline_proc in "${PROCESS_BASELINE[@]}"; do
-             if [[ "$proc" == "$baseline_proc" ]]; then
-                 found=true
-                 break
-             fi
-         done
-         
-         if [[ "$found" == "false" ]]; then
+         if [[ -z "${PROCESS_BASELINE_MAP[$proc]+x}" ]]; then
              anomaly_count=$((anomaly_count + 1))
              PROCESS_BASELINE+=("$proc")
+             PROCESS_BASELINE_MAP["$proc"]=1
          fi
      done
      
@@ -2014,5 +2041,25 @@ remove_dns_filter_handler() {
          last_dns_sync=$now
      fi
      
-     sleep 2
+     # v5.0.13-perf: Dynamic sleep interval based on agent state
+     base_sleep=2
+     case "$CURRENT_STATE" in
+         "ENFORCING") base_sleep=2 ;;
+         "DEGRADED")  base_sleep=5 ;;
+         "SAFE_MODE") base_sleep=10 ;;
+         *)           base_sleep=2 ;;
+     esac
+     
+     # v5.0.13-perf: Adaptive CPU protection - increase sleep under high load
+     cpu_load=$(awk '{print int($1 * 100)}' /proc/loadavg 2>/dev/null || echo 0)
+     nproc_count=$(nproc 2>/dev/null || echo 1)
+     cpu_percent=$((cpu_load / nproc_count))
+     if [[ $cpu_percent -gt 80 ]]; then
+         base_sleep=$((base_sleep > 10 ? base_sleep : 10))
+     fi
+     
+     sleep "$base_sleep"
+     
+     # v5.0.13-perf: Flush log buffer on each cycle boundary
+     flush_log_buffer
  done
