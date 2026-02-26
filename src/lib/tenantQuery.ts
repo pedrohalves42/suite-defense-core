@@ -98,9 +98,11 @@ export function tenantQuery<T extends TableName>(
     return queryBuilder;
   }
 
-  // Use a Proxy to intercept .select(), .insert(), .update(), .delete(), .upsert()
-  // and automatically chain .eq('tenant_id', tenantId) AFTER them
-  const INTERCEPTED_METHODS = new Set(['select', 'insert', 'update', 'delete', 'upsert']);
+  // Use a Proxy to intercept .select(), .update(), .delete()
+  // and automatically chain .eq('tenant_id', tenantId) AFTER them.
+  // NOTE: .insert() and .upsert() are NOT intercepted because tenant_id
+  // should already be in the inserted data, not as a WHERE filter.
+  const INTERCEPTED_METHODS = new Set(['select', 'update', 'delete']);
 
   return new Proxy(queryBuilder, {
     get(target, prop, receiver) {
@@ -108,7 +110,7 @@ export function tenantQuery<T extends TableName>(
       if (typeof original === 'function' && INTERCEPTED_METHODS.has(prop as string)) {
         return (...args: unknown[]) => {
           const result = (original as Function).apply(target, args);
-          // After select/insert/update/delete, the result is a FilterBuilder that has .eq()
+          // After select/update/delete, the result is a FilterBuilder that has .eq()
           return result.eq('tenant_id', tenantId);
         };
       }
