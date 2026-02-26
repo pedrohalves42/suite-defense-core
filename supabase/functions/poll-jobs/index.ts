@@ -336,7 +336,7 @@ Deno.serve(async (req) => {
     const jobsResponse = await Promise.all(validJobs.map(async (j: ClaimedJob) => {
       const jobPayload = j.payload || {}
       
-      // Sign the job if private key is available
+      // Sign the job - MANDATORY when key is configured (SSA-004)
       let signatureInfo: { payload_signature?: string; signing_alg?: string } = {}
       
       if (signingEnabled && privateKey) {
@@ -348,11 +348,13 @@ Deno.serve(async (req) => {
           }
           logger.debug('Job signed successfully', { jobId: j.job_id, algorithm: signed.algorithm })
         } catch (signError) {
-          logger.error('Failed to sign job', { 
+          logger.error('CRITICAL: Failed to sign job - SKIPPING delivery to prevent unsigned job', { 
             jobId: j.job_id, 
+            jobType: j.job_type,
             error: signError instanceof Error ? signError.message : 'Unknown error'
           })
-          // Continue without signature - agents should handle this based on their config
+          // Return null to filter out this job - never deliver unsigned jobs
+          return null
         }
       }
       
@@ -373,14 +375,14 @@ Deno.serve(async (req) => {
         previous_execution_hash: j.previous_execution_hash,
         ...signatureInfo
       }
-    }))
+    })).then(results => results.filter(Boolean))
 
     // LOG CRÍTICO: mostrar exatamente o que será retornado (com execution tracking)
     logger.info('Jobs to return to agent with execution tracking', { 
       agentName: agent.agent_name,
       responseCount: jobsResponse.length,
       signingEnabled,
-      executionIds: jobsResponse.map(j => j.execution_id),
+      executionIds: jobsResponse.map(j => j!.execution_id),
       response: JSON.stringify(jobsResponse)
     })
 
