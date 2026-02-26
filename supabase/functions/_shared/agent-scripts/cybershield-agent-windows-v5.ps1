@@ -312,6 +312,9 @@ function Flush-LogBuffer {
     $Global:LogBufferLastFlush = Get-Date
 }
 
+# v5.0.13-perf: Guarantee log flush on unexpected exit/shutdown
+try { Register-EngineEvent PowerShell.Exiting -Action { Flush-LogBuffer } -ErrorAction SilentlyContinue } catch { }
+
 function Write-Log {
     param(
         [Parameter(Mandatory = $true)]
@@ -4554,12 +4557,19 @@ while ($true) {
     }
     
     # v5.0.13-perf: Dynamic sleep interval based on agent state
-    $sleepInterval = switch ($Global:CurrentState) {
+    # v5.0.13-perf: Adaptive sleep - increase interval under high system load
+    $baseSleep = switch ($Global:CurrentState) {
         "ENFORCING" { 2 }
         "DEGRADED"  { 5 }
         "SAFE_MODE" { 10 }
         default     { 2 }
     }
+    try {
+        $cpuLoad = (Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue | 
+            Measure-Object -Property LoadPercentage -Average).Average
+        if ($cpuLoad -gt 80) { $baseSleep = [math]::Max($baseSleep, 10) }
+    } catch { }
+    $sleepInterval = $baseSleep
     Start-Sleep -Seconds $sleepInterval
     
     # v5.0.13-perf: Flush log buffer on each cycle boundary
