@@ -471,8 +471,27 @@ const ServerDashboard = () => {
     .slice(0, 10)
     .map(([agent, count]) => ({ agent, jobs: count }));
 
-  // Timeline de eventos de seguranca - humanizada
-  const securityEvents = auditLogs.slice(0, 10).map(log => {
+  // Humanizar resource_type
+  const friendlyResource = (resource: string): string => {
+    const map: Record<string, string> = {
+      'agent': 'Computador',
+      'enrollment_key': 'Chave de Registro',
+      'job': 'Verificação',
+      'user': 'Usuário',
+      'scan': 'Análise de Vírus',
+      'report': 'Relatório',
+      'alert': 'Alerta',
+      'ai_action': 'Ação Automática',
+      'login': 'Acesso',
+      'tenant': 'Empresa',
+      'policy': 'Política',
+      'session': 'Sessão',
+    };
+    return map[resource] || resource;
+  };
+
+  // Timeline de eventos de seguranca - humanizada e agrupada
+  const rawEvents = auditLogs.slice(0, 30).map(log => {
     const { icon, text } = humanizeAction(log.action, log.resource_type);
     return {
       time: formatBrazilDateTime(log.created_at, 'time'),
@@ -480,10 +499,24 @@ const ServerDashboard = () => {
       icon,
       text,
       action: log.action,
-      resource: log.resource_type,
-      status: log.success ? 'success' : 'failed',
+      resource: friendlyResource(log.resource_type),
+      status: log.success ? 'success' as const : 'failed' as const,
     };
   });
+
+  // Agrupar eventos consecutivos idênticos
+  const securityEvents = useMemo(() => {
+    const grouped: Array<typeof rawEvents[0] & { count: number }> = [];
+    for (const event of rawEvents) {
+      const last = grouped[grouped.length - 1];
+      if (last && last.text === event.text && last.status === event.status && last.date === event.date) {
+        last.count++;
+      } else {
+        grouped.push({ ...event, count: 1 });
+      }
+    }
+    return grouped.slice(0, 10);
+  }, [rawEvents]);
 
   const COLORS = [
     'hsl(217 91% 60%)',   // blue
@@ -1146,7 +1179,14 @@ const ServerDashboard = () => {
                         {event.icon}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-foreground">{event.text}</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {event.text}
+                          {event.count > 1 && (
+                            <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                              ×{event.count}
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-muted-foreground">{event.resource}</p>
                       </div>
                     </div>
