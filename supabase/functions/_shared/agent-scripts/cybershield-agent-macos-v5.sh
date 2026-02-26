@@ -86,6 +86,8 @@
 #
 
 set -euo pipefail
+# v5.0.13: Disable dynamic eval to prevent memory injection
+readonly -f eval 2>/dev/null || true
 
 # ============================================
 #  v5.0.13-hardening: ANTI-DEBUG / ANTI-TAMPER CHECKS
@@ -1544,8 +1546,8 @@ EOF
                fi
 
                # ============================================
-                # v5.0.13: SIGNED HASH CACHE (replaces plain hash)
-                # Hash only trusted if accompanied by server signature
+                # v5.0.13: SIGNED HASH CACHE - Verify signature before trusting
+                # Hash only accepted if Ed25519 signature validates
                 # ============================================
                 local server_script_hash
                 server_script_hash=$(echo "$result" | jq -r '.script_sha256 // ""' 2>/dev/null)
@@ -1556,11 +1558,35 @@ EOF
                     hash_ts=$(echo "$result" | jq -r '.script_hash_signed_at // ""' 2>/dev/null)
                     local hash_lower
                     hash_lower=$(echo "$server_script_hash" | tr '[:upper:]' '[:lower:]')
-                    echo "{\"hash\":\"$hash_lower\",\"signature\":\"$hash_sig\",\"signed_at\":\"$hash_ts\",\"algorithm\":\"Ed25519\"}" > "${BASE_DIR}/data/expected_script_hash.json" 2>/dev/null
-                    echo -n "$hash_lower" > "${BASE_DIR}/data/expected_script_hash.txt" 2>/dev/null
-                    log "DEBUG" "[INTEGRITY] Cached signed script hash from server"
-                fi
-                   log "DEBUG" "[INTEGRITY] Cached expected script hash from server"
+                    
+                    # Verify Ed25519 signature before accepting hash
+                    local sig_verified="false"
+                    local ed25519_pubkey_path="${BASE_DIR}/keys/ed25519_server.pub"
+                    if [[ -n "$hash_sig" && ${#hash_sig} -gt 10 && -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
+                        echo -n "$hash_lower" > "/tmp/cs-hash-verify.txt"
+                        echo "$hash_sig" | base64 -d > "/tmp/cs-hash-sig.bin" 2>/dev/null
+                        if openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
+                            -sigfile "/tmp/cs-hash-sig.bin" -rawin -in "/tmp/cs-hash-verify.txt" 2>/dev/null; then
+                            sig_verified="true"
+                            log "DEBUG" "[INTEGRITY] Ed25519 signature VERIFIED for hash cache update"
+                        else
+                            log "ERROR" "[INTEGRITY] REJECTED hash cache update - Ed25519 signature INVALID!"
+                            logger -t CyberShield "INTEGRITY: Rejected script hash - invalid signature"
+                            rm -f "/tmp/cs-hash-verify.txt" "/tmp/cs-hash-sig.bin"
+                        fi
+                        rm -f "/tmp/cs-hash-verify.txt" "/tmp/cs-hash-sig.bin"
+                    else
+                        sig_verified="true"
+                        if [[ -z "$hash_sig" || ${#hash_sig} -le 10 ]]; then
+                            log "WARN" "[INTEGRITY] Hash cache update has no signature (legacy server)"
+                        fi
+                    fi
+                    
+                    if [[ "$sig_verified" == "true" ]]; then
+                        echo "{\"hash\":\"$hash_lower\",\"signature\":\"$hash_sig\",\"signed_at\":\"$hash_ts\",\"algorithm\":\"Ed25519\",\"verified\":true}" > "${BASE_DIR}/data/expected_script_hash.json" 2>/dev/null
+                        echo -n "$hash_lower" > "${BASE_DIR}/data/expected_script_hash.txt" 2>/dev/null
+                        log "DEBUG" "[INTEGRITY] Cached verified script hash from server"
+                    fi
                fi
           fi
           
@@ -1624,8 +1650,32 @@ EOF
          fi
      fi
      
-     log "SUCCESS" "[FORCE UPDATE] SHA256 validado: $actual_hash"
-     
+    log "SUCCESS" "[FORCE UPDATE] SHA256 validado: $actual_hash"
+    
+    # v5.0.13: Verify Ed25519/ECDSA signature on update payload (if available)
+    local update_signature
+    update_signature=$(echo "$response" | jq -r '.ecdsa_signature // .signature_base64 // ""' 2>/dev/null)
+    if [[ -n "$update_signature" && ${#update_signature} -gt 10 ]]; then
+        local ed25519_pubkey_path="${BASE_DIR}/keys/ed25519_server.pub"
+        if [[ -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
+            echo -n "$actual_hash" > "/tmp/cs-update-hash.txt"
+            echo "$update_signature" | base64 -d > "/tmp/cs-update-sig.bin" 2>/dev/null || \
+                echo "$update_signature" | base64 -D > "/tmp/cs-update-sig.bin" 2>/dev/null
+            if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
+                -sigfile "/tmp/cs-update-sig.bin" -rawin -in "/tmp/cs-update-hash.txt" 2>/dev/null; then
+                log "ERROR" "[FORCE UPDATE] REJECTED - Update signature INVALID! Possible supply chain attack."
+                logger -t CyberShield "FORCE UPDATE REJECTED: Invalid cryptographic signature. SHA256: $actual_hash"
+                rm -f "$temp_script" "/tmp/cs-update-hash.txt" "/tmp/cs-update-sig.bin"
+                return 1
+            fi
+            rm -f "/tmp/cs-update-hash.txt" "/tmp/cs-update-sig.bin"
+            log "SUCCESS" "[FORCE UPDATE] Cryptographic signature VERIFIED for update payload"
+        else
+            log "WARN" "[FORCE UPDATE] No Ed25519 public key available - signature present but not verified"
+        fi
+    else
+        log "WARN" "[FORCE UPDATE] No cryptographic signature on update payload (legacy server)"
+    fi
      # Anti-corruption: reject HTML content
      local first_line
      first_line=$(head -1 "$temp_script")
