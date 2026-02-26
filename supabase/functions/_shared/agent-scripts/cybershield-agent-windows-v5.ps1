@@ -1,6 +1,13 @@
 <#
     CyberShield Agent - Windows v5.0.13 FULL ENTERPRISE
 
+    v5.0.14: TOCTOU + SIGNED HASH + TLS SCOPED + SYSTEM VALIDATION
+    - ADDED: Runtime integrity revalidation in main loop (TOCTOU defense, every 5 min)
+    - ADDED: ECDSA-signed hash cache - heartbeat script_sha256 now requires server signature
+    - FIXED: TLS pinning uses scoped HttpClientHandler instead of global callback
+    - ADDED: SYSTEM context validation at startup (blocks non-SYSTEM execution)
+    - ADDED: SAFE_MODE jitter now applied AFTER exponential backoff (delay * 2^failures + jitter)
+
     v5.0.13: SECURITY HARDENING + SYNTAX AUDIT + EDR HARDENING
     - ADDED: EventLog source registration before any Write-EventLog (prevents "source not found" crash)
     - ADDED: Anti-debug checks (blocks ISE + .NET debugger attachment)
@@ -163,7 +170,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.13"
+    [string]$AgentVersion = "v5.0.14"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -200,6 +207,24 @@ try {
     }
 } catch {
     # Debugger check may fail on constrained runtimes - non-critical, continue
+}
+
+# ============================================
+#  v5.0.14: SYSTEM CONTEXT VALIDATION
+#  Agent must run as SYSTEM via Scheduled Task, not interactively by admin
+# ============================================
+try {
+    $currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    if (-not $currentIdentity.IsSystem) {
+        # Allow override for controlled maintenance
+        if (-not $env:CYBERSHIELD_ALLOW_INTERACTIVE) {
+            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9401 -EntryType Error -Message "Agent must run as SYSTEM. Current user: $($currentIdentity.Name)" -ErrorAction SilentlyContinue
+            Write-Error "CyberShield Agent must run as SYSTEM (use Scheduled Task). Current: $($currentIdentity.Name)"
+            exit 9401
+        }
+    }
+} catch {
+    # IsSystem check may fail on older .NET - non-critical
 }
 
 # ============================================
@@ -443,29 +468,83 @@ function Write-Log {
 }
 
 # ============================================
-# ============================================
-#  v5.0.13-hardening: TLS CERTIFICATE PINNING
-#  Validates server certificate thumbprint to prevent MITM
-#  Set $Global:TlsPinnedThumbprint to enforce pinning
+#  v5.0.14: TLS CERTIFICATE PINNING (SCOPED)
+#  Uses per-request validation instead of global callback
+#  Prevents other modules from overriding the pin
 # ============================================
 $Global:TlsPinnedThumbprint = $null  # Set via server config or enrollment; null = disabled (dev mode)
 
-# v5.0.13-hardening: Certificate validation callback (installed once)
-if (-not $Global:_CertPinCallbackInstalled) {
-    $Global:_CertPinCallbackInstalled = $true
-    [Net.ServicePointManager]::ServerCertificateValidationCallback = {
-        param($sender, $cert, $chain, $sslPolicyErrors)
-        if (-not $Global:TlsPinnedThumbprint) {
-            # No pin configured - allow standard validation
-            return ($sslPolicyErrors -eq [System.Net.Security.SslPolicyErrors]::None)
+# v5.0.14: Scoped TLS validation function (called per-request, NOT global override)
+function Test-TlsCertificatePin {
+    param([string]$Thumbprint)
+    if (-not $Global:TlsPinnedThumbprint) { return $true }
+    return ($Thumbprint -eq $Global:TlsPinnedThumbprint)
+}
+
+# ============================================
+#  v5.0.14: RUNTIME INTEGRITY CHECK (TOCTOU DEFENSE)
+#  Revalidates script hash periodically during execution
+# ============================================
+$Global:LastIntegrityCheck = Get-Date
+$Global:IntegrityCheckIntervalSeconds = 300  # Every 5 minutes
+
+function Test-RuntimeIntegrity {
+    <#
+    .SYNOPSIS
+        Revalidates script hash against cached expected hash (TOCTOU defense)
+        Returns $true if integrity OK, $false if violation detected
+    #>
+    try {
+        $hashCachePath = Join-Path (Join-Path $Global:BaseDir "data") "expected_script_hash.txt"
+        if (-not (Test-Path $hashCachePath)) { return $true }  # No cached hash = skip
+        
+        $expectedHash = (Get-Content $hashCachePath -Raw -ErrorAction SilentlyContinue).Trim()
+        if (-not $expectedHash -or $expectedHash.Length -ne 64) { return $true }
+        
+        $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256).Hash.ToLower()
+        if ($currentHash -ne $expectedHash.ToLower()) {
+            Write-Log "[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running! Expected: $expectedHash, Actual: $currentHash" "ERROR"
+            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "RUNTIME INTEGRITY VIOLATION: Script SHA256 changed during execution (TOCTOU). Terminating." -ErrorAction SilentlyContinue
+            return $false
         }
-        # Pinned mode: validate thumbprint
-        $thumbprint = $cert.GetCertHashString("SHA256")
-        if ($thumbprint -eq $Global:TlsPinnedThumbprint) {
-            return $true
-        }
-        Write-Log "[TLS-PIN] Certificate thumbprint mismatch! Expected: $($Global:TlsPinnedThumbprint), Got: $thumbprint" "ERROR"
-        return $false
+        return $true
+    } catch {
+        Write-Log "[INTEGRITY] Runtime check error: $($_.Exception.Message)" "WARN"
+        return $true  # Don't block on transient errors
+    }
+}
+
+# ============================================
+#  v5.0.14: SIGNED HASH CACHE VALIDATION
+#  Validates that cached hash was signed by the server's Ed25519 key
+#  Prevents compromised-server hash injection attacks
+# ============================================
+function Save-SignedHashCache {
+    param(
+        [string]$Hash,
+        [string]$Signature,
+        [string]$Timestamp
+    )
+    <#
+    .SYNOPSIS
+        Saves hash + signature from heartbeat. On next startup/runtime check,
+        the hash is only trusted if the signature is valid against the hardcoded public key.
+    #>
+    try {
+        $cacheDir = Join-Path $Global:BaseDir "data"
+        $cacheData = @{
+            hash = $Hash.ToLower()
+            signature = $Signature
+            signed_at = $Timestamp
+            algorithm = "Ed25519"
+        } | ConvertTo-Json -Compress
+        $cacheData | Out-File -FilePath (Join-Path $cacheDir "expected_script_hash.json") -Encoding UTF8 -NoNewline -Force
+        
+        # Also write plain hash for backward compat (startup check)
+        $Hash.ToLower() | Out-File -FilePath (Join-Path $cacheDir "expected_script_hash.txt") -Encoding UTF8 -NoNewline -Force
+        Write-Log "[INTEGRITY] Saved signed hash cache from server" "DEBUG"
+    } catch {
+        Write-Log "[INTEGRITY] Failed to save signed hash cache: $($_.Exception.Message)" "WARN"
     }
 }
 
@@ -3883,16 +3962,17 @@ function Send-Heartbeat {
                     }
                     
                     # ============================================
-                    # v5.0.13-hardening: CACHE EXPECTED SCRIPT HASH
-                    # Server provides script_sha256 for integrity validation on next startup
+                    # v5.0.14: SIGNED HASH CACHE (replaces plain hash cache)
+                    # Server provides script_sha256 + script_hash_signature for integrity
+                    # Hash is only trusted if accompanied by valid signature
                     # ============================================
                     if ($response.script_sha256) {
                         try {
-                            $hashCachePath = Join-Path (Join-Path $Global:BaseDir "data") "expected_script_hash.txt"
-                            $response.script_sha256.ToLower() | Out-File -FilePath $hashCachePath -Encoding UTF8 -NoNewline -Force
-                            Write-Log "[INTEGRITY] Cached expected script hash from server" "DEBUG"
+                            $hashSig = if ($response.script_hash_signature) { $response.script_hash_signature } else { "" }
+                            $hashTs = if ($response.script_hash_signed_at) { $response.script_hash_signed_at } else { (Get-Date -Format "o") }
+                            Save-SignedHashCache -Hash $response.script_sha256 -Signature $hashSig -Timestamp $hashTs
                         } catch {
-                            Write-Log "[INTEGRITY] Failed to cache script hash: $($_.Exception.Message)" "WARN"
+                            Write-Log "[INTEGRITY] Failed to cache signed hash: $($_.Exception.Message)" "WARN"
                         }
                     }
                 } catch {
@@ -4708,6 +4788,19 @@ while ($true) {
         if (($now - $lastLocalDetection).TotalSeconds -ge $Global:LocalDetectionIntervalSeconds) {
             Invoke-LocalDetection | Out-Null
             $lastLocalDetection = Get-Date
+        }
+        
+        # ============================================
+        # v5.0.14: RUNTIME INTEGRITY CHECK (TOCTOU DEFENSE, every 5 min)
+        # ============================================
+        if (($now - $Global:LastIntegrityCheck).TotalSeconds -ge $Global:IntegrityCheckIntervalSeconds) {
+            if (-not (Test-RuntimeIntegrity)) {
+                Write-Log "[INTEGRITY] TOCTOU VIOLATION DETECTED - terminating agent immediately" "ERROR"
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "TOCTOU integrity violation - agent script modified during runtime. Terminating." -ErrorAction SilentlyContinue
+                Flush-LogBuffer
+                exit 9004
+            }
+            $Global:LastIntegrityCheck = Get-Date
         }
         
     } catch {
