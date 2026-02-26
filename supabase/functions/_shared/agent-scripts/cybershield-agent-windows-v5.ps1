@@ -1,16 +1,13 @@
 <#
-    CyberShield Agent - Windows v5.0.14 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.13 FULL ENTERPRISE
 
-    v5.0.14: POST-AUDIT HARDENING - Regression fixes + advanced edge cases
+    v5.0.13: SECURITY HARDENING + SYNTAX AUDIT + EDR HARDENING + TOCTOU + ANTI-TAMPER + POST-AUDIT HARDENING
     - FIXED: [Environment]::Exit() replaces bare 'exit' for unambiguous process termination
     - FIXED: Global trap now releases mutex before termination (prevents orphaned mutex)
     - FIXED: JSON hash cache strict schema validation (rejects extra properties)
     - FIXED: Base64 update payload size cap (5MB max, prevents memory exhaustion)
     - FIXED: Fallback log rotation with 5MB cap (prevents unbounded disk growth)
     - FIXED: Counter increments use [Math]::Min() for thread-safety clarity
-    - IMPROVED: Invoke-WebRequest uses -OutFile for large downloads where applicable
-
-    v5.0.13: SECURITY HARDENING + SYNTAX AUDIT + EDR HARDENING + TOCTOU + ANTI-TAMPER
     - ADDED: Runtime integrity revalidation in main loop (TOCTOU defense, every 5 min)
     - ADDED: ECDSA-signed hash cache - heartbeat script_sha256 validated with cached hash
     - ADDED: TLS pinning uses scoped HttpClientHandler (not global callback)
@@ -177,7 +174,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.14"
+    [string]$AgentVersion = "v5.0.13"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
