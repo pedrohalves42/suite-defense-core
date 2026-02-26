@@ -264,48 +264,86 @@ Deno.serve(async (req) => {
     let agentData: { agent_name: string; os_type: string | null; hmac_secret: string } | null = null;
 
     if (!resolvedAgentId) {
-      // === AUTO-PROVISION: Create new agent for enrollment keys without agent_id ===
-      console.log(`[${requestId}] Enrollment key has no agent_id - auto-provisioning new agent`);
-      
+      // === AUTO-PROVISION OR REUSE: Check for existing agent by hostname first ===
       const hostname = url.searchParams.get('hostname') || `agent-${crypto.randomUUID().substring(0, 8)}`;
       const osPlatform = url.searchParams.get('os_type') || 'windows';
       
-      // Generate HMAC secret (64 chars hex)
-      const hmacBytes = new Uint8Array(32);
-      crypto.getRandomValues(hmacBytes);
-      const newHmacSecret = Array.from(hmacBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+      console.log(`[${requestId}] Enrollment key has no agent_id - checking for existing agent with hostname: ${hostname}`);
       
-      // Insert new agent
-      const { data: newAgent, error: newAgentError } = await supabaseClient
+      // DEDUP: Check if an agent with this hostname already exists in the same tenant
+      const { data: existingByHostname } = await supabaseClient
         .from('agents')
-        .insert({
-          agent_name: hostname,
-          tenant_id: enrollmentData.tenant_id,
-          status: 'active',
-          os_type: osPlatform,
-          hmac_secret: newHmacSecret,
-          enrolled_at: new Date().toISOString(),
-          agent_version: '0.0.0',
-        })
-        .select('id, agent_name, os_type, hmac_secret')
-        .single();
+        .select('id, agent_name, os_type, hmac_secret, status')
+        .eq('agent_name', hostname)
+        .eq('tenant_id', enrollmentData.tenant_id)
+        .in('status', ['active', 'offline', 'inactive'])
+        .order('enrolled_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
       
-      if (newAgentError || !newAgent) {
-        console.error(`[${requestId}] Failed to auto-provision agent`, newAgentError);
-        return new Response('Failed to create agent record', { 
-          status: 500,
-          headers: corsHeaders
+      if (existingByHostname) {
+        // === REUSE EXISTING AGENT (dedup) ===
+        resolvedAgentId = existingByHostname.id;
+        agentData = { 
+          agent_name: existingByHostname.agent_name, 
+          os_type: existingByHostname.os_type, 
+          hmac_secret: existingByHostname.hmac_secret 
+        };
+        
+        // Reactivate if needed
+        if (existingByHostname.status !== 'active') {
+          await supabaseClient
+            .from('agents')
+            .update({ status: 'active' })
+            .eq('id', existingByHostname.id);
+        }
+        
+        console.log(`[${requestId}] DEDUP: Reusing existing agent`, {
+          agentId: resolvedAgentId,
+          agentName: hostname,
+          previousStatus: existingByHostname.status,
+          tenantId: enrollmentData.tenant_id
+        });
+      } else {
+        // === CREATE NEW AGENT ===
+        console.log(`[${requestId}] No existing agent found - creating new agent: ${hostname}`);
+        
+        // Generate HMAC secret (64 chars hex)
+        const hmacBytes = new Uint8Array(32);
+        crypto.getRandomValues(hmacBytes);
+        const newHmacSecret = Array.from(hmacBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        const { data: newAgent, error: newAgentError } = await supabaseClient
+          .from('agents')
+          .insert({
+            agent_name: hostname,
+            tenant_id: enrollmentData.tenant_id,
+            status: 'active',
+            os_type: osPlatform,
+            hmac_secret: newHmacSecret,
+            enrolled_at: new Date().toISOString(),
+            agent_version: '0.0.0',
+          })
+          .select('id, agent_name, os_type, hmac_secret')
+          .single();
+        
+        if (newAgentError || !newAgent) {
+          console.error(`[${requestId}] Failed to auto-provision agent`, newAgentError);
+          return new Response('Failed to create agent record', { 
+            status: 500,
+            headers: corsHeaders
+          });
+        }
+        
+        resolvedAgentId = newAgent.id;
+        agentData = { agent_name: newAgent.agent_name, os_type: newAgent.os_type, hmac_secret: newAgent.hmac_secret };
+        
+        console.log(`[${requestId}] Auto-provisioned new agent`, {
+          agentId: resolvedAgentId,
+          agentName: hostname,
+          tenantId: enrollmentData.tenant_id
         });
       }
-      
-      resolvedAgentId = newAgent.id;
-      agentData = { agent_name: newAgent.agent_name, os_type: newAgent.os_type, hmac_secret: newAgent.hmac_secret };
-      
-      console.log(`[${requestId}] Auto-provisioned agent`, {
-        agentId: resolvedAgentId,
-        agentName: hostname,
-        tenantId: enrollmentData.tenant_id
-      });
 
       // Increment usage count on enrollment key
       try {
