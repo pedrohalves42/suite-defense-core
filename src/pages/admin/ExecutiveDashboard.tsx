@@ -58,7 +58,7 @@ export default function ExecutiveDashboard() {
   const tenantId = activeTenant?.id;
 
   // ADR-026: Centralized agent snapshots - single source of truth
-  const { data: snapshots } = useAgentSnapshots();
+  const { data: snapshots, isLoading: snapshotsLoading } = useAgentSnapshots();
   const agentCounts = getAgentStatusCounts(snapshots);
 
   // Helper para evitar deep type instantiation
@@ -113,12 +113,13 @@ export default function ExecutiveDashboard() {
     };
   };
 
-  // Buscar dados resumidos
+  // Buscar dados resumidos — placeholderData removido para evitar dados stale cross-tenant
   const { data: summaryData, isLoading, refetch } = useQuery({
-    queryKey: ['executive-summary', tenantId, agentCounts.total, agentCounts.online],
+    queryKey: ['executive-summary', tenantId],
     queryFn: () => tenantId ? fetchSummaryData(tenantId) : null,
-    enabled: !tenantLoading && !!tenantId && agentCounts.total >= 0,
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    enabled: !tenantLoading && !!tenantId && !snapshotsLoading,
+    refetchInterval: 300000, // COST-OPT: 5min
+    staleTime: 60000,
   });
 
   // Determinar status de saúde
