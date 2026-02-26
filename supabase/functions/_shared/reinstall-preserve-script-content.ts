@@ -209,7 +209,8 @@ Write-Status "PHASE 4/5: Download Updated Script" "INFO"
 
 $newScript = $null
 $downloadMethod = "none"
-$dlUrl = "$ServerUrl/functions/v1/get-latest-agent-script?platform=windows&format=plain"
+$cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+$dlUrl = "$ServerUrl/functions/v1/get-latest-agent-script?platform=windows&format=plain&cb=$cacheBust"
 Write-Status "URL: $dlUrl" "INFO"
 
 # Method 1: Invoke-RestMethod (cleanest)
