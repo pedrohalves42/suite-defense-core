@@ -29,10 +29,19 @@ export interface SoftwareInventoryItem {
   name: string;
   version: string | null;
   vendor: string | null;
+  install_location: string | null;
   risk_level: string | null;
   first_seen_at: string;
   last_seen_at: string;
   agents?: { agent_name: string };
+}
+
+export interface TopRiskySoftware {
+  name: string;
+  vendor: string | null;
+  risk_level: string;
+  machine_count: number;
+  first_seen_at: string;
 }
 
 export function useSoftwareRiskSummary() {
@@ -75,6 +84,75 @@ export function useSoftwareByRisk(riskLevel?: string, limit = 50) {
       const { data, error } = await query;
       if (error) throw error;
       return (data || []) as SoftwareInventoryItem[];
+    },
+    enabled: !loading && !!activeTenant?.id,
+  });
+}
+
+export function useTopRiskySoftware(limit = 10) {
+  const { activeTenant, loading } = useActiveTenant();
+
+  return useQuery({
+    queryKey: ['top-risky-software', activeTenant?.id, limit],
+    queryFn: async () => {
+      if (!activeTenant?.id) return [];
+
+      const { data, error } = await tenantQuery('software_inventory', activeTenant.id)
+        .select('name, vendor, risk_level, agent_id, first_seen_at')
+        .in('risk_level', ['critical', 'high'])
+        .order('last_seen_at', { ascending: false })
+        .limit(500);
+
+      if (error) throw error;
+
+      // Group by name to count unique machines
+      const grouped = new Map<string, TopRiskySoftware>();
+      for (const item of data || []) {
+        const key = item.name;
+        const existing = grouped.get(key);
+        if (existing) {
+          existing.machine_count++;
+        } else {
+          grouped.set(key, {
+            name: item.name,
+            vendor: item.vendor,
+            risk_level: item.risk_level || 'unknown',
+            machine_count: 1,
+            first_seen_at: item.first_seen_at,
+          });
+        }
+      }
+
+      return Array.from(grouped.values())
+        .sort((a, b) => {
+          const riskOrder: Record<string, number> = { critical: 0, high: 1 };
+          const riskDiff = (riskOrder[a.risk_level] ?? 9) - (riskOrder[b.risk_level] ?? 9);
+          if (riskDiff !== 0) return riskDiff;
+          return b.machine_count - a.machine_count;
+        })
+        .slice(0, limit);
+    },
+    enabled: !loading && !!activeTenant?.id,
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useSoftwarePolicy() {
+  const { activeTenant, loading } = useActiveTenant();
+
+  return useQuery({
+    queryKey: ['software-policy', activeTenant?.id],
+    queryFn: async () => {
+      if (!activeTenant?.id) return null;
+
+      const { data, error } = await supabase
+        .from('tenant_software_policy')
+        .select('*')
+        .eq('tenant_id', activeTenant.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
     },
     enabled: !loading && !!activeTenant?.id,
   });
