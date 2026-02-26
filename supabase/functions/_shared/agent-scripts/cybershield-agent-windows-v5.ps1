@@ -273,6 +273,14 @@ $Global:LocalDetectionStats = @{
     remediations_applied = 0
 }
 
+# v5.0.13-perf: Log buffer for reduced I/O
+$Global:LogBuffer = [System.Collections.Generic.List[string]]::new()
+$Global:LogBufferMaxSize = 20
+$Global:LogBufferLastFlush = Get-Date
+
+# v5.0.13-perf: Pre-compiled suspicious process regex patterns
+$Global:CompiledSuspiciousPatterns = $null  # Initialized on first use
+
 # v5.0.1: Hash Chain for execution
 $Global:ExecutionChain = @{
     last_hash = "genesis"
@@ -285,6 +293,25 @@ $Global:ED25519_PUBLIC_KEY = "MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZ
 # ============================================
 #  LOGGING
 # ============================================
+function Flush-LogBuffer {
+    if ($Global:LogBuffer.Count -eq 0) { return }
+    try {
+        $logDir = Split-Path $Global:LogFilePath -Parent
+        $logFile = Get-Item $Global:LogFilePath -ErrorAction SilentlyContinue
+        if ($logFile -and $logFile.Length -gt $Global:MaxLogSizeBytes) {
+            $backupFile = "$($Global:LogFilePath).$(Get-Date -Format 'yyyyMMdd_HHmmss').bak"
+            Move-Item $Global:LogFilePath $backupFile -Force
+            Get-ChildItem -Path $logDir -Filter "*.bak" | 
+                Sort-Object LastWriteTime -Descending | 
+                Select-Object -Skip 5 | 
+                Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+        $Global:LogBuffer | Out-File -Append -FilePath $Global:LogFilePath -Encoding UTF8
+    } catch { }
+    $Global:LogBuffer.Clear()
+    $Global:LogBufferLastFlush = Get-Date
+}
+
 function Write-Log {
     param(
         [Parameter(Mandatory = $true)]
@@ -308,23 +335,15 @@ function Write-Log {
     }
     Write-Host $logEntry -ForegroundColor $color
 
-    # File output with rotation
-    try {
-        $logFile = Get-Item $Global:LogFilePath -ErrorAction SilentlyContinue
-        if ($logFile -and $logFile.Length -gt $Global:MaxLogSizeBytes) {
-            $backupFile = "$($Global:LogFilePath).$(Get-Date -Format 'yyyyMMdd_HHmmss').bak"
-            Move-Item $Global:LogFilePath $backupFile -Force
-            
-            # Keep only last 5 backups
-            Get-ChildItem -Path $logDir -Filter "*.bak" | 
-                Sort-Object LastWriteTime -Descending | 
-                Select-Object -Skip 5 | 
-                Remove-Item -Force -ErrorAction SilentlyContinue
-        }
-        
-        Add-Content -Path $Global:LogFilePath -Value $logEntry -Encoding UTF8
-    } catch {
-        # Silent - log errors should not crash the agent
+    # v5.0.13-perf: Buffered file output - flush on ERROR/WARN immediately, batch others
+    $Global:LogBuffer.Add($logEntry)
+    
+    $shouldFlush = ($Level -eq "ERROR" -or $Level -eq "WARN") -or
+                   ($Global:LogBuffer.Count -ge $Global:LogBufferMaxSize) -or
+                   ((Get-Date) - $Global:LogBufferLastFlush).TotalSeconds -ge 10
+    
+    if ($shouldFlush) {
+        Flush-LogBuffer
     }
 }
 
@@ -1514,7 +1533,7 @@ function Invoke-CollectSoftwareInventory {
 function Invoke-CollectAntivirusStatus {
     try {
         # ── Phase 1: WMI SecurityCenter2 (detecta qualquer AV registrado no Windows) ──
-        $avProducts = Get-WmiObject -Namespace "root\SecurityCenter2" -Class "AntiVirusProduct" -ErrorAction SilentlyContinue
+        $avProducts = Get-CimInstance -Namespace "root/SecurityCenter2" -ClassName AntiVirusProduct -ErrorAction SilentlyContinue
         
         $avList = @()
         foreach ($av in $avProducts) {
@@ -2436,7 +2455,7 @@ function Invoke-DisableService {
         }
         
         $previousStatus = $service.Status.ToString()
-        $previousStartType = (Get-WmiObject Win32_Service -Filter "Name='$serviceName'").StartMode
+        $previousStartType = (Get-CimInstance Win32_Service -Filter "Name='$serviceName'").StartMode
         
         # Stop if running
         if ($service.Status -ne 'Stopped') {
@@ -2538,7 +2557,7 @@ function Invoke-DiskCleanup {
     )
     
     try {
-        $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
+        $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
         $usedPercent = [math]::Round((($disk.Size - $disk.FreeSpace) / $disk.Size) * 100, 1)
         
         if ($usedPercent -lt $ThresholdPercent) {
@@ -2600,7 +2619,7 @@ function Invoke-DiskCleanup {
         } catch { }
         
         # Recalculate disk usage
-        $diskAfter = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
+        $diskAfter = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
         $usedPercentAfter = [math]::Round((($diskAfter.Size - $diskAfter.FreeSpace) / $diskAfter.Size) * 100, 1)
         $freedGB = [math]::Round(($diskAfter.FreeSpace - $disk.FreeSpace) / 1GB, 2)
         
@@ -2830,7 +2849,7 @@ function Get-UnauthorizedSoftware {
         )
         
         # Get installed software
-        $installedSoftware = Get-WmiObject Win32_Product -ErrorAction SilentlyContinue | 
+        $installedSoftware = Get-CimInstance Win32_Product -ErrorAction SilentlyContinue | 
             Where-Object { $_.Name } |
             Select-Object -ExpandProperty Name -Unique
         
@@ -3122,7 +3141,7 @@ function Invoke-ServiceHealthCheck {
         foreach ($svcName in $serviceNames) {
             $svc = Get-Service -Name $svcName -ErrorAction SilentlyContinue
             if ($svc) {
-                $startType = (Get-WmiObject Win32_Service -Filter "Name='$svcName'" -ErrorAction SilentlyContinue).StartMode
+                $startType = (Get-CimInstance Win32_Service -Filter "Name='$svcName'" -ErrorAction SilentlyContinue).StartMode
                 $isHealthy = ($svc.Status -eq 'Running') -or ($startType -eq 'Disabled' -or $startType -eq 'Manual')
                 
                 if (-not $isHealthy) { $unhealthy++ }
@@ -3425,16 +3444,17 @@ function Invoke-ApplySecurityPatch {
 # ============================================
 function Get-SystemMetrics {
     try {
-        $cpu = Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average | Select-Object -ExpandProperty Average
-        $memory = Get-WmiObject Win32_OperatingSystem
-        $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
-        $uptime = (Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+        # v5.0.13-perf: Use CIM instead of WMI (faster, uses WSMan)
+        $cpu = Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average | Select-Object -ExpandProperty Average
+        $os = Get-CimInstance Win32_OperatingSystem
+        $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
+        $uptime = (Get-Date) - $os.LastBootUpTime
         
         return @{
             cpu_percent = [math]::Round($cpu, 2)
-            memory_total_gb = [math]::Round($memory.TotalVisibleMemorySize / 1MB, 2)
-            memory_used_gb = [math]::Round(($memory.TotalVisibleMemorySize - $memory.FreePhysicalMemory) / 1MB, 2)
-            memory_used_percent = [math]::Round((($memory.TotalVisibleMemorySize - $memory.FreePhysicalMemory) / $memory.TotalVisibleMemorySize) * 100, 2)
+            memory_total_gb = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2)
+            memory_used_gb = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1MB, 2)
+            memory_used_percent = [math]::Round((($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / $os.TotalVisibleMemorySize) * 100, 2)
             disk_total_gb = [math]::Round($disk.Size / 1GB, 2)
             disk_free_gb = [math]::Round($disk.FreeSpace / 1GB, 2)
             disk_used_percent = [math]::Round((($disk.Size - $disk.FreeSpace) / $disk.Size) * 100, 2)
@@ -4094,29 +4114,47 @@ function Test-SuspiciousProcesses {
     try {
         $Global:LocalDetectionStats.process_checks++
         
-        $suspiciousPatterns = @(
-            @{ pattern = "mimikatz"; severity = "critical"; description = "Credential dumping tool" },
-            @{ pattern = "psexec"; severity = "warning"; description = "Remote execution tool" },
-            @{ pattern = "ncat"; severity = "warning"; description = "Netcat variant" },
-            @{ pattern = "nc.exe"; severity = "warning"; description = "Netcat" },
-            @{ pattern = "wireshark"; severity = "info"; description = "Network sniffer" },
-            @{ pattern = "keylogger"; severity = "critical"; description = "Potential keylogger" },
-            @{ pattern = "cobaltstrike"; severity = "critical"; description = "C2 framework" },
-            @{ pattern = "meterpreter"; severity = "critical"; description = "Exploitation framework" },
-            @{ pattern = "lazagne"; severity = "critical"; description = "Password recovery tool" },
-            @{ pattern = "bloodhound"; severity = "warning"; description = "AD enumeration tool" }
-        )
+        # v5.0.13-perf: Pre-compile regex patterns on first call (cached globally)
+        if (-not $Global:CompiledSuspiciousPatterns) {
+            $patternDefs = @(
+                @{ pattern = "mimikatz"; severity = "critical"; description = "Credential dumping tool" },
+                @{ pattern = "psexec"; severity = "warning"; description = "Remote execution tool" },
+                @{ pattern = "ncat"; severity = "warning"; description = "Netcat variant" },
+                @{ pattern = "nc\.exe"; severity = "warning"; description = "Netcat" },
+                @{ pattern = "wireshark"; severity = "info"; description = "Network sniffer" },
+                @{ pattern = "keylogger"; severity = "critical"; description = "Potential keylogger" },
+                @{ pattern = "cobaltstrike"; severity = "critical"; description = "C2 framework" },
+                @{ pattern = "meterpreter"; severity = "critical"; description = "Exploitation framework" },
+                @{ pattern = "lazagne"; severity = "critical"; description = "Password recovery tool" },
+                @{ pattern = "bloodhound"; severity = "warning"; description = "AD enumeration tool" }
+            )
+            $Global:CompiledSuspiciousPatterns = $patternDefs | ForEach-Object {
+                @{
+                    regex = [regex]::new("\b$($_.pattern)\b", "IgnoreCase, Compiled")
+                    severity = $_.severity
+                    description = $_.description
+                    pattern = $_.pattern
+                }
+            }
+            Write-Log "[LOCAL-DETECT] Compiled $($Global:CompiledSuspiciousPatterns.Count) suspicious process patterns" "DEBUG"
+        }
         
         $detected = @()
-        $processes = Get-Process -ErrorAction SilentlyContinue | Select-Object -Property Name, Id, Path
+        # v5.0.13-perf: Only get Name+Id (skip Path - it's slow and requires elevation)
+        $processes = Get-Process -ErrorAction SilentlyContinue | Select-Object -Property Name, Id
         
         foreach ($proc in $processes) {
-            foreach ($suspicious in $suspiciousPatterns) {
-                if ($proc.Name -match "\b$($suspicious.pattern)\b") {
+            foreach ($suspicious in $Global:CompiledSuspiciousPatterns) {
+                if ($suspicious.regex.IsMatch($proc.Name)) {
+                    # v5.0.13-perf: Only fetch Path on-demand for detected suspicious processes
+                    $procPath = "N/A"
+                    try { $procPath = (Get-Process -Id $proc.Id -ErrorAction Stop).Path } catch { }
+                    if (-not $procPath) { $procPath = "N/A" }
+                    
                     $detected += @{
                         process_name = $proc.Name
                         process_id = $proc.Id
-                        process_path = if ($proc.Path) { $proc.Path } else { "N/A" }
+                        process_path = $procPath
                         pattern = $suspicious.pattern
                         severity = $suspicious.severity
                         description = $suspicious.description
@@ -4515,5 +4553,15 @@ while ($true) {
         }
     }
     
-    Start-Sleep -Seconds 2
+    # v5.0.13-perf: Dynamic sleep interval based on agent state
+    $sleepInterval = switch ($Global:CurrentState) {
+        "ENFORCING" { 2 }
+        "DEGRADED"  { 5 }
+        "SAFE_MODE" { 10 }
+        default     { 2 }
+    }
+    Start-Sleep -Seconds $sleepInterval
+    
+    # v5.0.13-perf: Flush log buffer on each cycle boundary
+    Flush-LogBuffer
 }
