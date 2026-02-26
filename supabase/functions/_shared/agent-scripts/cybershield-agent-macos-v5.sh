@@ -77,6 +77,28 @@
 set -euo pipefail
 
 # ============================================
+#  v5.0.13-hardening: ANTI-DEBUG / ANTI-TAMPER CHECKS
+#  Prevents execution under debuggers/tracers
+# ============================================
+# Block DTrace/lldb attachment (macOS equivalent of ptrace check)
+if sysctl -n kern.proc.pid.$$ 2>/dev/null | grep -qi "traced"; then
+    echo "[SECURITY] CyberShield Agent cannot run under a debugger/tracer (security policy)"
+    exit 9102
+fi
+
+# Block interactive shells (must run as launchd service, not manually)
+if [[ "${CYBERSHIELD_ALLOW_INTERACTIVE:-}" != "1" ]]; then
+    if tty -s 2>/dev/null; then
+        parent_comm=$(ps -p ${PPID:-0} -o comm= 2>/dev/null || echo "unknown")
+        if [[ "$parent_comm" != "launchd" && "$parent_comm" != "cron" ]]; then
+            echo "[SECURITY] CyberShield Agent should run as a launchd service, not interactively"
+            echo "           Set CYBERSHIELD_ALLOW_INTERACTIVE=1 to override (dev only)"
+            exit 9101
+        fi
+    fi
+fi
+
+# ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
 AGENT_VERSION="v5.0.13"
@@ -218,6 +240,13 @@ declare -a PROCESS_BASELINE=()
  # ============================================
  mkdir -p "$LOG_DIR" "$EVIDENCE_DIR" "$CONFIG_DIR" "$KEYS_DIR" "$DATA_DIR"
  chmod 700 "$KEYS_DIR"
+
+ # v5.0.13-hardening: Restrict base directory ACL (root only)
+ chmod 750 "$BASE_DIR" 2>/dev/null || true
+ chown -R root:wheel "$BASE_DIR" 2>/dev/null || true
+ # Remove world-readable/writable bits from all subdirectories
+ chmod 700 "$CONFIG_DIR" "$DATA_DIR" "$EVIDENCE_DIR" 2>/dev/null || true
+ chmod 750 "$LOG_DIR" 2>/dev/null || true
  
  # ============================================
  #  v5.0.13: DEPENDENCY VALIDATION AT STARTUP
