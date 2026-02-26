@@ -146,10 +146,10 @@ Deno.serve(async (req) => {
     logger.debug('Agent polling', { agentName: agent.agent_name })
 
     // FASE CORRECAO: Verificar se agente está online antes de entregar jobs
-    // Buscar dados completos do agente incluindo last_heartbeat
+    // Buscar dados completos do agente incluindo last_heartbeat e agent_version
     const { data: agentData, error: agentError } = await supabase
       .from('agents')
-      .select('id, last_heartbeat, status')
+      .select('id, last_heartbeat, status, agent_version')
       .eq('id', token.agent_id)
       .single()
 
@@ -159,6 +159,23 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Agent not found' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
       )
+    }
+
+    // COMPAT: Detectar versão do agente para formato de resposta
+    const agentVersionStr = agentData.agent_version || 'v0.0.0'
+    const parseVersion = (v: string): number[] => {
+      const m = v.replace(/^v/, '').match(/^(\d+)\.(\d+)\.(\d+)/)
+      return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [0, 0, 0]
+    }
+    const agentVer = parseVersion(agentVersionStr)
+    // Agentes <= v5.0.11 esperam array plano; >= v5.0.12 suportam formato encapsulado
+    const isLegacyAgent = agentVer[0] < 5 || (agentVer[0] === 5 && agentVer[1] === 0 && agentVer[2] <= 11)
+    
+    if (isLegacyAgent) {
+      logger.warn('COMPAT: Legacy agent detected, will use flat array response', {
+        agentName: agent.agent_name,
+        agentVersion: agentVersionStr,
+      })
     }
 
     // VALIDACAO CRITICA: Não entregar jobs para agentes que estavam offline >24h
@@ -190,7 +207,7 @@ Deno.serve(async (req) => {
         .eq('token_hash', tokenHash)
       
       return new Response(
-        JSON.stringify([]),
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 300 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
@@ -225,7 +242,7 @@ Deno.serve(async (req) => {
         maxLimit: MAX_PENDING_JOBS 
       })
       return new Response(
-        JSON.stringify([]),
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 60 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
@@ -268,7 +285,7 @@ Deno.serve(async (req) => {
         agentId: token.agent_id
       })
       return new Response(
-        JSON.stringify([]),
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 30 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
@@ -318,7 +335,7 @@ Deno.serve(async (req) => {
     if (validJobs.length === 0) {
       logger.debug('No valid jobs to return', { agentName: agent.agent_name })
       return new Response(
-        JSON.stringify([]),
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 30 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
@@ -395,10 +412,61 @@ Deno.serve(async (req) => {
     })
 
     // Retornar jobs ao agente
-    // COST-OPT: Wrap response with poll_interval to instruct agents
+    // COMPAT: Legacy agents (<= v5.0.11) recebem array plano
+    // Novos agentes (>= v5.0.12) recebem { jobs, poll_interval_seconds }
+    if (isLegacyAgent) {
+      logger.info('COMPAT: Returning flat array for legacy agent', {
+        agentName: agent.agent_name,
+        agentVersion: agentVersionStr,
+        jobCount: jobsResponse.length,
+      })
+      // PROTEÇÃO: Para agentes legacy, entregar APENAS jobs de recuperação
+      // Jobs operacionais serão desperdiçados (agente não consegue parseá-los corretamente)
+      const recoveryTypes = ['update_agent', 'reinstall_agent', 'force_update']
+      const recoveryJobs = jobsResponse.filter(j => j && recoveryTypes.includes(j.type || j.job_type || ''))
+      const blockedCount = jobsResponse.length - recoveryJobs.length
+      
+      if (blockedCount > 0) {
+        logger.warn('COMPAT: Blocked operational jobs for legacy agent (would waste cycles)', {
+          agentName: agent.agent_name,
+          agentVersion: agentVersionStr,
+          blocked: blockedCount,
+          delivered: recoveryJobs.length,
+          blockedTypes: jobsResponse
+            .filter(j => j && !recoveryTypes.includes(j.type || j.job_type || ''))
+            .map(j => j!.type || j!.job_type),
+        })
+        
+        // Cancelar os jobs bloqueados para liberar a fila de dedup
+        const blockedJobIds = jobsResponse
+          .filter(j => j && !recoveryTypes.includes(j.type || j.job_type || ''))
+          .map(j => j!.id)
+          .filter(Boolean)
+        
+        if (blockedJobIds.length > 0) {
+          await supabase
+            .from('jobs')
+            .update({ 
+              status: 'cancelled', 
+              error_message: `Blocked: agent ${agentVersionStr} is legacy and cannot process this job type. Update required.`
+            })
+            .in('id', blockedJobIds)
+        }
+      }
+      
+      return new Response(
+        JSON.stringify(recoveryJobs),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      )
+    }
+
+    // Novo formato encapsulado para agentes modernos
     const responsePayload = {
       jobs: jobsResponse,
-      poll_interval_seconds: 30,  // Poll every 30s instead of 2-3s
+      poll_interval_seconds: 30,
     };
     return new Response(
       JSON.stringify(responsePayload),
