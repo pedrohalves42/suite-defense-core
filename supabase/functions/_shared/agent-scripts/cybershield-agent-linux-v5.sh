@@ -79,7 +79,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.13"
+AGENT_VERSION="v5.0.14"
 BASE_DIR="/opt/cybershield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -217,6 +217,21 @@ declare -a PROCESS_BASELINE=()
  # ============================================
  mkdir -p "$LOG_DIR" "$EVIDENCE_DIR" "$CONFIG_DIR" "$KEYS_DIR" "$DATA_DIR"
  chmod 700 "$KEYS_DIR"
+ 
+ # ============================================
+ #  v5.0.14: DEPENDENCY VALIDATION AT STARTUP
+ # ============================================
+ missing_deps=()
+ for dep in jq openssl curl nc sha256sum base64; do
+     if ! command -v "$dep" &>/dev/null; then
+         missing_deps+=("$dep")
+     fi
+ done
+ if [[ ${#missing_deps[@]} -gt 0 ]]; then
+     echo "[FATAL] Missing required dependencies: ${missing_deps[*]}"
+     echo "Install with: apt-get install -y jq openssl curl netcat-openbsd coreutils"
+     exit 1
+ fi
  
  # ============================================
  #  LOGGING - v5.0.13-perf: Buffered I/O (reduces disk writes by ~80%)
@@ -1537,14 +1552,39 @@ EOF
      
      log "INFO" "[FORCE UPDATE] Reiniciando agente com nova versao..."
      
-     # Restart via systemd (no PC restart needed)
-     if systemctl is-active cybershield-agent &>/dev/null; then
-         sudo systemctl restart cybershield-agent &
-     elif systemctl is-active --user cybershield-agent &>/dev/null; then
-         systemctl restart --user cybershield-agent &
-     else
-         # Fallback: exec into new script
-         exec "$current_script" --server-url "$SERVER_URL" --agent-token "$AGENT_TOKEN" --hmac-secret "$HMAC_SECRET" --agent-name "$AGENT_NAME" &
+     # v5.0.14-fix: Retry limit for update restart (max 3 attempts to prevent infinite loop)
+     local restart_attempt=0
+     local restart_max=3
+     local restart_success=false
+     
+     while [[ $restart_attempt -lt $restart_max ]]; do
+         restart_attempt=$((restart_attempt + 1))
+         log "INFO" "[FORCE UPDATE] Restart attempt $restart_attempt/$restart_max..."
+         
+         if systemctl is-active cybershield-agent &>/dev/null; then
+             sudo systemctl restart cybershield-agent &
+             restart_success=true
+             break
+         elif systemctl is-active --user cybershield-agent &>/dev/null; then
+             systemctl restart --user cybershield-agent &
+             restart_success=true
+             break
+         else
+             # Fallback: exec into new script
+             exec "$current_script" --server-url "$SERVER_URL" --agent-token "$AGENT_TOKEN" --hmac-secret "$HMAC_SECRET" --agent-name "$AGENT_NAME" &
+             restart_success=true
+             break
+         fi
+         sleep 2
+     done
+     
+     if [[ "$restart_success" == "false" ]]; then
+         log "ERROR" "[FORCE UPDATE] All $restart_max restart attempts failed - rolling back"
+         if [[ -f "${current_script}.backup" ]]; then
+             cp "${current_script}.backup" "$current_script" 2>/dev/null
+             log "WARN" "[FORCE UPDATE] Rolled back to previous version"
+         fi
+         return 1
      fi
      
      log "SUCCESS" "[FORCE UPDATE] Restart iniciado - saindo do processo atual"
@@ -1891,12 +1931,12 @@ remove_dns_filter_handler() {
 # ============================================
 #  MAIN LOOP v5.0.1 FULL ENTERPRISE
 # ============================================
- log "============================================"
+ log "INFO" "============================================"
  log "INFO" "[START] CyberShield Agent $AGENT_VERSION FULL ENTERPRISE"
  log "DEBUG" "[INFO] ServerUrl: $SERVER_URL"
  log "DEBUG" "[INFO] AgentName: $AGENT_NAME"
  log "INFO" "[INFO] Features: ECDSA-signing, Ed25519-verify, hash-chain, FSM, DNS-filter, auto-remediation"
- log "============================================"
+ log "INFO" "============================================"
  
  # ============================================
  #  PHASE 1: INITIALIZATION
@@ -2041,8 +2081,8 @@ remove_dns_filter_handler() {
      if [[ $((now - last_job_poll)) -ge $JOB_POLL_INTERVAL && "$network_ok" == "true" ]]; then
          jobs=$(poll_jobs)
          
-         # Process each job
-         echo "$jobs" | jq -c '.[]' 2>/dev/null | while read -r job; do
+         # v5.0.14-fix: Use process substitution instead of pipe to avoid subshell variable isolation
+         while read -r job; do
              if [[ -n "$job" ]]; then
                  # v5.0.13-fix: When SecurityDegraded, only allow recovery jobs (fail-closed)
                  job_type=$(echo "$job" | jq -r '.type // .job_type // "unknown"' 2>/dev/null)
@@ -2053,7 +2093,6 @@ remove_dns_filter_handler() {
                              ;;
                          *)
                              log "WARN" "[SECURITY] BLOCKED job '$job_type' - SecurityDegraded=TRUE (only recovery jobs allowed)"
-                             job_id=$(echo "$job" | jq -r '.id // ""' 2>/dev/null)
                              submit_job_result "$job" '{"success":false,"status":"failed","error_message":"Agent in SecurityDegraded mode - only recovery jobs accepted","exit_code":403}'
                              continue
                              ;;
@@ -2063,7 +2102,7 @@ remove_dns_filter_handler() {
                  result=$(execute_job "$job")
                  submit_job_result "$job" "$result"
              fi
-         done
+         done < <(echo "$jobs" | jq -c '.[]' 2>/dev/null)
          
          last_job_poll=$now
      fi
