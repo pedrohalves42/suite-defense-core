@@ -98,15 +98,13 @@ Deno.serve(async (req) => {
     if (headerMatch) {
       const scriptVersion = headerMatch[1];
       const targetVersion = version.replace(/^v/, '');
-      const scriptMajorMinor = scriptVersion.split('.').slice(0, 2).join('.');
-      const targetMajorMinor = targetVersion.split('.').slice(0, 2).join('.');
       
-      if (scriptMajorMinor !== targetMajorMinor) {
+      if (scriptVersion !== targetVersion) {
         return new Response(JSON.stringify({ 
           error: `Version mismatch: script header says v${scriptVersion} but uploading as ${version}`,
           script_version: scriptVersion,
           target_version: version,
-          hint: 'The script content does not match the target version.'
+          hint: 'The script content does not match the target version. Exact version match required.'
         }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
