@@ -161,30 +161,34 @@ if [[ -f "$HASH_CACHE_JSON_PATH" ]]; then
     cached_sig=$(jq -r '.signature // ""' "$HASH_CACHE_JSON_PATH" 2>/dev/null)
     ed25519_pubkey_path="/opt/cybershield/keys/ed25519_server.pub"
     
-    if [[ -n "$cached_hash" && ${#cached_hash} -eq 64 ]]; then
-        # Step 1: Verify signature of cached hash (if sig + pubkey available)
-        sig_trusted="true"
-        if [[ -n "$cached_sig" && ${#cached_sig} -gt 10 && -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
-            _tmp_hash=$(mktemp)
-            _tmp_sig=$(mktemp)
-            echo -n "$cached_hash" > "$_tmp_hash"
-            echo "$cached_sig" | base64 -d > "$_tmp_sig" 2>/dev/null
-            if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
-                -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
-                logger -t CyberShield -p auth.err "INTEGRITY: Cached hash signature INVALID - ignoring tampered cache"
-                sig_trusted="false"
-            fi
-            rm -f "$_tmp_hash" "$_tmp_sig"
+    if [[ ${#cached_hash} -ne 64 ]]; then
+        logger -t CyberShield -p auth.err "INTEGRITY: JSON hash cache has invalid hash length (${#cached_hash}) - fail-closed"
+        echo "[SECURITY] CyberShield Agent integrity check failed: invalid hash in cache"
+        exit 9004
+    fi
+    
+    # Step 1: Verify signature of cached hash (if sig + pubkey available)
+    sig_trusted="true"
+    if [[ -n "$cached_sig" && ${#cached_sig} -gt 10 && -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
+        _tmp_hash=$(mktemp) || { logger -t CyberShield -p auth.err "INTEGRITY: mktemp failed - filesystem issue"; exit 9010; }
+        _tmp_sig=$(mktemp) || { rm -f "$_tmp_hash"; logger -t CyberShield -p auth.err "INTEGRITY: mktemp failed - filesystem issue"; exit 9010; }
+        echo -n "$cached_hash" > "$_tmp_hash"
+        echo "$cached_sig" | base64 -d > "$_tmp_sig" 2>/dev/null
+        if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
+            -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
+            logger -t CyberShield -p auth.err "INTEGRITY: Cached hash signature INVALID - ignoring tampered cache"
+            sig_trusted="false"
         fi
-        
-        # Step 2: Only compare hash if signature is trusted
-        if [[ "$sig_trusted" == "true" ]]; then
-            current_hash=$(sha256sum "$SCRIPT_PATH" 2>/dev/null | awk '{print $1}')
-            if [[ "${current_hash,,}" != "${cached_hash,,}" ]]; then
-                logger -t CyberShield -p auth.err "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected (signed): $cached_hash, Actual: $current_hash"
-                echo "[SECURITY] CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
-                exit 9003
-            fi
+        rm -f "$_tmp_hash" "$_tmp_sig"
+    fi
+    
+    # Step 2: Only compare hash if signature is trusted
+    if [[ "$sig_trusted" == "true" ]]; then
+        current_hash=$(sha256sum "$SCRIPT_PATH" 2>/dev/null | awk '{print $1}')
+        if [[ "${current_hash,,}" != "${cached_hash,,}" ]]; then
+            logger -t CyberShield -p auth.err "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected (signed): $cached_hash, Actual: $current_hash"
+            echo "[SECURITY] CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
+            exit 9003
         fi
     fi
 elif [[ -f "$HASH_CACHE_PATH" ]]; then
@@ -1631,8 +1635,8 @@ EOF
                     local ed25519_pubkey_path="${BASE_DIR}/keys/ed25519_server.pub"
                     if [[ -n "$hash_sig" && ${#hash_sig} -gt 10 && -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
                         local _tmp_hash _tmp_sig
-                        _tmp_hash=$(mktemp)
-                        _tmp_sig=$(mktemp)
+                        _tmp_hash=$(mktemp) || { log "ERROR" "[INTEGRITY] mktemp failed"; continue; }
+                        _tmp_sig=$(mktemp) || { rm -f "$_tmp_hash"; log "ERROR" "[INTEGRITY] mktemp failed"; continue; }
                         echo -n "${server_script_hash,,}" > "$_tmp_hash"
                         echo "$hash_sig" | base64 -d > "$_tmp_sig" 2>/dev/null
                         if openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
@@ -1694,9 +1698,14 @@ EOF
      
      log "INFO" "[FORCE UPDATE] Version: $target_version, Reason: $reason"
      
-     # Decode Base64 (secure temp file via mktemp to prevent symlink/pre-creation attacks)
+     # Decode Base64 (secure temp in SAME filesystem as target for atomic mv)
+     local current_script_dir
+     current_script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
      local temp_script
-     temp_script=$(mktemp /tmp/cybershield-force-update-XXXXXXXX.sh)
+     temp_script=$(mktemp "${current_script_dir}/.cybershield-update-XXXXXXXX.sh") || {
+         log "ERROR" "[FORCE UPDATE] mktemp failed - cannot create secure temp file"
+         return 1
+     }
      echo "$base64_content" | base64 -d > "$temp_script" 2>/dev/null
      
      if [[ ! -s "$temp_script" ]]; then
@@ -1729,8 +1738,8 @@ EOF
         local ed25519_pubkey_path="${BASE_DIR}/keys/ed25519_server.pub"
         if [[ -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
             local _tmp_hash _tmp_sig
-            _tmp_hash=$(mktemp)
-            _tmp_sig=$(mktemp)
+            _tmp_hash=$(mktemp) || { log "ERROR" "[FORCE UPDATE] mktemp failed"; return 1; }
+            _tmp_sig=$(mktemp) || { rm -f "$_tmp_hash"; log "ERROR" "[FORCE UPDATE] mktemp failed"; return 1; }
             echo -n "$actual_hash" > "$_tmp_hash"
             echo "$update_signature" | base64 -d > "$_tmp_sig" 2>/dev/null
             if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
