@@ -3,9 +3,7 @@
  */
 
 import { useTodayRiskDelta, useGenerateExecutiveReport, getDeltaInfo, formatCurrency } from '@/hooks/useRiskDelta';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useTenant } from '@/hooks/useTenant';
+import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,38 +15,13 @@ import {
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-function useFleetStatus() {
-  const { tenant } = useTenant();
-
-  return useQuery({
-    queryKey: ['fleet-status', tenant?.id],
-    queryFn: async () => {
-      if (!tenant?.id) return null;
-
-      const cutoff = new Date(Date.now() - 90 * 60 * 1000).toISOString();
-
-      const { data: agents } = await supabase
-        .from('agents')
-        .select('status, last_heartbeat, agent_name')
-        .eq('tenant_id', tenant.id)
-        .in('status', ['active', 'inactive']);
-
-      if (!agents || agents.length === 0) return { online: 0, offline: 0, total: 0 };
-
-      const online = agents.filter(a => a.last_heartbeat && a.last_heartbeat > cutoff).length;
-      const total = agents.length;
-
-      return { online, offline: total - online, total };
-    },
-    enabled: !!tenant?.id,
-    staleTime: 30 * 1000,
-    refetchInterval: 30 * 1000,
-  });
-}
-
 export function ExecutiveSummaryCard() {
   const { data: riskDelta, isLoading } = useTodayRiskDelta();
-  const { data: fleet, isLoading: fleetLoading } = useFleetStatus();
+  const { data: snapshots, isLoading: fleetLoading } = useAgentSnapshots();
+  const fleet = (() => {
+    const counts = getAgentStatusCounts(snapshots);
+    return counts.total > 0 ? { online: counts.online, offline: counts.offline + counts.warning + counts.never_connected, total: counts.total } : null;
+  })();
   const generateReport = useGenerateExecutiveReport();
 
   if (isLoading || fleetLoading) {
