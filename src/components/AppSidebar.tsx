@@ -77,14 +77,14 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   });
 
   const [sectionStates, setSectionStates] = useState<Record<string, boolean>>(() => {
-    const saved = localStorage.getItem('sidebar-sections-v4');
+    const saved = localStorage.getItem('sidebar-sections-v5');
     return saved ? JSON.parse(saved) : {
       protection: true,
-      management: false,
+      management: true,
       compliance: false,
       advanced: false,
       aiAnalysis: false,
-      superAdmin: true,
+      superAdmin: false,
       superOps: true,
       superFinance: false,
       superSystem: false,
@@ -96,7 +96,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('sidebar-sections-v4', JSON.stringify(sectionStates));
+    localStorage.setItem('sidebar-sections-v5', JSON.stringify(sectionStates));
   }, [sectionStates]);
 
   useEffect(() => {
@@ -133,121 +133,121 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   ], [urgentCount, t]);
 
   const protectionItems = useMemo<MenuItem[]>(() => [
-    { icon: AlertTriangle, label: t('adminPages.sidebar.alerts'), to: '/admin/security-monitoring' },
-    { icon: ShieldCheck, label: t('adminPages.sidebar.vulnerabilities'), to: '/admin/vulnerabilities' },
-    { icon: AlertCircle, label: t('adminPages.sidebar.quarantine'), to: '/quarantine' },
-    { icon: Globe, label: t('adminPages.sidebar.webNavigation'), to: '/admin/web-activity' },
+    { icon: AlertTriangle, label: 'Alertas', to: '/admin/security-monitoring' },
+    { icon: ShieldCheck, label: 'Vulnerabilidades', to: '/admin/vulnerabilities' },
+    { icon: AlertCircle, label: 'Quarentena', to: '/quarantine' },
+    { icon: Globe, label: 'Navegação Web', to: '/admin/web-activity' },
     { icon: Network, label: 'Filtro DNS', to: '/admin/dns-filter' },
-    { icon: ShieldAlert, label: 'Segurança Real-Time', to: '/admin/realtime-security' },
-    { icon: FileSearch, label: t('adminPages.sidebar.history'), to: '/admin/agent-timeline' },
-    { icon: ShieldAlert, label: 'Software Risk', to: '/admin/software-risk' },
-    { icon: AlertCircle, label: 'Alert Resolution', to: '/admin/alert-resolution' },
-  ], [t]);
+    { icon: ShieldAlert, label: 'Tempo Real', to: '/admin/realtime-security' },
+    { icon: FileSearch, label: 'Histórico', to: '/admin/agent-timeline' },
+    { icon: ShieldAlert, label: 'Risco de Software', to: '/admin/software-risk' },
+    { icon: AlertCircle, label: 'Resolver Alertas', to: '/admin/alert-resolution' },
+  ], []);
 
   const managementItems = useMemo<MenuItem[]>(() => [
-    { icon: Users, label: t('adminPages.sidebar.groups'), to: '/admin/agent-groups' },
+    { icon: Users, label: 'Grupos', to: '/admin/agent-groups' },
     { icon: Tag, label: 'Tags', to: '/admin/agent-tags' },
-    { icon: Shield, label: t('adminPages.sidebar.policies'), to: '/admin/security-policies' },
-    { icon: AppWindow, label: t('adminPages.sidebar.programs'), to: '/admin/software-inventory' },
-    { icon: Crown, label: t('adminPages.sidebar.team'), to: '/admin/members' },
+    { icon: Shield, label: 'Políticas', to: '/admin/security-policies' },
+    { icon: AppWindow, label: 'Programas', to: '/admin/software-inventory' },
+    { icon: Crown, label: 'Equipe', to: '/admin/members' },
     { icon: UserPlus, label: 'Convites', to: '/admin/invites' },
-    { icon: FileBarChart, label: t('adminPages.sidebar.reports'), to: '/admin/reports' },
-    { icon: Bell, label: t('adminPages.sidebar.notifications'), to: '/admin/notification-channels' },
-    { icon: Archive, label: 'Agentes Arquivados', to: '/admin/archived-agents' },
+    { icon: FileBarChart, label: 'Relatórios', to: '/admin/reports' },
+    { icon: Bell, label: 'Notificações', to: '/admin/notification-channels' },
+    { icon: Archive, label: 'Arquivados', to: '/admin/archived-agents' },
     { icon: ListTodo, label: 'Tarefas', to: '/admin/tasks' },
-    { icon: Settings, label: t('adminPages.sidebar.settings'), to: '/admin/tenant' },
+    { icon: Settings, label: 'Configurações', to: '/admin/tenant' },
     { icon: Fingerprint, label: 'Minha Conta', to: '/admin/my-account' },
-  ], [t]);
+  ], []);
 
   const complianceItems = useMemo<MenuItem[]>(() => [
-    { icon: ClipboardCheck, label: t('adminPages.sidebar.soc2'), to: '/admin/soc2-compliance' },
-    { icon: ScrollText, label: t('adminPages.sidebar.audit'), to: '/admin/system-audit' },
-    { icon: Scale, label: t('adminPages.sidebar.complianceLabel'), to: '/admin/compliance-timeline' },
-    { icon: FileText, label: 'Compliance Automation', to: '/admin/compliance-automation' },
-    { icon: Crosshair, label: 'Threat Intelligence', to: '/admin/threat-intelligence' },
-    { icon: Brain, label: t('adminPages.sidebar.aiRules'), to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
+    { icon: ClipboardCheck, label: 'SOC 2', to: '/admin/soc2-compliance' },
+    { icon: ScrollText, label: 'Auditoria', to: '/admin/system-audit' },
+    { icon: Scale, label: 'Conformidade', to: '/admin/compliance-timeline' },
+    { icon: FileText, label: 'Automação', to: '/admin/compliance-automation' },
+    { icon: Crosshair, label: 'Inteligência de Ameaças', to: '/admin/threat-intelligence' },
+    { icon: Brain, label: 'Regras IA', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
     { icon: Eye, label: 'Governança', to: '/admin/governance' },
-    { icon: FileBarChart, label: 'Relatórios Governança', to: '/admin/governance-reports' },
-    { icon: BookOpen, label: 'Pacote de Evidências', to: '/admin/evidence-bundle' },
+    { icon: FileBarChart, label: 'Relatórios Gov.', to: '/admin/governance-reports' },
+    { icon: BookOpen, label: 'Evidências', to: '/admin/evidence-bundle' },
     { icon: Workflow, label: 'Playbooks', to: '/admin/playbooks' },
     { icon: BarChart3, label: 'Score de Risco', to: '/admin/risk-score' },
-  ], [criticalInsightsCount, t]);
+  ], [criticalInsightsCount]);
 
   const advancedItems = useMemo<MenuItem[]>(() => [
-    { icon: Download, label: t('adminPages.sidebar.installations'), to: '/admin/installations' },
-    { icon: GitBranch, label: t('adminPages.sidebar.versions'), to: '/admin/agent-releases' },
-    { icon: Terminal, label: t('adminPages.sidebar.diagnostics'), to: '/admin/diagnostics' },
-    { icon: Clock, label: t('adminPages.sidebar.automations'), to: '/admin/automations' },
-    { icon: Zap, label: 'Auto-remediação', to: '/admin/auto-remediation' },
-    { icon: CreditCard, label: t('adminPages.sidebar.plans'), to: '/admin/plan-upgrade' },
-  ], [t]);
+    { icon: Download, label: 'Instalações', to: '/admin/installations' },
+    { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases' },
+    { icon: Terminal, label: 'Diagnóstico', to: '/admin/diagnostics' },
+    { icon: Clock, label: 'Automações', to: '/admin/automations' },
+    { icon: Zap, label: 'Correção Automática', to: '/admin/auto-remediation' },
+    { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
+  ], []);
 
-  // ─── AI & Análise (Admin) ─────────────────────
+  // ─── IA & Análise (Admin) ─────────────────────
   const aiAnalysisItems = useMemo<MenuItem[]>(() => [
-    { icon: BrainCircuit, label: 'AI Insights', to: '/admin/ai-insights' },
-    { icon: Sparkles, label: 'AI Actions', to: '/admin/ai-actions' },
-    { icon: AlertTriangle, label: 'AI Anomalies', to: '/admin/ai-anomalies' },
-    { icon: ThumbsUp, label: 'AI Feedback', to: '/admin/ai-feedback' },
-    { icon: Lightbulb, label: 'Insight Triage', to: '/admin/insight-triage' },
-    { icon: TrendingUp, label: 'Confidence Gap', to: '/admin/confidence-gap' },
-    { icon: FileSearch, label: 'Decision Audit', to: '/admin/decision-audit' },
-    { icon: BookOpen, label: 'Knowledge Base', to: '/admin/software-knowledge-base' },
+    { icon: BrainCircuit, label: 'Insights IA', to: '/admin/ai-insights' },
+    { icon: Sparkles, label: 'Ações IA', to: '/admin/ai-actions' },
+    { icon: AlertTriangle, label: 'Anomalias', to: '/admin/ai-anomalies' },
+    { icon: ThumbsUp, label: 'Feedback IA', to: '/admin/ai-feedback' },
+    { icon: Lightbulb, label: 'Triagem', to: '/admin/insight-triage' },
+    { icon: TrendingUp, label: 'Confiança IA', to: '/admin/confidence-gap' },
+    { icon: FileSearch, label: 'Auditoria IA', to: '/admin/decision-audit' },
+    { icon: BookOpen, label: 'Base de Conhecimento', to: '/admin/software-knowledge-base' },
   ], []);
 
   // ─── SUPER ADMIN Menu Items ─────────────────────
   const superOpsItems = useMemo<MenuItem[]>(() => [
-    { icon: Server, label: t('adminPages.sidebar.companies'), to: '/super-admin/tenants', end: true },
-    { icon: Key, label: t('adminPages.sidebar.enrollmentKeys'), to: '/super-admin/enrollment-keys' },
-    { icon: Percent, label: t('adminPages.sidebar.rollout'), to: '/super-admin/rollout-policies' },
-    { icon: Users, label: t('adminPages.sidebar.users'), to: '/super-admin/users' },
-    { icon: Shield, label: t('adminPages.sidebar.features'), to: '/super-admin/features' },
-    { icon: Clock, label: t('adminPages.sidebar.suspension'), to: '/super-admin/tenant-suspension' },
-  ], [t]);
+    { icon: Server, label: 'Empresas', to: '/super-admin/tenants', end: true },
+    { icon: Key, label: 'Chaves de Cadastro', to: '/super-admin/enrollment-keys' },
+    { icon: Percent, label: 'Rollout', to: '/super-admin/rollout-policies' },
+    { icon: Users, label: 'Usuários', to: '/super-admin/users' },
+    { icon: Shield, label: 'Funcionalidades', to: '/super-admin/features' },
+    { icon: Clock, label: 'Suspensão', to: '/super-admin/tenant-suspension' },
+  ], []);
 
   const superFinanceItems = useMemo<MenuItem[]>(() => [
-    { icon: BarChart3, label: t('adminPages.sidebar.metrics'), to: '/super-admin/metrics' },
-    { icon: PieChart, label: t('adminPages.sidebar.subscriptions'), to: '/super-admin/subscription-analytics' },
-    { icon: DollarSign, label: t('adminPages.sidebar.indicators'), to: '/super-admin/unit-economics' },
-    { icon: TrendingUp, label: t('adminPages.sidebar.retention'), to: '/super-admin/cohort-analysis' },
-    { icon: Target, label: t('adminPages.sidebar.projections'), to: '/super-admin/revenue-projections' },
-    { icon: Presentation, label: t('adminPages.sidebar.pipeline'), to: '/super-admin/sales-pipeline' },
-    { icon: Scale, label: t('adminPages.sidebar.presentation'), to: '/super-admin/pitch-deck' },
-    { icon: AlertTriangle, label: t('adminPages.sidebar.risksLabel'), to: '/super-admin/risk-analysis' },
-    { icon: CreditCard, label: t('adminPages.sidebar.payments'), to: '/super-admin/stripe-setup' },
-  ], [t]);
+    { icon: BarChart3, label: 'Métricas', to: '/super-admin/metrics' },
+    { icon: PieChart, label: 'Assinaturas', to: '/super-admin/subscription-analytics' },
+    { icon: DollarSign, label: 'Indicadores', to: '/super-admin/unit-economics' },
+    { icon: TrendingUp, label: 'Retenção', to: '/super-admin/cohort-analysis' },
+    { icon: Target, label: 'Projeções', to: '/super-admin/revenue-projections' },
+    { icon: Presentation, label: 'Pipeline', to: '/super-admin/sales-pipeline' },
+    { icon: Scale, label: 'Apresentação', to: '/super-admin/pitch-deck' },
+    { icon: AlertTriangle, label: 'Riscos', to: '/super-admin/risk-analysis' },
+    { icon: CreditCard, label: 'Pagamentos', to: '/super-admin/stripe-setup' },
+  ], []);
 
   const superSystemItems = useMemo<MenuItem[]>(() => [
-    { icon: ScrollText, label: t('adminPages.sidebar.auditLogs'), to: '/super-admin/audit-logs' },
-    { icon: Activity, label: t('adminPages.sidebar.logs'), to: '/super-admin/system-logs' },
+    { icon: ScrollText, label: 'Auditoria', to: '/super-admin/audit-logs' },
+    { icon: Activity, label: 'Logs', to: '/super-admin/system-logs' },
     { icon: Clock, label: 'Saúde dos Crons', to: '/admin/cron-health' },
-    { icon: Gauge, label: 'System Health', to: '/admin/system-health' },
-    { icon: Wrench, label: 'Job Health', to: '/admin/job-health' },
-    { icon: HardDrive, label: 'SLO Dashboard', to: '/admin/slo-dashboard' },
-    { icon: Database, label: 'Dead Letter Queue', to: '/admin/dead-letter-queue' },
-    { icon: Percent, label: 'Rate Limiting', to: '/admin/rate-limiting' },
-    { icon: GitBranch, label: 'Monitor de Versões', to: '/admin/agent-versions' },
-    { icon: BarChart, label: 'Performance Metrics', to: '/admin/performance-metrics' },
-    { icon: Heart, label: 'Installation Health', to: '/admin/installation-health' },
-    { icon: Activity, label: 'System Operations', to: '/admin/system-operations' },
-    { icon: Activity, label: 'System Logs', to: '/admin/system-logs' },
-    { icon: Download, label: 'Mass Reinstall', to: '/admin/mass-reinstall' },
-    { icon: Layers, label: 'Jobs V3 Migration', to: '/admin/jobs-v3-migration' },
-    { icon: Settings, label: t('adminPages.sidebar.settingsLabel'), to: '/super-admin/settings' },
-  ], [t]);
+    { icon: Gauge, label: 'Saúde do Sistema', to: '/admin/system-health' },
+    { icon: Wrench, label: 'Saúde dos Jobs', to: '/admin/job-health' },
+    { icon: HardDrive, label: 'Metas de Serviço', to: '/admin/slo-dashboard' },
+    { icon: Database, label: 'Fila de Erros', to: '/admin/dead-letter-queue' },
+    { icon: Percent, label: 'Limite de Uso', to: '/admin/rate-limiting' },
+    { icon: GitBranch, label: 'Versões dos Agentes', to: '/admin/agent-versions' },
+    { icon: BarChart, label: 'Performance', to: '/admin/performance-metrics' },
+    { icon: Heart, label: 'Saúde Instalação', to: '/admin/installation-health' },
+    { icon: Activity, label: 'Operações', to: '/admin/system-operations' },
+    { icon: Activity, label: 'Logs do Sistema', to: '/admin/system-logs' },
+    { icon: Download, label: 'Reinstalação em Massa', to: '/admin/mass-reinstall' },
+    { icon: Layers, label: 'Migração Jobs V3', to: '/admin/jobs-v3-migration' },
+    { icon: Settings, label: 'Configurações', to: '/super-admin/settings' },
+  ], []);
 
   const superAIItems = useMemo<MenuItem[]>(() => [
-    { icon: BarChart, label: 'AI Metrics', to: '/admin/ai-metrics' },
-    { icon: Eye, label: 'AI Governance', to: '/admin/ai-governance' },
-    { icon: Bot, label: 'AI Autonomy', to: '/admin/ai-autonomy' },
+    { icon: BarChart, label: 'Métricas IA', to: '/admin/ai-metrics' },
+    { icon: Eye, label: 'Governança IA', to: '/admin/ai-governance' },
+    { icon: Bot, label: 'Autonomia IA', to: '/admin/ai-autonomy' },
   ], []);
 
   const superIntegrationsItems = useMemo<MenuItem[]>(() => [
     { icon: Plug, label: 'ITSM', to: '/admin/itsm' },
-    { icon: FileText, label: 'SIEM Export', to: '/admin/siem-export' },
-    { icon: Palette, label: 'White Label', to: '/admin/white-label' },
+    { icon: FileText, label: 'Exportar SIEM', to: '/admin/siem-export' },
+    { icon: Palette, label: 'Marca Própria', to: '/admin/white-label' },
     { icon: Map, label: 'Plataformas', to: '/admin/platforms' },
-    { icon: Code, label: 'API Docs', to: '/admin/api-docs' },
-    { icon: Bell, label: 'Notification Settings', to: '/admin/notification-settings' },
+    { icon: Code, label: 'API', to: '/admin/api-docs' },
+    { icon: Bell, label: 'Notificações', to: '/admin/notification-settings' },
   ], []);
 
   // ─── Determine effective width ───────────────────
@@ -510,15 +510,15 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
 
               <div className="sidebar-divider-neon my-2 mx-2" />
 
-              {renderCollapsibleSection(t('adminPages.sidebar.protection'), 'protection', protectionItems)}
+              {renderCollapsibleSection('🛡️ Proteção', 'protection', protectionItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection(t('adminPages.sidebar.management'), 'management', managementItems)}
+              {renderCollapsibleSection('⚙️ Gestão', 'management', managementItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection(t('adminPages.sidebar.compliance'), 'compliance', complianceItems)}
+              {renderCollapsibleSection('📋 Conformidade', 'compliance', complianceItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection(t('adminPages.sidebar.advanced'), 'advanced', advancedItems)}
+              {renderCollapsibleSection('🔧 Avançado', 'advanced', advancedItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection('🤖 IA & Análise', 'aiAnalysis', aiAnalysisItems)}
+              {renderCollapsibleSection('🤖 Inteligência Artificial', 'aiAnalysis', aiAnalysisItems)}
             </motion.div>
           ) : (
             <motion.div className="space-y-0.5" variants={containerVariants} initial="hidden" animate="show">
@@ -570,13 +570,13 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                         className="overflow-hidden"
                       >
                         <div className="space-y-1 mt-1">
-                          {renderCollapsibleSection(t('adminPages.sidebar.operational'), 'superOps', superOpsItems, 'super')}
+                          {renderCollapsibleSection('Operacional', 'superOps', superOpsItems, 'super')}
                           <div className="my-1" />
-                          {renderCollapsibleSection(t('adminPages.sidebar.financial'), 'superFinance', superFinanceItems, 'super')}
+                          {renderCollapsibleSection('Financeiro', 'superFinance', superFinanceItems, 'super')}
                           <div className="my-1" />
-                          {renderCollapsibleSection(t('adminPages.sidebar.system'), 'superSystem', superSystemItems, 'super')}
+                          {renderCollapsibleSection('Sistema', 'superSystem', superSystemItems, 'super')}
                           <div className="my-1" />
-                          {renderCollapsibleSection('🤖 IA & Análise', 'superAI', superAIItems, 'super')}
+                          {renderCollapsibleSection('🤖 IA', 'superAI', superAIItems, 'super')}
                           <div className="my-1" />
                           {renderCollapsibleSection('🔌 Integrações', 'superIntegrations', superIntegrationsItems, 'super')}
                         </div>
