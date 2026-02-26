@@ -77,12 +77,13 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   });
 
   const [sectionStates, setSectionStates] = useState<Record<string, boolean>>(() => {
-    const saved = localStorage.getItem('sidebar-sections-v3');
+    const saved = localStorage.getItem('sidebar-sections-v4');
     return saved ? JSON.parse(saved) : {
       protection: true,
       management: false,
       compliance: false,
       advanced: false,
+      aiAnalysis: false,
       superAdmin: true,
       superOps: true,
       superFinance: false,
@@ -95,7 +96,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('sidebar-sections-v3', JSON.stringify(sectionStates));
+    localStorage.setItem('sidebar-sections-v4', JSON.stringify(sectionStates));
   }, [sectionStates]);
 
   useEffect(() => {
@@ -139,6 +140,8 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Network, label: 'Filtro DNS', to: '/admin/dns-filter' },
     { icon: ShieldAlert, label: 'Segurança Real-Time', to: '/admin/realtime-security' },
     { icon: FileSearch, label: t('adminPages.sidebar.history'), to: '/admin/agent-timeline' },
+    { icon: ShieldAlert, label: 'Software Risk', to: '/admin/software-risk' },
+    { icon: AlertCircle, label: 'Alert Resolution', to: '/admin/alert-resolution' },
   ], [t]);
 
   const managementItems = useMemo<MenuItem[]>(() => [
@@ -178,6 +181,18 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Zap, label: 'Auto-remediação', to: '/admin/auto-remediation' },
     { icon: CreditCard, label: t('adminPages.sidebar.plans'), to: '/admin/plan-upgrade' },
   ], [t]);
+
+  // ─── AI & Análise (Admin) ─────────────────────
+  const aiAnalysisItems = useMemo<MenuItem[]>(() => [
+    { icon: BrainCircuit, label: 'AI Insights', to: '/admin/ai-insights' },
+    { icon: Sparkles, label: 'AI Actions', to: '/admin/ai-actions' },
+    { icon: AlertTriangle, label: 'AI Anomalies', to: '/admin/ai-anomalies' },
+    { icon: ThumbsUp, label: 'AI Feedback', to: '/admin/ai-feedback' },
+    { icon: Lightbulb, label: 'Insight Triage', to: '/admin/insight-triage' },
+    { icon: TrendingUp, label: 'Confidence Gap', to: '/admin/confidence-gap' },
+    { icon: FileSearch, label: 'Decision Audit', to: '/admin/decision-audit' },
+    { icon: BookOpen, label: 'Knowledge Base', to: '/admin/software-knowledge-base' },
+  ], []);
 
   // ─── SUPER ADMIN Menu Items ─────────────────────
   const superOpsItems = useMemo<MenuItem[]>(() => [
@@ -221,19 +236,9 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   ], [t]);
 
   const superAIItems = useMemo<MenuItem[]>(() => [
-    { icon: BrainCircuit, label: 'AI Insights', to: '/admin/ai-insights' },
-    { icon: Sparkles, label: 'AI Actions', to: '/admin/ai-actions' },
     { icon: BarChart, label: 'AI Metrics', to: '/admin/ai-metrics' },
     { icon: Eye, label: 'AI Governance', to: '/admin/ai-governance' },
-    { icon: AlertTriangle, label: 'AI Anomalies', to: '/admin/ai-anomalies' },
     { icon: Bot, label: 'AI Autonomy', to: '/admin/ai-autonomy' },
-    { icon: ThumbsUp, label: 'AI Feedback', to: '/admin/ai-feedback' },
-    { icon: Lightbulb, label: 'Insight Triage', to: '/admin/insight-triage' },
-    { icon: TrendingUp, label: 'Confidence Gap', to: '/admin/confidence-gap' },
-    { icon: AlertCircle, label: 'Alert Resolution', to: '/admin/alert-resolution' },
-    { icon: FileSearch, label: 'Decision Audit', to: '/admin/decision-audit' },
-    { icon: ShieldAlert, label: 'Software Risk', to: '/admin/software-risk' },
-    { icon: BookOpen, label: 'Knowledge Base', to: '/admin/software-knowledge-base' },
   ], []);
 
   const superIntegrationsItems = useMemo<MenuItem[]>(() => [
@@ -512,6 +517,8 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
               {renderCollapsibleSection(t('adminPages.sidebar.compliance'), 'compliance', complianceItems)}
               <div className="my-1.5" />
               {renderCollapsibleSection(t('adminPages.sidebar.advanced'), 'advanced', advancedItems)}
+              <div className="my-1.5" />
+              {renderCollapsibleSection('🤖 IA & Análise', 'aiAnalysis', aiAnalysisItems)}
             </motion.div>
           ) : (
             <motion.div className="space-y-0.5" variants={containerVariants} initial="hidden" animate="show">
