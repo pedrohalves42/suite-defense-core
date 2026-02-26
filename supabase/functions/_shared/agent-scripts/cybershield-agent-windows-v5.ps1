@@ -1,5 +1,9 @@
 <#
-    CyberShield Agent - Windows v5.0.11 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.12 FULL ENTERPRISE
+
+    v5.0.12: JOB PARSING FIX - Handle wrapped {jobs:[...]} format from backend
+    - FIXED: Poll-Jobs now handles both wrapped object and flat array responses
+    - FIXED: Linux and macOS scripts updated with same fix
 
     v5.0.11: LOCAL DETECTION + TOAST ALERTS + PUSH TO BACKEND
     - NEW: Proactive Local Detection Module (runs every 5 min in main loop)
