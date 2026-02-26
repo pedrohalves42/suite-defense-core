@@ -47,7 +47,7 @@ const BREAKDOWN_CONFIG: Record<keyof RiskBreakdown, {
     icon: Activity,
     label: 'Taxa de Falhas',
     description: 'Alta taxa de falha em tarefas do sistema',
-    link: '/admin/jobs',
+    link: '/admin/jobs-health',
   },
 };
 

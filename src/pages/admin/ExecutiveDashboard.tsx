@@ -92,7 +92,7 @@ export default function ExecutiveDashboard() {
     const list = [];
     if (summaryData.offlineAgents > 0) list.push({ priority: 'high', title: `${summaryData.offlineAgents} computador${summaryData.offlineAgents > 1 ? 'es' : ''} offline`, link: '/admin/agent-health' });
     if (summaryData.pendingAlerts > 0) list.push({ priority: 'medium', title: `${summaryData.pendingAlerts} alerta${summaryData.pendingAlerts > 1 ? 's' : ''} pendente${summaryData.pendingAlerts > 1 ? 's' : ''}`, link: '/admin/action-center' });
-    if (summaryData.failedJobs > 0) list.push({ priority: 'medium', title: `${summaryData.failedJobs} job${summaryData.failedJobs > 1 ? 's' : ''} com falha hoje`, link: '/admin/jobs' });
+    if (summaryData.failedJobs > 0) list.push({ priority: 'medium', title: `${summaryData.failedJobs} tarefa${summaryData.failedJobs > 1 ? 's' : ''} com falha hoje`, link: '/admin/jobs-health' });
     return list;
   })();
 
