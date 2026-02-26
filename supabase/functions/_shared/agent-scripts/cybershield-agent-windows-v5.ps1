@@ -4530,9 +4530,9 @@ while ($true) {
                             Write-Log "[SAFE_MODE] Recovery limit reached (10 attempts) - staying in SAFE_MODE, will retry next main loop cycle" "ERROR"
                             break
                         }
-                    $recoveryDelay = [math]::Min(120 * [math]::Pow(1.5, $safeModeRecoveryAttempt - 1), 600)
-                    Write-Log "[SAFE_MODE] Recovery attempt #$safeModeRecoveryAttempt - waiting ${recoveryDelay}s..." "INFO"
-                    Start-Sleep -Seconds $recoveryDelay
+                        $recoveryDelay = [math]::Min(120 * [math]::Pow(1.5, $safeModeRecoveryAttempt - 1), 600)
+                        Write-Log "[SAFE_MODE] Recovery attempt #$safeModeRecoveryAttempt - waiting ${recoveryDelay}s..." "INFO"
+                        Start-Sleep -Seconds $recoveryDelay
                         $recoveryHb = Send-Heartbeat
                         if ($recoveryHb) {
                             $consecutiveHeartbeatFailures = 0
