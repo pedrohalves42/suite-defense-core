@@ -5,6 +5,7 @@ import { useTenant } from "@/hooks/useTenant";
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Activity, AlertCircle, Server, Clock, CheckCircle, Wifi, WifiOff, Shield, ShieldAlert, Archive } from "lucide-react";
+import { getOsDisplayName } from "@/lib/os-utils";
 import { toast } from "sonner";
 import { ErrorState } from "@/components/ErrorState";
 import { useQuery } from "@tanstack/react-query";
@@ -418,7 +419,7 @@ export default function AgentHealthMonitor() {
                       id={agent.id || ''}
                       name={agent.agent_name}
                       hostname={agent.hostname}
-                      osVersion={agent.os_version || agent.os_type}
+                      osVersion={getOsDisplayName(agent.os_type, agent.os_version || null)}
                       agentVersion={agent.agent_version}
                       isOnline={isOnline}
                       healthStatus={healthStatus}
