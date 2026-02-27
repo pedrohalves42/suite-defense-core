@@ -48,6 +48,7 @@ import CheckoutSuccess from "./pages/CheckoutSuccess";
 import CheckoutCancel from "./pages/CheckoutCancel";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
+import Privacidade from "./pages/Privacidade";
 import AuthDebug from "./pages/debug/AuthDebug";
 import SecurityDashboard from "./pages/admin/SecurityDashboard";
 import AgentMonitoringAdvanced from "./pages/AgentMonitoringAdvanced";
@@ -175,6 +176,7 @@ const App = () => (
             <Route path="/checkout/cancel" element={<CheckoutCancel />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/privacidade" element={<Privacidade />} />
             <Route path="/verificar/:laudoId" element={<VerificarLaudo />} />
             <Route path="/verificar-laudo" element={<VerificarLaudo />} />
             <Route path="/approve" element={<ApprovePage />} />
