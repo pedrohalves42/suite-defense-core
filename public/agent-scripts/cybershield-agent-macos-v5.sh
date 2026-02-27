@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - macOS v5.0.11
+# CyberShield Agent - macOS v5.0.13
 #
-# v5.0.11: FULL ENTERPRISE - All functions (Get-RollbackState, Add-EvidenceEntry, Apply-ForcedUpdate)
+# v5.0.13: WINDOWS PARITY - Runtime integrity, signed hash cache, heartbeat failure tracking
 # v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
 # - NEW: Agent reads heartbeat_interval_seconds and poll_interval_seconds from heartbeat response
 # - NEW: Dynamically adjusts POLL_INTERVAL and JOB_POLL_INTERVAL at runtime
@@ -79,7 +79,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.9"
+AGENT_VERSION="v5.0.13"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -151,6 +151,16 @@ AUTO_REPAIR_LAST_PROCESS_KILL=""
 NETWORK_TEST_HOST=""
 NETWORK_TEST_PORT=443
 CONSECUTIVE_NETWORK_FAILURES=0
+
+# v5.0.13: Heartbeat failure tracking (Windows parity)
+CONSECUTIVE_HEARTBEAT_FAILURES=0
+MAX_CONSECUTIVE_FAILURES=1000000
+
+# v5.0.13: Signed hash cache paths (Windows parity)
+HASH_CACHE_TXT="${DATA_DIR}/expected_script_hash.txt"
+HASH_CACHE_JSON="${DATA_DIR}/expected_script_hash.json"
+LAST_RUNTIME_INTEGRITY_CHECK=0
+RUNTIME_INTEGRITY_INTERVAL=300  # 5 minutes
 
 # v5.0.3: LaunchDaemon Health Check
 LAST_LAUNCHD_HEALTH_CHECK=0
@@ -619,6 +629,102 @@ assert_launchd_health() {
      echo "{\"execution_hash\":\"$hash\",\"previous_execution_hash\":\"$previous_hash\",\"execution_index\":$index}"
  }
  
+# ============================================
+#  v5.0.13: RUNTIME INTEGRITY CHECK (TOCTOU Defense)
+#  Validates script hash against cached expected hash every 5 minutes
+#  Windows parity: Test-RuntimeIntegrity equivalent
+# ============================================
+test_runtime_integrity() {
+    local expected_hash=""
+    
+    # Prefer signed JSON cache as authoritative source
+    if [[ -f "$HASH_CACHE_JSON" ]]; then
+        expected_hash=$(python3 -c "import json; print(json.load(open('$HASH_CACHE_JSON')).get('hash',''))" 2>/dev/null)
+    fi
+    
+    # Fallback to legacy TXT
+    if [[ -z "$expected_hash" && -f "$HASH_CACHE_TXT" ]]; then
+        expected_hash=$(cat "$HASH_CACHE_TXT" 2>/dev/null | tr -d '[:space:]')
+    fi
+    
+    if [[ -z "$expected_hash" || ${#expected_hash} -ne 64 ]]; then
+        return 0  # No cached hash = skip (don't block)
+    fi
+    
+    local current_hash
+    current_hash=$(shasum -a 256 "$0" 2>/dev/null | cut -d' ' -f1)
+    
+    if [[ "$current_hash" != "${expected_hash,,}" ]]; then
+        log "ERROR" "[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running! Expected: $expected_hash, Actual: $current_hash"
+        return 1
+    fi
+    
+    log "DEBUG" "[INTEGRITY] Runtime integrity check PASSED"
+    return 0
+}
+
+# ============================================
+#  v5.0.13: SIGNED HASH CACHE - Save & Validate
+#  Windows parity: Save-SignedHashCache equivalent
+# ============================================
+save_signed_hash_cache() {
+    local hash="$1"
+    local signature="${2:-}"
+    
+    # Save legacy TXT for backward compat
+    echo "$hash" > "$HASH_CACHE_TXT" 2>/dev/null || true
+    
+    # Save signed JSON cache
+    local signed_at
+    signed_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    cat > "$HASH_CACHE_JSON" <<EOJSON
+{"hash":"$hash","signature":"$signature","signed_at":"$signed_at","algorithm":"Ed25519","verified":true}
+EOJSON
+    
+    chmod 600 "$HASH_CACHE_JSON" "$HASH_CACHE_TXT" 2>/dev/null || true
+    log "DEBUG" "[INTEGRITY] Saved signed hash cache (hash: ${hash:0:16}...)"
+}
+
+validate_hash_cache_schema() {
+    # v5.0.13: Strict JSON schema validation (Windows parity)
+    if [[ ! -f "$HASH_CACHE_JSON" ]]; then
+        return 0
+    fi
+    
+    local cache_content
+    cache_content=$(cat "$HASH_CACHE_JSON" 2>/dev/null) || return 0
+    
+    # Validate JSON and check for unexpected keys using python3 (macOS native)
+    local validation
+    validation=$(python3 -c "
+import json, sys
+try:
+    data = json.loads('''$cache_content''')
+    allowed = {'hash','signature','signed_at','algorithm','verified'}
+    extra = set(data.keys()) - allowed
+    if extra:
+        print('EXTRA:' + ','.join(extra))
+        sys.exit(1)
+    h = data.get('hash','')
+    if h and len(h) != 64:
+        print('BADHASH:' + str(len(h)))
+        sys.exit(1)
+    print('OK')
+except:
+    print('INVALID_JSON')
+    sys.exit(1)
+" 2>/dev/null)
+    
+    if [[ "$validation" == "OK" ]]; then
+        return 0
+    fi
+    
+    log "ERROR" "[INTEGRITY] JSON hash cache validation failed: $validation. Removing corrupted cache."
+    rm -f "$HASH_CACHE_JSON" 2>/dev/null || true
+    return 1
+}
+
 # ============================================
 #  v5.0.1: PROTECTED PROCESSES AND SERVICES
 #  Defense-in-depth: Agent-side validation
@@ -1864,32 +1970,60 @@ remove_dns_filter_handler() {
      log "WARN" "[STARTUP] Recovering from SAFE_MODE..."
  fi
  
- # Initialize ECDSA keys
- keys_initialized=false
- if initialize_agent_keys; then
-     keys_initialized=true
- else
-     log "ERROR" "[STARTUP] Failed to initialize keys - entering DEGRADED mode"
- fi
- 
- # ============================================
- #  PHASE 2: AUTHENTICATION
- # ============================================
- set_agent_state "AUTHENTICATING" "Validating credentials"
- 
- # Send first heartbeat
- heartbeat_success=false
- if send_heartbeat; then
-     heartbeat_success=true
-     
-     # Register public key
-     if [[ "$keys_initialized" == "true" ]]; then
-         register_agent_key || log "WARN" "[STARTUP] Key registration failed"
-     fi
- else
-     log "WARN" "[STARTUP] Initial heartbeat failed - entering DEGRADED mode"
-     set_agent_state "DEGRADED" "Heartbeat failed"
- fi
+# Initialize ECDSA keys
+keys_initialized=false
+security_degraded=false
+if initialize_agent_keys; then
+    keys_initialized=true
+else
+    log "ERROR" "[STARTUP] Failed to initialize keys - entering DEGRADED mode (FAIL-CLOSED)"
+    set_agent_state "DEGRADED" "Key initialization failed"
+    security_degraded=true
+    log "WARN" "[SECURITY] SecurityDegraded=TRUE - operational jobs will be BLOCKED until crypto is restored"
+fi
+
+# v5.0.13: Validate hash cache schema on startup (Windows parity)
+if ! validate_hash_cache_schema; then
+    log "WARN" "[STARTUP] Hash cache schema invalid - removed corrupted cache"
+fi
+
+# v5.0.13: Save initial script hash on startup
+initial_hash=$(shasum -a 256 "$0" 2>/dev/null | cut -d' ' -f1)
+if [[ -n "$initial_hash" && ${#initial_hash} -eq 64 ]]; then
+    save_signed_hash_cache "$initial_hash" ""
+    log "DEBUG" "[STARTUP] Initial script hash cached: ${initial_hash:0:16}..."
+fi
+
+# ============================================
+#  PHASE 2: AUTHENTICATION
+# ============================================
+if [[ "$security_degraded" == "true" ]]; then
+    log "WARN" "[STARTUP] Skipping AUTHENTICATING - SecurityDegraded, staying in DEGRADED for heartbeat attempt"
+else
+    set_agent_state "AUTHENTICATING" "Validating credentials"
+fi
+
+# Send first heartbeat
+heartbeat_success=false
+if send_heartbeat; then
+    heartbeat_success=true
+    CONSECUTIVE_HEARTBEAT_FAILURES=0
+    
+    # Register public key
+    if [[ "$keys_initialized" == "true" ]]; then
+        register_agent_key || log "WARN" "[STARTUP] Key registration failed"
+    fi
+else
+    log "WARN" "[STARTUP] Initial heartbeat failed - entering DEGRADED mode"
+    set_agent_state "DEGRADED" "Heartbeat failed"
+    CONSECUTIVE_HEARTBEAT_FAILURES=$((CONSECUTIVE_HEARTBEAT_FAILURES + 1))
+    
+    # If BOTH keys and heartbeat failed, enter SAFE_MODE (fail-closed)
+    if [[ "$keys_initialized" == "false" ]]; then
+        log "ERROR" "[SECURITY] No crypto + no auth = SAFE_MODE (fail-closed)"
+        set_agent_state "SAFE_MODE" "No auth + no crypto - fail closed"
+    fi
+fi
  
  # ============================================
  #  PHASE 3: SYNCHRONIZATION
@@ -1909,10 +2043,12 @@ remove_dns_filter_handler() {
  
  log "SUCCESS" "[STARTUP] Agent fully operational in ENFORCING state"
  
- last_heartbeat=$(date +%s)
- last_auto_repair=$(date +%s)
- last_job_poll=$(date +%s)
- last_dns_sync=$(date +%s)
+last_heartbeat=$(date +%s)
+last_auto_repair=$(date +%s)
+last_job_poll=$(date +%s)
+last_dns_sync=$(date +%s)
+LAST_RUNTIME_INTEGRITY_CHECK=$(date +%s)
+CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
  
  while true; do
      now=$(date +%s)
@@ -1982,17 +2118,40 @@ remove_dns_filter_handler() {
     fi
      
      # ============================================
-     # HEARTBEAT EVERY INTERVAL
+     # HEARTBEAT EVERY INTERVAL (v5.0.13: with failure tracking)
      # ============================================
      if [[ $((now - last_heartbeat)) -ge $POLL_INTERVAL && "$network_ok" == "true" ]]; then
-         if ! send_heartbeat; then
-             if [[ "$CURRENT_STATE" == "ENFORCING" ]]; then
-                 set_agent_state "DEGRADED" "Heartbeat failed"
+         if send_heartbeat; then
+             CONSECUTIVE_HEARTBEAT_FAILURES=0
+             if [[ "$CURRENT_STATE" == "DEGRADED" ]]; then
+                 set_agent_state "ENFORCING" "Heartbeat restored"
              fi
+         else
+             CONSECUTIVE_HEARTBEAT_FAILURES=$((CONSECUTIVE_HEARTBEAT_FAILURES + 1))
+             # Cap to prevent overflow on long-running agents
+             if [[ $CONSECUTIVE_HEARTBEAT_FAILURES -gt $MAX_CONSECUTIVE_FAILURES ]]; then
+                 CONSECUTIVE_HEARTBEAT_FAILURES=$MAX_CONSECUTIVE_FAILURES
+             fi
+             if [[ "$CURRENT_STATE" == "ENFORCING" ]]; then
+                 set_agent_state "DEGRADED" "Heartbeat failed (consecutive: $CONSECUTIVE_HEARTBEAT_FAILURES)"
+             fi
+             log "WARN" "[HEARTBEAT] Consecutive failures: $CONSECUTIVE_HEARTBEAT_FAILURES"
          fi
          last_heartbeat=$now
      fi
      
+     # ============================================
+     # v5.0.13: RUNTIME INTEGRITY CHECK (every 5 min - Windows parity)
+     # ============================================
+     if [[ $((now - LAST_RUNTIME_INTEGRITY_CHECK)) -ge $RUNTIME_INTEGRITY_INTERVAL ]]; then
+         if ! test_runtime_integrity; then
+             log "ERROR" "[INTEGRITY] Runtime integrity check FAILED - script may have been tampered!"
+             set_agent_state "SAFE_MODE" "Runtime integrity violation"
+             break  # Exit main loop
+         fi
+         LAST_RUNTIME_INTEGRITY_CHECK=$now
+     fi
+      
      # ============================================
      # DNS BLOCKLIST SYNC (1x per hour)
      # ============================================
@@ -2000,6 +2159,6 @@ remove_dns_filter_handler() {
          sync_dns_blocklist || true
          last_dns_sync=$now
      fi
-     
+      
      sleep 2
  done

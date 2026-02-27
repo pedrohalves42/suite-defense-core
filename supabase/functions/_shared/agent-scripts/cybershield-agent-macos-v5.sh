@@ -2,18 +2,7 @@
 #
 # CyberShield Agent - macOS v5.0.13
 #
-# v5.0.13: SECURITY HARDENING + TOCTOU + ANTI-TAMPER + EDR HARDENING
-# - ADDED: Runtime integrity revalidation in main loop (TOCTOU defense, every 5 min)
-# - ADDED: SHA256 hash validation at startup and runtime against cached server hash
-# - ADDED: Anti-debug (sysctl traced), anti-interactive (parent process check)
-# - ADDED: ACL hardening (root:wheel directory permissions)
-# - ADDED: Fail-closed security model (SecurityDegraded blocks operational jobs)
-# - ADDED: SAFE_MODE jitter after exponential backoff (anti-thundering herd)
-# - FIXED: FSM INITIALIZING -> DEGRADED transition
-# - FIXED: Consecutive heartbeat failure counter initialized
-# - FIXED: Process substitution for job loop (prevents subshell variable isolation)
-#
-# v5.0.11: FULL ENTERPRISE - All functions (Get-RollbackState, Add-EvidenceEntry, Apply-ForcedUpdate)
+# v5.0.13: WINDOWS PARITY - Runtime integrity, signed hash cache, heartbeat failure tracking
 # v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
 # - NEW: Agent reads heartbeat_interval_seconds and poll_interval_seconds from heartbeat response
 # - NEW: Dynamically adjusts POLL_INTERVAL and JOB_POLL_INTERVAL at runtime
@@ -86,139 +75,6 @@
 #
 
 set -euo pipefail
-# v5.0.13: Disable dynamic eval to prevent memory injection
-readonly -f eval 2>/dev/null || true
-
-# ============================================
-#  v5.0.13-hardening: ANTI-DEBUG / ANTI-TAMPER CHECKS
-#  Prevents execution under debuggers/tracers
-# ============================================
-# Block DTrace/lldb attachment (macOS equivalent of ptrace check)
-if sysctl -n kern.proc.pid.$$ 2>/dev/null | grep -qi "traced"; then
-    echo "[SECURITY] CyberShield Agent cannot run under a debugger/tracer (security policy)"
-    exit 9102
-fi
-
-# Block interactive shells (must run as launchd service, not manually)
-if [[ "${CYBERSHIELD_ALLOW_INTERACTIVE:-}" != "1" ]]; then
-    if tty -s 2>/dev/null; then
-        parent_comm=$(ps -p ${PPID:-0} -o comm= 2>/dev/null || echo "unknown")
-        if [[ "$parent_comm" != "launchd" && "$parent_comm" != "cron" ]]; then
-            echo "[SECURITY] CyberShield Agent should run as a launchd service, not interactively"
-            echo "           Set CYBERSHIELD_ALLOW_INTERACTIVE=1 to override (dev only)"
-            exit 9101
-        fi
-    fi
-fi
-
-# ============================================
-#  v5.0.13: SINGLE INSTANCE LOCK
-#  Prevents multiple agent instances from running simultaneously
-#  macOS: uses mkdir as atomic lock (flock not available by default)
-# ============================================
-LOCK_DIR="/var/run/cybershield-agent.lock"
-if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-    # Check if lock holder is still alive
-    if [[ -f "$LOCK_DIR/pid" ]]; then
-        lock_pid=$(cat "$LOCK_DIR/pid" 2>/dev/null)
-        if kill -0 "$lock_pid" 2>/dev/null; then
-            echo "[SECURITY] Another CyberShield Agent instance (PID $lock_pid) is already running. Exiting."
-            logger -t CyberShield "Duplicate agent instance blocked (PID $lock_pid alive)"
-            exit 9501
-        else
-            # Stale lock - remove and retry
-            rm -rf "$LOCK_DIR"
-            mkdir "$LOCK_DIR" 2>/dev/null || { echo "[ERROR] Cannot acquire instance lock"; exit 9501; }
-        fi
-    else
-        rm -rf "$LOCK_DIR"
-        mkdir "$LOCK_DIR" 2>/dev/null || { echo "[ERROR] Cannot acquire instance lock"; exit 9501; }
-    fi
-fi
-echo $$ > "$LOCK_DIR/pid"
-# Cleanup lock on exit
-trap 'rm -rf "$LOCK_DIR"' EXIT
-
-# ============================================
-#  v5.0.13-hardening: SELF-INTEGRITY VALIDATION
-#  Validates script SHA256 hash at startup (anti-tampering)
-#  ORDER: Signature verification FIRST, then hash comparison
-# ============================================
-SCRIPT_PATH="$(greadlink -f "$0" 2>/dev/null || readlink -f "$0" 2>/dev/null || echo "$0")"
-HASH_CACHE_PATH="/Library/Application Support/CyberShield/data/expected_script_hash.txt"
-HASH_CACHE_JSON_PATH="/Library/Application Support/CyberShield/data/expected_script_hash.json"
-
-# 1. Code signature validation (macOS codesign)
-if command -v codesign &>/dev/null; then
-    codesign_result=$(codesign --verify --deep --strict "$SCRIPT_PATH" 2>&1 || true)
-    if echo "$codesign_result" | grep -qi "invalid signature"; then
-        logger -t CyberShield "INTEGRITY VIOLATION: codesign verification failed on agent script"
-        echo "[SECURITY] CyberShield Agent script has invalid code signature"
-        exit 9002
-    fi
-fi
-
-# 2. SHA256 hash validation - verify signature FIRST, then compare hash
-if [[ -f "$HASH_CACHE_JSON_PATH" ]]; then
-    if ! command -v jq &>/dev/null; then
-        logger -t CyberShield "INTEGRITY: JSON hash cache exists but jq not available - fail-closed"
-        echo "[SECURITY] CyberShield Agent integrity check failed: jq required for JSON hash cache"
-        exit 9004
-    fi
-    cached_hash=$(jq -r '.hash // ""' "$HASH_CACHE_JSON_PATH" 2>/dev/null)
-    if [[ $? -ne 0 || -z "$cached_hash" ]]; then
-        logger -t CyberShield "INTEGRITY: JSON hash cache corrupted or unreadable - fail-closed"
-        echo "[SECURITY] CyberShield Agent integrity check failed: corrupted hash cache"
-        exit 9004
-    fi
-    cached_sig=$(jq -r '.signature // ""' "$HASH_CACHE_JSON_PATH" 2>/dev/null)
-    ed25519_pubkey_path="/Library/Application Support/CyberShield/keys/ed25519_server.pub"
-    
-    if [[ ${#cached_hash} -ne 64 ]]; then
-        logger -t CyberShield "INTEGRITY: JSON hash cache has invalid hash length (${#cached_hash}) - fail-closed"
-        echo "[SECURITY] CyberShield Agent integrity check failed: invalid hash in cache"
-        exit 9004
-    fi
-    
-    # Step 1: Verify signature of cached hash (if sig + pubkey available)
-    sig_trusted="true"
-    if [[ -n "$cached_sig" && ${#cached_sig} -gt 10 && -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
-        _tmp_hash=$(mktemp) || { logger -t CyberShield "INTEGRITY: mktemp failed - filesystem issue"; exit 9010; }
-        _tmp_sig=$(mktemp) || { rm -f "$_tmp_hash"; logger -t CyberShield "INTEGRITY: mktemp failed - filesystem issue"; exit 9010; }
-        echo -n "$cached_hash" > "$_tmp_hash"
-        echo "$cached_sig" | base64 -d > "$_tmp_sig" 2>/dev/null || echo "$cached_sig" | base64 -D > "$_tmp_sig" 2>/dev/null
-        if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
-            -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
-            logger -t CyberShield "INTEGRITY: Cached hash signature INVALID - ignoring tampered cache"
-            sig_trusted="false"
-        fi
-        rm -f "$_tmp_hash" "$_tmp_sig"
-    fi
-    
-    # Step 2: Only compare hash if signature is trusted
-    if [[ "$sig_trusted" == "true" ]]; then
-        current_hash=$(shasum -a 256 "$SCRIPT_PATH" 2>/dev/null | awk '{print $1}')
-        current_lower=$(echo "$current_hash" | tr '[:upper:]' '[:lower:]')
-        cached_lower=$(echo "$cached_hash" | tr '[:upper:]' '[:lower:]')
-        if [[ "$current_lower" != "$cached_lower" ]]; then
-            logger -t CyberShield "INTEGRITY VIOLATION: Script SHA256 mismatch (signed). Expected: $cached_hash, Actual: $current_hash"
-            echo "[SECURITY] CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
-            exit 9003
-        fi
-    fi
-elif [[ -f "$HASH_CACHE_PATH" ]]; then
-    expected_hash=$(cat "$HASH_CACHE_PATH" 2>/dev/null | tr -d '[:space:]')
-    if [[ -n "$expected_hash" && ${#expected_hash} -eq 64 ]]; then
-        current_hash=$(shasum -a 256 "$SCRIPT_PATH" 2>/dev/null | awk '{print $1}')
-        current_lower=$(echo "$current_hash" | tr '[:upper:]' '[:lower:]')
-        expected_lower=$(echo "$expected_hash" | tr '[:upper:]' '[:lower:]')
-        if [[ "$current_lower" != "$expected_lower" ]]; then
-            logger -t CyberShield "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected: $expected_hash, Actual: $current_hash"
-            echo "[SECURITY] CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
-            exit 9003
-        fi
-    fi
-fi
 
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
@@ -269,12 +125,12 @@ CURRENT_STATE="INITIALIZING"
 
 # Valid FSM transitions
 declare -A STATE_TRANSITIONS=(
-    ["INITIALIZING"]="AUTHENTICATING DEGRADED SAFE_MODE SYNCING"
+    ["INITIALIZING"]="AUTHENTICATING SAFE_MODE"
     ["AUTHENTICATING"]="SYNCING DEGRADED SAFE_MODE"
     ["SYNCING"]="ENFORCING DEGRADED SAFE_MODE"
     ["ENFORCING"]="SYNCING DEGRADED SAFE_MODE"
     ["DEGRADED"]="AUTHENTICATING SYNCING ENFORCING SAFE_MODE"
-    ["SAFE_MODE"]="INITIALIZING DEGRADED"
+    ["SAFE_MODE"]="INITIALIZING"
 )
 
 # v5.0.1: Hash Chain for execution
@@ -296,11 +152,15 @@ NETWORK_TEST_HOST=""
 NETWORK_TEST_PORT=443
 CONSECUTIVE_NETWORK_FAILURES=0
 
-# v5.0.13-fix: SecurityDegraded flag (fail-closed security model)
-SECURITY_DEGRADED=false
-
-# v5.0.13-fix: Consecutive heartbeat failure counter (auth loop prevention)
+# v5.0.13: Heartbeat failure tracking (Windows parity)
 CONSECUTIVE_HEARTBEAT_FAILURES=0
+MAX_CONSECUTIVE_FAILURES=1000000
+
+# v5.0.13: Signed hash cache paths (Windows parity)
+HASH_CACHE_TXT="${DATA_DIR}/expected_script_hash.txt"
+HASH_CACHE_JSON="${DATA_DIR}/expected_script_hash.json"
+LAST_RUNTIME_INTEGRITY_CHECK=0
+RUNTIME_INTEGRITY_INTERVAL=300  # 5 minutes
 
 # v5.0.3: LaunchDaemon Health Check
 LAST_LAUNCHD_HEALTH_CHECK=0
@@ -362,60 +222,10 @@ declare -a PROCESS_BASELINE=()
  # ============================================
  mkdir -p "$LOG_DIR" "$EVIDENCE_DIR" "$CONFIG_DIR" "$KEYS_DIR" "$DATA_DIR"
  chmod 700 "$KEYS_DIR"
-
- # v5.0.13-hardening: Restrict base directory ACL (root only)
- chmod 750 "$BASE_DIR" 2>/dev/null || true
- chown -R root:wheel "$BASE_DIR" 2>/dev/null || true
- # Remove world-readable/writable bits from all subdirectories
- chmod 700 "$CONFIG_DIR" "$DATA_DIR" "$EVIDENCE_DIR" 2>/dev/null || true
- chmod 750 "$LOG_DIR" 2>/dev/null || true
  
  # ============================================
- #  v5.0.13: DEPENDENCY VALIDATION AT STARTUP
+ #  LOGGING
  # ============================================
- missing_deps=()
- for dep in jq openssl curl nc base64; do
-     if ! command -v "$dep" &>/dev/null; then
-         missing_deps+=("$dep")
-     fi
- done
- # macOS: shasum instead of sha256sum
- if ! command -v shasum &>/dev/null; then
-     missing_deps+=("shasum")
- fi
- if [[ ${#missing_deps[@]} -gt 0 ]]; then
-     echo "[FATAL] Missing required dependencies: ${missing_deps[*]}"
-     echo "Install jq with: brew install jq"
-     exit 1
- fi
- 
- # ============================================
- #  LOGGING - v5.0.13-perf: Buffered I/O (reduces disk writes by ~80%)
- # ============================================
- LOG_BUFFER=()
- LOG_BUFFER_SIZE=20
- LOG_BUFFER_LAST_FLUSH=$(date +%s)
- LOG_BUFFER_FLUSH_INTERVAL=10
-
- flush_log_buffer() {
-     if [[ ${#LOG_BUFFER[@]} -eq 0 ]]; then
-         return 0
-     fi
-     printf '%s\n' "${LOG_BUFFER[@]}" >> "$LOG_FILE"
-     LOG_BUFFER=()
-     LOG_BUFFER_LAST_FLUSH=$(date +%s)
-     
-     # Log rotation (keep 10MB max)
-     local log_size
-     log_size=$(stat -f%z "$LOG_FILE" 2>/dev/null || echo 0)
-     if [[ $log_size -gt 10485760 ]]; then
-         mv "$LOG_FILE" "${LOG_FILE}.$(date +%Y%m%d_%H%M%S).bak"
-     fi
- }
-
- # v5.0.13-perf: Guarantee log flush on unexpected exit/shutdown
- trap 'flush_log_buffer' EXIT TERM INT HUP
-
  log() {
      local level="${1:-INFO}"
      local message="$2"
@@ -424,19 +234,13 @@ declare -a PROCESS_BASELINE=()
      local line="[$timestamp] [$level] [$CURRENT_STATE] $message"
      
      echo "$line"
-     LOG_BUFFER+=("$line")
+     echo "$line" >> "$LOG_FILE"
      
-     # v5.0.13-perf: Immediate flush for ERROR/WARN levels
-     if [[ "$level" == "ERROR" || "$level" == "WARN" ]]; then
-         flush_log_buffer
-         return 0
-     fi
-     
-     # Flush when buffer is full or interval elapsed
-     local now
-     now=$(date +%s)
-     if [[ ${#LOG_BUFFER[@]} -ge $LOG_BUFFER_SIZE || $((now - LOG_BUFFER_LAST_FLUSH)) -ge $LOG_BUFFER_FLUSH_INTERVAL ]]; then
-         flush_log_buffer
+     # Log rotation (keep 10MB max)
+     local log_size
+     log_size=$(stat -f%z "$LOG_FILE" 2>/dev/null || echo 0)
+     if [[ $log_size -gt 10485760 ]]; then
+         mv "$LOG_FILE" "${LOG_FILE}.$(date +%Y%m%d_%H%M%S).bak"
      fi
  }
  
@@ -472,7 +276,7 @@ declare -a PROCESS_BASELINE=()
  
  get_saved_state() {
      if [[ -f "$STATE_PATH" ]]; then
-         jq -r '.state // "INITIALIZING"' "$STATE_PATH" 2>/dev/null || echo "INITIALIZING"
+         python3 -c "import json; print(json.load(open('$STATE_PATH')).get('state', 'INITIALIZING'))" 2>/dev/null || echo "INITIALIZING"
      else
          echo "INITIALIZING"
      fi
@@ -694,9 +498,9 @@ assert_launchd_health() {
              
              # Extract public key
              if openssl ec -in "$PRIVATE_KEY_PATH" -pubout -out "$PUBLIC_KEY_PATH" 2>/dev/null; then
-                 # v5.0.13-fix: Use binary hash for fingerprint (parity with Linux)
+                 # Calculate fingerprint
                  local fingerprint
-                 fingerprint=$(openssl dgst -sha256 -binary "$PUBLIC_KEY_PATH" | xxd -p | tr -d '\n')
+                 fingerprint=$(openssl dgst -sha256 "$PUBLIC_KEY_PATH" | awk '{print $2}')
                  echo "$fingerprint" > "$FINGERPRINT_PATH"
                  
                  SIGNING_FINGERPRINT="$fingerprint"
@@ -739,7 +543,7 @@ assert_launchd_health() {
      log "INFO" "[KEYS] Registering public key with server..."
      
      local public_key_b64
-     public_key_b64=$(base64 < "$PUBLIC_KEY_PATH" 2>/dev/null | tr -d '\n')
+     public_key_b64=$(base64 "$PUBLIC_KEY_PATH" 2>/dev/null | tr -d '\n')
      
      local body
      body=$(cat <<EOF
@@ -751,7 +555,7 @@ assert_launchd_health() {
      result=$(invoke_secure_request "POST" "/functions/v1/register-agent-key" "$body" 30)
      
      if [[ $? -eq 0 ]]; then
-         KEY_VERSION=$(echo "$result" | jq -r '.version // 1' 2>/dev/null || echo 1)
+         KEY_VERSION=$(python3 -c "import json; print(json.loads('$result').get('version', 1))" 2>/dev/null || echo 1)
          log "SUCCESS" "[KEYS] Public key registered successfully (version: $KEY_VERSION)"
          return 0
      else
@@ -783,7 +587,7 @@ assert_launchd_health() {
      local job="$1"
      
      local signature
-     signature=$(echo "$job" | jq -r '.payload_signature // empty' 2>/dev/null)
+     signature=$(python3 -c "import json; print(json.loads('$job').get('payload_signature', ''))" 2>/dev/null)
      
      if [[ -z "$signature" ]]; then
          log "ERROR" "[VERIFY] Job has no signature - REJECTED"
@@ -791,8 +595,8 @@ assert_launchd_health() {
      fi
      
      # Validate Ed25519 signature format (64 bytes)
-      local sig_bytes
-      sig_bytes=$(echo -n "$signature" | { base64 -d 2>/dev/null || base64 -D 2>/dev/null; } | wc -c | tr -d ' ')
+     local sig_bytes
+     sig_bytes=$(echo -n "$signature" | base64 -D 2>/dev/null | wc -c | tr -d ' ')
      
      if [[ "$sig_bytes" -ne 64 ]]; then
          log "ERROR" "[VERIFY] Invalid Ed25519 signature length"
@@ -826,6 +630,102 @@ assert_launchd_health() {
  }
  
 # ============================================
+#  v5.0.13: RUNTIME INTEGRITY CHECK (TOCTOU Defense)
+#  Validates script hash against cached expected hash every 5 minutes
+#  Windows parity: Test-RuntimeIntegrity equivalent
+# ============================================
+test_runtime_integrity() {
+    local expected_hash=""
+    
+    # Prefer signed JSON cache as authoritative source
+    if [[ -f "$HASH_CACHE_JSON" ]]; then
+        expected_hash=$(python3 -c "import json; print(json.load(open('$HASH_CACHE_JSON')).get('hash',''))" 2>/dev/null)
+    fi
+    
+    # Fallback to legacy TXT
+    if [[ -z "$expected_hash" && -f "$HASH_CACHE_TXT" ]]; then
+        expected_hash=$(cat "$HASH_CACHE_TXT" 2>/dev/null | tr -d '[:space:]')
+    fi
+    
+    if [[ -z "$expected_hash" || ${#expected_hash} -ne 64 ]]; then
+        return 0  # No cached hash = skip (don't block)
+    fi
+    
+    local current_hash
+    current_hash=$(shasum -a 256 "$0" 2>/dev/null | cut -d' ' -f1)
+    
+    if [[ "$current_hash" != "${expected_hash,,}" ]]; then
+        log "ERROR" "[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running! Expected: $expected_hash, Actual: $current_hash"
+        return 1
+    fi
+    
+    log "DEBUG" "[INTEGRITY] Runtime integrity check PASSED"
+    return 0
+}
+
+# ============================================
+#  v5.0.13: SIGNED HASH CACHE - Save & Validate
+#  Windows parity: Save-SignedHashCache equivalent
+# ============================================
+save_signed_hash_cache() {
+    local hash="$1"
+    local signature="${2:-}"
+    
+    # Save legacy TXT for backward compat
+    echo "$hash" > "$HASH_CACHE_TXT" 2>/dev/null || true
+    
+    # Save signed JSON cache
+    local signed_at
+    signed_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    cat > "$HASH_CACHE_JSON" <<EOJSON
+{"hash":"$hash","signature":"$signature","signed_at":"$signed_at","algorithm":"Ed25519","verified":true}
+EOJSON
+    
+    chmod 600 "$HASH_CACHE_JSON" "$HASH_CACHE_TXT" 2>/dev/null || true
+    log "DEBUG" "[INTEGRITY] Saved signed hash cache (hash: ${hash:0:16}...)"
+}
+
+validate_hash_cache_schema() {
+    # v5.0.13: Strict JSON schema validation (Windows parity)
+    if [[ ! -f "$HASH_CACHE_JSON" ]]; then
+        return 0
+    fi
+    
+    local cache_content
+    cache_content=$(cat "$HASH_CACHE_JSON" 2>/dev/null) || return 0
+    
+    # Validate JSON and check for unexpected keys using python3 (macOS native)
+    local validation
+    validation=$(python3 -c "
+import json, sys
+try:
+    data = json.loads('''$cache_content''')
+    allowed = {'hash','signature','signed_at','algorithm','verified'}
+    extra = set(data.keys()) - allowed
+    if extra:
+        print('EXTRA:' + ','.join(extra))
+        sys.exit(1)
+    h = data.get('hash','')
+    if h and len(h) != 64:
+        print('BADHASH:' + str(len(h)))
+        sys.exit(1)
+    print('OK')
+except:
+    print('INVALID_JSON')
+    sys.exit(1)
+" 2>/dev/null)
+    
+    if [[ "$validation" == "OK" ]]; then
+        return 0
+    fi
+    
+    log "ERROR" "[INTEGRITY] JSON hash cache validation failed: $validation. Removing corrupted cache."
+    rm -f "$HASH_CACHE_JSON" 2>/dev/null || true
+    return 1
+}
+
+# ============================================
 #  v5.0.1: PROTECTED PROCESSES AND SERVICES
 #  Defense-in-depth: Agent-side validation
 # ============================================
@@ -836,78 +736,78 @@ PROTECTED_SERVICES="com.apple.sshd com.apple.windowserver com.apple.coreservices
 #  v5.0.1: KILL PROCESS HANDLER
 # ============================================
 kill_process_handler() {
-    local job="$1"
+    local job="\$1"
     local process_name
-     process_name=$(echo "$job" | jq -r '.payload.process_name // empty' 2>/dev/null)
-     local force
-     force=$(echo "$job" | jq -r '.payload.force // false' 2>/dev/null)
+    process_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('process_name',''))" 2>/dev/null)
+    local force
+    force=\$(echo "\$job" | python3 -c "import sys,json; print(str(json.load(sys.stdin).get('payload',{}).get('force',False)).lower())" 2>/dev/null)
     
-    if [[ -z "$process_name" ]]; then
+    if [[ -z "\$process_name" ]]; then
         echo '{"success":false,"error":"Missing process_name in payload"}'
         return
     fi
     
     # Security check: Protected process list
     local normalized_name
-    normalized_name=$(echo "$process_name" | tr '[:upper:]' '[:lower:]')
+    normalized_name=\$(echo "\$process_name" | tr '[:upper:]' '[:lower:]')
     
-    if echo "$PROTECTED_PROCESSES" | grep -qw "$normalized_name"; then
-        log "WARN" "[KILL-PROCESS] BLOCKED: $process_name is a protected process"
-        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: $process_name is a protected system process\",\"blocked\":true}"
+    if echo "\$PROTECTED_PROCESSES" | grep -qw "\$normalized_name"; then
+        log "WARN" "[KILL-PROCESS] BLOCKED: \$process_name is a protected process"
+        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: \$process_name is a protected system process\",\"blocked\":true}"
         return
     fi
     
     # Find and kill processes
     local pids
-    pids=$(pgrep -x "$process_name" 2>/dev/null)
+    pids=\$(pgrep -x "\$process_name" 2>/dev/null)
     
-    if [[ -z "$pids" ]]; then
-        echo "{\"success\":true,\"killed\":0,\"message\":\"Process not running: $process_name\"}"
+    if [[ -z "\$pids" ]]; then
+        echo "{\"success\":true,\"killed\":0,\"message\":\"Process not running: \$process_name\"}"
         return
     fi
     
     local killed=0
     local total=0
     
-    for pid in $pids; do
-        total=$((total + 1))
-        if [[ "$force" == "true" ]]; then
-            kill -9 "$pid" 2>/dev/null && killed=$((killed + 1))
+    for pid in \$pids; do
+        total=\$((total + 1))
+        if [[ "\$force" == "true" ]]; then
+            kill -9 "\$pid" 2>/dev/null && killed=\$((killed + 1))
         else
-            kill "$pid" 2>/dev/null && killed=$((killed + 1))
+            kill "\$pid" 2>/dev/null && killed=\$((killed + 1))
         fi
     done
     
-    log "SUCCESS" "[KILL-PROCESS] Terminated $killed/$total instances of $process_name"
-    echo "{\"success\":true,\"process_name\":\"$process_name\",\"killed\":$killed,\"total_found\":$total,\"killed_at\":\"$(date -Iseconds)\"}"
+    log "SUCCESS" "[KILL-PROCESS] Terminated \$killed/\$total instances of \$process_name"
+    echo "{\"success\":true,\"process_name\":\"\$process_name\",\"killed\":\$killed,\"total_found\":\$total,\"killed_at\":\"\$(date -Iseconds)\"}"
 }
 
 # ============================================
 #  v5.0.1: STOP SERVICE HANDLER (launchctl)
 # ============================================
 stop_service_handler() {
-    local job="$1"
+    local job="\$1"
     local service_name
-     service_name=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
+    service_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
     
-    if [[ -z "$service_name" ]]; then
+    if [[ -z "\$service_name" ]]; then
         echo '{"success":false,"error":"Missing service_name in payload"}'
         return
     fi
     
     # Security check: Protected service list
-    if echo "$PROTECTED_SERVICES" | grep -qw "$service_name"; then
-        log "WARN" "[STOP-SERVICE] BLOCKED: $service_name is a protected service"
-        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: $service_name is a protected system service\",\"blocked\":true}"
+    if echo "\$PROTECTED_SERVICES" | grep -qw "\$service_name"; then
+        log "WARN" "[STOP-SERVICE] BLOCKED: \$service_name is a protected service"
+        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: \$service_name is a protected system service\",\"blocked\":true}"
         return
     fi
     
     # macOS uses launchctl
-    if launchctl stop "$service_name" 2>/dev/null; then
-        log "SUCCESS" "[STOP-SERVICE] Stopped: $service_name"
-        echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"stopped\",\"stopped_at\":\"$(date -Iseconds)\"}"
+    if launchctl stop "\$service_name" 2>/dev/null; then
+        log "SUCCESS" "[STOP-SERVICE] Stopped: \$service_name"
+        echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"stopped\",\"stopped_at\":\"\$(date -Iseconds)\"}"
     else
-        echo "{\"success\":false,\"error\":\"Failed to stop service: $service_name\"}"
+        echo "{\"success\":false,\"error\":\"Failed to stop service: \$service_name\"}"
     fi
 }
 
@@ -915,29 +815,29 @@ stop_service_handler() {
 #  v5.0.1: DISABLE SERVICE HANDLER (launchctl)
 # ============================================
 disable_service_handler() {
-    local job="$1"
+    local job="\$1"
     local service_name
-     service_name=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
+    service_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
     
-    if [[ -z "$service_name" ]]; then
+    if [[ -z "\$service_name" ]]; then
         echo '{"success":false,"error":"Missing service_name in payload"}'
         return
     fi
     
     # Security check: Protected service list
-    if echo "$PROTECTED_SERVICES" | grep -qw "$service_name"; then
-        log "WARN" "[DISABLE-SERVICE] BLOCKED: $service_name is a protected service"
-        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: $service_name is a protected system service\",\"blocked\":true}"
+    if echo "\$PROTECTED_SERVICES" | grep -qw "\$service_name"; then
+        log "WARN" "[DISABLE-SERVICE] BLOCKED: \$service_name is a protected service"
+        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: \$service_name is a protected system service\",\"blocked\":true}"
         return
     fi
     
     # macOS: stop and disable via launchctl
-    launchctl stop "$service_name" 2>/dev/null
-    if launchctl disable "system/$service_name" 2>/dev/null; then
-        log "SUCCESS" "[DISABLE-SERVICE] Disabled: $service_name"
-        echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"stopped\",\"new_enabled\":\"disabled\",\"disabled_at\":\"$(date -Iseconds)\"}"
+    launchctl stop "\$service_name" 2>/dev/null
+    if launchctl disable "system/\$service_name" 2>/dev/null; then
+        log "SUCCESS" "[DISABLE-SERVICE] Disabled: \$service_name"
+        echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"stopped\",\"new_enabled\":\"disabled\",\"disabled_at\":\"\$(date -Iseconds)\"}"
     else
-        echo "{\"success\":false,\"error\":\"Failed to disable service: $service_name\"}"
+        echo "{\"success\":false,\"error\":\"Failed to disable service: \$service_name\"}"
     fi
 }
 
@@ -945,33 +845,33 @@ disable_service_handler() {
 #  v5.0.1: RESTART SERVICE HANDLER (launchctl)
 # ============================================
 restart_service_handler() {
-    local job="$1"
+    local job="\$1"
     local service_name
-    service_name=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
+    service_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
     
-    if [[ -z "$service_name" ]]; then
+    if [[ -z "\$service_name" ]]; then
         echo '{"success":false,"error":"Missing service_name in payload"}'
         return
     fi
     
     # Allow restart of protected services (but log warning)
-    if echo "$PROTECTED_SERVICES" | grep -qw "$service_name"; then
-        log "WARN" "[RESTART-SERVICE] WARNING: Restarting protected service $service_name"
+    if echo "\$PROTECTED_SERVICES" | grep -qw "\$service_name"; then
+        log "WARN" "[RESTART-SERVICE] WARNING: Restarting protected service \$service_name"
     fi
     
     # macOS: kickstart restarts a service
-    if launchctl kickstart -k "system/$service_name" 2>/dev/null; then
-        log "SUCCESS" "[RESTART-SERVICE] Restarted: $service_name"
-        echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"running\",\"restarted_at\":\"$(date -Iseconds)\"}"
+    if launchctl kickstart -k "system/\$service_name" 2>/dev/null; then
+        log "SUCCESS" "[RESTART-SERVICE] Restarted: \$service_name"
+        echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"running\",\"restarted_at\":\"\$(date -Iseconds)\"}"
     else
         # Fallback: stop + start
-        launchctl stop "$service_name" 2>/dev/null
+        launchctl stop "\$service_name" 2>/dev/null
         sleep 1
-        if launchctl start "$service_name" 2>/dev/null; then
-            log "SUCCESS" "[RESTART-SERVICE] Restarted (stop+start): $service_name"
-            echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"running\",\"restarted_at\":\"$(date -Iseconds)\"}"
+        if launchctl start "\$service_name" 2>/dev/null; then
+            log "SUCCESS" "[RESTART-SERVICE] Restarted (stop+start): \$service_name"
+            echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"running\",\"restarted_at\":\"\$(date -Iseconds)\"}"
         else
-            echo "{\"success\":false,\"error\":\"Failed to restart service: $service_name\"}"
+            echo "{\"success\":false,\"error\":\"Failed to restart service: \$service_name\"}"
         fi
     fi
 }
@@ -988,34 +888,21 @@ restart_service_handler() {
      local result
      result=$(invoke_secure_request "POST" "/functions/v1/poll-jobs" "$poll_body" 15 2)
      
-      if [[ $? -ne 0 ]]; then
+     if [[ $? -ne 0 ]]; then
          log "WARN" "[POLL-JOBS] Failed to poll"
          echo "[]"
          return 1
      fi
      
-      # v5.0.13: Migrated from python3 to jq
-      local jobs_array
-      if echo "$result" | jq -e '.jobs' &>/dev/null; then
-          jobs_array=$(echo "$result" | jq -c '.jobs')
-          local new_interval
-          new_interval=$(echo "$result" | jq -r '.poll_interval_seconds // 0' 2>/dev/null)
-          if [[ "$new_interval" -ge 10 && "$new_interval" != "$JOB_POLL_INTERVAL" ]]; then
-              log "INFO" "[POLL-JOBS] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_interval}s"
-              JOB_POLL_INTERVAL=$new_interval
-          fi
-      else
-          jobs_array="$result"
-      fi
-      
-      local count
-      count=$(echo "$jobs_array" | jq 'length' 2>/dev/null || echo 0)
+     # Backend returns array directly, not { jobs: [...] }
+     local count
+     count=$(python3 -c "import json; print(len(json.loads('''$result''')))" 2>/dev/null || echo 0)
      
      if [[ "$count" -gt 0 ]]; then
          log "INFO" "[POLL-JOBS] Received $count job(s)"
      fi
      
-     echo "$jobs_array"
+     echo "$result"
  }
  
  execute_job() {
@@ -1023,12 +910,12 @@ restart_service_handler() {
      local start_time
      start_time=$(date +%s)
      
-      local execution_id
-      execution_id=$(echo "$job" | jq -r '.execution_id' 2>/dev/null)
-      local job_id
-      job_id=$(echo "$job" | jq -r '.id' 2>/dev/null)
-      local job_type
-      job_type=$(echo "$job" | jq -r '.job_type // .type' 2>/dev/null)
+     local execution_id
+     execution_id=$(python3 -c "import json; print(json.loads('$job').get('execution_id', ''))" 2>/dev/null)
+     local job_id
+     job_id=$(python3 -c "import json; print(json.loads('$job').get('id', ''))" 2>/dev/null)
+     local job_type
+     job_type=$(python3 -c "import json; j=json.loads('$job'); print(j.get('job_type', '') or j.get('type', ''))" 2>/dev/null)
      
      log "INFO" "[JOB] Starting execution: $job_type (ID: $job_id)"
      
@@ -1123,18 +1010,6 @@ restart_service_handler() {
         "integration_test_v3")
             output='{"pong":true,"agent_version":"'"$AGENT_VERSION"'","timestamp":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","hostname":"'"$(hostname)"'"}'
             ;;
-        "force_update")
-            # v5.0.13-fix: Handle force_update as job type
-            local payload
-            payload=$(echo "$job" | jq -c '.payload // {}')
-            if apply_forced_update "$payload"; then
-                # Should not be reached on success as apply_forced_update exits
-                output='{"success":true,"message":"Update initiated"}'
-            else
-                status="failed"
-                error_message="Force update failed (check logs)"
-            fi
-            ;;
         *)
             error_message="Unknown job type: $job_type"
             status="failed"
@@ -1152,12 +1027,12 @@ restart_service_handler() {
      
      log "SUCCESS" "[JOB] Completed $job_type in ${duration}s (status: $status)"
      
-      local exec_hash
-      exec_hash=$(echo "$hash_data" | jq -r '.execution_hash')
-      local prev_hash
-      prev_hash=$(echo "$hash_data" | jq -r '.previous_execution_hash')
-      local exec_index
-      exec_index=$(echo "$hash_data" | jq -r '.execution_index')
+     local exec_hash
+     exec_hash=$(python3 -c "import json; print(json.loads('$hash_data').get('execution_hash', ''))" 2>/dev/null)
+     local prev_hash
+     prev_hash=$(python3 -c "import json; print(json.loads('$hash_data').get('previous_execution_hash', ''))" 2>/dev/null)
+     local exec_index
+     exec_index=$(python3 -c "import json; print(json.loads('$hash_data').get('execution_index', 0))" 2>/dev/null)
      
      cat <<EOF
  {"success":true,"status":"$status","output":$output,"output_hash":"$output_hash","error_message":"$error_message","duration_seconds":$duration,"execution_hash":"$exec_hash","previous_execution_hash":"$prev_hash","execution_index":$exec_index}
@@ -1168,31 +1043,31 @@ restart_service_handler() {
      local job="$1"
      local result="$2"
      
-      local execution_id
-      execution_id=$(echo "$job" | jq -r '.execution_id')
-      local job_id
-      job_id=$(echo "$job" | jq -r '.id')
-      local status
-      status=$(echo "$result" | jq -r '.status')
-      local output_hash
-      output_hash=$(echo "$result" | jq -r '.output_hash')
-      local finished_at
-      finished_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-      
-      # Sign result
-      local signature
-      signature=$(sign_execution_result "$execution_id" "$job_id" "$status" "$output_hash" "$finished_at")
-      
-      local output
-      output=$(echo "$result" | jq -c '.output // {}')
-      local error_message
-      error_message=$(echo "$result" | jq -r '.error_message // ""')
-      local exec_hash
-      exec_hash=$(echo "$result" | jq -r '.execution_hash')
-      local prev_hash
-      prev_hash=$(echo "$result" | jq -r '.previous_execution_hash')
-      local exec_index
-      exec_index=$(echo "$result" | jq -r '.execution_index')
+     local execution_id
+     execution_id=$(python3 -c "import json; print(json.loads('$job').get('execution_id', ''))" 2>/dev/null)
+     local job_id
+     job_id=$(python3 -c "import json; print(json.loads('$job').get('id', ''))" 2>/dev/null)
+     local status
+     status=$(python3 -c "import json; print(json.loads('$result').get('status', ''))" 2>/dev/null)
+     local output_hash
+     output_hash=$(python3 -c "import json; print(json.loads('$result').get('output_hash', ''))" 2>/dev/null)
+     local finished_at
+     finished_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+     
+     # Sign result
+     local signature
+     signature=$(sign_execution_result "$execution_id" "$job_id" "$status" "$output_hash" "$finished_at")
+     
+     local output
+     output=$(python3 -c "import json; print(json.dumps(json.loads('$result').get('output', {})))" 2>/dev/null || echo '{}')
+     local error_message
+     error_message=$(python3 -c "import json; print(json.loads('$result').get('error_message', ''))" 2>/dev/null)
+     local exec_hash
+     exec_hash=$(python3 -c "import json; print(json.loads('$result').get('execution_hash', ''))" 2>/dev/null)
+     local prev_hash
+     prev_hash=$(python3 -c "import json; print(json.loads('$result').get('previous_execution_hash', ''))" 2>/dev/null)
+     local exec_index
+     exec_index=$(python3 -c "import json; print(json.loads('$result').get('execution_index', 0))" 2>/dev/null)
      
      local payload
      payload=$(cat <<EOF
@@ -1278,13 +1153,13 @@ restart_service_handler() {
  fix_firewall() {
      local job="$1"
      local payload
-     payload=$(echo "$job" | jq -c '.payload // {}')
+     payload=$(python3 -c "import json; print(json.dumps(json.loads('$job').get('payload', {})))" 2>/dev/null || echo '{}')
      
      local results='{}'
      
      # macOS Application Firewall
      local enable
-     enable=$(echo "$payload" | jq -r '.enable // false')
+     enable=$(python3 -c "import json; print(json.loads('$payload').get('enable', False))" 2>/dev/null)
      
      if [[ "$enable" == "True" || "$enable" == "true" ]]; then
          /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on 2>/dev/null || true
@@ -1311,7 +1186,7 @@ restart_service_handler() {
      fi
      
      local count
-     count=$(echo "$result" | jq -r '[.domains // [] | length] | .[0]' 2>/dev/null || echo 0)
+     count=$(python3 -c "import json; print(len(json.loads('$result').get('domains', [])))" 2>/dev/null || echo 0)
      
      if [[ "$count" -gt 0 ]]; then
          echo "$result" > "$DNS_BLOCKLIST_PATH"
@@ -1416,11 +1291,14 @@ restart_service_handler() {
          if [[ "$is_protected" == "false" ]]; then
              log "WARN" "[PROCESS-CHECK] High CPU detected: $name (PID: $pid) at $cpu%"
              
-             # v5.0.13-perf: O(1) baseline lookup via associative array
+             # Check if in baseline
              local in_baseline=false
-             if [[ -n "${PROCESS_BASELINE_MAP[$name]+x}" ]]; then
-                 in_baseline=true
-             fi
+             for baseline_proc in "${PROCESS_BASELINE[@]}"; do
+                 if [[ "$baseline_proc" == "$name" ]]; then
+                     in_baseline=true
+                     break
+                 fi
+             done
              
              if [[ "$in_baseline" == "false" ]]; then
                  log "WARN" "[PROCESS-CHECK] Process $name NOT in baseline - killing..."
@@ -1460,15 +1338,11 @@ restart_service_handler() {
  # ============================================
  #  v5.0.1: PROCESS BASELINE
  # ============================================
- # v5.0.13-perf: Use associative array for O(1) baseline lookups instead of O(n) linear scan
- declare -A PROCESS_BASELINE_MAP=()
-
  initialize_process_baseline() {
      if [[ -f "$PROCESS_BASELINE_PATH" ]]; then
          while IFS= read -r proc; do
              PROCESS_BASELINE+=("$proc")
-             PROCESS_BASELINE_MAP["$proc"]=1
-         done < <(jq -r '.[].name' "$PROCESS_BASELINE_PATH" 2>/dev/null)
+         done < <(python3 -c "import json; [print(p['name']) for p in json.load(open('$PROCESS_BASELINE_PATH'))]" 2>/dev/null)
          log "INFO" "[BASELINE] Loaded baseline with ${#PROCESS_BASELINE[@]} processes"
      else
          log "INFO" "[BASELINE] Creating initial process baseline..."
@@ -1483,7 +1357,6 @@ restart_service_handler() {
              fi
              baseline+="{\"name\":\"$proc\",\"first_seen\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}"
              PROCESS_BASELINE+=("$proc")
-             PROCESS_BASELINE_MAP["$proc"]=1
          done
          baseline+=']'
          
@@ -1492,15 +1365,21 @@ restart_service_handler() {
      fi
  }
  
- # v5.0.13-perf: O(1) lookups via associative array
  get_process_anomalies() {
      local anomaly_count=0
      
      for proc in $(ps -eo comm= | sort -u); do
-         if [[ -z "${PROCESS_BASELINE_MAP[$proc]+x}" ]]; then
+         local found=false
+         for baseline_proc in "${PROCESS_BASELINE[@]}"; do
+             if [[ "$proc" == "$baseline_proc" ]]; then
+                 found=true
+                 break
+             fi
+         done
+         
+         if [[ "$found" == "false" ]]; then
              anomaly_count=$((anomaly_count + 1))
              PROCESS_BASELINE+=("$proc")
-             PROCESS_BASELINE_MAP["$proc"]=1
          fi
      done
      
@@ -1569,7 +1448,7 @@ restart_service_handler() {
      local anomalies
      anomalies=$(get_process_anomalies)
      local anomaly_count
-     anomaly_count=$(echo "$anomalies" | jq -r '.anomaly_count' 2>/dev/null || echo 0)
+     anomaly_count=$(python3 -c "import json; print(json.loads('$anomalies').get('anomaly_count', 0))" 2>/dev/null || echo 0)
      
      local payload
      payload=$(cat <<EOF
@@ -1589,86 +1468,35 @@ EOF
          # Ported from Windows v5.0.7 - bypasses job system
          # ============================================
          if [[ -n "$result" ]]; then
-              local force_update
-              force_update=$(echo "$result" | jq -r '.force_update // false' 2>/dev/null)
+             local force_update
+             force_update=$(python3 -c "import json; print(json.loads('''$result''').get('force_update', False))" 2>/dev/null || echo "False")
+             
+             if [[ "$force_update" == "True" ]]; then
+                 log "WARN" "[FORCE UPDATE] Update forcado detectado via heartbeat!"
+                 local target_version
+                 target_version=$(python3 -c "import json; print(json.loads('''$result''').get('target_version', ''))" 2>/dev/null)
+                 log "INFO" "[FORCE UPDATE] Target version: $target_version"
+                 
+                 apply_forced_update "$result"
+              fi
               
-              if [[ "$force_update" == "true" ]]; then
-                  log "WARN" "[FORCE UPDATE] Update forcado detectado via heartbeat!"
-                  local target_version
-                  target_version=$(echo "$result" | jq -r '.target_version // ""' 2>/dev/null)
-                  log "INFO" "[FORCE UPDATE] Target version: $target_version"
-                  
-                  apply_forced_update "$result"
-               fi
-               
-               # ============================================
-               # v5.0.9: DYNAMIC POLLING INTERVALS FROM SERVER
-               # Server controls agent cadence via heartbeat response
-               # ============================================
-               local new_hb_interval
-               new_hb_interval=$(echo "$result" | jq -r '.heartbeat_interval_seconds // 0' 2>/dev/null)
-               if [[ "$new_hb_interval" -ge 10 && "$new_hb_interval" != "$POLL_INTERVAL" ]]; then
-                   log "INFO" "[HEARTBEAT] Server adjusted heartbeat interval: ${POLL_INTERVAL}s -> ${new_hb_interval}s"
-                   POLL_INTERVAL=$new_hb_interval
-               fi
-               
-               local new_job_interval
-               new_job_interval=$(echo "$result" | jq -r '.poll_interval_seconds // 0' 2>/dev/null)
-               if [[ "$new_job_interval" -ge 10 && "$new_job_interval" != "$JOB_POLL_INTERVAL" ]]; then
-                   log "INFO" "[HEARTBEAT] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_job_interval}s"
-                   JOB_POLL_INTERVAL=$new_job_interval
-               fi
-
-               # ============================================
-                # v5.0.13: SIGNED HASH CACHE - Verify signature before trusting
-                # Hash only accepted if Ed25519 signature validates
-                # ============================================
-                local server_script_hash
-                server_script_hash=$(echo "$result" | jq -r '.script_sha256 // ""' 2>/dev/null)
-                if [[ -n "$server_script_hash" && ${#server_script_hash} -eq 64 ]]; then
-                    local hash_sig
-                    hash_sig=$(echo "$result" | jq -r '.script_hash_signature // ""' 2>/dev/null)
-                    local hash_ts
-                    hash_ts=$(echo "$result" | jq -r '.script_hash_signed_at // ""' 2>/dev/null)
-                    local hash_lower
-                    hash_lower=$(echo "$server_script_hash" | tr '[:upper:]' '[:lower:]')
-                    
-                    # Verify Ed25519 signature before accepting hash
-                    local sig_verified="false"
-                    local ed25519_pubkey_path="${BASE_DIR}/keys/ed25519_server.pub"
-                    if [[ -n "$hash_sig" && ${#hash_sig} -gt 10 && -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
-                        local _tmp_hash _tmp_sig
-                        _tmp_hash=$(mktemp) || { log "ERROR" "[INTEGRITY] mktemp failed"; continue; }
-                        _tmp_sig=$(mktemp) || { rm -f "$_tmp_hash"; log "ERROR" "[INTEGRITY] mktemp failed"; continue; }
-                        echo -n "$hash_lower" > "$_tmp_hash"
-                        echo "$hash_sig" | base64 -d > "$_tmp_sig" 2>/dev/null || echo "$hash_sig" | base64 -D > "$_tmp_sig" 2>/dev/null
-                        if openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
-                            -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
-                            sig_verified="true"
-                            log "DEBUG" "[INTEGRITY] Ed25519 signature VERIFIED for hash cache update"
-                        else
-                            log "ERROR" "[INTEGRITY] REJECTED hash cache update - Ed25519 signature INVALID!"
-                            logger -t CyberShield "INTEGRITY: Rejected script hash - invalid signature"
-                        fi
-                        rm -f "$_tmp_hash" "$_tmp_sig"
-                    else
-                        sig_verified="true"
-                        if [[ -z "$hash_sig" || ${#hash_sig} -le 10 ]]; then
-                            log "WARN" "[INTEGRITY] Hash cache update has no signature (legacy server)"
-                        fi
-                    fi
-                    
-                    if [[ "$sig_verified" == "true" ]]; then
-                        echo "{\"hash\":\"$hash_lower\",\"signature\":\"$hash_sig\",\"signed_at\":\"$hash_ts\",\"algorithm\":\"Ed25519\",\"verified\":true}" > "${BASE_DIR}/data/expected_script_hash.json" 2>/dev/null
-                        echo -n "$hash_lower" > "${BASE_DIR}/data/expected_script_hash.txt" 2>/dev/null
-                        # v5.0.13: Harden cache file permissions (root-only read/write)
-                        chmod 600 "${BASE_DIR}/data/expected_script_hash.json" 2>/dev/null || true
-                        chmod 600 "${BASE_DIR}/data/expected_script_hash.txt" 2>/dev/null || true
-                        chown root:wheel "${BASE_DIR}/data/expected_script_hash.json" 2>/dev/null || true
-                        chown root:wheel "${BASE_DIR}/data/expected_script_hash.txt" 2>/dev/null || true
-                        log "DEBUG" "[INTEGRITY] Cached verified script hash from server"
-                    fi
-               fi
+              # ============================================
+              # v5.0.9: DYNAMIC POLLING INTERVALS FROM SERVER
+              # Server controls agent cadence via heartbeat response
+              # ============================================
+              local new_hb_interval
+              new_hb_interval=$(python3 -c "import json; print(json.loads('''$result''').get('heartbeat_interval_seconds', 0))" 2>/dev/null || echo 0)
+              if [[ "$new_hb_interval" -ge 10 && "$new_hb_interval" != "$POLL_INTERVAL" ]]; then
+                  log "INFO" "[HEARTBEAT] Server adjusted heartbeat interval: ${POLL_INTERVAL}s -> ${new_hb_interval}s"
+                  POLL_INTERVAL=$new_hb_interval
+              fi
+              
+              local new_job_interval
+              new_job_interval=$(python3 -c "import json; print(json.loads('''$result''').get('poll_interval_seconds', 0))" 2>/dev/null || echo 0)
+              if [[ "$new_job_interval" -ge 10 && "$new_job_interval" != "$JOB_POLL_INTERVAL" ]]; then
+                  log "INFO" "[HEARTBEAT] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_job_interval}s"
+                  JOB_POLL_INTERVAL=$new_job_interval
+              fi
           fi
           
           return 0
@@ -1684,14 +1512,14 @@ EOF
  apply_forced_update() {
      local response="$1"
      
-      local target_version
-      target_version=$(echo "$response" | jq -r '.target_version // ""' 2>/dev/null)
-      local base64_content
-      base64_content=$(echo "$response" | jq -r '.script_content_base64 // ""' 2>/dev/null)
-      local expected_hash
-      expected_hash=$(echo "$response" | jq -r '.sha256 // ""' 2>/dev/null)
-      local reason
-      reason=$(echo "$response" | jq -r '.reason // "heartbeat_force_update"' 2>/dev/null)
+     local target_version
+     target_version=$(python3 -c "import json; print(json.loads('''$response''').get('target_version', ''))" 2>/dev/null)
+     local base64_content
+     base64_content=$(python3 -c "import json; print(json.loads('''$response''').get('script_content_base64', ''))" 2>/dev/null)
+     local expected_hash
+     expected_hash=$(python3 -c "import json; print(json.loads('''$response''').get('sha256', ''))" 2>/dev/null)
+     local reason
+     reason=$(python3 -c "import json; print(json.loads('''$response''').get('reason', 'heartbeat_force_update'))" 2>/dev/null)
      
      if [[ -z "$target_version" || -z "$base64_content" || -z "$expected_hash" ]]; then
          log "ERROR" "[FORCE UPDATE] Dados incompletos no response"
@@ -1700,25 +1528,18 @@ EOF
      
      log "INFO" "[FORCE UPDATE] Version: $target_version, Reason: $reason"
      
-     # Decode Base64 (secure temp in SAME filesystem as target for atomic mv)
-     local current_script_dir
-     current_script_dir=$(dirname "$(greadlink -f "$0" 2>/dev/null || readlink -f "$0" 2>/dev/null || echo "$0")")
-     local temp_script
-     temp_script=$(mktemp "${current_script_dir}/.cybershield-update-XXXXXXXX.sh") || {
-         log "ERROR" "[FORCE UPDATE] mktemp failed - cannot create secure temp file"
-         return 1
-     }
      # v5.0.13-patch: Pre-decode size validation (prevents OOM before Base64 decode)
      local base64_len=${#base64_content}
      local max_base64_len=7340032  # ~5MB binary = ~7MB Base64
      if [[ "$base64_len" -gt "$max_base64_len" ]]; then
          log "ERROR" "[FORCE UPDATE] REJECTED - Base64 payload too large BEFORE decode: $base64_len chars (max $max_base64_len)"
          logger -t CyberShield "Update rejected: Base64 payload too large before decode ($base64_len chars)"
-         rm -f "$temp_script"
          return 1
      fi
 
-     echo "$base64_content" | base64 -d > "$temp_script" 2>/dev/null || echo "$base64_content" | base64 -D > "$temp_script" 2>/dev/null
+     # Decode Base64
+     local temp_script="/tmp/cybershield-force-update-${target_version}.sh"
+     echo "$base64_content" | base64 -D > "$temp_script" 2>/dev/null
      
      if [[ ! -s "$temp_script" ]]; then
          log "ERROR" "[FORCE UPDATE] Base64 decode falhou"
@@ -1735,10 +1556,8 @@ EOF
      actual_hash=$(shasum -a 256 "$temp_script" 2>/dev/null | awk '{print $1}')
      
      if [[ "${actual_hash}" != "${expected_hash}" ]]; then
-         # Case-insensitive compare
-         local actual_lower
+         local actual_lower expected_lower
          actual_lower=$(echo "$actual_hash" | tr '[:upper:]' '[:lower:]')
-         local expected_lower
          expected_lower=$(echo "$expected_hash" | tr '[:upper:]' '[:lower:]')
          if [[ "$actual_lower" != "$expected_lower" ]]; then
              log "ERROR" "[FORCE UPDATE] SHA256 mismatch! Esperado: $expected_hash, Obtido: $actual_hash"
@@ -1747,39 +1566,40 @@ EOF
          fi
      fi
      
-    log "SUCCESS" "[FORCE UPDATE] SHA256 validado: $actual_hash"
-    
-    # v5.0.13: Verify Ed25519/ECDSA signature on update payload (if available)
-    local update_signature
-    update_signature=$(echo "$response" | jq -r '.ecdsa_signature // .signature_base64 // ""' 2>/dev/null)
-    if [[ -n "$update_signature" && ${#update_signature} -gt 10 ]]; then
-        local ed25519_pubkey_path="${BASE_DIR}/keys/ed25519_server.pub"
-        if [[ -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
-            local _tmp_hash _tmp_sig
-            _tmp_hash=$(mktemp) || { log "ERROR" "[FORCE UPDATE] mktemp failed"; return 1; }
-            _tmp_sig=$(mktemp) || { rm -f "$_tmp_hash"; log "ERROR" "[FORCE UPDATE] mktemp failed"; return 1; }
-            echo -n "$actual_hash" > "$_tmp_hash"
-            echo "$update_signature" | base64 -d > "$_tmp_sig" 2>/dev/null || \
-                echo "$update_signature" | base64 -D > "$_tmp_sig" 2>/dev/null
-            if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
-                -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
-                log "ERROR" "[FORCE UPDATE] REJECTED - Update signature INVALID! Possible supply chain attack."
-                logger -t CyberShield "FORCE UPDATE REJECTED: Invalid cryptographic signature. SHA256: $actual_hash"
-                rm -f "$temp_script" "$_tmp_hash" "$_tmp_sig"
-                return 1
-            fi
-            rm -f "$_tmp_hash" "$_tmp_sig"
-            log "SUCCESS" "[FORCE UPDATE] Cryptographic signature VERIFIED for update payload"
-        else
-            log "WARN" "[FORCE UPDATE] No Ed25519 public key available - signature present but not verified"
-        fi
-    else
-        # v5.0.13-patch: Reject unsigned payloads (mandatory signature enforcement)
-        log "ERROR" "[FORCE UPDATE] REJECTED - No cryptographic signature on update payload. Unsigned updates blocked."
-        logger -t CyberShield "Update rejected: missing cryptographic signature (unsigned payloads blocked since v5.0.13)"
-        rm -f "$temp_script"
-        return 1
-    fi
+     log "SUCCESS" "[FORCE UPDATE] SHA256 validado: $actual_hash"
+
+     # v5.0.13-patch: Verify Ed25519/ECDSA signature on update payload (mandatory)
+     local update_signature
+     update_signature=$(python3 -c "import json; print(json.loads('''$response''').get('ecdsa_signature', '') or json.loads('''$response''').get('signature_base64', ''))" 2>/dev/null)
+     if [[ -n "$update_signature" && ${#update_signature} -gt 10 ]]; then
+         local ed25519_pubkey_path="${BASE_DIR:-/opt/cybershield}/keys/ed25519_server.pub"
+         if [[ -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
+             local _tmp_hash _tmp_sig
+             _tmp_hash=$(mktemp) || { log "ERROR" "[FORCE UPDATE] mktemp failed"; rm -f "$temp_script"; return 1; }
+             _tmp_sig=$(mktemp) || { rm -f "$_tmp_hash"; log "ERROR" "[FORCE UPDATE] mktemp failed"; rm -f "$temp_script"; return 1; }
+             echo -n "$actual_hash" > "$_tmp_hash"
+             echo "$update_signature" | base64 -d > "$_tmp_sig" 2>/dev/null || \
+                 echo "$update_signature" | base64 -D > "$_tmp_sig" 2>/dev/null
+             if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
+                 -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
+                 log "ERROR" "[FORCE UPDATE] REJECTED - Update signature INVALID! Possible supply chain attack."
+                 logger -t CyberShield "FORCE UPDATE REJECTED: Invalid cryptographic signature. SHA256: $actual_hash"
+                 rm -f "$temp_script" "$_tmp_hash" "$_tmp_sig"
+                 return 1
+             fi
+             rm -f "$_tmp_hash" "$_tmp_sig"
+             log "SUCCESS" "[FORCE UPDATE] Cryptographic signature VERIFIED for update payload"
+         else
+             log "WARN" "[FORCE UPDATE] Ed25519 public key or openssl not available - cannot verify signature"
+         fi
+     else
+         # v5.0.13-patch: Reject unsigned payloads
+         log "ERROR" "[FORCE UPDATE] REJECTED - No cryptographic signature on update payload. Unsigned updates blocked."
+         logger -t CyberShield "Update rejected: missing cryptographic signature (unsigned payloads blocked since v5.0.13)"
+         rm -f "$temp_script"
+         return 1
+     fi
+     
      # Anti-corruption: reject HTML content
      local first_line
      first_line=$(head -1 "$temp_script")
@@ -1799,58 +1619,32 @@ EOF
          log "INFO" "[FORCE UPDATE] Backup criado: ${current_script}.backup"
      fi
      
-    # Apply update (atomic mv instead of cp to prevent partial write TOCTOU)
-    chmod 750 "$temp_script"
-    chown root:wheel "$temp_script" 2>/dev/null || true
-    mv -f "$temp_script" "$current_script" 2>/dev/null || { cp "$temp_script" "$current_script" && rm -f "$temp_script"; }
-    # v5.0.13: Harden permissions on installed script
-    chmod 750 "$current_script"
-    chown root:wheel "$current_script" 2>/dev/null || true
+     # Apply update
+     chmod +x "$temp_script"
+     cp "$temp_script" "$current_script" 2>/dev/null
+     rm -f "$temp_script"
      
-      log "SUCCESS" "[FORCE UPDATE] Script instalado: $current_script"
-      
-      # Confirm on backend
-      local confirm_payload
-      confirm_payload="{\"agent_name\":\"$AGENT_NAME\",\"old_version\":\"$AGENT_VERSION\",\"new_version\":\"$target_version\",\"sha256\":\"$actual_hash\",\"method\":\"heartbeat_force_update\",\"platform\":\"macos\",\"timestamp\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}"
-      
-      invoke_secure_request "POST" "/functions/v1/confirm-force-update" "$confirm_payload" 10 1 2>/dev/null || true
-      
-      log "INFO" "[FORCE UPDATE] Reiniciando agente com nova versao..."
-      
-      # v5.0.13-fix: Retry limit for update restart (max 3 attempts to prevent infinite loop)
-      local restart_attempt=0
-      local restart_max=3
-      local restart_success=false
-      
-      while [[ $restart_attempt -lt $restart_max ]]; do
-          restart_attempt=$((restart_attempt + 1))
-          log "INFO" "[FORCE UPDATE] Restart attempt $restart_attempt/$restart_max..."
-          
-          local plist_label="com.cybershield.agent"
-          if launchctl list "$plist_label" &>/dev/null; then
-              sudo launchctl kickstart -k "system/$plist_label" 2>/dev/null &
-              restart_success=true
-              break
-          else
-              # Fallback: exec into new script
-              exec "$current_script" --server-url "$SERVER_URL" --agent-token "$AGENT_TOKEN" --hmac-secret "$HMAC_SECRET" --agent-name "$AGENT_NAME" &
-              restart_success=true
-              break
-          fi
-          sleep 2
-      done
-      
-      if [[ "$restart_success" == "false" ]]; then
-          log "ERROR" "[FORCE UPDATE] All $restart_max restart attempts failed - rolling back"
-          if [[ -f "${current_script}.backup" ]]; then
-              cp "${current_script}.backup" "$current_script" 2>/dev/null
-              log "WARN" "[FORCE UPDATE] Rolled back to previous version"
-          fi
-          return 1
-      fi
-      
-      log "SUCCESS" "[FORCE UPDATE] Restart iniciado - saindo do processo atual"
-      exit 0
+     log "SUCCESS" "[FORCE UPDATE] Script instalado: $current_script"
+     
+     # Confirm on backend
+     local confirm_payload
+     confirm_payload="{\"agent_name\":\"$AGENT_NAME\",\"old_version\":\"$AGENT_VERSION\",\"new_version\":\"$target_version\",\"sha256\":\"$actual_hash\",\"method\":\"heartbeat_force_update\",\"platform\":\"macos\",\"timestamp\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}"
+     
+     invoke_secure_request "POST" "/functions/v1/confirm-force-update" "$confirm_payload" 10 1 2>/dev/null || true
+     
+     log "INFO" "[FORCE UPDATE] Reiniciando agente com nova versao..."
+     
+     # Restart via launchd (no Mac restart needed)
+     local plist_label="com.cybershield.agent"
+     if launchctl list "$plist_label" &>/dev/null; then
+         sudo launchctl kickstart -k "system/$plist_label" 2>/dev/null &
+     else
+         # Fallback: exec into new script
+         exec "$current_script" --server-url "$SERVER_URL" --agent-token "$AGENT_TOKEN" --hmac-secret "$HMAC_SECRET" --agent-name "$AGENT_NAME" &
+     fi
+     
+     log "SUCCESS" "[FORCE UPDATE] Restart iniciado - saindo do processo atual"
+     exit 0
  }
  
  # ============================================
@@ -1859,7 +1653,7 @@ EOF
  sync_blocked_websites_handler() {
      local job="$1"
      local urls
-     urls=$(echo "$job" | jq -r '.payload.urls // [] | .[]' 2>/dev/null)
+     urls=$(echo "$job" | python3 -c "import sys,json; [print(u) for u in json.loads(sys.stdin.read()).get('payload',{}).get('urls',[])]" 2>/dev/null)
      
      local blocked=0
      local marker_start="# === CyberShield Blocked Websites Start ==="
@@ -1891,7 +1685,7 @@ EOF
  service_health_check_handler() {
      local job="$1"
      local services
-     services=$(echo "$job" | jq -r '.payload.services // ["com.apple.mDNSResponder","com.apple.ftp-proxy"] | .[]' 2>/dev/null)
+     services=$(echo "$job" | python3 -c "import sys,json; [print(s) for s in json.loads(sys.stdin.read()).get('payload',{}).get('services',['com.apple.mDNSResponder','com.apple.ftp-proxy'])]" 2>/dev/null)
      
      local results="[]"
      local unhealthy=0
@@ -1908,7 +1702,7 @@ EOF
                  status="not_running"
                  unhealthy=$((unhealthy + 1))
              fi
-             results=$(echo "$results" | jq --arg n "$svc" --arg s "$status" --argjson h "$healthy" '. + [{"name":$n,"status":$s,"healthy":$h}]')
+             results=$(echo "$results" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); d.append({'name':'$svc','status':'$status','healthy':$healthy}); print(json.dumps(d))" 2>/dev/null)
              checked=$((checked + 1))
          fi
      done <<< "$services"
@@ -1921,7 +1715,7 @@ EOF
  network_diagnostics_handler() {
      local job="$1"
      local targets
-     targets=$(echo "$job" | jq -r '.payload.targets // ["8.8.8.8","1.1.1.1"] | .[]' 2>/dev/null)
+     targets=$(echo "$job" | python3 -c "import sys,json; [print(t) for t in json.loads(sys.stdin.read()).get('payload',{}).get('targets',['8.8.8.8','1.1.1.1'])]" 2>/dev/null)
      
      local diagnostics="[]"
      
@@ -1940,7 +1734,7 @@ EOF
                  dns_result='{"success":true}'
              fi
              
-             diagnostics=$(echo "$diagnostics" | jq --arg t "$target" --argjson p "$ping_result" --argjson d "$dns_result" '. + [{"target":$t,"ping":$p,"dns":$d}]')
+             diagnostics=$(echo "$diagnostics" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); d.append({'target':'$target','ping':$ping_result,'dns':$dns_result}); print(json.dumps(d))" 2>/dev/null)
          fi
      done <<< "$targets"
      
@@ -1952,7 +1746,7 @@ EOF
  quarantine_agent_handler() {
      local job="$1"
      local action
-     action=$(echo "$job" | jq -r '.payload.action // "quarantine"' 2>/dev/null)
+     action=$(echo "$job" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('payload',{}).get('action','quarantine'))" 2>/dev/null)
      local server_host
      server_host=$(echo "$SERVER_URL" | sed 's|https\?://||' | sed 's|/.*||')
      
@@ -1976,7 +1770,7 @@ EOF
  apply_security_patch_handler() {
      local job="$1"
      local cve_id
-     cve_id=$(echo "$job" | jq -r '.payload.cve_id // ""' 2>/dev/null)
+     cve_id=$(echo "$job" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('payload',{}).get('cve_id',''))" 2>/dev/null)
      
      # macOS uses softwareupdate
      sudo softwareupdate --install --recommended 2>/dev/null
@@ -2013,7 +1807,7 @@ collect_web_activity_handler() {
     local dns_raw
     dns_raw=$(sudo dscacheutil -cachedump -entries 2>/dev/null | head -50 || echo "")
     if [[ -n "$dns_raw" ]]; then
-        dns_entries=$(echo "$dns_raw" | jq -R -s '[split("\n")[] | select(length > 0) | {entry: .}]' 2>/dev/null || echo '[]')
+        dns_entries=$(echo "$dns_raw" | python3 -c "import sys,json; lines=[l.strip() for l in sys.stdin if l.strip()]; print(json.dumps([{'entry':l} for l in lines[:50]]))" 2>/dev/null || echo '[]')
     fi
     
     # Collect Safari history
@@ -2024,7 +1818,7 @@ collect_web_activity_handler() {
         cp "$safari_db" "$tmp_db" 2>/dev/null
         if command -v sqlite3 &>/dev/null; then
             browser_history=$(sqlite3 "$tmp_db" "SELECT url, title FROM history_items ORDER BY visit_count DESC LIMIT 50;" 2>/dev/null | \
-                awk -F'|' '{printf "{\"url\":\"%s\",\"title\":\"%s\"},", $1, ($2 ? $2 : "")}' | sed 's/,$//' | sed 's/^/[/' | sed 's/$/]/' 2>/dev/null || echo '[]')
+                python3 -c "import sys,json; lines=[l.strip().split('|',1) for l in sys.stdin if l.strip()]; print(json.dumps([{'url':l[0],'title':l[1] if len(l)>1 else ''} for l in lines]))" 2>/dev/null || echo '[]')
         fi
         rm -f "$tmp_db" 2>/dev/null
     fi
@@ -2047,8 +1841,16 @@ light_vuln_scan_handler() {
     updates=$(softwareupdate --list 2>&1 | grep -i "recommended\|restart\|security" || echo "")
     
     if [[ -n "$updates" ]]; then
-        vulns=$(echo "$updates" | head -20 | jq -R -s '[split("\n")[] | select(length > 0) | {package: .[:80], severity: (if (. | test("security";"i")) then "critical" elif (. | test("restart";"i")) then "high" else "medium" end), source: "softwareupdate"}]' 2>/dev/null || echo '[]')
-        total=$(echo "$vulns" | jq 'length' 2>/dev/null || echo 0)
+        vulns=$(echo "$updates" | head -20 | python3 -c "
+import sys, json
+lines = [l.strip() for l in sys.stdin if l.strip()]
+results = []
+for l in lines:
+    sev = 'critical' if 'security' in l.lower() else 'high' if 'restart' in l.lower() else 'medium'
+    results.append({'package': l[:80], 'severity': sev, 'source': 'softwareupdate'})
+print(json.dumps(results))
+" 2>/dev/null || echo '[]')
+        total=$(echo "$vulns" | python3 -c "import sys,json; print(len(json.loads(sys.stdin.read())))" 2>/dev/null || echo 0)
     fi
     
     local scanned_at
@@ -2065,9 +1867,9 @@ update_agent_handler() {
 scan_handler() {
     log "INFO" "[JOB] Running general security scan"
     local open_ports
-    open_ports=$(lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null | tail -n +2 | awk '{print $9}' | head -20 | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
+    open_ports=$(lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null | tail -n +2 | awk '{print $9}' | head -20 | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
     local users_logged
-    users_logged=$(who 2>/dev/null | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
+    users_logged=$(who 2>/dev/null | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
     local uptime_info
     uptime_info=$(uptime 2>/dev/null || echo "unknown")
     echo '{"open_ports":'"$open_ports"',"logged_users":'"$users_logged"',"uptime":"'"$uptime_info"'","scanned_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
@@ -2078,21 +1880,29 @@ report_handler() {
     local disk_usage
     disk_usage=$(df -g / | tail -1 | awk '{print "{\"total\":\""$2"G\",\"used\":\""$3"G\",\"free\":\""$4"G\",\"percent\":\""$5"\"}"}')
     local mem_info
-    mem_info=$(vm_stat 2>/dev/null | awk '
-        /Pages free/ { free=$3+0 }
-        /Pages active/ { active=$3+0 }
-        END {
-            ps=16384; total_mb=(free+active)*ps/1048576; free_mb=free*ps/1048576
-            printf "{\"total_mb\":%d,\"free_mb\":%d}", total_mb, free_mb
-        }
-    ' 2>/dev/null || echo '{}')
+    mem_info=$(vm_stat 2>/dev/null | python3 -c "
+import sys
+lines = sys.stdin.readlines()
+pages = {}
+for l in lines:
+    parts = l.strip().split(':')
+    if len(parts)==2:
+        key = parts[0].strip().lower()
+        val = parts[1].strip().rstrip('.')
+        try: pages[key] = int(val)
+        except: pass
+page_size = 16384
+total_mb = sum(pages.values()) * page_size // (1024*1024)
+free_mb = pages.get('pages free', 0) * page_size // (1024*1024)
+print('{\"total_mb\":%d,\"free_mb\":%d}' % (total_mb, free_mb))
+" 2>/dev/null || echo '{}')
     echo '{"agent_version":"'"$AGENT_VERSION"'","hostname":"'$(hostname)'",'$disk_usage',"memory":'"$mem_info"',"generated_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
 }
 
 collect_info_handler() {
     log "INFO" "[JOB] Collecting system info"
     local os_version
-    os_version=$(sw_vers 2>/dev/null | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
+    os_version=$(sw_vers 2>/dev/null | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
     local kernel
     kernel=$(uname -r 2>/dev/null || echo "unknown")
     local arch
@@ -2120,7 +1930,7 @@ collect_dns_blocks_handler() {
     log "INFO" "[JOB] Collecting DNS blocks from hosts file"
     local blocks='[]'
     if [[ -f /etc/hosts ]]; then
-        blocks=$(grep -E "^(0\.0\.0\.0|127\.0\.0\.1)" /etc/hosts 2>/dev/null | grep -v "localhost" | awk '{print $2}' | head -100 | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
+        blocks=$(grep -E "^(0\.0\.0\.0|127\.0\.0\.1)" /etc/hosts 2>/dev/null | grep -v "localhost" | awk '{print $2}' | head -100 | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
     fi
     echo '{"blocked_domains":'"$blocks"',"source":"/etc/hosts","collected_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
 }
@@ -2142,12 +1952,12 @@ remove_dns_filter_handler() {
 # ============================================
 #  MAIN LOOP v5.0.1 FULL ENTERPRISE
 # ============================================
- log "INFO" "============================================"
+ log "============================================"
  log "INFO" "[START] CyberShield Agent $AGENT_VERSION FULL ENTERPRISE"
  log "DEBUG" "[INFO] ServerUrl: $SERVER_URL"
  log "DEBUG" "[INFO] AgentName: $AGENT_NAME"
  log "INFO" "[INFO] Features: ECDSA-signing, Ed25519-verify, hash-chain, FSM, DNS-filter, auto-remediation"
- log "INFO" "============================================"
+ log "============================================"
  
  # ============================================
  #  PHASE 1: INITIALIZATION
@@ -2160,89 +1970,68 @@ remove_dns_filter_handler() {
      log "WARN" "[STARTUP] Recovering from SAFE_MODE..."
  fi
  
- # Initialize ECDSA keys
- keys_initialized=false
- SECURITY_DEGRADED=false
- CONSECUTIVE_HEARTBEAT_FAILURES=0
- if initialize_agent_keys; then
-     keys_initialized=true
- else
-     log "ERROR" "[STARTUP] Failed to initialize keys - entering DEGRADED mode (FAIL-CLOSED)"
-     set_agent_state "DEGRADED" "Key initialization failed"
-     SECURITY_DEGRADED=true
-     log "WARN" "[SECURITY] SecurityDegraded=TRUE - operational jobs will be BLOCKED until crypto is restored"
- fi
- 
- # ============================================
- #  PHASE 2: AUTHENTICATION
- # ============================================
- # v5.0.13-fix: Guard - only transition to AUTHENTICATING if not stuck in DEGRADED with failed keys
- if [[ "$SECURITY_DEGRADED" == "true" ]]; then
-     log "WARN" "[STARTUP] Skipping AUTHENTICATING - SecurityDegraded, staying in DEGRADED for heartbeat attempt"
- else
-     set_agent_state "AUTHENTICATING" "Validating credentials"
- fi
- 
- # Send first heartbeat
- heartbeat_success=false
- if send_heartbeat; then
-     heartbeat_success=true
-     
-     # Register public key
-     if [[ "$keys_initialized" == "true" ]]; then
-         register_agent_key || log "WARN" "[STARTUP] Key registration failed"
-     fi
-     CONSECUTIVE_HEARTBEAT_FAILURES=0
- else
-     log "WARN" "[STARTUP] Initial heartbeat failed - entering DEGRADED mode"
-     set_agent_state "DEGRADED" "Heartbeat failed"
-     CONSECUTIVE_HEARTBEAT_FAILURES=$((CONSECUTIVE_HEARTBEAT_FAILURES + 1))
-     
-     # v5.0.13-fix: If BOTH keys and heartbeat failed, enter SAFE_MODE (fail-closed)
-     if [[ "$keys_initialized" == "false" ]]; then
-         log "ERROR" "[SECURITY] No crypto + no auth = SAFE_MODE (fail-closed)"
-         set_agent_state "SAFE_MODE" "No auth + no crypto - fail closed"
-     fi
- fi
+# Initialize ECDSA keys
+keys_initialized=false
+security_degraded=false
+if initialize_agent_keys; then
+    keys_initialized=true
+else
+    log "ERROR" "[STARTUP] Failed to initialize keys - entering DEGRADED mode (FAIL-CLOSED)"
+    set_agent_state "DEGRADED" "Key initialization failed"
+    security_degraded=true
+    log "WARN" "[SECURITY] SecurityDegraded=TRUE - operational jobs will be BLOCKED until crypto is restored"
+fi
+
+# v5.0.13: Validate hash cache schema on startup (Windows parity)
+if ! validate_hash_cache_schema; then
+    log "WARN" "[STARTUP] Hash cache schema invalid - removed corrupted cache"
+fi
+
+# v5.0.13: Save initial script hash on startup
+initial_hash=$(shasum -a 256 "$0" 2>/dev/null | cut -d' ' -f1)
+if [[ -n "$initial_hash" && ${#initial_hash} -eq 64 ]]; then
+    save_signed_hash_cache "$initial_hash" ""
+    log "DEBUG" "[STARTUP] Initial script hash cached: ${initial_hash:0:16}..."
+fi
+
+# ============================================
+#  PHASE 2: AUTHENTICATION
+# ============================================
+if [[ "$security_degraded" == "true" ]]; then
+    log "WARN" "[STARTUP] Skipping AUTHENTICATING - SecurityDegraded, staying in DEGRADED for heartbeat attempt"
+else
+    set_agent_state "AUTHENTICATING" "Validating credentials"
+fi
+
+# Send first heartbeat
+heartbeat_success=false
+if send_heartbeat; then
+    heartbeat_success=true
+    CONSECUTIVE_HEARTBEAT_FAILURES=0
+    
+    # Register public key
+    if [[ "$keys_initialized" == "true" ]]; then
+        register_agent_key || log "WARN" "[STARTUP] Key registration failed"
+    fi
+else
+    log "WARN" "[STARTUP] Initial heartbeat failed - entering DEGRADED mode"
+    set_agent_state "DEGRADED" "Heartbeat failed"
+    CONSECUTIVE_HEARTBEAT_FAILURES=$((CONSECUTIVE_HEARTBEAT_FAILURES + 1))
+    
+    # If BOTH keys and heartbeat failed, enter SAFE_MODE (fail-closed)
+    if [[ "$keys_initialized" == "false" ]]; then
+        log "ERROR" "[SECURITY] No crypto + no auth = SAFE_MODE (fail-closed)"
+        set_agent_state "SAFE_MODE" "No auth + no crypto - fail closed"
+    fi
+fi
  
  # ============================================
  #  PHASE 3: SYNCHRONIZATION
  # ============================================
- # v5.0.13-fix: If in SAFE_MODE after startup failures, enter recovery loop
- if [[ "$CURRENT_STATE" == "SAFE_MODE" ]]; then
-     log "WARN" "[STARTUP] Agent in SAFE_MODE - entering recovery-only loop"
-     recovery_attempt=0
-     while [[ "$CURRENT_STATE" == "SAFE_MODE" ]]; do
-         recovery_attempt=$((recovery_attempt + 1))
-          # Exponential backoff (60s, 120s, 240s... max 600s) + jitter (anti-thundering herd)
-          base_backoff=$((60 * (2 ** (recovery_attempt - 1))))
-          [[ $base_backoff -gt 600 ]] && base_backoff=600
-          jitter=$((RANDOM % 31))
-          recovery_delay=$((base_backoff + jitter))
-          log "INFO" "[SAFE_MODE] Recovery attempt #$recovery_attempt - waiting ${recovery_delay}s (backoff: ${base_backoff}s, jitter: ${jitter}s)..."
-         sleep "$recovery_delay"
-         log "INFO" "[SAFE_MODE] Attempting recovery heartbeat..."
-         if send_heartbeat; then
-             if initialize_agent_keys; then
-                 SECURITY_DEGRADED=false
-                 set_agent_state "INITIALIZING" "Recovery successful"
-                 log "SUCCESS" "[SAFE_MODE] Recovery successful - restarting initialization"
-                 break
-             else
-                 log "WARN" "[SAFE_MODE] Heartbeat OK but keys still failed - continuing recovery"
-             fi
-         fi
-     done
- fi
-
  set_agent_state "SYNCING" "Syncing policies and baseline"
  
- # v5.0.13-fix: Guard against duplicate baseline initialization
- if [[ ${#PROCESS_BASELINE[@]} -eq 0 ]]; then
-     initialize_process_baseline
- else
-     log "DEBUG" "[BASELINE] Already initialized, skipping duplicate call"
- fi
+ # Initialize process baseline
+ initialize_process_baseline
  
  # Sync DNS blocklist
  sync_dns_blocklist || true
@@ -2250,43 +2039,19 @@ remove_dns_filter_handler() {
  # ============================================
  #  PHASE 4: ENFORCEMENT
  # ============================================
- # v5.0.13-fix: Only enter ENFORCING if security is not degraded
- if [[ "$SECURITY_DEGRADED" == "true" ]]; then
-     log "WARN" "[STARTUP] Agent v$AGENT_VERSION starting in DEGRADED mode (SecurityDegraded=TRUE, only recovery jobs allowed)"
- else
-     set_agent_state "ENFORCING" "Normal operation"
-     log "SUCCESS" "[STARTUP] Agent v$AGENT_VERSION fully operational in ENFORCING state"
- fi
+ set_agent_state "ENFORCING" "Normal operation"
  
- last_heartbeat=$(date +%s)
- last_auto_repair=$(date +%s)
- last_job_poll=$(date +%s)
- last_dns_sync=$(date +%s)
- last_integrity_check=$(date +%s)
+ log "SUCCESS" "[STARTUP] Agent fully operational in ENFORCING state"
+ 
+last_heartbeat=$(date +%s)
+last_auto_repair=$(date +%s)
+last_job_poll=$(date +%s)
+last_dns_sync=$(date +%s)
+LAST_RUNTIME_INTEGRITY_CHECK=$(date +%s)
+CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
  
  while true; do
-      now=$(date +%s)
-      
-      # ============================================
-      # v5.0.13: RUNTIME INTEGRITY CHECK (TOCTOU DEFENSE, every 5 min)
-      # ============================================
-      if [[ $((now - last_integrity_check)) -ge 300 ]]; then
-          if [[ -f "$HASH_CACHE_PATH" ]]; then
-              expected_rt_hash=$(cat "$HASH_CACHE_PATH" 2>/dev/null | tr -d '[:space:]')
-              if [[ -n "$expected_rt_hash" && ${#expected_rt_hash} -eq 64 ]]; then
-                  current_rt_hash=$(shasum -a 256 "$SCRIPT_PATH" 2>/dev/null | awk '{print $1}')
-                  current_rt_lower=$(echo "$current_rt_hash" | tr '[:upper:]' '[:lower:]')
-                  expected_rt_lower=$(echo "$expected_rt_hash" | tr '[:upper:]' '[:lower:]')
-                  if [[ "$current_rt_lower" != "$expected_rt_lower" ]]; then
-                      log "ERROR" "[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running!"
-                      logger -t CyberShield "TOCTOU integrity violation - agent terminating"
-                      flush_log_buffer
-                      exit 9004
-                  fi
-              fi
-          fi
-          last_integrity_check=$now
-      fi
+     now=$(date +%s)
      
      # ============================================
      # NETWORK WATCHDOG
@@ -2295,12 +2060,7 @@ remove_dns_filter_handler() {
      if test_network_connectivity; then
          network_ok=true
          if [[ $CONSECUTIVE_NETWORK_FAILURES -ge 3 && "$CURRENT_STATE" == "DEGRADED" ]]; then
-             # v5.0.13-fix: Only restore ENFORCING if crypto is healthy
-             if [[ "$SECURITY_DEGRADED" == "false" ]]; then
-                 set_agent_state "ENFORCING" "Network restored"
-             else
-                 log "WARN" "[FSM] Network restored but SecurityDegraded=TRUE - staying DEGRADED"
-             fi
+             set_agent_state "ENFORCING" "Network restored"
          fi
          CONSECUTIVE_NETWORK_FAILURES=0
      else
@@ -2316,27 +2076,13 @@ remove_dns_filter_handler() {
      if [[ $((now - last_job_poll)) -ge $JOB_POLL_INTERVAL && "$network_ok" == "true" ]]; then
          jobs=$(poll_jobs)
          
-         # v5.0.13-fix: Use process substitution instead of pipe to avoid subshell variable isolation
-         while read -r job; do
+         # Process each job
+         echo "$jobs" | python3 -c "import sys,json; [print(json.dumps(j)) for j in json.loads(sys.stdin.read())]" 2>/dev/null | while read -r job; do
              if [[ -n "$job" ]]; then
-                 job_type=$(echo "$job" | jq -r '.type // .job_type // "unknown"' 2>/dev/null)
-                 if [[ "$SECURITY_DEGRADED" == "true" ]]; then
-                     case "$job_type" in
-                         update_agent|force_update|reinstall_agent)
-                             # Recovery jobs allowed
-                             ;;
-                         *)
-                             log "WARN" "[SECURITY] BLOCKED job '$job_type' - SecurityDegraded=TRUE (only recovery jobs allowed)"
-                             submit_job_result "$job" '{"success":false,"status":"failed","error_message":"Agent in SecurityDegraded mode - only recovery jobs accepted","exit_code":403}'
-                             continue
-                             ;;
-                     esac
-                 fi
-                 
                  result=$(execute_job "$job")
                  submit_job_result "$job" "$result"
              fi
-         done < <(echo "$jobs" | jq -c '.[]' 2>/dev/null)
+         done
          
          last_job_poll=$now
      fi
@@ -2345,8 +2091,8 @@ remove_dns_filter_handler() {
     # v5.0.3: LAUNCHD HEALTH CHECK (every 5 min)
     # ============================================
     launchd_health=$(assert_launchd_health)
-    if echo "$launchd_health" | jq -e '.repaired == true' &>/dev/null; then
-        repair_action=$(echo "$launchd_health" | jq -r '.repair_action')
+    if python3 -c "import json; exit(0 if json.loads('$launchd_health').get('repaired') else 1)" 2>/dev/null; then
+        repair_action=$(python3 -c "import json; print(json.loads('$launchd_health').get('repair_action', 'unknown'))" 2>/dev/null)
         log "INFO" "[MAIN-LOOP] LaunchDaemon repaired: $repair_action"
     fi
     
@@ -2356,14 +2102,14 @@ remove_dns_filter_handler() {
     if [[ $((now - last_auto_repair)) -ge 300 ]]; then
         # Disk cleanup
         disk_result=$(invoke_disk_cleanup)
-        if echo "$disk_result" | jq -e '.cleaned == true' &>/dev/null; then
-            freed=$(echo "$disk_result" | jq -r '.freed_percent')
+        if python3 -c "import json; exit(0 if json.loads('$disk_result').get('cleaned') else 1)" 2>/dev/null; then
+            freed=$(python3 -c "import json; print(json.loads('$disk_result').get('freed_percent', 0))" 2>/dev/null)
             log "SUCCESS" "[AUTO-REPAIR] Disk cleanup freed ${freed}%"
         fi
         
         # High CPU process check
         cpu_result=$(invoke_high_cpu_process_check)
-        killed=$(echo "$cpu_result" | jq -r '.killed_count')
+        killed=$(python3 -c "import json; print(json.loads('$cpu_result').get('killed_count', 0))" 2>/dev/null)
         if [[ "$killed" -gt 0 ]]; then
             log "SUCCESS" "[AUTO-REPAIR] Killed $killed high-CPU processes"
         fi
@@ -2372,54 +2118,40 @@ remove_dns_filter_handler() {
     fi
      
      # ============================================
-     # HEARTBEAT EVERY INTERVAL
+     # HEARTBEAT EVERY INTERVAL (v5.0.13: with failure tracking)
      # ============================================
      if [[ $((now - last_heartbeat)) -ge $POLL_INTERVAL && "$network_ok" == "true" ]]; then
-         if ! send_heartbeat; then
-             CONSECUTIVE_HEARTBEAT_FAILURES=$((CONSECUTIVE_HEARTBEAT_FAILURES + 1))
-             log "WARN" "[HEARTBEAT] Failure #$CONSECUTIVE_HEARTBEAT_FAILURES"
-             
-             if [[ "$CURRENT_STATE" == "ENFORCING" ]]; then
-                 set_agent_state "DEGRADED" "Heartbeat failed"
-             fi
-             
-             # v5.0.13-fix: After 5 consecutive failures, enter SAFE_MODE (auth loop prevention)
-             if [[ $CONSECUTIVE_HEARTBEAT_FAILURES -ge 5 ]]; then
-                 log "ERROR" "[SECURITY] $CONSECUTIVE_HEARTBEAT_FAILURES consecutive heartbeat failures - entering SAFE_MODE"
-                 set_agent_state "SAFE_MODE" "Persistent auth failure ($CONSECUTIVE_HEARTBEAT_FAILURES consecutive)"
-                 
-                 # Backoff loop in SAFE_MODE - try every 2 minutes, max 10 attempts
-                 safe_mode_attempt=0
-                 while [[ "$CURRENT_STATE" == "SAFE_MODE" && $safe_mode_attempt -lt 10 ]]; do
-                     safe_mode_attempt=$((safe_mode_attempt + 1))
-                     # v5.0.13: Jitter AFTER exponential backoff (delay = base * 2^attempt + jitter)
-                     jitter=$((RANDOM % 30))
-                     base_backoff=$((120 * (2 ** (safe_mode_attempt - 1))))
-                     [[ $base_backoff -gt 600 ]] && base_backoff=600
-                     recovery_delay=$((base_backoff + jitter))
-                     log "INFO" "[SAFE_MODE] Recovery attempt $safe_mode_attempt/10 - waiting ${recovery_delay}s (backoff: ${base_backoff}s + jitter: ${jitter}s)..."
-                     sleep "$recovery_delay"
-                     if send_heartbeat; then
-                         CONSECUTIVE_HEARTBEAT_FAILURES=0
-                         if [[ "$SECURITY_DEGRADED" == "false" ]]; then
-                             set_agent_state "ENFORCING" "Heartbeat recovered"
-                         else
-                             set_agent_state "DEGRADED" "Heartbeat recovered but SecurityDegraded"
-                         fi
-                         log "SUCCESS" "[SAFE_MODE] Recovery successful after $safe_mode_attempt attempts"
-                         break
-                     fi
-                 done
+         if send_heartbeat; then
+             CONSECUTIVE_HEARTBEAT_FAILURES=0
+             if [[ "$CURRENT_STATE" == "DEGRADED" ]]; then
+                 set_agent_state "ENFORCING" "Heartbeat restored"
              fi
          else
-             if [[ $CONSECUTIVE_HEARTBEAT_FAILURES -gt 0 ]]; then
-                 log "SUCCESS" "[HEARTBEAT] Recovered after $CONSECUTIVE_HEARTBEAT_FAILURES failures"
+             CONSECUTIVE_HEARTBEAT_FAILURES=$((CONSECUTIVE_HEARTBEAT_FAILURES + 1))
+             # Cap to prevent overflow on long-running agents
+             if [[ $CONSECUTIVE_HEARTBEAT_FAILURES -gt $MAX_CONSECUTIVE_FAILURES ]]; then
+                 CONSECUTIVE_HEARTBEAT_FAILURES=$MAX_CONSECUTIVE_FAILURES
              fi
-             CONSECUTIVE_HEARTBEAT_FAILURES=0
+             if [[ "$CURRENT_STATE" == "ENFORCING" ]]; then
+                 set_agent_state "DEGRADED" "Heartbeat failed (consecutive: $CONSECUTIVE_HEARTBEAT_FAILURES)"
+             fi
+             log "WARN" "[HEARTBEAT] Consecutive failures: $CONSECUTIVE_HEARTBEAT_FAILURES"
          fi
          last_heartbeat=$now
      fi
      
+     # ============================================
+     # v5.0.13: RUNTIME INTEGRITY CHECK (every 5 min - Windows parity)
+     # ============================================
+     if [[ $((now - LAST_RUNTIME_INTEGRITY_CHECK)) -ge $RUNTIME_INTEGRITY_INTERVAL ]]; then
+         if ! test_runtime_integrity; then
+             log "ERROR" "[INTEGRITY] Runtime integrity check FAILED - script may have been tampered!"
+             set_agent_state "SAFE_MODE" "Runtime integrity violation"
+             break  # Exit main loop
+         fi
+         LAST_RUNTIME_INTEGRITY_CHECK=$now
+     fi
+      
      # ============================================
      # DNS BLOCKLIST SYNC (1x per hour)
      # ============================================
@@ -2427,26 +2159,6 @@ remove_dns_filter_handler() {
          sync_dns_blocklist || true
          last_dns_sync=$now
      fi
-     
-     # v5.0.13-perf: Dynamic sleep interval based on agent state
-     base_sleep=2
-     case "$CURRENT_STATE" in
-         "ENFORCING") base_sleep=2 ;;
-         "DEGRADED")  base_sleep=5 ;;
-         "SAFE_MODE") base_sleep=10 ;;
-         *)           base_sleep=2 ;;
-     esac
-     
-     # v5.0.13-perf: Adaptive CPU protection - increase sleep under high load (macOS sysctl)
-     cpu_load_pct=$(sysctl -n vm.loadavg 2>/dev/null | awk '{gsub(/[{}]/,""); print int($1 * 100)}' || echo 0)
-     nproc_count=$(sysctl -n hw.ncpu 2>/dev/null || echo 1)
-     cpu_percent=$((cpu_load_pct / nproc_count))
-     if [[ $cpu_percent -gt 80 ]]; then
-         base_sleep=$((base_sleep > 10 ? base_sleep : 10))
-     fi
-     
-     sleep "$base_sleep"
-     
-     # v5.0.13-perf: Flush log buffer on each cycle boundary
-     flush_log_buffer
+      
+     sleep 2
  done

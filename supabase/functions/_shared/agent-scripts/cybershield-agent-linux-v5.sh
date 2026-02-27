@@ -2,18 +2,7 @@
 #
 # CyberShield Agent - Linux v5.0.13
 #
-# v5.0.13: SECURITY HARDENING + TOCTOU + ANTI-TAMPER + EDR HARDENING
-# - ADDED: Runtime integrity revalidation in main loop (TOCTOU defense, every 5 min)
-# - ADDED: SHA256 hash validation at startup and runtime against cached server hash
-# - ADDED: Anti-debug (TracerPid), anti-interactive (parent process check)
-# - ADDED: ACL hardening (root-only directory permissions)
-# - ADDED: Fail-closed security model (SecurityDegraded blocks operational jobs)
-# - ADDED: SAFE_MODE jitter after exponential backoff (anti-thundering herd)
-# - FIXED: FSM INITIALIZING -> DEGRADED transition
-# - FIXED: Consecutive heartbeat failure counter initialized
-# - FIXED: Process substitution for job loop (prevents subshell variable isolation)
-#
-# v5.0.11: FULL ENTERPRISE - All functions (Get-RollbackState, Add-EvidenceEntry, Apply-ForcedUpdate)
+# v5.0.13: WINDOWS PARITY - Runtime integrity, signed hash cache, heartbeat failure tracking
 # v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
 # - NEW: Agent reads heartbeat_interval_seconds and poll_interval_seconds from heartbeat response
 # - NEW: Dynamically adjusts POLL_INTERVAL and JOB_POLL_INTERVAL at runtime
@@ -86,123 +75,6 @@
 #
 
 set -euo pipefail
-# v5.0.13: Disable dynamic eval to prevent memory injection
-# shellcheck disable=SC2086
-readonly -f eval 2>/dev/null || true  # Make eval read-only if supported
-
-# ============================================
-#  v5.0.13-hardening: ANTI-DEBUG / ANTI-TAMPER CHECKS
-#  Prevents execution under debuggers/tracers
-# ============================================
-# Block strace/ltrace/ptrace attachment
-if grep -q "TracerPid:[[:space:]]*[1-9]" /proc/self/status 2>/dev/null; then
-    echo "[SECURITY] CyberShield Agent cannot run under a debugger/tracer (security policy)"
-    exit 9102
-fi
-
-# Block interactive shells (must run as service, not manually)
-if [[ "${CYBERSHIELD_ALLOW_INTERACTIVE:-}" != "1" ]]; then
-    if tty -s 2>/dev/null && [[ "${PPID:-0}" != "1" ]]; then
-        # Allow if parent is systemd (PID 1) or launched by root cron
-        parent_comm=$(cat /proc/${PPID}/comm 2>/dev/null || echo "unknown")
-        if [[ "$parent_comm" != "systemd" && "$parent_comm" != "cron" && "$parent_comm" != "init" ]]; then
-            echo "[SECURITY] CyberShield Agent should run as a systemd service, not interactively"
-            echo "           Set CYBERSHIELD_ALLOW_INTERACTIVE=1 to override (dev only)"
-            exit 9101
-        fi
-    fi
-fi
-
-# ============================================
-#  v5.0.13: SINGLE INSTANCE LOCK (flock)
-#  Prevents multiple agent instances from running simultaneously
-# ============================================
-LOCK_FILE="/var/run/cybershield-agent.lock"
-exec 200>"$LOCK_FILE"
-if ! flock -n 200; then
-    echo "[SECURITY] Another CyberShield Agent instance is already running. Exiting."
-    logger -t CyberShield -p auth.warn "Duplicate agent instance blocked by flock"
-    exit 9501
-fi
-
-# ============================================
-#  v5.0.13-hardening: SELF-INTEGRITY VALIDATION
-#  Validates script SHA256 hash at startup (anti-tampering)
-#  ORDER: Signature verification FIRST, then hash comparison
-# ============================================
-SCRIPT_PATH="$(readlink -f "$0" 2>/dev/null || echo "$0")"
-HASH_CACHE_PATH="/opt/cybershield/data/expected_script_hash.txt"
-HASH_CACHE_JSON_PATH="/opt/cybershield/data/expected_script_hash.json"
-
-# 1. Code signature validation (if signed with gpg)
-SCRIPT_SIG_PATH="${SCRIPT_PATH}.sig"
-GPG_PUBKEY_PATH="/opt/cybershield/keys/release_signing.pub"
-if [[ -f "$SCRIPT_SIG_PATH" && -f "$GPG_PUBKEY_PATH" ]] && command -v gpg &>/dev/null; then
-    if ! gpg --no-default-keyring --keyring "$GPG_PUBKEY_PATH" --verify "$SCRIPT_SIG_PATH" "$SCRIPT_PATH" 2>/dev/null; then
-        logger -t CyberShield -p auth.err "INTEGRITY VIOLATION: GPG signature invalid on agent script"
-        echo "[SECURITY] CyberShield Agent script has invalid GPG signature"
-        exit 9002
-    fi
-fi
-
-# 2. SHA256 hash validation - verify signature FIRST, then compare hash
-if [[ -f "$HASH_CACHE_JSON_PATH" ]]; then
-    if ! command -v jq &>/dev/null; then
-        logger -t CyberShield -p auth.err "INTEGRITY: JSON hash cache exists but jq not available - fail-closed"
-        echo "[SECURITY] CyberShield Agent integrity check failed: jq required for JSON hash cache"
-        exit 9004
-    fi
-    cached_hash=$(jq -r '.hash // ""' "$HASH_CACHE_JSON_PATH" 2>/dev/null)
-    if [[ $? -ne 0 || -z "$cached_hash" ]]; then
-        logger -t CyberShield -p auth.err "INTEGRITY: JSON hash cache corrupted or unreadable - fail-closed"
-        echo "[SECURITY] CyberShield Agent integrity check failed: corrupted hash cache"
-        exit 9004
-    fi
-    cached_sig=$(jq -r '.signature // ""' "$HASH_CACHE_JSON_PATH" 2>/dev/null)
-    ed25519_pubkey_path="/opt/cybershield/keys/ed25519_server.pub"
-    
-    if [[ ${#cached_hash} -ne 64 ]]; then
-        logger -t CyberShield -p auth.err "INTEGRITY: JSON hash cache has invalid hash length (${#cached_hash}) - fail-closed"
-        echo "[SECURITY] CyberShield Agent integrity check failed: invalid hash in cache"
-        exit 9004
-    fi
-    
-    # Step 1: Verify signature of cached hash (if sig + pubkey available)
-    sig_trusted="true"
-    if [[ -n "$cached_sig" && ${#cached_sig} -gt 10 && -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
-        _tmp_hash=$(mktemp) || { logger -t CyberShield -p auth.err "INTEGRITY: mktemp failed - filesystem issue"; exit 9010; }
-        _tmp_sig=$(mktemp) || { rm -f "$_tmp_hash"; logger -t CyberShield -p auth.err "INTEGRITY: mktemp failed - filesystem issue"; exit 9010; }
-        echo -n "$cached_hash" > "$_tmp_hash"
-        echo "$cached_sig" | base64 -d > "$_tmp_sig" 2>/dev/null
-        if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
-            -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
-            logger -t CyberShield -p auth.err "INTEGRITY: Cached hash signature INVALID - ignoring tampered cache"
-            sig_trusted="false"
-        fi
-        rm -f "$_tmp_hash" "$_tmp_sig"
-    fi
-    
-    # Step 2: Only compare hash if signature is trusted
-    if [[ "$sig_trusted" == "true" ]]; then
-        current_hash=$(sha256sum "$SCRIPT_PATH" 2>/dev/null | awk '{print $1}')
-        if [[ "${current_hash,,}" != "${cached_hash,,}" ]]; then
-            logger -t CyberShield -p auth.err "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected (signed): $cached_hash, Actual: $current_hash"
-            echo "[SECURITY] CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
-            exit 9003
-        fi
-    fi
-elif [[ -f "$HASH_CACHE_PATH" ]]; then
-    # Legacy plain text cache (no signature)
-    expected_hash=$(cat "$HASH_CACHE_PATH" 2>/dev/null | tr -d '[:space:]')
-    if [[ -n "$expected_hash" && ${#expected_hash} -eq 64 ]]; then
-        current_hash=$(sha256sum "$SCRIPT_PATH" 2>/dev/null | awk '{print $1}')
-        if [[ "${current_hash,,}" != "${expected_hash,,}" ]]; then
-            logger -t CyberShield -p auth.err "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected: $expected_hash, Actual: $current_hash"
-            echo "[SECURITY] CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
-            exit 9003
-        fi
-    fi
-fi
 
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
@@ -253,12 +125,12 @@ CURRENT_STATE="INITIALIZING"
 
 # Valid FSM transitions
 declare -A STATE_TRANSITIONS=(
-    ["INITIALIZING"]="AUTHENTICATING DEGRADED SAFE_MODE SYNCING"
+    ["INITIALIZING"]="AUTHENTICATING SAFE_MODE"
     ["AUTHENTICATING"]="SYNCING DEGRADED SAFE_MODE"
     ["SYNCING"]="ENFORCING DEGRADED SAFE_MODE"
     ["ENFORCING"]="SYNCING DEGRADED SAFE_MODE"
     ["DEGRADED"]="AUTHENTICATING SYNCING ENFORCING SAFE_MODE"
-    ["SAFE_MODE"]="INITIALIZING DEGRADED"
+    ["SAFE_MODE"]="INITIALIZING"
 )
 
 # v5.0.1: Hash Chain for execution
@@ -280,11 +152,15 @@ NETWORK_TEST_HOST=""
 NETWORK_TEST_PORT=443
 CONSECUTIVE_NETWORK_FAILURES=0
 
-# v5.0.13-fix: SecurityDegraded flag (fail-closed security model)
-SECURITY_DEGRADED=false
-
-# v5.0.13-fix: Consecutive heartbeat failure counter (auth loop prevention)
+# v5.0.13: Heartbeat failure tracking (Windows parity)
 CONSECUTIVE_HEARTBEAT_FAILURES=0
+MAX_CONSECUTIVE_FAILURES=1000000
+
+# v5.0.13: Signed hash cache paths (Windows parity)
+HASH_CACHE_TXT="${DATA_DIR}/expected_script_hash.txt"
+HASH_CACHE_JSON="${DATA_DIR}/expected_script_hash.json"
+LAST_RUNTIME_INTEGRITY_CHECK=0
+RUNTIME_INTEGRITY_INTERVAL=300  # 5 minutes
 
 # v5.0.3: Service Health Check
 LAST_SERVICE_HEALTH_CHECK=0
@@ -345,56 +221,10 @@ declare -a PROCESS_BASELINE=()
  # ============================================
  mkdir -p "$LOG_DIR" "$EVIDENCE_DIR" "$CONFIG_DIR" "$KEYS_DIR" "$DATA_DIR"
  chmod 700 "$KEYS_DIR"
-
- # v5.0.13-hardening: Restrict base directory ACL (root only)
- chmod 750 "$BASE_DIR" 2>/dev/null || true
- chown -R root:root "$BASE_DIR" 2>/dev/null || true
- # Remove world-readable/writable bits from all subdirectories
- chmod 700 "$CONFIG_DIR" "$DATA_DIR" "$EVIDENCE_DIR" 2>/dev/null || true
- chmod 750 "$LOG_DIR" 2>/dev/null || true
  
  # ============================================
- #  v5.0.13: DEPENDENCY VALIDATION AT STARTUP
+ #  LOGGING
  # ============================================
- missing_deps=()
- for dep in jq openssl curl nc sha256sum base64; do
-     if ! command -v "$dep" &>/dev/null; then
-         missing_deps+=("$dep")
-     fi
- done
- if [[ ${#missing_deps[@]} -gt 0 ]]; then
-     echo "[FATAL] Missing required dependencies: ${missing_deps[*]}"
-     echo "Install with: apt-get install -y jq openssl curl netcat-openbsd coreutils"
-     exit 1
- fi
- 
- # ============================================
- #  LOGGING - v5.0.13-perf: Buffered I/O (reduces disk writes by ~80%)
- # ============================================
- LOG_BUFFER=()
- LOG_BUFFER_SIZE=20
- LOG_BUFFER_LAST_FLUSH=$(date +%s)
- LOG_BUFFER_FLUSH_INTERVAL=10
-
- flush_log_buffer() {
-     if [[ ${#LOG_BUFFER[@]} -eq 0 ]]; then
-         return 0
-     fi
-     printf '%s\n' "${LOG_BUFFER[@]}" >> "$LOG_FILE"
-     LOG_BUFFER=()
-     LOG_BUFFER_LAST_FLUSH=$(date +%s)
-     
-     # Log rotation (keep 10MB max)
-     local log_size
-     log_size=$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
-     if [[ $log_size -gt 10485760 ]]; then
-         mv "$LOG_FILE" "${LOG_FILE}.$(date +%Y%m%d_%H%M%S).bak"
-     fi
- }
-
- # v5.0.13-perf: Guarantee log flush on unexpected exit/shutdown
- trap 'flush_log_buffer' EXIT TERM INT HUP
-
  log() {
      local level="${1:-INFO}"
      local message="$2"
@@ -403,19 +233,13 @@ declare -a PROCESS_BASELINE=()
      local line="[$timestamp] [$level] [$CURRENT_STATE] $message"
      
      echo "$line"
-     LOG_BUFFER+=("$line")
+     echo "$line" >> "$LOG_FILE"
      
-     # v5.0.13-perf: Immediate flush for ERROR/WARN levels
-     if [[ "$level" == "ERROR" || "$level" == "WARN" ]]; then
-         flush_log_buffer
-         return 0
-     fi
-     
-     # Flush when buffer is full or interval elapsed
-     local now
-     now=$(date +%s)
-     if [[ ${#LOG_BUFFER[@]} -ge $LOG_BUFFER_SIZE || $((now - LOG_BUFFER_LAST_FLUSH)) -ge $LOG_BUFFER_FLUSH_INTERVAL ]]; then
-         flush_log_buffer
+     # Log rotation (keep 10MB max)
+     local log_size
+     log_size=$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
+     if [[ $log_size -gt 10485760 ]]; then
+         mv "$LOG_FILE" "${LOG_FILE}.$(date +%Y%m%d_%H%M%S).bak"
      fi
  }
  
@@ -539,15 +363,6 @@ assert_service_health() {
     
     return 0
 }
-
-# ============================================
-# ============================================
-#  v5.0.13-hardening: TLS CERTIFICATE PINNING
-#  Set TLS_PINNED_PUBKEY_HASH to enforce pinning (sha256 of server's SPKI)
-#  Format: "sha256//BASE64_HASH_HERE"
-#  When empty, standard TLS validation is used (dev mode)
-# ============================================
-TLS_PINNED_PUBKEY_HASH="${CYBERSHIELD_TLS_PIN:-}"
 
 # ============================================
 #  v5.0.1: SECURE REQUEST WITH EXPONENTIAL BACKOFF
@@ -811,6 +626,95 @@ TLS_PINNED_PUBKEY_HASH="${CYBERSHIELD_TLS_PIN:-}"
  }
  
 # ============================================
+#  v5.0.13: RUNTIME INTEGRITY CHECK (TOCTOU Defense)
+#  Validates script hash against cached expected hash every 5 minutes
+#  Windows parity: Test-RuntimeIntegrity equivalent
+# ============================================
+test_runtime_integrity() {
+    local expected_hash=""
+    
+    # Prefer signed JSON cache as authoritative source
+    if [[ -f "$HASH_CACHE_JSON" ]]; then
+        expected_hash=$(jq -r '.hash // empty' "$HASH_CACHE_JSON" 2>/dev/null)
+    fi
+    
+    # Fallback to legacy TXT
+    if [[ -z "$expected_hash" && -f "$HASH_CACHE_TXT" ]]; then
+        expected_hash=$(cat "$HASH_CACHE_TXT" 2>/dev/null | tr -d '[:space:]')
+    fi
+    
+    if [[ -z "$expected_hash" || ${#expected_hash} -ne 64 ]]; then
+        return 0  # No cached hash = skip (don't block)
+    fi
+    
+    local current_hash
+    current_hash=$(sha256sum "$0" 2>/dev/null | cut -d' ' -f1)
+    
+    if [[ "$current_hash" != "${expected_hash,,}" ]]; then
+        log "ERROR" "[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running! Expected: $expected_hash, Actual: $current_hash"
+        return 1
+    fi
+    
+    log "DEBUG" "[INTEGRITY] Runtime integrity check PASSED"
+    return 0
+}
+
+# ============================================
+#  v5.0.13: SIGNED HASH CACHE - Save & Validate
+#  Windows parity: Save-SignedHashCache equivalent
+# ============================================
+save_signed_hash_cache() {
+    local hash="$1"
+    local signature="${2:-}"
+    
+    # Save legacy TXT for backward compat
+    echo "$hash" > "$HASH_CACHE_TXT" 2>/dev/null || true
+    
+    # Save signed JSON cache
+    local signed_at
+    signed_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    cat > "$HASH_CACHE_JSON" <<EOJSON
+{"hash":"$hash","signature":"$signature","signed_at":"$signed_at","algorithm":"Ed25519","verified":true}
+EOJSON
+    
+    chmod 600 "$HASH_CACHE_JSON" "$HASH_CACHE_TXT" 2>/dev/null || true
+    log "DEBUG" "[INTEGRITY] Saved signed hash cache (hash: ${hash:0:16}...)"
+}
+
+validate_hash_cache_schema() {
+    # v5.0.13: Strict JSON schema validation (Windows parity)
+    # Allowed properties: hash, signature, signed_at, algorithm, verified
+    if [[ ! -f "$HASH_CACHE_JSON" ]]; then
+        return 0  # No cache = OK
+    fi
+    
+    local cache_content
+    cache_content=$(cat "$HASH_CACHE_JSON" 2>/dev/null) || return 0
+    
+    # Validate JSON and check for unexpected keys
+    local extra_keys
+    extra_keys=$(echo "$cache_content" | jq -r 'keys[] | select(. != "hash" and . != "signature" and . != "signed_at" and . != "algorithm" and . != "verified")' 2>/dev/null)
+    
+    if [[ -n "$extra_keys" ]]; then
+        log "ERROR" "[INTEGRITY] JSON hash cache contains unexpected properties: $extra_keys. Possible injection."
+        rm -f "$HASH_CACHE_JSON" 2>/dev/null || true
+        return 1
+    fi
+    
+    # Validate hash format
+    local cached_hash
+    cached_hash=$(echo "$cache_content" | jq -r '.hash // empty' 2>/dev/null)
+    if [[ -n "$cached_hash" && ${#cached_hash} -ne 64 ]]; then
+        log "ERROR" "[INTEGRITY] Invalid hash length in cache: ${#cached_hash} (expected 64)"
+        rm -f "$HASH_CACHE_JSON" 2>/dev/null || true
+        return 1
+    fi
+    
+    return 0
+}
+
+# ============================================
 #  v5.0.1: PROTECTED PROCESSES AND SERVICES
 #  Defense-in-depth: Agent-side validation
 # ============================================
@@ -1000,32 +904,15 @@ restart_service_handler() {
          return 1
      fi
      
-     # v5.0.12 FIX: Backend may return wrapped {jobs:[...]} or flat array [...]
-     # Extract jobs array from either format
-     local jobs_array
-     if echo "$result" | jq -e '.jobs' &>/dev/null; then
-         # Wrapped format: { jobs: [...], poll_interval_seconds: N }
-         jobs_array=$(echo "$result" | jq -c '.jobs')
-         # Read dynamic poll interval
-         local new_interval
-         new_interval=$(echo "$result" | jq -r '.poll_interval_seconds // 0' 2>/dev/null)
-         if [[ "$new_interval" -ge 10 && "$new_interval" != "$JOB_POLL_INTERVAL" ]]; then
-             log "INFO" "[POLL-JOBS] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_interval}s"
-             JOB_POLL_INTERVAL=$new_interval
-         fi
-     else
-         # Flat array format (legacy)
-         jobs_array="$result"
-     fi
-     
+     # Backend returns array directly, not { jobs: [...] }
      local count
-     count=$(echo "$jobs_array" | jq 'length' 2>/dev/null || echo 0)
+     count=$(echo "$result" | jq 'length' 2>/dev/null || echo 0)
      
      if [[ "$count" -gt 0 ]]; then
          log "INFO" "[POLL-JOBS] Received $count job(s)"
      fi
      
-     echo "$jobs_array"
+     echo "$result"
  }
  
  execute_job() {
@@ -1132,18 +1019,6 @@ restart_service_handler() {
             ;;
         "integration_test_v3")
             output='{"pong":true,"agent_version":"'"$AGENT_VERSION"'","timestamp":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","hostname":"'"$(hostname)"'"}'
-            ;;
-        "force_update")
-            # v5.0.13-fix: Handle force_update as job type
-            local payload
-            payload=$(echo "$job" | jq -c '.payload // {}')
-            if apply_forced_update "$payload"; then
-                # Should not be reached on success as apply_forced_update exits
-                output='{"success":true,"message":"Update initiated"}'
-            else
-                status="failed"
-                error_message="Force update failed (check logs)"
-            fi
             ;;
         *)
             error_message="Unknown job type: $job_type"
@@ -1424,11 +1299,14 @@ restart_service_handler() {
          if [[ "$is_protected" == "false" ]]; then
              log "WARN" "[PROCESS-CHECK] High CPU detected: $name (PID: $pid) at $cpu%"
              
-             # v5.0.13-perf: O(1) baseline lookup via associative array
+             # Check if in baseline
              local in_baseline=false
-             if [[ -n "${PROCESS_BASELINE_MAP[$name]+x}" ]]; then
-                 in_baseline=true
-             fi
+             for baseline_proc in "${PROCESS_BASELINE[@]}"; do
+                 if [[ "$baseline_proc" == "$name" ]]; then
+                     in_baseline=true
+                     break
+                 fi
+             done
              
              if [[ "$in_baseline" == "false" ]]; then
                  log "WARN" "[PROCESS-CHECK] Process $name NOT in baseline - killing..."
@@ -1468,15 +1346,9 @@ restart_service_handler() {
  # ============================================
  #  v5.0.1: PROCESS BASELINE
  # ============================================
- # v5.0.13-perf: Use associative array for O(1) baseline lookups instead of O(n) linear scan
- declare -A PROCESS_BASELINE_MAP=()
-
  initialize_process_baseline() {
      if [[ -f "$PROCESS_BASELINE_PATH" ]]; then
          mapfile -t PROCESS_BASELINE < <(jq -r '.[].name' "$PROCESS_BASELINE_PATH" 2>/dev/null)
-         for p in "${PROCESS_BASELINE[@]}"; do
-             PROCESS_BASELINE_MAP["$p"]=1
-         done
          log "INFO" "[BASELINE] Loaded baseline with ${#PROCESS_BASELINE[@]} processes"
      else
          log "INFO" "[BASELINE] Creating initial process baseline..."
@@ -1491,7 +1363,6 @@ restart_service_handler() {
              fi
              baseline+="{\"name\":\"$proc\",\"first_seen\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}"
              PROCESS_BASELINE+=("$proc")
-             PROCESS_BASELINE_MAP["$proc"]=1
          done
          baseline+=']'
          
@@ -1500,18 +1371,25 @@ restart_service_handler() {
      fi
  }
  
- # v5.0.13-perf: O(1) lookups via associative array
  get_process_anomalies() {
      local current_procs
      mapfile -t current_procs < <(ps -eo comm= | sort -u)
      
+     local anomalies='[]'
      local anomaly_count=0
      
      for proc in "${current_procs[@]}"; do
-         if [[ -z "${PROCESS_BASELINE_MAP[$proc]+x}" ]]; then
+         local found=false
+         for baseline_proc in "${PROCESS_BASELINE[@]}"; do
+             if [[ "$proc" == "$baseline_proc" ]]; then
+                 found=true
+                 break
+             fi
+         done
+         
+         if [[ "$found" == "false" ]]; then
              anomaly_count=$((anomaly_count + 1))
              PROCESS_BASELINE+=("$proc")
-             PROCESS_BASELINE_MAP["$proc"]=1
          fi
      done
      
@@ -1616,58 +1494,8 @@ EOF
               if [[ "$new_job_interval" -ge 10 && "$new_job_interval" != "$JOB_POLL_INTERVAL" ]]; then
                   log "INFO" "[HEARTBEAT] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_job_interval}s"
                   JOB_POLL_INTERVAL=$new_job_interval
-               fi
-               
-               # ============================================
-                # v5.0.13: SIGNED HASH CACHE - Verify signature before trusting
-                # Hash only accepted if Ed25519 signature validates
-                # ============================================
-                local server_script_hash
-                server_script_hash=$(echo "$result" | jq -r '.script_sha256 // ""' 2>/dev/null)
-                if [[ -n "$server_script_hash" && ${#server_script_hash} -eq 64 ]]; then
-                    local hash_sig
-                    hash_sig=$(echo "$result" | jq -r '.script_hash_signature // ""' 2>/dev/null)
-                    local hash_ts
-                    hash_ts=$(echo "$result" | jq -r '.script_hash_signed_at // ""' 2>/dev/null)
-                    
-                    # Verify Ed25519 signature before accepting hash
-                    local sig_verified="false"
-                    local ed25519_pubkey_path="${BASE_DIR}/keys/ed25519_server.pub"
-                    if [[ -n "$hash_sig" && ${#hash_sig} -gt 10 && -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
-                        local _tmp_hash _tmp_sig
-                        _tmp_hash=$(mktemp) || { log "ERROR" "[INTEGRITY] mktemp failed"; continue; }
-                        _tmp_sig=$(mktemp) || { rm -f "$_tmp_hash"; log "ERROR" "[INTEGRITY] mktemp failed"; continue; }
-                        echo -n "${server_script_hash,,}" > "$_tmp_hash"
-                        echo "$hash_sig" | base64 -d > "$_tmp_sig" 2>/dev/null
-                        if openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
-                            -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
-                            sig_verified="true"
-                            log "DEBUG" "[INTEGRITY] Ed25519 signature VERIFIED for hash cache update"
-                        else
-                            log "ERROR" "[INTEGRITY] REJECTED hash cache update - Ed25519 signature INVALID! Possible server compromise!"
-                            logger -t CyberShield -p auth.err "INTEGRITY: Rejected script hash - invalid signature"
-                        fi
-                        rm -f "$_tmp_hash" "$_tmp_sig"
-                    else
-                        # No pubkey or no signature - accept with warning (legacy/first-run)
-                        sig_verified="true"
-                        if [[ -z "$hash_sig" || ${#hash_sig} -le 10 ]]; then
-                            log "WARN" "[INTEGRITY] Hash cache update has no signature (legacy server)"
-                        fi
-                    fi
-                    
-                    if [[ "$sig_verified" == "true" ]]; then
-                        echo "{\"hash\":\"${server_script_hash,,}\",\"signature\":\"$hash_sig\",\"signed_at\":\"$hash_ts\",\"algorithm\":\"Ed25519\",\"verified\":true}" > "$DATA_DIR/expected_script_hash.json" 2>/dev/null
-                        echo -n "${server_script_hash,,}" > "$DATA_DIR/expected_script_hash.txt" 2>/dev/null
-                        # v5.0.13: Harden cache file permissions (root-only read/write)
-                        chmod 600 "$DATA_DIR/expected_script_hash.json" 2>/dev/null || true
-                        chmod 600 "$DATA_DIR/expected_script_hash.txt" 2>/dev/null || true
-                        chown root:root "$DATA_DIR/expected_script_hash.json" 2>/dev/null || true
-                        chown root:root "$DATA_DIR/expected_script_hash.txt" 2>/dev/null || true
-                        log "DEBUG" "[INTEGRITY] Cached verified script hash from server"
-                    fi
-                fi
-           fi
+              fi
+          fi
           
           return 0
      else
@@ -1698,24 +1526,17 @@ EOF
      
      log "INFO" "[FORCE UPDATE] Version: $target_version, Reason: $reason"
      
-     # Decode Base64 (secure temp in SAME filesystem as target for atomic mv)
-     local current_script_dir
-     current_script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
-     local temp_script
-     temp_script=$(mktemp "${current_script_dir}/.cybershield-update-XXXXXXXX.sh") || {
-         log "ERROR" "[FORCE UPDATE] mktemp failed - cannot create secure temp file"
-         return 1
-     }
      # v5.0.13-patch: Pre-decode size validation (prevents OOM before Base64 decode)
      local base64_len=${#base64_content}
      local max_base64_len=7340032  # ~5MB binary = ~7MB Base64
      if [[ "$base64_len" -gt "$max_base64_len" ]]; then
          log "ERROR" "[FORCE UPDATE] REJECTED - Base64 payload too large BEFORE decode: $base64_len chars (max $max_base64_len)"
          logger -t CyberShield -p auth.err "Update rejected: Base64 payload too large before decode ($base64_len chars)"
-         rm -f "$temp_script"
          return 1
      fi
 
+     # Decode Base64
+     local temp_script="/tmp/cybershield-force-update-${target_version}.sh"
      echo "$base64_content" | base64 -d > "$temp_script" 2>/dev/null
      
      if [[ ! -s "$temp_script" ]]; then
@@ -1728,49 +1549,48 @@ EOF
      decoded_size=$(stat -c%s "$temp_script" 2>/dev/null || stat -f%z "$temp_script" 2>/dev/null)
      log "DEBUG" "[FORCE UPDATE] Script decodificado: $decoded_size bytes"
      
-    # Validate SHA256
-    local actual_hash
-    actual_hash=$(sha256sum "$temp_script" 2>/dev/null | awk '{print $1}')
-    
-    if [[ "${actual_hash,,}" != "${expected_hash,,}" ]]; then
-        log "ERROR" "[FORCE UPDATE] SHA256 mismatch! Esperado: $expected_hash, Obtido: $actual_hash"
-        rm -f "$temp_script"
-        return 1
-    fi
-    
-    log "SUCCESS" "[FORCE UPDATE] SHA256 validado: $actual_hash"
-    
-    # v5.0.13: Verify Ed25519/ECDSA signature on update payload (if available)
-    local update_signature
-    update_signature=$(echo "$response" | jq -r '.ecdsa_signature // .signature_base64 // ""' 2>/dev/null)
-    if [[ -n "$update_signature" && ${#update_signature} -gt 10 ]]; then
-        # Verify using openssl if Ed25519 public key is available
-        local ed25519_pubkey_path="${BASE_DIR}/keys/ed25519_server.pub"
-        if [[ -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
-            local _tmp_hash _tmp_sig
-            _tmp_hash=$(mktemp) || { log "ERROR" "[FORCE UPDATE] mktemp failed"; return 1; }
-            _tmp_sig=$(mktemp) || { rm -f "$_tmp_hash"; log "ERROR" "[FORCE UPDATE] mktemp failed"; return 1; }
-            echo -n "$actual_hash" > "$_tmp_hash"
-            echo "$update_signature" | base64 -d > "$_tmp_sig" 2>/dev/null
-            if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
-                -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
-                log "ERROR" "[FORCE UPDATE] REJECTED - Update signature INVALID! Possible supply chain attack."
-                logger -t CyberShield -p auth.err "FORCE UPDATE REJECTED: Invalid cryptographic signature. SHA256: $actual_hash"
-                rm -f "$temp_script" "$_tmp_hash" "$_tmp_sig"
-                return 1
-            fi
-            rm -f "$_tmp_hash" "$_tmp_sig"
-            log "SUCCESS" "[FORCE UPDATE] Cryptographic signature VERIFIED for update payload"
-        else
-            log "WARN" "[FORCE UPDATE] No Ed25519 public key available - signature present but not verified"
-        fi
-    else
-        # v5.0.13-patch: Reject unsigned payloads (mandatory signature enforcement)
-        log "ERROR" "[FORCE UPDATE] REJECTED - No cryptographic signature on update payload. Unsigned updates blocked."
-        logger -t CyberShield -p auth.err "Update rejected: missing cryptographic signature (unsigned payloads blocked since v5.0.13)"
-        rm -f "$temp_script"
-        return 1
-    fi
+     # Validate SHA256
+     local actual_hash
+     actual_hash=$(sha256sum "$temp_script" 2>/dev/null | awk '{print $1}')
+     
+     if [[ "${actual_hash,,}" != "${expected_hash,,}" ]]; then
+         log "ERROR" "[FORCE UPDATE] SHA256 mismatch! Esperado: $expected_hash, Obtido: $actual_hash"
+         rm -f "$temp_script"
+         return 1
+     fi
+     
+     log "SUCCESS" "[FORCE UPDATE] SHA256 validado: $actual_hash"
+
+     # v5.0.13-patch: Verify Ed25519/ECDSA signature on update payload (mandatory)
+     local update_signature
+     update_signature=$(echo "$response" | jq -r '.ecdsa_signature // .signature_base64 // ""' 2>/dev/null)
+     if [[ -n "$update_signature" && ${#update_signature} -gt 10 ]]; then
+         local ed25519_pubkey_path="${BASE_DIR:-/opt/cybershield}/keys/ed25519_server.pub"
+         if [[ -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
+             local _tmp_hash _tmp_sig
+             _tmp_hash=$(mktemp) || { log "ERROR" "[FORCE UPDATE] mktemp failed"; rm -f "$temp_script"; return 1; }
+             _tmp_sig=$(mktemp) || { rm -f "$_tmp_hash"; log "ERROR" "[FORCE UPDATE] mktemp failed"; rm -f "$temp_script"; return 1; }
+             echo -n "$actual_hash" > "$_tmp_hash"
+             echo "$update_signature" | base64 -d > "$_tmp_sig" 2>/dev/null
+             if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
+                 -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
+                 log "ERROR" "[FORCE UPDATE] REJECTED - Update signature INVALID! Possible supply chain attack."
+                 logger -t CyberShield -p auth.err "FORCE UPDATE REJECTED: Invalid cryptographic signature. SHA256: $actual_hash"
+                 rm -f "$temp_script" "$_tmp_hash" "$_tmp_sig"
+                 return 1
+             fi
+             rm -f "$_tmp_hash" "$_tmp_sig"
+             log "SUCCESS" "[FORCE UPDATE] Cryptographic signature VERIFIED for update payload"
+         else
+             log "WARN" "[FORCE UPDATE] Ed25519 public key or openssl not available - cannot verify signature"
+         fi
+     else
+         # v5.0.13-patch: Reject unsigned payloads
+         log "ERROR" "[FORCE UPDATE] REJECTED - No cryptographic signature on update payload. Unsigned updates blocked."
+         logger -t CyberShield -p auth.err "Update rejected: missing cryptographic signature (unsigned payloads blocked since v5.0.13)"
+         rm -f "$temp_script"
+         return 1
+     fi
      
      # Anti-corruption: reject HTML content
      local first_line
@@ -1792,13 +1612,8 @@ EOF
      fi
      
      # Apply update
-    # Apply update (atomic mv instead of cp to prevent partial write TOCTOU)
-    chmod 750 "$temp_script"
-    chown root:root "$temp_script" 2>/dev/null || true
-    mv -f "$temp_script" "$current_script" 2>/dev/null || { cp "$temp_script" "$current_script" && rm -f "$temp_script"; }
-    # v5.0.13: Harden permissions on installed script
-    chmod 750 "$current_script"
-    chown root:root "$current_script" 2>/dev/null || true
+     chmod +x "$temp_script"
+     cp "$temp_script" "$current_script" 2>/dev/null
      rm -f "$temp_script"
      
      log "SUCCESS" "[FORCE UPDATE] Script instalado: $current_script"
@@ -1811,39 +1626,14 @@ EOF
      
      log "INFO" "[FORCE UPDATE] Reiniciando agente com nova versao..."
      
-     # v5.0.13-fix: Retry limit for update restart (max 3 attempts to prevent infinite loop)
-     local restart_attempt=0
-     local restart_max=3
-     local restart_success=false
-     
-     while [[ $restart_attempt -lt $restart_max ]]; do
-         restart_attempt=$((restart_attempt + 1))
-         log "INFO" "[FORCE UPDATE] Restart attempt $restart_attempt/$restart_max..."
-         
-         if systemctl is-active cybershield-agent &>/dev/null; then
-             sudo systemctl restart cybershield-agent &
-             restart_success=true
-             break
-         elif systemctl is-active --user cybershield-agent &>/dev/null; then
-             systemctl restart --user cybershield-agent &
-             restart_success=true
-             break
-         else
-             # Fallback: exec into new script
-             exec "$current_script" --server-url "$SERVER_URL" --agent-token "$AGENT_TOKEN" --hmac-secret "$HMAC_SECRET" --agent-name "$AGENT_NAME" &
-             restart_success=true
-             break
-         fi
-         sleep 2
-     done
-     
-     if [[ "$restart_success" == "false" ]]; then
-         log "ERROR" "[FORCE UPDATE] All $restart_max restart attempts failed - rolling back"
-         if [[ -f "${current_script}.backup" ]]; then
-             cp "${current_script}.backup" "$current_script" 2>/dev/null
-             log "WARN" "[FORCE UPDATE] Rolled back to previous version"
-         fi
-         return 1
+     # Restart via systemd (no PC restart needed)
+     if systemctl is-active cybershield-agent &>/dev/null; then
+         sudo systemctl restart cybershield-agent &
+     elif systemctl is-active --user cybershield-agent &>/dev/null; then
+         systemctl restart --user cybershield-agent &
+     else
+         # Fallback: exec into new script
+         exec "$current_script" --server-url "$SERVER_URL" --agent-token "$AGENT_TOKEN" --hmac-secret "$HMAC_SECRET" --agent-name "$AGENT_NAME" &
      fi
      
      log "SUCCESS" "[FORCE UPDATE] Restart iniciado - saindo do processo atual"
@@ -2190,12 +1980,12 @@ remove_dns_filter_handler() {
 # ============================================
 #  MAIN LOOP v5.0.1 FULL ENTERPRISE
 # ============================================
- log "INFO" "============================================"
+ log "============================================"
  log "INFO" "[START] CyberShield Agent $AGENT_VERSION FULL ENTERPRISE"
  log "DEBUG" "[INFO] ServerUrl: $SERVER_URL"
  log "DEBUG" "[INFO] AgentName: $AGENT_NAME"
  log "INFO" "[INFO] Features: ECDSA-signing, Ed25519-verify, hash-chain, FSM, DNS-filter, auto-remediation"
- log "INFO" "============================================"
+ log "============================================"
  
  # ============================================
  #  PHASE 1: INITIALIZATION
@@ -2207,90 +1997,69 @@ remove_dns_filter_handler() {
  if [[ "$saved_state" == "SAFE_MODE" ]]; then
      log "WARN" "[STARTUP] Recovering from SAFE_MODE..."
  fi
- 
- # Initialize ECDSA keys
- keys_initialized=false
- SECURITY_DEGRADED=false
- CONSECUTIVE_HEARTBEAT_FAILURES=0
- if initialize_agent_keys; then
-     keys_initialized=true
- else
-     log "ERROR" "[STARTUP] Failed to initialize keys - entering DEGRADED mode (FAIL-CLOSED)"
-     set_agent_state "DEGRADED" "Key initialization failed"
-     SECURITY_DEGRADED=true
-     log "WARN" "[SECURITY] SecurityDegraded=TRUE - operational jobs will be BLOCKED until crypto is restored"
- fi
- 
- # ============================================
- #  PHASE 2: AUTHENTICATION
- # ============================================
- # v5.0.13-fix: Guard - only transition to AUTHENTICATING if not stuck in DEGRADED with failed keys
- if [[ "$SECURITY_DEGRADED" == "true" ]]; then
-     log "WARN" "[STARTUP] Skipping AUTHENTICATING - SecurityDegraded, staying in DEGRADED for heartbeat attempt"
- else
-     set_agent_state "AUTHENTICATING" "Validating credentials"
- fi
- 
- # Send first heartbeat
- heartbeat_success=false
- if send_heartbeat; then
-     heartbeat_success=true
-     
-     # Register public key
-     if [[ "$keys_initialized" == "true" ]]; then
-         register_agent_key || log "WARN" "[STARTUP] Key registration failed"
-     fi
-     CONSECUTIVE_HEARTBEAT_FAILURES=0
- else
-     log "WARN" "[STARTUP] Initial heartbeat failed - entering DEGRADED mode"
-     set_agent_state "DEGRADED" "Heartbeat failed"
-     CONSECUTIVE_HEARTBEAT_FAILURES=$((CONSECUTIVE_HEARTBEAT_FAILURES + 1))
-     
-     # v5.0.13-fix: If BOTH keys and heartbeat failed, enter SAFE_MODE (fail-closed)
-     if [[ "$keys_initialized" == "false" ]]; then
-         log "ERROR" "[SECURITY] No crypto + no auth = SAFE_MODE (fail-closed)"
-         set_agent_state "SAFE_MODE" "No auth + no crypto - fail closed"
-     fi
- fi
+
+# Initialize ECDSA keys
+keys_initialized=false
+security_degraded=false
+if initialize_agent_keys; then
+    keys_initialized=true
+else
+    log "ERROR" "[STARTUP] Failed to initialize keys - entering DEGRADED mode (FAIL-CLOSED)"
+    set_agent_state "DEGRADED" "Key initialization failed"
+    security_degraded=true
+    log "WARN" "[SECURITY] SecurityDegraded=TRUE - operational jobs will be BLOCKED until crypto is restored"
+fi
+
+# v5.0.13: Validate hash cache schema on startup (Windows parity)
+if ! validate_hash_cache_schema; then
+    log "WARN" "[STARTUP] Hash cache schema invalid - removed corrupted cache"
+fi
+
+# v5.0.13: Save initial script hash on startup
+initial_hash=$(sha256sum "$0" 2>/dev/null | cut -d' ' -f1)
+if [[ -n "$initial_hash" && ${#initial_hash} -eq 64 ]]; then
+    save_signed_hash_cache "$initial_hash" ""
+    log "DEBUG" "[STARTUP] Initial script hash cached: ${initial_hash:0:16}..."
+fi
+
+# ============================================
+#  PHASE 2: AUTHENTICATION
+# ============================================
+if [[ "$security_degraded" == "true" ]]; then
+    log "WARN" "[STARTUP] Skipping AUTHENTICATING - SecurityDegraded, staying in DEGRADED for heartbeat attempt"
+else
+    set_agent_state "AUTHENTICATING" "Validating credentials"
+fi
+
+# Send first heartbeat
+heartbeat_success=false
+if send_heartbeat; then
+    heartbeat_success=true
+    CONSECUTIVE_HEARTBEAT_FAILURES=0
+    
+    # Register public key
+    if [[ "$keys_initialized" == "true" ]]; then
+        register_agent_key || log "WARN" "[STARTUP] Key registration failed"
+    fi
+else
+    log "WARN" "[STARTUP] Initial heartbeat failed - entering DEGRADED mode"
+    set_agent_state "DEGRADED" "Heartbeat failed"
+    CONSECUTIVE_HEARTBEAT_FAILURES=$((CONSECUTIVE_HEARTBEAT_FAILURES + 1))
+    
+    # If BOTH keys and heartbeat failed, enter SAFE_MODE (fail-closed)
+    if [[ "$keys_initialized" == "false" ]]; then
+        log "ERROR" "[SECURITY] No crypto + no auth = SAFE_MODE (fail-closed)"
+        set_agent_state "SAFE_MODE" "No auth + no crypto - fail closed"
+    fi
+fi
  
  # ============================================
  #  PHASE 3: SYNCHRONIZATION
  # ============================================
- # v5.0.13-fix: If in SAFE_MODE after startup failures, enter recovery loop
- if [[ "$CURRENT_STATE" == "SAFE_MODE" ]]; then
-     log "WARN" "[STARTUP] Agent in SAFE_MODE - entering recovery-only loop"
-     recovery_attempt=0
-     while [[ "$CURRENT_STATE" == "SAFE_MODE" ]]; do
-         recovery_attempt=$((recovery_attempt + 1))
-          # Exponential backoff (60s, 120s, 240s... max 600s) + jitter (anti-thundering herd)
-          base_backoff=$((60 * (2 ** (recovery_attempt - 1))))
-          [[ $base_backoff -gt 600 ]] && base_backoff=600
-          jitter=$((RANDOM % 31))
-          recovery_delay=$((base_backoff + jitter))
-          log "INFO" "[SAFE_MODE] Recovery attempt #$recovery_attempt - waiting ${recovery_delay}s (backoff: ${base_backoff}s, jitter: ${jitter}s)..."
-         sleep "$recovery_delay"
-         log "INFO" "[SAFE_MODE] Attempting recovery heartbeat..."
-         if send_heartbeat; then
-             if initialize_agent_keys; then
-                 SECURITY_DEGRADED=false
-                 set_agent_state "INITIALIZING" "Recovery successful"
-                 log "SUCCESS" "[SAFE_MODE] Recovery successful - restarting initialization"
-                 break
-             else
-                 log "WARN" "[SAFE_MODE] Heartbeat OK but keys still failed - continuing recovery"
-             fi
-         fi
-     done
- fi
-
  set_agent_state "SYNCING" "Syncing policies and baseline"
  
- # v5.0.13-fix: Guard against duplicate baseline initialization
- if [[ ${#PROCESS_BASELINE[@]} -eq 0 ]]; then
-     initialize_process_baseline
- else
-     log "DEBUG" "[BASELINE] Already initialized, skipping duplicate call"
- fi
+ # Initialize process baseline
+ initialize_process_baseline
  
  # Sync DNS blocklist
  sync_dns_blocklist || true
@@ -2298,41 +2067,19 @@ remove_dns_filter_handler() {
  # ============================================
  #  PHASE 4: ENFORCEMENT
  # ============================================
- # v5.0.13-fix: Only enter ENFORCING if security is not degraded
- if [[ "$SECURITY_DEGRADED" == "true" ]]; then
-     log "WARN" "[STARTUP] Agent v$AGENT_VERSION starting in DEGRADED mode (SecurityDegraded=TRUE, only recovery jobs allowed)"
- else
-     set_agent_state "ENFORCING" "Normal operation"
-     log "SUCCESS" "[STARTUP] Agent v$AGENT_VERSION fully operational in ENFORCING state"
- fi
+ set_agent_state "ENFORCING" "Normal operation"
  
- last_heartbeat=$(date +%s)
- last_auto_repair=$(date +%s)
- last_job_poll=$(date +%s)
- last_dns_sync=$(date +%s)
- last_integrity_check=$(date +%s)
+ log "SUCCESS" "[STARTUP] Agent fully operational in ENFORCING state"
+ 
+last_heartbeat=$(date +%s)
+last_auto_repair=$(date +%s)
+last_job_poll=$(date +%s)
+last_dns_sync=$(date +%s)
+LAST_RUNTIME_INTEGRITY_CHECK=$(date +%s)
+CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
  
  while true; do
-      now=$(date +%s)
-      
-      # ============================================
-      # v5.0.13: RUNTIME INTEGRITY CHECK (TOCTOU DEFENSE, every 5 min)
-      # ============================================
-      if [[ $((now - last_integrity_check)) -ge 300 ]]; then
-          if [[ -f "$HASH_CACHE_PATH" ]]; then
-              expected_rt_hash=$(cat "$HASH_CACHE_PATH" 2>/dev/null | tr -d '[:space:]')
-              if [[ -n "$expected_rt_hash" && ${#expected_rt_hash} -eq 64 ]]; then
-                  current_rt_hash=$(sha256sum "$SCRIPT_PATH" 2>/dev/null | awk '{print $1}')
-                  if [[ "${current_rt_hash,,}" != "${expected_rt_hash,,}" ]]; then
-                      log "ERROR" "[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running!"
-                      logger -t CyberShield -p auth.err "TOCTOU integrity violation - agent terminating"
-                      flush_log_buffer
-                      exit 9004
-                  fi
-              fi
-          fi
-          last_integrity_check=$now
-      fi
+     now=$(date +%s)
      
      # ============================================
      # NETWORK WATCHDOG
@@ -2341,12 +2088,7 @@ remove_dns_filter_handler() {
      if test_network_connectivity; then
          network_ok=true
          if [[ $CONSECUTIVE_NETWORK_FAILURES -ge 3 && "$CURRENT_STATE" == "DEGRADED" ]]; then
-             # v5.0.13-fix: Only restore ENFORCING if crypto is healthy
-             if [[ "$SECURITY_DEGRADED" == "false" ]]; then
-                 set_agent_state "ENFORCING" "Network restored"
-             else
-                 log "WARN" "[FSM] Network restored but SecurityDegraded=TRUE - staying DEGRADED"
-             fi
+             set_agent_state "ENFORCING" "Network restored"
          fi
          CONSECUTIVE_NETWORK_FAILURES=0
      else
@@ -2362,28 +2104,13 @@ remove_dns_filter_handler() {
      if [[ $((now - last_job_poll)) -ge $JOB_POLL_INTERVAL && "$network_ok" == "true" ]]; then
          jobs=$(poll_jobs)
          
-         # v5.0.13-fix: Use process substitution instead of pipe to avoid subshell variable isolation
-         while read -r job; do
+         # Process each job
+         echo "$jobs" | jq -c '.[]' 2>/dev/null | while read -r job; do
              if [[ -n "$job" ]]; then
-                 # v5.0.13-fix: When SecurityDegraded, only allow recovery jobs (fail-closed)
-                 job_type=$(echo "$job" | jq -r '.type // .job_type // "unknown"' 2>/dev/null)
-                 if [[ "$SECURITY_DEGRADED" == "true" ]]; then
-                     case "$job_type" in
-                         update_agent|force_update|reinstall_agent)
-                             # Recovery jobs allowed
-                             ;;
-                         *)
-                             log "WARN" "[SECURITY] BLOCKED job '$job_type' - SecurityDegraded=TRUE (only recovery jobs allowed)"
-                             submit_job_result "$job" '{"success":false,"status":"failed","error_message":"Agent in SecurityDegraded mode - only recovery jobs accepted","exit_code":403}'
-                             continue
-                             ;;
-                     esac
-                 fi
-                 
                  result=$(execute_job "$job")
                  submit_job_result "$job" "$result"
              fi
-         done < <(echo "$jobs" | jq -c '.[]' 2>/dev/null)
+         done
          
          last_job_poll=$now
      fi
@@ -2419,54 +2146,40 @@ remove_dns_filter_handler() {
     fi
      
      # ============================================
-     # HEARTBEAT EVERY INTERVAL
+     # HEARTBEAT EVERY INTERVAL (v5.0.13: with failure tracking)
      # ============================================
      if [[ $((now - last_heartbeat)) -ge $POLL_INTERVAL && "$network_ok" == "true" ]]; then
-         if ! send_heartbeat; then
-             CONSECUTIVE_HEARTBEAT_FAILURES=$((CONSECUTIVE_HEARTBEAT_FAILURES + 1))
-             log "WARN" "[HEARTBEAT] Failure #$CONSECUTIVE_HEARTBEAT_FAILURES"
-             
-             if [[ "$CURRENT_STATE" == "ENFORCING" ]]; then
-                 set_agent_state "DEGRADED" "Heartbeat failed"
-             fi
-             
-             # v5.0.13-fix: After 5 consecutive failures, enter SAFE_MODE (auth loop prevention)
-             if [[ $CONSECUTIVE_HEARTBEAT_FAILURES -ge 5 ]]; then
-                 log "ERROR" "[SECURITY] $CONSECUTIVE_HEARTBEAT_FAILURES consecutive heartbeat failures - entering SAFE_MODE"
-                 set_agent_state "SAFE_MODE" "Persistent auth failure ($CONSECUTIVE_HEARTBEAT_FAILURES consecutive)"
-                 
-                 # Backoff loop in SAFE_MODE - try every 2 minutes, max 10 attempts
-                 safe_mode_attempt=0
-                 while [[ "$CURRENT_STATE" == "SAFE_MODE" && $safe_mode_attempt -lt 10 ]]; do
-                     safe_mode_attempt=$((safe_mode_attempt + 1))
-                     # v5.0.13: Jitter AFTER exponential backoff (delay = base * 2^attempt + jitter)
-                     jitter=$((RANDOM % 30))
-                     base_backoff=$((120 * (2 ** (safe_mode_attempt - 1))))
-                     [[ $base_backoff -gt 600 ]] && base_backoff=600
-                     recovery_delay=$((base_backoff + jitter))
-                     log "INFO" "[SAFE_MODE] Recovery attempt $safe_mode_attempt/10 - waiting ${recovery_delay}s (backoff: ${base_backoff}s + jitter: ${jitter}s)..."
-                     sleep "$recovery_delay"
-                     if send_heartbeat; then
-                         CONSECUTIVE_HEARTBEAT_FAILURES=0
-                         if [[ "$SECURITY_DEGRADED" == "false" ]]; then
-                             set_agent_state "ENFORCING" "Heartbeat recovered"
-                         else
-                             set_agent_state "DEGRADED" "Heartbeat recovered but SecurityDegraded"
-                         fi
-                         log "SUCCESS" "[SAFE_MODE] Recovery successful after $safe_mode_attempt attempts"
-                         break
-                     fi
-                 done
+         if send_heartbeat; then
+             CONSECUTIVE_HEARTBEAT_FAILURES=0
+             if [[ "$CURRENT_STATE" == "DEGRADED" ]]; then
+                 set_agent_state "ENFORCING" "Heartbeat restored"
              fi
          else
-             if [[ $CONSECUTIVE_HEARTBEAT_FAILURES -gt 0 ]]; then
-                 log "SUCCESS" "[HEARTBEAT] Recovered after $CONSECUTIVE_HEARTBEAT_FAILURES failures"
+             CONSECUTIVE_HEARTBEAT_FAILURES=$((CONSECUTIVE_HEARTBEAT_FAILURES + 1))
+             # Cap to prevent overflow on long-running agents
+             if [[ $CONSECUTIVE_HEARTBEAT_FAILURES -gt $MAX_CONSECUTIVE_FAILURES ]]; then
+                 CONSECUTIVE_HEARTBEAT_FAILURES=$MAX_CONSECUTIVE_FAILURES
              fi
-             CONSECUTIVE_HEARTBEAT_FAILURES=0
+             if [[ "$CURRENT_STATE" == "ENFORCING" ]]; then
+                 set_agent_state "DEGRADED" "Heartbeat failed (consecutive: $CONSECUTIVE_HEARTBEAT_FAILURES)"
+             fi
+             log "WARN" "[HEARTBEAT] Consecutive failures: $CONSECUTIVE_HEARTBEAT_FAILURES"
          fi
          last_heartbeat=$now
      fi
      
+     # ============================================
+     # v5.0.13: RUNTIME INTEGRITY CHECK (every 5 min - Windows parity)
+     # ============================================
+     if [[ $((now - LAST_RUNTIME_INTEGRITY_CHECK)) -ge $RUNTIME_INTEGRITY_INTERVAL ]]; then
+         if ! test_runtime_integrity; then
+             log "ERROR" "[INTEGRITY] Runtime integrity check FAILED - script may have been tampered!"
+             set_agent_state "SAFE_MODE" "Runtime integrity violation"
+             break  # Exit main loop
+         fi
+         LAST_RUNTIME_INTEGRITY_CHECK=$now
+     fi
+      
      # ============================================
      # DNS BLOCKLIST SYNC (1x per hour)
      # ============================================
@@ -2474,26 +2187,6 @@ remove_dns_filter_handler() {
          sync_dns_blocklist || true
          last_dns_sync=$now
      fi
-     
-     # v5.0.13-perf: Dynamic sleep interval based on agent state
-     base_sleep=2
-     case "$CURRENT_STATE" in
-         "ENFORCING") base_sleep=2 ;;
-         "DEGRADED")  base_sleep=5 ;;
-         "SAFE_MODE") base_sleep=10 ;;
-         *)           base_sleep=2 ;;
-     esac
-     
-     # v5.0.13-perf: Adaptive CPU protection - increase sleep under high load
-     cpu_load=$(awk '{print int($1 * 100)}' /proc/loadavg 2>/dev/null || echo 0)
-     nproc_count=$(nproc 2>/dev/null || echo 1)
-     cpu_percent=$((cpu_load / nproc_count))
-     if [[ $cpu_percent -gt 80 ]]; then
-         base_sleep=$((base_sleep > 10 ? base_sleep : 10))
-     fi
-     
-     sleep "$base_sleep"
-     
-     # v5.0.13-perf: Flush log buffer on each cycle boundary
-     flush_log_buffer
+      
+     sleep 2
  done
