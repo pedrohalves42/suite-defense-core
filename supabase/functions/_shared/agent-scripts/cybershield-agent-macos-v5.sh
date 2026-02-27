@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - macOS v5.0.14
+# CyberShield Agent - macOS v5.0.13
 #
-# v5.0.14: PERFORMANCE TUNING
+# v5.0.13-perf: PERFORMANCE TUNING
 # - OPT: Replace python3 with jq for JSON parsing (~60x faster: 300ms→5ms per call)
 # - OPT: Log buffering (flush every 20 entries or 10s) with trap-based persistence
 # - OPT: Log rotation check every 100 calls instead of every call
@@ -87,7 +87,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.14"
+AGENT_VERSION="v5.0.13"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -177,10 +177,10 @@ LAUNCHD_PLIST_PATH="/Library/LaunchDaemons/com.cybershield.agent.plist"
 
 # Process baseline array (legacy - kept for compat)
 declare -a PROCESS_BASELINE=()
-# v5.0.14: O(1) associative array for baseline lookups
+# v5.0.13-perf: O(1) associative array for baseline lookups
 declare -A PROCESS_BASELINE_MAP=()
 
-# v5.0.14: Performance - Log buffering
+# v5.0.13-perf: Performance - Log buffering
 LOG_BUFFER=""
 LOG_BUFFER_COUNT=0
 LOG_BUFFER_MAX=20
@@ -188,11 +188,11 @@ LOG_BUFFER_LAST_FLUSH=0
 LOG_CALL_COUNT=0
 LOG_ROTATION_CHECK_INTERVAL=100
 
-# v5.0.14: Performance - Cached timestamp per loop iteration
+# v5.0.13-perf: Performance - Cached timestamp per loop iteration
 CACHED_TIMESTAMP=""
 CACHED_EPOCH=0
 
-# v5.0.14: Performance - Adaptive sleep
+# v5.0.13-perf: Performance - Adaptive sleep
 ADAPTIVE_MIN_SLEEP=10
 LAST_CPU_PERCENT=0
  
@@ -250,7 +250,7 @@ LAST_CPU_PERCENT=0
  chmod 700 "$KEYS_DIR"
  
  # ============================================
- #  LOGGING (v5.0.14: Buffered + rotation throttled)
+ #  LOGGING (v5.0.13-perf: Buffered + rotation throttled)
  # ============================================
  flush_log_buffer() {
      if [[ -n "$LOG_BUFFER" ]]; then
@@ -1348,7 +1348,7 @@ restart_service_handler() {
          if [[ "$is_protected" == "false" ]]; then
              log "WARN" "[PROCESS-CHECK] High CPU detected: $name (PID: $pid) at $cpu%"
              
-              # v5.0.14: O(1) baseline check via associative array
+              # v5.0.13-perf: O(1) baseline check via associative array
               if [[ -z "${PROCESS_BASELINE_MAP[$name]+_}" ]]; then
              
              if [[ -z "${PROCESS_BASELINE_MAP[$name]+_}" ]]; then
@@ -1387,11 +1387,11 @@ restart_service_handler() {
  }
  
  # ============================================
- #  v5.0.14: PROCESS BASELINE (O(1) lookups via associative array + jq)
+ #  v5.0.13-perf: PROCESS BASELINE (O(1) lookups via associative array + jq)
  # ============================================
  initialize_process_baseline() {
      if [[ -f "$PROCESS_BASELINE_PATH" ]]; then
-         # v5.0.14: Use jq instead of python3 (~60x faster)
+         # v5.0.13-perf: Use jq instead of python3 (~60x faster)
          if command -v jq &>/dev/null; then
              while IFS= read -r proc; do
                  PROCESS_BASELINE+=("$proc")
@@ -1431,7 +1431,7 @@ restart_service_handler() {
  get_process_anomalies() {
      local anomaly_count=0
      
-     # v5.0.14: O(1) lookup via associative array instead of O(n) linear scan
+     # v5.0.13-perf: O(1) lookup via associative array instead of O(n) linear scan
      for proc in $(ps -eo comm= | sort -u); do
          if [[ -z "${PROCESS_BASELINE_MAP[$proc]+_}" ]]; then
              anomaly_count=$((anomaly_count + 1))
@@ -2109,7 +2109,7 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
  
  while true; do
      now=$(date +%s)
-     # v5.0.14: Cache timestamp for this iteration (avoids repeated date subshells)
+     # v5.0.13-perf: Cache timestamp for this iteration (avoids repeated date subshells)
      CACHED_EPOCH=$now
      CACHED_TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
      
@@ -2220,7 +2220,7 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
          last_dns_sync=$now
      fi
       
-     # v5.0.14: Adaptive sleep - protect CPU under load
+     # v5.0.13-perf: Adaptive sleep - protect CPU under load
      local sleep_time=2
      local current_cpu
      current_cpu=$(top -l 1 -n 0 2>/dev/null | awk '/CPU usage/ {gsub(/%/,"",$3); print int($3)}' || echo 0)
