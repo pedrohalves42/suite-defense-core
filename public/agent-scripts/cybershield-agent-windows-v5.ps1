@@ -1130,7 +1130,7 @@ function Initialize-AgentKeys {
         Add-Type -AssemblyName System.Security
         
         # v5.0.12 FIX: Pre-clean ALL orphaned CNG ECDSA containers before generation
-        # This prevents "O objeto já existe" / "The object already exists" errors
+        # This prevents "O objeto ja existe" / "The object already exists" errors
         try {
             $knownKeyNames = @("ECDSA_P256", "CyberShield-ECDSA", "Microsoft Software Key Storage Provider")
             foreach ($keyName in $knownKeyNames) {
@@ -1994,7 +1994,7 @@ function Invoke-CollectSoftwareInventory {
 
 function Invoke-CollectAntivirusStatus {
     try {
-        # ── Phase 1: WMI SecurityCenter2 (detecta qualquer AV registrado no Windows) ──
+        # -- Phase 1: WMI SecurityCenter2 (detecta qualquer AV registrado no Windows) --
         $avProducts = Get-CimInstance -Namespace "root/SecurityCenter2" -ClassName AntiVirusProduct -ErrorAction SilentlyContinue
         
         $avList = @()
@@ -2007,7 +2007,7 @@ function Invoke-CollectAntivirusStatus {
             }
         }
 
-        # ── Phase 2: Detecção complementar de EDRs corporativos (não registram no SecurityCenter2) ──
+        # -- Phase 2: Deteccao complementar de EDRs corporativos (nao registram no SecurityCenter2) --
         $edrSignatures = @(
             @{ Name = "CrowdStrike Falcon";    Services = @("CSFalconService","csagent");         Processes = @("CSFalconContainer.exe","CSFalconService.exe") },
             @{ Name = "SentinelOne";            Services = @("SentinelAgent","SentinelOne");       Processes = @("SentinelAgent.exe","SentinelServiceHost.exe") },
