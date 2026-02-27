@@ -114,30 +114,54 @@ if (-not $AgentToken -and $AgentName) {
 
     if ($enrollKey -and $enrollKey.Length -gt 5) {
         Write-Status "Calling auto-recover for agent: $AgentName" "INFO"
-        $recoverUrl = "$ServerUrl/functions/v1/get-reinstall-by-name/$AgentName?key=$enrollKey"
-        
+        $recoverBaseUrl = "$ServerUrl/functions/v1/get-reinstall-by-name/$AgentName"
+
+        $recoverScript = $null
+
+        # Attempt 1: Header auth (best against proxy/query stripping)
         try {
-            $recoverScript = Invoke-RestMethod -Uri $recoverUrl -Method GET -TimeoutSec 60
-            if ($recoverScript -and $recoverScript.Length -gt 1000 -and $recoverScript -match 'AgentToken') {
-                Write-Status "Auto-recover script received ($($recoverScript.Length) chars)" "SUCCESS"
-                Write-Status "Switching to auto-recover mode..." "INFO"
-                Write-Host ""
-                # Execute the recovered script directly (it has credentials baked in)
-                $tempRecover = "$env:TEMP\\cybershield-recover-$AgentName.ps1"
-                [System.IO.File]::WriteAllText($tempRecover, $recoverScript, [System.Text.Encoding]::UTF8)
-                & powershell.exe -ExecutionPolicy Bypass -File $tempRecover
-                exit 0
-            } else {
-                Write-Status "Server returned invalid response" "ERROR"
-            }
+            Write-Status "Auto-recover attempt 1/3: header auth" "INFO"
+            $headers = @{ "X-Enrollment-Key" = $enrollKey }
+            $recoverScript = Invoke-RestMethod -Uri $recoverBaseUrl -Method GET -Headers $headers -TimeoutSec 60
         } catch {
-            $errMsg = $_.Exception.Message
-            Write-Status "Auto-recovery failed: $errMsg" "ERROR"
-            if ($errMsg -match '401') {
-                Write-Status "Invalid or expired enrollment key" "ERROR"
-            } elseif ($errMsg -match '404') {
-                Write-Status "Agent '$AgentName' not found in your tenant" "ERROR"
+            Write-Status "Attempt 1 failed: $($_.Exception.Message)" "WARN"
+        }
+
+        # Attempt 2: Query param
+        if (-not $recoverScript) {
+            try {
+                Write-Status "Auto-recover attempt 2/3: query auth" "INFO"
+                $recoverUrl = "$recoverBaseUrl?key=$enrollKey"
+                $recoverScript = Invoke-RestMethod -Uri $recoverUrl -Method GET -TimeoutSec 60
+            } catch {
+                Write-Status "Attempt 2 failed: $($_.Exception.Message)" "WARN"
             }
+        }
+
+        # Attempt 3: POST JSON body
+        if (-not $recoverScript) {
+            try {
+                Write-Status "Auto-recover attempt 3/3: body auth" "INFO"
+                $headers = @{ "Content-Type" = "application/json" }
+                $body = @{ enrollment_key = $enrollKey } | ConvertTo-Json -Compress
+                $recoverScript = Invoke-RestMethod -Uri $recoverBaseUrl -Method POST -Headers $headers -Body $body -TimeoutSec 60
+            } catch {
+                Write-Status "Attempt 3 failed: $($_.Exception.Message)" "WARN"
+            }
+        }
+
+        if ($recoverScript -and $recoverScript.Length -gt 1000 -and $recoverScript -match 'AgentToken') {
+            Write-Status "Auto-recover script received ($($recoverScript.Length) chars)" "SUCCESS"
+            Write-Status "Switching to auto-recover mode..." "INFO"
+            Write-Host ""
+            # Execute the recovered script directly (it has credentials baked in)
+            $tempRecover = "$env:TEMP\cybershield-recover-$AgentName.ps1"
+            [System.IO.File]::WriteAllText($tempRecover, $recoverScript, [System.Text.Encoding]::UTF8)
+            & powershell.exe -ExecutionPolicy Bypass -File $tempRecover
+            return
+        } else {
+            Write-Status "Auto-recovery failed after 3 attempts" "ERROR"
+            Write-Status "Invalid enrollment key, blocked network, or agent not found" "ERROR"
         }
     } else {
         Write-Status "No enrollment key provided - skipping auto-recovery" "WARN"

@@ -45,8 +45,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Auth: enrollment key OR JWT
-    const enrollmentKey = url.searchParams.get('key');
+    // Auth: enrollment key (header/query/body) OR JWT
+    const enrollmentKeyFromQuery = url.searchParams.get('key')?.trim() || null;
+    const enrollmentKeyFromHeader = req.headers.get('X-Enrollment-Key')?.trim() || null;
+    let enrollmentKeyFromBody: string | null = null;
+
+    if (!enrollmentKeyFromQuery && !enrollmentKeyFromHeader && req.method === 'POST') {
+      try {
+        const body = await req.json();
+        if (body && typeof body.enrollment_key === 'string') {
+          enrollmentKeyFromBody = body.enrollment_key.trim();
+        }
+      } catch {
+        // ignore invalid JSON body for auth fallback
+      }
+    }
+
+    const enrollmentKey = enrollmentKeyFromHeader || enrollmentKeyFromQuery || enrollmentKeyFromBody;
     const authHeader = req.headers.get('Authorization');
     let tenantId: string | null = null;
 
@@ -114,7 +129,7 @@ Deno.serve(async (req) => {
       tenantId = role?.tenant_id || null;
     } else {
       return new Response(
-        '# ERROR: Authentication required\n# Add ?key=YOUR_ENROLLMENT_KEY to the URL\nWrite-Host "ERROR: No auth provided" -ForegroundColor Red\n',
+        '# ERROR: Authentication required\n# Provide one of:\n#  - Query: ?key=YOUR_ENROLLMENT_KEY\n#  - Header: X-Enrollment-Key: YOUR_ENROLLMENT_KEY\n#  - POST JSON: {"enrollment_key":"YOUR_ENROLLMENT_KEY"}\nWrite-Host "ERROR: No auth provided" -ForegroundColor Red\n',
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
       );
     }
@@ -246,8 +261,8 @@ Write-Host ""
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Status "ERROR: Must run as Administrator!" "ERROR"
-    Read-Host "Press Enter to exit"
-    exit 1
+    Start-Sleep -Seconds 10
+    return
 }
 
 Write-Status "Credentials pre-loaded from server" "SUCCESS"
@@ -341,8 +356,8 @@ if (-not $newScript) {
 
 if (-not $newScript) {
     Write-Status "ALL download methods FAILED!" "ERROR"
-    Read-Host "Press Enter to exit"
-    exit 1
+    Start-Sleep -Seconds 10
+    return
 }
 
 [System.IO.File]::WriteAllText($scriptPath, $newScript, [System.Text.Encoding]::UTF8)
@@ -409,7 +424,7 @@ Write-Host ""
     Write-Host ""
 }
 
-Read-Host "Press Enter to close"
+Start-Sleep -Seconds 15
 `;
 
     return new Response(script, {
