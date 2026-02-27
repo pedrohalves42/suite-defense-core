@@ -1427,6 +1427,15 @@ EOF
      
      log "INFO" "[FORCE UPDATE] Version: $target_version, Reason: $reason"
      
+     # v5.0.13-patch: Pre-decode size validation (prevents OOM before Base64 decode)
+     local base64_len=${#base64_content}
+     local max_base64_len=7340032  # ~5MB binary = ~7MB Base64
+     if [[ "$base64_len" -gt "$max_base64_len" ]]; then
+         log "ERROR" "[FORCE UPDATE] REJECTED - Base64 payload too large BEFORE decode: $base64_len chars (max $max_base64_len)"
+         logger -t CyberShield -p auth.err "Update rejected: Base64 payload too large before decode ($base64_len chars)"
+         return 1
+     fi
+
      # Decode Base64
      local temp_script="/tmp/cybershield-force-update-${target_version}.sh"
      echo "$base64_content" | base64 -d > "$temp_script" 2>/dev/null
@@ -1452,6 +1461,37 @@ EOF
      fi
      
      log "SUCCESS" "[FORCE UPDATE] SHA256 validado: $actual_hash"
+
+     # v5.0.13-patch: Verify Ed25519/ECDSA signature on update payload (mandatory)
+     local update_signature
+     update_signature=$(echo "$response" | jq -r '.ecdsa_signature // .signature_base64 // ""' 2>/dev/null)
+     if [[ -n "$update_signature" && ${#update_signature} -gt 10 ]]; then
+         local ed25519_pubkey_path="${BASE_DIR:-/opt/cybershield}/keys/ed25519_server.pub"
+         if [[ -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
+             local _tmp_hash _tmp_sig
+             _tmp_hash=$(mktemp) || { log "ERROR" "[FORCE UPDATE] mktemp failed"; rm -f "$temp_script"; return 1; }
+             _tmp_sig=$(mktemp) || { rm -f "$_tmp_hash"; log "ERROR" "[FORCE UPDATE] mktemp failed"; rm -f "$temp_script"; return 1; }
+             echo -n "$actual_hash" > "$_tmp_hash"
+             echo "$update_signature" | base64 -d > "$_tmp_sig" 2>/dev/null
+             if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
+                 -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
+                 log "ERROR" "[FORCE UPDATE] REJECTED - Update signature INVALID! Possible supply chain attack."
+                 logger -t CyberShield -p auth.err "FORCE UPDATE REJECTED: Invalid cryptographic signature. SHA256: $actual_hash"
+                 rm -f "$temp_script" "$_tmp_hash" "$_tmp_sig"
+                 return 1
+             fi
+             rm -f "$_tmp_hash" "$_tmp_sig"
+             log "SUCCESS" "[FORCE UPDATE] Cryptographic signature VERIFIED for update payload"
+         else
+             log "WARN" "[FORCE UPDATE] Ed25519 public key or openssl not available - cannot verify signature"
+         fi
+     else
+         # v5.0.13-patch: Reject unsigned payloads
+         log "ERROR" "[FORCE UPDATE] REJECTED - No cryptographic signature on update payload. Unsigned updates blocked."
+         logger -t CyberShield -p auth.err "Update rejected: missing cryptographic signature (unsigned payloads blocked since v5.0.13)"
+         rm -f "$temp_script"
+         return 1
+     fi
      
      # Anti-corruption: reject HTML content
      local first_line

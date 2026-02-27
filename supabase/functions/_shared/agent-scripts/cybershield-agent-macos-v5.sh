@@ -1708,6 +1708,16 @@ EOF
          log "ERROR" "[FORCE UPDATE] mktemp failed - cannot create secure temp file"
          return 1
      }
+     # v5.0.13-patch: Pre-decode size validation (prevents OOM before Base64 decode)
+     local base64_len=${#base64_content}
+     local max_base64_len=7340032  # ~5MB binary = ~7MB Base64
+     if [[ "$base64_len" -gt "$max_base64_len" ]]; then
+         log "ERROR" "[FORCE UPDATE] REJECTED - Base64 payload too large BEFORE decode: $base64_len chars (max $max_base64_len)"
+         logger -t CyberShield "Update rejected: Base64 payload too large before decode ($base64_len chars)"
+         rm -f "$temp_script"
+         return 1
+     fi
+
      echo "$base64_content" | base64 -d > "$temp_script" 2>/dev/null || echo "$base64_content" | base64 -D > "$temp_script" 2>/dev/null
      
      if [[ ! -s "$temp_script" ]]; then
@@ -1764,7 +1774,11 @@ EOF
             log "WARN" "[FORCE UPDATE] No Ed25519 public key available - signature present but not verified"
         fi
     else
-        log "WARN" "[FORCE UPDATE] No cryptographic signature on update payload (legacy server)"
+        # v5.0.13-patch: Reject unsigned payloads (mandatory signature enforcement)
+        log "ERROR" "[FORCE UPDATE] REJECTED - No cryptographic signature on update payload. Unsigned updates blocked."
+        logger -t CyberShield "Update rejected: missing cryptographic signature (unsigned payloads blocked since v5.0.13)"
+        rm -f "$temp_script"
+        return 1
     fi
      # Anti-corruption: reject HTML content
      local first_line
