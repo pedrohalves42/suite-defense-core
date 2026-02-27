@@ -3956,6 +3956,14 @@ function Apply-ForcedUpdate {
         $tempScript = Join-Path $installDir "cybershield-update-temp-$([Guid]::NewGuid().ToString('N').Substring(0,8)).ps1"
         
         # BUG FIX #3: Base64 decode with try/catch for invalid content
+        # v5.0.13-patch: Pre-decode size validation (prevents OOM before Base64 decode)
+        $maxBase64Length = 7340032  # ~5MB binary = ~7MB Base64
+        if ($base64Content.Length -gt $maxBase64Length) {
+            Write-Log "[FORCE UPDATE] REJECTED - Base64 payload too large BEFORE decode: $($base64Content.Length) chars (max $maxBase64Length)" "ERROR"
+            Write-EventLog -LogName Application -Source "CyberShield" -EventId 5101 -EntryType Error -Message "Update rejected: Base64 payload too large before decode ($($base64Content.Length) chars)" -ErrorAction SilentlyContinue
+            return @{ success = $false; error = "Base64 payload too large before decode ($($base64Content.Length) chars)" }
+        }
+
         Write-Log "[FORCE UPDATE] Decodificando Base64..." "DEBUG"
         try {
             $bytes = [System.Convert]::FromBase64String($base64Content)
@@ -4003,7 +4011,15 @@ function Apply-ForcedUpdate {
             }
             Write-Log "[FORCE UPDATE] Cryptographic signature VERIFIED for update payload" "SUCCESS"
         } else {
-            Write-Log "[FORCE UPDATE] WARNING: No cryptographic signature on update payload (legacy server)" "WARN"
+            Write-Log "[FORCE UPDATE] REJECTED - No cryptographic signature on update payload. Unsigned updates are no longer accepted." "ERROR"
+            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+            Write-EventLog -LogName Application -Source "CyberShield" -EventId 5102 -EntryType Error -Message "Update rejected: missing cryptographic signature (unsigned payloads blocked since v5.0.13)" -ErrorAction SilentlyContinue
+            Add-EvidenceEntry -Type "security_alert" -Data @{
+                event = "unsigned_update_rejected"
+                target_version = $targetVersion
+                sha256 = $actualHash
+            } -Severity "warning"
+            return @{ success = $false; error = "Update rejected: no cryptographic signature (mandatory since v5.0.13)" }
         }
         
         # Detectar script atual e diretorio de instalacao
