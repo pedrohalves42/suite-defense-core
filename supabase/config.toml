@@ -485,6 +485,9 @@ verify_jwt = true
 [functions.sync-release-from-repo]
 verify_jwt = false
 
+[functions.sync-agent-release-content]
+verify_jwt = false
+
 # === Zero Trust Integrity Sentinel (every 6 hours) COST-OPT-V2 ===
 [functions.integrity-sentinel]
 verify_jwt = false

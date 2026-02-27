@@ -202,38 +202,56 @@ Write-Status "PHASE 4/5: Download Updated Script" "INFO"
 $newScript = $null
 $downloadMethod = "none"
 $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-$dlUrl = "$ServerUrl/functions/v1/get-latest-agent-script?platform=windows&format=plain&cb=$cacheBust"
+# Primary: fetch from published app public assets (always in sync with codebase)
+$dlUrl = "https://cybershield-audit.lovable.app/agent-scripts/cybershield-agent-windows-v5.ps1?cb=$cacheBust"
+# Fallback: edge function endpoint
+$dlUrlFallback = "$ServerUrl/functions/v1/get-latest-agent-script?platform=windows&format=plain&cb=$cacheBust"
 Write-Status "URL: $dlUrl" "INFO"
 
-# Method 1: Invoke-RestMethod (cleanest)
+# Method 1: Invoke-RestMethod from published app (cleanest, always latest)
 try {
     $template = Invoke-RestMethod -Uri $dlUrl -Method GET -TimeoutSec 60
     if ($template -and $template.Length -gt 5000) {
         $newScript = $template
-        $downloadMethod = "Invoke-RestMethod"
-        Write-Status "Downloaded via IRM ($($template.Length) chars)" "SUCCESS"
+        $downloadMethod = "IRM-PublicApp"
+        Write-Status "Downloaded via IRM from published app ($($template.Length) chars)" "SUCCESS"
     } else {
         Write-Status "IRM: response too short ($($template.Length) chars)" "WARN"
     }
 } catch {
-    Write-Status "IRM failed: $($_.Exception.Message)" "WARN"
+    Write-Status "IRM (published app) failed: $($_.Exception.Message)" "WARN"
 }
 
-# Method 2: Invoke-WebRequest with UseBasicParsing (proxy-friendly)
+# Method 2: Invoke-WebRequest from published app (proxy-friendly)
 if (-not $newScript) {
     try {
         $resp = Invoke-WebRequest -Uri $dlUrl -UseBasicParsing -TimeoutSec 60
         if ($resp.Content -and $resp.Content.Length -gt 5000) {
             $newScript = $resp.Content
-            $downloadMethod = "Invoke-WebRequest"
-            Write-Status "Downloaded via IWR ($($resp.Content.Length) chars)" "SUCCESS"
+            $downloadMethod = "IWR-PublicApp"
+            Write-Status "Downloaded via IWR from published app ($($resp.Content.Length) chars)" "SUCCESS"
         }
     } catch {
-        Write-Status "IWR failed: $($_.Exception.Message)" "WARN"
+        Write-Status "IWR (published app) failed: $($_.Exception.Message)" "WARN"
     }
 }
 
-# Method 3: System.Net.WebClient (legacy fallback)
+# Method 3: Fallback to edge function endpoint
+if (-not $newScript) {
+    Write-Status "Trying edge function fallback: $dlUrlFallback" "INFO"
+    try {
+        $template = Invoke-RestMethod -Uri $dlUrlFallback -Method GET -TimeoutSec 60
+        if ($template -and $template.Length -gt 5000) {
+            $newScript = $template
+            $downloadMethod = "IRM-EdgeFn"
+            Write-Status "Downloaded via edge function ($($template.Length) chars)" "SUCCESS"
+        }
+    } catch {
+        Write-Status "Edge function failed: $($_.Exception.Message)" "WARN"
+    }
+}
+
+# Method 4: System.Net.WebClient (legacy fallback)
 if (-not $newScript) {
     try {
         $wc = New-Object System.Net.WebClient
