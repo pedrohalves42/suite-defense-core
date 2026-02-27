@@ -11,7 +11,7 @@ interface TelegramPayload {
   channel_id: string;
   tenant_id: string;
   alert_id?: string;
-  recipient: string; // chat_id
+  recipient: string;
   config: {
     chat_id: string;
     bot_token?: string;
@@ -27,11 +27,19 @@ interface TelegramPayload {
 }
 
 const SEVERITY_EMOJI: Record<string, string> = {
-  critical: '?',
-  high: '?',
-  medium: '?',
-  low: '?',
-  info: '[INFO] ?'
+  critical: '🔴',
+  high: '🟠',
+  medium: '🟡',
+  low: '🔵',
+  info: '✅',
+};
+
+const SEVERITY_LABEL: Record<string, string> = {
+  critical: 'CRÍTICO',
+  high: 'ALTO',
+  medium: 'MÉDIO',
+  low: 'BAIXO',
+  info: 'INFO',
 };
 
 serve(async (req: Request) => {
@@ -58,7 +66,6 @@ serve(async (req: Request) => {
       chat_id: payload.recipient 
     });
 
-    // Use channel-specific bot token or global one
     const botToken = payload.config.bot_token || Deno.env.get('TELEGRAM_BOT_TOKEN');
 
     if (!botToken) {
@@ -84,26 +91,38 @@ serve(async (req: Request) => {
       });
     }
 
-    // Format message with Markdown
-    const emoji = SEVERITY_EMOJI[payload.alert.severity] || '[WARN] ?';
-    const message = `${emoji} *CyberShield Alert*\n\n` +
-      `*${escapeMarkdown(payload.alert.title)}*\n\n` +
-      `${escapeMarkdown(payload.alert.message)}\n\n` +
-      (payload.alert.agent_name ? `?? Agent: \`${escapeMarkdown(payload.alert.agent_name)}\`\n` : '') +
-      `? ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`;
+    // Format message with HTML (more reliable than Markdown)
+    const severity = payload.alert.severity?.toLowerCase() || 'info';
+    const emoji = SEVERITY_EMOJI[severity] || '🔔';
+    const label = SEVERITY_LABEL[severity] || 'ALERTA';
+    const now = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    const agentName = payload.alert.agent_name || 'System';
+
+    const message = [
+      `${emoji} <b>CyberShield Alert</b>  ·  <code>${label}</code>`,
+      ``,
+      `━━━━━━━━━━━━━━━━━━`,
+      ``,
+      `<b>${escapeHtml(payload.alert.title)}</b>`,
+      ``,
+      `${escapeHtml(payload.alert.message)}`,
+      ``,
+      `━━━━━━━━━━━━━━━━━━`,
+      ``,
+      `🤖 <b>Agent:</b> <code>${escapeHtml(agentName)}</code>`,
+      `🕐 <b>Data:</b> ${now}`,
+    ].join('\n');
 
     // Send via Telegram Bot API
     const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
     const response = await fetch(telegramUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: payload.recipient,
         text: message,
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         disable_web_page_preview: true
       }),
     });
@@ -138,7 +157,6 @@ serve(async (req: Request) => {
       chat_id: payload.recipient
     });
 
-    // Log success
     await supabase.from('notification_log').insert({
       tenant_id: payload.tenant_id,
       channel_id: payload.channel_id,
@@ -169,7 +187,10 @@ serve(async (req: Request) => {
   }
 });
 
-// Escape special Markdown characters
-function escapeMarkdown(text: string): string {
-  return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
+// Escape HTML special characters for Telegram HTML parse mode
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
