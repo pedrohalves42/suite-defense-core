@@ -30,8 +30,8 @@ Write-Host ""
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Status "ERROR: Must run as Administrator!" "ERROR"
-    Read-Host "Press Enter to exit"
-    exit 1
+    Start-Sleep -Seconds 10
+    return
 }
 
 try {
@@ -44,8 +44,8 @@ Write-Status "PHASE 1/5: Extract Credentials" "INFO"
 if (-not (Test-Path $InstallDir)) {
     Write-Status "Directory $InstallDir does NOT exist!" "ERROR"
     Write-Status "Use full installer instead of preserve-reinstall" "ERROR"
-    Read-Host "Press Enter to exit"
-    exit 1
+    Start-Sleep -Seconds 10
+    return
 }
 
 # Find agent script (exclude backups)
@@ -57,8 +57,8 @@ if (-not $agentScript) {
     Write-Status "No agent script found in $InstallDir" "ERROR"
     Write-Status "Files present:" "WARN"
     Get-ChildItem $InstallDir -ErrorAction SilentlyContinue | ForEach-Object { Write-Status "  $($_.Name)" "WARN" }
-    Read-Host "Press Enter to exit"
-    exit 1
+    Start-Sleep -Seconds 10
+    return
 }
 Write-Status "Script found: $($agentScript.Name)" "INFO"
 
@@ -158,8 +158,8 @@ if (-not $AgentName -or -not $AgentToken) {
     Write-Status "Options:" "INFO"
     Write-Status "  1. Run again and provide a valid JWT token" "INFO"
     Write-Status "  2. Use full reinstall with enrollment key" "INFO"
-    Read-Host "Press Enter to exit"
-    exit 1
+    Start-Sleep -Seconds 10
+    return
 }
 
 Write-Status "Credentials OK | Agent: $AgentName | HMAC: $(if($HmacSecret){'YES'}else{'NO'})" "SUCCESS"
@@ -271,8 +271,8 @@ if (-not $newScript) {
 if (-not $newScript) {
     Write-Status "ALL download methods FAILED!" "ERROR"
     Write-Status "Check network/firewall: Test-NetConnection $($([System.Uri]$ServerUrl).Host) -Port 443" "ERROR"
-    Read-Host "Press Enter to exit"
-    exit 1
+    Start-Sleep -Seconds 10
+    return
 }
 
 # Extract version from downloaded script
@@ -298,8 +298,8 @@ Write-Status "Script written: $scriptPath ($($newScript.Length) chars)" "SUCCESS
 # Verify file was written correctly
 if (-not (Test-Path $scriptPath)) {
     Write-Status "CRITICAL: Script file not found after write!" "ERROR"
-    Read-Host "Press Enter to exit"
-    exit 1
+    Start-Sleep -Seconds 10
+    return
 }
 $writtenSize = (Get-Item $scriptPath).Length
 Write-Status "File verified: $writtenSize bytes on disk" "SUCCESS"
@@ -393,5 +393,5 @@ Write-Host ""
     Write-Host ""
 }
 
-Read-Host "Press Enter to close"
+Start-Sleep -Seconds 15
 `;
