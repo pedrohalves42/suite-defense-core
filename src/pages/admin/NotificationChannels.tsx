@@ -181,7 +181,18 @@ export default function NotificationChannels() {
         payload.config = channel.config;
       }
 
-      await callEdgeFunction(functionName, payload);
+      const { data, error: fnError } = await supabase.functions.invoke(functionName, {
+        body: payload,
+      });
+      
+      if (fnError) {
+        console.error('Function error:', fnError);
+        throw new Error(fnError.message || 'Erro ao chamar função');
+      }
+      
+      if (data && !data.success) {
+        throw new Error(data.error || 'Falha no envio');
+      }
       
       await supabase
         .from('notification_channels')
