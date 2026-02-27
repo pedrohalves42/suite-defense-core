@@ -559,8 +559,8 @@ Deno.serve(async (req) => {
                     old_version: currentVersion || 'unknown',
                   },
                   // COST-OPT: Instruct agents to slow down polling
-                  heartbeat_interval_seconds: 60,
-                  poll_interval_seconds: 30,
+                  heartbeat_interval_seconds: 120,
+                  poll_interval_seconds: 60,
                 }),
                 {
                   headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -591,9 +591,9 @@ Deno.serve(async (req) => {
         ok: true,
         agent: agent.agent_name,
         timestamp: new Date().toISOString(),
-        // COST-OPT: Instruct agents to slow down polling
-        heartbeat_interval_seconds: 60,   // Heartbeat every 60s (was ~2-3s)
-        poll_interval_seconds: 30,         // Poll jobs every 30s (was ~2-3s)
+        // COST-OPT v2: Further reduce polling to cut costs
+        heartbeat_interval_seconds: 120,   // Heartbeat every 120s (was 60s)
+        poll_interval_seconds: 60,         // Poll jobs every 60s (was 30s)
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
