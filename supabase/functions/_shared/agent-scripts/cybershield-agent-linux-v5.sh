@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - Linux v5.0.13
+# CyberShield Agent - Linux v5.0.14
 #
-# v5.0.13: WINDOWS PARITY - Runtime integrity, signed hash cache, heartbeat failure tracking
+# v5.0.14: PERFORMANCE TUNING
+# - OPT: Log buffering (flush every 20 entries or 10s) with trap-based persistence
+# - OPT: Log rotation check every 100 calls instead of every call
+# - OPT: O(1) process baseline lookups via associative array (was O(n) linear scan)
+# - OPT: Adaptive CPU-aware sleep (min 10s when system CPU > 80%)
+# - OPT: Cached timestamp per main-loop iteration (reduces date subprocess spawns)
+# - OPT: Lazy path resolution for process anomaly detection
+#
 # v5.0.9: DYNAMIC INTERVALS - Read server-side polling config from heartbeat response
 # - NEW: Agent reads heartbeat_interval_seconds and poll_interval_seconds from heartbeat response
 # - NEW: Dynamically adjusts POLL_INTERVAL and JOB_POLL_INTERVAL at runtime
@@ -79,7 +86,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.13"
+AGENT_VERSION="v5.0.14"
 BASE_DIR="/opt/cybershield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -166,9 +173,26 @@ RUNTIME_INTEGRITY_INTERVAL=300  # 5 minutes
 LAST_SERVICE_HEALTH_CHECK=0
 SERVICE_HEALTH_CHECK_INTERVAL=300
 
-# Process baseline array
+# Process baseline array (legacy - kept for compat)
 declare -a PROCESS_BASELINE=()
- 
+# v5.0.14: O(1) associative array for baseline lookups
+declare -A PROCESS_BASELINE_MAP=()
+
+# v5.0.14: Performance - Log buffering
+LOG_BUFFER=""
+LOG_BUFFER_COUNT=0
+LOG_BUFFER_MAX=20
+LOG_BUFFER_LAST_FLUSH=0
+LOG_CALL_COUNT=0
+LOG_ROTATION_CHECK_INTERVAL=100
+
+# v5.0.14: Performance - Cached timestamp per loop iteration
+CACHED_TIMESTAMP=""
+CACHED_EPOCH=0
+
+# v5.0.14: Performance - Adaptive sleep
+ADAPTIVE_MIN_SLEEP=10
+LAST_CPU_PERCENT=0
  # ============================================
  #  ARGUMENT PARSING
  # ============================================
@@ -223,23 +247,54 @@ declare -a PROCESS_BASELINE=()
  chmod 700 "$KEYS_DIR"
  
  # ============================================
- #  LOGGING
+ #  LOGGING (v5.0.14: Buffered + rotation throttled)
  # ============================================
+ flush_log_buffer() {
+     if [[ -n "$LOG_BUFFER" ]]; then
+         echo -n "$LOG_BUFFER" >> "$LOG_FILE" 2>/dev/null
+         LOG_BUFFER=""
+         LOG_BUFFER_COUNT=0
+         LOG_BUFFER_LAST_FLUSH=$(date +%s)
+     fi
+ }
+
+ # Trap: flush on exit/signal
+ trap 'flush_log_buffer' EXIT TERM INT
+
  log() {
      local level="${1:-INFO}"
      local message="$2"
      local timestamp
-     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+     # Use cached timestamp if available (set once per main-loop iteration)
+     if [[ -n "$CACHED_TIMESTAMP" ]]; then
+         timestamp="$CACHED_TIMESTAMP"
+     else
+         timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+     fi
      local line="[$timestamp] [$level] [$CURRENT_STATE] $message"
      
      echo "$line"
-     echo "$line" >> "$LOG_FILE"
      
-     # Log rotation (keep 10MB max)
-     local log_size
-     log_size=$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
-     if [[ $log_size -gt 10485760 ]]; then
-         mv "$LOG_FILE" "${LOG_FILE}.$(date +%Y%m%d_%H%M%S).bak"
+     # Buffer instead of direct write
+     LOG_BUFFER+="$line"$'\n'
+     LOG_BUFFER_COUNT=$((LOG_BUFFER_COUNT + 1))
+     LOG_CALL_COUNT=$((LOG_CALL_COUNT + 1))
+     
+     # Flush buffer when full or on ERROR
+     local now_epoch=${CACHED_EPOCH:-$(date +%s)}
+     if [[ $LOG_BUFFER_COUNT -ge $LOG_BUFFER_MAX ]] || \
+        [[ "$level" == "ERROR" ]] || \
+        [[ $((now_epoch - LOG_BUFFER_LAST_FLUSH)) -ge 10 ]]; then
+         flush_log_buffer
+     fi
+     
+     # Log rotation: check every N calls (not every call)
+     if [[ $((LOG_CALL_COUNT % LOG_ROTATION_CHECK_INTERVAL)) -eq 0 ]]; then
+         local log_size
+         log_size=$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
+         if [[ $log_size -gt 10485760 ]]; then
+             mv "$LOG_FILE" "${LOG_FILE}.$(date +%Y%m%d_%H%M%S).bak"
+         fi
      fi
  }
  
@@ -1299,16 +1354,10 @@ restart_service_handler() {
          if [[ "$is_protected" == "false" ]]; then
              log "WARN" "[PROCESS-CHECK] High CPU detected: $name (PID: $pid) at $cpu%"
              
-             # Check if in baseline
-             local in_baseline=false
-             for baseline_proc in "${PROCESS_BASELINE[@]}"; do
-                 if [[ "$baseline_proc" == "$name" ]]; then
-                     in_baseline=true
-                     break
-                 fi
-             done
+              # v5.0.14: O(1) baseline check via associative array
+              if [[ -z "${PROCESS_BASELINE_MAP[$name]+_}" ]]; then
              
-             if [[ "$in_baseline" == "false" ]]; then
+             if [[ -z "${PROCESS_BASELINE_MAP[$name]+_}" ]]; then
                  log "WARN" "[PROCESS-CHECK] Process $name NOT in baseline - killing..."
                  kill -9 "$pid" 2>/dev/null || true
                  killed_count=$((killed_count + 1))
@@ -1344,52 +1393,48 @@ restart_service_handler() {
  }
  
  # ============================================
- #  v5.0.1: PROCESS BASELINE
+ #  v5.0.14: PROCESS BASELINE (O(1) lookups via associative array)
  # ============================================
  initialize_process_baseline() {
      if [[ -f "$PROCESS_BASELINE_PATH" ]]; then
-         mapfile -t PROCESS_BASELINE < <(jq -r '.[].name' "$PROCESS_BASELINE_PATH" 2>/dev/null)
-         log "INFO" "[BASELINE] Loaded baseline with ${#PROCESS_BASELINE[@]} processes"
+         while IFS= read -r proc; do
+             PROCESS_BASELINE+=("$proc")
+             PROCESS_BASELINE_MAP["$proc"]=1
+         done < <(jq -r '.[].name' "$PROCESS_BASELINE_PATH" 2>/dev/null)
+         log "INFO" "[BASELINE] Loaded baseline with ${#PROCESS_BASELINE[@]} processes (O(1) map)"
      else
          log "INFO" "[BASELINE] Creating initial process baseline..."
          
          local baseline='['
          local first=true
+         local ts
+         ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
          for proc in $(ps -eo comm= | sort -u); do
              if [[ "$first" == "true" ]]; then
                  first=false
              else
                  baseline+=','
              fi
-             baseline+="{\"name\":\"$proc\",\"first_seen\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}"
+             baseline+="{\"name\":\"$proc\",\"first_seen\":\"$ts\"}"
              PROCESS_BASELINE+=("$proc")
+             PROCESS_BASELINE_MAP["$proc"]=1
          done
          baseline+=']'
          
          echo "$baseline" > "$PROCESS_BASELINE_PATH"
-         log "SUCCESS" "[BASELINE] Created baseline with ${#PROCESS_BASELINE[@]} processes"
+         log "SUCCESS" "[BASELINE] Created baseline with ${#PROCESS_BASELINE[@]} processes (O(1) map)"
      fi
  }
  
  get_process_anomalies() {
-     local current_procs
-     mapfile -t current_procs < <(ps -eo comm= | sort -u)
-     
-     local anomalies='[]'
      local anomaly_count=0
      
-     for proc in "${current_procs[@]}"; do
-         local found=false
-         for baseline_proc in "${PROCESS_BASELINE[@]}"; do
-             if [[ "$proc" == "$baseline_proc" ]]; then
-                 found=true
-                 break
-             fi
-         done
-         
-         if [[ "$found" == "false" ]]; then
+     # v5.0.14: O(1) lookup via associative array instead of O(n) linear scan
+     for proc in $(ps -eo comm= | sort -u); do
+         if [[ -z "${PROCESS_BASELINE_MAP[$proc]+_}" ]]; then
              anomaly_count=$((anomaly_count + 1))
              PROCESS_BASELINE+=("$proc")
+             PROCESS_BASELINE_MAP["$proc"]=1
          fi
      done
      
@@ -2080,6 +2125,9 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
  
  while true; do
      now=$(date +%s)
+     # v5.0.14: Cache timestamp for this iteration (avoids repeated date subshells)
+     CACHED_EPOCH=$now
+     CACHED_TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
      
      # ============================================
      # NETWORK WATCHDOG
@@ -2188,5 +2236,18 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
          last_dns_sync=$now
      fi
       
-     sleep 2
+     # v5.0.14: Adaptive sleep - protect CPU under load
+     local sleep_time=2
+     local current_cpu
+     current_cpu=$(awk '{u=$2+$4; t=$2+$4+$5; if(t>0) printf "%.0f", u*100/t; else print "0"}' /proc/stat 2>/dev/null | head -1 || echo 0)
+     LAST_CPU_PERCENT=${current_cpu:-0}
+     if [[ $LAST_CPU_PERCENT -gt 80 ]]; then
+         sleep_time=$ADAPTIVE_MIN_SLEEP
+         log "DEBUG" "[PERF] CPU at ${LAST_CPU_PERCENT}% - adaptive sleep ${sleep_time}s"
+     fi
+     
+     # Flush log buffer at end of iteration
+     flush_log_buffer
+     
+     sleep "$sleep_time"
  done
