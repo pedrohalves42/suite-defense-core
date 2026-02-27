@@ -285,8 +285,8 @@ try {
         # v5.0.13: Verify signature BEFORE trusting hash (correct order)
         try {
             $cacheJson = Get-Content $hashCacheJsonPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
-            # v5.0.14: Strict JSON schema validation - only 'hash' and 'signature' properties allowed
-            $allowedProps = @('hash', 'signature')
+            # v5.0.13: Strict JSON schema validation - allowed properties for signed hash cache
+            $allowedProps = @('hash', 'signature', 'signed_at', 'algorithm', 'verified')
             $actualProps = ($cacheJson | Get-Member -MemberType NoteProperty).Name
             $extraProps = $actualProps | Where-Object { $_ -notin $allowedProps }
             if ($extraProps) {
@@ -382,7 +382,7 @@ trap {
 
     Write-EventLog -LogName Application -Source "CyberShield" -EventId 1001 -EntryType Error -Message "$msg`n$stack" -ErrorAction SilentlyContinue
 
-    # v5.0.14: Release mutex in trap to prevent orphaned mutex on crash
+    # v5.0.13: Release mutex in trap to prevent orphaned mutex on crash
     if ($Global:AgentMutex) {
         try {
             $Global:AgentMutex.ReleaseMutex()
@@ -569,7 +569,7 @@ function Write-Log {
             # EventLog write failed - ensure we don't lose the error silently
             try {
                 $fallbackLog = Join-Path "C:\CyberShield\logs" "eventlog-fallback.log"
-                # v5.0.14: Rotate fallback log if > 5MB to prevent unbounded growth
+                # v5.0.13: Rotate fallback log if > 5MB to prevent unbounded growth
                 if (Test-Path $fallbackLog) {
                     $fbSize = (Get-Item $fallbackLog -ErrorAction SilentlyContinue).Length
                     if ($fbSize -and $fbSize -gt 5MB) {
@@ -3971,7 +3971,7 @@ function Apply-ForcedUpdate {
             Write-Log "[FORCE UPDATE] REJECTED - Base64 decode failed: $($_.Exception.Message)" "ERROR"
             return @{ success = $false; error = "Base64 decode failed: $($_.Exception.Message)" }
         }
-        # v5.0.14: Cap update payload size to prevent memory exhaustion (5MB max)
+        # v5.0.13: Cap update payload size to prevent memory exhaustion (5MB max)
         if ($bytes.Length -gt 5MB) {
             Write-Log "[FORCE UPDATE] REJECTED - Payload too large: $($bytes.Length) bytes (max 5MB)" "ERROR"
             return @{ success = $false; error = "Update payload exceeds 5MB limit ($($bytes.Length) bytes)" }
@@ -4787,6 +4787,7 @@ if ($savedState -eq "SAFE_MODE") {
 $keysInitialized = Initialize-AgentKeys
 $Global:SecurityDegraded = $false
 $consecutiveHeartbeatFailures = 0
+$maxConsecutiveFailures = 1000000  # Declared here (before Phase 2 uses it) to comply with StrictMode
 if (-not $keysInitialized) {
     Write-Log "[STARTUP] Failed to initialize keys - entering DEGRADED mode (FAIL-CLOSED)" "ERROR"
     Set-AgentState -NewState "DEGRADED" -Reason "Key initialization failed"
@@ -4900,8 +4901,8 @@ $lastJobPoll = Get-Date
 $lastDnsSync = Get-Date
 $lastLocalDetection = Get-Date
 $consecutiveNetworkFailures = 0
-$consecutiveHeartbeatFailures = 0  # v5.0.13-fix: Was used but never initialized (BUG with StrictMode)
-$maxConsecutiveFailures = 1000000  # BUG FIX #6: Cap counter to prevent Int32 overflow on long-running agents
+$consecutiveHeartbeatFailures = 0  # Reset for main loop (also declared before Phase 2)
+# $maxConsecutiveFailures already declared at line ~4790
 
 # v5.0.11: Run initial local detection on startup
 Write-Log "[STARTUP] Running initial local security detection..." "INFO"
