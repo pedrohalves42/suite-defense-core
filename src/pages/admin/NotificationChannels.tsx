@@ -150,14 +150,39 @@ export default function NotificationChannels() {
     setTestingChannel(channel.id);
     try {
       const functionName = `send-${channel.channel_type}-notification`;
-      await callEdgeFunction(functionName, {
-        channel_id: channel.id,
-        message: 'Teste de notificação do ANA Security',
-        subject: 'Teste de Canal',
-        test: true
-      });
       
-      // Mark as verified
+      // Build payload matching the expected format for each channel type
+      let payload: Record<string, unknown> = {
+        channel_id: channel.id,
+        tenant_id: tenant?.id || '',
+        alert: {
+          type: 'test',
+          severity: 'info',
+          title: '✅ Teste de Canal - CyberShield',
+          message: 'Este é um teste de notificação. Se você recebeu esta mensagem, o canal está funcionando corretamente!',
+          agent_name: 'CyberShield System',
+        },
+      };
+
+      if (channel.channel_type === 'telegram') {
+        const chatId = (channel.config as any)?.chat_id || '';
+        payload.recipient = String(chatId);
+        payload.config = { 
+          chat_id: String(chatId),
+          bot_token: (channel.config as any)?.bot_token || '',
+        };
+      } else if (channel.channel_type === 'email') {
+        payload.recipient = (channel.config as any)?.email || '';
+        payload.config = channel.config;
+      } else if (channel.channel_type === 'whatsapp') {
+        payload.recipient = (channel.config as any)?.phone || '';
+        payload.config = channel.config;
+      } else {
+        payload.config = channel.config;
+      }
+
+      await callEdgeFunction(functionName, payload);
+      
       await supabase
         .from('notification_channels')
         .update({ 
