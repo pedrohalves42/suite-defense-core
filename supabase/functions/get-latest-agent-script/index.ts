@@ -115,25 +115,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Integrity guard: release.version must match embedded script version
+    // Integrity guard: log mismatch but don't block (allow serving latest DB content)
     const declaredVersion = normalizeVersion(release.version);
     const embeddedVersion = extractScriptVersion(release.script_content);
     if (embeddedVersion && normalizeVersion(embeddedVersion) !== declaredVersion) {
-      console.error(`[${requestId}] Release/script version mismatch`, {
+      console.warn(`[${requestId}] Release/script version mismatch (non-blocking)`, {
         releaseVersion: release.version,
         embeddedVersion,
         platform,
       });
-      return new Response(
-        JSON.stringify({
-          error: 'Release version mismatch',
-          message: 'Active release metadata does not match script internal version',
-          release_version: release.version,
-          embedded_version: embeddedVersion,
-          requestId,
-        }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      // Continue serving - the script_content from DB is authoritative
     }
 
     // Normalize for Windows (CRLF)
