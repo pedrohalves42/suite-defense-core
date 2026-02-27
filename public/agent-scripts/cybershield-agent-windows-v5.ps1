@@ -626,10 +626,23 @@ function Test-RuntimeIntegrity {
         Returns $true if integrity OK, $false if violation detected
     #>
     try {
-        $hashCachePath = Join-Path (Join-Path $Global:BaseDir "data") "expected_script_hash.txt"
-        if (-not (Test-Path $hashCachePath)) { return $true }  # No cached hash = skip
-        
-        $expectedHash = (Get-Content $hashCachePath -Raw -ErrorAction SilentlyContinue).Trim()
+        $expectedHash = $null
+        # v5.0.13-fix: Prefer signed JSON cache as authoritative source
+        $hashCacheJsonPath = Join-Path (Join-Path $Global:BaseDir "data") "expected_script_hash.json"
+        if (Test-Path $hashCacheJsonPath) {
+            try {
+                $cache = Get-Content $hashCacheJsonPath -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json -ErrorAction SilentlyContinue
+                if ($cache -and $cache.hash -and $cache.hash.Length -eq 64) {
+                    $expectedHash = $cache.hash
+                }
+            } catch { }
+        }
+        # Fallback to legacy TXT if JSON not available
+        if (-not $expectedHash) {
+            $hashCachePath = Join-Path (Join-Path $Global:BaseDir "data") "expected_script_hash.txt"
+            if (-not (Test-Path $hashCachePath)) { return $true }
+            $expectedHash = (Get-Content $hashCachePath -Raw -ErrorAction SilentlyContinue).Trim()
+        }
         if (-not $expectedHash -or $expectedHash.Length -ne 64) { return $true }
         
         $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256).Hash.ToLower()
