@@ -1,16 +1,8 @@
 <#
-    CyberShield Agent - Windows v5.0.14 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.13 FULL ENTERPRISE
 
-    v5.0.14: PERFORMANCE TUNING - Parity with Linux/macOS optimizations
-    - PERF: Cached timestamp per main loop iteration (eliminates repeated Get-Date calls)
-    - PERF: HashSet for O(1) process baseline lookups (replaces linear Where-Object scan)
-    - PERF: HashSet for protected processes/services (replaces -contains O(n) with O(1))
-    - PERF: HMAC key object cached globally (avoids recreating HMACSHA256 per request)
-    - PERF: Log rotation check throttled to every 50 flushes (reduces stat() I/O by ~98%)
-    - PERF: CIM CPU load result cached for 30s in main loop (avoids WMI query per iteration)
-    - PERF: Process anomaly detection uses HashSet (replaces -notin O(n) with O(1))
-    - PERF: Get-TopProcesses single pass with pre-sorted arrays (eliminates double enumeration)
-
+    v5.0.13-perf: PERFORMANCE TUNING - Parity with Linux/macOS optimizations
+    v5.0.13-perf: Performance tuning (cached timestamps, HashSet O(1) lookups, HMAC reuse, log rotation throttling, CIM caching)
     v5.0.13: SECURITY HARDENING + SYNTAX AUDIT + EDR HARDENING + TOCTOU + ANTI-TAMPER + POST-AUDIT HARDENING
     - FIXED: [Environment]::Exit() replaces bare 'exit' for unambiguous process termination
     - FIXED: Global trap now releases mutex before termination (prevents orphaned mutex)
@@ -184,7 +176,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.14"
+    [string]$AgentVersion = "v5.0.13"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -510,19 +502,19 @@ $Global:LocalDetectionStats = @{
 $Global:LogBuffer = [System.Collections.Generic.List[string]]::new()
 $Global:LogBufferMaxSize = 20
 $Global:LogBufferLastFlush = Get-Date
-$Global:LogFlushCount = 0          # v5.0.14-perf: Throttle rotation checks
+$Global:LogFlushCount = 0          # v5.0.13-perf: Throttle rotation checks
 
 # v5.0.13-perf: Pre-compiled suspicious process regex patterns
 $Global:CompiledSuspiciousPatterns = $null  # Initialized on first use
 
-# v5.0.14-perf: Cached HMAC key object (avoids recreating per request)
+# v5.0.13-perf: Cached HMAC key object (avoids recreating per request)
 $Global:CachedHmacKey = $null
 
-# v5.0.14-perf: Cached CIM CPU load (avoids WMI query per main loop iteration)
+# v5.0.13-perf: Cached CIM CPU load (avoids WMI query per main loop iteration)
 $Global:CachedCpuLoad = 0
 $Global:CachedCpuLoadTime = [datetime]::MinValue
 
-# v5.0.14-perf: Per-iteration cached timestamp (set once at top of main loop)
+# v5.0.13-perf: Per-iteration cached timestamp (set once at top of main loop)
 $Global:LoopTimestamp = Get-Date
 $Global:LoopTimestampStr = $Global:LoopTimestamp.ToString("yyyy-MM-dd HH:mm:ss")
 
@@ -542,7 +534,7 @@ function Flush-LogBuffer {
     if ($Global:LogBuffer.Count -eq 0) { return }
     $Global:LogFlushCount++
     try {
-        # v5.0.14-perf: Only check file size every 50 flushes (reduces stat() I/O by ~98%)
+        # v5.0.13-perf: Only check file size every 50 flushes (reduces stat() I/O by ~98%)
         if ($Global:LogFlushCount % 50 -eq 1) {
             $logFile = Get-Item $Global:LogFilePath -ErrorAction SilentlyContinue
             if ($logFile -and $logFile.Length -gt $Global:MaxLogSizeBytes) {
@@ -3140,7 +3132,7 @@ function Invoke-HighCpuProcessCheck {
         [int]$ThresholdPercent = $Global:HighCpuThresholdPercent
     )
     
-    # v5.0.14-perf: Protected processes HashSet (O(1) lookup instead of -notin O(n))
+    # v5.0.13-perf: Protected processes HashSet (O(1) lookup instead of -notin O(n))
     # Built once as script-level static set
     if (-not $Global:ProtectedProcessSet) {
         $Global:ProtectedProcessSet = [System.Collections.Generic.HashSet[string]]::new(
@@ -3182,7 +3174,7 @@ function Invoke-HighCpuProcessCheck {
         }
         
         # Filter high-CPU processes
-        # v5.0.14-perf: Filter with HashSet O(1) instead of -notin O(n)
+        # v5.0.13-perf: Filter with HashSet O(1) instead of -notin O(n)
         $highCpuProcesses = $cpuSamples.GetEnumerator() | 
             Where-Object { $_.Value.CpuPercent -gt $ThresholdPercent } |
             Where-Object { -not $Global:ProtectedProcessSet.Contains($_.Value.Name) }
@@ -3255,7 +3247,7 @@ function Get-TopProcesses {
         P1 Important: Resource consumption visibility in heartbeat.
     #>
     try {
-        # v5.0.14-perf: Single Get-Process call, pre-filter, then sort for both CPU and Memory
+        # v5.0.13-perf: Single Get-Process call, pre-filter, then sort for both CPU and Memory
         $allProcesses = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.WorkingSet -gt 0 }
         $procArray = @($allProcesses)
         
@@ -3380,9 +3372,9 @@ function Get-UnauthorizedSoftware {
 }
 
 # ============================================
-#  v5.0: PROCESS BASELINE (v5.0.14-perf: HashSet for O(1) lookups)
+#  v5.0: PROCESS BASELINE (v5.0.13-perf: HashSet for O(1) lookups)
 # ============================================
-# v5.0.14-perf: Global HashSet for O(1) baseline lookups
+# v5.0.13-perf: Global HashSet for O(1) baseline lookups
 $Global:ProcessBaselineSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
 function Initialize-ProcessBaseline {
@@ -3417,7 +3409,7 @@ function Initialize-ProcessBaseline {
             Write-Log "[BASELINE] Created baseline with $($baseline.Count) processes" "SUCCESS"
         }
 
-        # v5.0.14-perf: Build HashSet index for O(1) lookups
+        # v5.0.13-perf: Build HashSet index for O(1) lookups
         $Global:ProcessBaselineSet.Clear()
         foreach ($entry in $Global:ProcessBaseline) {
             [void]$Global:ProcessBaselineSet.Add($entry.name)
@@ -3439,14 +3431,14 @@ function Test-ProcessInBaseline {
     
     if ($Global:ProcessBaselineSet.Count -eq 0) { return $true }  # If no baseline, assume OK
     
-    # v5.0.14-perf: O(1) HashSet lookup instead of O(n) Where-Object
+    # v5.0.13-perf: O(1) HashSet lookup instead of O(n) Where-Object
     return $Global:ProcessBaselineSet.Contains($ProcessName)
 }
 
 function Get-ProcessAnomalies {
     <#
     .SYNOPSIS
-        Detects new processes not in baseline (v5.0.14-perf: O(1) HashSet lookups)
+        Detects new processes not in baseline (v5.0.13-perf: O(1) HashSet lookups)
     #>
     try {
         if (-not $Global:ProcessBaseline) {
@@ -3455,7 +3447,7 @@ function Get-ProcessAnomalies {
         
         $currentProcesses = Get-Process | Select-Object -ExpandProperty ProcessName -Unique
         
-        # v5.0.14-perf: O(1) lookup per process instead of O(n) -notin
+        # v5.0.13-perf: O(1) lookup per process instead of O(n) -notin
         $anomalies = @()
         foreach ($proc in $currentProcesses) {
             if (-not $Global:ProcessBaselineSet.Contains($proc)) {
@@ -3474,7 +3466,7 @@ function Get-ProcessAnomalies {
                     description = "Auto-added"
                     first_seen = (Get-Date).ToString("o")
                 }
-                [void]$Global:ProcessBaselineSet.Add($proc)  # v5.0.14-perf: Update HashSet too
+                [void]$Global:ProcessBaselineSet.Add($proc)  # v5.0.13-perf: Update HashSet too
             }
             
             # Save updated baseline
@@ -4969,7 +4961,7 @@ Write-Log "[STARTUP] Running initial local security detection..." "INFO"
 Invoke-LocalDetection | Out-Null
 
 while ($true) {
-    # v5.0.14-perf: Cache timestamp once per iteration (eliminates repeated Get-Date calls)
+    # v5.0.13-perf: Cache timestamp once per iteration (eliminates repeated Get-Date calls)
     $now = Get-Date
     $Global:LoopTimestamp = $now
     $Global:LoopTimestampStr = $now.ToString("yyyy-MM-dd HH:mm:ss")
@@ -5160,7 +5152,7 @@ while ($true) {
         }
     }
     
-    # v5.0.14-perf: Adaptive sleep with CACHED CIM CPU load (reuse for 30s)
+    # v5.0.13-perf: Adaptive sleep with CACHED CIM CPU load (reuse for 30s)
     $baseSleep = switch ($Global:CurrentState) {
         "ENFORCING" { 2 }
         "DEGRADED"  { 5 }
