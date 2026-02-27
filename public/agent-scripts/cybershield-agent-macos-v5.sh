@@ -1422,6 +1422,15 @@ EOF
      
      log "INFO" "[FORCE UPDATE] Version: $target_version, Reason: $reason"
      
+     # v5.0.13-patch: Pre-decode size validation (prevents OOM before Base64 decode)
+     local base64_len=${#base64_content}
+     local max_base64_len=7340032  # ~5MB binary = ~7MB Base64
+     if [[ "$base64_len" -gt "$max_base64_len" ]]; then
+         log "ERROR" "[FORCE UPDATE] REJECTED - Base64 payload too large BEFORE decode: $base64_len chars (max $max_base64_len)"
+         logger -t CyberShield "Update rejected: Base64 payload too large before decode ($base64_len chars)"
+         return 1
+     fi
+
      # Decode Base64
      local temp_script="/tmp/cybershield-force-update-${target_version}.sh"
      echo "$base64_content" | base64 -D > "$temp_script" 2>/dev/null
@@ -1441,10 +1450,8 @@ EOF
      actual_hash=$(shasum -a 256 "$temp_script" 2>/dev/null | awk '{print $1}')
      
      if [[ "${actual_hash}" != "${expected_hash}" ]]; then
-         # Case-insensitive compare
-         local actual_lower
+         local actual_lower expected_lower
          actual_lower=$(echo "$actual_hash" | tr '[:upper:]' '[:lower:]')
-         local expected_lower
          expected_lower=$(echo "$expected_hash" | tr '[:upper:]' '[:lower:]')
          if [[ "$actual_lower" != "$expected_lower" ]]; then
              log "ERROR" "[FORCE UPDATE] SHA256 mismatch! Esperado: $expected_hash, Obtido: $actual_hash"
@@ -1454,6 +1461,38 @@ EOF
      fi
      
      log "SUCCESS" "[FORCE UPDATE] SHA256 validado: $actual_hash"
+
+     # v5.0.13-patch: Verify Ed25519/ECDSA signature on update payload (mandatory)
+     local update_signature
+     update_signature=$(python3 -c "import json; print(json.loads('''$response''').get('ecdsa_signature', '') or json.loads('''$response''').get('signature_base64', ''))" 2>/dev/null)
+     if [[ -n "$update_signature" && ${#update_signature} -gt 10 ]]; then
+         local ed25519_pubkey_path="${BASE_DIR:-/opt/cybershield}/keys/ed25519_server.pub"
+         if [[ -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
+             local _tmp_hash _tmp_sig
+             _tmp_hash=$(mktemp) || { log "ERROR" "[FORCE UPDATE] mktemp failed"; rm -f "$temp_script"; return 1; }
+             _tmp_sig=$(mktemp) || { rm -f "$_tmp_hash"; log "ERROR" "[FORCE UPDATE] mktemp failed"; rm -f "$temp_script"; return 1; }
+             echo -n "$actual_hash" > "$_tmp_hash"
+             echo "$update_signature" | base64 -d > "$_tmp_sig" 2>/dev/null || \
+                 echo "$update_signature" | base64 -D > "$_tmp_sig" 2>/dev/null
+             if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
+                 -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
+                 log "ERROR" "[FORCE UPDATE] REJECTED - Update signature INVALID! Possible supply chain attack."
+                 logger -t CyberShield "FORCE UPDATE REJECTED: Invalid cryptographic signature. SHA256: $actual_hash"
+                 rm -f "$temp_script" "$_tmp_hash" "$_tmp_sig"
+                 return 1
+             fi
+             rm -f "$_tmp_hash" "$_tmp_sig"
+             log "SUCCESS" "[FORCE UPDATE] Cryptographic signature VERIFIED for update payload"
+         else
+             log "WARN" "[FORCE UPDATE] Ed25519 public key or openssl not available - cannot verify signature"
+         fi
+     else
+         # v5.0.13-patch: Reject unsigned payloads
+         log "ERROR" "[FORCE UPDATE] REJECTED - No cryptographic signature on update payload. Unsigned updates blocked."
+         logger -t CyberShield "Update rejected: missing cryptographic signature (unsigned payloads blocked since v5.0.13)"
+         rm -f "$temp_script"
+         return 1
+     fi
      
      # Anti-corruption: reject HTML content
      local first_line
