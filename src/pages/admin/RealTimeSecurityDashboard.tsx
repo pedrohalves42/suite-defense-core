@@ -130,7 +130,7 @@ interface SecurityEvent {
 }
 
 export default function RealTimeSecurityDashboard() {
-  const { tenant } = useTenant();
+  const { tenant, loading: tenantLoading } = useTenant();
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [isLive, setIsLive] = useState(true);
 
@@ -184,16 +184,27 @@ export default function RealTimeSecurityDashboard() {
     queryKey: ['realtime-agent-stats', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return { total: 0, protected: 0, isolated: 0, offline: 0 };
-      const { data: rpcData } = await supabase.rpc('get_agents_list', { p_tenant_id: tenant.id, p_include_archived: false });
+      const { data: rpcData, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
+      if (error) throw error;
+
       const data = (rpcData as any[] || []).map((a: any) => ({
-        id: a.id, status: a.status, last_heartbeat: a.last_heartbeat, is_isolated: a.is_isolated,
+        id: a.id,
+        last_heartbeat: a.last_heartbeat,
+        is_isolated: !!a.is_isolated,
       }));
+
       const total = data.length;
-      const prot = data.filter(a => a.status === 'active' && isAgentOnline(a.last_heartbeat)).length;
       const isolated = data.filter(a => a.is_isolated).length;
-      return { total, protected: prot, isolated, offline: total - prot - isolated };
+      const protectedCount = data.filter(a => !a.is_isolated && isAgentOnline(a.last_heartbeat)).length;
+      const offline = data.filter(a => !a.is_isolated && !isAgentOnline(a.last_heartbeat)).length;
+
+      return { total, protected: protectedCount, isolated, offline };
     },
-    enabled: !!tenant?.id, refetchInterval: 120000,
+    enabled: !tenantLoading && !!tenant?.id,
+    refetchInterval: 60000,
   });
 
   const { data: recentLogs } = useQuery({
@@ -248,9 +259,10 @@ export default function RealTimeSecurityDashboard() {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'approval_requests', filter: `tenant_id=eq.${tenant.id}` }, () => refetchApprovals())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'playbook_executions', filter: `tenant_id=eq.${tenant.id}` }, () => refetchPlaybooks())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'agents', filter: `tenant_id=eq.${tenant.id}` }, () => refetchAgents())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [tenant?.id, isLive, refetchPlaybooks, refetchBlocked, refetchApprovals]);
+  }, [tenant?.id, isLive, refetchPlaybooks, refetchBlocked, refetchApprovals, refetchAgents]);
 
   const refreshAll = () => { refetchPlaybooks(); refetchBlocked(); refetchApprovals(); refetchAgents(); };
 
