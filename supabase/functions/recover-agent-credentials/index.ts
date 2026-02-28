@@ -56,23 +56,58 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check role
+    // Check role - respect active tenant from JWT
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { data: userRole, error: roleError } = await adminClient
-      .from('user_roles')
-      .select('role, tenant_id')
-      .eq('user_id', user.id)
-      .limit(1)
-      .maybeSingle();
+    // Get active tenant from JWT app_metadata (set by tenant switcher)
+    const activeTenantId = user.app_metadata?.active_tenant_id;
 
-    if (roleError || !userRole) {
-      console.error(`[${requestId}] Role check failed:`, roleError?.message);
+    // Try to find role for the active tenant first, fallback to any role
+    let userRole: { role: string; tenant_id: string } | null = null;
+
+    if (activeTenantId) {
+      const { data: activeRole } = await adminClient
+        .from('user_roles')
+        .select('role, tenant_id')
+        .eq('user_id', user.id)
+        .eq('tenant_id', activeTenantId)
+        .maybeSingle();
+      userRole = activeRole;
+    }
+
+    // Fallback: check if super_admin (any tenant)
+    if (!userRole) {
+      const { data: anyRole } = await adminClient
+        .from('user_roles')
+        .select('role, tenant_id')
+        .eq('user_id', user.id)
+        .in('role', ['super_admin'])
+        .limit(1)
+        .maybeSingle();
+      userRole = anyRole;
+    }
+
+    // Final fallback: first role found
+    if (!userRole) {
+      const { data: fallbackRole, error: roleError } = await adminClient
+        .from('user_roles')
+        .select('role, tenant_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+      if (roleError) console.error(`[${requestId}] Role check failed:`, roleError?.message);
+      userRole = fallbackRole;
+    }
+
+    if (!userRole) {
+      console.error(`[${requestId}] No role found for user ${user.id}`);
       return new Response(
         JSON.stringify({ error: 'Forbidden' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`[${requestId}] User ${user.email} role=${userRole.role} tenant=${userRole.tenant_id} activeTenant=${activeTenantId}`);
 
     const allowedRoles = ['admin', 'operator', 'super_admin'];
     if (!allowedRoles.includes(userRole.role)) {
@@ -96,8 +131,8 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Recovery request for agent: ${agentName} by user: ${user.email}`);
 
-    // Find agent - enforce tenant isolation
-    const tenantFilter = userRole.role === 'super_admin' ? {} : { tenant_id: userRole.tenant_id };
+    // Find agent - enforce tenant isolation using active tenant
+    const effectiveTenantId = activeTenantId || userRole.tenant_id;
 
     let query = adminClient
       .from('agents')
@@ -105,7 +140,10 @@ Deno.serve(async (req) => {
       .eq('agent_name', agentName);
 
     if (userRole.role !== 'super_admin') {
-      query = query.eq('tenant_id', userRole.tenant_id);
+      query = query.eq('tenant_id', effectiveTenantId);
+    } else if (activeTenantId) {
+      // Super admin with active tenant selected - scope to that tenant
+      query = query.eq('tenant_id', activeTenantId);
     }
 
     const { data: agent, error: agentError } = await query.maybeSingle();
