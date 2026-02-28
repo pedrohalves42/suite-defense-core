@@ -373,6 +373,16 @@ Write-Host ""
 # ============================================================
 Write-Status "PHASE 4/4: Register Task" "INFO"
 
+# Clear stale integrity cache from previous versions
+$hashCacheDir = "$InstallDir\\data"
+$staleHashFiles = @("$hashCacheDir\\expected_script_hash.json", "$hashCacheDir\\expected_script_hash.txt")
+foreach ($stale in $staleHashFiles) {
+    if (Test-Path $stale) {
+        Remove-Item $stale -Force -ErrorAction SilentlyContinue
+        Write-Status "Cleared stale integrity cache: $stale" "INFO"
+    }
+}
+
 $taskArgStr = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $q$scriptPath$q -ServerUrl $q$ServerUrl$q -AgentToken $q$AgentToken$q -HmacSecret $q$HmacSecret$q -AgentName $q$AgentName$q"
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $taskArgStr
 $trigger = New-ScheduledTaskTrigger -AtStartup

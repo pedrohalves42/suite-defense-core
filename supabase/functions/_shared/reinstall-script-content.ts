@@ -32,6 +32,13 @@ try {
     
     # 4. Execute installer
     Write-Status "4/5: Running installer..." "INFO"
+    
+    # Clear stale v5 integrity cache to avoid false tamper abort after reinstall
+    $hashJson = "C:\\CyberShield\\data\\expected_script_hash.json"
+    $hashTxt = "C:\\CyberShield\\data\\expected_script_hash.txt"
+    if (Test-Path $hashJson) { Remove-Item $hashJson -Force -ErrorAction SilentlyContinue; Write-Status "Cleared stale integrity cache: $hashJson" "INFO" }
+    if (Test-Path $hashTxt) { Remove-Item $hashTxt -Force -ErrorAction SilentlyContinue; Write-Status "Cleared stale integrity cache: $hashTxt" "INFO" }
+
     & powershell.exe -ExecutionPolicy Bypass -File $installerPath
     if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) { throw "Installer failed: $LASTEXITCODE" }
     Write-Status "Installer completed" "SUCCESS"
