@@ -419,12 +419,14 @@ Deno.serve(async (req) => {
         .eq('id', agent.id)
       // Fall through to normal heartbeat response (no force update)
     } else if (effectiveForceVersion) {
-      // PARTE 1: Verificar se agente JÁ está na versão alvo → limpar flag
-      // Normalizar versões para comparação (strip "v" prefix e sufixos como "-hotfix")
-      // Version comparison via hexagonal normalizeVersion
+      // FIX: force_update_at é o gatilho autoritativo para re-push,
+      // inclusive quando currentVersion === targetVersion (hotfix same-version)
       const currentVersion = agentVersion || updateData.agent_version
-      if (normalizeVersion(currentVersion) === normalizeVersion(effectiveForceVersion)) {
-        logger.info('Agent already at target version, clearing force_update flag', {
+      const forceTriggeredAt = (forceCheck as any)?.force_update_at
+      const hasExplicitForceTrigger = !!forceTriggeredAt
+
+      if (!hasExplicitForceTrigger && normalizeVersion(currentVersion) === normalizeVersion(effectiveForceVersion)) {
+        logger.info('Agent already at target version (no explicit force trigger), clearing force_update flag', {
           agentName: agent.agent_name,
           version: currentVersion
         })
@@ -440,7 +442,7 @@ Deno.serve(async (req) => {
           })
           .eq('id', agent.id)
         
-        // Response normal - agente já está atualizado
+        // Response normal - agente já está atualizado e não houve trigger explícito
       } else {
         // PARTE 1: Verificar delivered_count - se > 50, limpar flag (agente não suporta)
         const deliveredCount = (forceCheck as any).force_update_delivered_count || 0
@@ -547,6 +549,7 @@ Deno.serve(async (req) => {
                   script_content_base64: base64Script,
                   script_content: finalScript,
                   sha256: calculatedSha256,
+                  script_sha256: calculatedSha256, // Alias required by v5.0.13 agents
                   sha256_base64: calculatedSha256,
                   reason: effectiveForceReason || 'Forced update via backend',
                   force_update_reason: effectiveForceReason || 'Forced update via backend',
@@ -591,6 +594,7 @@ Deno.serve(async (req) => {
         ok: true,
         agent: agent.agent_name,
         timestamp: new Date().toISOString(),
+        script_sha256: null, // Compatibility field for legacy/v5.0.13 parsing
         // COST-OPT v2: Further reduce polling to cut costs
         heartbeat_interval_seconds: 120,   // Heartbeat every 120s (was 60s)
         poll_interval_seconds: 60,         // Poll jobs every 60s (was 30s)
