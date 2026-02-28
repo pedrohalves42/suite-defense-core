@@ -297,6 +297,7 @@ Deno.serve(async (req) => {
         key_id: result.key_id,
         version: result.version,
         valid_from: result.valid_from,
+        registered_at: new Date().toISOString(),
         algorithm
       }),
       { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
