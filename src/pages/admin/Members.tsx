@@ -44,6 +44,7 @@ export default function Members() {
       const { data, error } = await supabase.functions.invoke('list-users', {
         headers: {
           Authorization: `Bearer ${session?.access_token}`,
+          'X-Tenant-Id': tenant?.id || '',
         },
       });
       
