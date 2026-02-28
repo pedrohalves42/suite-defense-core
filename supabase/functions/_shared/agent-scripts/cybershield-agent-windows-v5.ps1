@@ -458,6 +458,9 @@ $Global:AutoRepairStats = @{
 # v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)
 $Global:SecurityDegraded = $false
 
+# v5.0.13-fix: ProtectedProcessSet must be declared before use (StrictMode compatibility)
+$Global:ProtectedProcessSet = $null
+
 # v5.0.14-hotfix: Declare crypto globals early (StrictMode-safe when key init fails)
 $Global:AgentPrivateKey = $null
 $Global:AgentPublicKey = $null
