@@ -3,7 +3,7 @@
  * 
  * Fornece comandos prontos para copiar e colar no PowerShell,
  * evitando erros de usuário como colar apenas a URL.
- * v2.9.0: Suporte a Enrollment Key para deploy em massa sem JWT
+ * v3.2.0: Comando atualizado com cache-bust + envio correto de Enrollment Key
  */
 
 import { useState } from 'react';
@@ -32,14 +32,14 @@ import { Link } from 'react-router-dom';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
-// Comando interativo (máquina individual - detecta credenciais locais)
-const INTERACTIVE_COMMAND = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm ${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script | iex`;
+// Comando interativo (máquina individual - detecta credenciais locais e força versão mais recente)
+const INTERACTIVE_COMMAND = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" | iex`;
 
-// Comando com Enrollment Key (deploy em massa via RMM/GPO)
-const EK_COMMAND_TEMPLATE = `$ek="COLE_SUA_ENROLLMENT_KEY"; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm ${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script | iex`;
+// Comando com Enrollment Key (deploy em massa via RMM/GPO) - agora injeta a key corretamente
+const EK_COMMAND_TEMPLATE = `$env:CYBERSHIELD_KEY="COLE_SUA_ENROLLMENT_KEY"; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" | iex`;
 
-// Comando alternativo (usa Invoke-WebRequest com UseBasicParsing - melhor compatibilidade com proxy)
-const FALLBACK_COMMAND = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $script = (Invoke-WebRequest -Uri "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script" -UseBasicParsing).Content; Invoke-Expression $script`;
+// Comando alternativo (Invoke-WebRequest + cache-bust - melhor compatibilidade com proxy)
+const FALLBACK_COMMAND = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $script = (Invoke-WebRequest -Uri "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" -UseBasicParsing).Content; Invoke-Expression $script`;
 
 // Comando de diagnóstico de rede
 const NETWORK_TEST_COMMAND = `Test-NetConnection -ComputerName "${new URL(SUPABASE_URL).hostname}" -Port 443`;
@@ -77,7 +77,7 @@ export function PreserveReinstallSection() {
             <CardTitle className="text-sm flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
               Reinstalação Preservando Credenciais
-              <Badge variant="secondary" className="ml-2 text-xs">v2.9.0</Badge>
+              <Badge variant="secondary" className="ml-2 text-xs">v3.2.0</Badge>
             </CardTitle>
             <CardDescription className="mt-1">
               Atualiza o agente mantendo nome, token e HMAC originais
