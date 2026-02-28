@@ -138,7 +138,18 @@ Deno.serve(async (req) => {
       )
     }
 
-    const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
+    const hmacResult = await verifyHmacSignature(
+      supabase,
+      req,
+      agent.agent_name,
+      agent.hmac_secret,
+      {
+        agentId: agent.id,
+        tenantId: agent.tenant_id,
+        endpoint: '/submit-job-result',
+        ip: ipAddress,
+      }
+    )
     if (!hmacResult.valid) {
       // DEBUG LOGGING: Enhanced error details
       console.error('[submit-job-result] HMAC validation failed:', {
@@ -146,9 +157,12 @@ Deno.serve(async (req) => {
         error_code: hmacResult.errorCode,
         error_message: hmacResult.errorMessage,
         transient: hmacResult.transient,
+        mode_used: hmacResult.modeUsed,
         headers: {
-          timestamp: req.headers.get('X-Timestamp'),
-          nonce: req.headers.get('X-Nonce'),
+          timestamp_hmac: req.headers.get('X-HMAC-Timestamp'),
+          timestamp_legacy: req.headers.get('X-Timestamp'),
+          nonce_hmac: req.headers.get('X-HMAC-Nonce'),
+          nonce_legacy: req.headers.get('X-Nonce'),
           has_signature: !!req.headers.get('X-HMAC-Signature')
         }
       });

@@ -95,7 +95,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
+    const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret, {
+      agentId: agent.id,
+      tenantId: agent.tenant_id,
+      endpoint: '/register-agent-key',
+      ip: ipAddress,
+    })
     if (!hmacResult.valid) {
       await logSecurityEvent({
         supabase,
@@ -166,16 +171,18 @@ Deno.serve(async (req) => {
     })
 
     // 6. Verify the fingerprint matches the public key (multi-method)
-    const possibleFingerprints = await computeAllKeyFingerprints(payload.public_key)
+    const computedFingerprints = await computeAllKeyFingerprints(payload.public_key)
     const providedFp = payload.key_fingerprint.toLowerCase()
-    const fingerprintMatch = possibleFingerprints.some(fp => fp.toLowerCase() === providedFp)
+    const matchedFingerprint = computedFingerprints.find(entry => entry.fingerprint === providedFp)
     
-    if (!fingerprintMatch) {
+    if (!matchedFingerprint) {
+      const computedPreview = computedFingerprints[0]?.fingerprint.substring(0, 16) || 'none'
+
       console.warn('[register-agent-key] Fingerprint mismatch (all methods failed):', {
         agent: agent.agent_name,
         provided_preview: providedFp.substring(0, 16),
-        computed_previews: possibleFingerprints.map(fp => fp.substring(0, 16)),
-        methods_tried: possibleFingerprints.length
+        computed_preview: computedPreview,
+        modes_tried: computedFingerprints.map(entry => entry.mode)
       })
       
       await logSecurityEvent({
@@ -190,16 +197,18 @@ Deno.serve(async (req) => {
           agent_name: agent.agent_name,
           reason: 'key_tampering',
           message: 'Fingerprint does not match public key',
-          computed_preview: possibleFingerprints[0]?.substring(0, 16) || 'none',
-          methods_tried: possibleFingerprints.length
+          computed_preview: computedPreview,
+          mode_used: 'none',
+          modes_tried: computedFingerprints.map(entry => entry.mode)
         }
       })
       
       return new Response(
         JSON.stringify({ 
           error: 'Fingerprint does not match public key content',
-          computed_preview: possibleFingerprints[0]?.substring(0, 16) || 'none',
-          methods_tried: possibleFingerprints.length
+          computed_preview: computedPreview,
+          mode_used: 'none',
+          modes_tried: computedFingerprints.map(entry => entry.mode)
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -207,7 +216,7 @@ Deno.serve(async (req) => {
     
     console.log('[register-agent-key] Fingerprint verified:', {
       agent: agent.agent_name,
-      method_index: possibleFingerprints.findIndex(fp => fp.toLowerCase() === providedFp)
+      mode_used: matchedFingerprint.mode
     })
 
     // 7. Check if this exact key is already registered (by fingerprint)
@@ -299,49 +308,103 @@ Deno.serve(async (req) => {
   }
 })
 
-/**
- * Computes SHA256 fingerprint of the public key content.
- * Returns multiple possible fingerprints to match different agent implementations:
- * 1. SHA256 of decoded bytes (when public_key is Base64 or PEM)
- * 2. SHA256 of normalized string content (legacy fallback)
- */
-async function computeAllKeyFingerprints(publicKey: string): Promise<string[]> {
-  const fingerprints: string[] = []
-  const hashToHex = async (data: Uint8Array): Promise<string> => {
-    const hash = await crypto.subtle.digest('SHA-256', data)
-    return Array.from(new Uint8Array(hash))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('')
-  }
-
-  // Extract Base64 content (remove PEM headers if present)
-  let base64Content = publicKey
-  if (base64Content.includes('-----BEGIN')) {
-    base64Content = base64Content
-      .replace(/-----BEGIN [A-Z ]+-----/, '')
-      .replace(/-----END [A-Z ]+-----/, '')
-      .replace(/\s/g, '')
-  } else {
-    // Already Base64 - just strip whitespace
-    base64Content = base64Content.replace(/\s/g, '')
-  }
-
-  // Method 1: SHA256 of decoded bytes (what most agents actually compute)
-  try {
-    const decodedBytes = Uint8Array.from(atob(base64Content), c => c.charCodeAt(0))
-    fingerprints.push(await hashToHex(decodedBytes))
-  } catch {
-    // Not valid Base64 - skip
-  }
-
-  // Method 2: SHA256 of normalized Base64 string (legacy/fallback)
-  fingerprints.push(await hashToHex(new TextEncoder().encode(base64Content)))
-
-  // Method 3: SHA256 of raw public_key string (if different from base64Content)
-  const rawTrimmed = publicKey.trim()
-  if (rawTrimmed !== base64Content) {
-    fingerprints.push(await hashToHex(new TextEncoder().encode(rawTrimmed)))
-  }
-
-  return fingerprints
+interface FingerprintCandidate {
+  fingerprint: string
+  mode: string
 }
+
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const hash = await crypto.subtle.digest('SHA-256', bytes)
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+function normalizeBase64(value: string): string {
+  let normalized = value.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/')
+  const padLength = normalized.length % 4
+  if (padLength > 0) {
+    normalized = normalized.padEnd(normalized.length + (4 - padLength), '=')
+  }
+  return normalized
+}
+
+function extractPemPayload(publicKey: string): string {
+  if (!publicKey.includes('-----BEGIN')) {
+    return publicKey.trim()
+  }
+
+  return publicKey
+    .replace(/-----BEGIN [^-]+-----/g, '')
+    .replace(/-----END [^-]+-----/g, '')
+    .trim()
+}
+
+function utf16LeBytes(input: string): Uint8Array {
+  const bytes = new Uint8Array(input.length * 2)
+  for (let i = 0; i < input.length; i++) {
+    const code = input.charCodeAt(i)
+    bytes[i * 2] = code & 0xff
+    bytes[i * 2 + 1] = code >> 8
+  }
+  return bytes
+}
+
+function dedupeCandidates(candidates: FingerprintCandidate[]): FingerprintCandidate[] {
+  const seen = new Set<string>()
+  return candidates.filter((candidate) => {
+    const key = `${candidate.mode}:${candidate.fingerprint}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+/**
+ * Computes SHA256 fingerprint candidates for the public key.
+ * Matching order:
+ * 1) SHA-256 dos bytes decodificados (Base64/PEM)
+ * 2) SHA-256 da string normalizada (UTF-8)
+ * 3) SHA-256 da string normalizada em UTF-16LE (compat .NET)
+ * 4) Fallback para conteúdo bruto trimado
+ */
+async function computeAllKeyFingerprints(publicKey: string): Promise<FingerprintCandidate[]> {
+  const candidates: FingerprintCandidate[] = []
+  const rawTrimmed = publicKey.trim()
+  const normalizedBase64 = normalizeBase64(extractPemPayload(publicKey))
+
+  try {
+    const decoded = atob(normalizedBase64)
+    const decodedBytes = Uint8Array.from(decoded, (c) => c.charCodeAt(0))
+    candidates.push({
+      fingerprint: await sha256Hex(decodedBytes),
+      mode: 'decoded_bytes'
+    })
+  } catch {
+    // ignore invalid base64, fallback methods below
+  }
+
+  candidates.push({
+    fingerprint: await sha256Hex(new TextEncoder().encode(normalizedBase64)),
+    mode: 'normalized_base64_utf8'
+  })
+
+  candidates.push({
+    fingerprint: await sha256Hex(utf16LeBytes(normalizedBase64)),
+    mode: 'normalized_base64_utf16le'
+  })
+
+  if (rawTrimmed !== normalizedBase64) {
+    candidates.push({
+      fingerprint: await sha256Hex(new TextEncoder().encode(rawTrimmed)),
+      mode: 'raw_trimmed_utf8'
+    })
+    candidates.push({
+      fingerprint: await sha256Hex(utf16LeBytes(rawTrimmed)),
+      mode: 'raw_trimmed_utf16le'
+    })
+  }
+
+  return dedupeCandidates(candidates)
+}
+

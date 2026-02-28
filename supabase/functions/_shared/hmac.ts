@@ -6,6 +6,7 @@ export interface HmacVerificationResult {
   errorMessage?: string;
   transient?: boolean;
   rawBody?: string;  // Body lido durante a verificacao
+  modeUsed?: string;
   // Clock skew recovery fields (Fase 2)
   serverTimeMs?: number;
   skewSeconds?: number;
@@ -43,6 +44,35 @@ export interface AuthFailureContext {
   ip?: string;
 }
 
+function uniqueNonEmpty(values: Array<string | null>): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+
+  for (const value of values) {
+    const normalized = value?.trim()
+    if (!normalized || seen.has(normalized)) continue
+    seen.add(normalized)
+    result.push(normalized)
+  }
+
+  return result
+}
+
+function parseTimestampToMs(rawTimestamp: string): number | null {
+  const parsed = Number.parseInt(rawTimestamp, 10)
+  if (!Number.isFinite(parsed)) return null
+
+  // Compat: alguns agentes enviam segundos, outros milissegundos
+  return parsed < 1e12 ? parsed * 1000 : parsed
+}
+
+interface PayloadVariant {
+  payload: string
+  sep: ':' | '.'
+  fmt: 'raw' | 'compact'
+  mode: string
+}
+
 export async function verifyHmacSignature(
   supabase: SupabaseClient,
   request: Request,
@@ -50,242 +80,257 @@ export async function verifyHmacSignature(
   hmacSecret: string,
   context?: AuthFailureContext
 ): Promise<HmacVerificationResult> {
-  const signature = request.headers.get('X-HMAC-Signature');
-  // COMPAT: Accept both X-Timestamp/X-Nonce (legacy) and X-HMAC-Timestamp/X-HMAC-Nonce (v5.0.3+)
-  const timestamp = request.headers.get('X-Timestamp') || request.headers.get('X-HMAC-Timestamp');
-  const nonce = request.headers.get('X-Nonce') || request.headers.get('X-HMAC-Nonce');
-  const serverTimeMs = Date.now();
+  const signatureRaw = request.headers.get('X-HMAC-Signature')?.trim()
+  const signature = signatureRaw?.toLowerCase()
 
-  if (!signature || !timestamp || !nonce) {
-    return { 
-      valid: false, 
+  // Padronização: priorizar headers explícitos X-HMAC-* e aceitar legacy X-*
+  const timestampCandidates = uniqueNonEmpty([
+    request.headers.get('X-HMAC-Timestamp'),
+    request.headers.get('X-Timestamp'),
+  ])
+  const nonceCandidates = uniqueNonEmpty([
+    request.headers.get('X-HMAC-Nonce'),
+    request.headers.get('X-Nonce'),
+  ])
+
+  const serverTimeMs = Date.now()
+
+  if (!signature || timestampCandidates.length === 0 || nonceCandidates.length === 0) {
+    return {
+      valid: false,
       errorCode: 'AUTH_MISSING_HEADERS',
-      errorMessage: 'Headers HMAC ausentes (X-HMAC-Signature, X-Timestamp, X-Nonce)',
+      errorMessage: 'Headers HMAC ausentes (X-HMAC-Signature, X-HMAC-Timestamp|X-Timestamp, X-HMAC-Nonce|X-Nonce)',
       transient: false,
-      serverTimeMs
-    };
-  }
-
-  // Verificar timestamp (maximo 5 minutos de diferenca)
-  // COMPAT: v5.0.3 agents send timestamp in SECONDS, legacy agents send in MILLISECONDS
-  let requestTime = parseInt(timestamp);
-  // Auto-detect: if timestamp < 1e12, it's in seconds; convert to ms
-  if (requestTime < 1e12) {
-    requestTime = requestTime * 1000;
-  }
-  const maxDiff = 5 * 60 * 1000; // 5 minutos
-  const skewSeconds = Math.abs(serverTimeMs - requestTime) / 1000;
-
-  if (Math.abs(serverTimeMs - requestTime) > maxDiff) {
-    // Log auth failure to agent_evidence_logs for dashboard visibility
-    if (context?.agentId && context?.tenantId) {
-      await logAuthFailure(supabase, {
-        agentId: context.agentId,
-        agentName,
-        tenantId: context.tenantId,
-        errorCode: 'AUTH_TIMESTAMP_OUT_OF_RANGE',
-        skewSeconds,
-        endpoint: context.endpoint || 'unknown',
-        ip: context.ip || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-        serverTimeMs,
-        receivedTimestamp: requestTime
-      });
-    }
-    
-    return { 
-      valid: false, 
-      errorCode: 'AUTH_TIMESTAMP_OUT_OF_RANGE',
-      errorMessage: `Timestamp expirado (skew: ${skewSeconds.toFixed(1)}s, max: 300s)`,
-      transient: true, // Clock skew pode ser transitorio
       serverTimeMs,
-      skewSeconds,
-      receivedTimestamp: requestTime,
-      maxSkewSeconds: 300
-    };
+    }
   }
 
-  // Verificar se a assinatura ja foi usada (prevenir replay)
+  // Replay protection
   const { data: usedSignature } = await supabase
     .from('hmac_signatures')
     .select('id')
     .eq('signature', signature)
     .order('used_at', { ascending: false })
     .limit(1)
-    .maybeSingle();
+    .maybeSingle()
 
   if (usedSignature) {
-    return { 
-      valid: false, 
+    return {
+      valid: false,
       errorCode: 'AUTH_REPLAY_DETECTED',
       errorMessage: 'Assinatura ja utilizada (replay attack detectado)',
-      transient: false
-    };
+      transient: false,
+    }
   }
 
-  // Construir payload para verificacao
-  let body = '';
+  // Body idempotente para não consumir req original
+  let body = ''
   try {
-    const clonedRequest = request.clone();
-    body = await clonedRequest.text();
+    body = await request.clone().text()
   } catch {
-    body = '';
+    body = ''
   }
 
-  // BUG-FIX: v5.0.3 agents sign with ConvertTo-Json -Compress (compact JSON)
-  // but send the body with ConvertTo-Json (pretty-printed with \r\n and spaces)
-  // Try both the raw body and a compacted version
-  let compactBody = body;
+  let compactBody = body
   try {
     if (body.trim().startsWith('{') || body.trim().startsWith('[')) {
-      compactBody = JSON.stringify(JSON.parse(body));
+      compactBody = JSON.stringify(JSON.parse(body))
     }
   } catch {
-    compactBody = body; // If parse fails, keep original
+    compactBody = body
   }
 
-  // COMPAT: v5.0.3 uses "." separator, legacy uses ":" separator
-  // Use the original timestamp string (not the converted one) for payload reconstruction
-  const payloadColon = `${timestamp}:${nonce}:${body}`;
-  const payloadDot = `${timestamp}.${nonce}.${body}`;
-  // v5.0.3 compact body variants
-  const payloadColonCompact = `${timestamp}:${nonce}:${compactBody}`;
-  const payloadDotCompact = `${timestamp}.${nonce}.${compactBody}`;
+  const buildPayloadVariants = (
+    timestamp: string,
+    nonce: string,
+    cached?: { separator: string; body_format: string } | null,
+  ): PayloadVariant[] => {
+    const variants: PayloadVariant[] = [
+      { payload: `${timestamp}:${nonce}:${body}`, sep: ':', fmt: 'raw', mode: 'strict_colon_raw' },
+    ]
 
-  // COMPAT: Try multiple key encodings and payload formats
-  // Optimization: check cached format first, then try all variants
-  const encoder = new TextEncoder();
-  
-  // Build key variants
-  const keyVariants: { name: string; data: Uint8Array }[] = [];
-  
-  // 1. HEX-decoded bytes (legacy/correct)
+    // Compat legacy: manter fallback sem quebrar agentes antigos
+    if (compactBody !== body) {
+      variants.push({ payload: `${timestamp}:${nonce}:${compactBody}`, sep: ':', fmt: 'compact', mode: 'colon_compact' })
+    }
+    variants.push({ payload: `${timestamp}.${nonce}.${body}`, sep: '.', fmt: 'raw', mode: 'dot_raw_legacy' })
+    if (compactBody !== body) {
+      variants.push({ payload: `${timestamp}.${nonce}.${compactBody}`, sep: '.', fmt: 'compact', mode: 'dot_compact_legacy' })
+    }
+
+    if (!cached) return variants
+
+    return [...variants].sort((a, b) => {
+      const score = (variant: PayloadVariant) =>
+        (variant.sep === cached.separator ? 2 : 0) + (variant.fmt === cached.body_format ? 1 : 0)
+      return score(b) - score(a)
+    })
+  }
+
+  // Key variants
+  const encoder = new TextEncoder()
+  const keyVariants: { name: string; data: Uint8Array }[] = []
+
   try {
-    keyVariants.push({ name: 'hex', data: hexToBytes(hmacSecret) });
+    keyVariants.push({ name: 'hex', data: hexToBytes(hmacSecret) })
   } catch {
-    // Not valid hex - skip
+    // skip invalid hex, fallback to utf8 variant
   }
-  
-  // 2. UTF-8 raw bytes (v5.0.3 bug - treats hex string as UTF-8)
-  keyVariants.push({ name: 'utf8', data: encoder.encode(hmacSecret) });
-  
+  keyVariants.push({ name: 'utf8', data: encoder.encode(hmacSecret) })
+
   if (keyVariants.length === 0) {
-    console.error(`[HMAC] CRITICAL: No valid key encoding for agent ${agentName}`);
     return {
       valid: false,
       errorCode: 'AUTH_INVALID_SECRET_FORMAT',
       errorMessage: 'HMAC secret invalido. Agente deve ser reinstalado com secret HEX valido.',
       transient: false,
-    };
+    }
   }
-  
-  // Check format cache to try the known-good combination first
-  let cachedFormat: { key_encoding: string; separator: string; body_format: string } | null = null;
+
+  // Cache de formato para reduzir tentativas e manter compatibilidade
+  let cachedFormat: { key_encoding: string; separator: string; body_format: string } | null = null
   if (context?.agentId) {
     const { data: cache } = await supabase
       .from('agent_hmac_format_cache')
       .select('key_encoding, separator, body_format')
       .eq('agent_id', context.agentId)
-      .maybeSingle();
-    if (cache) cachedFormat = cache;
+      .maybeSingle()
+    if (cache) cachedFormat = cache
   }
-  
-  // Order payloads: cached separator first, then alternatives
-  const allPayloads: { payload: string; sep: string; fmt: string }[] = [];
-  const separators = cachedFormat ? [cachedFormat.separator, cachedFormat.separator === ':' ? '.' : ':'] : [':', '.'];
-  const bodyFormats = cachedFormat ? [cachedFormat.body_format, cachedFormat.body_format === 'raw' ? 'compact' : 'raw'] : ['raw', 'compact'];
-  
-  for (const sep of separators) {
-    for (const fmt of bodyFormats) {
-      const b = fmt === 'compact' ? compactBody : body;
-      allPayloads.push({ payload: `${timestamp}${sep}${nonce}${sep}${b}`, sep, fmt });
-    }
-  }
-  
-  // Order keys: cached encoding first
+
   const orderedKeys = cachedFormat
-    ? [...keyVariants.filter(k => k.name === cachedFormat!.key_encoding), ...keyVariants.filter(k => k.name !== cachedFormat!.key_encoding)]
-    : keyVariants;
-  
-  for (const keyVariant of orderedKeys) {
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      keyVariant.data.buffer as ArrayBuffer,
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    );
-    
-    for (const { payload, sep, fmt } of allPayloads) {
-      const messageData = encoder.encode(payload);
-      const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
-      const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-      
-      if (signature === expectedSignature) {
-        // Match found! Store signature for replay protection
-        const { error: insertError } = await supabase.from('hmac_signatures').insert({
-          signature,
-          agent_name: agentName,
-        });
+    ? [
+        ...keyVariants.filter((k) => k.name === cachedFormat!.key_encoding),
+        ...keyVariants.filter((k) => k.name !== cachedFormat!.key_encoding),
+      ]
+    : keyVariants
 
-        if (insertError) {
-          console.error(`[HMAC] CRITICAL: Failed to store signature for agent ${agentName}:`, {
-            error: insertError.message,
-            code: insertError.code,
-          });
+  const maxDiffMs = 5 * 60 * 1000
+  let closestSkewSeconds: number | null = null
+  let closestTimestamp: number | undefined
+  let hasTimestampInRange = false
+
+  for (const timestamp of timestampCandidates) {
+    const requestTime = parseTimestampToMs(timestamp)
+    if (!requestTime) continue
+
+    const skewMs = Math.abs(serverTimeMs - requestTime)
+    const skewSeconds = skewMs / 1000
+
+    if (closestSkewSeconds === null || skewSeconds < closestSkewSeconds) {
+      closestSkewSeconds = skewSeconds
+      closestTimestamp = requestTime
+    }
+
+    if (skewMs > maxDiffMs) {
+      continue
+    }
+
+    hasTimestampInRange = true
+
+    for (const nonce of nonceCandidates) {
+      const payloadVariants = buildPayloadVariants(timestamp, nonce, cachedFormat)
+
+      for (const keyVariant of orderedKeys) {
+        const cryptoKey = await crypto.subtle.importKey(
+          'raw',
+          keyVariant.data.buffer as ArrayBuffer,
+          { name: 'HMAC', hash: 'SHA-256' },
+          false,
+          ['sign']
+        )
+
+        for (const variant of payloadVariants) {
+          const messageData = encoder.encode(variant.payload)
+          const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData)
+          const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('')
+
+          if (signature === expectedSignature) {
+            const { error: insertError } = await supabase.from('hmac_signatures').insert({
+              signature,
+              agent_name: agentName,
+            })
+
+            if (insertError) {
+              console.error(`[HMAC] CRITICAL: Failed to store signature for agent ${agentName}:`, {
+                error: insertError.message,
+                code: insertError.code,
+              })
+            }
+
+            if (context?.agentId) {
+              supabase.from('agent_hmac_format_cache').upsert(
+                {
+                  agent_id: context.agentId,
+                  key_encoding: keyVariant.name,
+                  separator: variant.sep,
+                  body_format: variant.fmt,
+                  last_verified_at: new Date().toISOString(),
+                  hit_count: 1,
+                },
+                { onConflict: 'agent_id' }
+              ).then(({ error }) => {
+                if (error) console.warn('[HMAC] Cache update failed:', error.message)
+              })
+            }
+
+            return { valid: true, rawBody: body, modeUsed: variant.mode }
+          }
         }
-
-        // Update format cache (fire-and-forget, no await needed for response)
-        if (context?.agentId) {
-          supabase.from('agent_hmac_format_cache').upsert({
-            agent_id: context.agentId,
-            key_encoding: keyVariant.name,
-            separator: sep,
-            body_format: fmt,
-            last_verified_at: new Date().toISOString(),
-            hit_count: 1,
-          }, { onConflict: 'agent_id' }).then(({ error }) => {
-            if (error) console.warn('[HMAC] Cache update failed:', error.message);
-          });
-        }
-
-        return { valid: true, rawBody: body };
       }
     }
   }
 
-  // No match found - DEBUG: Log details for diagnosis
-  const debugUtf8Key = encoder.encode(hmacSecret);
-  let debugHexKey: Uint8Array | null = null;
-  try { debugHexKey = hexToBytes(hmacSecret); } catch { /* skip */ }
-  
+  if (!hasTimestampInRange && closestSkewSeconds !== null) {
+    if (context?.agentId && context?.tenantId) {
+      await logAuthFailure(supabase, {
+        agentId: context.agentId,
+        agentName,
+        tenantId: context.tenantId,
+        errorCode: 'AUTH_TIMESTAMP_OUT_OF_RANGE',
+        skewSeconds: closestSkewSeconds,
+        endpoint: context.endpoint || 'unknown',
+        ip: context.ip || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        serverTimeMs,
+        receivedTimestamp: closestTimestamp,
+      })
+    }
+
+    return {
+      valid: false,
+      errorCode: 'AUTH_TIMESTAMP_OUT_OF_RANGE',
+      errorMessage: `Timestamp expirado (skew: ${closestSkewSeconds.toFixed(1)}s, max: 300s)`,
+      transient: true,
+      serverTimeMs,
+      skewSeconds: closestSkewSeconds,
+      receivedTimestamp: closestTimestamp,
+      maxSkewSeconds: 300,
+    }
+  }
+
   console.error('[HMAC] Signature verification failed', {
     agent: agentName,
     error_code: 'AUTH_INVALID_SIGNATURE',
-    timestamp: timestamp,
-    nonce: nonce?.substring(0, 8),
-    receivedSignature: signature?.substring(0, 16) + '...',
+    has_timestamp_hmac: !!request.headers.get('X-HMAC-Timestamp'),
+    has_timestamp_legacy: !!request.headers.get('X-Timestamp'),
+    has_nonce_hmac: !!request.headers.get('X-HMAC-Nonce'),
+    has_nonce_legacy: !!request.headers.get('X-Nonce'),
     bodyLength: body.length,
-    bodyPreview: body.substring(0, 100),
-    secretLength: hmacSecret?.length,
-    secretPrefix: hmacSecret?.substring(0, 8),
-    utf8KeyLength: debugUtf8Key.length,
-    hexKeyLength: debugHexKey?.length || 'N/A',
-    headerNames: {
-      timestamp: request.headers.get('X-Timestamp') ? 'X-Timestamp' : request.headers.get('X-HMAC-Timestamp') ? 'X-HMAC-Timestamp' : 'none',
-      nonce: request.headers.get('X-Nonce') ? 'X-Nonce' : request.headers.get('X-HMAC-Nonce') ? 'X-HMAC-Nonce' : 'none',
-    }
-  });
-  
-  return { 
-    valid: false, 
+    mode: 'payload_mismatch',
+  })
+
+  return {
+    valid: false,
     rawBody: body,
     errorCode: 'AUTH_INVALID_SIGNATURE',
-    errorMessage: 'Assinatura HMAC invalida',
-    transient: false
-  };
+    errorMessage: 'Assinatura HMAC invalida (payload/secret/header mismatch)',
+    transient: false,
+    serverTimeMs,
+  }
 }
+
 
 // HMAC signature cleanup moved to run_system_maintenance() cron (every 30 min).
 // Removed from hot path to save ~120 queries/min (was 20% of all requests).
