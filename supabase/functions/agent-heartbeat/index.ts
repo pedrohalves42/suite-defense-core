@@ -344,6 +344,8 @@ Deno.serve(async (req) => {
             script_content_base64: base64Script,
             sha256: calculatedSha256,
             script_sha256: calculatedSha256, // Alias for v5.0.13+ agents
+            ecdsa_signature: null, // Not signed via force-update path
+            script_hash_signature: null, // Compatibility for local hash cache
             reason: agent.force_update_reason || 'System recovery update',
             override_safe_mode: overrideValid
           }),
