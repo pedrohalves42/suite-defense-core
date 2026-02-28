@@ -3394,6 +3394,7 @@ export type Database = {
           created_at: string
           expires_at: string | null
           id: string
+          is_active: boolean
           key_fingerprint: string
           public_key: string
           revoked_at: string | null
@@ -3401,6 +3402,7 @@ export type Database = {
           rotation_signaled_at: string | null
           tenant_id: string | null
           valid_from: string
+          valid_until: string | null
           version: number
         }
         Insert: {
@@ -3409,6 +3411,7 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          is_active?: boolean
           key_fingerprint: string
           public_key: string
           revoked_at?: string | null
@@ -3416,6 +3419,7 @@ export type Database = {
           rotation_signaled_at?: string | null
           tenant_id?: string | null
           valid_from?: string
+          valid_until?: string | null
           version?: number
         }
         Update: {
@@ -3424,6 +3428,7 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          is_active?: boolean
           key_fingerprint?: string
           public_key?: string
           revoked_at?: string | null
@@ -3431,6 +3436,7 @@ export type Database = {
           rotation_signaled_at?: string | null
           tenant_id?: string | null
           valid_from?: string
+          valid_until?: string | null
           version?: number
         }
         Relationships: [
