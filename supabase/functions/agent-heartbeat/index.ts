@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     const tokenHash = await hashToken(agentToken)
     const { data: token } = await supabase
       .from('agent_tokens')
-      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status, tenant_id, force_update_version, force_update_reason, force_update_override_safe_mode, agent_version)')
+      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status, tenant_id, force_update_version, force_update_reason, force_update_override_safe_mode, force_update_at, agent_version)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -131,6 +131,7 @@ Deno.serve(async (req) => {
       force_update_version: string | null;
       force_update_reason: string | null;
       force_update_override_safe_mode: boolean | null;
+      force_update_at: string | null;
       agent_version: string | null;
     }
     
@@ -278,7 +279,9 @@ Deno.serve(async (req) => {
       (!overrideCheck?.force_update_override_safe_mode_expires_at || 
        new Date(overrideCheck.force_update_override_safe_mode_expires_at) > new Date())
 
-    if (agent.force_update_version && agent.force_update_version !== agent.agent_version) {
+    // FIXED: Use force_update_at as trigger instead of version comparison
+    // This allows same-version pushes (e.g., v5.0.13 hotfix re-download)
+    if (agent.force_update_version && agent.force_update_at) {
       logger.info('[PROXY] Force update pending', { 
         agentName: agent.agent_name,
         currentVersion: agent.agent_version,
@@ -363,6 +366,7 @@ Deno.serve(async (req) => {
       agent: agent.agent_name,
       timestamp: new Date().toISOString(),
       proxy: true,
+      script_sha256: null, // FIXED: Include so old agents don't crash accessing this property
       message: 'Heartbeat received via legacy endpoint - please update agent to v4.0.7+'
     };
     
