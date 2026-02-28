@@ -42,6 +42,70 @@ function extractScriptVersion(content: string): string | null {
   return null;
 }
 
+function applyWindowsEcdsaHotfix(script: string): { content: string; changed: boolean; reasons: string[] } {
+  let content = script;
+  const reasons: string[] = [];
+
+  if (
+    content.includes('$Global:SecurityDegraded = $false') &&
+    !content.includes('$Global:AgentPrivateKey = $null')
+  ) {
+    const withDeclaredGlobals = content.replace(
+      /# v5\.0\.13-fix: SecurityDegraded flag \(BUG 7 - declare early for robustness\)\s*\r?\n\$Global:SecurityDegraded = \$false/,
+      '# v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)\n$Global:SecurityDegraded = $false\n\n# v5.0.14-hotfix: Declare crypto globals early (StrictMode-safe when key init fails)\n$Global:AgentPrivateKey = $null\n$Global:AgentPublicKey = $null\n$Global:KeyFingerprint = $null\n$Global:KeyVersion = 0'
+    );
+
+    if (withDeclaredGlobals !== content) {
+      content = withDeclaredGlobals;
+      reasons.push('strictmode_globals');
+    }
+  }
+
+  if (!content.includes('ECDsaCng]::new(256)') && content.includes('if ($attempt -eq $maxKeyAttempts)')) {
+    const updated = content.replace(
+      /if \(\$attempt -eq \$maxKeyAttempts\) \{[\s\S]*?Write-Log "\[KEYS\] All \$maxKeyAttempts ECDSA attempts failed" "ERROR"[\s\S]*?return \$false\s*\}/m,
+      `if ($attempt -eq $maxKeyAttempts) {
+                    # v5.0.14 HOTFIX: fallback for legacy Windows/.NET where CNG container creation is unstable
+                    try {
+                        $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(256)
+                        if ($null -ne $ecdsa) {
+                            Write-Log "[KEYS] Fallback ECDSA keypair generated via ECDsaCng(256)" "WARN"
+                            break
+                        }
+                    } catch {
+                        Write-Log "[KEYS] ECDsaCng fallback failed: $($_.Exception.Message)" "WARN"
+                    }
+
+                    try {
+                        $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
+                        if ($null -ne $ecdsa) {
+                            try {
+                                if ($ecdsa.KeySize -ne 256) { $ecdsa.KeySize = 256 }
+                            } catch {
+                                Write-Log "[KEYS] Managed ECDSA fallback created key with KeySize=$($ecdsa.KeySize)" "WARN"
+                            }
+                            Write-Log "[KEYS] Fallback ECDSA keypair generated via managed API" "WARN"
+                            break
+                        }
+                    } catch {
+                        Write-Log "[KEYS] Managed ECDSA fallback failed: $($_.Exception.Message)" "WARN"
+                    }
+
+                    Write-Log "[KEYS] All $maxKeyAttempts ECDSA attempts failed" "ERROR"
+                    Write-Log "[KEYS] Result signing will be DISABLED for this agent" "WARN"
+                    return $false
+                }`
+    );
+
+    if (updated !== content) {
+      content = updated;
+      reasons.push('legacy_ecdsa_fallback');
+    }
+  }
+
+  return { content, changed: reasons.length > 0, reasons };
+}
+
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   
@@ -82,7 +146,7 @@ Deno.serve(async (req) => {
     // Fetch latest active release
     const { data: release, error: releaseError } = await supabase
       .from('agent_releases')
-      .select('version, script_content, sha256, release_notes, created_at')
+      .select('id, version, script_content, sha256, release_notes, created_at')
       .eq('platform', platform)
       .eq('is_active', true)
       .eq('channel', 'stable')
@@ -102,9 +166,40 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Apply runtime hotfix for legacy Windows crypto environments (non-breaking, self-healing)
+    let releaseScriptContent = release.script_content;
+    if (platform === 'windows' && releaseScriptContent) {
+      const hotfix = applyWindowsEcdsaHotfix(releaseScriptContent);
+      if (hotfix.changed) {
+        releaseScriptContent = hotfix.content;
+        console.warn(`[${requestId}] Applied Windows ECDSA hotfix at serve-time`, {
+          releaseVersion: release.version,
+          reasons: hotfix.reasons,
+        });
+
+        // Best-effort persistence so all endpoints (including serve-agent-update) benefit immediately
+        try {
+          const { error: persistError } = await supabase
+            .from('agent_releases')
+            .update({ script_content: releaseScriptContent })
+            .eq('id', release.id);
+
+          if (persistError) {
+            console.warn(`[${requestId}] Could not persist hotfixed script_content`, {
+              error: persistError.message,
+              releaseId: release.id,
+            });
+          }
+        } catch (persistErr) {
+          const err = persistErr as Error;
+          console.warn(`[${requestId}] Exception persisting hotfix: ${err.message}`);
+        }
+      }
+    }
+
     // Validate script content
-    if (!release.script_content || release.script_content.length < 5000) {
-      console.error(`[${requestId}] Script content too short: ${release.script_content?.length || 0} bytes`);
+    if (!releaseScriptContent || releaseScriptContent.length < 5000) {
+      console.error(`[${requestId}] Script content too short: ${releaseScriptContent?.length || 0} bytes`);
       return new Response(
         JSON.stringify({
           error: 'Invalid script content',
@@ -117,7 +212,7 @@ Deno.serve(async (req) => {
 
     // Integrity guard: log mismatch but don't block (allow serving latest DB content)
     const declaredVersion = normalizeVersion(release.version);
-    const embeddedVersion = extractScriptVersion(release.script_content);
+    const embeddedVersion = extractScriptVersion(releaseScriptContent);
     if (embeddedVersion && normalizeVersion(embeddedVersion) !== declaredVersion) {
       console.warn(`[${requestId}] Release/script version mismatch (non-blocking)`, {
         releaseVersion: release.version,
@@ -128,9 +223,9 @@ Deno.serve(async (req) => {
     }
 
     // Normalize for Windows (CRLF)
-    let normalizedScript = release.script_content;
+    let normalizedScript = releaseScriptContent;
     if (platform === 'windows') {
-      normalizedScript = release.script_content
+      normalizedScript = releaseScriptContent
         .replace(/\r\n/g, '\n')
         .replace(/\r/g, '\n')
         .replace(/\n/g, '\r\n');
