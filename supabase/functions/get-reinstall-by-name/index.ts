@@ -48,15 +48,20 @@ Deno.serve(async (req) => {
     }
 
     // Auth: enrollment key (header/query/body) OR JWT
-    const enrollmentKeyFromQuery = url.searchParams.get('key')?.trim() || null;
-    const enrollmentKeyFromHeader = req.headers.get('X-Enrollment-Key')?.trim() || null;
+    const sanitizeEnrollmentKey = (value: string | null): string | null => {
+      if (!value) return null;
+      return value.replace(/^Bearer\s+/i, '').replace(/^['"]+|['"]+$/g, '').trim();
+    };
+
+    const enrollmentKeyFromQuery = sanitizeEnrollmentKey(url.searchParams.get('key'));
+    const enrollmentKeyFromHeader = sanitizeEnrollmentKey(req.headers.get('X-Enrollment-Key'));
     let enrollmentKeyFromBody: string | null = null;
 
     if (!enrollmentKeyFromQuery && !enrollmentKeyFromHeader && req.method === 'POST') {
       try {
         const body = await req.json();
         if (body && typeof body.enrollment_key === 'string') {
-          enrollmentKeyFromBody = body.enrollment_key.trim();
+          enrollmentKeyFromBody = sanitizeEnrollmentKey(body.enrollment_key);
         }
       } catch {
         // ignore invalid JSON body for auth fallback
@@ -80,7 +85,7 @@ Deno.serve(async (req) => {
       if (ekError || !ek) {
         console.error(`[${requestId}] Invalid enrollment key`);
         return new Response(
-          '# ERROR: Invalid or expired enrollment key\nWrite-Host "ERROR: Invalid key" -ForegroundColor Red\n',
+          '# ERROR: Invalid or expired enrollment key\n# Tip: use an ACTIVE Enrollment Key from Chaves de Instalação (not JWT)\nWrite-Host "ERROR: Invalid key" -ForegroundColor Red\n',
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
         );
       }

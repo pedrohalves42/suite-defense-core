@@ -1,10 +1,10 @@
 // CyberShield Agent - Reinstall Preserve Script Content
 // Embedded version for Edge Function delivery
-// Version: 3.2.0 - Interactive key/name prompt + stronger auto-recover fallback
+// Version: 3.2.1 - Enrollment Key/JWT auth fallback + clearer recovery guidance
 
-export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v3.2.0
+export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v3.2.1
 # Preserves credentials (AgentName, Token, HMAC) during agent update
-# Strategy 4: Auto-recover via enrollment key (env/file/log/prompt) with guided fallback
+# Strategy 4: Auto-recover via enrollment key/JWT (env/file/log/prompt) with guided fallback
 # ASCII-safe, English-only for cross-locale compatibility
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ErrorActionPreference = "Stop"
@@ -22,7 +22,7 @@ function Write-Status {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " CyberShield - Reinstall Preserve v3.2.0" -ForegroundColor Cyan
+Write-Host " CyberShield - Reinstall Preserve v3.2.1" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -210,16 +210,35 @@ if ($AgentName) {
         }
     }
 
+    $jwtToken = $env:CYBERSHIELD_JWT
+
     if ($enrollKey) {
         $enrollKey = $enrollKey.Trim().Trim('"').Trim("'")
     }
 
-    if (-not $enrollKey -and -not $AgentToken) {
-        Write-Status "Agent token missing locally; enrollment key required for auto-recover." "WARN"
-        $typedKey = Read-Host "Digite a Enrollment Key (XXXX-XXXX-XXXX-XXXX)"
+    if ($jwtToken) {
+        $jwtToken = $jwtToken.Trim().Trim('"').Trim("'")
+    }
+
+    # If user pasted JWT into key field by mistake, auto-switch mode
+    if ($enrollKey -and $enrollKey -match '^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$') {
+        $jwtToken = $enrollKey
+        $enrollKey = $null
+        Write-Status "Detected JWT in Enrollment Key field - switching to JWT auth mode" "WARN"
+    }
+
+    if (-not $enrollKey -and -not $jwtToken -and -not $AgentToken) {
+        Write-Status "Agent token missing locally; enrollment key or JWT required for auto-recover." "WARN"
+        $typedKey = Read-Host "Digite Enrollment Key (XXXX-XXXX-XXXX-XXXX) OU JWT"
         if ($typedKey -and $typedKey.Trim()) {
-            $enrollKey = $typedKey.Trim().Trim('"').Trim("'")
-            Write-Status "Enrollment key informada manualmente" "SUCCESS"
+            $typedKey = $typedKey.Trim().Trim('"').Trim("'")
+            if ($typedKey -match '^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$') {
+                $jwtToken = $typedKey
+                Write-Status "JWT informado manualmente" "SUCCESS"
+            } else {
+                $enrollKey = $typedKey
+                Write-Status "Enrollment key informada manualmente" "SUCCESS"
+            }
         }
 
         if (-not $ForcedAgentName) {
@@ -231,46 +250,59 @@ if ($AgentName) {
         }
     }
 
-    if (-not $enrollKey) {
-        Write-Status "No enrollment key available for auto-recover (set CYBERSHIELD_KEY env var)" "WARN"
+    if (-not $enrollKey -and -not $jwtToken) {
+        Write-Status "No enrollment key/JWT available for auto-recover (set CYBERSHIELD_KEY or CYBERSHIELD_JWT)" "WARN"
     }
 
-    if ($enrollKey -and $enrollKey.Length -gt 5) {
+    if (($enrollKey -and $enrollKey.Length -gt 5) -or ($jwtToken -and $jwtToken.Length -gt 20)) {
         Write-Status "Calling auto-recover for agent: $AgentName" "INFO"
         $agentNameEncoded = [System.Uri]::EscapeDataString($AgentName)
         $recoverBaseUrl = "$ServerUrl/functions/v1/get-reinstall-by-name/$agentNameEncoded"
 
         $recoverScript = $null
 
-        # Attempt 1: Header auth (best against proxy/query stripping)
-        try {
-            Write-Status "Auto-recover attempt 1/3: header auth" "INFO"
-            $headers = @{ "X-Enrollment-Key" = $enrollKey }
-            $recoverScript = Invoke-RestMethod -Uri $recoverBaseUrl -Method GET -Headers $headers -TimeoutSec 60
-        } catch {
-            Write-Status "Attempt 1 failed: $($_.Exception.Message)" "WARN"
+        # Attempt 1: JWT auth (when available)
+        if ($jwtToken -and -not $recoverScript) {
+            try {
+                Write-Status "Auto-recover attempt 1/4: JWT auth" "INFO"
+                $headers = @{ "Authorization" = "Bearer $jwtToken" }
+                $recoverScript = Invoke-RestMethod -Uri $recoverBaseUrl -Method GET -Headers $headers -TimeoutSec 60
+            } catch {
+                Write-Status "Attempt 1 failed: $($_.Exception.Message)" "WARN"
+            }
         }
 
-        # Attempt 2: Query param
-        if (-not $recoverScript) {
+        # Attempt 2: Enrollment key header auth
+        if ($enrollKey -and -not $recoverScript) {
             try {
-                Write-Status "Auto-recover attempt 2/3: query auth" "INFO"
-                $recoverUrl = "$recoverBaseUrl?key=$([System.Uri]::EscapeDataString($enrollKey))"
-                $recoverScript = Invoke-RestMethod -Uri $recoverUrl -Method GET -TimeoutSec 60
+                Write-Status "Auto-recover attempt 2/4: header auth" "INFO"
+                $headers = @{ "X-Enrollment-Key" = $enrollKey }
+                $recoverScript = Invoke-RestMethod -Uri $recoverBaseUrl -Method GET -Headers $headers -TimeoutSec 60
             } catch {
                 Write-Status "Attempt 2 failed: $($_.Exception.Message)" "WARN"
             }
         }
 
-        # Attempt 3: POST JSON body
-        if (-not $recoverScript) {
+        # Attempt 3: Enrollment key query auth
+        if ($enrollKey -and -not $recoverScript) {
             try {
-                Write-Status "Auto-recover attempt 3/3: body auth" "INFO"
+                Write-Status "Auto-recover attempt 3/4: query auth" "INFO"
+                $recoverUrl = "$recoverBaseUrl?key=$([System.Uri]::EscapeDataString($enrollKey))"
+                $recoverScript = Invoke-RestMethod -Uri $recoverUrl -Method GET -TimeoutSec 60
+            } catch {
+                Write-Status "Attempt 3 failed: $($_.Exception.Message)" "WARN"
+            }
+        }
+
+        # Attempt 4: Enrollment key body auth
+        if ($enrollKey -and -not $recoverScript) {
+            try {
+                Write-Status "Auto-recover attempt 4/4: body auth" "INFO"
                 $headers = @{ "Content-Type" = "application/json" }
                 $body = @{ enrollment_key = $enrollKey } | ConvertTo-Json -Compress
                 $recoverScript = Invoke-RestMethod -Uri $recoverBaseUrl -Method POST -Headers $headers -Body $body -TimeoutSec 60
             } catch {
-                Write-Status "Attempt 3 failed: $($_.Exception.Message)" "WARN"
+                Write-Status "Attempt 4 failed: $($_.Exception.Message)" "WARN"
             }
         }
 
@@ -287,12 +319,13 @@ if ($AgentName) {
             if ($AgentToken) {
                 Write-Status "Auto-recovery failed - using preserved local credentials as fallback" "WARN"
             } else {
-                Write-Status "Auto-recovery failed after 3 attempts" "ERROR"
-                Write-Status "Invalid enrollment key, blocked network, or agent not found" "ERROR"
+                Write-Status "Auto-recovery failed after auth attempts" "ERROR"
+                Write-Status "Use an ACTIVE Enrollment Key from 'Chaves de Instalação' (do not paste JWT there)." "ERROR"
+                Write-Status "You can also set CYBERSHIELD_JWT for manual recovery mode." "WARN"
             }
         }
     } else {
-        Write-Status "Skipping auto-recovery because no enrollment key was found" "WARN"
+        Write-Status "Skipping auto-recovery because no enrollment key/JWT was found" "WARN"
     }
 }
 
@@ -308,9 +341,10 @@ if (-not $AgentName -or -not $AgentToken) {
     }
     Write-Host ""
     Write-Status "Options:" "INFO"
-    Write-Status '  1. Set env key and retry: $env:CYBERSHIELD_KEY="XXXX-XXXX-XXXX-XXXX"' "INFO"
-    Write-Status '  2. Optional name override: $env:CYBERSHIELD_AGENT_NAME="MIT-SERVIDOR"' "INFO"
-    Write-Status "  3. Use full reinstall with enrollment key" "INFO"
+    Write-Status '  1. Set enrollment key and retry: $env:CYBERSHIELD_KEY="XXXX-XXXX-XXXX-XXXX"' "INFO"
+    Write-Status '  2. Set JWT (manual mode): $env:CYBERSHIELD_JWT="eyJ..."' "INFO"
+    Write-Status '  3. Optional name override: $env:CYBERSHIELD_AGENT_NAME="MIT-SERVIDOR"' "INFO"
+    Write-Status "  4. Use full reinstall with enrollment key" "INFO"
     Start-Sleep -Seconds 10
     return
 }

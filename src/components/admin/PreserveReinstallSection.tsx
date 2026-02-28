@@ -35,8 +35,8 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 // Comando interativo (máquina individual - detecta credenciais locais e força versão mais recente)
 const INTERACTIVE_COMMAND = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" | iex`;
 
-// Comando com Enrollment Key (deploy em massa via RMM/GPO) - agora injeta a key corretamente
-const EK_COMMAND_TEMPLATE = `$env:CYBERSHIELD_KEY="COLE_SUA_ENROLLMENT_KEY"; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" | iex`;
+// Comando com Enrollment Key (deploy em massa via RMM/GPO) - com fallback de nome por hostname
+const EK_COMMAND_TEMPLATE = `$env:CYBERSHIELD_KEY="COLE_SUA_ENROLLMENT_KEY"; if (-not $env:CYBERSHIELD_AGENT_NAME) { $env:CYBERSHIELD_AGENT_NAME=$env:COMPUTERNAME }; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" | iex`;
 
 // Comando alternativo (Invoke-WebRequest + cache-bust - melhor compatibilidade com proxy)
 const FALLBACK_COMMAND = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $script = (Invoke-WebRequest -Uri "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" -UseBasicParsing).Content; Invoke-Expression $script`;
@@ -77,7 +77,7 @@ export function PreserveReinstallSection() {
             <CardTitle className="text-sm flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
               Reinstalação Preservando Credenciais
-              <Badge variant="secondary" className="ml-2 text-xs">v3.2.0</Badge>
+              <Badge variant="secondary" className="ml-2 text-xs">v3.2.1</Badge>
             </CardTitle>
             <CardDescription className="mt-1">
               Atualiza o agente mantendo nome, token e HMAC originais
@@ -189,8 +189,9 @@ export function PreserveReinstallSection() {
                   </Link>{' '}
                   e copie uma chave ativa (ou crie uma nova)
                 </li>
-                <li>Substitua <code className="bg-muted px-1 rounded">COLE_SUA_ENROLLMENT_KEY</code> pela chave copiada</li>
-                <li>Distribua o comando via RMM, GPO ou script centralizado</li>
+                <li>Substitua <code className="bg-muted px-1 rounded">COLE_SUA_ENROLLMENT_KEY</code> por uma chave ativa</li>
+                <li>Opcional: defina <code className="bg-muted px-1 rounded">$env:CYBERSHIELD_AGENT_NAME</code> se quiser forçar um nome específico (ex: MIT-SERVIDOR)</li>
+                <li><strong>Não use JWT no campo da Enrollment Key</strong>; JWT é apenas fallback manual</li>
               </ol>
             </div>
 
