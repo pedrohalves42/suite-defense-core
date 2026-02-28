@@ -164,35 +164,85 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
     reasons.push('safe_sha256_access');
   }
 
-  // HOTFIX 8: Null-safe .status access in Invoke-LocalDetection (line ~4854)
-  // Test-AntivirusStatus/Test-FirewallStatus/etc. can return $null on servers without SecurityCenter2
-  if (content.includes('$results.antivirus.status') && !content.includes('HOTFIX-NULL-SAFE-STATUS')) {
+  // HOTFIX 8: Pipeline-safe Test-* calls in Invoke-LocalDetection
+  // Root cause: Show-SecurityToast, Invoke-PushAlert, Add-EvidenceEntry emit pipeline output
+  // which turns $results.antivirus into an array instead of a hashtable, crashing .status access
+  if (content.includes('Test-AntivirusStatus') && !content.includes('PIPELINE-SAFE')) {
     content = content.replace(
-      /if\s*\(\$results\.antivirus\.status\s+-eq\s+"inactive"\)/g,
-      'if ($results.antivirus -and $results.antivirus.status -eq "inactive") <# HOTFIX-NULL-SAFE-STATUS #>'
+      /\$results\.antivirus\s*=\s*Test-AntivirusStatus\b/g,
+      '$results.antivirus = @(Test-AntivirusStatus)[-1] <# PIPELINE-SAFE #>'
     );
     content = content.replace(
-      /if\s*\(\$results\.firewall\.status\s+-eq\s+"remediated"\)/g,
-      'if ($results.firewall -and $results.firewall.status -eq "remediated") <# HOTFIX-NULL-SAFE-STATUS #>'
+      /\$results\.firewall\s*=\s*Test-FirewallStatus\b/g,
+      '$results.firewall = @(Test-FirewallStatus)[-1] <# PIPELINE-SAFE #>'
     );
     content = content.replace(
-      /if\s*\(\$results\.usb\.status\s+-eq\s+"detected"\)/g,
-      'if ($results.usb -and $results.usb.status -eq "detected") <# HOTFIX-NULL-SAFE-STATUS #>'
+      /\$results\.usb\s*=\s*Test-UsbDevices\b/g,
+      '$results.usb = @(Test-UsbDevices)[-1] <# PIPELINE-SAFE #>'
     );
     content = content.replace(
-      /if\s*\(\$results\.processes\.status\s+-eq\s+"detected"\)/g,
-      'if ($results.processes -and $results.processes.status -eq "detected") <# HOTFIX-NULL-SAFE-STATUS #>'
+      /\$results\.processes\s*=\s*Test-SuspiciousProcesses\b/g,
+      '$results.processes = @(Test-SuspiciousProcesses)[-1] <# PIPELINE-SAFE #>'
     );
-    reasons.push('null_safe_local_detect_status');
+    reasons.push('pipeline_safe_test_calls');
   }
 
-  // HOTFIX 9: Wrap Invoke-LocalDetection call sites in try/catch (prevent fatal crash loops)
-  if (content.includes('Invoke-LocalDetection') && !content.includes('HOTFIX-LOCAL-DETECT-TRYCATCH')) {
+  // HOTFIX 9: Type-safe .status access (handles both null AND non-hashtable results)
+  if (content.includes('$results.antivirus') && !content.includes('HOTFIX-TYPESAFE-STATUS')) {
+    // Match patterns with or without -and prefix, with or without prior HOTFIX markers
     content = content.replace(
-      /^(\s+)(Invoke-LocalDetection)\s*$/gm,
-      '$1try { $2 } catch { Write-Log "[LOCAL-DETECT] Non-fatal error: $($_.Exception.Message)" "WARN" } <# HOTFIX-LOCAL-DETECT-TRYCATCH #>'
+      /if\s*\(\$results\.antivirus(?:\s+-and\s+\$results\.antivirus\.status|\s+-is\s+\[hashtable\]\s+-and\s+\$results\.antivirus\.status|\.status)\s+-eq\s+"inactive"\)\s*(?:<#[^#]*#>\s*)?/g,
+      'if ($results.antivirus -is [hashtable] -and $results.antivirus.status -eq "inactive") <# HOTFIX-TYPESAFE-STATUS #> '
+    );
+    content = content.replace(
+      /if\s*\(\$results\.firewall(?:\s+-and\s+\$results\.firewall\.status|\s+-is\s+\[hashtable\]\s+-and\s+\$results\.firewall\.status|\.status)\s+-eq\s+"remediated"\)\s*(?:<#[^#]*#>\s*)?/g,
+      'if ($results.firewall -is [hashtable] -and $results.firewall.status -eq "remediated") <# HOTFIX-TYPESAFE-STATUS #> '
+    );
+    content = content.replace(
+      /if\s*\(\$results\.usb(?:\s+-and\s+\$results\.usb\.status|\s+-is\s+\[hashtable\]\s+-and\s+\$results\.usb\.status|\.status)\s+-eq\s+"detected"\)\s*(?:<#[^#]*#>\s*)?/g,
+      'if ($results.usb -is [hashtable] -and $results.usb.status -eq "detected") <# HOTFIX-TYPESAFE-STATUS #> '
+    );
+    content = content.replace(
+      /if\s*\(\$results\.processes(?:\s+-and\s+\$results\.processes\.status|\s+-is\s+\[hashtable\]\s+-and\s+\$results\.processes\.status|\.status)\s+-eq\s+"detected"\)\s*(?:<#[^#]*#>\s*)?/g,
+      'if ($results.processes -is [hashtable] -and $results.processes.status -eq "detected") <# HOTFIX-TYPESAFE-STATUS #> '
+    );
+    reasons.push('typesafe_status_access');
+  }
+
+  // HOTFIX 10: Wrap Invoke-LocalDetection call sites in try/catch (prevent fatal crash loops)
+  // Match bare calls, piped calls, and already-wrapped calls that might be malformed
+  if (content.includes('Invoke-LocalDetection') && !content.includes('HOTFIX-LOCAL-DETECT-TRYCATCH')) {
+    // Match bare invocations (not inside function definition or existing try)
+    content = content.replace(
+      /^(\s+)(?:try\s*\{\s*)?Invoke-LocalDetection(?:\s*\|\s*Out-Null)?(?:\s*\}[^}]*catch[^}]*\{[^}]*\}\s*(?:<#[^#]*#>)?)?$/gm,
+      (match, indent) => {
+        if (match.includes('function ')) return match;
+        return `${indent}try { Invoke-LocalDetection | Out-Null } catch { Write-Log "[LOCAL-DETECT] Non-fatal error: $($_.Exception.Message)" "WARN" } <# HOTFIX-LOCAL-DETECT-TRYCATCH #>`;
+      }
     );
     reasons.push('local_detect_trycatch');
+  }
+
+  // HOTFIX 11: Initialize $Global:ProtectedProcessSet for Invoke-HighCpuProcessCheck
+  // Without this, StrictMode throws hundreds of errors per minute
+  if (content.includes('$Global:ProtectedProcessSet') && !content.includes('HOTFIX-INIT-PROTECTEDSET')) {
+    // Find the first use of ProtectedProcessSet and ensure it's initialized
+    content = content.replace(
+      /\$Global:ProtectedProcessSet = \$null/,
+      '$Global:ProtectedProcessSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase) <# HOTFIX-INIT-PROTECTEDSET #>'
+    );
+    reasons.push('init_protected_process_set');
+  }
+
+  // HOTFIX 12: Key registration - handle response without 'registered_at' property
+  if (content.includes('.registered_at') && !content.includes('HOTFIX-SAFE-REGISTERED-AT')) {
+    content = content.replace(
+      /\$(?:response|result|regResult)\.registered_at\s*=/g,
+      (match) => {
+        return `# ${match.trim()} <# HOTFIX-SAFE-REGISTERED-AT - property may not exist in response #>\n        # Skipped: server may not return registered_at`;
+      }
+    );
+    reasons.push('safe_registered_at');
   }
 
   return { content, changed: reasons.length > 0, reasons };
