@@ -217,7 +217,12 @@ serve(async (req) => {
       );
     }
 
-    // Create user_role
+    // Remove any auto-created role from handle_new_user trigger, then insert the correct one
+    await supabaseAdmin
+      .from('user_roles')
+      .delete()
+      .eq('user_id', newUserId);
+
     const { error: roleInsertError } = await supabaseAdmin
       .from('user_roles')
       .insert({
