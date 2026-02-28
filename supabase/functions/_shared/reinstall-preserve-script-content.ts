@@ -1,8 +1,8 @@
 // CyberShield Agent - Reinstall Preserve Script Content
 // Embedded version for Edge Function delivery
-// Version: 3.1.0 - Fix: prioritize config.json and task args for AgentName over filename
+// Version: 3.1.1 - Fix: parse AgentToken/HMAC from config.json + URL-encode AgentName
 
-export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v3.1.0
+export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v3.1.1
 # Preserves credentials (AgentName, Token, HMAC) during agent update
 # Strategy 3: Auto-recover via built-in enrollment key (zero prompts)
 # ASCII-safe, English-only for cross-locale compatibility
@@ -22,7 +22,7 @@ function Write-Status {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " CyberShield - Reinstall Preserve v3.1.0" -ForegroundColor Cyan
+Write-Host " CyberShield - Reinstall Preserve v3.1.1" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -62,17 +62,34 @@ if (-not $agentScript) {
 }
 Write-Status "Script found: $($agentScript.Name)" "INFO"
 
-# Extract AgentName - Priority: config.json > task args > script content > filename
+# Extract preserved identity/credentials
+# Priority: config.json > task args > script content > filename
 $AgentName = $null
+$AgentToken = $null
+$HmacSecret = ""
 
-# Priority 1: config.json (most reliable - contains the registered name)
+# Priority 1: config.json (most reliable - contains registered identity and creds)
 $configPath = "$InstallDir\\config.json"
 if (Test-Path $configPath) {
     try {
         $configJson = Get-Content $configPath -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
+
         if ($configJson.AgentName) {
             $AgentName = $configJson.AgentName
             Write-Status "AgentName: $AgentName (from config.json)" "SUCCESS"
+        }
+
+        if ($configJson.AgentToken) {
+            $AgentToken = $configJson.AgentToken
+            Write-Status "AgentToken: from config.json" "SUCCESS"
+        }
+
+        if ($configJson.HMACSecret) {
+            $HmacSecret = $configJson.HMACSecret
+            Write-Status "HmacSecret: from config.json (HMACSecret)" "SUCCESS"
+        } elseif ($configJson.HmacSecret) {
+            $HmacSecret = $configJson.HmacSecret
+            Write-Status "HmacSecret: from config.json (HmacSecret)" "SUCCESS"
         }
     } catch {
         Write-Status "Failed to parse config.json: $($_.Exception.Message)" "WARN"
@@ -87,9 +104,7 @@ if (-not $AgentName) {
     }
 }
 
-# Strategy 1: Extract credentials from Scheduled Task arguments
-$AgentToken = $null
-$HmacSecret = ""
+# Strategy 1: Extract credentials from Scheduled Task arguments (fallback/override)
 $existingTask = Get-ScheduledTask -TaskName "CyberShield*" -ErrorAction SilentlyContinue | Select-Object -First 1
 
 if ($existingTask) {
@@ -145,7 +160,8 @@ if ($AgentName) {
 
     if ($enrollKey -and $enrollKey.Length -gt 5) {
         Write-Status "Calling auto-recover for agent: $AgentName" "INFO"
-        $recoverBaseUrl = "$ServerUrl/functions/v1/get-reinstall-by-name/$AgentName"
+        $agentNameEncoded = [System.Uri]::EscapeDataString($AgentName)
+        $recoverBaseUrl = "$ServerUrl/functions/v1/get-reinstall-by-name/$agentNameEncoded"
 
         $recoverScript = $null
 
