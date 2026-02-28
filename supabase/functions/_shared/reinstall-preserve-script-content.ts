@@ -1,10 +1,10 @@
 // CyberShield Agent - Reinstall Preserve Script Content
 // Embedded version for Edge Function delivery
-// Version: 3.1.2 - Remove stale fallback key + support explicit env overrides
+// Version: 3.2.0 - Interactive key/name prompt + stronger auto-recover fallback
 
-export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v3.1.2
+export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v3.2.0
 # Preserves credentials (AgentName, Token, HMAC) during agent update
-# Strategy 3: Auto-recover via enrollment key (env/log), no hardcoded stale key
+# Strategy 4: Auto-recover via enrollment key (env/file/log/prompt) with guided fallback
 # ASCII-safe, English-only for cross-locale compatibility
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ErrorActionPreference = "Stop"
@@ -22,7 +22,7 @@ function Write-Status {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " CyberShield - Reinstall Preserve v3.1.2" -ForegroundColor Cyan
+Write-Host " CyberShield - Reinstall Preserve v3.2.0" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -177,8 +177,23 @@ if ($AgentName) {
         Write-Status "Local credentials not found - auto-recovering from server..." "WARN"
     }
 
-    # Enrollment key source order: env > installer.log
+    # Enrollment key source order: env > enrollment.key > installer.log > interactive prompt
     $enrollKey = $env:CYBERSHIELD_KEY
+
+    if (-not $enrollKey) {
+        $keyFilePath = "$InstallDir\\enrollment.key"
+        if (Test-Path $keyFilePath) {
+            try {
+                $fileKey = (Get-Content $keyFilePath -Raw -ErrorAction SilentlyContinue).Trim()
+                if ($fileKey) {
+                    $enrollKey = $fileKey
+                    Write-Status "Enrollment key loaded from enrollment.key" "SUCCESS"
+                }
+            } catch {
+                Write-Status "Could not read enrollment.key: $($_.Exception.Message)" "WARN"
+            }
+        }
+    }
 
     if (-not $enrollKey) {
         $installerLogPath = "$InstallDir\\logs\\installer.log"
@@ -191,6 +206,27 @@ if ($AgentName) {
                 }
             } catch {
                 Write-Status "Could not read installer.log for key recovery: $($_.Exception.Message)" "WARN"
+            }
+        }
+    }
+
+    if ($enrollKey) {
+        $enrollKey = $enrollKey.Trim().Trim('"').Trim("'")
+    }
+
+    if (-not $enrollKey -and -not $AgentToken) {
+        Write-Status "Agent token missing locally; enrollment key required for auto-recover." "WARN"
+        $typedKey = Read-Host "Digite a Enrollment Key (XXXX-XXXX-XXXX-XXXX)"
+        if ($typedKey -and $typedKey.Trim()) {
+            $enrollKey = $typedKey.Trim().Trim('"').Trim("'")
+            Write-Status "Enrollment key informada manualmente" "SUCCESS"
+        }
+
+        if (-not $ForcedAgentName) {
+            $typedAgentName = Read-Host "Nome do agente no painel (opcional, Enter para manter '$AgentName')"
+            if ($typedAgentName -and $typedAgentName.Trim()) {
+                $AgentName = $typedAgentName.Trim()
+                Write-Status "AgentName override manual: $AgentName" "SUCCESS"
             }
         }
     }
@@ -219,7 +255,7 @@ if ($AgentName) {
         if (-not $recoverScript) {
             try {
                 Write-Status "Auto-recover attempt 2/3: query auth" "INFO"
-                $recoverUrl = "$recoverBaseUrl?key=$enrollKey"
+                $recoverUrl = "$recoverBaseUrl?key=$([System.Uri]::EscapeDataString($enrollKey))"
                 $recoverScript = Invoke-RestMethod -Uri $recoverUrl -Method GET -TimeoutSec 60
             } catch {
                 Write-Status "Attempt 2 failed: $($_.Exception.Message)" "WARN"
