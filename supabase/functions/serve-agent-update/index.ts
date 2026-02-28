@@ -194,6 +194,7 @@ Deno.serve(async (req) => {
           version: forcedRelease.version,
           script_content: forcedRelease.script_content,
           sha256: calculatedSha256,
+          script_sha256: calculatedSha256, // Alias for v5.0.13+ agents
           script_content_base64: base64Script,
           sha256_base64: calculatedSha256,
           signature_base64: forcedRelease.signature_base64 || null,
@@ -461,6 +462,7 @@ Deno.serve(async (req) => {
         version: release.version,
         script_content: finalScriptContent,
         sha256: legacySha256,
+        script_sha256: calculatedSha256, // Alias for v5.0.13+ agents that expect this field
         script_content_base64: base64Script,
         sha256_base64: base64Sha256,
         signature_base64: release.signature_base64 || null,

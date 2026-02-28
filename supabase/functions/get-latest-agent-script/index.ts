@@ -46,14 +46,14 @@ function applyWindowsEcdsaHotfix(script: string): { content: string; changed: bo
   let content = script;
   const reasons: string[] = [];
 
-  // HOTFIX 1: StrictMode globals
+  // HOTFIX 1: StrictMode globals (crypto + monitoring)
   if (
     content.includes('$Global:SecurityDegraded = $false') &&
     !content.includes('$Global:AgentPrivateKey = $null')
   ) {
     const withDeclaredGlobals = content.replace(
       /# v5\.0\.13-fix: SecurityDegraded flag \(BUG 7 - declare early for robustness\)\s*\r?\n\$Global:SecurityDegraded = \$false/,
-      '# v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)\n$Global:SecurityDegraded = $false\n\n# v5.0.14-hotfix: Declare crypto globals early (StrictMode-safe when key init fails)\n$Global:AgentPrivateKey = $null\n$Global:AgentPublicKey = $null\n$Global:KeyFingerprint = $null\n$Global:KeyVersion = 0'
+      '# v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)\n$Global:SecurityDegraded = $false\n\n# v5.0.14-hotfix: Declare ALL globals early (StrictMode-safe)\n$Global:AgentPrivateKey = $null\n$Global:AgentPublicKey = $null\n$Global:KeyFingerprint = $null\n$Global:KeyVersion = 0\n$Global:ProtectedProcessSet = $null\n$Global:ProcessBaseline = @{}\n$Global:LastBaselineUpdate = [datetime]::MinValue\n$Global:LastAnomalyCheck = [datetime]::MinValue\n$Global:AnomalyHistory = @()\n$Global:LogBuffer = [System.Collections.Generic.List[string]]::new()\n$Global:LastLogFlush = [datetime]::UtcNow\n$Global:CachedTimestamp = $null\n$Global:LastTimestampUpdate = [datetime]::MinValue'
     );
 
     if (withDeclaredGlobals !== content) {
@@ -151,15 +151,16 @@ function applyWindowsEcdsaHotfix(script: string): { content: string; changed: bo
   }
 
   // HOTFIX 5: $Global:ProcessBaseline not declared - StrictMode crash
-  if (content.includes('$Global:ProcessBaseline') && !content.includes('HOTFIX-BASELINE-GLOBALS')) {
-    // Add declaration right after the other global declarations
+  // NOTE: Now covered by HOTFIX 1 expanded globals. Keep as safety net for scripts
+  // that already had HOTFIX 1 applied without the monitoring globals.
+  if (content.includes('$Global:ProcessBaseline') && !content.includes('HOTFIX-BASELINE-GLOBALS') && !content.includes('$Global:ProtectedProcessSet = $null')) {
     const baselineGlobals = `\n# HOTFIX-BASELINE-GLOBALS: Declare monitoring globals early for StrictMode\n` +
       `$Global:ProcessBaseline = @{}\n` +
       `$Global:LastBaselineUpdate = [datetime]::MinValue\n` +
       `$Global:LastAnomalyCheck = [datetime]::MinValue\n` +
-      `$Global:AnomalyHistory = @()\n`;
+      `$Global:AnomalyHistory = @()\n` +
+      `$Global:ProtectedProcessSet = $null\n`;
 
-    // Insert after SecurityDegraded declaration block
     if (content.includes('$Global:SecurityDegraded = $false')) {
       content = content.replace(
         /\$Global:SecurityDegraded = \$false/,
@@ -179,6 +180,26 @@ function applyWindowsEcdsaHotfix(script: string): { content: string; changed: bo
       }
     );
     reasons.push('safe_force_update');
+  }
+
+  // HOTFIX 7: Safe access to .repaired and .script_sha256 properties (hashtable vs PSObject)
+  if (content.includes('.repaired') && !content.includes('HOTFIX-SAFE-REPAIRED')) {
+    content = content.replace(
+      /\$taskHealth\.repaired/g,
+      '$(if ($taskHealth -is [hashtable] -and $taskHealth.ContainsKey("repaired")) { $taskHealth["repaired"] } elseif ($taskHealth -and (Get-Member -InputObject $taskHealth -Name "repaired" -ErrorAction SilentlyContinue)) { $taskHealth.repaired } else { $false }) <# HOTFIX-SAFE-REPAIRED #>'
+    );
+    reasons.push('safe_repaired_access');
+  }
+
+  if (content.includes('.script_sha256') && !content.includes('HOTFIX-SAFE-SHA256')) {
+    content = content.replace(
+      /\$(?:response|result)\.script_sha256/g,
+      (match) => {
+        const varName = match.split('.')[0];
+        return `$(if (${varName} -is [hashtable] -and ${varName}.ContainsKey("script_sha256")) { ${varName}["script_sha256"] } elseif (${varName} -and (Get-Member -InputObject ${varName} -Name "script_sha256" -ErrorAction SilentlyContinue)) { ${varName}.script_sha256 } elseif (${varName} -and (Get-Member -InputObject ${varName} -Name "sha256" -ErrorAction SilentlyContinue)) { ${varName}.sha256 } else { $null }) <# HOTFIX-SAFE-SHA256 #>`;
+      }
+    );
+    reasons.push('safe_sha256_access');
   }
 
   return { content, changed: reasons.length > 0, reasons };
