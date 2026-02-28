@@ -32,6 +32,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const DASHBOARD_ORIGIN = typeof window !== 'undefined' ? window.location.origin : '';
 
 const escapeForSingleQuotedPowerShell = (value: string) => value.replace(/'/g, "''");
 
@@ -106,6 +107,7 @@ export function PreserveReinstallSection({ defaultAgentName }: PreserveReinstall
       }
 
       const serverUrlEscaped = escapeForSingleQuotedPowerShell(SUPABASE_URL);
+      const fallbackOriginEscaped = escapeForSingleQuotedPowerShell(DASHBOARD_ORIGIN);
       const tokenEscaped = escapeForSingleQuotedPowerShell(data.agentToken);
       const hmacEscaped = escapeForSingleQuotedPowerShell(data.hmacSecret);
       const nameEscaped = escapeForSingleQuotedPowerShell(data.agentName);
@@ -121,30 +123,47 @@ export function PreserveReinstallSection({ defaultAgentName }: PreserveReinstall
         '$hashJson = "$hashDir\\expected_script_hash.json"; $hashTxt = "$hashDir\\expected_script_hash.txt";',
         'if (Test-Path $hashJson) { Remove-Item $hashJson -Force -ErrorAction SilentlyContinue };',
         'if (Test-Path $hashTxt) { Remove-Item $hashTxt -Force -ErrorAction SilentlyContinue };',
-        // 3. Set credentials
+        // 3. Set credentials and endpoint candidates
         `$serverUrl='${serverUrlEscaped}';`,
+        `$fallbackServerUrl='${fallbackOriginEscaped}';`,
         `$agentToken='${tokenEscaped}';`,
         `$hmacSecret='${hmacEscaped}';`,
         `$agentName='${nameEscaped}';`,
-        // 4. Download script with cache-bust
-        `$url = "$serverUrl/functions/v1/get-latest-agent-script?platform=windows&format=json&include_plain=1&cb=$(Get-Random)";`,
-        '$resp = Invoke-RestMethod -Uri $url -Method GET -TimeoutSec 60;',
-        'if ($resp.script_content) {',
+        '$baseUrls = @($serverUrl, $fallbackServerUrl) | Where-Object { $_ -and $_.Trim() -ne "" } | Select-Object -Unique;',
+        '$resp = $null; $resolvedBaseUrl = $null; $lastErr = $null;',
+        // 4. Download script with endpoint + transport fallback
+        'foreach ($baseUrl in $baseUrls) {',
+        '  try {',
+        '    $url = "$baseUrl/functions/v1/get-latest-agent-script?platform=windows&format=json&include_plain=1&cb=$(Get-Random)";',
+        '    try {',
+        '      $resp = Invoke-RestMethod -Uri $url -Method GET -TimeoutSec 60 -ErrorAction Stop;',
+        '    } catch {',
+        '      $raw = (Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop).Content;',
+        '      if ($raw) { $resp = $raw | ConvertFrom-Json -ErrorAction Stop }',
+        '    }',
+        '    if ($resp -and $resp.script_content) { $resolvedBaseUrl = $baseUrl; break }',
+        '  } catch {',
+        '    $lastErr = $_.Exception.Message;',
+        '    Write-Host ("Falha ao baixar script em " + $baseUrl + ": " + $lastErr) -ForegroundColor Yellow;',
+        '  }',
+        '}',
+        'if ($resp -and $resp.script_content) {',
+        '  $effectiveServerUrl = if ($resolvedBaseUrl) { $resolvedBaseUrl } else { $serverUrl };',
         '  $scriptPath = "$dir\\cybershield-agent-$agentName.ps1";',
         '  $resp.script_content | Set-Content -Path $scriptPath -Encoding UTF8 -Force;',
         // 5. Write config.json
-        '  $cfg = @{ ServerUrl=$serverUrl; AgentToken=$agentToken; HMACSecret=$hmacSecret; AgentName=$agentName };',
+        '  $cfg = @{ ServerUrl=$effectiveServerUrl; AgentToken=$agentToken; HMACSecret=$hmacSecret; AgentName=$agentName };',
         '  $cfg | ConvertTo-Json | Set-Content -Path "$dir\\config.json" -Encoding UTF8 -Force;',
         // 6. Create scheduled task with watchdog settings
-        "  $arg = '-ExecutionPolicy Bypass -WindowStyle Hidden -File \"' + $scriptPath + '\" -ServerUrl \"' + $serverUrl + '\" -AgentToken \"' + $agentToken + '\" -HmacSecret \"' + $hmacSecret + '\" -AgentName \"' + $agentName + '\"';",
+        "  $arg = '-ExecutionPolicy Bypass -WindowStyle Hidden -File \"' + $scriptPath + '\" -ServerUrl \"' + $effectiveServerUrl + '\" -AgentToken \"' + $agentToken + '\" -HmacSecret \"' + $hmacSecret + '\" -AgentName \"' + $agentName + '\"';",
         "  $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arg;",
         '  $trigger1 = New-ScheduledTaskTrigger -AtStartup;',
         '  $trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 365);',
         '  $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit (New-TimeSpan -Days 0);',
         "  Register-ScheduledTask -TaskName 'CyberShieldAgent' -Action $action -Trigger @($trigger1,$trigger2) -Settings $settings -User 'SYSTEM' -RunLevel Highest -Force;",
         "  Start-ScheduledTask -TaskName 'CyberShieldAgent';",
-        "  Write-Host 'CyberShield reinstalado com sucesso!' -ForegroundColor Green",
-        "} else { Write-Host 'Erro: servidor nao retornou script' -ForegroundColor Red }",
+        "  Write-Host ('CyberShield reinstalado com sucesso! Endpoint: ' + $effectiveServerUrl) -ForegroundColor Green",
+        "} else { Write-Host ('Erro: servidor nao retornou script. Ultimo erro: ' + $lastErr) -ForegroundColor Red }",
       ];
 
       setAutoCommand(commandParts.join(' '));
