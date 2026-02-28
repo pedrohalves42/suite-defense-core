@@ -55,7 +55,7 @@ type DiagnosticTestConfig = {
 const DIAGNOSTIC_TESTS: DiagnosticTestConfig[] = [
   { type: 'ping', jobType: 'network_diagnostics', label: 'Testar conexão', icon: Wifi, description: 'Verifica se o computador responde' },
   { type: 'collect_logs', jobType: 'collect_info', label: 'Coletar registros', icon: FileText, description: 'Obtém logs do sistema' },
-  { type: 'health_report', jobType: 'health_report', label: 'Relatório de saúde', icon: Activity, description: 'Verifica estado geral' },
+  { type: 'health_report', jobType: 'scan', label: 'Relatório de saúde', icon: Activity, description: 'Verifica estado geral' },
   { type: 'check_services', jobType: 'service_health_check', label: 'Verificar serviços', icon: Settings, description: 'Checa serviços importantes' },
 ];
 
