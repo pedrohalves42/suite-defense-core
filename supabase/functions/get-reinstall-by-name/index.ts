@@ -360,6 +360,13 @@ if (-not $newScript) {
     return
 }
 
+# Emergency hotfix: patch legacy builds that still use $anomalies.anomalies (can crash heartbeat)
+if ($newScript -match '\$anomalies\.anomalies') {
+    $safeAnomalyExpr = '$(if ($anomalies -is [hashtable] -and $anomalies.ContainsKey("anomalies") -and $null -ne $anomalies["anomalies"]) { @($anomalies["anomalies"]) } else { @() })'
+    $newScript = $newScript.Replace('$anomalies.anomalies', $safeAnomalyExpr)
+    Write-Status "Applied heartbeat anomaly hotfix to downloaded script" "WARN"
+}
+
 [System.IO.File]::WriteAllText($scriptPath, $newScript, [System.Text.Encoding]::UTF8)
 Write-Status "Script written: $scriptPath" "SUCCESS"
 
