@@ -458,6 +458,12 @@ $Global:AutoRepairStats = @{
 # v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)
 $Global:SecurityDegraded = $false
 
+# v5.0.14-hotfix: Declare crypto globals early (StrictMode-safe when key init fails)
+$Global:AgentPrivateKey = $null
+$Global:AgentPublicKey = $null
+$Global:KeyFingerprint = $null
+$Global:KeyVersion = 0
+
 # v5.0.13-fix: Evidence buffer for Add-EvidenceEntry (BUG 1)
 $Global:EvidenceBuffer = [System.Collections.ArrayList]::new()
 
@@ -1169,11 +1175,26 @@ function Initialize-AgentKeys {
                 Write-Log "[KEYS] ECDSA attempt $attempt/$maxKeyAttempts failed: $errMsg" "WARN"
                 
                 if ($attempt -eq $maxKeyAttempts) {
-                    # v5.0.14 HOTFIX: fallback for legacy Windows/CNG providers that throw "object already exists"
+                    # v5.0.14 HOTFIX: fallback for legacy Windows/.NET where CNG container creation is unstable
                     try {
-                        $ecdsa = [System.Security.Cryptography.ECDsa]::Create([System.Security.Cryptography.ECCurve]::NamedCurves.nistP256)
+                        $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(256)
                         if ($null -ne $ecdsa) {
-                            Write-Log "[KEYS] Fallback ECDSA keypair generated via managed API (CNG bypass)" "WARN"
+                            Write-Log "[KEYS] Fallback ECDSA keypair generated via ECDsaCng(256)" "WARN"
+                            break
+                        }
+                    } catch {
+                        Write-Log "[KEYS] ECDsaCng fallback failed: $($_.Exception.Message)" "WARN"
+                    }
+
+                    try {
+                        $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
+                        if ($null -ne $ecdsa) {
+                            try {
+                                if ($ecdsa.KeySize -ne 256) { $ecdsa.KeySize = 256 }
+                            } catch {
+                                Write-Log "[KEYS] Managed ECDSA fallback created key with KeySize=$($ecdsa.KeySize)" "WARN"
+                            }
+                            Write-Log "[KEYS] Fallback ECDSA keypair generated via managed API" "WARN"
                             break
                         }
                     } catch {
