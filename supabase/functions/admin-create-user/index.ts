@@ -145,10 +145,14 @@ serve(async (req) => {
     }
 
     // Check user limit for tenant
-    const { data: userCount } = await supabaseAdmin
+    const { count: userCount, error: countError } = await supabaseAdmin
       .from('user_roles')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId);
+
+    if (countError) {
+      console.error('[admin-create-user] Count error:', countError);
+    }
 
     const { data: tenantFeatures } = await supabaseAdmin
       .from('tenant_features')
@@ -160,9 +164,11 @@ serve(async (req) => {
     const maxUsers = tenantFeatures?.quota_limit ?? 5; // Default to 5 if no feature found
     const currentUsers = userCount ?? 0;
 
-    if (typeof currentUsers === 'number' && currentUsers >= maxUsers) {
+    console.log(`[admin-create-user] User count: ${currentUsers}/${maxUsers}`);
+
+    if (currentUsers >= maxUsers) {
       return new Response(
-        JSON.stringify({ success: false, error: `User limit reached (${maxUsers}). Upgrade your plan.` }),
+        JSON.stringify({ success: false, error: `Limite de usuários atingido (${currentUsers}/${maxUsers}). Faça upgrade do plano.` }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
