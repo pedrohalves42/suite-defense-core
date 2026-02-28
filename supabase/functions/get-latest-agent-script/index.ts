@@ -140,13 +140,45 @@ function applyWindowsEcdsaHotfix(script: string): { content: string; changed: bo
     reasons.push('export_pkcs8_compat');
   }
 
-  // HOTFIX 4: $anomalies.anomalies crashes when $anomalies is not a hashtable
-  if (content.includes('$anomalies.anomalies') && !content.includes('HOTFIX-ANOMALIES')) {
+  // HOTFIX 4: $anomalies.anomalies crashes when $anomalies is not a hashtable (PSObject vs Hashtable)
+  if (content.includes('.anomalies') && !content.includes('HOTFIX-ANOMALIES')) {
+    // Replace all variations: $anomalies.anomalies, $result.anomalies etc.
     content = content.replace(
-      /process_anomalies = \$anomalies\.anomalies/g,
-      '# HOTFIX-ANOMALIES: Safe access for legacy anomaly format\n            process_anomalies = $(if ($anomalies -is [hashtable] -and $anomalies.ContainsKey("anomalies")) { $anomalies["anomalies"] } else { @() })'
+      /\$anomalies\.anomalies/g,
+      '$(if ($anomalies -is [hashtable] -and $anomalies.ContainsKey("anomalies")) { $anomalies["anomalies"] } elseif ($anomalies -and (Get-Member -InputObject $anomalies -Name "anomalies" -ErrorAction SilentlyContinue)) { $anomalies.anomalies } else { @() }) <# HOTFIX-ANOMALIES #>'
     );
     reasons.push('safe_anomalies_access');
+  }
+
+  // HOTFIX 5: $Global:ProcessBaseline not declared - StrictMode crash
+  if (content.includes('$Global:ProcessBaseline') && !content.includes('HOTFIX-BASELINE-GLOBALS')) {
+    // Add declaration right after the other global declarations
+    const baselineGlobals = `\n# HOTFIX-BASELINE-GLOBALS: Declare monitoring globals early for StrictMode\n` +
+      `$Global:ProcessBaseline = @{}\n` +
+      `$Global:LastBaselineUpdate = [datetime]::MinValue\n` +
+      `$Global:LastAnomalyCheck = [datetime]::MinValue\n` +
+      `$Global:AnomalyHistory = @()\n`;
+
+    // Insert after SecurityDegraded declaration block
+    if (content.includes('$Global:SecurityDegraded = $false')) {
+      content = content.replace(
+        /\$Global:SecurityDegraded = \$false/,
+        '$Global:SecurityDegraded = $false' + baselineGlobals
+      );
+      reasons.push('baseline_globals');
+    }
+  }
+
+  // HOTFIX 6: Heartbeat response may not have 'force_update' property (PSObject strict access)
+  if (content.includes('.force_update') && !content.includes('HOTFIX-FORCE-UPDATE')) {
+    content = content.replace(
+      /\$(?:response|result|heartbeatResponse)\.force_update/g,
+      (match) => {
+        const varName = match.split('.')[0];
+        return `$(if (${varName} -and (Get-Member -InputObject ${varName} -Name "force_update" -ErrorAction SilentlyContinue)) { ${varName}.force_update } else { $false }) <# HOTFIX-FORCE-UPDATE #>`;
+      }
+    );
+    reasons.push('safe_force_update');
   }
 
   return { content, changed: reasons.length > 0, reasons };
