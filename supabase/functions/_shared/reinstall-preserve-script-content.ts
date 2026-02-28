@@ -101,10 +101,14 @@ if (-not $AgentToken) {
     }
 }
 
-# Strategy 3: Auto-recover from server using get-reinstall-by-name (v3.0.0)
-# Uses built-in enrollment key - fully automatic, no prompts
-if (-not $AgentToken -and $AgentName) {
-    Write-Status "Local credentials not found - auto-recovering from server..." "WARN"
+# Strategy 3: Auto-recover from server using get-reinstall-by-name (v3.0.1)
+# Always try server-side rebind first (fresh token/HMAC), fallback to preserved creds on failure
+if ($AgentName) {
+    if ($AgentToken) {
+        Write-Status "Local credentials found - trying server rebind for fresh credentials..." "INFO"
+    } else {
+        Write-Status "Local credentials not found - auto-recovering from server..." "WARN"
+    }
     
     # Use environment variable if set, otherwise use built-in default key
     $enrollKey = $env:CYBERSHIELD_KEY
@@ -160,8 +164,12 @@ if (-not $AgentToken -and $AgentName) {
             & powershell.exe -ExecutionPolicy Bypass -File $tempRecover
             return
         } else {
-            Write-Status "Auto-recovery failed after 3 attempts" "ERROR"
-            Write-Status "Invalid enrollment key, blocked network, or agent not found" "ERROR"
+            if ($AgentToken) {
+                Write-Status "Auto-recovery failed - using preserved local credentials as fallback" "WARN"
+            } else {
+                Write-Status "Auto-recovery failed after 3 attempts" "ERROR"
+                Write-Status "Invalid enrollment key, blocked network, or agent not found" "ERROR"
+            }
         }
     } else {
         Write-Status "No enrollment key provided - skipping auto-recovery" "WARN"
