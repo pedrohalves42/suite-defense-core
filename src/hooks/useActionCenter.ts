@@ -63,8 +63,8 @@ export function useActionCenter() {
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 120000, // COST-OPT: 30s → 2min
-    staleTime: 10000,
+    refetchInterval: 120000,
+    staleTime: 60000, // Increased from 10s to 60s to reduce re-renders
   });
 
   // Subscribe to realtime updates for playbook_executions
