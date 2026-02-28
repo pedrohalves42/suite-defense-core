@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     const tokenHash = await hashToken(agentToken)
     const { data: token } = await supabase
       .from('agent_tokens')
-      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status)')
+      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status, skip_firewall_remediation)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -77,6 +77,7 @@ Deno.serve(async (req) => {
       agent_name: string; 
       hmac_secret: string; 
       status: string;
+      skip_firewall_remediation: boolean;
     }
     
     // FASE 1.2: HMAC OBRIGATORIO - Agora hmac_secret e NOT NULL
@@ -600,6 +601,8 @@ Deno.serve(async (req) => {
         // COST-OPT v2: Further reduce polling to cut costs
         heartbeat_interval_seconds: 120,   // Heartbeat every 120s (was 60s)
         poll_interval_seconds: 60,         // Poll jobs every 60s (was 30s)
+        // Agent config flags
+        skip_firewall_remediation: agent.skip_firewall_remediation || false,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

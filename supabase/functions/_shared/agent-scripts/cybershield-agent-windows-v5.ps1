@@ -630,6 +630,7 @@ function Write-Log {
 #  Prevents other modules from overriding the pin
 # ============================================
 $Global:TlsPinnedThumbprint = $null  # Set via server config or enrollment; null = disabled (dev mode)
+$Global:SkipFirewallRemediation = $false  # v5.0.14: Set via heartbeat response for pfSense/external firewall environments
 
 # v5.0.13: Scoped TLS validation function (called per-request, NOT global override)
 function Test-TlsCertificatePin {
@@ -4399,6 +4400,17 @@ function Send-Heartbeat {
                     }
                     
                     # ============================================
+                    # AGENT CONFIG FLAGS (v5.0.14)
+                    # Server-side feature toggles
+                    # ============================================
+                    if ($null -ne $response.skip_firewall_remediation) {
+                        $Global:SkipFirewallRemediation = [bool]$response.skip_firewall_remediation
+                        if ($Global:SkipFirewallRemediation) {
+                            Write-Log "[CONFIG] Firewall auto-remediation DISABLED by server (external firewall environment)" "INFO"
+                        }
+                    }
+                    
+                    # ============================================
                     # FORCE UPDATE VIA HEARTBEAT RESPONSE
                     # Ported from v4 - bypasses job system completely
                     # ============================================
@@ -4701,6 +4713,23 @@ function Test-FirewallStatus {
         
         if ($disabledProfiles.Count -gt 0) {
             Write-Log "[LOCAL-DETECT] FIREWALL DISABLED on profiles: $($disabledProfiles -join ', ')" "ERROR"
+            
+            # v5.0.14: Skip remediation if server configured external firewall mode (pfSense, etc.)
+            if ($Global:SkipFirewallRemediation) {
+                Write-Log "[LOCAL-DETECT] Firewall remediation SKIPPED (external firewall environment - configured by server)" "INFO"
+                
+                Invoke-PushAlert `
+                    -AlertType "firewall_disabled" `
+                    -AlertMessage "Firewall desativado em $env:COMPUTERNAME (profiles: $($disabledProfiles -join ', ')). Remediacao ignorada: ambiente com firewall externo (pfSense)." `
+                    -Severity "info" `
+                    -Details @{
+                        disabled_profiles = $disabledProfiles
+                        skip_remediation = $true
+                        reason = "external_firewall_environment"
+                    }
+                
+                return @{ status = "skipped"; disabled = $disabledProfiles; reason = "external_firewall" }
+            }
             
             Show-SecurityToast `
                 -Title "CyberShield - Firewall Desativado!" `

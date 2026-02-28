@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     const tokenHash = await hashToken(agentToken)
     const { data: token } = await supabase
       .from('agent_tokens')
-      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status, tenant_id, force_update_version, force_update_reason, force_update_override_safe_mode, force_update_at, agent_version)')
+      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status, tenant_id, force_update_version, force_update_reason, force_update_override_safe_mode, force_update_at, agent_version, skip_firewall_remediation)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -369,6 +369,7 @@ Deno.serve(async (req) => {
       timestamp: new Date().toISOString(),
       proxy: true,
       script_sha256: null, // FIXED: Include so old agents don't crash accessing this property
+      skip_firewall_remediation: (agent as any).skip_firewall_remediation || false,
       message: 'Heartbeat received via legacy endpoint - please update agent to v4.0.7+'
     };
     
