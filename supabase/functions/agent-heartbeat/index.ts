@@ -340,6 +340,7 @@ Deno.serve(async (req) => {
             target_version: release.version,
             script_content_base64: base64Script,
             sha256: calculatedSha256,
+            script_sha256: calculatedSha256, // Alias for v5.0.13+ agents
             reason: agent.force_update_reason || 'System recovery update',
             override_safe_mode: overrideValid
           }),
