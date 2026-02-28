@@ -226,52 +226,52 @@ Write-Status "PHASE 4/5: Download Updated Script" "INFO"
 $newScript = $null
 $downloadMethod = "none"
 $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-# Primary: fetch from published app public assets (always in sync with codebase)
-$dlUrl = "https://cybershield-audit.lovable.app/agent-scripts/cybershield-agent-windows-v5.ps1?cb=$cacheBust"
-# Fallback: edge function endpoint
-$dlUrlFallback = "$ServerUrl/functions/v1/get-latest-agent-script?platform=windows&format=plain&cb=$cacheBust"
-Write-Status "URL: $dlUrl" "INFO"
+# Primary: fetch from backend release endpoint (source of truth)
+$dlUrl = "$ServerUrl/functions/v1/get-latest-agent-script?platform=windows&format=plain&cb=$cacheBust"
+# Fallback: published app static asset
+$dlUrlFallback = "https://cybershield-audit.lovable.app/agent-scripts/cybershield-agent-windows-v5.ps1?cb=$cacheBust"
+Write-Status "Primary URL: $dlUrl" "INFO"
 
-# Method 1: Invoke-RestMethod from published app (cleanest, always latest)
+# Method 1: Invoke-RestMethod from backend (preferred)
 try {
     $template = Invoke-RestMethod -Uri $dlUrl -Method GET -TimeoutSec 60
     if ($template -and $template.Length -gt 5000) {
         $newScript = $template
-        $downloadMethod = "IRM-PublicApp"
-        Write-Status "Downloaded via IRM from published app ($($template.Length) chars)" "SUCCESS"
+        $downloadMethod = "IRM-EdgeFn"
+        Write-Status "Downloaded via IRM from backend ($($template.Length) chars)" "SUCCESS"
     } else {
         Write-Status "IRM: response too short ($($template.Length) chars)" "WARN"
     }
 } catch {
-    Write-Status "IRM (published app) failed: $($_.Exception.Message)" "WARN"
+    Write-Status "IRM (backend) failed: $($_.Exception.Message)" "WARN"
 }
 
-# Method 2: Invoke-WebRequest from published app (proxy-friendly)
+# Method 2: Invoke-WebRequest from backend (proxy-friendly)
 if (-not $newScript) {
     try {
         $resp = Invoke-WebRequest -Uri $dlUrl -UseBasicParsing -TimeoutSec 60
         if ($resp.Content -and $resp.Content.Length -gt 5000) {
             $newScript = $resp.Content
-            $downloadMethod = "IWR-PublicApp"
-            Write-Status "Downloaded via IWR from published app ($($resp.Content.Length) chars)" "SUCCESS"
+            $downloadMethod = "IWR-EdgeFn"
+            Write-Status "Downloaded via IWR from backend ($($resp.Content.Length) chars)" "SUCCESS"
         }
     } catch {
-        Write-Status "IWR (published app) failed: $($_.Exception.Message)" "WARN"
+        Write-Status "IWR (backend) failed: $($_.Exception.Message)" "WARN"
     }
 }
 
-# Method 3: Fallback to edge function endpoint
+# Method 3: Fallback to published app static endpoint
 if (-not $newScript) {
-    Write-Status "Trying edge function fallback: $dlUrlFallback" "INFO"
+    Write-Status "Trying published app fallback: $dlUrlFallback" "INFO"
     try {
         $template = Invoke-RestMethod -Uri $dlUrlFallback -Method GET -TimeoutSec 60
         if ($template -and $template.Length -gt 5000) {
             $newScript = $template
-            $downloadMethod = "IRM-EdgeFn"
-            Write-Status "Downloaded via edge function ($($template.Length) chars)" "SUCCESS"
+            $downloadMethod = "IRM-PublicApp"
+            Write-Status "Downloaded via published app fallback ($($template.Length) chars)" "SUCCESS"
         }
     } catch {
-        Write-Status "Edge function failed: $($_.Exception.Message)" "WARN"
+        Write-Status "Published app fallback failed: $($_.Exception.Message)" "WARN"
     }
 }
 

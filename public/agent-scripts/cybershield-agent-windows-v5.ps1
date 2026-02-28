@@ -3480,7 +3480,13 @@ function Get-ProcessAnomalies {
         }
         
     } catch {
-        return @{ checked = $false; error = $_.Exception.Message }
+        Write-Log "[BASELINE] Failed to detect process anomalies: $($_.Exception.Message)" "WARN"
+        return @{
+            checked = $false
+            anomaly_count = 0
+            anomalies = @()
+            error = $_.Exception.Message
+        }
     }
 }
 
@@ -4229,6 +4235,10 @@ function Send-Heartbeat {
         $metrics = Get-SystemMetrics
         $topProcesses = Get-TopProcesses
         $anomalies = Get-ProcessAnomalies
+        $processAnomalies = @()
+        if ($anomalies -is [hashtable] -and $anomalies.ContainsKey("anomalies") -and $null -ne $anomalies["anomalies"]) {
+            $processAnomalies = @($anomalies["anomalies"])
+        }
         
         $payload = @{
             agent_name = $Global:AgentName
@@ -4237,7 +4247,7 @@ function Send-Heartbeat {
             timestamp = (Get-Date).ToString("o")
             system_metrics = $metrics
             processes = $topProcesses
-            process_anomalies = $anomalies.anomalies
+            process_anomalies = $processAnomalies
             auto_repair_stats = $Global:AutoRepairStats
             state = $Global:CurrentState
             ecdsa_enabled = ($null -ne $Global:AgentPrivateKey)
