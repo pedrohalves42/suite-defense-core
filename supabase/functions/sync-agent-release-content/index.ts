@@ -62,6 +62,7 @@ Deno.serve(async (req) => {
     const platform = body.platform || 'windows';
     const version = body.version || 'v5.0.13';
     const sourceUrl = typeof body.source_url === 'string' ? body.source_url.trim() : '';
+    const inlineContent = typeof body.script_content === 'string' ? body.script_content : '';
     
     // Map platform to public asset filename
     const fileMap: Record<string, string> = {
@@ -77,49 +78,56 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Prefer local bundled script from codebase (avoids web cache lag)
     let content = '';
     let contentSource = 'codebase';
 
-    try {
-      content = await Deno.readTextFile(
-        new URL(`../_shared/agent-scripts/${filename}`, import.meta.url)
-      );
-      console.log(`[sync] Loaded ${platform} script from codebase: ${content.length} chars`);
-    } catch (readErr) {
-      console.warn(`[sync] Codebase read failed, trying remote sources: ${(readErr as Error).message}`);
+    // Priority 1: Inline content from POST body
+    if (inlineContent && inlineContent.length > 1000) {
+      content = inlineContent;
+      contentSource = 'inline';
+      console.log(`[sync] Using inline script content: ${content.length} chars`);
+    } else {
+      // Priority 2: Prefer local bundled script from codebase
+      try {
+        content = await Deno.readTextFile(
+          new URL(`../_shared/agent-scripts/${filename}`, import.meta.url)
+        );
+        console.log(`[sync] Loaded ${platform} script from codebase: ${content.length} chars`);
+      } catch (readErr) {
+        console.warn(`[sync] Codebase read failed, trying remote sources: ${(readErr as Error).message}`);
 
-      const publishedUrl = `https://cybershield-audit.lovable.app/agent-scripts/${filename}?cb=${Date.now()}`;
-      const candidateUrls = [sourceUrl, publishedUrl].filter(Boolean);
-      let fetchError = '';
+        const publishedUrl = `https://cybershield-audit.lovable.app/agent-scripts/${filename}?cb=${Date.now()}`;
+        const candidateUrls = [sourceUrl, publishedUrl].filter(Boolean);
+        let fetchError = '';
 
-      for (const url of candidateUrls) {
-        try {
-          console.log(`[sync] Fetching ${platform} script from: ${url}`);
-          const resp = await fetch(url);
-          if (!resp.ok) {
-            fetchError = `Failed to fetch from ${url}: ${resp.status} ${resp.statusText}`;
-            continue;
+        for (const url of candidateUrls) {
+          try {
+            console.log(`[sync] Fetching ${platform} script from: ${url}`);
+            const resp = await fetch(url);
+            if (!resp.ok) {
+              fetchError = `Failed to fetch from ${url}: ${resp.status} ${resp.statusText}`;
+              continue;
+            }
+
+            content = await resp.text();
+            if (content.length < 1000) {
+              fetchError = `Fetched content too small from ${url}: ${content.length} bytes`;
+              content = '';
+              continue;
+            }
+
+            contentSource = url;
+            break;
+          } catch (err) {
+            fetchError = `Fetch exception from ${url}: ${(err as Error).message}`;
           }
-
-          content = await resp.text();
-          if (content.length < 1000) {
-            fetchError = `Fetched content too small from ${url}: ${content.length} bytes`;
-            content = '';
-            continue;
-          }
-
-          contentSource = url;
-          break;
-        } catch (err) {
-          fetchError = `Fetch exception from ${url}: ${(err as Error).message}`;
         }
-      }
 
-      if (!content) {
-        return new Response(JSON.stringify({ error: fetchError || 'Failed to fetch script content from all sources' }), {
-          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+        if (!content) {
+          return new Response(JSON.stringify({ error: fetchError || 'Failed to fetch script content from all sources' }), {
+            status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
       }
     }
 

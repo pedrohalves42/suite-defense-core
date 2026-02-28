@@ -458,6 +458,9 @@ $Global:AutoRepairStats = @{
 # v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)
 $Global:SecurityDegraded = $false
 
+# v5.0.13-fix: ProtectedProcessSet must be declared before use (StrictMode compatibility)
+$Global:ProtectedProcessSet = $null
+
 # v5.0.14-hotfix: Declare crypto globals early (StrictMode-safe when key init fails)
 $Global:AgentPrivateKey = $null
 $Global:AgentPublicKey = $null
@@ -1201,8 +1204,83 @@ function Initialize-AgentKeys {
                         Write-Log "[KEYS] Managed ECDSA fallback failed: $($_.Exception.Message)" "WARN"
                     }
 
-                    Write-Log "[KEYS] All $maxKeyAttempts ECDSA attempts failed" "ERROR"
-                    Write-Log "[KEYS] Result signing will be DISABLED for this agent" "WARN"
+                    Write-Log "[KEYS] All $maxKeyAttempts ECDSA attempts failed - trying RSA-2048 fallback" "WARN"
+                    
+                    # v5.0.13-fix: RSA-2048 fallback for legacy Windows without ECDSA support
+                    try {
+                        $rsa = [System.Security.Cryptography.RSA]::Create(2048)
+                        if ($null -ne $rsa) {
+                            $privateKeyBytes = $rsa.ExportPkcs8PrivateKey()
+                            $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
+                            $publicKeyBytes = $rsa.ExportSubjectPublicKeyInfo()
+                            $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
+                            
+                            $sha256Hash = [System.Security.Cryptography.SHA256]::Create()
+                            $fpBytes = $sha256Hash.ComputeHash($publicKeyBytes)
+                            $fp = [BitConverter]::ToString($fpBytes).Replace("-", "").ToLower()
+                            $sha256Hash.Dispose()
+                            
+                            $keyData = @{
+                                private_key = $privateKeyBase64
+                                public_key = $publicKeyBase64
+                                fingerprint = $fp
+                                algorithm = "RSA-2048-SHA256"
+                                version = 1
+                                created_at = (Get-Date).ToString("o")
+                            }
+                            $keyData | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
+                            
+                            $Global:AgentPrivateKey = $privateKeyBase64
+                            $Global:AgentPublicKey = $publicKeyBase64
+                            $Global:KeyFingerprint = $fp
+                            $Global:KeyVersion = 1
+                            
+                            Write-Log "[KEYS] RSA-2048 fallback keypair generated. Fingerprint: $($fp.Substring(0, 16))..." "SUCCESS"
+                            $rsa.Dispose()
+                            return $true
+                        }
+                    } catch {
+                        Write-Log "[KEYS] RSA fallback also failed: $($_.Exception.Message)" "WARN"
+                    }
+                    
+                    # v5.0.13-fix: Last resort - RSACryptoServiceProvider (works on .NET 2.0+)
+                    try {
+                        $rsaCsp = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
+                        $pubXml = $rsaCsp.ToXmlString($false)
+                        $privXml = $rsaCsp.ToXmlString($true)
+                        
+                        $pubBytes = [System.Text.Encoding]::UTF8.GetBytes($pubXml)
+                        $privB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($privXml))
+                        $pubB64 = [Convert]::ToBase64String($pubBytes)
+                        
+                        $sha256Hash2 = [System.Security.Cryptography.SHA256]::Create()
+                        $fpBytes2 = $sha256Hash2.ComputeHash($pubBytes)
+                        $fp2 = [BitConverter]::ToString($fpBytes2).Replace("-", "").ToLower()
+                        $sha256Hash2.Dispose()
+                        
+                        $keyData2 = @{
+                            private_key = $privB64
+                            public_key = $pubB64
+                            fingerprint = $fp2
+                            algorithm = "RSA-2048-XML"
+                            version = 1
+                            created_at = (Get-Date).ToString("o")
+                        }
+                        $keyData2 | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
+                        
+                        $Global:AgentPrivateKey = $privB64
+                        $Global:AgentPublicKey = $pubB64
+                        $Global:KeyFingerprint = $fp2
+                        $Global:KeyVersion = 1
+                        
+                        Write-Log "[KEYS] RSACryptoServiceProvider fallback generated. Fingerprint: $($fp2.Substring(0, 16))..." "SUCCESS"
+                        $rsaCsp.Dispose()
+                        return $true
+                    } catch {
+                        Write-Log "[KEYS] RSACryptoServiceProvider fallback failed: $($_.Exception.Message)" "ERROR"
+                    }
+                    
+                    Write-Log "[KEYS] All crypto attempts exhausted - signing DISABLED" "ERROR"
                     return $false
                 }
                 
@@ -4266,9 +4344,10 @@ function Send-Heartbeat {
         # Collect metrics
         $metrics = Get-SystemMetrics
         $topProcesses = Get-TopProcesses
-        $anomalies = Get-ProcessAnomalies
+        $anomalies = $null
+        try { $anomalies = Get-ProcessAnomalies } catch { Write-Log "[HEARTBEAT] Get-ProcessAnomalies error: $($_.Exception.Message)" "DEBUG" }
         $processAnomalies = @()
-        if ($anomalies -is [hashtable] -and $anomalies.ContainsKey("anomalies") -and $null -ne $anomalies["anomalies"]) {
+        if ($null -ne $anomalies -and $anomalies -is [hashtable] -and $anomalies.ContainsKey("anomalies") -and $null -ne $anomalies["anomalies"]) {
             $processAnomalies = @($anomalies["anomalies"])
         }
         

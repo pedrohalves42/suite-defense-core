@@ -4344,9 +4344,10 @@ function Send-Heartbeat {
         # Collect metrics
         $metrics = Get-SystemMetrics
         $topProcesses = Get-TopProcesses
-        $anomalies = Get-ProcessAnomalies
+        $anomalies = $null
+        try { $anomalies = Get-ProcessAnomalies } catch { Write-Log "[HEARTBEAT] Get-ProcessAnomalies error: $($_.Exception.Message)" "DEBUG" }
         $processAnomalies = @()
-        if ($anomalies -is [hashtable] -and $anomalies.ContainsKey("anomalies") -and $null -ne $anomalies["anomalies"]) {
+        if ($null -ne $anomalies -and $anomalies -is [hashtable] -and $anomalies.ContainsKey("anomalies") -and $null -ne $anomalies["anomalies"]) {
             $processAnomalies = @($anomalies["anomalies"])
         }
         
