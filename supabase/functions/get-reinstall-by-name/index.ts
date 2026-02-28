@@ -34,13 +34,15 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const adminClient = createClient(supabaseUrl, serviceKey);
 
-    // Extract agent name from path: /get-reinstall-by-name/AGENT_NAME
+    // Extract agent name from path OR query param: /get-reinstall-by-name/AGENT_NAME or ?name=AGENT_NAME
     const pathParts = url.pathname.split('/');
-    const agentName = decodeURIComponent(pathParts[pathParts.length - 1] || '').trim();
+    const pathName = decodeURIComponent(pathParts[pathParts.length - 1] || '').trim();
+    const queryName = url.searchParams.get('name')?.trim() || '';
+    const agentName = (pathName && pathName !== 'get-reinstall-by-name') ? pathName : queryName;
 
-    if (!agentName || agentName === 'get-reinstall-by-name') {
+    if (!agentName) {
       return new Response(
-        '# ERROR: Missing agent name in URL\n# Usage: irm ".../get-reinstall-by-name/YOUR_AGENT_NAME?key=YOUR_KEY" | iex\nWrite-Host "ERROR: Specify agent name in URL" -ForegroundColor Red\n',
+        '# ERROR: Missing agent name in URL\n# Usage: irm ".../get-reinstall-by-name/YOUR_AGENT_NAME?key=YOUR_KEY" | iex\n# Or:    irm ".../get-reinstall-by-name?name=YOUR_AGENT_NAME&key=YOUR_KEY" | iex\nWrite-Host "ERROR: Specify agent name in URL" -ForegroundColor Red\n',
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
       );
     }
