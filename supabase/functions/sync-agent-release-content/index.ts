@@ -76,33 +76,46 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch from published app public assets
-    const publishedUrl = `https://cybershield-audit.lovable.app/agent-scripts/${filename}?cb=${Date.now()}`;
-    console.log(`[sync] Fetching ${platform} script from: ${publishedUrl}`);
-    
-    const resp = await fetch(publishedUrl);
-    if (!resp.ok) {
-      return new Response(JSON.stringify({ error: `Failed to fetch: ${resp.status} ${resp.statusText}` }), {
-        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    // Prefer local bundled script from codebase (avoids published-app lag)
+    let content = '';
+    let contentSource = 'codebase';
+
+    try {
+      content = await Deno.readTextFile(
+        new URL(`../_shared/agent-scripts/${filename}`, import.meta.url)
+      );
+      console.log(`[sync] Loaded ${platform} script from codebase: ${content.length} chars`);
+    } catch (readErr) {
+      console.warn(`[sync] Codebase read failed, falling back to published app: ${(readErr as Error).message}`);
+      contentSource = 'published-app';
+
+      const publishedUrl = `https://cybershield-audit.lovable.app/agent-scripts/${filename}?cb=${Date.now()}`;
+      console.log(`[sync] Fetching ${platform} script from: ${publishedUrl}`);
+
+      const resp = await fetch(publishedUrl);
+      if (!resp.ok) {
+        return new Response(JSON.stringify({ error: `Failed to fetch: ${resp.status} ${resp.statusText}` }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      content = await resp.text();
     }
-    
-    let content = await resp.text();
-    
+
     // SAFETY: Reject HTML (SPA fallback)
     const trimmed = content.trimStart();
     if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html') || trimmed.startsWith('<head')) {
-      return new Response(JSON.stringify({ 
-        error: 'Got HTML instead of script - file not found at published app',
-        hint: 'Ensure file exists at public/agent-scripts/' + filename
+      return new Response(JSON.stringify({
+        error: 'Got HTML instead of script',
+        hint: 'Ensure file exists at _shared/agent-scripts/ or public/agent-scripts/' + filename
       }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-    
+
     // SAFETY: Check minimum size
     if (content.length < 1000) {
-      return new Response(JSON.stringify({ error: 'Script too small', size: content.length }), {
+      return new Response(JSON.stringify({ error: 'Script too small', size: content.length, source: contentSource }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
