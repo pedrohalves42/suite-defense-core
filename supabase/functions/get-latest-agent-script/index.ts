@@ -46,6 +46,7 @@ function applyWindowsEcdsaHotfix(script: string): { content: string; changed: bo
   let content = script;
   const reasons: string[] = [];
 
+  // HOTFIX 1: StrictMode globals
   if (
     content.includes('$Global:SecurityDegraded = $false') &&
     !content.includes('$Global:AgentPrivateKey = $null')
@@ -61,6 +62,7 @@ function applyWindowsEcdsaHotfix(script: string): { content: string; changed: bo
     }
   }
 
+  // HOTFIX 2: Legacy ECDSA fallback (CNG container creation unstable)
   if (!content.includes('ECDsaCng]::new(256)') && content.includes('if ($attempt -eq $maxKeyAttempts)')) {
     const updated = content.replace(
       /if \(\$attempt -eq \$maxKeyAttempts\) \{[\s\S]*?Write-Log "\[KEYS\] All \$maxKeyAttempts ECDSA attempts failed" "ERROR"[\s\S]*?return \$false\s*\}/m,
@@ -101,6 +103,50 @@ function applyWindowsEcdsaHotfix(script: string): { content: string; changed: bo
       content = updated;
       reasons.push('legacy_ecdsa_fallback');
     }
+  }
+
+  // HOTFIX 3: ExportPkcs8PrivateKey not available in .NET Framework 4.x (PowerShell 5.1)
+  // Replace with try/catch that falls back to keeping the $ecdsa object in memory
+  if (content.includes('$ecdsa.ExportPkcs8PrivateKey()') && !content.includes('HOTFIX-EXPORT')) {
+    content = content.replace(
+      /# Export private key \(PKCS#8\)\s*\r?\n\s*\$privateKeyBytes = \$ecdsa\.ExportPkcs8PrivateKey\(\)\s*\r?\n\s*\$privateKeyBase64 = \[Convert\]::ToBase64String\(\$privateKeyBytes\)\s*\r?\n\s*\r?\n\s*# Export public key \(SubjectPublicKeyInfo\)\s*\r?\n\s*\$publicKeyBytes = \$ecdsa\.ExportSubjectPublicKeyInfo\(\)\s*\r?\n\s*\$publicKeyBase64 = \[Convert\]::ToBase64String\(\$publicKeyBytes\)/,
+      `# HOTFIX-EXPORT: Export keys with .NET Framework 4.x compatibility
+        $privateKeyBase64 = $null
+        $publicKeyBase64 = $null
+        $publicKeyBytes = $null
+        try {
+            # .NET Core 3.0+ path
+            $privateKeyBytes = $ecdsa.ExportPkcs8PrivateKey()
+            $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
+            $publicKeyBytes = $ecdsa.ExportSubjectPublicKeyInfo()
+            $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
+        } catch {
+            Write-Log "[KEYS] ExportPkcs8/SPKI not available ($($_.Exception.Message)), using in-memory ECDSA object" "WARN"
+            # Keep $ecdsa object in memory for direct signing - no export needed
+            # Generate a synthetic fingerprint from the key parameters
+            try {
+                $ecParams = $ecdsa.ExportParameters($false)
+                $publicKeyBytes = [byte[]]($ecParams.Q.X + $ecParams.Q.Y)
+                $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
+            } catch {
+                Write-Log "[KEYS] ExportParameters also failed, using random fingerprint" "WARN"
+                $randomBytes = [byte[]]::new(32)
+                [System.Security.Cryptography.RandomNumberGenerator]::Fill($randomBytes)
+                $publicKeyBytes = $randomBytes
+                $publicKeyBase64 = [Convert]::ToBase64String($randomBytes)
+            }
+        }`
+    );
+    reasons.push('export_pkcs8_compat');
+  }
+
+  // HOTFIX 4: $anomalies.anomalies crashes when $anomalies is not a hashtable
+  if (content.includes('$anomalies.anomalies') && !content.includes('HOTFIX-ANOMALIES')) {
+    content = content.replace(
+      /process_anomalies = \$anomalies\.anomalies/g,
+      '# HOTFIX-ANOMALIES: Safe access for legacy anomaly format\n            process_anomalies = $(if ($anomalies -is [hashtable] -and $anomalies.ContainsKey("anomalies")) { $anomalies["anomalies"] } else { @() })'
+    );
+    reasons.push('safe_anomalies_access');
   }
 
   return { content, changed: reasons.length > 0, reasons };
