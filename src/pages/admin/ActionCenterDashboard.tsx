@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useActionCenter } from '@/hooks/useActionCenter';
 import { useActionCenterHistory, ActionHistoryItem } from '@/hooks/useActionCenterHistory';
 import { useInsightFeedback, FeedbackType } from '@/hooks/useInsightFeedback';
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { RefreshCw, Target, ArrowRight, Clock, History, CheckCircle2, XCircle, Bot, User, ChevronDown, ShieldCheck, BookOpen, AlertTriangle, Loader2, ThumbsUp, ThumbsDown, Ban, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow, format, ptBR } from '@/lib/date-utils';
@@ -301,6 +302,7 @@ export default function ActionCenterDashboard() {
   const filteredInformational = filterItems(data?.informational);
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -531,5 +533,6 @@ export default function ActionCenterDashboard() {
         </TabsContent>
       </Tabs>
     </div>
+    </TooltipProvider>
   );
 }

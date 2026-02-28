@@ -14,7 +14,6 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
@@ -290,46 +289,53 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
 
             {/* Actions - compact column */}
             <div className="flex items-center gap-1.5 shrink-0">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="sm"
-                      onClick={handleExecute}
-                      disabled={executeAction.isPending}
-                      className="h-8"
-                    >
-                      {executeAction.isPending ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : isInvestigateAction ? (
-                        <><Search className="h-3.5 w-3.5 mr-1" />{displayCta}</>
-                      ) : (
-                        <><CheckCircle2 className="h-3.5 w-3.5 mr-1" />{displayCta}</>
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs text-xs">{copy.ctaTooltip || 'Executar ação recomendada'}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    onClick={handleExecute}
+                    disabled={executeAction.isPending}
+                    className="h-8"
+                  >
+                    {executeAction.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : isInvestigateAction ? (
+                      <><Search className="h-3.5 w-3.5 mr-1" />{displayCta}</>
+                    ) : (
+                      <><CheckCircle2 className="h-3.5 w-3.5 mr-1" />{displayCta}</>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs text-xs">{copy.ctaTooltip || 'Executar ação recomendada'}</p>
+                </TooltipContent>
+              </Tooltip>
 
               {/* Secondary action */}
               {item.source_type === 'playbook' && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => setIgnoreDialogOpen(true)} disabled={executeAction.isPending}>
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p className="text-xs">Ignorar</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => setIgnoreDialogOpen(true)} disabled={executeAction.isPending}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p className="text-xs">Ignorar</p></TooltipContent>
+                </Tooltip>
               )}
 
               {(item.source_type === 'alert' || item.source_type === 'agent_offline') && (
-                <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleAcknowledge} disabled={executeAction.isPending}>
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p className="text-xs">Entendido</p></TooltipContent>
+                </Tooltip>
+              )}
+
+              {item.source_type === 'ai_insight' && (
+                <>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleAcknowledge} disabled={executeAction.isPending}>
@@ -338,51 +344,32 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
                     </TooltipTrigger>
                     <TooltipContent><p className="text-xs">Entendido</p></TooltipContent>
                   </Tooltip>
-                </TooltipProvider>
-              )}
-
-              {item.source_type === 'ai_insight' && (
-                <>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleAcknowledge} disabled={executeAction.isPending}>
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent><p className="text-xs">Entendido</p></TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
                   {!item.item_id.startsWith('offline_') && 
                    !item.item_id.startsWith('alert_') && 
                    !item.item_id.startsWith('system_') && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 px-2 text-destructive hover:text-destructive" onClick={() => setRejectDialogOpen(true)} disabled={executeAction.isPending}>
-                            <XCircle className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p className="text-xs">Rejeitar</p></TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 px-2 text-destructive hover:text-destructive" onClick={() => setRejectDialogOpen(true)} disabled={executeAction.isPending}>
+                          <XCircle className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p className="text-xs">Rejeitar</p></TooltipContent>
+                    </Tooltip>
                   )}
                 </>
               )}
 
               {item.agent_id && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 px-1.5" asChild>
-                        <Link to={`/admin/agent-health?agent=${item.agent_id}`}>
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </Link>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p className="text-xs">Ver agente</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 px-1.5" asChild>
+                      <Link to={`/admin/agent-health?agent=${item.agent_id}`}>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p className="text-xs">Ver agente</p></TooltipContent>
+                </Tooltip>
               )}
             </div>
           </div>
