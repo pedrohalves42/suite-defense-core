@@ -1,106 +1,37 @@
-# 🔥 Plano de Remediação Zero-Gap — CyberShield v7+
 
-**Status**: FASE 1+2 Completas  
-**Criado**: 2026-02-21  
-**Atualizado**: 2026-02-21
 
----
+## Investigation Results
 
-## FASE 1 — Correção Crítica ✅ COMPLETA
+**Root Cause**: Both agents are running **OLD scripts from disk**. All hotfixes (pipeline-safe, typesafe-status, registered_at, ProtectedProcessSet) are correctly applied in the database, but agents don't re-download on restart — they keep executing the stale `.ps1` file.
 
-### 1.1 Crons Fantasma — CORRIGIDOS
-- [x] **ROOT CAUSE**: Edge Functions não estavam deployadas (seed-collection-jobs, calculate-compliance, evaluate-playbook-triggers)
-- [x] Deploy das 3 funções — todas respondendo 200
-- [x] `seed-collection-jobs` testado: 15 jobs criados para 3 agentes ativos
-- [x] `calculate-compliance` testado: score 96/100, grade A
-- [x] `auto-approve-safe-ai-actions-daily` e `rollback-test-weekly` são SQL RPCs (existem em pg_proc)
+**Evidence from DB query**: `has_pipeline_safe: true`, `has_typesafe_status: true`, `has_init_protectedset: true`, `has_trycatch: true` — but `has_registered_at_fix: false` (fix IS present in DB, just missing the marker string).
 
-### 1.2 SOAR Bridge — ATIVADO
-- [x] `evaluate-playbook-triggers` deployada e funcional
-- [x] SOAR Bridge em `evaluate-automation-rules` já chama `evaluate-playbook-triggers` via fetch
-- [x] Tabela `soar_executions` criada com RLS, índices e isolamento tenant
-- [x] View `v_soar_execution_summary` criada para dashboard
+**Evidence from logs**: pcteste1's latest runs (15:54-16:00) no longer show `script_sha256` or `ProtectedProcessSet` errors (those were from Feb 27), but STILL show `registered_at` error and 404 on sync — confirming OLD script on disk.
 
-### 1.3 Error Messages em Automações — CORRIGIDO
-- [x] Trigger `trg_automation_error_msg` criado para garantir error_message nunca NULL em falhas
-- [x] `evaluate-automation-rules` agora popula `error_message` em todos os 3 pontos de inserção
-- [x] 2 registros históricos sem error_message corrigidos
+## Errors and Fixes
 
----
+| Error | Agent | Root Cause | Fix |
+|-------|-------|-----------|-----|
+| FATAL `.status` line 4854 | MIT-SERVIDOR | Old script, pipeline pollution | Force re-download |
+| `registered_at` property not found | Both | Old script doesn't have Add-Member fix | Force re-download |
+| 404 on SYNCING | Both | `serve-dns-filter` not deployed | Deploy function |
+| `script_sha256` not found | pcteste1 | Heartbeat standard response lacks this field | Add to response |
+| Force update won't trigger | Both | Heartbeat compares `force_update_version !== agent_version`, both are v5.0.13 | Fix comparison logic |
 
-## FASE 2 — Blindagem Estrutural ✅ COMPLETA
+## Implementation Plan
 
-### 2.1 Silent Catches — CORRIGIDOS (6/6)
-- [x] `maintenance-cron/index.ts` — `.catch(() => {})` → logging
-- [x] `security-cleanup-cron/index.ts` — `catch {}` → logging
-- [x] `monitor-slow-operations/index.ts` — logging
-- [x] `cron-sentinel/index.ts` — logging
-- [x] `reset-daily-quotas/index.ts` — logging
-- [x] `smart-router-use-case.ts` + `ai-cache-use-case.ts` — logging
+### Step 1: Fix heartbeat to include `script_sha256` in standard response
+Add `script_sha256: null` to the standard heartbeat response (line 361-367 of `agent-heartbeat/index.ts`) so old agents don't crash trying to access this property.
 
-### 2.2 FKs tenant_id → tenants — ADICIONADAS (6 tabelas críticas)
-- [x] `security_logs` — FK ON DELETE RESTRICT
-- [x] `audit_logs` — FK ON DELETE RESTRICT
-- [x] `automation_rules` — FK ON DELETE RESTRICT
-- [x] `automation_executions` — FK ON DELETE RESTRICT
-- [x] `playbook_executions` — FK ON DELETE RESTRICT
-- [x] `jobs` — FK ON DELETE RESTRICT
+### Step 2: Fix force_update logic to support same-version pushes
+Currently `agent.force_update_version !== agent.agent_version` blocks same-version re-pushes. Change to check `force_update_at` being set (not null) as the trigger, regardless of version match. This allows pushing the fixed v5.0.13 script without a version bump.
 
-### 2.3 AI Views Tenant Isolation — CORRIGIDAS (3/3)
-- [x] `v_ai_function_performance` — security_invoker=on + tenant filter
-- [x] `v_ai_provider_performance` — security_invoker=on + tenant filter
-- [x] `v_ai_hourly_trends` — security_invoker=on + tenant filter
-- [x] `v_ai_anomalies` — já estava correto
+### Step 3: SQL migration — trigger force_update on both agents
+Set `force_update_version = 'v5.0.13'`, `force_update_at = now()`, `force_update_reason = 'Critical hotfix: pipeline-safe + registered_at + ProtectedProcessSet'` on MIT-SERVIDOR and pcteste1. On next heartbeat, agents will receive the fixed script.
 
----
+### Step 4: Add registered_at HOTFIX marker to DB script
+Update `agent_releases` to include `HOTFIX-SAFE-REGISTERED-AT` comment in the DB script for consistency with other hotfix markers, preventing HOTFIX 12 from attempting to re-apply.
 
-## FASE 3 — Testes de Caos ✅ COMPLETA
+### Step 5: Deploy edge functions
+Deploy `agent-heartbeat` and `serve-dns-filter`.
 
-### 3.1 Teste SOAR End-to-End ✅
-- [x] Inserir processo suspeito → automation_rules detecta (triggered: 1)
-- [x] SOAR Bridge chama evaluate-playbook-triggers com X-Internal-Secret
-- [x] Playbook `a6000000` criou execução `7287f2ce` com status=pending, risk_score=0.8
-- [x] **Bug corrigido**: SOAR Bridge usava Authorization Bearer (rejeitado como JWT inválido) → migrado para X-Internal-Secret
-- [x] **Bug corrigido**: Context do SOAR Bridge não incluía `process_reputation` → enriquecido automaticamente
-
-### 3.2 Teste de Idempotência dos Crons ✅
-- [x] `seed-collection-jobs` 2x → 1ª: 15 criados, 2ª: 0 criados / 15 deduplicados
-- [x] `evaluate-automation-rules` 2x → 1ª: 1 triggered, 2ª: 0 triggered (cooldown ativo)
-
----
-
-## FASE 4 — Monitoramento Preventivo ✅ COMPLETA
-
-### 4.1 Alerta para Crons Nunca Executados ✅
-- [x] `cron-sentinel` já detecta NEVER_RAN via `deriveHealthStatus()` (line 43)
-- [x] Cria task P0 + audit log automaticamente
-
-### 4.2 Dashboard SOAR Executions ✅
-- [x] View `v_soar_execution_summary` criada
-- [x] Componente `SoarExecutionsCard` integrado no `RealTimeSecurityDashboard`
-- [x] Mostra total, pendentes, auto-executados, breakdown por trigger type, dry-run indicator
-
----
-
-## FASE 5 — Auditoria Final (Linter) ✅ COMPLETA
-
-### 5.1 SECURITY DEFINER View — CORRIGIDO
-- [x] `agents_safe` tinha `security_invoker=off` → migrado para `security_invoker=on`
-
-### 5.2 Function Search Path — CORRIGIDO
-- [x] `handle_updated_at()` sem `search_path` → adicionado `SET search_path = public`
-
-### 5.3 RLS Policy Always True — FALSO POSITIVO (3x)
-- [x] Todas são policies "Service role" com `USING (true)` — intencional, service_role já bypassa RLS
-
----
-
-## Progresso
-
-| Fase | Status | Completos |
-|------|--------|-----------|
-| FASE 1 | ✅ Completa | 5/5 |
-| FASE 2 | ✅ Completa | 5/5 |
-| FASE 3 | ✅ Completa | 2/2 |
-| FASE 4 | ✅ Completa | 2/2 |
-| FASE 5 | ✅ Completa | 3/3 |
