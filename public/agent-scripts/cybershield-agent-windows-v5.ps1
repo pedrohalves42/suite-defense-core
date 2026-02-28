@@ -1169,6 +1169,17 @@ function Initialize-AgentKeys {
                 Write-Log "[KEYS] ECDSA attempt $attempt/$maxKeyAttempts failed: $errMsg" "WARN"
                 
                 if ($attempt -eq $maxKeyAttempts) {
+                    # v5.0.14 HOTFIX: fallback for legacy Windows/CNG providers that throw "object already exists"
+                    try {
+                        $ecdsa = [System.Security.Cryptography.ECDsa]::Create([System.Security.Cryptography.ECCurve]::NamedCurves.nistP256)
+                        if ($null -ne $ecdsa) {
+                            Write-Log "[KEYS] Fallback ECDSA keypair generated via managed API (CNG bypass)" "WARN"
+                            break
+                        }
+                    } catch {
+                        Write-Log "[KEYS] Managed ECDSA fallback failed: $($_.Exception.Message)" "WARN"
+                    }
+
                     Write-Log "[KEYS] All $maxKeyAttempts ECDSA attempts failed" "ERROR"
                     Write-Log "[KEYS] Result signing will be DISABLED for this agent" "WARN"
                     return $false
