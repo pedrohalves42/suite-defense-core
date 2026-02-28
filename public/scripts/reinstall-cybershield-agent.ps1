@@ -76,6 +76,18 @@ try {
     Write-Host "[4/5] Running installer..." -ForegroundColor Yellow
     Write-Host "  This may take a minute..." -ForegroundColor Gray
     
+    # Clear stale v5 integrity cache to avoid false tamper abort after reinstall
+    $hashJson = "C:\CyberShield\data\expected_script_hash.json"
+    $hashTxt = "C:\CyberShield\data\expected_script_hash.txt"
+    if (Test-Path $hashJson) {
+        Remove-Item $hashJson -Force -ErrorAction SilentlyContinue
+        Write-Host "  [INFO]  Cleared stale integrity cache: $hashJson" -ForegroundColor Gray
+    }
+    if (Test-Path $hashTxt) {
+        Remove-Item $hashTxt -Force -ErrorAction SilentlyContinue
+        Write-Host "  [INFO]  Cleared stale integrity cache: $hashTxt" -ForegroundColor Gray
+    }
+    
     try {
         & powershell.exe -ExecutionPolicy Bypass -File $installerPath
         
