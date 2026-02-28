@@ -3,6 +3,7 @@ import { encodeBase64 } from 'https://deno.land/std@0.208.0/encoding/base64.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
+import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts';
 // NOTE: Codebase script imports removed - .ps1 files are NOT bundled in Deno Deploy
 // All script content is served exclusively from the agent_releases DB table
 import { INSTALLER_VERSION } from '../_shared/installer-version.ts';
@@ -38,7 +39,7 @@ Deno.serve(async (req) => {
     const tokenHash = await hashToken(agentToken);
     const { data: tokenData, error: tokenError } = await supabase
       .from('agent_tokens')
-      .select('agent_id, is_active, agents!inner(id, agent_name, hmac_secret, agent_version, os_type, force_update_version, force_update_reason)')
+      .select('agent_id, is_active, agents!inner(id, agent_name, tenant_id, hmac_secret, agent_version, os_type, force_update_version, force_update_reason)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .single();
@@ -57,7 +58,8 @@ Deno.serve(async (req) => {
 
     const agent = (tokenData as any).agents as { 
       id: string; 
-      agent_name: string; 
+      agent_name: string;
+      tenant_id: string;
       hmac_secret: string; 
       agent_version: string | null; 
       os_type: string | null;
@@ -68,13 +70,22 @@ Deno.serve(async (req) => {
     // COMPAT: HMAC verification with token-only fallback for pre-hotfix agents
     // Pre-hotfix v5.0.3 agents call serve-agent-update without HMAC headers
     const signature = req.headers.get('X-HMAC-Signature');
-    const timestamp = req.headers.get('X-Timestamp') || req.headers.get('X-HMAC-Timestamp');
-    const nonce = req.headers.get('X-Nonce') || req.headers.get('X-HMAC-Nonce');
+    const timestamp = req.headers.get('X-HMAC-Timestamp') || req.headers.get('X-Timestamp');
+    const nonce = req.headers.get('X-HMAC-Nonce') || req.headers.get('X-Nonce');
     const hasAnyHmacHeader = !!(signature || timestamp || nonce);
 
     if (hasAnyHmacHeader && agent.hmac_secret) {
       const hmacResult = await verifyHmacSignature(
-        supabase, req, agent.agent_name, agent.hmac_secret
+        supabase,
+        req,
+        agent.agent_name,
+        agent.hmac_secret,
+        {
+          agentId: agent.id,
+          tenantId: agent.tenant_id,
+          endpoint: '/serve-agent-update',
+          ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined,
+        }
       );
       if (!hmacResult.valid) {
         // Accept with token-only auth if HMAC fails (encoding bugs in pre-hotfix agents)
@@ -116,7 +127,7 @@ Deno.serve(async (req) => {
       // Buscar release forçada
       const { data: forcedRelease, error: forcedError } = await supabase
         .from('agent_releases')
-        .select('version, script_content, sha256, release_notes, signature_base64, signed_at, signed_by')
+        .select('id, version, script_content, sha256, release_notes, signature_base64, signed_at, signed_by')
         .eq('version', agent.force_update_version)
         .eq('platform', platform)
         .eq('is_active', true)
@@ -147,12 +158,38 @@ Deno.serve(async (req) => {
         );
       }
 
+      let forcedScriptContent = forcedRelease.script_content;
+      if (platform === 'windows' && forcedScriptContent) {
+        const hotfix = applyWindowsScriptHotfix(forcedScriptContent);
+        if (hotfix.changed) {
+          forcedScriptContent = hotfix.content;
+          logger.warn('[serve-agent-update] Applied Windows hotfix in force-update path', {
+            requestId,
+            forceVersion: forcedRelease.version,
+            reasons: hotfix.reasons,
+          });
+
+          const { error: persistError } = await supabase
+            .from('agent_releases')
+            .update({ script_content: forcedScriptContent })
+            .eq('id', forcedRelease.id);
+
+          if (persistError) {
+            logger.warn('[serve-agent-update] Could not persist force-update hotfix', {
+              requestId,
+              releaseId: forcedRelease.id,
+              error: persistError.message,
+            });
+          }
+        }
+      }
+
       // SAFETY: Reject HTML content from DB (corrupted releases)
-      if (forcedRelease.script_content?.trimStart().startsWith('<!DOCTYPE') || forcedRelease.script_content?.trimStart().startsWith('<html')) {
+      if (forcedScriptContent?.trimStart().startsWith('<!DOCTYPE') || forcedScriptContent?.trimStart().startsWith('<html')) {
         logger.error('[serve-agent-update] Force update script is corrupted HTML', {
           requestId,
           forceVersion: agent.force_update_version,
-          preview: forcedRelease.script_content.substring(0, 100),
+          preview: forcedScriptContent.substring(0, 100),
         });
         return new Response(
           JSON.stringify({ error: 'Script content corrupted (HTML)', version: agent.force_update_version }),
@@ -161,7 +198,7 @@ Deno.serve(async (req) => {
       }
 
       // Normalizar script para Windows (via hexagonal shared module)
-      const normalizedScript = normalizeForWindows(forcedRelease.script_content);
+      const normalizedScript = normalizeForWindows(forcedScriptContent);
       const forceEncoder = new TextEncoder();
       const scriptBytes = forceEncoder.encode(normalizedScript);
       const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes);
@@ -192,7 +229,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           version: forcedRelease.version,
-          script_content: forcedRelease.script_content,
+          script_content: forcedScriptContent,
           sha256: calculatedSha256,
           script_sha256: calculatedSha256, // Alias for v5.0.13+ agents
           script_content_base64: base64Script,
@@ -292,7 +329,7 @@ Deno.serve(async (req) => {
     // Buscar ultima release ativa (incluindo assinatura criptográfica)
     const { data: release, error: releaseError } = await supabase
       .from('agent_releases')
-      .select('version, script_content, sha256, release_notes, created_at, signature_base64, signed_at, signed_by')
+      .select('id, version, script_content, sha256, release_notes, created_at, signature_base64, signed_at, signed_by')
       .eq('platform', platform)
       .eq('channel', 'stable')
       .eq('is_active', true)
@@ -378,6 +415,31 @@ Deno.serve(async (req) => {
     // AUTHORITATIVE SOURCE: Always use DB release content
     // Codebase scripts (.ps1 files) are NOT bundled in Deno Deploy
     let finalScriptContent = release.script_content;
+
+    if (platform === 'windows' && finalScriptContent) {
+      const hotfix = applyWindowsScriptHotfix(finalScriptContent);
+      if (hotfix.changed) {
+        finalScriptContent = hotfix.content;
+        logger.warn('[serve-agent-update] Applied Windows hotfix before delivery', {
+          requestId,
+          releaseVersion: release.version,
+          reasons: hotfix.reasons,
+        });
+
+        const { error: persistError } = await supabase
+          .from('agent_releases')
+          .update({ script_content: finalScriptContent })
+          .eq('id', release.id);
+
+        if (persistError) {
+          logger.warn('[serve-agent-update] Could not persist hotfixed script', {
+            requestId,
+            releaseId: release.id,
+            error: persistError.message,
+          });
+        }
+      }
+    }
     
     // SAFETY: Reject HTML content from DB (corrupted releases)
     if (finalScriptContent && (finalScriptContent.trimStart().startsWith('<!DOCTYPE') || finalScriptContent.trimStart().startsWith('<html'))) {
