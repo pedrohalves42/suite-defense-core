@@ -554,6 +554,8 @@ Deno.serve(async (req) => {
                   sha256_base64: calculatedSha256,
                   ecdsa_signature: null, // Not signed via force-update path; agent must accept null
                   script_hash_signature: null, // Compatibility: agent caches signed hash locally
+                  signature_base64: null, // Required by v5.0.13 StrictMode - agent accesses $Response.signature_base64
+                  script_hash_signed_at: null, // Required by v5.0.13 StrictMode - agent accesses $response.script_hash_signed_at
                   reason: effectiveForceReason || 'Forced update via backend',
                   force_update_reason: effectiveForceReason || 'Forced update via backend',
                   override_safe_mode: !!(forceCheck as any)?.force_update_override_safe_mode && (!(forceCheck as any)?.force_update_override_safe_mode_expires_at || new Date((forceCheck as any).force_update_override_safe_mode_expires_at) > new Date()),
