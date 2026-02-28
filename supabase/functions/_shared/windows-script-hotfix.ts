@@ -164,5 +164,40 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
     reasons.push('safe_sha256_access');
   }
 
+  // HOTFIX 8: Invoke-LocalDetection crashes accessing .status on object without that property (line ~4854)
+  // This typically happens when Get-MpComputerStatus or WMI AV query returns $null or an unexpected type
+  if (content.includes('Invoke-LocalDetection') && !content.includes('HOTFIX-LOCAL-DETECT-STATUS')) {
+    // Pattern: wrap the entire Invoke-LocalDetection call in a try/catch to prevent fatal crash loops
+    // Also patch .status access inside the function to be safe
+    const localDetectPatched = content.replace(
+      /function\s+Invoke-LocalDetection\s*\{/,
+      `function Invoke-LocalDetection { # HOTFIX-LOCAL-DETECT-STATUS`
+    );
+
+    if (localDetectPatched !== content) {
+      // Now inject a safety wrapper at the START of the function body
+      content = localDetectPatched.replace(
+        /function\s+Invoke-LocalDetection\s*\{\s*# HOTFIX-LOCAL-DETECT-STATUS/,
+        `function Invoke-LocalDetection { # HOTFIX-LOCAL-DETECT-STATUS
+    try {`
+      );
+
+      // Find the closing of Invoke-LocalDetection and wrap with catch
+      // Strategy: patch the call site instead - wrap in try/catch where it's called
+      // Revert the function-level patch and instead wrap all CALL SITES
+      content = localDetectPatched; // revert to just the marker
+
+      // Wrap all call sites of Invoke-LocalDetection in try/catch
+      content = content.replace(
+        /(\s*)(Invoke-LocalDetection\b[^\r\n]*)/g,
+        (match, indent, call) => {
+          if (match.includes('function ')) return match; // skip function definition
+          return `${indent}try { ${call} } catch { Write-Log "[LOCAL-DETECT] Non-fatal error: $($_.Exception.Message)" "WARN" } <# HOTFIX-LOCAL-DETECT-STATUS #>`;
+        }
+      );
+      reasons.push('safe_local_detect_status');
+    }
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }
