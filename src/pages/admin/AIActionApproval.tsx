@@ -18,6 +18,7 @@ import { useApprovalMetrics } from '@/components/admin/AIApprovalMetrics';
 import { cn } from '@/lib/utils';
 import { AutoApprovalPanel } from '@/components/admin/AutoApprovalPanel';
 import { RollbackTestPanel } from '@/components/admin/RollbackTestPanel';
+import { useTenant } from '@/hooks/useTenant';
 
 interface AIAction {
   id: string;
@@ -64,6 +65,7 @@ interface AIInsight {
 export default function AIActionApproval() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { tenant, loading: tenantLoading } = useTenant();
   const [executingActions, setExecutingActions] = useState<Set<string>>(new Set());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
@@ -83,9 +85,9 @@ export default function AIActionApproval() {
   const { data: approvalMetrics } = useApprovalMetrics();
   const isSuspiciousPattern = approvalMetrics?.isSuspiciousPattern || false;
 
-  // Buscar acoes pendentes
+  // Buscar acoes pendentes - FIX: add tenant_id filter
   const { data: pendingActions, isLoading } = useQuery({
-    queryKey: ['ai-actions-pending'],
+    queryKey: ['ai-actions-pending', tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ai_actions')
@@ -94,18 +96,20 @@ export default function AIActionApproval() {
           ai_insights (*),
           ai_action_executions (*)
         `)
+        .eq('tenant_id', tenant!.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data as AIAction[];
     },
-    refetchInterval: 120000, // COST-OPT: 10s → 2min
+    enabled: !tenantLoading && !!tenant?.id,
+    refetchInterval: 120000,
   });
 
-  // Buscar insights recentes (últimos 30 dias)
+  // Buscar insights recentes (últimos 30 dias) - FIX: add tenant_id filter
   const { data: recentInsights } = useQuery({
-    queryKey: ['ai-insights-recent'],
+    queryKey: ['ai-insights-recent', tenant?.id],
     queryFn: async () => {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 30);
@@ -113,6 +117,7 @@ export default function AIActionApproval() {
       const { data, error } = await supabase
         .from('ai_insights')
         .select('id, title, description, severity, recommendation, confidence_score, created_at, acknowledged')
+        .eq('tenant_id', tenant!.id)
         .gte('created_at', cutoff.toISOString())
         .order('created_at', { ascending: false })
         .limit(10);
@@ -120,6 +125,7 @@ export default function AIActionApproval() {
       if (error) throw error;
       return data as AIInsight[];
     },
+    enabled: !tenantLoading && !!tenant?.id,
   });
 
   // Buscar configuracoes de acoes
