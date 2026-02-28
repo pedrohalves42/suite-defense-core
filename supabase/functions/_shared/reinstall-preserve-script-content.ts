@@ -1,8 +1,8 @@
 // CyberShield Agent - Reinstall Preserve Script Content
 // Embedded version for Edge Function delivery
-// Version: 3.0.0 - Fully automatic, no prompts, built-in enrollment key
+// Version: 3.1.0 - Fix: prioritize config.json and task args for AgentName over filename
 
-export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v3.0.0
+export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v3.1.0
 # Preserves credentials (AgentName, Token, HMAC) during agent update
 # Strategy 3: Auto-recover via built-in enrollment key (zero prompts)
 # ASCII-safe, English-only for cross-locale compatibility
@@ -22,7 +22,7 @@ function Write-Status {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " CyberShield - Reinstall Preserve v3.0.0" -ForegroundColor Cyan
+Write-Host " CyberShield - Reinstall Preserve v3.1.0" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -62,12 +62,30 @@ if (-not $agentScript) {
 }
 Write-Status "Script found: $($agentScript.Name)" "INFO"
 
-# Extract AgentName from filename pattern: cybershield-agent-XXXX.ps1
+# Extract AgentName - Priority: config.json > task args > script content > filename
 $AgentName = $null
-if ($agentScript.Name -match 'cybershield-agent-(.+)\\.ps1$') {
-    $AgentName = $Matches[1]
+
+# Priority 1: config.json (most reliable - contains the registered name)
+$configPath = "$InstallDir\\config.json"
+if (Test-Path $configPath) {
+    try {
+        $configJson = Get-Content $configPath -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
+        if ($configJson.AgentName) {
+            $AgentName = $configJson.AgentName
+            Write-Status "AgentName: $AgentName (from config.json)" "SUCCESS"
+        }
+    } catch {
+        Write-Status "Failed to parse config.json: $($_.Exception.Message)" "WARN"
+    }
 }
-Write-Status "AgentName: $AgentName" "INFO"
+
+# Priority 2: Fallback to filename pattern: cybershield-agent-XXXX.ps1
+if (-not $AgentName) {
+    if ($agentScript.Name -match 'cybershield-agent-(.+)\\.ps1$') {
+        $AgentName = $Matches[1]
+        Write-Status "AgentName: $AgentName (from filename)" "INFO"
+    }
+}
 
 # Strategy 1: Extract credentials from Scheduled Task arguments
 $AgentToken = $null
@@ -86,6 +104,15 @@ if ($existingTask) {
     elseif ($taskArgs -match "-HmacSecret\\s+'([^']+)'") { $HmacSecret = $Matches[1]; Write-Status "HmacSecret: from task args (sq)" "SUCCESS" }
 
     if ($taskArgs -match '-ServerUrl\\s+"([^"]+)"') { $ServerUrl = $Matches[1]; Write-Status "ServerUrl override: $ServerUrl" "INFO" }
+
+    # Also extract AgentName from task args (overrides filename-based name)
+    if ($taskArgs -match '-AgentName\\s+"([^"]+)"') {
+        $taskAgentName = $Matches[1]
+        if (-not $AgentName -or $AgentName -ne $taskAgentName) {
+            Write-Status "AgentName override: $taskAgentName (from task args, was: $AgentName)" "SUCCESS"
+            $AgentName = $taskAgentName
+        }
+    }
 } else {
     Write-Status "No scheduled task found - will try script content" "WARN"
 }
