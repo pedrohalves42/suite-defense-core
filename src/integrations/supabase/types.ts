@@ -5087,6 +5087,7 @@ export type Database = {
           scheduling_paused: boolean
           scheduling_paused_reason: string | null
           signature_mode: string | null
+          skip_firewall_remediation: boolean
           status: string
           tenant_id: string
           throttle_reason: string | null
@@ -5143,6 +5144,7 @@ export type Database = {
           scheduling_paused?: boolean
           scheduling_paused_reason?: string | null
           signature_mode?: string | null
+          skip_firewall_remediation?: boolean
           status?: string
           tenant_id: string
           throttle_reason?: string | null
@@ -5199,6 +5201,7 @@ export type Database = {
           scheduling_paused?: boolean
           scheduling_paused_reason?: string | null
           signature_mode?: string | null
+          skip_firewall_remediation?: boolean
           status?: string
           tenant_id?: string
           throttle_reason?: string | null
