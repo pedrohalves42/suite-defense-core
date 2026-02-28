@@ -3,28 +3,29 @@
  * 
  * Fornece comandos prontos para copiar e colar no PowerShell,
  * evitando erros de usuário como colar apenas a URL.
- * v3.2.0: Comando atualizado com cache-bust + envio correto de Enrollment Key
+ * v3.2.2: comando automático por agente (sem key manual) via autenticação do painel
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Copy, 
-  Check, 
-  Terminal, 
-  Shield, 
+import { Input } from '@/components/ui/input';
+import {
+  Copy,
+  Check,
+  Terminal,
+  Shield,
   AlertTriangle,
   ChevronDown,
   ChevronUp,
   RefreshCw,
-  Key,
   Users,
   Monitor,
-  ExternalLink
+  ExternalLink,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,7 +33,9 @@ import { Link } from 'react-router-dom';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
-// Comando interativo (máquina individual - detecta credenciais locais e força versão mais recente)
+const escapeForSingleQuotedPowerShell = (value: string) => value.replace(/'/g, "''");
+
+// Comando interativo legado (mantido como fallback)
 const INTERACTIVE_COMMAND = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" | iex`;
 
 // Comando com Enrollment Key (deploy em massa via RMM/GPO) - com fallback de nome por hostname
@@ -44,18 +47,33 @@ const FALLBACK_COMMAND = `[Net.ServicePointManager]::SecurityProtocol = [Net.Sec
 // Comando de diagnóstico de rede
 const NETWORK_TEST_COMMAND = `Test-NetConnection -ComputerName "${new URL(SUPABASE_URL).hostname}" -Port 443`;
 
-export function PreserveReinstallSection() {
+interface PreserveReinstallSectionProps {
+  defaultAgentName?: string | null;
+}
+
+export function PreserveReinstallSection({ defaultAgentName }: PreserveReinstallSectionProps) {
+  const [copiedAuto, setCopiedAuto] = useState(false);
   const [copiedInteractive, setCopiedInteractive] = useState(false);
   const [copiedEk, setCopiedEk] = useState(false);
   const [copiedFallback, setCopiedFallback] = useState(false);
   const [copiedNetworkTest, setCopiedNetworkTest] = useState(false);
-  const [copiedJwt, setCopiedJwt] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const handleCopy = async (text: string, type: 'interactive' | 'ek' | 'fallback' | 'network') => {
+  const [autoAgentName, setAutoAgentName] = useState(defaultAgentName ?? '');
+  const [autoCommand, setAutoCommand] = useState<string | null>(null);
+  const [isGeneratingAuto, setIsGeneratingAuto] = useState(false);
+
+  useEffect(() => {
+    if (defaultAgentName) {
+      setAutoAgentName(defaultAgentName);
+    }
+  }, [defaultAgentName]);
+
+  const handleCopy = async (text: string, type: 'auto' | 'interactive' | 'ek' | 'fallback' | 'network') => {
     try {
       await navigator.clipboard.writeText(text);
       const setters: Record<string, (v: boolean) => void> = {
+        auto: setCopiedAuto,
         interactive: setCopiedInteractive,
         ek: setCopiedEk,
         fallback: setCopiedFallback,
@@ -69,6 +87,68 @@ export function PreserveReinstallSection() {
     }
   };
 
+  const handleGenerateAutomaticCommand = async () => {
+    const agentName = autoAgentName.trim();
+    if (!agentName) {
+      toast.error('Informe o nome do agente para gerar o comando automático.');
+      return;
+    }
+
+    try {
+      setIsGeneratingAuto(true);
+      const { data, error } = await supabase.functions.invoke('recover-agent-credentials', {
+        body: { agent_name: agentName },
+      });
+
+      if (error) throw new Error(error.message || 'Falha ao recuperar credenciais');
+      if (!data?.agentToken || !data?.hmacSecret || !data?.agentName) {
+        throw new Error(data?.error || 'Resposta inválida do servidor');
+      }
+
+      const serverUrlEscaped = escapeForSingleQuotedPowerShell(SUPABASE_URL);
+      const tokenEscaped = escapeForSingleQuotedPowerShell(data.agentToken);
+      const hmacEscaped = escapeForSingleQuotedPowerShell(data.hmacSecret);
+      const nameEscaped = escapeForSingleQuotedPowerShell(data.agentName);
+
+      const commandParts = [
+        '[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;',
+        "$dir='C:\\CyberShield'; if (!(Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null };",
+        '$hashDir = "$dir\\data"; $hashJson = "$hashDir\\expected_script_hash.json"; $hashTxt = "$hashDir\\expected_script_hash.txt";',
+        'if (Test-Path $hashJson) { Remove-Item $hashJson -Force -ErrorAction SilentlyContinue };',
+        'if (Test-Path $hashTxt) { Remove-Item $hashTxt -Force -ErrorAction SilentlyContinue };',
+        `$serverUrl='${serverUrlEscaped}';`,
+        `$agentToken='${tokenEscaped}';`,
+        `$hmacSecret='${hmacEscaped}';`,
+        `$agentName='${nameEscaped}';`,
+        '$url = "$serverUrl/functions/v1/serve-agent-update";',
+        "$headers = @{ 'X-Agent-Token' = $agentToken; 'Content-Type' = 'application/json' };",
+        "$body = '{\"current_version\":\"0.0.0\",\"hostname\":\"' + $env:COMPUTERNAME + '\",\"os_type\":\"windows\"}';",
+        '$resp = Invoke-RestMethod -Uri $url -Method POST -Headers $headers -Body $body;',
+        'if ($resp.script_content) {',
+        '  $scriptPath = "$dir\\cybershield-agent-$agentName.ps1";',
+        '  $resp.script_content | Set-Content -Path $scriptPath -Encoding UTF8 -Force;',
+        '  $cfg = @{ ServerUrl=$serverUrl; AgentToken=$agentToken; HMACSecret=$hmacSecret; AgentName=$agentName };',
+        '  $cfg | ConvertTo-Json | Set-Content -Path "$dir\\config.json" -Encoding UTF8 -Force;',
+        "  $arg = '-ExecutionPolicy Bypass -WindowStyle Hidden -File \"' + $scriptPath + '\" -ServerUrl \"' + $serverUrl + '\" -AgentToken \"' + $agentToken + '\" -HmacSecret \"' + $hmacSecret + '\" -AgentName \"' + $agentName + '\"';",
+        "  $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arg;",
+        '  $trigger = New-ScheduledTaskTrigger -AtStartup;',
+        '  $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1);',
+        "  Unregister-ScheduledTask -TaskName 'CyberShieldAgent' -Confirm:$false -ErrorAction SilentlyContinue;",
+        "  Register-ScheduledTask -TaskName 'CyberShieldAgent' -Action $action -Trigger $trigger -Settings $settings -User 'SYSTEM' -RunLevel Highest -Force;",
+        "  Start-ScheduledTask -TaskName 'CyberShieldAgent';",
+        "  Write-Host 'CyberShield reinstalado com sucesso!' -ForegroundColor Green",
+        "} else { Write-Host 'Erro: servidor nao retornou script' -ForegroundColor Red }",
+      ];
+
+      setAutoCommand(commandParts.join(' '));
+      toast.success('Comando automático gerado com autenticação do painel.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao gerar comando automático');
+    } finally {
+      setIsGeneratingAuto(false);
+    }
+  };
+
   return (
     <Card className="border-primary/30 bg-primary/5">
       <CardHeader className="pb-3">
@@ -77,7 +157,7 @@ export function PreserveReinstallSection() {
             <CardTitle className="text-sm flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
               Reinstalação Preservando Credenciais
-              <Badge variant="secondary" className="ml-2 text-xs">v3.2.1</Badge>
+              <Badge variant="secondary" className="ml-2 text-xs">v3.2.2</Badge>
             </CardTitle>
             <CardDescription className="mt-1">
               Atualiza o agente mantendo nome, token e HMAC originais
@@ -101,70 +181,93 @@ export function PreserveReinstallSection() {
 
           {/* === ABA: Máquina Individual === */}
           <TabsContent value="individual" className="space-y-4 mt-3">
+            <Alert className="border-primary/50 bg-primary/10">
+              <Shield className="h-4 w-4 text-primary" />
+              <AlertDescription className="text-xs">
+                Gere um comando automático autenticado pelo painel (sem digitar Enrollment Key/JWT no servidor).
+              </AlertDescription>
+            </Alert>
+
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground">COMO USAR:</p>
               <ol className="text-xs space-y-1 list-decimal list-inside text-muted-foreground">
-                <li>Abra o <strong>PowerShell como Administrador</strong></li>
-                <li>Clique em "Copiar Comando" abaixo</li>
-                <li>Cole no PowerShell (Ctrl+V ou clique direito)</li>
-                <li>Pressione Enter e aguarde finalizar</li>
-                <li>Se pedir Enrollment Key ou JWT, use os botões abaixo</li>
+                <li>Confirme o nome exato do agente no painel</li>
+                <li>Clique em <strong>Gerar Comando Automático</strong></li>
+                <li>Copie e execute no PowerShell como Administrador</li>
               </ol>
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-medium">Comando:</p>
+              <p className="text-xs font-medium">Nome do agente:</p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Input
+                  value={autoAgentName}
+                  onChange={(e) => setAutoAgentName(e.target.value)}
+                  placeholder="Ex: MIT-SERVIDOR"
+                />
+                <Button
+                  onClick={handleGenerateAutomaticCommand}
+                  disabled={isGeneratingAuto}
+                  className="sm:w-auto"
+                >
+                  {isGeneratingAuto ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    'Gerar Comando Automático'
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {autoCommand && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium flex items-center gap-2">
+                  Comando automático:
+                  <Badge variant="outline" className="text-[10px]">Sem key manual</Badge>
+                </p>
+                <div className="relative">
+                  <pre className="bg-muted/50 border rounded-md p-3 pr-24 text-xs overflow-x-auto whitespace-pre-wrap break-all font-mono">
+                    {autoCommand}
+                  </pre>
+                  <Button
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={() => handleCopy(autoCommand, 'auto')}
+                  >
+                    {copiedAuto ? (
+                      <><Check className="h-3 w-3 mr-1" /> Copiado!</>
+                    ) : (
+                      <><Copy className="h-3 w-3 mr-1" /> Copiar Comando</>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Este comando já sai autenticado e gera novas credenciais para esse agente.
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2 pt-2 border-t">
+              <p className="text-xs font-medium">Fallback legado (detecção local):</p>
               <div className="relative">
                 <pre className="bg-muted/50 border rounded-md p-3 pr-24 text-xs overflow-x-auto whitespace-pre-wrap break-all font-mono">
                   {INTERACTIVE_COMMAND}
                 </pre>
                 <Button
                   size="sm"
+                  variant="outline"
                   className="absolute top-2 right-2"
                   onClick={() => handleCopy(INTERACTIVE_COMMAND, 'interactive')}
                 >
                   {copiedInteractive ? (
                     <><Check className="h-3 w-3 mr-1" /> Copiado!</>
                   ) : (
-                    <><Copy className="h-3 w-3 mr-1" /> Copiar Comando</>
+                    <><Copy className="h-3 w-3 mr-1" /> Copiar</>
                   )}
                 </Button>
-              </div>
-            </div>
-
-            {/* JWT Token para casos sem credenciais locais */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium">Se o script pedir autorização:</p>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={async () => {
-                    try {
-                      const { data: { session } } = await supabase.auth.getSession();
-                      if (!session?.access_token) {
-                        toast.error('Você precisa estar logado para copiar o token');
-                        return;
-                      }
-                      await navigator.clipboard.writeText(session.access_token);
-                      setCopiedJwt(true);
-                      setTimeout(() => setCopiedJwt(false), 3000);
-                      toast.success('Token JWT copiado! Cole no PowerShell quando solicitado.');
-                    } catch {
-                      toast.error('Falha ao copiar token');
-                    }
-                  }}
-                >
-                  {copiedJwt ? (
-                    <><Check className="h-3 w-3 mr-1" /> Token Copiado!</>
-                  ) : (
-                    <><Key className="h-3 w-3 mr-1" /> Copiar Token JWT</>
-                  )}
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  Só se credenciais locais foram perdidas
-                </span>
               </div>
             </div>
           </TabsContent>
@@ -172,7 +275,7 @@ export function PreserveReinstallSection() {
           {/* === ABA: Em Massa === */}
           <TabsContent value="massa" className="space-y-4 mt-3">
             <Alert className="border-primary/50 bg-primary/10">
-              <Key className="h-4 w-4 text-primary" />
+              <Shield className="h-4 w-4 text-primary" />
               <AlertDescription className="text-xs">
                 <strong>Enrollment Key</strong> permite reinstalar múltiplas máquinas sem precisar de JWT individual.
                 O script usa a chave para recuperar credenciais do servidor automaticamente.

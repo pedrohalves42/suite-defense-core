@@ -858,7 +858,7 @@ export default function DiagnosticsCenter() {
 
                   {/* Preserve Reinstall Section - RECOMMENDED */}
                   <div className="mb-6">
-                    <PreserveReinstallSection />
+                    <PreserveReinstallSection defaultAgentName={selectedAgent?.agent_name ?? null} />
                   </div>
 
                   {/* Original Tools */}
