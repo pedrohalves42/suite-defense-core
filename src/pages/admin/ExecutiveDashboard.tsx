@@ -25,17 +25,18 @@ import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // === Cost model for financial impact calculation ===
-// Based on Ponemon Institute / IBM Cost of Data Breach 2025 adapted for Brazilian SMEs
+// Valores conservadores para PMEs brasileiras (2025-2026)
+// Fontes: CERT.br, Kaspersky BR SMB Report, mercado local de suporte TI
 const COST_MODEL = {
-  security_event_critical: 15000, // R$ per critical security event prevented
-  security_event_high: 8000,
-  security_event_medium: 3000,
-  auto_repair: 450, // R$ per auto-repair (avoided technician dispatch ~R$150/h × 3h)
-  auto_recovery: 2500, // R$ per auto-recovery (avoided downtime + incident response)
-  policy_drift: 1200, // R$ per policy drift corrected (compliance fine avoidance)
-  blocked_access: 5000, // R$ per blocked unauthorized access
-  firewall_enforcement: 800, // R$ per firewall rule enforced
-  agent_offline_per_hour: 350, // R$ per hour of unmonitored endpoint
+  security_event_critical: 2800, // R$ incidente crítico prevenido (resposta emergencial + downtime médio 4h)
+  security_event_high: 1200, // R$ incidente alto risco (investigação + remediação ~2h técnico sênior)
+  security_event_medium: 350, // R$ incidente médio (triagem + correção)
+  auto_repair: 85, // R$ por auto-reparo (evita chamado técnico remoto ~R$85/atendimento)
+  auto_recovery: 420, // R$ por recuperação automática (evita visita presencial ~R$180 + 1-2h downtime)
+  policy_drift: 150, // R$ por correção de política (retrabalho de conformidade)
+  blocked_access: 650, // R$ por acesso não autorizado bloqueado (custo médio de investigação)
+  firewall_enforcement: 120, // R$ por regra de firewall aplicada
+  agent_offline_per_hour: 75, // R$ por hora de endpoint sem monitoramento
 };
 
 export default function ExecutiveDashboard() {
@@ -276,13 +277,13 @@ export default function ExecutiveDashboard() {
                       </Badge>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs text-xs">
-                      <p className="font-semibold mb-1">Cálculo baseado em:</p>
+                      <p className="font-semibold mb-1">Cálculo conservador (PMEs BR):</p>
                       <ul className="space-y-0.5">
-                        <li>• Ponemon Institute - Custo de Incidente (BR)</li>
-                        <li>• Auto-reparo: R$ 450/evento (técnico evitado)</li>
-                        <li>• Recuperação: R$ 2.500 (downtime evitado)</li>
-                        <li>• Evento crítico: R$ 15.000 (incidente prevenido)</li>
-                        <li>• Correção de política: R$ 1.200 (multa evitada)</li>
+                        <li>• CERT.br + Kaspersky BR SMB Report</li>
+                        <li>• Auto-reparo: R$ 85 (chamado remoto evitado)</li>
+                        <li>• Recuperação: R$ 420 (visita + downtime)</li>
+                        <li>• Evento crítico: R$ 2.800 (resposta emergencial)</li>
+                        <li>• Correção de política: R$ 150 (retrabalho)</li>
                       </ul>
                     </TooltipContent>
                   </Tooltip>
