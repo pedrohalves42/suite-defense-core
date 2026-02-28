@@ -59,41 +59,78 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.FORBIDDEN, 'Acesso negado', 403, requestId);
     }
 
-    // Get user's tenant
-    console.log(`[${requestId}] Fetching tenant for user:`, user.id);
-    
-    const { data: userRole, error: tenantError } = await supabaseAdmin
-      .from('user_roles')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Resolve tenant context (prefer explicit tenant from client)
+    const requestedTenantId = req.headers.get('x-tenant-id')?.trim() || url.searchParams.get('tenant_id')?.trim() || null;
+    console.log(`[${requestId}] Resolving tenant for user:`, { userId: user.id, requestedTenantId });
 
-    console.log(`[${requestId}] Tenant query result:`, { userRole, tenantError });
+    let targetTenantId: string | null = null;
 
-    if (tenantError) {
-      console.error(`[${requestId}] Error fetching tenant:`, tenantError);
-      return createErrorResponse(
-        ErrorCode.INTERNAL_ERROR, 
-        'Erro ao buscar tenant do usuario', 
-        500, 
-        requestId
-      );
+    if (requestedTenantId) {
+      if (superAdminCheck.data) {
+        targetTenantId = requestedTenantId;
+      } else {
+        const { data: tenantMembership, error: membershipError } = await supabaseAdmin
+          .from('user_roles')
+          .select('tenant_id')
+          .eq('user_id', user.id)
+          .eq('tenant_id', requestedTenantId)
+          .limit(1)
+          .maybeSingle();
+
+        if (membershipError) {
+          console.error(`[${requestId}] Error validating tenant membership:`, membershipError);
+          return createErrorResponse(
+            ErrorCode.INTERNAL_ERROR,
+            'Erro ao validar acesso ao tenant',
+            500,
+            requestId
+          );
+        }
+
+        if (!tenantMembership?.tenant_id) {
+          console.warn(`[${requestId}] User ${user.id} has no access to tenant ${requestedTenantId}`);
+          return createErrorResponse(ErrorCode.FORBIDDEN, 'Acesso negado ao tenant selecionado', 403, requestId);
+        }
+
+        targetTenantId = tenantMembership.tenant_id;
+      }
+    } else {
+      // Fallback for legacy clients without explicit tenant header
+      const { data: userRole, error: tenantError } = await supabaseAdmin
+        .from('user_roles')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      console.log(`[${requestId}] Tenant fallback result:`, { userRole, tenantError });
+
+      if (tenantError) {
+        console.error(`[${requestId}] Error fetching tenant:`, tenantError);
+        return createErrorResponse(
+          ErrorCode.INTERNAL_ERROR,
+          'Erro ao buscar tenant do usuario',
+          500,
+          requestId
+        );
+      }
+
+      targetTenantId = userRole?.tenant_id || null;
     }
 
-    if (!userRole?.tenant_id) {
+    if (!targetTenantId) {
       console.warn(`[${requestId}] No tenant found for user:`, user.id);
       return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant nao encontrado', 400, requestId);
     }
 
-    console.log(`[${requestId}] Found tenant:`, userRole.tenant_id);
+    console.log(`[${requestId}] Using tenant:`, targetTenantId);
 
     // Get all users in the tenant
     const { data: tenantUsers } = await supabaseAdmin
       .from('user_roles')
       .select('user_id, role, created_at')
-      .eq('tenant_id', userRole.tenant_id);
+      .eq('tenant_id', targetTenantId);
 
     if (!tenantUsers) {
       return new Response(JSON.stringify({ users: [] }), {
@@ -105,7 +142,7 @@ Deno.serve(async (req) => {
     const { data: tenant } = await supabaseAdmin
       .from('tenants')
       .select('id, name')
-      .eq('id', userRole.tenant_id)
+      .eq('id', targetTenantId)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -136,7 +173,7 @@ Deno.serve(async (req) => {
         email: authUser?.email || '',
         full_name: profile?.full_name || '',
         role: tu.role,
-        tenant_id: userRole.tenant_id,
+        tenant_id: targetTenantId,
         tenant_name: tenant?.name || '',
         created_at: tu.created_at,
         is_active: !isBanned,
