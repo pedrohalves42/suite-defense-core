@@ -127,10 +127,8 @@ export function PreserveReinstallSection({ defaultAgentName }: PreserveReinstall
         `$hmacSecret='${hmacEscaped}';`,
         `$agentName='${nameEscaped}';`,
         // 4. Download script with cache-bust
-        `$url = "$serverUrl/functions/v1/serve-agent-update?cb=$(Get-Random)";`,
-        "$headers = @{ 'X-Agent-Token' = $agentToken; 'Content-Type' = 'application/json' };",
-        "$body = '{\"current_version\":\"0.0.0\",\"hostname\":\"' + $env:COMPUTERNAME + '\",\"os_type\":\"windows\"}';",
-        '$resp = Invoke-RestMethod -Uri $url -Method POST -Headers $headers -Body $body;',
+        `$url = "$serverUrl/functions/v1/get-latest-agent-script?platform=windows&format=json&include_plain=1&cb=$(Get-Random)";`,
+        '$resp = Invoke-RestMethod -Uri $url -Method GET -TimeoutSec 60;',
         'if ($resp.script_content) {',
         '  $scriptPath = "$dir\\cybershield-agent-$agentName.ps1";',
         '  $resp.script_content | Set-Content -Path $scriptPath -Encoding UTF8 -Force;',
