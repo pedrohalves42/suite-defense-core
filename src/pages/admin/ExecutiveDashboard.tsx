@@ -11,10 +11,11 @@ import {
   ShieldCheck, ShieldAlert, ShieldX, Shield,
   Monitor, MonitorOff, AlertTriangle, CheckCircle2,
   ArrowRight, Activity, Zap, RefreshCw,
-  DollarSign, TrendingDown, TrendingUp, Minus, XCircle,
+  TrendingDown, TrendingUp, Minus, XCircle,
   CalendarDays, BarChart3, FileText, 
-  Wrench, Lock, Bug, Eye, Server, Cpu, HardDrive, Clock,
-  Award, PieChart, Siren, BanknoteIcon
+  Wrench, Lock, Bug, Eye, Siren, BanknoteIcon,
+  Building2, Users, Laptop, Clock, HandCoins, ShieldBan,
+  Flame, HeartPulse, FileCheck, Hammer
 } from 'lucide-react';
 import { format, ptBR } from '@/lib/date-utils';
 import { subDays } from 'date-fns';
@@ -24,19 +25,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-// === Cost model for financial impact calculation ===
-// Valores conservadores para PMEs brasileiras (2025-2026)
+// === Modelo de custo conservador para PMEs brasileiras (2025-2026) ===
 // Fontes: CERT.br, Kaspersky BR SMB Report, mercado local de suporte TI
 const COST_MODEL = {
-  security_event_critical: 2800, // R$ incidente crítico prevenido (resposta emergencial + downtime médio 4h)
-  security_event_high: 1200, // R$ incidente alto risco (investigação + remediação ~2h técnico sênior)
-  security_event_medium: 350, // R$ incidente médio (triagem + correção)
-  auto_repair: 85, // R$ por auto-reparo (evita chamado técnico remoto ~R$85/atendimento)
-  auto_recovery: 420, // R$ por recuperação automática (evita visita presencial ~R$180 + 1-2h downtime)
-  policy_drift: 150, // R$ por correção de política (retrabalho de conformidade)
-  blocked_access: 650, // R$ por acesso não autorizado bloqueado (custo médio de investigação)
-  firewall_enforcement: 120, // R$ por regra de firewall aplicada
-  agent_offline_per_hour: 75, // R$ por hora de endpoint sem monitoramento
+  security_event_critical: 2800,
+  security_event_high: 1200,
+  security_event_medium: 350,
+  auto_repair: 85,
+  auto_recovery: 420,
+  policy_drift: 150,
+  blocked_access: 650,
+  firewall_enforcement: 120,
+  agent_offline_per_hour: 75,
 };
 
 export default function ExecutiveDashboard() {
@@ -47,9 +47,8 @@ export default function ExecutiveDashboard() {
   const agentCounts = getAgentStatusCounts(snapshots);
   const { data: riskDelta } = useTodayRiskDelta();
 
-  // Main summary data
   const { data: summaryData, isLoading, refetch } = useQuery({
-    queryKey: ['executive-summary-v2', tenantId],
+    queryKey: ['executive-summary-v3', tenantId],
     queryFn: async () => {
       if (!tenantId) return null;
       const now = new Date();
@@ -60,95 +59,98 @@ export default function ExecutiveDashboard() {
 
       const sb = supabase as any;
 
-      const [alertsRes, jobsTodayRes, jobs30dRes, blockedRes, evidenceRes, complianceRes, evidenceAllRes] = await Promise.all([
+      const [alertsRes, jobsTodayRes, jobs30dRes, blockedRes, evidence7dRes, evidence30dRes, complianceRes] = await Promise.all([
         sb.from('system_alerts').select('severity, status', { count: 'exact' }).eq('tenant_id', tenantId),
-        sb.from('jobs').select('status').eq('tenant_id', tenantId).gte('created_at', todayISO),
-        sb.from('jobs').select('status').eq('tenant_id', tenantId).gte('created_at', thirtyDaysAgo),
+        sb.from('jobs').select('status, job_type').eq('tenant_id', tenantId).gte('created_at', todayISO),
+        sb.from('jobs').select('status, job_type').eq('tenant_id', tenantId).gte('created_at', thirtyDaysAgo),
         sb.from('blocked_access_attempts').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).gte('attempted_at', sevenDaysAgo),
         sb.from('agent_evidence_logs').select('event_type, severity').eq('tenant_id', tenantId).gte('created_at', sevenDaysAgo),
-        sb.from('compliance_snapshots').select('overall_score, grade, category_scores, calculated_at').eq('tenant_id', tenantId).order('calculated_at', { ascending: false }).limit(1),
         sb.from('agent_evidence_logs').select('event_type, severity').eq('tenant_id', tenantId).gte('created_at', thirtyDaysAgo),
+        sb.from('compliance_snapshots').select('overall_score, grade, category_scores, calculated_at').eq('tenant_id', tenantId).order('calculated_at', { ascending: false }).limit(1),
       ]);
 
       const alerts: Array<{ severity: string; status: string }> = alertsRes.data || [];
       const activeAlerts = alerts.filter(a => a.status === 'active').length;
       const criticalAlerts = alerts.filter(a => a.severity === 'critical').length;
 
-      const jobsToday: Array<{ status: string }> = jobsTodayRes.data || [];
-      const jobs30d: Array<{ status: string }> = jobs30dRes.data || [];
+      const jobsToday: Array<{ status: string; job_type: string }> = jobsTodayRes.data || [];
+      const jobs30d: Array<{ status: string; job_type: string }> = jobs30dRes.data || [];
       const blockedThreats: number = blockedRes.count || 0;
 
-      const evidence7d: Array<{ event_type: string; severity: string }> = evidenceRes.data || [];
-      const evidenceAll: Array<{ event_type: string; severity: string }> = evidenceAllRes.data || [];
+      const evidence7d: Array<{ event_type: string; severity: string }> = evidence7dRes.data || [];
+      const evidence30d: Array<{ event_type: string; severity: string }> = evidence30dRes.data || [];
       const compliance = complianceRes.data?.[0] || null;
 
-      // Agent counts
       const totalAgents = agentCounts.total;
       const onlineAgents = agentCounts.online;
       const offlineAgents = agentCounts.offline + agentCounts.warning + agentCounts.never_connected;
 
-      // Jobs metrics
-      const totalJobsToday = jobsToday.length;
-      const failedJobsToday = jobsToday.filter(j => j.status === 'failed').length;
-      const completedJobsToday = jobsToday.filter(j => j.status === 'completed').length;
-      const successRateToday = totalJobsToday > 0 ? Math.round(((completedJobsToday) / totalJobsToday) * 100) : 100;
+      // === O que o sistema FEZ pela empresa (30 dias) ===
+      const actions30d = {
+        auto_repairs: evidence30d.filter(e => e.event_type === 'auto_repair').length,
+        auto_recoveries: evidence30d.filter(e => e.event_type === 'auto_recovery').length,
+        critical_prevented: evidence30d.filter(e => e.event_type === 'security_event' && e.severity === 'critical').length,
+        high_prevented: evidence30d.filter(e => e.event_type === 'security_event' && (e.severity === 'error' || e.severity === 'high')).length,
+        medium_prevented: evidence30d.filter(e => e.event_type === 'security_event' && e.severity === 'warning').length,
+        policy_corrections: evidence30d.filter(e => e.event_type === 'policy_drift').length,
+        blocked_access: blockedThreats,
+        total_events: evidence30d.length,
+      };
 
+      // Ações automáticas que evitaram trabalho manual
+      const automatedActions = actions30d.auto_repairs + actions30d.auto_recoveries + actions30d.policy_corrections;
+      // Incidentes que foram contidos sem intervenção humana
+      const incidentsContained = actions30d.critical_prevented + actions30d.high_prevented + actions30d.medium_prevented;
+      
+      // Horas de TI economizadas (estimativa: cada auto-reparo = 1h, recovery = 2h, policy = 0.5h)
+      const hoursOfITSaved = (actions30d.auto_repairs * 1) + (actions30d.auto_recoveries * 2) + (actions30d.policy_corrections * 0.5);
+
+      // Jobs completados automaticamente pelo sistema (não pelo humano)
+      const automatedJobsCompleted = jobs30d.filter(j => j.status === 'completed').length;
       const totalJobs30d = jobs30d.length;
-      const failedJobs30d = jobs30d.filter(j => j.status === 'failed').length;
-      const completedJobs30d = jobs30d.filter(j => j.status === 'completed').length;
 
-      // Security events breakdown (7 days)
-      const securityEvents = {
+      // === Impacto financeiro ===
+      const financialImpact = {
+        autoRepairs: actions30d.auto_repairs * COST_MODEL.auto_repair,
+        autoRecoveries: actions30d.auto_recoveries * COST_MODEL.auto_recovery,
+        criticalPrevented: actions30d.critical_prevented * COST_MODEL.security_event_critical,
+        highPrevented: actions30d.high_prevented * COST_MODEL.security_event_high,
+        policyCorrections: actions30d.policy_corrections * COST_MODEL.policy_drift,
+        blockedAccess: blockedThreats * COST_MODEL.blocked_access,
+      };
+      const totalCostAvoided = Object.values(financialImpact).reduce((a, b) => a + b, 0);
+
+      // 7-day activity for sparkline
+      const events7d = {
         critical: evidence7d.filter(e => e.severity === 'critical').length,
         high: evidence7d.filter(e => e.severity === 'error' || e.severity === 'high').length,
         warning: evidence7d.filter(e => e.severity === 'warning').length,
         info: evidence7d.filter(e => e.severity === 'info' || e.severity === 'debug').length,
       };
 
-      // Event type breakdown
-      const eventTypes = {
-        auto_repair: evidence7d.filter(e => e.event_type === 'auto_repair').length,
-        auto_recovery: evidence7d.filter(e => e.event_type === 'auto_recovery').length,
-        security_event: evidence7d.filter(e => e.event_type === 'security_event').length,
-        policy_drift: evidence7d.filter(e => e.event_type === 'policy_drift').length,
-        state_change: evidence7d.filter(e => e.event_type === 'state_change').length,
-      };
-
-      // 30-day event types for financial calc
-      const eventTypes30d = {
-        auto_repair: evidenceAll.filter(e => e.event_type === 'auto_repair').length,
-        auto_recovery: evidenceAll.filter(e => e.event_type === 'auto_recovery').length,
-        security_critical: evidenceAll.filter(e => e.event_type === 'security_event' && e.severity === 'critical').length,
-        security_high: evidenceAll.filter(e => e.event_type === 'security_event' && (e.severity === 'error' || e.severity === 'high')).length,
-        policy_drift: evidenceAll.filter(e => e.event_type === 'policy_drift').length,
-      };
-
-      // === REAL Financial Impact Calculation (30 days) ===
-      const financialImpact = {
-        autoRepairs: eventTypes30d.auto_repair * COST_MODEL.auto_repair,
-        autoRecoveries: eventTypes30d.auto_recovery * COST_MODEL.auto_recovery,
-        criticalPrevented: eventTypes30d.security_critical * COST_MODEL.security_event_critical,
-        highPrevented: eventTypes30d.security_high * COST_MODEL.security_event_high,
-        policyCorrections: eventTypes30d.policy_drift * COST_MODEL.policy_drift,
-        blockedAccess: blockedThreats * COST_MODEL.blocked_access,
-      };
-      const totalCostAvoided = Object.values(financialImpact).reduce((a, b) => a + b, 0);
+      // Protection coverage
+      const protectionCoverage = totalAgents > 0 ? Math.round((onlineAgents / totalAgents) * 100) : 0;
 
       // Overall score
       const agentHealthScore = totalAgents > 0 ? (onlineAgents / totalAgents) * 100 : 100;
       const alertPenalty = Math.min(activeAlerts * 5, 30);
       const overallScore = Math.max(0, Math.round(agentHealthScore - alertPenalty));
 
+      // Jobs today
+      const successRateToday = jobsToday.length > 0 ? Math.round((jobsToday.filter(j => j.status === 'completed').length / jobsToday.length) * 100) : 100;
+
       return {
         totalAgents, onlineAgents, offlineAgents,
-        activeAlerts, criticalAlerts,
-        blockedThreats,
-        successRateToday, totalJobsToday, failedJobsToday, completedJobsToday,
-        totalJobs30d, failedJobs30d, completedJobs30d,
-        overallScore,
-        securityEvents, eventTypes, eventTypes30d,
-        compliance,
+        activeAlerts, criticalAlerts, blockedThreats,
+        overallScore, protectionCoverage,
+        actions30d, automatedActions, incidentsContained, hoursOfITSaved,
+        automatedJobsCompleted, totalJobs30d,
         financialImpact, totalCostAvoided,
+        events7d, compliance,
+        successRateToday,
+        totalJobsToday: jobsToday.length,
+        completedJobsToday: jobsToday.filter(j => j.status === 'completed').length,
+        failedJobsToday: jobsToday.filter(j => j.status === 'failed').length,
         lastUpdate: new Date()
       };
     },
@@ -158,10 +160,10 @@ export default function ExecutiveDashboard() {
   });
 
   const getHealthStatus = (score: number) => {
-    if (score >= 90) return { status: 'excellent' as const, message: 'Ambiente protegido', color: 'text-green-500', bgClass: 'border-green-500/20 bg-green-500/5' };
-    if (score >= 70) return { status: 'good' as const, message: 'Proteção ativa', color: 'text-emerald-500', bgClass: 'border-emerald-500/20 bg-emerald-500/5' };
-    if (score >= 50) return { status: 'warning' as const, message: 'Atenção necessária', color: 'text-amber-500', bgClass: 'border-amber-500/20 bg-amber-500/5' };
-    return { status: 'critical' as const, message: 'Ação imediata', color: 'text-red-500', bgClass: 'border-red-500/20 bg-red-500/5' };
+    if (score >= 90) return { status: 'excellent' as const, message: 'Sua empresa está protegida', color: 'text-green-500', bgClass: 'border-green-500/20 bg-green-500/5' };
+    if (score >= 70) return { status: 'good' as const, message: 'Proteção ativa na sua empresa', color: 'text-emerald-500', bgClass: 'border-emerald-500/20 bg-emerald-500/5' };
+    if (score >= 50) return { status: 'warning' as const, message: 'Sua empresa precisa de atenção', color: 'text-amber-500', bgClass: 'border-amber-500/20 bg-amber-500/5' };
+    return { status: 'critical' as const, message: 'Risco elevado para sua empresa', color: 'text-red-500', bgClass: 'border-red-500/20 bg-red-500/5' };
   };
 
   const healthStatus = summaryData ? getHealthStatus(summaryData.overallScore) : null;
@@ -172,10 +174,10 @@ export default function ExecutiveDashboard() {
   const actions = (() => {
     if (!summaryData) return [];
     const list: Array<{ priority: string; title: string; link: string }> = [];
-    if (summaryData.offlineAgents > 0) list.push({ priority: 'high', title: `${summaryData.offlineAgents} computador${summaryData.offlineAgents > 1 ? 'es' : ''} offline`, link: '/admin/agent-health' });
-    if (summaryData.criticalAlerts > 0) list.push({ priority: 'high', title: `${summaryData.criticalAlerts} alerta${summaryData.criticalAlerts > 1 ? 's' : ''} crítico${summaryData.criticalAlerts > 1 ? 's' : ''}`, link: '/admin/action-center' });
-    if (summaryData.activeAlerts > 0) list.push({ priority: 'medium', title: `${summaryData.activeAlerts} alerta${summaryData.activeAlerts > 1 ? 's' : ''} ativo${summaryData.activeAlerts > 1 ? 's' : ''}`, link: '/admin/action-center' });
-    if (summaryData.failedJobsToday > 0) list.push({ priority: 'medium', title: `${summaryData.failedJobsToday} tarefa${summaryData.failedJobsToday > 1 ? 's' : ''} com falha hoje`, link: '/admin/jobs-health' });
+    if (summaryData.offlineAgents > 0) list.push({ priority: 'high', title: `${summaryData.offlineAgents} computador${summaryData.offlineAgents > 1 ? 'es' : ''} sem proteção`, link: '/admin/agent-health' });
+    if (summaryData.criticalAlerts > 0) list.push({ priority: 'high', title: `${summaryData.criticalAlerts} alerta${summaryData.criticalAlerts > 1 ? 's' : ''} crítico${summaryData.criticalAlerts > 1 ? 's' : ''} pendente${summaryData.criticalAlerts > 1 ? 's' : ''}`, link: '/admin/action-center' });
+    if (summaryData.activeAlerts > 0) list.push({ priority: 'medium', title: `${summaryData.activeAlerts} situaç${summaryData.activeAlerts > 1 ? 'ões' : 'ão'} aguardando revisão`, link: '/admin/action-center' });
+    if (summaryData.failedJobsToday > 0) list.push({ priority: 'medium', title: `${summaryData.failedJobsToday} tarefa${summaryData.failedJobsToday > 1 ? 's' : ''} não concluída${summaryData.failedJobsToday > 1 ? 's' : ''} hoje`, link: '/admin/jobs-health' });
     return list;
   })();
 
@@ -199,9 +201,12 @@ export default function ExecutiveDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Visão Geral</h1>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Building2 className="h-6 w-6 text-primary" />
+              Proteção da Empresa
+            </h1>
             <p className="text-sm text-muted-foreground">
-              Resumo executivo da proteção do seu ambiente
+              O que o CyberShield está fazendo pela sua organização
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -215,7 +220,7 @@ export default function ExecutiveDashboard() {
           </div>
         </div>
 
-        {/* === HERO: Protection Score === */}
+        {/* === HERO: Protection Status === */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
           <Card className={cn("border", healthStatus?.bgClass)}>
             <CardContent className="pt-5 pb-5 space-y-4">
@@ -238,7 +243,7 @@ export default function ExecutiveDashboard() {
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                           <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
                         </span>
-                        Monitorando
+                        Monitorando 24/7
                       </Badge>
                     )}
                   </div>
@@ -246,28 +251,69 @@ export default function ExecutiveDashboard() {
                 </div>
               </div>
 
-              {/* Key metrics row */}
+              {/* Key metrics - focused on BUSINESS impact */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                <MetricTile icon={<Monitor className="h-3.5 w-3.5" />} label="Online" value={`${agentCounts.online}`} sub={`de ${agentCounts.total}`} color="green" pulse={agentCounts.online > 0} />
-                <MetricTile icon={<MonitorOff className="h-3.5 w-3.5" />} label="Offline" value={`${agentCounts.offline + agentCounts.warning + agentCounts.never_connected}`} sub="desconectados" color={agentCounts.offline > 0 ? 'red' : 'muted'} />
-                <MetricTile icon={<DeltaIcon className="h-3.5 w-3.5" />} label="Risco" value={deltaInfo.label} sub={deltaInfo.description} color={deltaInfo.color === 'green' ? 'green' : deltaInfo.color === 'red' ? 'red' : 'muted'} />
-                <MetricTile icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Ameaças Bloqueadas" value={`${summaryData?.blockedThreats || 0}`} sub="últimos 7 dias" color={summaryData?.blockedThreats ? 'green' : 'muted'} />
-                <MetricTile icon={<Award className="h-3.5 w-3.5" />} label="Compliance" value={summaryData?.compliance?.grade || 'N/A'} sub={`Score: ${summaryData?.compliance?.overall_score || 0}/100`} color={summaryData?.compliance?.overall_score >= 80 ? 'green' : summaryData?.compliance?.overall_score >= 60 ? 'amber' : 'red'} />
+                <MetricTile icon={<Laptop className="h-3.5 w-3.5" />} label="Computadores" value={`${agentCounts.online}/${agentCounts.total}`} sub="protegidos" color="green" pulse={agentCounts.online > 0} />
+                <MetricTile icon={<ShieldBan className="h-3.5 w-3.5" />} label="Ameaças Bloqueadas" value={`${summaryData?.blockedThreats || 0}`} sub="últimos 7 dias" color={summaryData?.blockedThreats ? 'green' : 'muted'} />
+                <MetricTile icon={<DeltaIcon className="h-3.5 w-3.5" />} label="Nível de Risco" value={deltaInfo.label} sub={deltaInfo.description} color={deltaInfo.color === 'green' ? 'green' : deltaInfo.color === 'red' ? 'red' : 'muted'} />
+                <MetricTile icon={<Hammer className="h-3.5 w-3.5" />} label="Correções Automáticas" value={`${summaryData?.automatedActions || 0}`} sub="últimos 30 dias" color={summaryData?.automatedActions ? 'emerald' : 'muted'} />
+                <MetricTile icon={<FileCheck className="h-3.5 w-3.5" />} label="Conformidade" value={summaryData?.compliance?.grade || 'N/A'} sub={`Score: ${summaryData?.compliance?.overall_score || 0}/100`} color={summaryData?.compliance?.overall_score >= 80 ? 'green' : summaryData?.compliance?.overall_score >= 60 ? 'amber' : 'red'} />
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* === ROW 2: Financial Impact + Security Events === */}
+        {/* === ROW 2: What CyberShield DID for you + Financial Savings === */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Financial Impact Card */}
+          
+          {/* What CyberShield did - Business focused */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.06 }}>
+            <Card className="h-full border-blue-500/15 bg-blue-500/[0.02]">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <HeartPulse className="h-4 w-4 text-blue-500" />
+                  O que fizemos pela sua empresa (30 dias)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* Big numbers - business impact */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                    <p className="text-2xl font-bold text-blue-500">{summaryData?.automatedActions || 0}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Problemas resolvidos<br/>automaticamente</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                    <p className="text-2xl font-bold text-red-500">{summaryData?.incidentsContained || 0}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Incidentes de segurança<br/>contidos</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <p className="text-2xl font-bold text-amber-500">{summaryData?.hoursOfITSaved ? Math.round(summaryData.hoursOfITSaved) : 0}h</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Horas de TI<br/>economizadas</p>
+                  </div>
+                </div>
+
+                {/* Detailed breakdown - friendly language */}
+                <div className="space-y-1">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1.5">Detalhamento</p>
+                  <ActionRow icon={<Wrench className="h-3 w-3 text-blue-400" />} label="Problemas corrigidos sem chamar técnico" count={summaryData?.actions30d.auto_repairs || 0} description="O sistema detectou e resolveu sozinho" />
+                  <ActionRow icon={<RefreshCw className="h-3 w-3 text-emerald-400" />} label="Serviços restaurados automaticamente" count={summaryData?.actions30d.auto_recoveries || 0} description="Recuperação sem downtime para sua equipe" />
+                  <ActionRow icon={<Flame className="h-3 w-3 text-red-400" />} label="Ameaças críticas neutralizadas" count={summaryData?.actions30d.critical_prevented || 0} description="Incidentes que poderiam parar sua operação" />
+                  <ActionRow icon={<Bug className="h-3 w-3 text-orange-400" />} label="Riscos de segurança contidos" count={summaryData?.actions30d.high_prevented || 0} description="Vulnerabilidades identificadas e tratadas" />
+                  <ActionRow icon={<Lock className="h-3 w-3 text-amber-400" />} label="Políticas de segurança realinhadas" count={summaryData?.actions30d.policy_corrections || 0} description="Desvios de conformidade corrigidos" />
+                  <ActionRow icon={<ShieldBan className="h-3 w-3 text-purple-400" />} label="Acessos não autorizados bloqueados" count={summaryData?.blockedThreats || 0} description="Tentativas barradas nos últimos 7 dias" />
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Financial Impact */}
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.1 }}>
             <Card className="h-full border-emerald-500/15 bg-emerald-500/[0.02]">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <BanknoteIcon className="h-4 w-4 text-emerald-500" />
-                    Prejuízo Evitado (30 dias)
+                    <HandCoins className="h-4 w-4 text-emerald-500" />
+                    Economia para a Empresa (30 dias)
                   </CardTitle>
                   <Tooltip>
                     <TooltipTrigger>
@@ -279,11 +325,12 @@ export default function ExecutiveDashboard() {
                     <TooltipContent className="max-w-xs text-xs">
                       <p className="font-semibold mb-1">Cálculo conservador (PMEs BR):</p>
                       <ul className="space-y-0.5">
-                        <li>• CERT.br + Kaspersky BR SMB Report</li>
-                        <li>• Auto-reparo: R$ 85 (chamado remoto evitado)</li>
-                        <li>• Recuperação: R$ 420 (visita + downtime)</li>
-                        <li>• Evento crítico: R$ 2.800 (resposta emergencial)</li>
-                        <li>• Correção de política: R$ 150 (retrabalho)</li>
+                        <li>• Baseado em CERT.br + Kaspersky BR</li>
+                        <li>• Chamado técnico remoto evitado: R$ 85</li>
+                        <li>• Visita presencial + downtime evitado: R$ 420</li>
+                        <li>• Resposta a incidente crítico: R$ 2.800</li>
+                        <li>• Retrabalho de conformidade: R$ 150</li>
+                        <li>• Investigação de acesso indevido: R$ 650</li>
                       </ul>
                     </TooltipContent>
                   </Tooltip>
@@ -293,63 +340,48 @@ export default function ExecutiveDashboard() {
                 <div className="text-3xl font-bold text-emerald-500">
                   {formatCurrency(summaryData?.totalCostAvoided || 0)}
                 </div>
+                <p className="text-xs text-muted-foreground -mt-1">
+                  em custos que sua empresa <strong>não precisou gastar</strong>
+                </p>
                 <div className="space-y-1.5">
                   {summaryData?.financialImpact && (
                     <>
-                      <ImpactRow label="Auto-reparos" count={summaryData.eventTypes30d.auto_repair} value={summaryData.financialImpact.autoRepairs} icon={<Wrench className="h-3 w-3" />} />
-                      <ImpactRow label="Recuperações automáticas" count={summaryData.eventTypes30d.auto_recovery} value={summaryData.financialImpact.autoRecoveries} icon={<RefreshCw className="h-3 w-3" />} />
-                      <ImpactRow label="Eventos críticos prevenidos" count={summaryData.eventTypes30d.security_critical} value={summaryData.financialImpact.criticalPrevented} icon={<Siren className="h-3 w-3" />} />
-                      <ImpactRow label="Eventos alto risco prevenidos" count={summaryData.eventTypes30d.security_high} value={summaryData.financialImpact.highPrevented} icon={<Bug className="h-3 w-3" />} />
-                      <ImpactRow label="Políticas corrigidas" count={summaryData.eventTypes30d.policy_drift} value={summaryData.financialImpact.policyCorrections} icon={<Lock className="h-3 w-3" />} />
+                      <ImpactRow label="Chamados técnicos evitados" count={summaryData.actions30d.auto_repairs} value={summaryData.financialImpact.autoRepairs} icon={<Wrench className="h-3 w-3" />} />
+                      <ImpactRow label="Downtime evitado" count={summaryData.actions30d.auto_recoveries} value={summaryData.financialImpact.autoRecoveries} icon={<RefreshCw className="h-3 w-3" />} />
+                      <ImpactRow label="Crises de segurança evitadas" count={summaryData.actions30d.critical_prevented} value={summaryData.financialImpact.criticalPrevented} icon={<Siren className="h-3 w-3" />} />
+                      <ImpactRow label="Investigações evitadas" count={summaryData.actions30d.high_prevented} value={summaryData.financialImpact.highPrevented} icon={<Bug className="h-3 w-3" />} />
+                      <ImpactRow label="Retrabalho de compliance evitado" count={summaryData.actions30d.policy_corrections} value={summaryData.financialImpact.policyCorrections} icon={<Lock className="h-3 w-3" />} />
+                      <ImpactRow label="Prejuízo de acessos indevidos" count={summaryData.blockedThreats} value={summaryData.financialImpact.blockedAccess} icon={<ShieldBan className="h-3 w-3" />} />
                     </>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
 
-          {/* Security Events Card */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.1 }}>
-            <Card className="h-full">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-primary" />
-                  Atividade de Segurança (7 dias)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Severity breakdown */}
-                <div className="grid grid-cols-4 gap-2">
-                  <SeverityBox label="Crítico" count={summaryData?.securityEvents.critical || 0} color="red" />
-                  <SeverityBox label="Alto" count={summaryData?.securityEvents.high || 0} color="orange" />
-                  <SeverityBox label="Médio" count={summaryData?.securityEvents.warning || 0} color="amber" />
-                  <SeverityBox label="Info" count={summaryData?.securityEvents.info || 0} color="blue" />
-                </div>
-
-                {/* Event type bars */}
-                <div className="space-y-2">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Por tipo de evento</p>
-                  <EventBar label="Auto-reparos" count={summaryData?.eventTypes.auto_repair || 0} total={Object.values(summaryData?.eventTypes || {}).reduce((a: number, b: number) => a + b, 0) || 1} color="bg-blue-500" icon={<Wrench className="h-3 w-3" />} />
-                  <EventBar label="Recuperações" count={summaryData?.eventTypes.auto_recovery || 0} total={Object.values(summaryData?.eventTypes || {}).reduce((a: number, b: number) => a + b, 0) || 1} color="bg-emerald-500" icon={<RefreshCw className="h-3 w-3" />} />
-                  <EventBar label="Eventos de segurança" count={summaryData?.eventTypes.security_event || 0} total={Object.values(summaryData?.eventTypes || {}).reduce((a: number, b: number) => a + b, 0) || 1} color="bg-red-500" icon={<Siren className="h-3 w-3" />} />
-                  <EventBar label="Desvio de política" count={summaryData?.eventTypes.policy_drift || 0} total={Object.values(summaryData?.eventTypes || {}).reduce((a: number, b: number) => a + b, 0) || 1} color="bg-amber-500" icon={<Lock className="h-3 w-3" />} />
-                  <EventBar label="Mudanças de estado" count={summaryData?.eventTypes.state_change || 0} total={Object.values(summaryData?.eventTypes || {}).reduce((a: number, b: number) => a + b, 0) || 1} color="bg-purple-500" icon={<Server className="h-3 w-3" />} />
-                </div>
+                {/* ROI Summary */}
+                {summaryData?.hoursOfITSaved && summaryData.hoursOfITSaved > 0 ? (
+                  <div className="mt-3 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <div className="flex items-center gap-2 text-xs">
+                      <Clock className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                      <span className="text-muted-foreground">
+                        Sua equipe de TI economizou <strong className="text-emerald-500">{Math.round(summaryData.hoursOfITSaved)}h</strong> de trabalho manual este mês
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           </motion.div>
         </div>
 
-        {/* === ROW 3: Compliance + Jobs Performance === */}
+        {/* === ROW 3: Compliance + Automation Performance === */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Compliance Breakdown */}
+          {/* Compliance - Business language */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.14 }}>
             <Card className="h-full">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
                     <FileText className="h-4 w-4 text-primary" />
-                    Conformidade por Categoria
+                    Conformidade Regulatória
                   </CardTitle>
                   {summaryData?.compliance && (
                     <Badge variant="outline" className={cn("text-xs",
@@ -372,23 +404,23 @@ export default function ExecutiveDashboard() {
             </Card>
           </motion.div>
 
-          {/* Jobs Performance */}
+          {/* Automation effectiveness - what the system is doing */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.18 }}>
             <Card className="h-full">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <Zap className="h-4 w-4 text-primary" />
-                  Desempenho de Tarefas
+                  Eficiência da Proteção Automática
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Today stats */}
+                {/* Today */}
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">Hoje</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <MiniStat label="Executadas" value={summaryData?.totalJobsToday || 0} color="text-foreground" />
-                    <MiniStat label="Sucesso" value={summaryData?.completedJobsToday || 0} color="text-green-500" />
-                    <MiniStat label="Falha" value={summaryData?.failedJobsToday || 0} color="text-red-500" />
+                    <MiniStat label="Verificações" value={summaryData?.totalJobsToday || 0} color="text-foreground" />
+                    <MiniStat label="Concluídas" value={summaryData?.completedJobsToday || 0} color="text-green-500" />
+                    <MiniStat label="Com problema" value={summaryData?.failedJobsToday || 0} color="text-red-500" />
                   </div>
                   <div className="mt-2">
                     <div className="flex items-center justify-between mb-1">
@@ -402,29 +434,28 @@ export default function ExecutiveDashboard() {
                   </div>
                 </div>
 
-                {/* 30 day stats */}
+                {/* 30 days */}
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">Últimos 30 dias</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <MiniStat label="Total" value={summaryData?.totalJobs30d || 0} color="text-foreground" />
-                    <MiniStat label="Sucesso" value={summaryData?.completedJobs30d || 0} color="text-green-500" />
-                    <MiniStat label="Falha" value={summaryData?.failedJobs30d || 0} color="text-red-500" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="text-center p-2.5 rounded-lg bg-muted/30 border border-border/40">
+                      <p className="text-lg font-bold text-foreground">{summaryData?.automatedJobsCompleted || 0}</p>
+                      <p className="text-[10px] text-muted-foreground">Tarefas executadas<br/>com sucesso</p>
+                    </div>
+                    <div className="text-center p-2.5 rounded-lg bg-muted/30 border border-border/40">
+                      <p className="text-lg font-bold text-foreground">{summaryData?.totalJobs30d || 0}</p>
+                      <p className="text-[10px] text-muted-foreground">Total de<br/>verificações</p>
+                    </div>
                   </div>
                   <div className="mt-2">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] text-muted-foreground">Taxa de sucesso</span>
+                      <span className="text-[10px] text-muted-foreground">Confiabilidade do sistema</span>
                       {(() => {
-                        const rate = summaryData?.totalJobs30d ? Math.round((summaryData.completedJobs30d / summaryData.totalJobs30d) * 100) : 0;
-                        return (
-                          <>
-                            <span className={cn("text-xs font-bold",
-                              rate >= 80 ? "text-green-500" : rate >= 50 ? "text-amber-500" : "text-red-500"
-                            )}>{rate}%</span>
-                          </>
-                        );
+                        const rate = summaryData?.totalJobs30d ? Math.round((summaryData.automatedJobsCompleted / summaryData.totalJobs30d) * 100) : 0;
+                        return <span className={cn("text-xs font-bold", rate >= 80 ? "text-green-500" : rate >= 50 ? "text-amber-500" : "text-red-500")}>{rate}%</span>;
                       })()}
                     </div>
-                    <Progress value={summaryData?.totalJobs30d ? Math.round((summaryData.completedJobs30d / summaryData.totalJobs30d) * 100) : 0} className="h-1.5" />
+                    <Progress value={summaryData?.totalJobs30d ? Math.round((summaryData.automatedJobsCompleted / summaryData.totalJobs30d) * 100) : 0} className="h-1.5" />
                   </div>
                 </div>
               </CardContent>
@@ -439,7 +470,7 @@ export default function ExecutiveDashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CalendarDays className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-sm font-semibold">Ações Pendentes</CardTitle>
+                  <CardTitle className="text-sm font-semibold">O que precisa da sua atenção</CardTitle>
                   <span className="text-[11px] text-muted-foreground">
                     {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
                   </span>
@@ -475,8 +506,8 @@ export default function ExecutiveDashboard() {
                 <div className="flex items-center gap-3 p-3 rounded-lg border border-green-500/20 bg-green-500/5">
                   <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-green-500">Tudo em ordem</p>
-                    <p className="text-xs text-muted-foreground">Nenhuma ação necessária no momento</p>
+                    <p className="text-sm font-medium text-green-500">Tudo sob controle</p>
+                    <p className="text-xs text-muted-foreground">O CyberShield está cuidando da segurança da sua empresa automaticamente</p>
                   </div>
                 </div>
               )}
@@ -484,9 +515,9 @@ export default function ExecutiveDashboard() {
           </Card>
         </motion.div>
 
-        {/* === Quick Navigation === */}
+        {/* Quick Navigation */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <NavButton to="/admin/dashboard" icon={<Activity className="h-5 w-5" />} label="Dashboard" />
+          <NavButton to="/admin/dashboard" icon={<Activity className="h-5 w-5" />} label="Monitoramento" />
           <NavButton to="/admin/reports" icon={<BarChart3 className="h-5 w-5" />} label="Relatórios" />
           <NavButton to="/admin/compliance-automation" icon={<FileText className="h-5 w-5" />} label="Compliance" />
           <NavButton to="/admin/playbooks" icon={<Zap className="h-5 w-5" />} label="Automações" />
@@ -530,49 +561,31 @@ function MetricTile({ icon, label, value, sub, color, pulse }: {
   );
 }
 
+function ActionRow({ icon, label, count, description }: { icon: React.ReactNode; label: string; count: number; description: string }) {
+  return (
+    <div className="flex items-start gap-2 py-1.5 border-b border-border/30 last:border-0">
+      <span className="mt-0.5 shrink-0">{icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium truncate">{label}</span>
+          <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-2 shrink-0">{count}x</Badge>
+        </div>
+        <p className="text-[10px] text-muted-foreground/70 mt-0.5">{description}</p>
+      </div>
+    </div>
+  );
+}
+
 function ImpactRow({ label, count, value, icon }: { label: string; count: number; value: number; icon: React.ReactNode }) {
   if (value === 0) return null;
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         {icon}
-        <span>{label}</span>
+        <span className="text-xs">{label}</span>
         <Badge variant="secondary" className="text-[10px] h-4 px-1">{count}x</Badge>
       </div>
-      <span className="text-sm font-semibold text-emerald-500">{formatCurrency(value)}</span>
-    </div>
-  );
-}
-
-function SeverityBox({ label, count, color }: { label: string; count: number; color: string }) {
-  const colors: Record<string, string> = {
-    red: 'text-red-500 bg-red-500/10 border-red-500/20',
-    orange: 'text-orange-500 bg-orange-500/10 border-orange-500/20',
-    amber: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-    blue: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
-  };
-  return (
-    <div className={cn("text-center p-2 rounded-lg border", colors[color])}>
-      <p className="text-xl font-bold">{count}</p>
-      <p className="text-[10px] uppercase tracking-wider font-medium">{label}</p>
-    </div>
-  );
-}
-
-function EventBar({ label, count, total, color, icon }: { label: string; count: number; total: number; color: string; icon: React.ReactNode }) {
-  const pct = total > 0 ? Math.max((count / total) * 100, 2) : 0;
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-muted-foreground shrink-0">{icon}</span>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-0.5">
-          <span className="text-[11px] text-muted-foreground truncate">{label}</span>
-          <span className="text-[11px] font-semibold">{count}</span>
-        </div>
-        <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
-          <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${pct}%` }} />
-        </div>
-      </div>
+      <span className="text-xs font-semibold text-emerald-500">{formatCurrency(value)}</span>
     </div>
   );
 }
