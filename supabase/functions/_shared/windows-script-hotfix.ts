@@ -235,11 +235,12 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
   }
 
   // HOTFIX 12: Key registration - handle response without 'registered_at' property
+  // The script uses $keys.registered_at (not $response/$result) to persist to local key store
   if (content.includes('.registered_at') && !content.includes('HOTFIX-SAFE-REGISTERED-AT')) {
     content = content.replace(
-      /\$(?:response|result|regResult)\.registered_at\s*=/g,
+      /\$\w+\.registered_at\s*=\s*\(Get-Date\)\.ToString\("o"\)/g,
       (match) => {
-        return `# ${match.trim()} <# HOTFIX-SAFE-REGISTERED-AT - property may not exist in response #>\n        # Skipped: server may not return registered_at`;
+        return `# ${match} <# HOTFIX-SAFE-REGISTERED-AT - set safely #>\n        if ($keys -and $keys -is [hashtable]) { $keys["registered_at"] = (Get-Date).ToString("o") } elseif ($keys) { try { $keys | Add-Member -NotePropertyName "registered_at" -NotePropertyValue (Get-Date).ToString("o") -Force -ErrorAction SilentlyContinue } catch {} }`;
       }
     );
     reasons.push('safe_registered_at');
