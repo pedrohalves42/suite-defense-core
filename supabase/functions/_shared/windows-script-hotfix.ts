@@ -164,39 +164,35 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
     reasons.push('safe_sha256_access');
   }
 
-  // HOTFIX 8: Invoke-LocalDetection crashes accessing .status on object without that property (line ~4854)
-  // This typically happens when Get-MpComputerStatus or WMI AV query returns $null or an unexpected type
-  if (content.includes('Invoke-LocalDetection') && !content.includes('HOTFIX-LOCAL-DETECT-STATUS')) {
-    // Pattern: wrap the entire Invoke-LocalDetection call in a try/catch to prevent fatal crash loops
-    // Also patch .status access inside the function to be safe
-    const localDetectPatched = content.replace(
-      /function\s+Invoke-LocalDetection\s*\{/,
-      `function Invoke-LocalDetection { # HOTFIX-LOCAL-DETECT-STATUS`
+  // HOTFIX 8: Null-safe .status access in Invoke-LocalDetection (line ~4854)
+  // Test-AntivirusStatus/Test-FirewallStatus/etc. can return $null on servers without SecurityCenter2
+  if (content.includes('$results.antivirus.status') && !content.includes('HOTFIX-NULL-SAFE-STATUS')) {
+    content = content.replace(
+      /if\s*\(\$results\.antivirus\.status\s+-eq\s+"inactive"\)/g,
+      'if ($results.antivirus -and $results.antivirus.status -eq "inactive") <# HOTFIX-NULL-SAFE-STATUS #>'
     );
+    content = content.replace(
+      /if\s*\(\$results\.firewall\.status\s+-eq\s+"remediated"\)/g,
+      'if ($results.firewall -and $results.firewall.status -eq "remediated") <# HOTFIX-NULL-SAFE-STATUS #>'
+    );
+    content = content.replace(
+      /if\s*\(\$results\.usb\.status\s+-eq\s+"detected"\)/g,
+      'if ($results.usb -and $results.usb.status -eq "detected") <# HOTFIX-NULL-SAFE-STATUS #>'
+    );
+    content = content.replace(
+      /if\s*\(\$results\.processes\.status\s+-eq\s+"detected"\)/g,
+      'if ($results.processes -and $results.processes.status -eq "detected") <# HOTFIX-NULL-SAFE-STATUS #>'
+    );
+    reasons.push('null_safe_local_detect_status');
+  }
 
-    if (localDetectPatched !== content) {
-      // Now inject a safety wrapper at the START of the function body
-      content = localDetectPatched.replace(
-        /function\s+Invoke-LocalDetection\s*\{\s*# HOTFIX-LOCAL-DETECT-STATUS/,
-        `function Invoke-LocalDetection { # HOTFIX-LOCAL-DETECT-STATUS
-    try {`
-      );
-
-      // Find the closing of Invoke-LocalDetection and wrap with catch
-      // Strategy: patch the call site instead - wrap in try/catch where it's called
-      // Revert the function-level patch and instead wrap all CALL SITES
-      content = localDetectPatched; // revert to just the marker
-
-      // Wrap all call sites of Invoke-LocalDetection in try/catch
-      content = content.replace(
-        /(\s*)(Invoke-LocalDetection\b[^\r\n]*)/g,
-        (match, indent, call) => {
-          if (match.includes('function ')) return match; // skip function definition
-          return `${indent}try { ${call} } catch { Write-Log "[LOCAL-DETECT] Non-fatal error: $($_.Exception.Message)" "WARN" } <# HOTFIX-LOCAL-DETECT-STATUS #>`;
-        }
-      );
-      reasons.push('safe_local_detect_status');
-    }
+  // HOTFIX 9: Wrap Invoke-LocalDetection call sites in try/catch (prevent fatal crash loops)
+  if (content.includes('Invoke-LocalDetection') && !content.includes('HOTFIX-LOCAL-DETECT-TRYCATCH')) {
+    content = content.replace(
+      /^(\s+)(Invoke-LocalDetection)\s*$/gm,
+      '$1try { $2 } catch { Write-Log "[LOCAL-DETECT] Non-fatal error: $($_.Exception.Message)" "WARN" } <# HOTFIX-LOCAL-DETECT-TRYCATCH #>'
+    );
+    reasons.push('local_detect_trycatch');
   }
 
   return { content, changed: reasons.length > 0, reasons };
