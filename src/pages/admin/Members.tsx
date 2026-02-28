@@ -48,7 +48,12 @@ export default function Members() {
       });
       
       if (error) throw error;
-      return data.users || [];
+      // Map edge function response to Member type (profiles wrapper)
+      return (data.users || []).map((u: any) => ({
+        ...u,
+        id: u.user_id,
+        profiles: u.profiles || { full_name: u.full_name || null },
+      }));
     },
     enabled: !!tenant?.id,
   });
