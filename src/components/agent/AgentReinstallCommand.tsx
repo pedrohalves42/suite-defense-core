@@ -68,7 +68,7 @@ export function AgentReinstallCommand({ agentId, agentName }: AgentReinstallComm
         "  $arg = '-ExecutionPolicy Bypass -WindowStyle Hidden -File \"' + $scriptPath + '\" -ServerUrl \"" + serverUrl + "\" -AgentToken \"" + token + "\" -HMACSecret \"" + hmac + "\" -AgentName \"" + name + "\"';",
         "  $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arg;",
         "  $trigger1 = New-ScheduledTaskTrigger -AtStartup;",
-        "  $trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5);",
+        "  $trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration ([TimeSpan]::MaxValue);",
         "  $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit (New-TimeSpan -Days 0);",
         "  Register-ScheduledTask -TaskName 'CyberShieldAgent' -Action $action -Trigger @($trigger1,$trigger2) -Settings $settings -User 'SYSTEM' -RunLevel Highest -Force;",
         "  Start-ScheduledTask -TaskName 'CyberShieldAgent';",
