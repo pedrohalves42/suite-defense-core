@@ -1,10 +1,10 @@
 // CyberShield Agent - Reinstall Preserve Script Content
 // Embedded version for Edge Function delivery
-// Version: 3.1.1 - Fix: parse AgentToken/HMAC from config.json + URL-encode AgentName
+// Version: 3.1.2 - Remove stale fallback key + support explicit env overrides
 
-export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v3.1.1
+export const REINSTALL_PRESERVE_SCRIPT_CONTENT = `# CyberShield Agent - Reinstall Preserve v3.1.2
 # Preserves credentials (AgentName, Token, HMAC) during agent update
-# Strategy 3: Auto-recover via built-in enrollment key (zero prompts)
+# Strategy 3: Auto-recover via enrollment key (env/log), no hardcoded stale key
 # ASCII-safe, English-only for cross-locale compatibility
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ErrorActionPreference = "Stop"
@@ -22,7 +22,7 @@ function Write-Status {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " CyberShield - Reinstall Preserve v3.1.1" -ForegroundColor Cyan
+Write-Host " CyberShield - Reinstall Preserve v3.1.2" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -67,6 +67,7 @@ Write-Status "Script found: $($agentScript.Name)" "INFO"
 $AgentName = $null
 $AgentToken = $null
 $HmacSecret = ""
+$ForcedAgentName = $env:CYBERSHIELD_AGENT_NAME
 
 # Priority 1: config.json (most reliable - contains registered identity and creds)
 $configPath = "$InstallDir\\config.json"
@@ -76,12 +77,18 @@ if (Test-Path $configPath) {
 
         if ($configJson.AgentName) {
             $AgentName = $configJson.AgentName
-            Write-Status "AgentName: $AgentName (from config.json)" "SUCCESS"
+            Write-Status "AgentName: $AgentName (from config.json: AgentName)" "SUCCESS"
+        } elseif ($configJson.agent_name) {
+            $AgentName = $configJson.agent_name
+            Write-Status "AgentName: $AgentName (from config.json: agent_name)" "SUCCESS"
         }
 
         if ($configJson.AgentToken) {
             $AgentToken = $configJson.AgentToken
-            Write-Status "AgentToken: from config.json" "SUCCESS"
+            Write-Status "AgentToken: from config.json (AgentToken)" "SUCCESS"
+        } elseif ($configJson.agent_token) {
+            $AgentToken = $configJson.agent_token
+            Write-Status "AgentToken: from config.json (agent_token)" "SUCCESS"
         }
 
         if ($configJson.HMACSecret) {
@@ -90,6 +97,9 @@ if (Test-Path $configPath) {
         } elseif ($configJson.HmacSecret) {
             $HmacSecret = $configJson.HmacSecret
             Write-Status "HmacSecret: from config.json (HmacSecret)" "SUCCESS"
+        } elseif ($configJson.hmac_secret) {
+            $HmacSecret = $configJson.hmac_secret
+            Write-Status "HmacSecret: from config.json (hmac_secret)" "SUCCESS"
         }
     } catch {
         Write-Status "Failed to parse config.json: $($_.Exception.Message)" "WARN"
@@ -106,6 +116,11 @@ if (-not $AgentName) {
 
 # Strategy 1: Extract credentials from Scheduled Task arguments (fallback/override)
 $existingTask = Get-ScheduledTask -TaskName "CyberShield*" -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $existingTask) {
+    $existingTask = Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object {
+        $_.TaskName -match 'CyberShield' -or (($_.Actions | ForEach-Object { $_.Arguments }) -match 'cybershield-agent-')
+    } | Select-Object -First 1
+}
 
 if ($existingTask) {
     $taskArgs = $existingTask.Actions[0].Arguments
@@ -143,19 +158,45 @@ if (-not $AgentToken) {
     }
 }
 
-# Strategy 3: Auto-recover from server using get-reinstall-by-name (v3.0.1)
+# Strategy 3: Auto-recover from server using get-reinstall-by-name
 # Always try server-side rebind first (fresh token/HMAC), fallback to preserved creds on failure
+if ($ForcedAgentName) {
+    $forcedTrimmed = $ForcedAgentName.Trim()
+    if ($forcedTrimmed) {
+        if (-not $AgentName -or $AgentName -ne $forcedTrimmed) {
+            Write-Status "AgentName override from env: $forcedTrimmed (was: $AgentName)" "SUCCESS"
+        }
+        $AgentName = $forcedTrimmed
+    }
+}
+
 if ($AgentName) {
     if ($AgentToken) {
         Write-Status "Local credentials found - trying server rebind for fresh credentials..." "INFO"
     } else {
         Write-Status "Local credentials not found - auto-recovering from server..." "WARN"
     }
-    
-    # Use environment variable if set, otherwise use built-in default key
+
+    # Enrollment key source order: env > installer.log
     $enrollKey = $env:CYBERSHIELD_KEY
+
     if (-not $enrollKey) {
-        $enrollKey = "CSH-NCLR-7K9Q-2M4T"
+        $installerLogPath = "$InstallDir\\logs\\installer.log"
+        if (Test-Path $installerLogPath) {
+            try {
+                $installerLog = Get-Content $installerLogPath -Raw -ErrorAction SilentlyContinue
+                if ($installerLog -match '(?:[?&]key=|enrollment[_-]?key[^A-Z0-9]*)([A-Z0-9]{4}(?:-[A-Z0-9]{4}){3})') {
+                    $enrollKey = $Matches[1]
+                    Write-Status "Enrollment key recovered from installer.log" "SUCCESS"
+                }
+            } catch {
+                Write-Status "Could not read installer.log for key recovery: $($_.Exception.Message)" "WARN"
+            }
+        }
+    }
+
+    if (-not $enrollKey) {
+        Write-Status "No enrollment key available for auto-recover (set CYBERSHIELD_KEY env var)" "WARN"
     }
 
     if ($enrollKey -and $enrollKey.Length -gt 5) {
@@ -215,7 +256,7 @@ if ($AgentName) {
             }
         }
     } else {
-        Write-Status "No enrollment key provided - skipping auto-recovery" "WARN"
+        Write-Status "Skipping auto-recovery because no enrollment key was found" "WARN"
     }
 }
 
@@ -231,8 +272,9 @@ if (-not $AgentName -or -not $AgentToken) {
     }
     Write-Host ""
     Write-Status "Options:" "INFO"
-    Write-Status "  1. Run again and provide a valid JWT token" "INFO"
-    Write-Status "  2. Use full reinstall with enrollment key" "INFO"
+    Write-Status '  1. Set env key and retry: $env:CYBERSHIELD_KEY="XXXX-XXXX-XXXX-XXXX"' "INFO"
+    Write-Status '  2. Optional name override: $env:CYBERSHIELD_AGENT_NAME="MIT-SERVIDOR"' "INFO"
+    Write-Status "  3. Use full reinstall with enrollment key" "INFO"
     Start-Sleep -Seconds 10
     return
 }
