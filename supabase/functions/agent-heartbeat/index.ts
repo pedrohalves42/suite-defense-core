@@ -294,7 +294,7 @@ Deno.serve(async (req) => {
       // Fetch the release script
       const { data: release, error: releaseError } = await supabase
         .from('agent_releases')
-        .select('id, version, script_content, sha256')
+        .select('id, version, script_content, sha256, signature_base64, signed_at')
         .eq('version', agent.force_update_version)
         .eq('platform', platform)
         .eq('is_active', true)
@@ -312,7 +312,9 @@ Deno.serve(async (req) => {
         logger.info('[PROXY] Sending force_update in response', { 
           agentName: agent.agent_name,
           targetVersion: release.version,
-          platform
+          platform,
+          hasSignature: !!release.signature_base64,
+          skipFirewallRemediation: agent.skip_firewall_remediation === true
         })
 
         // Normalize line endings (CRLF for Windows)
@@ -344,10 +346,11 @@ Deno.serve(async (req) => {
             script_content_base64: base64Script,
             sha256: calculatedSha256,
             script_sha256: calculatedSha256, // Alias for v5.0.13+ agents
-            ecdsa_signature: null, // Not signed via force-update path
-            script_hash_signature: null, // Compatibility for local hash cache
-            signature_base64: null, // Required by v5.0.13 StrictMode
-            script_hash_signed_at: null, // Required by v5.0.13 StrictMode
+            ecdsa_signature: release.signature_base64 || null, // Signed payload required by v5.0.13+
+            script_hash_signature: release.signature_base64 || null, // Compatibility for local hash cache
+            signature_base64: release.signature_base64 || null, // Legacy alias used by StrictMode path
+            script_hash_signed_at: release.signed_at || null,
+            skip_firewall_remediation: agent.skip_firewall_remediation || false,
             reason: agent.force_update_reason || 'System recovery update',
             override_safe_mode: overrideValid
           }),
