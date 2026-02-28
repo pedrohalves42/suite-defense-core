@@ -89,7 +89,17 @@ export function CreateUserForm({ open, onOpenChange }: CreateUserFormProps) {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Extract actual error message from edge function response
+        let msg = error.message;
+        try {
+          if ('context' in error && typeof (error as any).context?.json === 'function') {
+            const body = await (error as any).context.json();
+            msg = body?.error || body?.error?.message || msg;
+          }
+        } catch {}
+        throw new Error(msg);
+      }
       if (!result?.success) throw new Error(result?.error || 'Erro ao criar usuário');
       return result;
     },
