@@ -27618,6 +27618,10 @@ export type Database = {
       }
     }
     Functions: {
+      _assert_caller_tenant: {
+        Args: { p_tenant_id: string }
+        Returns: undefined
+      }
       _assert_service_role_or_super_admin: { Args: never; Returns: undefined }
       acknowledge_all_alerts: { Args: { p_tenant_id: string }; Returns: Json }
       aggregate_daily_metrics: {
