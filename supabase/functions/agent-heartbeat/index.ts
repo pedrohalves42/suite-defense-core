@@ -230,7 +230,11 @@ Deno.serve(async (req) => {
       updateData.hostname = osInfo.hostname
     }
     if (osInfo.agent_version) {
-      updateData.agent_version = osInfo.agent_version
+      const incomingVersion = osInfo.agent_version.trim().toLowerCase()
+      const currentVersion = (agent.agent_version || '').trim().toLowerCase()
+      if (incomingVersion !== currentVersion) {
+        updateData.agent_version = osInfo.agent_version
+      }
     }
     
     // Capturar Ed25519 capability flags do payload
