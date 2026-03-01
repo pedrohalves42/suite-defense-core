@@ -182,8 +182,8 @@ export function PreserveReinstallSection({ defaultAgentName }: PreserveReinstall
           <div>
             <CardTitle className="text-sm flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
-              Reinstalação Preservando Credenciais
-              <Badge variant="secondary" className="ml-2 text-xs">v3.3.0</Badge>
+               Reinstalação Preservando Credenciais
+              <Badge variant="secondary" className="ml-2 text-xs font-mono">v3.3.0</Badge>
             </CardTitle>
             <CardDescription className="mt-1">
               Atualiza o agente mantendo nome, token e HMAC originais
