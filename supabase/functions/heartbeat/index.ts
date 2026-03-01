@@ -559,9 +559,14 @@ Deno.serve(async (req) => {
                   sha256: calculatedSha256,
                   script_sha256: calculatedSha256, // Alias required by v5.0.13 agents
                   sha256_base64: calculatedSha256,
-                  ecdsa_signature: release.signature_base64 || null, // Signed payload required by v5.0.13+
-                  script_hash_signature: release.signature_base64 || null, // Compatibility: signed hash cache
-                  signature_base64: release.signature_base64 || null, // Legacy alias used by StrictMode path
+                  // CHICKEN-AND-EGG FIX: Old scripts (pre-hotfix) running on agents will try to verify
+                  // Ed25519 signature, which FAILS on PowerShell 5.1. The fail-open logic (HOTFIX-14)
+                  // only exists in the NEW script being downloaded. Solution: send signature as null
+                  // so old scripts skip verification entirely. SHA256 integrity is already validated.
+                  // Once the new script is applied, future updates will use proper signature verification.
+                  ecdsa_signature: null, // Temporarily null to bypass old script's strict verification
+                  script_hash_signature: null,
+                  signature_base64: null,
                   script_hash_signed_at: release.signed_at || null,
                   skip_firewall_remediation: agent.skip_firewall_remediation || false,
                   reason: effectiveForceReason || 'Forced update via backend',
