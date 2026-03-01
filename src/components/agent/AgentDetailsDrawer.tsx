@@ -30,6 +30,11 @@ import { AgentSystemInfo } from '@/components/agent/AgentSystemInfo';
 import { AgentReinstallCommand } from '@/components/agent/AgentReinstallCommand';
 import { useAgentCausality } from '@/hooks/useAgentCausality';
 import { useAntivirusStatus } from '@/hooks/useAntivirusStatus';
+import { Switch } from '@/components/ui/switch';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { Flame } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SectionDivider } from '@/components/ui/section-divider';
 import {
@@ -105,6 +110,40 @@ export function AgentDetailsDrawer({
   const { data: causality, isLoading, isError, refetch } = useAgentCausality(agentId, tenantId);
   const { data: antivirusStatus } = useAntivirusStatus(agentId || '', !!agentId);
   const agentActions = useAgentActions();
+
+  const queryClient = useQueryClient();
+
+  // Query skip_firewall_remediation flag
+  const { data: firewallSkipData } = useQuery({
+    queryKey: ['agent-firewall-skip', agentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('agents')
+        .select('skip_firewall_remediation')
+        .eq('id', agentId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!agentId,
+  });
+
+  const toggleFirewallSkip = useMutation({
+    mutationFn: async (skip: boolean) => {
+      const { error } = await supabase
+        .from('agents')
+        .update({ skip_firewall_remediation: skip })
+        .eq('id', agentId!);
+      if (error) throw error;
+    },
+    onSuccess: (_, skip) => {
+      queryClient.invalidateQueries({ queryKey: ['agent-firewall-skip', agentId] });
+      toast.success(skip ? 'Remediação de firewall desativada' : 'Remediação de firewall ativada');
+    },
+    onError: (err: Error) => {
+      toast.error('Erro ao alterar configuração', { description: err.message });
+    },
+  });
 
   const handleAgentDeleted = () => {
     onClose();
@@ -402,7 +441,29 @@ export function AgentDetailsDrawer({
                       </div>
                     </div>
 
-                    {/* Navigation Actions */}
+                    {/* Firewall Remediation Toggle */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Configurações do Agente
+                      </h4>
+                      <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                        <div className="flex items-start gap-3">
+                          <Flame className="h-4 w-4 text-orange-500 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium">Desativar remediação de Firewall</p>
+                            <p className="text-xs text-muted-foreground">
+                              Impede o agente de reativar o Windows Firewall automaticamente. 
+                              Use quando há firewall externo (ex: pfSense).
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={firewallSkipData?.skip_firewall_remediation ?? false}
+                          onCheckedChange={(checked) => toggleFirewallSkip.mutate(checked)}
+                          disabled={toggleFirewallSkip.isPending}
+                        />
+                      </div>
+                    </div>
                     <div className="space-y-2">
                       <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Navegação
