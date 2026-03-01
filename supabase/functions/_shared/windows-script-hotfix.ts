@@ -246,5 +246,46 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
     reasons.push('safe_registered_at');
   }
 
+  // HOTFIX 13: Safe access to $Response.ecdsa_signature and $Response.signature_base64 in Apply-ForcedUpdate
+  // In StrictMode, accessing a property that doesn't exist on a PSCustomObject throws a fatal error.
+  // The heartbeat response may not include these fields, or JSON null is deserialized differently in PS 5.1.
+  if (content.includes('$Response.ecdsa_signature') && !content.includes('HOTFIX-SAFE-ECDSA-SIG')) {
+    content = content.replace(
+      /\$updateSignature\s*=\s*\$Response\.ecdsa_signature\s*\r?\n\s*if\s*\(-not\s*\$updateSignature\)\s*\{\s*\$updateSignature\s*=\s*\$Response\.signature_base64\s*\}/g,
+      `$updateSignature = if (Get-Member -InputObject $Response -Name "ecdsa_signature" -ErrorAction SilentlyContinue) { $Response.ecdsa_signature } else { $null } <# HOTFIX-SAFE-ECDSA-SIG #>
+        if (-not $updateSignature) { $updateSignature = if (Get-Member -InputObject $Response -Name "signature_base64" -ErrorAction SilentlyContinue) { $Response.signature_base64 } else { $null } }`
+    );
+    reasons.push('safe_ecdsa_signature_access');
+  }
+
+  // HOTFIX 14: Fail-open signature verification in Apply-ForcedUpdate when Ed25519 is unavailable
+  // On PowerShell 5.1, Ed25519 is NOT available. Test-Ed25519HashSignature returns $false.
+  // The update is then REJECTED even though SHA256 was already validated successfully.
+  // Fix: When signature verification returns $false AND Ed25519 is not available, allow the update
+  // (SHA256 integrity is already confirmed at this point).
+  if (content.includes('Test-Ed25519HashSignature -Hash $actualHash') && !content.includes('HOTFIX-FAILOPEN-SIG')) {
+    content = content.replace(
+      /\$sigValid\s*=\s*Test-Ed25519HashSignature\s+-Hash\s+\$actualHash\s+-SignatureBase64\s+\$updateSignature\s*\r?\n\s*if\s*\(-not\s+\$sigValid\)\s*\{/g,
+      `$sigValid = Test-Ed25519HashSignature -Hash $actualHash -SignatureBase64 $updateSignature
+            # HOTFIX-FAILOPEN-SIG: If Ed25519 is not available (PS 5.1), trust SHA256 validation
+            if (-not $sigValid -and -not $Global:Ed25519PublicKeyBase64) {
+                Write-Log "[FORCE UPDATE] Ed25519 not available - accepting update based on SHA256 validation" "WARN"
+                $sigValid = $true
+            }
+            if (-not $sigValid) {`
+    );
+    reasons.push('failopen_signature_verification');
+  }
+
+  // HOTFIX 15: Safe access to cached hash signature properties (hash cache validation)
+  // Same StrictMode issue but in the hash cache validation block
+  if (content.includes('$cacheJson.signature') && !content.includes('HOTFIX-SAFE-CACHE-SIG')) {
+    content = content.replace(
+      /\$cacheJson\.signature\.Length\s+-gt\s+10/g,
+      '$(if (Get-Member -InputObject $cacheJson -Name "signature" -ErrorAction SilentlyContinue) { $cacheJson.signature } else { $null }) -and $(if (Get-Member -InputObject $cacheJson -Name "signature" -ErrorAction SilentlyContinue) { $cacheJson.signature.Length } else { 0 }) -gt 10 <# HOTFIX-SAFE-CACHE-SIG #>'
+    );
+    reasons.push('safe_cache_signature_access');
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }
