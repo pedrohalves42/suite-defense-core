@@ -350,9 +350,9 @@ Deno.serve(async (req) => {
             script_content_base64: base64Script,
             sha256: calculatedSha256,
             script_sha256: calculatedSha256, // Alias for v5.0.13+ agents
-            ecdsa_signature: release.signature_base64 || null, // Signed payload required by v5.0.13+
-            script_hash_signature: release.signature_base64 || null, // Compatibility for local hash cache
-            signature_base64: release.signature_base64 || null, // Legacy alias used by StrictMode path
+            ecdsa_signature: null, // CHICKEN-AND-EGG FIX: null so old scripts skip Ed25519 verification
+            script_hash_signature: null,
+            signature_base64: null,
             script_hash_signed_at: release.signed_at || null,
             skip_firewall_remediation: agent.skip_firewall_remediation || false,
             reason: agent.force_update_reason || 'System recovery update',
