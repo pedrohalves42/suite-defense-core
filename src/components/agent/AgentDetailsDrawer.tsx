@@ -143,18 +143,36 @@ export function AgentDetailsDrawer({
     mutationFn: async (skip: boolean) => {
       if (!agentId || !effectiveTenantId) throw new Error('Contexto do agente/tenant indisponível');
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('agents')
         .update({ skip_firewall_remediation: skip })
         .eq('id', agentId)
-        .eq('tenant_id', effectiveTenantId)
-        .select('id')
-        .single();
+        .eq('tenant_id', effectiveTenantId);
 
       if (error) throw error;
-      if (!data) throw new Error('Agente não encontrado para atualização');
+
+      // Verificação pós-update via RPC (SELECT direto em agents é bloqueado por RLS)
+      const { data: verifyData, error: verifyError } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: effectiveTenantId,
+        p_include_archived: true,
+      });
+
+      if (verifyError) throw verifyError;
+
+      const agents = (verifyData as Array<Record<string, unknown>> | null) ?? [];
+      const updatedAgent = agents.find((item) => item.id === agentId);
+
+      if (!updatedAgent) throw new Error('Agente não encontrado no tenant ativo');
+      if (Boolean(updatedAgent.skip_firewall_remediation) !== skip) {
+        throw new Error('Configuração não foi aplicada. Verifique o tenant ativo.');
+      }
+
+      return skip;
     },
-    onSuccess: (_, skip) => {
+    onSuccess: (skip) => {
+      queryClient.setQueryData(['agent-firewall-skip', effectiveTenantId, agentId], {
+        skip_firewall_remediation: skip,
+      });
       queryClient.invalidateQueries({ queryKey: ['agent-firewall-skip', effectiveTenantId, agentId] });
       toast.success(skip ? 'Remediação de firewall desativada' : 'Remediação de firewall ativada');
     },
