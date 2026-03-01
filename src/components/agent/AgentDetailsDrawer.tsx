@@ -30,6 +30,7 @@ import { AgentSystemInfo } from '@/components/agent/AgentSystemInfo';
 import { AgentReinstallCommand } from '@/components/agent/AgentReinstallCommand';
 import { useAgentCausality } from '@/hooks/useAgentCausality';
 import { useAntivirusStatus } from '@/hooks/useAntivirusStatus';
+import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -112,32 +113,49 @@ export function AgentDetailsDrawer({
   const agentActions = useAgentActions();
 
   const queryClient = useQueryClient();
+  const { activeTenant } = useActiveTenant();
+  const effectiveTenantId = tenantId || activeTenant?.id;
 
-  // Query skip_firewall_remediation flag
-  const { data: firewallSkipData } = useQuery({
-    queryKey: ['agent-firewall-skip', agentId],
+  // Query skip_firewall_remediation flag (via RPC, pois SELECT direto em agents é bloqueado)
+  const { data: firewallSkipData, isLoading: firewallSkipLoading } = useQuery({
+    queryKey: ['agent-firewall-skip', effectiveTenantId, agentId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('agents')
-        .select('skip_firewall_remediation')
-        .eq('id', agentId!)
-        .single();
+      if (!agentId || !effectiveTenantId) return { skip_firewall_remediation: false };
+
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: effectiveTenantId,
+        p_include_archived: true,
+      });
+
       if (error) throw error;
-      return data;
+
+      const agents = (data as Array<Record<string, unknown>> | null) ?? [];
+      const agent = agents.find((item) => item.id === agentId);
+
+      return {
+        skip_firewall_remediation: Boolean(agent?.skip_firewall_remediation),
+      };
     },
-    enabled: !!agentId,
+    enabled: !!agentId && !!effectiveTenantId,
   });
 
   const toggleFirewallSkip = useMutation({
     mutationFn: async (skip: boolean) => {
-      const { error } = await supabase
+      if (!agentId || !effectiveTenantId) throw new Error('Contexto do agente/tenant indisponível');
+
+      const { data, error } = await supabase
         .from('agents')
         .update({ skip_firewall_remediation: skip })
-        .eq('id', agentId!);
+        .eq('id', agentId)
+        .eq('tenant_id', effectiveTenantId)
+        .select('id')
+        .single();
+
       if (error) throw error;
+      if (!data) throw new Error('Agente não encontrado para atualização');
     },
     onSuccess: (_, skip) => {
-      queryClient.invalidateQueries({ queryKey: ['agent-firewall-skip', agentId] });
+      queryClient.invalidateQueries({ queryKey: ['agent-firewall-skip', effectiveTenantId, agentId] });
       toast.success(skip ? 'Remediação de firewall desativada' : 'Remediação de firewall ativada');
     },
     onError: (err: Error) => {
@@ -460,7 +478,7 @@ export function AgentDetailsDrawer({
                         <Switch
                           checked={firewallSkipData?.skip_firewall_remediation ?? false}
                           onCheckedChange={(checked) => toggleFirewallSkip.mutate(checked)}
-                          disabled={toggleFirewallSkip.isPending}
+                          disabled={firewallSkipLoading || toggleFirewallSkip.isPending || !agentId || !effectiveTenantId}
                         />
                       </div>
                     </div>
