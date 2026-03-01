@@ -27,6 +27,7 @@ interface AgentQuickActionsProps {
   isIsolated?: boolean | null;
   isInSafeMode?: boolean | null;
   onAgentDeleted?: () => void;
+  layout?: 'horizontal' | 'vertical';
 }
 
 export function AgentQuickActions({ 
@@ -37,6 +38,7 @@ export function AgentQuickActions({
   isIsolated,
   isInSafeMode,
   onAgentDeleted,
+  layout = 'horizontal',
 }: AgentQuickActionsProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -146,9 +148,11 @@ export function AgentQuickActions({
     }
   }, [showDeleteDialog, agentId]);
 
+  const isVertical = layout === 'vertical';
+
   return (
     <>
-      <div className="flex items-center gap-1">
+      <div className={isVertical ? 'flex flex-col' : 'flex items-center gap-1'}>
         {isThrottled && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -157,16 +161,19 @@ export function AgentQuickActions({
                 size="sm"
                 onClick={() => removeThrottle.mutate(agentId)}
                 disabled={removeThrottle.isPending}
-                className="text-amber-600 hover:text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/20"
+                className={isVertical 
+                  ? 'w-full justify-start gap-3 h-10 text-muted-foreground hover:text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/20' 
+                  : 'text-amber-600 hover:text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/20'}
               >
                 {removeThrottle.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Clock className="h-4 w-4" />
-              )}
+                )}
+                {isVertical && <span className="text-sm">Remover Limitação</span>}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Remover limitação temporária</TooltipContent>
+            {!isVertical && <TooltipContent>Remover limitação temporária</TooltipContent>}
           </Tooltip>
         )}
         {isIsolated && (
@@ -177,16 +184,19 @@ export function AgentQuickActions({
                 size="sm"
                 onClick={() => removeIsolation.mutate(agentId)}
                 disabled={removeIsolation.isPending}
-                className="text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/20"
+                className={isVertical 
+                  ? 'w-full justify-start gap-3 h-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10' 
+                  : 'text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/20'}
               >
                 {removeIsolation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <ShieldOff className="h-4 w-4" />
-              )}
+                )}
+                {isVertical && <span className="text-sm">Remover Isolamento</span>}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Remover isolamento de segurança</TooltipContent>
+            {!isVertical && <TooltipContent>Remover isolamento de segurança</TooltipContent>}
           </Tooltip>
         )}
         {isInSafeMode && (
@@ -198,19 +208,24 @@ export function AgentQuickActions({
                   size="sm"
                   onClick={() => tenantId && resetSafeMode.mutate({ agentId, tenantId })}
                   disabled={resetSafeMode.isPending}
-                  className="text-orange-600 hover:text-orange-700 hover:bg-orange-100 dark:hover:bg-orange-900/20"
+                  className={isVertical 
+                    ? 'w-full justify-start gap-3 h-10 text-muted-foreground hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/20' 
+                    : 'text-orange-600 hover:text-orange-700 hover:bg-orange-100 dark:hover:bg-orange-900/20'}
                 >
                   {resetSafeMode.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <RefreshCcw className="h-4 w-4" />
                   )}
+                  {isVertical && <span className="text-sm">Resetar Modo de Proteção</span>}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p className="font-medium">Resetar modo de proteção</p>
-                <p className="text-xs text-muted-foreground">Cria uma tarefa para desativar o modo de proteção</p>
-              </TooltipContent>
+              {!isVertical && (
+                <TooltipContent>
+                  <p className="font-medium">Resetar modo de proteção</p>
+                  <p className="text-xs text-muted-foreground">Cria uma tarefa para desativar o modo de proteção</p>
+                </TooltipContent>
+              )}
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -219,81 +234,79 @@ export function AgentQuickActions({
                   size="sm"
                   onClick={() => enableOverrideSafeMode.mutate(agentId)}
                   disabled={enableOverrideSafeMode.isPending}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/20"
+                  className={isVertical 
+                    ? 'w-full justify-start gap-3 h-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10' 
+                    : 'text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/20'}
                 >
                   {enableOverrideSafeMode.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <ShieldOff className="h-4 w-4" />
                   )}
+                  {isVertical && <span className="text-sm">Forçar Atualização (30 min)</span>}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p className="font-medium">Forçar atualização (30 min)</p>
-                <p className="text-xs text-yellow-400">⚠️ Ignora proteções. Use apenas em emergências.</p>
-              </TooltipContent>
+              {!isVertical && (
+                <TooltipContent>
+                  <p className="font-medium">Forçar atualização (30 min)</p>
+                  <p className="text-xs text-yellow-400">⚠️ Ignora proteções. Use apenas em emergências.</p>
+                </TooltipContent>
+              )}
             </Tooltip>
           </>
         )}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(`/admin/diagnostics?agent=${agentId}`)}
-            >
-              <Stethoscope className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Ver diagnóstico do computador</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/admin/enrollment-keys')}
-            >
-              <Key className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Gerar nova chave de instalação</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowCleanupDialog(true)}
-              disabled={cleanupMutation.isPending}
-            >
-              {cleanupMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Limpar e resetar computador</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDeleteDialog(true)}
-              disabled={archiveMutation.isPending || hardDeleteMutation.isPending}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-            >
-              {(archiveMutation.isPending || hardDeleteMutation.isPending) ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <UserX className="h-4 w-4" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Arquivar ou excluir computador</TooltipContent>
-        </Tooltip>
+        {!isVertical && (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/diagnostics?agent=${agentId}`)}>
+                  <Stethoscope className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Ver diagnóstico do computador</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/admin/enrollment-keys')}>
+                  <Key className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Gerar nova chave de instalação</TooltipContent>
+            </Tooltip>
+          </>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowCleanupDialog(true)}
+          disabled={cleanupMutation.isPending}
+          className={isVertical 
+            ? 'w-full justify-start gap-3 h-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10' 
+            : ''}
+        >
+          {cleanupMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="h-4 w-4" />
+          )}
+          {isVertical && <span className="text-sm">Limpar e Resetar</span>}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowDeleteDialog(true)}
+          disabled={archiveMutation.isPending || hardDeleteMutation.isPending}
+          className={isVertical 
+            ? 'w-full justify-start gap-3 h-10 text-destructive hover:text-destructive hover:bg-destructive/10' 
+            : 'text-destructive hover:text-destructive hover:bg-destructive/10'}
+        >
+          {(archiveMutation.isPending || hardDeleteMutation.isPending) ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <UserX className="h-4 w-4" />
+          )}
+          {isVertical && <span className="text-sm">Arquivar ou Excluir</span>}
+        </Button>
       </div>
 
       <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
