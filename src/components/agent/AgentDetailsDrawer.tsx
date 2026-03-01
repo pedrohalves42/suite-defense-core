@@ -116,30 +116,36 @@ export function AgentDetailsDrawer({
   const { activeTenant } = useActiveTenant();
   const effectiveTenantId = tenantId || activeTenant?.id;
 
-  // Query skip_firewall_remediation flag (via RPC, pois SELECT direto em agents é bloqueado)
-  const { data: firewallSkipData, isLoading: firewallSkipLoading } = useQuery({
+  // Query skip_firewall_remediation flag via RPC tenant-safe
+  const {
+    data: firewallSkipData,
+    isLoading: firewallSkipLoading,
+    isError: firewallSkipError,
+  } = useQuery({
     queryKey: ['agent-firewall-skip', effectiveTenantId, agentId],
     queryFn: async () => {
-      if (!agentId || !effectiveTenantId) return { skip_firewall_remediation: false };
+      if (!agentId || !effectiveTenantId) return null;
 
-      // Query direta na tabela agents - RLS permite SELECT para o tenant
-      const { data, error } = await supabase
-        .from('agents')
-        .select('skip_firewall_remediation')
-        .eq('id', agentId)
-        .eq('tenant_id', effectiveTenantId)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: effectiveTenantId,
+        p_include_archived: true,
+      });
 
-      if (error) {
-        console.warn('Fallback: skip_firewall_remediation não disponível via SELECT direto', error.message);
-        return { skip_firewall_remediation: false };
+      if (error) throw error;
+
+      const agents = (data as Array<Record<string, unknown>> | null) ?? [];
+      const agent = agents.find((item) => item.id === agentId);
+
+      if (!agent) {
+        throw new Error('Agente não encontrado para o tenant atual');
       }
 
       return {
-        skip_firewall_remediation: Boolean(data?.skip_firewall_remediation),
+        skip_firewall_remediation: Boolean(agent.skip_firewall_remediation),
       };
     },
     enabled: !!agentId && !!effectiveTenantId,
+    retry: 1,
   });
 
   const toggleFirewallSkip = useMutation({
@@ -156,7 +162,7 @@ export function AgentDetailsDrawer({
       return skip;
     },
     onSuccess: (skip) => {
-      // Atualiza cache local sem re-fetch (RPC não retorna este campo)
+      // Atualiza cache local sem re-fetch para manter resposta imediata do toggle
       queryClient.setQueryData(['agent-firewall-skip', effectiveTenantId, agentId], {
         skip_firewall_remediation: skip,
       });
@@ -477,12 +483,17 @@ export function AgentDetailsDrawer({
                               Impede o agente de reativar o Windows Firewall automaticamente. 
                               Use quando há firewall externo (ex: pfSense).
                             </p>
+                            {firewallSkipError && (
+                              <p className="text-xs text-destructive mt-1">
+                                Não foi possível carregar o status salvo agora. Tente atualizar a página.
+                              </p>
+                            )}
                           </div>
                         </div>
                         <Switch
                           checked={firewallSkipData?.skip_firewall_remediation ?? false}
                           onCheckedChange={(checked) => toggleFirewallSkip.mutate(checked)}
-                          disabled={firewallSkipLoading || toggleFirewallSkip.isPending || !agentId || !effectiveTenantId}
+                          disabled={firewallSkipLoading || firewallSkipError || toggleFirewallSkip.isPending || !agentId || !effectiveTenantId}
                         />
                       </div>
                     </div>
