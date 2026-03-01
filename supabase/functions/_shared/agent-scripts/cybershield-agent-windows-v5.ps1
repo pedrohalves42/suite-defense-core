@@ -461,7 +461,7 @@ $Global:SecurityDegraded = $false
 # v5.0.13-fix: ProtectedProcessSet must be declared before use (StrictMode compatibility)
 $Global:ProtectedProcessSet = $null
 
-# v5.0.14-hotfix: Declare crypto globals early (StrictMode-safe when key init fails)
+# v5.0.13-hotfix: Declare crypto globals early (StrictMode-safe when key init fails)
 $Global:AgentPrivateKey = $null
 $Global:AgentPublicKey = $null
 $Global:KeyFingerprint = $null
@@ -630,7 +630,7 @@ function Write-Log {
 #  Prevents other modules from overriding the pin
 # ============================================
 $Global:TlsPinnedThumbprint = $null  # Set via server config or enrollment; null = disabled (dev mode)
-$Global:SkipFirewallRemediation = $false  # v5.0.14: Set via heartbeat response for pfSense/external firewall environments
+$Global:SkipFirewallRemediation = $false  # v5.0.13: Set via heartbeat response for pfSense/external firewall environments
 
 # v5.0.13: Scoped TLS validation function (called per-request, NOT global override)
 function Test-TlsCertificatePin {
@@ -1179,7 +1179,7 @@ function Initialize-AgentKeys {
                 Write-Log "[KEYS] ECDSA attempt $attempt/$maxKeyAttempts failed: $errMsg" "WARN"
                 
                 if ($attempt -eq $maxKeyAttempts) {
-                    # v5.0.14 HOTFIX: fallback for legacy Windows/.NET where CNG container creation is unstable
+                    # v5.0.13 HOTFIX: fallback for legacy Windows/.NET where CNG container creation is unstable
                     try {
                         $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(256)
                         if ($null -ne $ecdsa) {
@@ -4400,7 +4400,7 @@ function Send-Heartbeat {
                     }
                     
                     # ============================================
-                    # AGENT CONFIG FLAGS (v5.0.14)
+                    # AGENT CONFIG FLAGS (v5.0.13)
                     # Server-side feature toggles
                     # ============================================
                     if ($null -ne $response.skip_firewall_remediation) {
@@ -4714,7 +4714,7 @@ function Test-FirewallStatus {
         if ($disabledProfiles.Count -gt 0) {
             Write-Log "[LOCAL-DETECT] FIREWALL DISABLED on profiles: $($disabledProfiles -join ', ')" "ERROR"
             
-            # v5.0.14: Skip remediation if server configured external firewall mode (pfSense, etc.)
+            # v5.0.13: Skip remediation if server configured external firewall mode (pfSense, etc.)
             if ($Global:SkipFirewallRemediation) {
                 Write-Log "[LOCAL-DETECT] Firewall remediation SKIPPED (external firewall environment - configured by server)" "INFO"
                 
