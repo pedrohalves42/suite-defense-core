@@ -87,24 +87,34 @@ export default function ExecutiveDashboard() {
       const offlineAgents = agentCounts.offline + agentCounts.warning + agentCounts.never_connected;
 
       // === O que o sistema FEZ pela empresa (30 dias) ===
+      // IMPORTANTE: Filtra apenas ações REAIS (severity >= warning).
+      // Eventos com severity 'info'/'debug' são detecções de rotina repetidas
+      // (ex: mesmo software não-autorizado detectado a cada hora) e NÃO representam
+      // ações concretas que evitariam um chamado técnico.
       const actions30d = {
-        auto_repairs: evidence30d.filter(e => e.event_type === 'auto_repair').length,
-        auto_recoveries: evidence30d.filter(e => e.event_type === 'auto_recovery').length,
+        auto_repairs: evidence30d.filter(e => e.event_type === 'auto_repair' && e.severity !== 'info' && e.severity !== 'debug').length,
+        auto_detections: evidence30d.filter(e => e.event_type === 'auto_repair' && (e.severity === 'info' || e.severity === 'debug')).length,
+        auto_recoveries: evidence30d.filter(e => e.event_type === 'auto_recovery' && e.severity !== 'info' && e.severity !== 'debug').length,
         critical_prevented: evidence30d.filter(e => e.event_type === 'security_event' && e.severity === 'critical').length,
         high_prevented: evidence30d.filter(e => e.event_type === 'security_event' && (e.severity === 'error' || e.severity === 'high')).length,
         medium_prevented: evidence30d.filter(e => e.event_type === 'security_event' && e.severity === 'warning').length,
         policy_corrections: evidence30d.filter(e => e.event_type === 'policy_drift').length,
         blocked_access: blockedThreats,
-        total_events: evidence30d.length,
+        total_events: evidence30d.filter(e => e.severity !== 'info' && e.severity !== 'debug').length,
       };
 
-      // Ações automáticas que evitaram trabalho manual
+      // Ações automáticas que evitaram trabalho manual (apenas ações reais)
       const automatedActions = actions30d.auto_repairs + actions30d.auto_recoveries + actions30d.policy_corrections;
       // Incidentes que foram contidos sem intervenção humana
       const incidentsContained = actions30d.critical_prevented + actions30d.high_prevented + actions30d.medium_prevented;
       
-      // Horas de TI economizadas (estimativa: cada auto-reparo = 1h, recovery = 2h, policy = 0.5h)
-      const hoursOfITSaved = (actions30d.auto_repairs * 1) + (actions30d.auto_recoveries * 2) + (actions30d.policy_corrections * 0.5);
+      // Horas de TI economizadas (estimativa conservadora)
+      // auto_repair real (warning+): 0.5h, recovery: 1h, policy: 0.25h, critical: 2h
+      const hoursOfITSaved = 
+        (actions30d.auto_repairs * 0.5) + 
+        (actions30d.auto_recoveries * 1) + 
+        (actions30d.policy_corrections * 0.25) +
+        (actions30d.critical_prevented * 2);
 
       // Jobs completados automaticamente pelo sistema (não pelo humano)
       const automatedJobsCompleted = jobs30d.filter(j => j.status === 'completed').length;
@@ -281,7 +291,7 @@ export default function ExecutiveDashboard() {
                 <div className="grid grid-cols-3 gap-3">
                   <div className="text-center p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                     <p className="text-2xl font-bold text-blue-500">{summaryData?.automatedActions || 0}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Problemas resolvidos<br/>automaticamente</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Problemas corrigidos<br/>automaticamente</p>
                   </div>
                   <div className="text-center p-3 rounded-lg bg-red-500/10 border border-red-500/20">
                     <p className="text-2xl font-bold text-red-500">{summaryData?.incidentsContained || 0}</p>
@@ -296,12 +306,17 @@ export default function ExecutiveDashboard() {
                 {/* Detailed breakdown - friendly language */}
                 <div className="space-y-1">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1.5">Detalhamento</p>
-                  <ActionRow icon={<Wrench className="h-3 w-3 text-blue-400" />} label="Problemas corrigidos sem chamar técnico" count={summaryData?.actions30d.auto_repairs || 0} description="O sistema detectou e resolveu sozinho" />
-                  <ActionRow icon={<RefreshCw className="h-3 w-3 text-emerald-400" />} label="Serviços restaurados automaticamente" count={summaryData?.actions30d.auto_recoveries || 0} description="Recuperação sem downtime para sua equipe" />
-                  <ActionRow icon={<Flame className="h-3 w-3 text-red-400" />} label="Ameaças críticas neutralizadas" count={summaryData?.actions30d.critical_prevented || 0} description="Incidentes que poderiam parar sua operação" />
+                  <ActionRow icon={<Wrench className="h-3 w-3 text-blue-400" />} label="Problemas corrigidos automaticamente" count={summaryData?.actions30d.auto_repairs || 0} description="Falhas detectadas e resolvidas sem intervenção" />
+                  <ActionRow icon={<RefreshCw className="h-3 w-3 text-emerald-400" />} label="Serviços restaurados" count={summaryData?.actions30d.auto_recoveries || 0} description="Recuperação automática sem downtime" />
+                  <ActionRow icon={<Flame className="h-3 w-3 text-red-400" />} label="Ameaças críticas neutralizadas" count={summaryData?.actions30d.critical_prevented || 0} description="Incidentes graves bloqueados pelo sistema" />
                   <ActionRow icon={<Bug className="h-3 w-3 text-orange-400" />} label="Riscos de segurança contidos" count={summaryData?.actions30d.high_prevented || 0} description="Vulnerabilidades identificadas e tratadas" />
                   <ActionRow icon={<Lock className="h-3 w-3 text-amber-400" />} label="Políticas de segurança realinhadas" count={summaryData?.actions30d.policy_corrections || 0} description="Desvios de conformidade corrigidos" />
                   <ActionRow icon={<ShieldBan className="h-3 w-3 text-purple-400" />} label="Acessos não autorizados bloqueados" count={summaryData?.blockedThreats || 0} description="Tentativas barradas nos últimos 7 dias" />
+                  {(summaryData?.actions30d.auto_detections || 0) > 0 && (
+                    <div className="pt-1.5 mt-1.5 border-t border-border/30">
+                      <ActionRow icon={<Eye className="h-3 w-3 text-muted-foreground" />} label="Verificações de rotina realizadas" count={summaryData?.actions30d.auto_detections || 0} description="Monitoramento contínuo (não contabilizado como ação)" />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
