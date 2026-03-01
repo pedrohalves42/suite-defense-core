@@ -122,18 +122,21 @@ export function AgentDetailsDrawer({
     queryFn: async () => {
       if (!agentId || !effectiveTenantId) return { skip_firewall_remediation: false };
 
-      const { data, error } = await supabase.rpc('get_agents_list', {
-        p_tenant_id: effectiveTenantId,
-        p_include_archived: true,
-      });
+      // Query direta na tabela agents - RLS permite SELECT para o tenant
+      const { data, error } = await supabase
+        .from('agents')
+        .select('skip_firewall_remediation')
+        .eq('id', agentId)
+        .eq('tenant_id', effectiveTenantId)
+        .maybeSingle();
 
-      if (error) throw error;
-
-      const agents = (data as Array<Record<string, unknown>> | null) ?? [];
-      const agent = agents.find((item) => item.id === agentId);
+      if (error) {
+        console.warn('Fallback: skip_firewall_remediation não disponível via SELECT direto', error.message);
+        return { skip_firewall_remediation: false };
+      }
 
       return {
-        skip_firewall_remediation: Boolean(agent?.skip_firewall_remediation),
+        skip_firewall_remediation: Boolean(data?.skip_firewall_remediation),
       };
     },
     enabled: !!agentId && !!effectiveTenantId,
@@ -153,10 +156,10 @@ export function AgentDetailsDrawer({
       return skip;
     },
     onSuccess: (skip) => {
+      // Atualiza cache local sem re-fetch (RPC não retorna este campo)
       queryClient.setQueryData(['agent-firewall-skip', effectiveTenantId, agentId], {
         skip_firewall_remediation: skip,
       });
-      queryClient.invalidateQueries({ queryKey: ['agent-firewall-skip', effectiveTenantId, agentId] });
       toast.success(skip ? 'Remediação de firewall desativada' : 'Remediação de firewall ativada');
     },
     onError: (err: Error) => {
