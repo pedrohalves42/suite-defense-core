@@ -541,16 +541,35 @@ export function AgentDetailsDrawer({
                     </div>
 
                     {/* Danger Zone */}
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <h4 className="text-xs font-semibold uppercase tracking-wider text-destructive/70">
                         Zona de Perigo
                       </h4>
-                      <div className="border border-destructive/20 rounded-lg p-3 space-y-2 bg-destructive/5">
+                      <div className="border border-destructive/20 rounded-lg p-1 bg-destructive/5 space-y-1">
                         <TooltipProvider>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-start gap-3 h-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => navigate(`/admin/diagnostics?agent=${agentId}`)}
+                          >
+                            <Stethoscope className="h-4 w-4" />
+                            <span className="text-sm">Diagnóstico do Computador</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-start gap-3 h-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => navigate('/admin/enrollment-keys')}
+                          >
+                            <Key className="h-4 w-4" />
+                            <span className="text-sm">Nova Chave de Instalação</span>
+                          </Button>
                           <AgentQuickActions
                             agentId={agentId}
                             agentName={agentName}
                             onAgentDeleted={handleAgentDeleted}
+                            layout="vertical"
                           />
                         </TooltipProvider>
                       </div>
