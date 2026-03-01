@@ -26,17 +26,18 @@ import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // === Modelo de custo conservador para PMEs brasileiras (2025-2026) ===
-// Fontes: CERT.br, Kaspersky BR SMB Report, mercado local de suporte TI
+// Fontes: CERT.br, mercado local de suporte TI para pequenas empresas
+// Valores calibrados para operações de 1-50 máquinas
 const COST_MODEL = {
-  security_event_critical: 2800,
-  security_event_high: 1200,
-  security_event_medium: 350,
-  auto_repair: 85,
-  auto_recovery: 420,
-  policy_drift: 150,
-  blocked_access: 650,
-  firewall_enforcement: 120,
-  agent_offline_per_hour: 75,
+  security_event_critical: 500,   // Incidente crítico contido (ex: ransomware bloqueado)
+  security_event_high: 200,       // Ameaça alta neutralizada
+  security_event_medium: 60,      // Alerta médio tratado automaticamente
+  auto_repair: 45,                // Chamado técnico remoto evitado
+  auto_recovery: 150,             // Restauração de serviço sem visita
+  policy_drift: 60,               // Correção de conformidade automática
+  blocked_access: 120,            // Tentativa de acesso indevido bloqueada
+  firewall_enforcement: 40,       // Regra de firewall aplicada
+  agent_offline_per_hour: 25,     // Custo por hora de máquina desprotegida
 };
 
 export default function ExecutiveDashboard() {
@@ -325,12 +326,12 @@ export default function ExecutiveDashboard() {
                     <TooltipContent className="max-w-xs text-xs">
                       <p className="font-semibold mb-1">Cálculo conservador (PMEs BR):</p>
                       <ul className="space-y-0.5">
-                        <li>• Baseado em CERT.br + Kaspersky BR</li>
-                        <li>• Chamado técnico remoto evitado: R$ 85</li>
-                        <li>• Visita presencial + downtime evitado: R$ 420</li>
-                        <li>• Resposta a incidente crítico: R$ 2.800</li>
-                        <li>• Retrabalho de conformidade: R$ 150</li>
-                        <li>• Investigação de acesso indevido: R$ 650</li>
+                        <li>• Baseado em CERT.br + mercado local de TI</li>
+                        <li>• Chamado técnico remoto evitado: R$ 45</li>
+                        <li>• Restauração de serviço sem visita: R$ 150</li>
+                        <li>• Incidente crítico contido: R$ 500</li>
+                        <li>• Correção de conformidade automática: R$ 60</li>
+                        <li>• Acesso indevido bloqueado: R$ 120</li>
                       </ul>
                     </TooltipContent>
                   </Tooltip>
