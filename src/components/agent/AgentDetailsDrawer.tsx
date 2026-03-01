@@ -150,23 +150,6 @@ export function AgentDetailsDrawer({
         .eq('tenant_id', effectiveTenantId);
 
       if (error) throw error;
-
-      // Verificação pós-update via RPC (SELECT direto em agents é bloqueado por RLS)
-      const { data: verifyData, error: verifyError } = await supabase.rpc('get_agents_list', {
-        p_tenant_id: effectiveTenantId,
-        p_include_archived: true,
-      });
-
-      if (verifyError) throw verifyError;
-
-      const agents = (verifyData as Array<Record<string, unknown>> | null) ?? [];
-      const updatedAgent = agents.find((item) => item.id === agentId);
-
-      if (!updatedAgent) throw new Error('Agente não encontrado no tenant ativo');
-      if (Boolean(updatedAgent.skip_firewall_remediation) !== skip) {
-        throw new Error('Configuração não foi aplicada. Verifique o tenant ativo.');
-      }
-
       return skip;
     },
     onSuccess: (skip) => {
