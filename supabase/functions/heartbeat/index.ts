@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     const tokenHash = await hashToken(agentToken)
     const { data: token } = await supabase
       .from('agent_tokens')
-      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status, skip_firewall_remediation)')
+      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status, skip_firewall_remediation, agent_version)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -78,6 +78,7 @@ Deno.serve(async (req) => {
       hmac_secret: string; 
       status: string;
       skip_firewall_remediation: boolean;
+      agent_version: string | null;
     }
     
     // FASE 1.2: HMAC OBRIGATORIO - Agora hmac_secret e NOT NULL
@@ -182,10 +183,14 @@ Deno.serve(async (req) => {
       updateData.hostname = osInfo.hostname
     }
     
-    // FASE 4: Capturar agent_version do payload
+    // FASE 4: Capturar agent_version do payload (somente quando realmente mudou)
     const agentVersion = (osInfo as any).agent_version as string | undefined;
     if (agentVersion) {
-      updateData.agent_version = agentVersion;
+      const incomingNorm = normalizeVersion(agentVersion)
+      const currentNorm = normalizeVersion(agent.agent_version || undefined)
+      if (!incomingNorm || !currentNorm || incomingNorm !== currentNorm) {
+        updateData.agent_version = agentVersion;
+      }
     }
     
     // FASE 5: Capturar Ed25519 capability flags do payload
