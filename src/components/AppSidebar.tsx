@@ -123,24 +123,23 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // ─── TENANT-FACING Menu Items ─────────────────────
+  // ─── USER-FACING: Visible by default ─────────────────────
   const overviewItems = useMemo<MenuItem[]>(() => [
     { icon: Target, label: t('adminPages.sidebar.actionCenter'), to: '/admin/action-center', end: true, badge: urgentCount > 0 ? urgentCount : undefined },
     { icon: Home, label: t('adminPages.sidebar.generalPanel'), to: '/admin/dashboard' },
     { icon: Presentation, label: 'Dashboard Executivo', to: '/admin/executive' },
-    { icon: Activity, label: t('adminPages.sidebar.realTime'), to: '/admin/monitoring-advanced' },
     { icon: Cpu, label: t('adminPages.sidebar.myComputers'), to: '/admin/agent-health' },
+    { icon: Activity, label: t('adminPages.sidebar.realTime'), to: '/admin/monitoring-advanced' },
   ], [urgentCount, t]);
 
-  const protectionItems = useMemo<MenuItem[]>(() => [
+  const securityItems = useMemo<MenuItem[]>(() => [
     { icon: AlertTriangle, label: 'Alertas', to: '/admin/security-monitoring' },
     { icon: ShieldCheck, label: 'Vulnerabilidades', to: '/admin/vulnerabilities' },
     { icon: AlertCircle, label: 'Quarentena', to: '/quarantine' },
     { icon: Globe, label: 'Navegação Web', to: '/admin/web-activity' },
     { icon: Network, label: 'Filtro DNS', to: '/admin/dns-filter' },
-    { icon: ShieldAlert, label: 'Tempo Real', to: '/admin/realtime-security' },
-    { icon: FileSearch, label: 'Histórico', to: '/admin/agent-timeline' },
     { icon: ShieldAlert, label: 'Risco de Software', to: '/admin/software-risk' },
+    { icon: FileSearch, label: 'Histórico', to: '/admin/agent-timeline' },
     { icon: AlertCircle, label: 'Resolver Alertas', to: '/admin/alert-resolution' },
   ], []);
 
@@ -150,27 +149,35 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Shield, label: 'Políticas', to: '/admin/security-policies' },
     { icon: AppWindow, label: 'Programas', to: '/admin/software-inventory' },
     { icon: Crown, label: 'Equipe', to: '/admin/members' },
-    { icon: UserPlus, label: 'Convites', to: '/admin/invites' },
     { icon: FileBarChart, label: 'Relatórios', to: '/admin/reports' },
     { icon: Bell, label: 'Notificações', to: '/admin/notification-channels' },
-    { icon: Archive, label: 'Arquivados', to: '/admin/archived-agents' },
-    { icon: ListTodo, label: 'Tarefas', to: '/admin/tasks' },
     { icon: Settings, label: 'Configurações', to: '/admin/tenant' },
-    { icon: Fingerprint, label: 'Minha Conta', to: '/admin/my-account' },
   ], []);
 
+  // ─── ADMIN: Collapsed by default ─────────────────────
   const complianceItems = useMemo<MenuItem[]>(() => [
     { icon: ClipboardCheck, label: 'SOC 2', to: '/admin/soc2-compliance' },
     { icon: ScrollText, label: 'Auditoria', to: '/admin/system-audit' },
     { icon: Scale, label: 'Linha do Tempo', to: '/admin/compliance-timeline' },
     { icon: FileText, label: 'Automação', to: '/admin/compliance-automation' },
-    { icon: Crosshair, label: 'Ameaças', to: '/admin/threat-intelligence' },
-    { icon: Brain, label: 'Regras IA', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
     { icon: Eye, label: 'Governança', to: '/admin/governance' },
     { icon: FileBarChart, label: 'Relatórios', to: '/admin/governance-reports' },
     { icon: BookOpen, label: 'Evidências', to: '/admin/evidence-bundle' },
     { icon: Workflow, label: 'Playbooks', to: '/admin/playbooks' },
     { icon: BarChart3, label: 'Score de Risco', to: '/admin/risk-score' },
+  ], []);
+
+  const intelligenceItems = useMemo<MenuItem[]>(() => [
+    { icon: Brain, label: 'Regras IA', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
+    { icon: Crosshair, label: 'Ameaças', to: '/admin/threat-intelligence' },
+    { icon: BrainCircuit, label: 'Insights', to: '/admin/ai-insights' },
+    { icon: Sparkles, label: 'Ações', to: '/admin/ai-actions' },
+    { icon: AlertTriangle, label: 'Anomalias', to: '/admin/ai-anomalies' },
+    { icon: ThumbsUp, label: 'Feedback', to: '/admin/ai-feedback' },
+    { icon: Lightbulb, label: 'Triagem', to: '/admin/insight-triage' },
+    { icon: TrendingUp, label: 'Confiança', to: '/admin/confidence-gap' },
+    { icon: FileSearch, label: 'Auditoria IA', to: '/admin/decision-audit' },
+    { icon: BookOpen, label: 'Base de Conhecimento', to: '/admin/software-knowledge-base' },
   ], [criticalInsightsCount]);
 
   const advancedItems = useMemo<MenuItem[]>(() => [
@@ -179,19 +186,12 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Terminal, label: 'Diagnóstico', to: '/admin/diagnostics' },
     { icon: Clock, label: 'Automações', to: '/admin/automations' },
     { icon: Zap, label: 'Correção Auto', to: '/admin/auto-remediation' },
+    { icon: ShieldAlert, label: 'Tempo Real Segurança', to: '/admin/realtime-security' },
+    { icon: UserPlus, label: 'Convites', to: '/admin/invites' },
+    { icon: Archive, label: 'Arquivados', to: '/admin/archived-agents' },
+    { icon: ListTodo, label: 'Tarefas', to: '/admin/tasks' },
+    { icon: Fingerprint, label: 'Minha Conta', to: '/admin/my-account' },
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
-  ], []);
-
-  // ─── IA & Análise (Admin) ─────────────────────
-  const aiAnalysisItems = useMemo<MenuItem[]>(() => [
-    { icon: BrainCircuit, label: 'Insights', to: '/admin/ai-insights' },
-    { icon: Sparkles, label: 'Ações', to: '/admin/ai-actions' },
-    { icon: AlertTriangle, label: 'Anomalias', to: '/admin/ai-anomalies' },
-    { icon: ThumbsUp, label: 'Feedback', to: '/admin/ai-feedback' },
-    { icon: Lightbulb, label: 'Triagem', to: '/admin/insight-triage' },
-    { icon: TrendingUp, label: 'Confiança', to: '/admin/confidence-gap' },
-    { icon: FileSearch, label: 'Auditoria', to: '/admin/decision-audit' },
-    { icon: BookOpen, label: 'Base de Conhecimento', to: '/admin/software-knowledge-base' },
   ], []);
 
   // ─── SUPER ADMIN Menu Items ─────────────────────
@@ -510,15 +510,20 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
 
               <div className="sidebar-divider-neon my-2 mx-2" />
 
-              {renderCollapsibleSection('🛡️ Proteção', 'protection', protectionItems)}
+              {renderCollapsibleSection('🛡️ Segurança', 'protection', securityItems)}
               <div className="my-1.5" />
               {renderCollapsibleSection('⚙️ Gestão', 'management', managementItems)}
-              <div className="my-1.5" />
+
+              <div className="sidebar-divider-neon my-2 mx-2" />
+              <div className="px-3 py-1">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-[hsl(var(--neon-cyan)_/_0.3)]">Admin</span>
+              </div>
+
               {renderCollapsibleSection('📋 Conformidade', 'compliance', complianceItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection('🔧 Avançado', 'advanced', advancedItems)}
+              {renderCollapsibleSection('🧠 Inteligência & IA', 'aiAnalysis', intelligenceItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection('🤖 IA', 'aiAnalysis', aiAnalysisItems)}
+              {renderCollapsibleSection('🔧 Avançado', 'advanced', advancedItems)}
             </motion.div>
           ) : (
             <motion.div className="space-y-0.5" variants={containerVariants} initial="hidden" animate="show">
