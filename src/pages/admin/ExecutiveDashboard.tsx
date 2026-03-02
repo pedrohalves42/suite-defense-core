@@ -71,8 +71,9 @@ export default function ExecutiveDashboard() {
       ]);
 
       const alerts: Array<{ severity: string; status: string }> = alertsRes.data || [];
-      const activeAlerts = alerts.filter(a => ['active', 'open', 'pending'].includes(a.status)).length;
-      const criticalAlerts = alerts.filter(a => a.severity === 'critical').length;
+      const unresolvedStatuses = ['active', 'open', 'pending'];
+      const activeAlerts = alerts.filter(a => unresolvedStatuses.includes(a.status)).length;
+      const criticalAlerts = alerts.filter(a => a.severity === 'critical' && unresolvedStatuses.includes(a.status)).length;
 
       const jobsToday: Array<{ status: string; job_type: string }> = jobsTodayRes.data || [];
       const jobs30d: Array<{ status: string; job_type: string }> = jobs30dRes.data || [];
