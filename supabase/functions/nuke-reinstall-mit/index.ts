@@ -102,13 +102,19 @@ try {
         return
     }
 
-    # 6. Execute installer - strip param() block then invoke
+    # 6. Execute installer - pass parameters via wrapper script
     Write-Host "[6/6] Executando instalador..." -ForegroundColor Yellow
-    $rawScript = Get-Content $tempFile -Raw
-    # Remove param(...) block so it doesn't prompt for values
-    $cleanScript = $rawScript -replace '(?s)param\s*\([^)]*\)', ''
-    Set-Content -Path $tempFile -Value $cleanScript -Encoding UTF8 -Force
-    & powershell.exe -ExecutionPolicy Bypass -File $tempFile
+    $wrapperFile = Join-Path $env:TEMP "cybershield-wrapper-install.ps1"
+    $lines = @()
+    $lines += '[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12'
+    $lines += '$' + 'ServerUrl = "' + $ServerUrl + '"'
+    $lines += '$' + 'EnrollmentKey = "' + $EnrollmentKey + '"'
+    $lines += '$' + 'AgentToken = ""'
+    $lines += '$' + 'AgentName = "MIT-SERVIDOR"'
+    $lines += '$' + 'Hostname = "' + $env:COMPUTERNAME + '"'
+    $lines += '. "' + $tempFile + '"'
+    $lines | Set-Content -Path $wrapperFile -Encoding UTF8 -Force
+    & powershell.exe -ExecutionPolicy Bypass -File $wrapperFile
 
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Green
