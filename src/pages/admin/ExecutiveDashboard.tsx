@@ -71,7 +71,7 @@ export default function ExecutiveDashboard() {
       ]);
 
       const alerts: Array<{ severity: string; status: string }> = alertsRes.data || [];
-      const activeAlerts = alerts.filter(a => a.status === 'active').length;
+      const activeAlerts = alerts.filter(a => ['active', 'open', 'pending'].includes(a.status)).length;
       const criticalAlerts = alerts.filter(a => a.severity === 'critical').length;
 
       const jobsToday: Array<{ status: string; job_type: string }> = jobsTodayRes.data || [];
@@ -166,8 +166,8 @@ export default function ExecutiveDashboard() {
       };
     },
     enabled: !tenantLoading && !!tenantId && !snapshotsLoading,
-    refetchInterval: 300000,
-    staleTime: 60000,
+    refetchInterval: 60000,
+    staleTime: 15000,
   });
 
   const getHealthStatus = (score: number) => {

@@ -64,7 +64,7 @@ export default function Dashboard() {
       return data || [];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 120000, // COST-OPT: 30s → 2min
+    refetchInterval: 60000,
   });
 
   // Fetch alerts
@@ -82,7 +82,7 @@ export default function Dashboard() {
       return data || [];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 120000, // COST-OPT: 30s → 2min
+    refetchInterval: 60000,
   });
 
   // Fetch vulnerabilities
