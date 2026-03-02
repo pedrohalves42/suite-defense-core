@@ -27,6 +27,32 @@ if (-not $isAdmin) {
     return
 }
 
+# 1.5 Resolve enrollment key (env -> file -> prompt)
+$EnrollmentKey = [Environment]::GetEnvironmentVariable("CYBERSHIELD_KEY", "Machine")
+if (-not $EnrollmentKey) { $EnrollmentKey = $env:CYBERSHIELD_KEY }
+
+if (-not $EnrollmentKey -and (Test-Path "C:\\CyberShield\\enrollment.key")) {
+    try {
+        $EnrollmentKey = (Get-Content "C:\\CyberShield\\enrollment.key" -Raw -ErrorAction SilentlyContinue).Trim()
+        if ($EnrollmentKey) { Write-Host "[OK] Enrollment key carregada de C:\\CyberShield\\enrollment.key" -ForegroundColor Green }
+    } catch {
+        Write-Host "[WARN] Nao foi possivel ler enrollment.key: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
+
+if (-not $EnrollmentKey) {
+    Write-Host "[WARN] CYBERSHIELD_KEY nao encontrada. Informe a Enrollment Key (XXXX-XXXX-XXXX-XXXX):" -ForegroundColor Yellow
+    $EnrollmentKey = Read-Host "Enrollment Key"
+}
+
+if (-not $EnrollmentKey) {
+    Write-Host "[ERROR] Enrollment Key obrigatoria para reinstalar do zero." -ForegroundColor Red
+    Start-Sleep -Seconds 10
+    return
+}
+
+$EnrollmentKey = $EnrollmentKey.Trim().Trim('"').Trim("'")
+
 try {
     # 2. Kill ALL CyberShield processes
     Write-Host "[1/6] Matando processos CyberShield..." -ForegroundColor Yellow
@@ -54,41 +80,37 @@ try {
         Write-Host "[OK] C:\\CyberShield ja nao existia" -ForegroundColor Green
     }
 
-    # 5. Clean environment variables
-    Write-Host "[4/6] Limpando variaveis de ambiente..." -ForegroundColor Yellow
-    [Environment]::SetEnvironmentVariable("CYBERSHIELD_KEY", $null, "Machine")
+    # 5. Clean environment variables (preserva enrollment key para recuperacao futura)
+    Write-Host "[4/6] Limpando variaveis de ambiente temporarias..." -ForegroundColor Yellow
     [Environment]::SetEnvironmentVariable("CYBERSHIELD_JWT", $null, "Machine")
     [Environment]::SetEnvironmentVariable("CYBERSHIELD_AGENT_NAME", $null, "Machine")
-    Write-Host "[OK] Variaveis limpas" -ForegroundColor Green
+    Write-Host "[OK] Variaveis temporarias limpas (CYBERSHIELD_KEY preservada)" -ForegroundColor Green
 
     # 6. Download and run fresh installer
     Write-Host "[5/6] Baixando instalador limpo..." -ForegroundColor Yellow
-    $enrollmentKeyId = "195abf32-ee46-4cec-9297-2a1c89277588"
-    $installerUrl = "$ServerUrl/functions/v1/serve-installer/$enrollmentKeyId" + "?os_type=windows&agent_name=MIT-SERVIDOR"
-    
-    Write-Host "  URL: $installerUrl" -ForegroundColor Gray
-    
+    $installerUrl = "$ServerUrl/functions/v1/serve-installer/$EnrollmentKey?os_type=windows&agent_name=MIT-SERVIDOR&hostname=$($env:COMPUTERNAME)"
+    $installerUrlQueryMode = "$ServerUrl/functions/v1/serve-installer?enrollment_key=$([System.Uri]::EscapeDataString($EnrollmentKey))&os_type=windows&agent_name=MIT-SERVIDOR&hostname=$($env:COMPUTERNAME)"
+
+    Write-Host "  URL (path mode): $installerUrl" -ForegroundColor Gray
+
     $tempFile = Join-Path $env:TEMP "cybershield-fresh-install.ps1"
-    
+
     try {
         $response = Invoke-WebRequest -Uri $installerUrl -OutFile $tempFile -UseBasicParsing -TimeoutSec 120 -PassThru
         $fileSize = (Get-Item $tempFile).Length
-        Write-Host "[OK] Instalador baixado: $fileSize bytes" -ForegroundColor Green
+        Write-Host "[OK] Instalador baixado (path mode): $fileSize bytes" -ForegroundColor Green
     } catch {
-        Write-Host "[ERROR] Falha no download: $($_.Exception.Message)" -ForegroundColor Red
-        
-        # Fallback: try get-latest-agent-script
-        Write-Host "[RETRY] Tentando via get-latest-agent-script..." -ForegroundColor Yellow
-        $fallbackUrl = "$ServerUrl/functions/v1/get-latest-agent-script?platform=windows&format=plain"
-        Invoke-WebRequest -Uri $fallbackUrl -OutFile $tempFile -UseBasicParsing -TimeoutSec 120
+        Write-Host "[WARN] Falha no path mode: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "[RETRY] Tentando query mode..." -ForegroundColor Yellow
+        $response = Invoke-WebRequest -Uri $installerUrlQueryMode -OutFile $tempFile -UseBasicParsing -TimeoutSec 120 -PassThru
         $fileSize = (Get-Item $tempFile).Length
-        Write-Host "[OK] Script baixado via fallback: $fileSize bytes" -ForegroundColor Green
+        Write-Host "[OK] Instalador baixado (query mode): $fileSize bytes" -ForegroundColor Green
     }
 
-    # Validate file is not HTML/error
+    # Validate file is script, not HTML/JSON error payload
     $firstLine = Get-Content $tempFile -TotalCount 1 -ErrorAction SilentlyContinue
-    if ($firstLine -match "<html|<!DOCTYPE|<head") {
-        Write-Host "[ERROR] Servidor retornou HTML em vez de script!" -ForegroundColor Red
+    if ($firstLine -match "<html|<!DOCTYPE|<head|^\s*\{\s*\"error\"|^\s*\{\s*\"code\"") {
+        Write-Host "[ERROR] Servidor retornou payload invalido em vez de script!" -ForegroundColor Red
         Write-Host "  Primeira linha: $firstLine" -ForegroundColor Red
         Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
         return
