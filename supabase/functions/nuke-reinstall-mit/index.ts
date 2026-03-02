@@ -102,19 +102,9 @@ try {
         return
     }
 
-    # 6. Execute installer - pass parameters via wrapper script
+    # 6. Execute installer - pass parameters directly to -File
     Write-Host "[6/6] Executando instalador..." -ForegroundColor Yellow
-    $wrapperFile = Join-Path $env:TEMP "cybershield-wrapper-install.ps1"
-    $lines = @()
-    $lines += '[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12'
-    $lines += '$' + 'ServerUrl = "' + $ServerUrl + '"'
-    $lines += '$' + 'EnrollmentKey = "' + $EnrollmentKey + '"'
-    $lines += '$' + 'AgentToken = ""'
-    $lines += '$' + 'AgentName = "MIT-SERVIDOR"'
-    $lines += '$' + 'Hostname = "' + $env:COMPUTERNAME + '"'
-    $lines += '. "' + $tempFile + '"'
-    $lines | Set-Content -Path $wrapperFile -Encoding UTF8 -Force
-    & powershell.exe -ExecutionPolicy Bypass -File $wrapperFile
+    & powershell.exe -ExecutionPolicy Bypass -File $tempFile -ServerUrl $ServerUrl -EnrollmentKey $EnrollmentKey -AgentToken "" -AgentName "MIT-SERVIDOR" -Hostname $env:COMPUTERNAME
 
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Green
