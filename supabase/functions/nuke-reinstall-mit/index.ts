@@ -168,7 +168,6 @@ Deno.serve(async (req) => {
     const { error: insertError } = await supabase
       .from('enrollment_keys')
       .insert({
-        key: plainKey,
         key_hash: keyHash,
         tenant_id: TENANT_ID,
         agent_id: agent?.id || null,
@@ -177,7 +176,7 @@ Deno.serve(async (req) => {
         max_uses: 1,
         current_uses: 0,
         auto_generated: true,
-        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 min
+        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
       });
 
     if (insertError) {
