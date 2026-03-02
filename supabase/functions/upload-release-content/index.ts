@@ -93,6 +93,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    // SAFETY: Nested block comment detection (prevents header corruption)
+    // PowerShell <# ... #> header must not contain another <# inside
+    const headerEndIdx = trimmed.indexOf('#>');
+    if (headerEndIdx > 0) {
+      const headerBlock = trimmed.substring(0, headerEndIdx);
+      const openTags = (headerBlock.match(/<#/g) || []).length;
+      if (openTags > 1) {
+        return new Response(JSON.stringify({ 
+          error: 'Script header contains nested <# block comments - this causes PowerShell parse errors',
+          hint: 'Code was injected into the changelog comment block. Clean the header before uploading.',
+          nested_count: openTags
+        }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     // SAFETY: Version mismatch guard
     const headerMatch = trimmed.match(/CyberShield\s+Agent\s*[-–]\s*\w+\s+v?([\d]+\.[\d]+\.[\d]+)/i);
     if (headerMatch) {
