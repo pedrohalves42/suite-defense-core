@@ -863,7 +863,9 @@ function Invoke-SecureRequest {
             }
             
             if ($Body) {
-                $params.Body = if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Depth 10 }
+                # HOTFIX-23: Must use -Compress to match HMAC signature (line 838)
+                # Without -Compress, formatted JSON != compact JSON signed by HMAC
+                $params.Body = if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Compress -Depth 10 }
                 $params.ContentType = "application/json; charset=utf-8"
             }
             

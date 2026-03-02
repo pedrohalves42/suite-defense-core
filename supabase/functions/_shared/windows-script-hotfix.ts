@@ -488,5 +488,22 @@ $1    $job_error_message = "Unknown job type: $($Job.job_type)"`
     reasons.push('cng_cleanup_fix');
   }
 
+  // HOTFIX 23: ConvertTo-Json body serialization mismatch between HMAC signing and HTTP body
+  // Line 838 signs with -Compress but line 866 sends WITHOUT -Compress
+  // This causes HMAC failures for complex payloads (software inventory, antivirus, services)
+  // because the server receives formatted JSON but the signature was computed over compact JSON
+  if (
+    content.includes('ConvertTo-Json -Depth 10 }') &&
+    content.includes('ConvertTo-Json -Compress -Depth 10') &&
+    !content.includes('HOTFIX-BODY-COMPRESS')
+  ) {
+    // Fix line 866: add -Compress to match HMAC signing on line 838
+    content = content.replace(
+      /\$params\.Body = if \(\$Body -is \[string\]\) \{ \$Body \} else \{ \$Body \| ConvertTo-Json -Depth 10 \}/g,
+      '$params.Body = if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Compress -Depth 10 } <# HOTFIX-BODY-COMPRESS #>'
+    );
+    reasons.push('body_compress_fix');
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }
