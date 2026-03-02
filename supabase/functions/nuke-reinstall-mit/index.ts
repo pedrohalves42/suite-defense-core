@@ -102,10 +102,13 @@ try {
         return
     }
 
-    # 6. Execute installer (use -Command to avoid param() prompts)
+    # 6. Execute installer - strip param() block then invoke
     Write-Host "[6/6] Executando instalador..." -ForegroundColor Yellow
-    $scriptBody = Get-Content $tempFile -Raw
-    powershell.exe -ExecutionPolicy Bypass -Command $scriptBody
+    $rawScript = Get-Content $tempFile -Raw
+    # Remove param(...) block so it doesn't prompt for values
+    $cleanScript = $rawScript -replace '(?s)param\s*\([^)]*\)', ''
+    Set-Content -Path $tempFile -Value $cleanScript -Encoding UTF8 -Force
+    & powershell.exe -ExecutionPolicy Bypass -File $tempFile
 
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Green
