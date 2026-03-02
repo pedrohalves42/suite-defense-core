@@ -369,5 +369,124 @@ try {
     }
   }
 
+  // HOTFIX 17: ACL hardening uses English names (SYSTEM/Administrators) which fail on non-English Windows
+  // Fix: Replace with well-known SIDs (S-1-5-18 for SYSTEM, S-1-5-32-544 for Administrators)
+  if (content.includes('FileSystemAccessRule("SYSTEM"') && !content.includes('HOTFIX-ACL-SID')) {
+    // Replace all ACL rules using English names with SID-based equivalents
+    content = content.replace(
+      /New-Object System\.Security\.AccessControl\.FileSystemAccessRule\("SYSTEM",\s*"FullControl",\s*"Allow"\)/g,
+      'New-Object System.Security.AccessControl.FileSystemAccessRule((New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")).Translate([System.Security.Principal.NTAccount]),"FullControl","Allow") <# HOTFIX-ACL-SID #>'
+    );
+    content = content.replace(
+      /New-Object System\.Security\.AccessControl\.FileSystemAccessRule\("Administrators",\s*"FullControl",\s*"Allow"\)/g,
+      'New-Object System.Security.AccessControl.FileSystemAccessRule((New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]),"FullControl","Allow") <# HOTFIX-ACL-SID #>'
+    );
+    // Also fix the directory ACL rules with inheritance flags
+    content = content.replace(
+      /New-Object System\.Security\.AccessControl\.FileSystemAccessRule\(\s*"SYSTEM",\s*"FullControl",\s*"ContainerInherit,ObjectInherit",\s*"None",\s*"Allow"\)/g,
+      'New-Object System.Security.AccessControl.FileSystemAccessRule((New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")).Translate([System.Security.Principal.NTAccount]),"FullControl","ContainerInherit,ObjectInherit","None","Allow") <# HOTFIX-ACL-SID #>'
+    );
+    content = content.replace(
+      /New-Object System\.Security\.AccessControl\.FileSystemAccessRule\(\s*"Administrators",\s*"FullControl",\s*"ContainerInherit,ObjectInherit",\s*"None",\s*"Allow"\)/g,
+      'New-Object System.Security.AccessControl.FileSystemAccessRule((New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]),"FullControl","ContainerInherit,ObjectInherit","None","Allow") <# HOTFIX-ACL-SID #>'
+    );
+    // Fix key file ACL rules (different pattern with separate variable names)
+    content = content.replace(
+      /New-Object System\.Security\.AccessControl\.FileSystemAccessRule\(\s*\n\s*"Administrators",\s*"FullControl",\s*"Allow"\)/g,
+      'New-Object System.Security.AccessControl.FileSystemAccessRule(\n                (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]),"FullControl","Allow") <# HOTFIX-ACL-SID #>'
+    );
+    content = content.replace(
+      /New-Object System\.Security\.AccessControl\.FileSystemAccessRule\(\s*\n\s*"SYSTEM",\s*"FullControl",\s*"Allow"\)/g,
+      'New-Object System.Security.AccessControl.FileSystemAccessRule(\n                (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")).Translate([System.Security.Principal.NTAccount]),"FullControl","Allow") <# HOTFIX-ACL-SID #>'
+    );
+    reasons.push('acl_sid_fix');
+  }
+
+  // HOTFIX 18: collect_certificates job handler missing from Execute-Job switch
+  if (content.includes('default {') && content.includes('Unknown job type') && !content.includes('HOTFIX-COLLECT-CERTS')) {
+    content = content.replace(
+      /(\s+)default \{\s*\n\s*\$job_error_message = "Unknown job type: \$\(\$Job\.job_type\)"/,
+      `$1"collect_certificates" { <# HOTFIX-COLLECT-CERTS #>
+$1    try {
+$1        $certs = @(Get-ChildItem -Path Cert:\\LocalMachine\\My -ErrorAction SilentlyContinue)
+$1        $certList = @($certs | ForEach-Object {
+$1            @{
+$1                thumbprint = $_.Thumbprint
+$1                subject = $_.Subject
+$1                issuer = $_.Issuer
+$1                valid_from = $_.NotBefore.ToString("o")
+$1                valid_until = $_.NotAfter.ToString("o")
+$1                serial_number = $_.SerialNumber
+$1                is_self_signed = ($_.Subject -eq $_.Issuer)
+$1                cert_store = "LocalMachine\\\\My"
+$1            }
+$1        })
+$1        $output = @{ certificates = $certList; count = $certList.Count; collected_at = (Get-Date).ToString("o") }
+$1        Write-Log "[JOB] Collected $($certList.Count) certificates" "INFO"
+$1    } catch {
+$1        $job_error_message = "collect_certificates failed: $($_.Exception.Message)"
+$1        $status = "failed"
+$1    }
+$1}
+$1default {
+$1    $job_error_message = "Unknown job type: $($Job.job_type)"`
+    );
+    reasons.push('collect_certificates_handler');
+  }
+
+  // HOTFIX 19: .Count on non-array in Test-UsbDevices and Get-UnauthorizedSoftware
+  // When Get-CimInstance returns a single object, it's not an array and .Count fails in StrictMode
+  if (content.includes('$usbDrives.Count') && !content.includes('HOTFIX-USB-COUNT')) {
+    content = content.replace(
+      /if \(\$usbDrives -and \$usbDrives\.Count -gt 0\)/g,
+      'if ($usbDrives -and @($usbDrives).Count -gt 0) <# HOTFIX-USB-COUNT #>'
+    );
+    content = content.replace(
+      /count = \$usbDrives\.Count/g,
+      'count = @($usbDrives).Count <# HOTFIX-USB-COUNT #>'
+    );
+    reasons.push('usb_count_fix');
+  }
+
+  // HOTFIX 20: .Count on non-array in Get-UnauthorizedSoftware (already uses @() for $unauthorized 
+  // but $installedSoftware might be a single string when only one software is found)
+  if (content.includes('$installedSoftware.Count') && !content.includes('HOTFIX-SW-COUNT')) {
+    content = content.replace(
+      /total_installed = \$installedSoftware\.Count/g,
+      'total_installed = @($installedSoftware).Count <# HOTFIX-SW-COUNT #>'
+    );
+    reasons.push('software_count_fix');
+  }
+
+  // HOTFIX 21: "vv" duplicated version prefix in startup log
+  // $Global:AgentVersion already contains "v5.0.13", so "v$($Global:AgentVersion)" produces "vv5.0.13"
+  if (content.includes('Agent v$($Global:AgentVersion)') && !content.includes('HOTFIX-VERSION-PREFIX')) {
+    content = content.replace(
+      /Agent v\$\(\$Global:AgentVersion\)/g,
+      'Agent $($Global:AgentVersion) <# HOTFIX-VERSION-PREFIX #>'
+    );
+    reasons.push('version_prefix_fix');
+  }
+
+  // HOTFIX 22: CNG key creation "Object already exists" — delete existing container before creating
+  // The current code uses $null name (ephemeral) but some Windows versions still persist it
+  if (content.includes('CngKey]::Create(') && !content.includes('HOTFIX-CNG-CLEANUP')) {
+    content = content.replace(
+      /\$cngKey = \[System\.Security\.Cryptography\.CngKey\]::Create\(\s*\n\s*\[System\.Security\.Cryptography\.CngAlgorithm\]::ECDsaP256,\s*\n\s*\$null,\s*# No name = ephemeral, no conflict\s*\n\s*\$creationParams\s*\)/g,
+      `# HOTFIX-CNG-CLEANUP: Delete any leftover CNG containers before creating
+                try {
+                    $existingKey = [System.Security.Cryptography.CngKey]::Open("CyberShieldECDSA_$env:COMPUTERNAME", [System.Security.Cryptography.CngProvider]::MicrosoftSoftwareKeyStorageProvider)
+                    if ($existingKey) { $existingKey.Delete(); $existingKey.Dispose() }
+                    Write-Log "[KEYS] Cleaned up existing CNG container" "DEBUG"
+                } catch { <# Container doesn't exist, that's fine #> }
+                $cngKey = [System.Security.Cryptography.CngKey]::Create(
+                    [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
+                    $null,  # Ephemeral key (HOTFIX-CNG-CLEANUP)
+                    $creationParams
+                )`
+    );
+    reasons.push('cng_cleanup_fix');
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }
