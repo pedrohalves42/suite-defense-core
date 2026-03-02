@@ -1,17 +1,36 @@
 import { corsHeaders } from '../_shared/cors.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { hashToken } from '../_shared/token-hash.ts';
 
 /**
  * Nuke & Reinstall MIT-SERVIDOR
- * Complete wipe + fresh install from scratch
+ * Auto-generates enrollment key server-side so no local files needed
  * GET /functions/v1/nuke-reinstall-mit
- * Usage: irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/nuke-reinstall-mit | iex
  */
 
-const SCRIPT = `# CyberShield - NUKE & REINSTALL - MIT-SERVIDOR
-# Apaga TUDO e reinstala do zero
+const TENANT_ID = '3adc67e6-8908-4d98-b85b-5e93be4673a1';
+const AGENT_NAME = 'MIT-SERVIDOR';
+
+function generateKey(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const parts: string[] = [];
+  for (let p = 0; p < 4; p++) {
+    let seg = '';
+    for (let i = 0; i < 4; i++) {
+      seg += chars[Math.floor(Math.random() * chars.length)];
+    }
+    parts.push(seg);
+  }
+  return parts.join('-');
+}
+
+function buildScript(enrollmentKey: string): string {
+  return `# CyberShield - NUKE & REINSTALL - MIT-SERVIDOR
+# Apaga TUDO e reinstala do zero (key auto-gerada pelo servidor)
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ErrorActionPreference = "Stop"
 $ServerUrl = "https://iavbnmduxpxhwubqrzzn.supabase.co"
+$EnrollmentKey = "${enrollmentKey}"
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Red
@@ -19,7 +38,7 @@ Write-Host " NUKE & REINSTALL - MIT-SERVIDOR" -ForegroundColor Red
 Write-Host "============================================" -ForegroundColor Red
 Write-Host ""
 
-# 1. Admin check
+# Admin check
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Host "[ERROR] Execute como Administrador!" -ForegroundColor Red
@@ -27,40 +46,10 @@ if (-not $isAdmin) {
     return
 }
 
-# 1.5 Resolve enrollment key BEFORE nuking (env -> file -> prompt)
-$EnrollmentKey = [Environment]::GetEnvironmentVariable("CYBERSHIELD_KEY", "Machine")
-if (-not $EnrollmentKey) { $EnrollmentKey = $env:CYBERSHIELD_KEY }
-
-if (-not $EnrollmentKey -and (Test-Path "C:\\CyberShield\\enrollment.key")) {
-    try {
-        $EnrollmentKey = (Get-Content "C:\\CyberShield\\enrollment.key" -Raw -ErrorAction SilentlyContinue).Trim()
-        if ($EnrollmentKey) { Write-Host "[OK] Enrollment key carregada de C:\\CyberShield\\enrollment.key" -ForegroundColor Green }
-    } catch {}
-}
-
-if (-not $EnrollmentKey -and (Test-Path "C:\\CyberShield\\config\\agent-config.json")) {
-    try {
-        $cfg = Get-Content "C:\\CyberShield\\config\\agent-config.json" -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
-        if ($cfg.enrollment_key) { $EnrollmentKey = $cfg.enrollment_key; Write-Host "[OK] Enrollment key carregada do config" -ForegroundColor Green }
-    } catch {}
-}
-
-if (-not $EnrollmentKey) {
-    Write-Host "[WARN] CYBERSHIELD_KEY nao encontrada. Informe a Enrollment Key (XXXX-XXXX-XXXX-XXXX):" -ForegroundColor Yellow
-    $EnrollmentKey = Read-Host "Enrollment Key"
-}
-
-if (-not $EnrollmentKey) {
-    Write-Host "[ERROR] Enrollment Key obrigatoria para reinstalar do zero." -ForegroundColor Red
-    Start-Sleep -Seconds 10
-    return
-}
-
-$EnrollmentKey = $EnrollmentKey.Trim().Trim('"').Trim("'")
-Write-Host "[OK] Enrollment Key capturada (antes do nuke)" -ForegroundColor Green
+Write-Host "[OK] Enrollment Key injetada pelo servidor" -ForegroundColor Green
 
 try {
-    # 2. Kill ALL CyberShield processes
+    # 1. Kill ALL CyberShield processes
     Write-Host "[1/6] Matando processos CyberShield..." -ForegroundColor Yellow
     Get-Process | Where-Object { $_.ProcessName -like "*CyberShield*" -or $_.ProcessName -like "*cybershield*" } | Stop-Process -Force -ErrorAction SilentlyContinue
     Get-WmiObject Win32_Process -Filter "CommandLine LIKE '%cybershield-agent%'" -ErrorAction SilentlyContinue | ForEach-Object {
@@ -68,7 +57,7 @@ try {
     }
     Write-Host "[OK] Processos encerrados" -ForegroundColor Green
 
-    # 3. Remove ALL scheduled tasks
+    # 2. Remove ALL scheduled tasks
     Write-Host "[2/6] Removendo scheduled tasks..." -ForegroundColor Yellow
     Get-ScheduledTask -TaskName "*CyberShield*" -ErrorAction SilentlyContinue | ForEach-Object {
         Stop-ScheduledTask -TaskName $_.TaskName -ErrorAction SilentlyContinue
@@ -77,7 +66,7 @@ try {
     }
     Write-Host "[OK] Tasks removidas" -ForegroundColor Green
 
-    # 4. NUKE - Delete EVERYTHING
+    # 3. NUKE - Delete EVERYTHING
     Write-Host "[3/6] APAGANDO C:\\CyberShield completamente..." -ForegroundColor Red
     if (Test-Path "C:\\CyberShield") {
         Remove-Item -Path "C:\\CyberShield" -Recurse -Force -ErrorAction Stop
@@ -86,91 +75,65 @@ try {
         Write-Host "[OK] C:\\CyberShield ja nao existia" -ForegroundColor Green
     }
 
-    # 5. Clean environment variables (preserva enrollment key para recuperacao futura)
-    Write-Host "[4/6] Limpando variaveis de ambiente temporarias..." -ForegroundColor Yellow
+    # 4. Clean environment variables
+    Write-Host "[4/6] Limpando variaveis de ambiente..." -ForegroundColor Yellow
     [Environment]::SetEnvironmentVariable("CYBERSHIELD_JWT", $null, "Machine")
     [Environment]::SetEnvironmentVariable("CYBERSHIELD_AGENT_NAME", $null, "Machine")
-    Write-Host "[OK] Variaveis temporarias limpas (CYBERSHIELD_KEY preservada)" -ForegroundColor Green
+    [Environment]::SetEnvironmentVariable("CYBERSHIELD_KEY", $null, "Machine")
+    Write-Host "[OK] Variaveis limpas" -ForegroundColor Green
 
-    # 6. Download and run fresh installer
+    # 5. Download fresh installer
     Write-Host "[5/6] Baixando instalador limpo..." -ForegroundColor Yellow
-    $installerUrl = "$ServerUrl/functions/v1/serve-installer/$EnrollmentKey?os_type=windows&agent_name=MIT-SERVIDOR&hostname=$($env:COMPUTERNAME)"
-    $installerUrlQueryMode = "$ServerUrl/functions/v1/serve-installer?enrollment_key=$([System.Uri]::EscapeDataString($EnrollmentKey))&os_type=windows&agent_name=MIT-SERVIDOR&hostname=$($env:COMPUTERNAME)"
-
-    Write-Host "  URL (path mode): $installerUrl" -ForegroundColor Gray
+    $installerUrl = "$ServerUrl/functions/v1/serve-installer/$EnrollmentKey" + "?os_type=windows&agent_name=MIT-SERVIDOR&hostname=$($env:COMPUTERNAME)"
+    Write-Host "  URL: $installerUrl" -ForegroundColor Gray
 
     $tempFile = Join-Path $env:TEMP "cybershield-fresh-install.ps1"
+    Invoke-WebRequest -Uri $installerUrl -OutFile $tempFile -UseBasicParsing -TimeoutSec 120
+    $fileSize = (Get-Item $tempFile).Length
+    Write-Host "[OK] Instalador baixado: $fileSize bytes" -ForegroundColor Green
 
-    try {
-        $response = Invoke-WebRequest -Uri $installerUrl -OutFile $tempFile -UseBasicParsing -TimeoutSec 120 -PassThru
-        $fileSize = (Get-Item $tempFile).Length
-        Write-Host "[OK] Instalador baixado (path mode): $fileSize bytes" -ForegroundColor Green
-    } catch {
-        Write-Host "[WARN] Falha no path mode: $($_.Exception.Message)" -ForegroundColor Yellow
-        Write-Host "[RETRY] Tentando query mode..." -ForegroundColor Yellow
-        $response = Invoke-WebRequest -Uri $installerUrlQueryMode -OutFile $tempFile -UseBasicParsing -TimeoutSec 120 -PassThru
-        $fileSize = (Get-Item $tempFile).Length
-        Write-Host "[OK] Instalador baixado (query mode): $fileSize bytes" -ForegroundColor Green
-    }
-
-    # Validate file is script, not HTML/JSON error payload
+    # Validate
     $firstLine = Get-Content $tempFile -TotalCount 1 -ErrorAction SilentlyContinue
     $firstLineTrimmed = if ($firstLine) { $firstLine.TrimStart() } else { "" }
-    if (
-        $firstLineTrimmed -like '<html*' -or
-        $firstLineTrimmed -like '<!DOCTYPE*' -or
-        $firstLineTrimmed -like '<head*' -or
-        $firstLineTrimmed -like '{"error"*' -or
-        $firstLineTrimmed -like '{"code"*'
-    ) {
-        Write-Host "[ERROR] Servidor retornou payload invalido em vez de script!" -ForegroundColor Red
+    if ($firstLineTrimmed -like '<html*' -or $firstLineTrimmed -like '<!DOCTYPE*' -or $firstLineTrimmed -like '{*') {
+        Write-Host "[ERROR] Servidor retornou payload invalido!" -ForegroundColor Red
         Write-Host "  Primeira linha: $firstLineTrimmed" -ForegroundColor Red
         Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
         return
     }
-    Write-Host "  Primeira linha: $firstLineTrimmed" -ForegroundColor Gray
 
-    # 7. Execute installer
+    # 6. Execute installer
     Write-Host "[6/6] Executando instalador..." -ForegroundColor Yellow
-    Write-Host "" 
     & powershell.exe -ExecutionPolicy Bypass -File $tempFile
-    
+
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Green
     Write-Host " REINSTALACAO COMPLETA!" -ForegroundColor Green
     Write-Host "============================================" -ForegroundColor Green
-    
-    # Verify
+
     Start-Sleep -Seconds 5
     $task = Get-ScheduledTask -TaskName "*CyberShield*" -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($task) {
         Write-Host "  Task: $($task.TaskName) | State: $($task.State)" -ForegroundColor Green
-        Start-ScheduledTask -TaskName $task.TaskName -ErrorAction SilentlyContinue
+        try { schtasks /Run /TN $task.TaskName 2>$null } catch { Start-ScheduledTask -TaskName $task.TaskName -ErrorAction SilentlyContinue }
         Write-Host "  Task iniciada!" -ForegroundColor Green
     } else {
         Write-Host "  [WARN] Nenhuma task encontrada apos instalacao" -ForegroundColor Yellow
     }
-    
-    if (Test-Path "C:\\CyberShield") {
-        $files = Get-ChildItem "C:\\CyberShield" -ErrorAction SilentlyContinue
-        Write-Host "  Arquivos em C:\\CyberShield:" -ForegroundColor Cyan
-        $files | ForEach-Object { Write-Host "    $($_.Name) ($($_.Length) bytes)" -ForegroundColor Gray }
-    }
-    
-    # Cleanup temp
+
     Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
 
 } catch {
     Write-Host ""
     Write-Host "[FATAL] $($_.Exception.Message)" -ForegroundColor Red
     Write-Host "  Line: $($_.InvocationInfo.ScriptLineNumber)" -ForegroundColor Red
-    Write-Host "  Stack: $($_.ScriptStackTrace)" -ForegroundColor DarkRed
 }
 
 Write-Host ""
 Write-Host "Pressione qualquer tecla para fechar..." -ForegroundColor Gray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 `;
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -184,16 +147,66 @@ Deno.serve(async (req) => {
     });
   }
 
-  console.log('[nuke-reinstall-mit] Serving nuke script');
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-  return new Response(SCRIPT, {
-    status: 200,
-    headers: {
-      ...corsHeaders,
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-    },
-  });
+    // Generate a fresh single-use enrollment key
+    const plainKey = generateKey();
+    const keyHash = await hashToken(plainKey);
+
+    // Find agent
+    const { data: agent } = await supabase
+      .from('agents')
+      .select('id')
+      .eq('agent_name', AGENT_NAME)
+      .eq('tenant_id', TENANT_ID)
+      .single();
+
+    // Insert enrollment key linked to this agent
+    const { error: insertError } = await supabase
+      .from('enrollment_keys')
+      .insert({
+        key: plainKey,
+        key_hash: keyHash,
+        tenant_id: TENANT_ID,
+        agent_id: agent?.id || null,
+        description: `Auto-generated nuke-reinstall key for ${AGENT_NAME}`,
+        is_active: true,
+        max_uses: 1,
+        current_uses: 0,
+        auto_generated: true,
+        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 min
+      });
+
+    if (insertError) {
+      console.error('[nuke-reinstall-mit] Failed to create enrollment key:', insertError);
+      return new Response(JSON.stringify({ error: 'Failed to provision key' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`[nuke-reinstall-mit] Generated temp key for ${AGENT_NAME}, expires in 30min`);
+
+    const script = buildScript(plainKey);
+
+    return new Response(script, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    });
+  } catch (error) {
+    console.error('[nuke-reinstall-mit] Error:', error);
+    return new Response(JSON.stringify({ error: 'Internal error' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 });
