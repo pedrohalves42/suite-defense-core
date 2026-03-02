@@ -109,13 +109,20 @@ try {
 
     # Validate file is script, not HTML/JSON error payload
     $firstLine = Get-Content $tempFile -TotalCount 1 -ErrorAction SilentlyContinue
-    if ($firstLine -match "<html|<!DOCTYPE|<head|^\s*\{\s*\"error\"|^\s*\{\s*\"code\"") {
+    $firstLineTrimmed = if ($firstLine) { $firstLine.TrimStart() } else { "" }
+    if (
+        $firstLineTrimmed -like '<html*' -or
+        $firstLineTrimmed -like '<!DOCTYPE*' -or
+        $firstLineTrimmed -like '<head*' -or
+        $firstLineTrimmed -like '{"error"*' -or
+        $firstLineTrimmed -like '{"code"*'
+    ) {
         Write-Host "[ERROR] Servidor retornou payload invalido em vez de script!" -ForegroundColor Red
-        Write-Host "  Primeira linha: $firstLine" -ForegroundColor Red
+        Write-Host "  Primeira linha: $firstLineTrimmed" -ForegroundColor Red
         Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
         return
     }
-    Write-Host "  Primeira linha: $firstLine" -ForegroundColor Gray
+    Write-Host "  Primeira linha: $firstLineTrimmed" -ForegroundColor Gray
 
     # 7. Execute installer
     Write-Host "[6/6] Executando instalador..." -ForegroundColor Yellow
