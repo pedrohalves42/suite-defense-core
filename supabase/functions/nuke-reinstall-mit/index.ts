@@ -102,9 +102,10 @@ try {
         return
     }
 
-    # 6. Execute installer
+    # 6. Execute installer (use -Command to avoid param() prompts)
     Write-Host "[6/6] Executando instalador..." -ForegroundColor Yellow
-    & powershell.exe -ExecutionPolicy Bypass -File $tempFile
+    $scriptBody = Get-Content $tempFile -Raw
+    powershell.exe -ExecutionPolicy Bypass -Command $scriptBody
 
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Green
