@@ -630,7 +630,18 @@ function Write-Log {
 #  Prevents other modules from overriding the pin
 # ============================================
 $Global:TlsPinnedThumbprint = $null  # Set via server config or enrollment; null = disabled (dev mode)
-$Global:SkipFirewallRemediation = $false  # v5.0.13: Set via heartbeat response for pfSense/external firewall environments
+# v5.0.13+: Initialize from persisted config to avoid race condition where
+# local detection runs BEFORE first heartbeat and re-enables firewall
+$Global:SkipFirewallRemediation = $false
+try {
+    $flagFile = Join-Path $PSScriptRoot "skip_firewall.flag"
+    if (Test-Path $flagFile) {
+        $Global:SkipFirewallRemediation = $true
+        Write-Log "[CONFIG] Loaded persisted skip_firewall_remediation=true from flag file" "INFO"
+    }
+} catch {
+    Write-Log "[CONFIG] Could not read firewall flag file: $_" "WARN"
+}
 
 # v5.0.13: Scoped TLS validation function (called per-request, NOT global override)
 function Test-TlsCertificatePin {
@@ -4429,8 +4440,18 @@ function Send-Heartbeat {
                     # ============================================
                     if ($null -ne $response.skip_firewall_remediation) {
                         $Global:SkipFirewallRemediation = [bool]$response.skip_firewall_remediation
-                        if ($Global:SkipFirewallRemediation) {
-                            Write-Log "[CONFIG] Firewall auto-remediation DISABLED by server (external firewall environment)" "INFO"
+                        # Persist flag locally to survive restarts and prevent race conditions
+                        try {
+                            $flagFile = Join-Path $PSScriptRoot "skip_firewall.flag"
+                            if ($Global:SkipFirewallRemediation) {
+                                "1" | Set-Content -Path $flagFile -Force -ErrorAction SilentlyContinue
+                                Write-Log "[CONFIG] Firewall auto-remediation DISABLED by server (external firewall environment) - persisted" "INFO"
+                            } else {
+                                if (Test-Path $flagFile) { Remove-Item $flagFile -Force -ErrorAction SilentlyContinue }
+                                Write-Log "[CONFIG] Firewall auto-remediation ENABLED by server - flag removed" "INFO"
+                            }
+                        } catch {
+                            Write-Log "[CONFIG] Could not persist firewall flag: $_" "WARN"
                         }
                     }
                     
