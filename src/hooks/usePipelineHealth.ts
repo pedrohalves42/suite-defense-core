@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export type PipelineSignalKey = 'heartbeats' | 'jobs' | 'web_activity' | 'dns_policy';
-export type PipelineFreshnessStatus = 'fresh' | 'stale' | 'critical' | 'unknown';
+export type PipelineFreshnessStatus = 'fresh' | 'stale' | 'critical' | 'disabled' | 'no_data' | 'unknown';
 
 export interface PipelineSignalHealth {
   key: PipelineSignalKey;
@@ -20,25 +20,41 @@ export interface PipelineHealth {
   overall_status: PipelineFreshnessStatus;
 }
 
-function computeStatus(lastSeenAt: string | null, freshMins: number, criticalMins: number) {
+// Per-signal thresholds (minutes) — realistic for each data source
+const SIGNAL_THRESHOLDS: Record<PipelineSignalKey, { fresh: number; critical: number }> = {
+  heartbeats: { fresh: 10, critical: 60 },      // agents heartbeat every ~2-5min
+  jobs: { fresh: 120, critical: 360 },           // jobs run every few hours
+  web_activity: { fresh: 60, critical: 480 },    // web activity depends on user browsing
+  dns_policy: { fresh: 1440, critical: 4320 },   // DNS policy changes are infrequent
+};
+
+function computeStatus(
+  lastSeenAt: string | null,
+  freshMins: number,
+  criticalMins: number,
+  hasAnyAgents: boolean,
+): { status: PipelineFreshnessStatus; minutesAgo: number | null } {
   if (!lastSeenAt) {
-    return { status: 'unknown' as const, minutesAgo: null as number | null };
+    // No data at all — if no agents exist it's expected, not critical
+    return { status: hasAnyAgents ? 'no_data' : 'no_data', minutesAgo: null };
   }
 
   const minutesAgo = (Date.now() - new Date(lastSeenAt).getTime()) / (1000 * 60);
   if (!Number.isFinite(minutesAgo) || minutesAgo < 0) {
-    return { status: 'unknown' as const, minutesAgo: null as number | null };
+    return { status: 'unknown', minutesAgo: null };
   }
-  if (minutesAgo < freshMins) return { status: 'fresh' as const, minutesAgo };
-  if (minutesAgo < criticalMins) return { status: 'stale' as const, minutesAgo };
-  return { status: 'critical' as const, minutesAgo };
+  if (minutesAgo < freshMins) return { status: 'fresh', minutesAgo };
+  if (minutesAgo < criticalMins) return { status: 'stale', minutesAgo };
+  return { status: 'critical', minutesAgo };
 }
 
 function computeOverallStatus(signals: PipelineSignalHealth[]): PipelineFreshnessStatus {
-  // Fail-closed: any unknown/critical makes overall not-green.
-  if (signals.some(s => s.status === 'critical')) return 'critical';
-  if (signals.some(s => s.status === 'unknown')) return 'unknown';
-  if (signals.some(s => s.status === 'stale')) return 'stale';
+  // Only consider signals that are NOT disabled/no_data for overall status
+  const active = signals.filter(s => s.status !== 'disabled' && s.status !== 'no_data');
+  if (active.length === 0) return 'no_data';
+  if (active.some(s => s.status === 'critical')) return 'critical';
+  if (active.some(s => s.status === 'unknown')) return 'unknown';
+  if (active.some(s => s.status === 'stale')) return 'stale';
   return 'fresh';
 }
 
@@ -52,35 +68,32 @@ export function usePipelineHealth(
   }
 ) {
   const enabled = opts?.enabled ?? true;
-  const freshMinutes = opts?.freshMinutes ?? 5;
-  const criticalMinutes = opts?.criticalMinutes ?? 30;
-  const refetchIntervalMs = opts?.refetchIntervalMs ?? 300000; // COST-OPT: 60s → 5min
+  const refetchIntervalMs = opts?.refetchIntervalMs ?? 300000;
 
   return useQuery({
-    queryKey: ['pipeline-health', tenantId, freshMinutes, criticalMinutes],
+    queryKey: ['pipeline-health', tenantId],
     enabled: enabled && !!tenantId,
     refetchInterval: refetchIntervalMs,
     staleTime: 30000,
     queryFn: async (): Promise<PipelineHealth> => {
       if (!tenantId) throw new Error('tenantId is required');
 
-      // Note: use lightweight “latest timestamp” queries (limit 1) to keep it fast.
       const [
         heartbeatsRes,
         jobsRes,
         webRes,
         dnsRes,
+        settingsRes,
+        agentCountRes,
       ] = await Promise.all([
-      // CORREÇÃO: Usar tabela 'agents' diretamente ao invés de 'agents_safe' view
-      // para evitar problemas quando JWT não tem claim active_tenant_id
-      supabase
-        .from('agents')
-        .select('last_heartbeat')
-        .eq('tenant_id', tenantId)
-        .is('archived_at', null)
-        .order('last_heartbeat', { ascending: false, nullsFirst: false })
-        .limit(1)
-        .maybeSingle(),
+        supabase
+          .from('agents')
+          .select('last_heartbeat')
+          .eq('tenant_id', tenantId)
+          .is('archived_at', null)
+          .order('last_heartbeat', { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle(),
         supabase
           .from('jobs')
           .select('created_at, completed_at')
@@ -104,12 +117,28 @@ export function usePipelineHealth(
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle(),
+        // Fetch tenant settings to know if DNS is enabled
+        supabase
+          .from('tenant_settings')
+          .select('dns_local_filter_enabled')
+          .eq('tenant_id', tenantId)
+          .maybeSingle(),
+        // Check if tenant has any agents at all
+        supabase
+          .from('agents')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', tenantId)
+          .is('archived_at', null),
       ]);
 
       if (heartbeatsRes.error) throw heartbeatsRes.error;
       if (jobsRes.error) throw jobsRes.error;
       if (webRes.error) throw webRes.error;
       if (dnsRes.error) throw dnsRes.error;
+      // Settings/count errors are non-fatal
+      
+      const dnsEnabled = settingsRes.data?.dns_local_filter_enabled ?? false;
+      const hasAgents = (agentCountRes.count ?? 0) > 0;
 
       const nowIso = new Date().toISOString();
 
@@ -118,10 +147,19 @@ export function usePipelineHealth(
       const webLast = (webRes.data as any)?.visited_at ?? null;
       const dnsLast = (dnsRes.data as any)?.updated_at ?? (dnsRes.data as any)?.created_at ?? null;
 
-      const heartbeatStatus = computeStatus(heartbeatLast, freshMinutes, criticalMinutes);
-      const jobsStatus = computeStatus(jobLast, freshMinutes, criticalMinutes);
-      const webStatus = computeStatus(webLast, freshMinutes, criticalMinutes);
-      const dnsStatus = computeStatus(dnsLast, freshMinutes, criticalMinutes);
+      const hbT = SIGNAL_THRESHOLDS.heartbeats;
+      const jobT = SIGNAL_THRESHOLDS.jobs;
+      const webT = SIGNAL_THRESHOLDS.web_activity;
+      const dnsT = SIGNAL_THRESHOLDS.dns_policy;
+
+      const heartbeatStatus = computeStatus(heartbeatLast, hbT.fresh, hbT.critical, hasAgents);
+      const jobsStatus = computeStatus(jobLast, jobT.fresh, jobT.critical, hasAgents);
+      const webStatus = computeStatus(webLast, webT.fresh, webT.critical, hasAgents);
+      
+      // DNS: if feature disabled, show "disabled" instead of critical
+      const dnsStatus = !dnsEnabled
+        ? { status: 'disabled' as const, minutesAgo: null as number | null }
+        : computeStatus(dnsLast, dnsT.fresh, dnsT.critical, hasAgents);
 
       const signals: PipelineHealth['signals'] = {
         heartbeats: {
@@ -159,7 +197,7 @@ export function usePipelineHealth(
       return {
         tenant_id: tenantId,
         fetched_at: nowIso,
-        thresholds_minutes: { fresh: freshMinutes, critical: criticalMinutes },
+        thresholds_minutes: { fresh: 5, critical: 30 },
         signals,
         overall_status,
       };
