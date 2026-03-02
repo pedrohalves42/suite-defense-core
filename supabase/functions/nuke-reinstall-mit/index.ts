@@ -102,10 +102,12 @@ try {
         return
     }
 
-    # 6. Execute installer - use Invoke-Expression since -File ignores param defaults
+    # 6. Execute installer - patch Mandatory to false so defaults are used with -File
     Write-Host "[6/6] Executando instalador..." -ForegroundColor Yellow
-    $installerContent = Get-Content $tempFile -Raw
-    Invoke-Expression $installerContent
+    $raw = Get-Content $tempFile -Raw
+    $patched = $raw -replace 'Mandatory\s*=\s*\$true', 'Mandatory = $false'
+    Set-Content -Path $tempFile -Value $patched -Encoding UTF8 -Force
+    & powershell.exe -ExecutionPolicy Bypass -File $tempFile
 
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Green
