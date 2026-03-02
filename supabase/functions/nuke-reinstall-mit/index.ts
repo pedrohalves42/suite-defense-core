@@ -27,7 +27,7 @@ if (-not $isAdmin) {
     return
 }
 
-# 1.5 Resolve enrollment key (env -> file -> prompt)
+# 1.5 Resolve enrollment key BEFORE nuking (env -> file -> prompt)
 $EnrollmentKey = [Environment]::GetEnvironmentVariable("CYBERSHIELD_KEY", "Machine")
 if (-not $EnrollmentKey) { $EnrollmentKey = $env:CYBERSHIELD_KEY }
 
@@ -35,9 +35,14 @@ if (-not $EnrollmentKey -and (Test-Path "C:\\CyberShield\\enrollment.key")) {
     try {
         $EnrollmentKey = (Get-Content "C:\\CyberShield\\enrollment.key" -Raw -ErrorAction SilentlyContinue).Trim()
         if ($EnrollmentKey) { Write-Host "[OK] Enrollment key carregada de C:\\CyberShield\\enrollment.key" -ForegroundColor Green }
-    } catch {
-        Write-Host "[WARN] Nao foi possivel ler enrollment.key: $($_.Exception.Message)" -ForegroundColor Yellow
-    }
+    } catch {}
+}
+
+if (-not $EnrollmentKey -and (Test-Path "C:\\CyberShield\\config\\agent-config.json")) {
+    try {
+        $cfg = Get-Content "C:\\CyberShield\\config\\agent-config.json" -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
+        if ($cfg.enrollment_key) { $EnrollmentKey = $cfg.enrollment_key; Write-Host "[OK] Enrollment key carregada do config" -ForegroundColor Green }
+    } catch {}
 }
 
 if (-not $EnrollmentKey) {
@@ -52,6 +57,7 @@ if (-not $EnrollmentKey) {
 }
 
 $EnrollmentKey = $EnrollmentKey.Trim().Trim('"').Trim("'")
+Write-Host "[OK] Enrollment Key capturada (antes do nuke)" -ForegroundColor Green
 
 try {
     # 2. Kill ALL CyberShield processes
