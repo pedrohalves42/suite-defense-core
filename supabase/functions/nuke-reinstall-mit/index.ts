@@ -105,7 +105,7 @@ try {
     # 6. Execute installer - patch Mandatory to false so defaults are used with -File
     Write-Host "[6/6] Executando instalador..." -ForegroundColor Yellow
     $raw = Get-Content $tempFile -Raw
-    $patched = $raw -replace 'Mandatory\s*=\s*\$true', 'Mandatory = $false'
+    $patched = $raw.Replace('Mandatory = $true', 'Mandatory = $false').Replace('Mandatory=$true', 'Mandatory=$false').Replace('Mandatory = $True', 'Mandatory = $false').Replace('Mandatory=$True', 'Mandatory=$false')
     Set-Content -Path $tempFile -Value $patched -Encoding UTF8 -Force
     & powershell.exe -ExecutionPolicy Bypass -File $tempFile
 
