@@ -13,6 +13,9 @@ function badgeVariantForStatus(status: PipelineFreshnessStatus) {
       return 'warning' as const;
     case 'critical':
       return 'destructive' as const;
+    case 'disabled':
+    case 'no_data':
+      return 'outline' as const;
     default:
       return 'secondary' as const;
   }
@@ -23,9 +26,13 @@ function compactLabel(status: PipelineFreshnessStatus) {
     case 'fresh':
       return 'OK';
     case 'stale':
-      return 'Stale';
+      return 'Lento';
     case 'critical':
       return 'Crítico';
+    case 'disabled':
+      return 'Desativado';
+    case 'no_data':
+      return 'Sem dados';
     default:
       return 'N/D';
   }
@@ -44,8 +51,6 @@ export function PipelineHealthInline({
 }) {
   const { data, isLoading, isError } = usePipelineHealth(tenantId, {
     enabled: !tenantLoading && !!tenantId,
-    freshMinutes: 5,
-    criticalMinutes: 30,
     refetchIntervalMs: 60000,
   });
 
@@ -72,9 +77,16 @@ export function PipelineHealthInline({
 
         {!isLoading && data && showSignals.map((key) => {
           const s = data.signals[key];
-          const tooltip = s.last_seen_at
-            ? `${s.label}: ${compactLabel(s.status)} · ${formatRelativeTime(s.last_seen_at)}`
-            : `${s.label}: sem evidência ainda`;
+          let tooltip: string;
+          if (s.status === 'disabled') {
+            tooltip = `${s.label}: recurso desativado nas configurações`;
+          } else if (s.status === 'no_data') {
+            tooltip = `${s.label}: nenhum registro encontrado ainda`;
+          } else if (s.last_seen_at) {
+            tooltip = `${s.label}: ${compactLabel(s.status)} · ${formatRelativeTime(s.last_seen_at)}`;
+          } else {
+            tooltip = `${s.label}: sem evidência ainda`;
+          }
 
           return (
             <Tooltip key={key}>

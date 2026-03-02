@@ -14,6 +14,9 @@ function badgeVariantForStatus(status: PipelineFreshnessStatus) {
       return 'warning' as const;
     case 'critical':
       return 'destructive' as const;
+    case 'disabled':
+    case 'no_data':
+      return 'outline' as const;
     default:
       return 'secondary' as const;
   }
@@ -27,21 +30,32 @@ function labelForStatus(status: PipelineFreshnessStatus) {
       return 'Desatualizando';
     case 'critical':
       return 'Crítico';
+    case 'disabled':
+      return 'Desativado';
+    case 'no_data':
+      return 'Sem dados';
     default:
       return 'Indeterminado';
   }
 }
 
 function SignalRow({ signal }: { signal: PipelineSignalHealth }) {
+  let detail: string;
+  if (signal.status === 'disabled') {
+    detail = 'Recurso desativado nas configurações do tenant';
+  } else if (signal.status === 'no_data') {
+    detail = 'Nenhum registro encontrado ainda';
+  } else if (signal.last_seen_at) {
+    detail = `Último: ${formatRelativeTime(signal.last_seen_at)} (${formatBrazilDateTime(signal.last_seen_at, 'short')})`;
+  } else {
+    detail = 'Sem evidência ainda';
+  }
+
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border bg-card p-3">
       <div className="min-w-0">
         <p className="text-sm font-medium text-foreground truncate">{signal.label}</p>
-        <p className="text-xs text-muted-foreground">
-          {signal.last_seen_at
-            ? `Último: ${formatRelativeTime(signal.last_seen_at)} (${formatBrazilDateTime(signal.last_seen_at, 'short')})`
-            : 'Sem evidência ainda'}
-        </p>
+        <p className="text-xs text-muted-foreground">{detail}</p>
       </div>
       <Badge variant={badgeVariantForStatus(signal.status)} className="shrink-0">
         {labelForStatus(signal.status)}
@@ -61,8 +75,6 @@ export function PipelineHealthCard({
 }) {
   const { data, isLoading, isError, error } = usePipelineHealth(tenantId, {
     enabled: !tenantLoading && !!tenantId,
-    freshMinutes: 5,
-    criticalMinutes: 30,
     refetchIntervalMs: 60000,
   });
 
@@ -130,7 +142,7 @@ export function PipelineHealthCard({
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5" />
           <span>
-            Verde &lt; 5 min · Amarelo 5–30 min · Vermelho &gt; 30 min · Indeterminado = sem evidência/erro
+            Heartbeats: OK &lt; 10min · Jobs: OK &lt; 2h · Web: OK &lt; 1h · DNS: verifica se habilitado
           </span>
         </div>
       </CardContent>
