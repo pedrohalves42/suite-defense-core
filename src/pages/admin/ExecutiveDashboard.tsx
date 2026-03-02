@@ -82,9 +82,9 @@ export default function ExecutiveDashboard() {
       const evidence30d: Array<{ event_type: string; severity: string }> = evidence30dRes.data || [];
       const compliance = complianceRes.data?.[0] || null;
 
-      const totalAgents = agentCounts.total;
-      const onlineAgents = agentCounts.online;
-      const offlineAgents = agentCounts.offline + agentCounts.warning + agentCounts.never_connected;
+      // NOTA: NÃO usar agentCounts aqui dentro do queryFn!
+      // agentCounts vem de useAgentSnapshots (closure stale durante troca de tenant)
+      // Os valores de totalAgents/onlineAgents são calculados no render usando agentCounts fresco.
 
       // === O que o sistema FEZ pela empresa (30 dias) ===
       // IMPORTANTE: Filtra apenas ações REAIS (severity >= warning).
@@ -139,21 +139,13 @@ export default function ExecutiveDashboard() {
         info: evidence7d.filter(e => e.severity === 'info' || e.severity === 'debug').length,
       };
 
-      // Protection coverage
-      const protectionCoverage = totalAgents > 0 ? Math.round((onlineAgents / totalAgents) * 100) : 0;
-
-      // Overall score
-      const agentHealthScore = totalAgents > 0 ? (onlineAgents / totalAgents) * 100 : 100;
-      const alertPenalty = Math.min(activeAlerts * 5, 30);
-      const overallScore = Math.max(0, Math.round(agentHealthScore - alertPenalty));
+      // Protection coverage e overall score são calculados no render (fora do queryFn)
 
       // Jobs today
       const successRateToday = jobsToday.length > 0 ? Math.round((jobsToday.filter(j => j.status === 'completed').length / jobsToday.length) * 100) : 100;
 
       return {
-        totalAgents, onlineAgents, offlineAgents,
         activeAlerts, criticalAlerts, blockedThreats,
-        overallScore, protectionCoverage,
         actions30d, automatedActions, incidentsContained, hoursOfITSaved,
         automatedJobsCompleted, totalJobs30d,
         financialImpact, totalCostAvoided,
@@ -170,6 +162,16 @@ export default function ExecutiveDashboard() {
     staleTime: 15000,
   });
 
+  // Compute agent-dependent values at RENDER TIME using fresh agentCounts
+  // (not inside queryFn where agentCounts would be a stale closure)
+  const totalAgents = agentCounts.total;
+  const onlineAgents = agentCounts.online;
+  const offlineAgents = agentCounts.offline + agentCounts.warning + agentCounts.never_connected;
+  const protectionCoverage = totalAgents > 0 ? Math.round((onlineAgents / totalAgents) * 100) : 0;
+  const agentHealthScore = totalAgents > 0 ? (onlineAgents / totalAgents) * 100 : 100;
+  const alertPenalty = Math.min((summaryData?.activeAlerts || 0) * 5, 30);
+  const overallScore = Math.max(0, Math.round(agentHealthScore - alertPenalty));
+
   const getHealthStatus = (score: number) => {
     if (score >= 90) return { status: 'excellent' as const, message: 'Sua empresa está protegida', color: 'text-green-500', bgClass: 'border-green-500/20 bg-green-500/5' };
     if (score >= 70) return { status: 'good' as const, message: 'Proteção ativa na sua empresa', color: 'text-emerald-500', bgClass: 'border-emerald-500/20 bg-emerald-500/5' };
@@ -177,7 +179,7 @@ export default function ExecutiveDashboard() {
     return { status: 'critical' as const, message: 'Risco elevado para sua empresa', color: 'text-red-500', bgClass: 'border-red-500/20 bg-red-500/5' };
   };
 
-  const healthStatus = summaryData ? getHealthStatus(summaryData.overallScore) : null;
+  const healthStatus = summaryData ? getHealthStatus(overallScore) : null;
   const deltaInfo = getDeltaInfo(riskDelta?.delta ?? null);
   const DeltaIcon = deltaInfo.icon === 'down' ? TrendingDown : deltaInfo.icon === 'up' ? TrendingUp : Minus;
 
@@ -185,7 +187,7 @@ export default function ExecutiveDashboard() {
   const actions = (() => {
     if (!summaryData) return [];
     const list: Array<{ priority: string; title: string; link: string }> = [];
-    if (summaryData.offlineAgents > 0) list.push({ priority: 'high', title: `${summaryData.offlineAgents} computador${summaryData.offlineAgents > 1 ? 'es' : ''} sem proteção`, link: '/admin/agent-health' });
+    if (offlineAgents > 0) list.push({ priority: 'high', title: `${offlineAgents} computador${offlineAgents > 1 ? 'es' : ''} sem proteção`, link: '/admin/agent-health' });
     if (summaryData.criticalAlerts > 0) list.push({ priority: 'high', title: `${summaryData.criticalAlerts} alerta${summaryData.criticalAlerts > 1 ? 's' : ''} crítico${summaryData.criticalAlerts > 1 ? 's' : ''} pendente${summaryData.criticalAlerts > 1 ? 's' : ''}`, link: '/admin/alert-resolution' });
     if (summaryData.activeAlerts > 0) list.push({ priority: 'medium', title: `${summaryData.activeAlerts} situaç${summaryData.activeAlerts > 1 ? 'ões' : 'ão'} aguardando revisão`, link: '/admin/alert-resolution' });
     if (summaryData.failedJobsToday > 0) list.push({ priority: 'medium', title: `${summaryData.failedJobsToday} tarefa${summaryData.failedJobsToday > 1 ? 's' : ''} não concluída${summaryData.failedJobsToday > 1 ? 's' : ''} hoje`, link: '/admin/jobs-health' });
@@ -246,7 +248,7 @@ export default function ExecutiveDashboard() {
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className={cn("text-lg font-bold", healthStatus?.color)}>{healthStatus?.message}</span>
                     <Badge variant="outline" className="text-[10px] font-medium">
-                      {summaryData?.overallScore}%
+                      {overallScore}%
                     </Badge>
                     {agentCounts.online > 0 && (
                       <Badge variant="outline" className="gap-1 text-[10px] border-green-500/30 text-green-500">
@@ -258,7 +260,7 @@ export default function ExecutiveDashboard() {
                       </Badge>
                     )}
                   </div>
-                  <Progress value={summaryData?.overallScore || 0} className="h-2" />
+                  <Progress value={overallScore || 0} className="h-2" />
                 </div>
               </div>
 
