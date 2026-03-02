@@ -99,7 +99,7 @@ export function ScriptUploader() {
         <div>
           <Label>Versão</Label>
           <Input 
-            placeholder="v5.0.11" 
+            placeholder="v5.0.13" 
             value={version} 
             onChange={(e) => setVersion(e.target.value)} 
           />
