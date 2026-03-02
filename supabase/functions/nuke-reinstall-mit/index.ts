@@ -104,7 +104,7 @@ try {
 
     # 6. Execute installer - pass parameters directly to -File
     Write-Host "[6/6] Executando instalador..." -ForegroundColor Yellow
-    & powershell.exe -ExecutionPolicy Bypass -File $tempFile -ServerUrl $ServerUrl -EnrollmentKey $EnrollmentKey -AgentToken "" -AgentName "MIT-SERVIDOR" -Hostname $env:COMPUTERNAME
+    & powershell.exe -ExecutionPolicy Bypass -File $tempFile -ServerUrl $ServerUrl -EnrollmentKey $EnrollmentKey -AgentToken "auto" -AgentName "MIT-SERVIDOR" -Hostname $env:COMPUTERNAME
 
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Green
