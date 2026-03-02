@@ -505,5 +505,27 @@ $1    $job_error_message = "Unknown job type: $($Job.job_type)"`
     reasons.push('body_compress_fix');
   }
 
+  // HOTFIX 24a: Persist skip_firewall_remediation flag locally and load it at startup.
+  // Prevents race condition where local detection runs before first heartbeat and re-enables firewall.
+  if (content.includes('$Global:SkipFirewallRemediation = $false') && !content.includes('HOTFIX-SKIP-FW-BOOT')) {
+    content = content.replace(
+      /\$Global:SkipFirewallRemediation = \$false[^\r\n]*/,
+      `$Global:SkipFirewallRemediation = $false  # v5.0.13: Set via heartbeat response for pfSense/external firewall environments\n# HOTFIX-SKIP-FW-BOOT: Load persisted skip flag to avoid pre-heartbeat remediation race\ntry {\n    $flagFile = Join-Path $PSScriptRoot "skip_firewall.flag"\n    if (Test-Path $flagFile) {\n        $Global:SkipFirewallRemediation = $true\n        Write-Log "[CONFIG] Loaded persisted skip_firewall_remediation=true from flag file" "INFO"\n    }\n} catch {\n    Write-Log "[CONFIG] Could not read firewall flag file: $($_.Exception.Message)" "WARN"\n} <# HOTFIX-SKIP-FW-BOOT #>`
+    );
+    reasons.push('skip_firewall_boot_persistence');
+  }
+
+  // HOTFIX 24b: Persist heartbeat toggle to disk so restarts keep the setting.
+  if (
+    content.includes('$Global:SkipFirewallRemediation = [bool]$response.skip_firewall_remediation') &&
+    !content.includes('HOTFIX-SKIP-FW-PERSIST')
+  ) {
+    content = content.replace(
+      /\$Global:SkipFirewallRemediation = \[bool\]\$response\.skip_firewall_remediation\s*\r?\n/g,
+      `$Global:SkipFirewallRemediation = [bool]$response.skip_firewall_remediation\n                        # HOTFIX-SKIP-FW-PERSIST: Persist flag locally for next boot\n                        try {\n                            $flagFile = Join-Path $PSScriptRoot "skip_firewall.flag"\n                            if ($Global:SkipFirewallRemediation) {\n                                "1" | Set-Content -Path $flagFile -Force -ErrorAction SilentlyContinue\n                            } else {\n                                if (Test-Path $flagFile) { Remove-Item $flagFile -Force -ErrorAction SilentlyContinue }\n                            }\n                        } catch {\n                            Write-Log "[CONFIG] Could not persist firewall flag: $($_.Exception.Message)" "WARN"\n                        } <# HOTFIX-SKIP-FW-PERSIST #>\n`
+    );
+    reasons.push('skip_firewall_runtime_persistence');
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }
