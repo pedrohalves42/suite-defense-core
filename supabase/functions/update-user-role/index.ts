@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
       return createError('INTERNAL', 'Internal server error', requestId, 500);
     }
 
-    if (!actorRole || actorRole.role !== 'admin') {
+    if (!actorRole || !['admin', 'super_admin'].includes(actorRole.role)) {
       logger.warn(`[${requestId}] User ${user.id} is not admin, role: ${actorRole?.role}`); // CORRECAO: Usar logger
       // Audit failed attempt
       await supabaseAdmin.from('audit_logs').insert({
