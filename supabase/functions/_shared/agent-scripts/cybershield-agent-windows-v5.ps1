@@ -422,9 +422,9 @@ try {
     $acl = Get-Acl $Global:BaseDir
     $acl.SetAccessRuleProtection($true, $false)  # Disable inheritance
     $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        "SYSTEM", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+        (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")).Translate([System.Security.Principal.NTAccount]), "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
     $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        "Administrators", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+        (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]), "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
     $acl.AddAccessRule($systemRule)
     $acl.AddAccessRule($adminRule)
     Set-Acl $Global:BaseDir $acl
@@ -786,8 +786,8 @@ function Save-SignedHashCache {
                 $acl = Get-Acl $cachePath
                 $acl.SetAccessRuleProtection($true, $false)
                 $acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) } 2>$null
-                $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule("SYSTEM","FullControl","Allow")))
-                $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule("Administrators","FullControl","Allow")))
+                $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule((New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")).Translate([System.Security.Principal.NTAccount]),"FullControl","Allow")))
+                $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule((New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]),"FullControl","Allow")))
                 Set-Acl -Path $cachePath -AclObject $acl -ErrorAction SilentlyContinue
             }
         } catch {
@@ -1320,9 +1320,9 @@ function Initialize-AgentKeys {
             $acl.SetAccessRuleProtection($true, $false)
             
             $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                "Administrators", "FullControl", "Allow")
+                (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]), "FullControl", "Allow")
             $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                "SYSTEM", "FullControl", "Allow")
+                (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")).Translate([System.Security.Principal.NTAccount]), "FullControl", "Allow")
             
             $acl.AddAccessRule($adminRule)
             $acl.AddAccessRule($systemRule)
@@ -1757,6 +1757,28 @@ function Execute-Job {
                     agent_version = $Global:AgentVersion
                     timestamp = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
                     hostname = $env:COMPUTERNAME
+                }
+            }
+            "collect_certificates" {
+                try {
+                    $certs = @(Get-ChildItem -Path Cert:\LocalMachine\My -ErrorAction SilentlyContinue)
+                    $certList = @($certs | ForEach-Object {
+                        @{
+                            thumbprint = $_.Thumbprint
+                            subject = $_.Subject
+                            issuer = $_.Issuer
+                            valid_from = $_.NotBefore.ToString("o")
+                            valid_until = $_.NotAfter.ToString("o")
+                            serial_number = $_.SerialNumber
+                            is_self_signed = ($_.Subject -eq $_.Issuer)
+                            cert_store = "LocalMachine\My"
+                        }
+                    })
+                    $output = @{ certificates = $certList; count = $certList.Count; collected_at = (Get-Date).ToString("o") }
+                    Write-Log "[JOB] Collected $($certList.Count) certificates" "INFO"
+                } catch {
+                    $job_error_message = "collect_certificates failed: $($_.Exception.Message)"
+                    $status = "failed"
                 }
             }
             default {
@@ -3473,7 +3495,7 @@ function Get-UnauthorizedSoftware {
             checked = $true
             unauthorized_count = $unauthorized.Count
             unauthorized_list = $unauthorized
-            total_installed = $installedSoftware.Count
+            total_installed = @($installedSoftware).Count
         }
         
     } catch {
@@ -4796,7 +4818,7 @@ function Test-UsbDevices {
         $usbDrives = Get-CimInstance -ClassName Win32_DiskDrive -ErrorAction SilentlyContinue | 
             Where-Object { $_.InterfaceType -eq "USB" }
         
-        if ($usbDrives -and $usbDrives.Count -gt 0) {
+        if ($usbDrives -and @($usbDrives).Count -gt 0) {
             foreach ($usb in $usbDrives) {
                 $usbInfo = @{
                     device_id = $usb.DeviceID
@@ -4825,7 +4847,7 @@ function Test-UsbDevices {
                 } -Severity "warning"
             }
             
-            return @{ status = "detected"; count = $usbDrives.Count; devices = $usbDrives | ForEach-Object { $_.Model } }
+            return @{ status = "detected"; count = @($usbDrives).Count; devices = @($usbDrives) | ForEach-Object { $_.Model } }
         }
         
         return @{ status = "none" }
@@ -5090,10 +5112,10 @@ if ($startupTaskHealth.checked -and $startupTaskHealth.repaired) {
 # ============================================
 # Bug 2 fix: Only enter ENFORCING if security is not degraded
 if ($Global:SecurityDegraded) {
-    Write-Log "[STARTUP] Agent v$($Global:AgentVersion) starting in DEGRADED mode (SecurityDegraded=TRUE, only recovery jobs allowed)" "WARN"
+    Write-Log "[STARTUP] Agent $($Global:AgentVersion) starting in DEGRADED mode (SecurityDegraded=TRUE, only recovery jobs allowed)" "WARN"
 } else {
     Set-AgentState -NewState "ENFORCING" -Reason "Normal operation"
-    Write-Log "[STARTUP] Agent v$($Global:AgentVersion) fully operational in ENFORCING state" "SUCCESS"
+    Write-Log "[STARTUP] Agent $($Global:AgentVersion) fully operational in ENFORCING state" "SUCCESS"
 }
 
 $lastHeartbeat = Get-Date
