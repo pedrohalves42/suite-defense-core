@@ -102,9 +102,10 @@ try {
         return
     }
 
-    # 6. Execute installer - pass parameters directly to -File
+    # 6. Execute installer - use Invoke-Expression since -File ignores param defaults
     Write-Host "[6/6] Executando instalador..." -ForegroundColor Yellow
-    & powershell.exe -ExecutionPolicy Bypass -File $tempFile -ServerUrl $ServerUrl -EnrollmentKey $EnrollmentKey -AgentToken "auto" -AgentName "MIT-SERVIDOR" -Hostname $env:COMPUTERNAME
+    $installerContent = Get-Content $tempFile -Raw
+    Invoke-Expression $installerContent
 
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Green
