@@ -43,8 +43,6 @@ try {
         Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue
         Write-Host "  Removida: $($_.TaskName)" -ForegroundColor Gray
     }
-    schtasks /Delete /TN "CyberShieldAgent" /F 2>$null
-    schtasks /Delete /TN "CyberShieldAgent-MIT-SERVIDOR" /F 2>$null
     Write-Host "[OK] Tasks removidas" -ForegroundColor Green
 
     # 4. NUKE - Delete EVERYTHING
