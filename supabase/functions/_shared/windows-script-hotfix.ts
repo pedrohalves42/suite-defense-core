@@ -556,5 +556,93 @@ $1    $job_error_message = "Unknown job type: $($Job.job_type)"`
     }
   }
 
+  // HOTFIX 25: DNS 403 silenciado — treat "feature disabled" as INFO, not error
+  // The serve-dns-filter endpoint returns 403 when dns_local_filter_enabled is false.
+  // Invoke-SecureRequest logs this as a permanent ERROR. We intercept it in Sync-DnsBlocklist.
+  if (content.includes('Sync-DnsBlocklist') && content.includes('serve-dns-filter') && !content.includes('HOTFIX-DNS-403-INFO')) {
+    content = content.replace(
+      /(\$result = Invoke-SecureRequest\s*`[^}]*?serve-dns-filter[^}]*?)\s*\n\s*if \(-not \$result\.Success\) \{\s*\n\s*return \$false\s*\n\s*\}/m,
+      `$1
+
+        # HOTFIX-DNS-403-INFO: 403 = feature disabled (not an error)
+        if (-not $result.Success) {
+            if ($result.StatusCode -eq 403) {
+                Write-Log "[DNS] DNS Filter desabilitado para este tenant (403 - feature flag off)" "INFO"
+            } else {
+                Write-Log "[DNS] Falha ao sincronizar DNS blocklist (HTTP $($result.StatusCode)): $($result.Error)" "WARN"
+            }
+            return $false
+        }`
+    );
+    reasons.push('dns_403_info');
+  }
+
+  // HOTFIX 26: RSA-2048 fallback when ECDSA PKCS8 export fails (.NET Framework 4.x / PS 5.1)
+  // Instead of keeping an ephemeral in-memory ECDSA object that can't be persisted,
+  // fall back to RSA-2048 which supports ExportPkcs8/SPKI on all .NET versions.
+  if (content.includes('HOTFIX-EXPORT') && content.includes('using in-memory ECDSA object') && !content.includes('HOTFIX-RSA-FALLBACK')) {
+    content = content.replace(
+      /Write-Log "\[KEYS\] ExportPkcs8\/SPKI not available \(\$\(\$_\.Exception\.Message\)\), using in-memory ECDSA object" "WARN"\s*\n\s*# Keep \$ecdsa object in memory for direct signing - no export needed\s*\n\s*# Generate a synthetic fingerprint from the key parameters\s*\n\s*try \{\s*\n\s*\$ecParams = \$ecdsa\.ExportParameters\(\$false\)\s*\n\s*\$publicKeyBytes = \[byte\[\]\]\(\$ecParams\.Q\.X \+ \$ecParams\.Q\.Y\)\s*\n\s*\$publicKeyBase64 = \[Convert\]::ToBase64String\(\$publicKeyBytes\)\s*\n\s*\} catch \{\s*\n\s*Write-Log "\[KEYS\] ExportParameters also failed, using random fingerprint" "WARN"\s*\n\s*\$randomBytes = \[byte\[\]\]::new\(32\)\s*\n\s*\[System\.Security\.Cryptography\.RandomNumberGenerator\]::Fill\(\$randomBytes\)\s*\n\s*\$publicKeyBytes = \$randomBytes\s*\n\s*\$publicKeyBase64 = \[Convert\]::ToBase64String\(\$randomBytes\)\s*\n\s*\}/,
+      `Write-Log "[KEYS] ECDSA PKCS8 export not available, falling back to RSA-2048..." "WARN"
+            # HOTFIX-RSA-FALLBACK: Generate RSA-2048 keypair instead (PKCS8 export works on all .NET versions)
+            try {
+                $ecdsa.Dispose()  # Release the unusable ECDSA key
+                $ecdsa = $null
+            } catch { }
+            try {
+                $rsa = [System.Security.Cryptography.RSA]::Create(2048)
+                $privateKeyBytes = $rsa.ExportPkcs8PrivateKey()
+                $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
+                $publicKeyBytes = $rsa.ExportSubjectPublicKeyInfo()
+                $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
+                # Store RSA object globally for signing
+                $Global:AgentRsaKey = $rsa
+                $Global:AgentSigningAlgorithm = "RSA-2048-SHA256"
+                Write-Log "[KEYS] RSA-2048 fallback keypair generated successfully" "INFO"
+            } catch {
+                Write-Log "[KEYS] RSA-2048 fallback also failed: $($_.Exception.Message)" "ERROR"
+                # Last resort: synthetic fingerprint
+                $randomBytes = [byte[]]::new(32)
+                [System.Security.Cryptography.RandomNumberGenerator]::Fill($randomBytes)
+                $publicKeyBytes = $randomBytes
+                $publicKeyBase64 = [Convert]::ToBase64String($randomBytes)
+            }`
+    );
+    reasons.push('rsa_2048_fallback');
+  }
+
+  // HOTFIX 26b: RSA signing in Submit-JobResult when ECDSA private key is unavailable
+  // If $Global:AgentSigningAlgorithm is "RSA-2048-SHA256", use RSA-PKCS1-SHA256 to sign
+  if (content.includes('$ecdsa.SignData') && !content.includes('HOTFIX-RSA-SIGN')) {
+    content = content.replace(
+      /\$signatureBytes = \$ecdsa\.SignData\(\[System\.Text\.Encoding\]::UTF8\.GetBytes\(\$canonicalPayload\), \[System\.Security\.Cryptography\.HashAlgorithmName\]::SHA256\)/g,
+      `# HOTFIX-RSA-SIGN: Use RSA if ECDSA private key was not exportable
+            if ($Global:AgentSigningAlgorithm -eq "RSA-2048-SHA256" -and $Global:AgentRsaKey) {
+                $signatureBytes = $Global:AgentRsaKey.SignData([System.Text.Encoding]::UTF8.GetBytes($canonicalPayload), [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+            } else {
+                $signatureBytes = $ecdsa.SignData([System.Text.Encoding]::UTF8.GetBytes($canonicalPayload), [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+            } <# HOTFIX-RSA-SIGN #>`
+    );
+    reasons.push('rsa_sign_fallback');
+  }
+
+  // HOTFIX 26c: Report correct algorithm in key registration and heartbeat
+  if (content.includes('"ECDSA-P256-SHA256"') && content.includes('algorithm =') && !content.includes('HOTFIX-RSA-ALGO')) {
+    content = content.replace(
+      /algorithm = "ECDSA-P256-SHA256"/g,
+      'algorithm = $(if ($Global:AgentSigningAlgorithm) { $Global:AgentSigningAlgorithm } else { "ECDSA-P256-SHA256" }) <# HOTFIX-RSA-ALGO #>'
+    );
+    reasons.push('rsa_algo_report');
+  }
+
+  // HOTFIX 26d: Initialize RSA globals early (StrictMode safe)
+  if (content.includes('$Global:AgentPrivateKey = $null') && !content.includes('$Global:AgentRsaKey = $null')) {
+    content = content.replace(
+      /\$Global:AgentPrivateKey = \$null/,
+      '$Global:AgentPrivateKey = $null\n$Global:AgentRsaKey = $null\n$Global:AgentSigningAlgorithm = "ECDSA-P256-SHA256"'
+    );
+    reasons.push('rsa_globals_init');
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }

@@ -178,6 +178,8 @@ async function tryVerifyWithKey(
       cryptoKey = await importEcdsaPublicKey(publicKeyPem)
     } else if (algorithm === 'Ed25519') {
       cryptoKey = await importEd25519PublicKey(publicKeyPem)
+    } else if (algorithm === 'RSA-2048-SHA256' || algorithm === 'RSA') {
+      cryptoKey = await importRsaPublicKey(publicKeyPem)
     } else {
       return { valid: false, error: `Unsupported algorithm: ${algorithm}` }
     }
@@ -193,6 +195,15 @@ async function tryVerifyWithKey(
         {
           name: 'ECDSA',
           hash: { name: 'SHA-256' }
+        },
+        cryptoKey,
+        signatureBytes,
+        payloadBytes
+      )
+    } else if (algorithm === 'RSA-2048-SHA256' || algorithm === 'RSA') {
+      isValid = await crypto.subtle.verify(
+        {
+          name: 'RSASSA-PKCS1-v1_5'
         },
         cryptoKey,
         signatureBytes,
@@ -270,6 +281,35 @@ async function importEd25519PublicKey(keyData: string): Promise<CryptoKey> {
     keyBytes,
     {
       name: 'Ed25519'
+    },
+    false,
+    ['verify']
+  )
+}
+
+/**
+ * Imports an RSA public key from PEM or raw Base64 format
+ * Used for PS 5.1 agents that fall back to RSA-2048 when ECDSA PKCS8 export is unavailable
+ */
+async function importRsaPublicKey(keyData: string): Promise<CryptoKey> {
+  let keyBytes: ArrayBuffer
+  
+  if (keyData.includes('-----BEGIN PUBLIC KEY-----')) {
+    const pemContent = keyData
+      .replace('-----BEGIN PUBLIC KEY-----', '')
+      .replace('-----END PUBLIC KEY-----', '')
+      .replace(/\s/g, '')
+    keyBytes = base64ToArrayBuffer(pemContent)
+  } else {
+    keyBytes = base64ToArrayBuffer(keyData)
+  }
+  
+  return await crypto.subtle.importKey(
+    'spki',
+    keyBytes,
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      hash: 'SHA-256'
     },
     false,
     ['verify']
