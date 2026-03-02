@@ -329,8 +329,6 @@ try {
                 # Compute actual hash using Get-FileHash (same method TOCTOU checker uses)
                 $toctouActual = (Get-FileHash $toctouScriptPath -Algorithm SHA256 -ErrorAction SilentlyContinue).Hash.ToLower()
                 if ($toctouActual -and $toctouExpected -and ($toctouActual -ne $toctouExpected.ToLower())) {
-                    Write-Log "[TOCTOU-SELFHEAL] Hash mismatch detected on startup. Cache: $($toctouExpected.Substring(0,16))... Disk: $($toctouActual.Substring(0,16))..." "WARN"
-                    Write-Log "[TOCTOU-SELFHEAL] Updating hash cache to match actual disk content" "WARN"
                     $toctouCache.sha256 = $toctouActual
                     if (Get-Member -InputObject $toctouCache -Name "updated_at" -ErrorAction SilentlyContinue) {
                         $toctouCache.updated_at = (Get-Date).ToString("o")
@@ -340,15 +338,12 @@ try {
                     $toctouCache | Add-Member -NotePropertyName "self_healed" -NotePropertyValue $true -Force
                     $toctouCache | Add-Member -NotePropertyName "self_healed_at" -NotePropertyValue (Get-Date).ToString("o") -Force
                     $toctouCache | ConvertTo-Json -Depth 5 | Set-Content $toctouHashCachePath -Encoding UTF8 -Force
-                    Write-Log "[TOCTOU-SELFHEAL] Hash cache updated successfully. TOCTOU will now pass." "INFO"
-                } else {
-                    Write-Log "[TOCTOU-SELFHEAL] Hash cache matches disk content. No action needed." "DEBUG"
                 }
             }
         }
     }
 } catch {
-    Write-Log "[TOCTOU-SELFHEAL] Non-fatal error during self-heal: $($_.Exception.Message)" "WARN"
+    # non-fatal
 }
 `;
 
@@ -510,7 +505,7 @@ $1    $job_error_message = "Unknown job type: $($Job.job_type)"`
   if (content.includes('$Global:SkipFirewallRemediation = $false') && !content.includes('HOTFIX-SKIP-FW-BOOT')) {
     content = content.replace(
       /\$Global:SkipFirewallRemediation = \$false[^\r\n]*/,
-      `$Global:SkipFirewallRemediation = $false  # v5.0.13: Set via heartbeat response for pfSense/external firewall environments\n# HOTFIX-SKIP-FW-BOOT: Load persisted skip flag to avoid pre-heartbeat remediation race\ntry {\n    $flagFile = Join-Path $PSScriptRoot "skip_firewall.flag"\n    if (Test-Path $flagFile) {\n        $Global:SkipFirewallRemediation = $true\n        Write-Log "[CONFIG] Loaded persisted skip_firewall_remediation=true from flag file" "INFO"\n    }\n} catch {\n    Write-Log "[CONFIG] Could not read firewall flag file: $($_.Exception.Message)" "WARN"\n} <# HOTFIX-SKIP-FW-BOOT #>`
+      `$Global:SkipFirewallRemediation = $false  # v5.0.13: Set via heartbeat response for pfSense/external firewall environments\n# HOTFIX-SKIP-FW-BOOT: Load persisted skip flag to avoid pre-heartbeat remediation race\ntry {\n    $flagFile = Join-Path $PSScriptRoot "skip_firewall.flag"\n    if (Test-Path $flagFile) {\n        $Global:SkipFirewallRemediation = $true\n    }\n} catch {\n    # non-fatal\n} <# HOTFIX-SKIP-FW-BOOT #>`
     );
     reasons.push('skip_firewall_boot_persistence');
   }
@@ -522,9 +517,43 @@ $1    $job_error_message = "Unknown job type: $($Job.job_type)"`
   ) {
     content = content.replace(
       /\$Global:SkipFirewallRemediation = \[bool\]\$response\.skip_firewall_remediation\s*\r?\n/g,
-      `$Global:SkipFirewallRemediation = [bool]$response.skip_firewall_remediation\n                        # HOTFIX-SKIP-FW-PERSIST: Persist flag locally for next boot\n                        try {\n                            $flagFile = Join-Path $PSScriptRoot "skip_firewall.flag"\n                            if ($Global:SkipFirewallRemediation) {\n                                "1" | Set-Content -Path $flagFile -Force -ErrorAction SilentlyContinue\n                            } else {\n                                if (Test-Path $flagFile) { Remove-Item $flagFile -Force -ErrorAction SilentlyContinue }\n                            }\n                        } catch {\n                            Write-Log "[CONFIG] Could not persist firewall flag: $($_.Exception.Message)" "WARN"\n                        } <# HOTFIX-SKIP-FW-PERSIST #>\n`
+      `$Global:SkipFirewallRemediation = [bool]$response.skip_firewall_remediation\n                        # HOTFIX-SKIP-FW-PERSIST: Persist flag locally for next boot\n                        try {\n                            $flagFile = Join-Path $PSScriptRoot "skip_firewall.flag"\n                            if ($Global:SkipFirewallRemediation) {\n                                "1" | Set-Content -Path $flagFile -Force -ErrorAction SilentlyContinue\n                            } else {\n                                if (Test-Path $flagFile) { Remove-Item $flagFile -Force -ErrorAction SilentlyContinue }\n                            }\n                        } catch {\n                            # non-fatal\n                        } <# HOTFIX-SKIP-FW-PERSIST #>\n`
     );
     reasons.push('skip_firewall_runtime_persistence');
+  }
+
+  // HOTFIX 24c: Repair previously persisted pre-logger calls that crash before Write-Log exists.
+  // This runs even when HOTFIX markers already exist in script_content from older injections.
+  if (content.includes('HOTFIX-TOCTOU-SELFHEAL') && content.includes('Write-Log "[TOCTOU-SELFHEAL]')) {
+    const repaired = content.replace(
+      /^\s*Write-Log "\[TOCTOU-SELFHEAL\][^"]*" "[A-Z]+"\s*$/gm,
+      '                    # HOTFIX-TOCTOU-SELFHEAL-REPAIR: pre-logger line removed'
+    );
+    if (repaired !== content) {
+      content = repaired;
+      reasons.push('toctou_selfheal_prelog_repair');
+    }
+  }
+
+  if (content.includes('HOTFIX-SKIP-FW-BOOT') && content.includes('Write-Log "[CONFIG]')) {
+    const repaired = content
+      .replace(
+        /^\s*Write-Log "\[CONFIG\] Loaded persisted skip_firewall_remediation=true from flag file" "INFO"\s*$/gm,
+        '        # HOTFIX-SKIP-FW-BOOT-REPAIR: pre-logger line removed'
+      )
+      .replace(
+        /^\s*Write-Log "\[CONFIG\] Could not read firewall flag file: \$\(\$_.Exception\.Message\)" "WARN"\s*$/gm,
+        '    # HOTFIX-SKIP-FW-BOOT-REPAIR: pre-logger line removed'
+      )
+      .replace(
+        /^\s*Write-Log "\[CONFIG\] Could not persist firewall flag: \$\(\$_.Exception\.Message\)" "WARN"\s*$/gm,
+        '                            # HOTFIX-SKIP-FW-PERSIST-REPAIR: logger line removed'
+      );
+
+    if (repaired !== content) {
+      content = repaired;
+      reasons.push('skip_firewall_prelog_repair');
+    }
   }
 
   return { content, changed: reasons.length > 0, reasons };
