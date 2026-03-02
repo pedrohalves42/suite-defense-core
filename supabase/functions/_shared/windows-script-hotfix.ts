@@ -399,8 +399,9 @@ try {
 
   // HOTFIX 18: collect_certificates job handler missing from Execute-Job switch
   if (content.includes('default {') && content.includes('Unknown job type') && !content.includes('HOTFIX-COLLECT-CERTS')) {
+    // Match both $error_message and $job_error_message variants
     content = content.replace(
-      /(\s+)default \{\s*\n\s*\$job_error_message = "Unknown job type: \$\(\$Job\.job_type\)"/,
+      /(\s+)default \{\s*\n\s*\$(?:job_)?error_message = "Unknown job type: \$\(\$Job\.(?:job_type|type)\)"/,
       `$1"collect_certificates" { <# HOTFIX-COLLECT-CERTS #>
 $1    try {
 $1        $certs = @(Get-ChildItem -Path Cert:\\LocalMachine\\My -ErrorAction SilentlyContinue)
@@ -419,12 +420,12 @@ $1        })
 $1        $output = @{ certificates = $certList; count = $certList.Count; collected_at = (Get-Date).ToString("o") }
 $1        Write-Log "[JOB] Collected $($certList.Count) certificates" "INFO"
 $1    } catch {
-$1        $job_error_message = "collect_certificates failed: $($_.Exception.Message)"
+$1        $error_message = "collect_certificates failed: $($_.Exception.Message)"
 $1        $status = "failed"
 $1    }
 $1}
 $1default {
-$1    $job_error_message = "Unknown job type: $($Job.job_type)"`
+$1    $error_message = "Unknown job type: $($Job.job_type)"`
     );
     reasons.push('collect_certificates_handler');
   }
