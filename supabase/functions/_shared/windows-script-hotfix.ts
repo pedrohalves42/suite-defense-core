@@ -13,14 +13,26 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
   const reasons: string[] = [];
 
   // HOTFIX 1: StrictMode globals (crypto + monitoring)
+  // Uses multiple regex patterns to match even partially-hotfixed content
   if (
     content.includes('$Global:SecurityDegraded = $false') &&
     !content.includes('$Global:AgentPrivateKey = $null')
   ) {
-    const withDeclaredGlobals = content.replace(
+    const globalsBlock = '\n\n# v5.0.14-hotfix: Declare ALL globals early (StrictMode-safe)\n$Global:AgentPrivateKey = $null\n$Global:AgentPublicKey = $null\n$Global:KeyFingerprint = $null\n$Global:KeyVersion = 0\n$Global:ProtectedProcessSet = $null\n$Global:ProcessBaseline = @{}\n$Global:LastBaselineUpdate = [datetime]::MinValue\n$Global:LastAnomalyCheck = [datetime]::MinValue\n$Global:AnomalyHistory = @()\n$Global:LogBuffer = [System.Collections.Generic.List[string]]::new()\n$Global:LastLogFlush = [datetime]::UtcNow\n$Global:CachedTimestamp = $null\n$Global:LastTimestampUpdate = [datetime]::MinValue';
+
+    // Try specific pattern first
+    let withDeclaredGlobals = content.replace(
       /# v5\.0\.13-fix: SecurityDegraded flag \(BUG 7 - declare early for robustness\)\s*\r?\n\$Global:SecurityDegraded = \$false/,
-      '# v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)\n$Global:SecurityDegraded = $false\n\n# v5.0.14-hotfix: Declare ALL globals early (StrictMode-safe)\n$Global:AgentPrivateKey = $null\n$Global:AgentPublicKey = $null\n$Global:KeyFingerprint = $null\n$Global:KeyVersion = 0\n$Global:ProtectedProcessSet = $null\n$Global:ProcessBaseline = @{}\n$Global:LastBaselineUpdate = [datetime]::MinValue\n$Global:LastAnomalyCheck = [datetime]::MinValue\n$Global:AnomalyHistory = @()\n$Global:LogBuffer = [System.Collections.Generic.List[string]]::new()\n$Global:LastLogFlush = [datetime]::UtcNow\n$Global:CachedTimestamp = $null\n$Global:LastTimestampUpdate = [datetime]::MinValue'
+      '# v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)\n$Global:SecurityDegraded = $false' + globalsBlock
     );
+
+    // Fallback: match any line containing the SecurityDegraded declaration
+    if (withDeclaredGlobals === content) {
+      withDeclaredGlobals = content.replace(
+        /(\$Global:SecurityDegraded = \$false[^\r\n]*)/,
+        '$1' + globalsBlock
+      );
+    }
 
     if (withDeclaredGlobals !== content) {
       content = withDeclaredGlobals;
@@ -96,7 +108,7 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
             } catch {
                 Write-Log "[KEYS] ExportParameters also failed, using random fingerprint" "WARN"
                 $randomBytes = [byte[]]::new(32)
-                [System.Security.Cryptography.RandomNumberGenerator]::Fill($randomBytes)
+                $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create(); $rng.GetBytes($randomBytes)
                 $publicKeyBytes = $randomBytes
                 $publicKeyBase64 = [Convert]::ToBase64String($randomBytes)
             }
@@ -115,7 +127,13 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
   }
 
   // HOTFIX 5: $Global:ProcessBaseline not declared - StrictMode crash (safety net)
-  if (content.includes('$Global:ProcessBaseline') && !content.includes('HOTFIX-BASELINE-GLOBALS') && !content.includes('$Global:ProtectedProcessSet = $null')) {
+  // This is a SAFETY NET: fires when HOTFIX 1 didn't inject globals (e.g. regex mismatch)
+  // Check for the actual variable declaration, not just markers that may have been partially applied
+  if (
+    content.includes('$Global:ProcessBaseline') && 
+    !content.includes('HOTFIX-BASELINE-GLOBALS') && 
+    !content.includes('$Global:ProcessBaseline = @{}')
+  ) {
     const baselineGlobals = `\n# HOTFIX-BASELINE-GLOBALS: Declare monitoring globals early for StrictMode\n` +
       `$Global:ProcessBaseline = @{}\n` +
       `$Global:LastBaselineUpdate = [datetime]::MinValue\n` +
@@ -123,13 +141,25 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
       `$Global:AnomalyHistory = @()\n` +
       `$Global:ProtectedProcessSet = $null\n`;
 
+    // Try multiple injection points
+    let injected = false;
     if (content.includes('$Global:SecurityDegraded = $false')) {
-      content = content.replace(
-        /\$Global:SecurityDegraded = \$false/,
-        '$Global:SecurityDegraded = $false' + baselineGlobals
+      const updated = content.replace(
+        /(\$Global:SecurityDegraded = \$false[^\r\n]*)/,
+        '$1' + baselineGlobals
       );
-      reasons.push('baseline_globals');
+      if (updated !== content) {
+        content = updated;
+        injected = true;
+      }
     }
+    if (!injected && content.includes('Set-StrictMode')) {
+      content = content.replace(
+        /(Set-StrictMode[^\r\n]*)/,
+        '$1' + baselineGlobals
+      );
+    }
+    reasons.push('baseline_globals');
   }
 
   // HOTFIX 6: Heartbeat response may not have 'force_update' property (PSObject strict access)
@@ -579,32 +609,32 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
   }
 
   // HOTFIX 26: RSA-2048 fallback when ECDSA PKCS8 export fails (.NET Framework 4.x / PS 5.1)
-  // Instead of keeping an ephemeral in-memory ECDSA object that can't be persisted,
-  // fall back to RSA-2048 which supports ExportPkcs8/SPKI on all .NET versions.
+  // Uses RSACryptoServiceProvider(2048) + ExportCspBlob() which works on ALL .NET Framework versions
+  // RSA.Create(2048) and ExportPkcs8PrivateKey() are NOT available on .NET 4.x
   if (content.includes('HOTFIX-EXPORT') && content.includes('using in-memory ECDSA object') && !content.includes('HOTFIX-RSA-FALLBACK')) {
     content = content.replace(
-      /Write-Log "\[KEYS\] ExportPkcs8\/SPKI not available \(\$\(\$_\.Exception\.Message\)\), using in-memory ECDSA object" "WARN"\s*\n\s*# Keep \$ecdsa object in memory for direct signing - no export needed\s*\n\s*# Generate a synthetic fingerprint from the key parameters\s*\n\s*try \{\s*\n\s*\$ecParams = \$ecdsa\.ExportParameters\(\$false\)\s*\n\s*\$publicKeyBytes = \[byte\[\]\]\(\$ecParams\.Q\.X \+ \$ecParams\.Q\.Y\)\s*\n\s*\$publicKeyBase64 = \[Convert\]::ToBase64String\(\$publicKeyBytes\)\s*\n\s*\} catch \{\s*\n\s*Write-Log "\[KEYS\] ExportParameters also failed, using random fingerprint" "WARN"\s*\n\s*\$randomBytes = \[byte\[\]\]::new\(32\)\s*\n\s*\[System\.Security\.Cryptography\.RandomNumberGenerator\]::Fill\(\$randomBytes\)\s*\n\s*\$publicKeyBytes = \$randomBytes\s*\n\s*\$publicKeyBase64 = \[Convert\]::ToBase64String\(\$randomBytes\)\s*\n\s*\}/,
+      /Write-Log "\[KEYS\] ExportPkcs8\/SPKI not available \(\$\(\$_\.Exception\.Message\)\), using in-memory ECDSA object" "WARN"\s*\n\s*# Keep \$ecdsa object in memory for direct signing - no export needed\s*\n\s*# Generate a synthetic fingerprint from the key parameters\s*\n\s*try \{\s*\n\s*\$ecParams = \$ecdsa\.ExportParameters\(\$false\)\s*\n\s*\$publicKeyBytes = \[byte\[\]\]\(\$ecParams\.Q\.X \+ \$ecParams\.Q\.Y\)\s*\n\s*\$publicKeyBase64 = \[Convert\]::ToBase64String\(\$publicKeyBytes\)\s*\n\s*\} catch \{\s*\n\s*Write-Log "\[KEYS\] ExportParameters also failed, using random fingerprint" "WARN"\s*\n\s*\$randomBytes = \[byte\[\]\]::new\(32\)\s*\n\s*\[System\.Security\.Cryptography\.RandomNumberGenerator\]::(?:Fill\(\$randomBytes\)|Create\(\);\s*\$rng\.GetBytes\(\$randomBytes\))\s*\n\s*\$publicKeyBytes = \$randomBytes\s*\n\s*\$publicKeyBase64 = \[Convert\]::ToBase64String\(\$randomBytes\)\s*\n\s*\}/,
       `Write-Log "[KEYS] ECDSA PKCS8 export not available, falling back to RSA-2048..." "WARN"
-            # HOTFIX-RSA-FALLBACK: Generate RSA-2048 keypair instead (PKCS8 export works on all .NET versions)
+            # HOTFIX-RSA-FALLBACK: Generate RSA-2048 keypair using RSACryptoServiceProvider (.NET 4.x compatible)
             try {
                 $ecdsa.Dispose()  # Release the unusable ECDSA key
                 $ecdsa = $null
             } catch { }
             try {
-                $rsa = [System.Security.Cryptography.RSA]::Create(2048)
-                $privateKeyBytes = $rsa.ExportPkcs8PrivateKey()
-                $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
-                $publicKeyBytes = $rsa.ExportSubjectPublicKeyInfo()
-                $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
+                # RSACryptoServiceProvider works on ALL .NET Framework versions (4.0+)
+                $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
+                $privateKeyBase64 = [Convert]::ToBase64String($rsa.ExportCspBlob($true))
+                $publicKeyBase64 = [Convert]::ToBase64String($rsa.ExportCspBlob($false))
+                $publicKeyBytes = $rsa.ExportCspBlob($false)
                 # Store RSA object globally for signing
                 $Global:AgentRsaKey = $rsa
                 $Global:AgentSigningAlgorithm = "RSA-2048-SHA256"
-                Write-Log "[KEYS] RSA-2048 fallback keypair generated successfully" "INFO"
+                Write-Log "[KEYS] RSA-2048 fallback keypair generated successfully (RSACryptoServiceProvider)" "INFO"
             } catch {
                 Write-Log "[KEYS] RSA-2048 fallback also failed: $($_.Exception.Message)" "ERROR"
-                # Last resort: synthetic fingerprint
+                # Last resort: synthetic fingerprint with .NET 4.x compatible RNG
                 $randomBytes = [byte[]]::new(32)
-                [System.Security.Cryptography.RandomNumberGenerator]::Fill($randomBytes)
+                $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create(); $rng.GetBytes($randomBytes)
                 $publicKeyBytes = $randomBytes
                 $publicKeyBase64 = [Convert]::ToBase64String($randomBytes)
             }`
@@ -643,6 +673,31 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
       '$Global:AgentPrivateKey = $null\n$Global:AgentRsaKey = $null\n$Global:AgentSigningAlgorithm = "ECDSA-P256-SHA256"'
     );
     reasons.push('rsa_globals_init');
+  }
+
+  // HOTFIX 27: Fix already-applied RSA fallback that used .NET Core APIs (RSA.Create + ExportPkcs8PrivateKey)
+  // These APIs don't exist on .NET Framework 4.x (Windows Server 2012 R2 / PS 5.1)
+  // Replace with RSACryptoServiceProvider(2048) + ExportCspBlob() which works on ALL .NET versions
+  if (content.includes('HOTFIX-RSA-FALLBACK') && content.includes('RSA]::Create(2048)') && !content.includes('HOTFIX-RSA-NET4X')) {
+    content = content.replace(
+      /\$rsa = \[System\.Security\.Cryptography\.RSA\]::Create\(2048\)\s*\n\s*\$privateKeyBytes = \$rsa\.ExportPkcs8PrivateKey\(\)\s*\n\s*\$privateKeyBase64 = \[Convert\]::ToBase64String\(\$privateKeyBytes\)\s*\n\s*\$publicKeyBytes = \$rsa\.ExportSubjectPublicKeyInfo\(\)\s*\n\s*\$publicKeyBase64 = \[Convert\]::ToBase64String\(\$publicKeyBytes\)/,
+      `# HOTFIX-RSA-NET4X: Use RSACryptoServiceProvider (.NET 4.x compatible)
+                $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
+                $privateKeyBase64 = [Convert]::ToBase64String($rsa.ExportCspBlob($true))
+                $publicKeyBytes = $rsa.ExportCspBlob($false)
+                $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)`
+    );
+    reasons.push('rsa_net4x_compat');
+  }
+
+  // HOTFIX 28: Replace ALL remaining RandomNumberGenerator.Fill() with .Create().GetBytes()
+  // RNG.Fill() is a .NET Core 3.0+ API, not available on .NET Framework 4.x
+  if (content.includes('RandomNumberGenerator]::Fill(')) {
+    content = content.replace(
+      /\[System\.Security\.Cryptography\.RandomNumberGenerator\]::Fill\((\$\w+)\)/g,
+      '$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create(); $rng.GetBytes($1) <# HOTFIX-RNG-NET4X #>'
+    );
+    reasons.push('rng_net4x_compat');
   }
 
   return { content, changed: reasons.length > 0, reasons };
