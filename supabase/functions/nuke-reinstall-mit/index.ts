@@ -150,18 +150,12 @@ try {
     # Remove #Requires lines (incompatible with -Command)
     ${D}patched = ${D}raw -replace '(?m)^#Requires[^${BS}r${BS}n]*[${BS}r${BS}n]+', ''
 
-    # Replace param() block with simple variable assignments
-    # Use multiline+singleline regex to match from 'param(' to the closing ')' on its own line
-    ${D}patched = ${D}patched -replace '(?ms)^${BS}s*param${BS}s*${BS}(.*?^${BS}s*${BS})', ''
-    ${D}insertBlock = '${D}ServerUrl  = "' + ${D}sUrl + '"' + [char]10 + '${D}AgentToken = "' + ${D}aTok + '"' + [char]10 + '${D}HmacSecret = "' + ${D}hSec + '"' + [char]10 + '${D}AgentName  = "' + ${D}aName + '"'
-    ${D}patched = ${D}insertBlock + [char]10 + ${D}patched
-
     Set-Content -Path ${D}tempFile -Value ${D}patched -Encoding UTF8 -Force
     ${D}patchedSize = (Get-Item ${D}tempFile).Length
-    Write-Host "  [OK] Script patched: ${D}patchedSize bytes (param block -> variable assignments)" -ForegroundColor Green
+    Write-Host "  [OK] Script cleaned: ${D}patchedSize bytes" -ForegroundColor Green
 
-    # Execute the patched script
-    & powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ". '${D}tempFile'"
+    # Execute the script passing parameters directly — no fragile param block patching
+    & powershell.exe -ExecutionPolicy Bypass -NoProfile -File ${D}tempFile -ServerUrl ${D}sUrl -AgentToken ${D}aTok -HmacSecret ${D}hSec -AgentName ${D}aName
 
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Green
