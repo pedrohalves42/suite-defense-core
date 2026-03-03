@@ -564,9 +564,9 @@ Deno.serve(async (req) => {
                   // only exists in the NEW script being downloaded. Solution: send signature as null
                   // so old scripts skip verification entirely. SHA256 integrity is already validated.
                   // Once the new script is applied, future updates will use proper signature verification.
-                  ecdsa_signature: null, // Temporarily null to bypass old script's strict verification
-                  script_hash_signature: null,
-                  signature_base64: null,
+                  ecdsa_signature: release.signature_base64 || null, // Pass real signature; null triggers fail-open on legacy agents (HOTFIX-14)
+                  script_hash_signature: release.signature_base64 || null,
+                  signature_base64: release.signature_base64 || null,
                   script_hash_signed_at: release.signed_at || null,
                   skip_firewall_remediation: agent.skip_firewall_remediation || false,
                   reason: effectiveForceReason || 'Forced update via backend',
