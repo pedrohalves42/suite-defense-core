@@ -94,7 +94,7 @@ function Get-HmacSignature {
 # ============= FASE 2: Logging Habilitado =============
 
 # Agora podemos logar tudo
-Write-InstallerLog "=== CyberShield Agent Installer v{{INSTALLER_VERSION}} ===" "INFO"
+Write-InstallerLog "=== CyberShield Agent Installer {{INSTALLER_VERSION}} ===" "INFO"
 Write-InstallerLog "ServerUrl: $ServerUrl" "INFO"
 Write-InstallerLog "AgentName: $AgentName" "INFO"
 Write-InstallerLog "Pasta base: $BasePath" "INFO"

@@ -7,10 +7,10 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v4.1.7';
+export const INSTALLER_VERSION = 'v5.0.13';
 export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
 export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
-export const LAST_UPDATED = '2025-12-25T00:00:00Z';
+export const LAST_UPDATED = '2026-03-03T00:00:00Z';
 
 export const CHANGES = [
   '[v5.0.9] COST-OPT: Agent reads heartbeat_interval_seconds and poll_interval_seconds from server response',
