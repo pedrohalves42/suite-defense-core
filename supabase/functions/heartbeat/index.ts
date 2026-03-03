@@ -579,9 +579,9 @@ Deno.serve(async (req) => {
                     new_version: release.version,
                     old_version: currentVersion || 'unknown',
                   },
-                  // COST-OPT: Instruct agents to slow down polling
-                  heartbeat_interval_seconds: 120,
-                  poll_interval_seconds: 60,
+                  // COST-OPT v3: 120s→300s heartbeat, 60s→120s poll (~60% cost reduction)
+                  heartbeat_interval_seconds: 300,
+                  poll_interval_seconds: 120,
                 }),
                 {
                   headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -613,9 +613,9 @@ Deno.serve(async (req) => {
         agent: agent.agent_name,
         timestamp: new Date().toISOString(),
         script_sha256: null, // Compatibility field for legacy/v5.0.13 parsing
-        // COST-OPT v2: Further reduce polling to cut costs
-        heartbeat_interval_seconds: 120,   // Heartbeat every 120s (was 60s)
-        poll_interval_seconds: 60,         // Poll jobs every 60s (was 30s)
+        // COST-OPT v3: 120s→300s heartbeat, 60s→120s poll (~60% cost reduction)
+        heartbeat_interval_seconds: 300,   // Heartbeat every 5min (was 2min)
+        poll_interval_seconds: 120,        // Poll jobs every 2min (was 1min)
         // Agent config flags
         skip_firewall_remediation: agent.skip_firewall_remediation || false,
       }),

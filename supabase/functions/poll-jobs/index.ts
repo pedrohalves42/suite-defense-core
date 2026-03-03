@@ -285,7 +285,7 @@ Deno.serve(async (req) => {
         agentId: token.agent_id
       })
       return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 60 }), // claim error - normal poll
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 120 }), // claim error - normal poll
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
@@ -335,7 +335,7 @@ Deno.serve(async (req) => {
     if (validJobs.length === 0) {
       logger.debug('No valid jobs to return', { agentName: agent.agent_name })
       return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 60 }), // no jobs - normal poll
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 120 }), // no jobs - normal poll
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
@@ -466,7 +466,7 @@ Deno.serve(async (req) => {
     // Novo formato encapsulado para agentes modernos
     const responsePayload = {
       jobs: jobsResponse,
-      poll_interval_seconds: 60, // COST-OPT v2: 30s → 60s
+      poll_interval_seconds: 120, // COST-OPT v3: 60s → 120s
     };
     return new Response(
       JSON.stringify(responsePayload),
