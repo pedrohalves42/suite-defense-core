@@ -151,8 +151,8 @@ try {
     ${D}patched = ${D}raw -replace '(?m)^#Requires[^${BS}r${BS}n]*[${BS}r${BS}n]+', ''
 
     # Replace param() block with simple variable assignments
-    # Use single-quoted strings + concatenation to avoid PS variable expansion issues
-    ${D}patched = ${D}patched -replace '(?s)param${BS}s*${BS}(.*?${BS})', ''
+    # Use multiline+singleline regex to match from 'param(' to the closing ')' on its own line
+    ${D}patched = ${D}patched -replace '(?ms)^${BS}s*param${BS}s*${BS}(.*?^${BS}s*${BS})', ''
     ${D}insertBlock = '${D}ServerUrl  = "' + ${D}sUrl + '"' + [char]10 + '${D}AgentToken = "' + ${D}aTok + '"' + [char]10 + '${D}HmacSecret = "' + ${D}hSec + '"' + [char]10 + '${D}AgentName  = "' + ${D}aName + '"'
     ${D}patched = ${D}insertBlock + [char]10 + ${D}patched
 
