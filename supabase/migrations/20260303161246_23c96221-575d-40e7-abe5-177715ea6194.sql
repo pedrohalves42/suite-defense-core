@@ -1,0 +1,1 @@
+UPDATE agents SET force_update_at = now() WHERE archived_at IS NULL AND agent_version = 'v5.0.13';
