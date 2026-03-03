@@ -48,7 +48,7 @@ import CheckoutSuccess from "./pages/CheckoutSuccess";
 import CheckoutCancel from "./pages/CheckoutCancel";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
-import PropostaComercial from "./pages/PropostaComercial";
+
 import Privacidade from "./pages/Privacidade";
 import AuthDebug from "./pages/debug/AuthDebug";
 import SecurityDashboard from "./pages/admin/SecurityDashboard";
@@ -182,7 +182,7 @@ const App = () => (
             <Route path="/verificar-laudo" element={<VerificarLaudo />} />
             <Route path="/approve" element={<ApprovePage />} />
             <Route path="/test-compliance" element={<TestComplianceGenerator />} />
-            <Route path="/proposta-comercial" element={<PropostaComercial />} />
+            
             
             {/* Documentation Routes */}
             <Route path="/docs/exe-build" element={<ExeBuild />} />
