@@ -426,6 +426,8 @@ Deno.serve(async (req) => {
       .select('script_content, version, sha256')
       .eq('platform', 'windows')
       .eq('is_active', true)
+      .like('version', 'v%')
+      .not('script_content', 'ilike', '<!DOCTYPE html%')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -529,6 +531,8 @@ Deno.serve(async (req) => {
         .select('script_content, version')
         .eq('platform', platform)
         .eq('is_active', true)
+        .like('version', 'v%')
+        .not('script_content', 'ilike', '<!DOCTYPE html%')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
