@@ -21615,6 +21615,78 @@ export type Database = {
           },
         ]
       }
+      soar_playbook_versions: {
+        Row: {
+          change_reason: string | null
+          changed_by: string | null
+          config_snapshot: Json
+          created_at: string | null
+          diff_summary: string | null
+          id: string
+          playbook_id: string
+          tenant_id: string | null
+          version: number
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_by?: string | null
+          config_snapshot: Json
+          created_at?: string | null
+          diff_summary?: string | null
+          id?: string
+          playbook_id: string
+          tenant_id?: string | null
+          version?: number
+        }
+        Update: {
+          change_reason?: string | null
+          changed_by?: string | null
+          config_snapshot?: Json
+          created_at?: string | null
+          diff_summary?: string | null
+          id?: string
+          playbook_id?: string
+          tenant_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soar_playbook_versions_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "soar_playbooks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soar_playbook_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soar_playbook_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "soar_playbook_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "soar_playbook_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       soar_playbooks: {
         Row: {
           actions: Json
@@ -21623,12 +21695,16 @@ export type Database = {
           cooldown_minutes: number | null
           created_at: string
           created_by: string | null
+          current_version: number | null
           description: string | null
+          dry_run: boolean | null
           execution_count: number | null
           id: string
           is_active: boolean
           last_triggered_at: string | null
+          mode: string | null
           name: string
+          observe_only_until: string | null
           requires_approval: boolean
           tenant_id: string | null
           trigger_conditions: Json | null
@@ -21642,12 +21718,16 @@ export type Database = {
           cooldown_minutes?: number | null
           created_at?: string
           created_by?: string | null
+          current_version?: number | null
           description?: string | null
+          dry_run?: boolean | null
           execution_count?: number | null
           id?: string
           is_active?: boolean
           last_triggered_at?: string | null
+          mode?: string | null
           name: string
+          observe_only_until?: string | null
           requires_approval?: boolean
           tenant_id?: string | null
           trigger_conditions?: Json | null
@@ -21661,12 +21741,16 @@ export type Database = {
           cooldown_minutes?: number | null
           created_at?: string
           created_by?: string | null
+          current_version?: number | null
           description?: string | null
+          dry_run?: boolean | null
           execution_count?: number | null
           id?: string
           is_active?: boolean
           last_triggered_at?: string | null
+          mode?: string | null
           name?: string
+          observe_only_until?: string | null
           requires_approval?: boolean
           tenant_id?: string | null
           trigger_conditions?: Json | null
@@ -23539,6 +23623,68 @@ export type Database = {
             foreignKeyName: "tenant_action_policies_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      tenant_automation_state: {
+        Row: {
+          cooldown_until: string | null
+          daily_execution_count: number | null
+          daily_execution_reset_at: string | null
+          last_breaker_trip: string | null
+          max_daily_executions: number | null
+          tenant_id: string
+          trip_reason: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cooldown_until?: string | null
+          daily_execution_count?: number | null
+          daily_execution_reset_at?: string | null
+          last_breaker_trip?: string | null
+          max_daily_executions?: number | null
+          tenant_id: string
+          trip_reason?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cooldown_until?: string | null
+          daily_execution_count?: number | null
+          daily_execution_reset_at?: string | null
+          last_breaker_trip?: string | null
+          max_daily_executions?: number | null
+          tenant_id?: string
+          trip_reason?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_automation_state_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_automation_state_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_automation_state_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_automation_state_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "v_tenant_plan_status"
             referencedColumns: ["tenant_id"]
           },
@@ -32309,6 +32455,14 @@ export type Database = {
         }[]
       }
       check_expired_risks: { Args: never; Returns: undefined }
+      check_global_circuit_breaker: {
+        Args: {
+          p_max_impact_percent?: number
+          p_tenant_id: string
+          p_window_minutes?: number
+        }
+        Returns: Json
+      }
       check_incident_slo_task: { Args: never; Returns: number }
       check_installation_failure_rate: {
         Args: {
@@ -32391,6 +32545,10 @@ export type Database = {
         Returns: boolean
       }
       check_task_sla_breach: { Args: never; Returns: number }
+      check_tenant_automation_quota: {
+        Args: { p_tenant_id: string }
+        Returns: Json
+      }
       claim_jobs_for_agent: {
         Args: { p_agent_id: string; p_limit?: number }
         Returns: {
@@ -33179,6 +33337,10 @@ export type Database = {
       hash_enrollment_key: { Args: { p_key: string }; Returns: string }
       hash_enrollment_key_secure: { Args: { p_key: string }; Returns: string }
       increment_ai_cache_hit: { Args: { cache_id: string }; Returns: undefined }
+      increment_tenant_quota: {
+        Args: { p_tenant_id: string }
+        Returns: undefined
+      }
       installation_health_summary: {
         Args: never
         Returns: {
@@ -33261,6 +33423,10 @@ export type Database = {
       persist_chain_breaks: { Args: never; Returns: number }
       poll_jobs_v2: {
         Args: { p_max_jobs?: number; p_token_hash: string }
+        Returns: Json
+      }
+      preview_automation_impact: {
+        Args: { p_rule_id: string; p_tenant_id: string }
         Returns: Json
       }
       process_autonomous_safe_mode: { Args: never; Returns: Json }
@@ -33383,6 +33549,10 @@ export type Database = {
       }
       revoke_agent_signing_key: {
         Args: { p_agent_id: string; p_reason?: string }
+        Returns: Json
+      }
+      rollback_soar_playbook: {
+        Args: { p_playbook_id: string; p_target_version: number }
         Returns: Json
       }
       run_all_health_checks: {

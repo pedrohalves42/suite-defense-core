@@ -741,6 +741,33 @@ async function evaluateForTenant(
   const totalAgents = agents.length;
   const agentIds = agents.map((a: any) => a.id);
 
+  // ─── P0: GLOBAL CIRCUIT BREAKER ───
+  // Check fleet-wide impact before processing any rules
+  try {
+    const { data: globalBreaker } = await supabase.rpc('check_global_circuit_breaker', {
+      p_tenant_id: tenantId,
+      p_max_impact_percent: 30,
+      p_window_minutes: 10,
+    });
+    if (globalBreaker && !globalBreaker.allowed) {
+      console.warn(`[Enterprise Engine v2] GLOBAL CIRCUIT BREAKER OPEN for tenant ${tenantId}: ${globalBreaker.reason || 'Impact threshold exceeded'} (${globalBreaker.impact_percent}%)`);
+      return { evaluated: 0, triggered: 0, blocked: rules.length, decisions: 1, risk_score: undefined };
+    }
+  } catch (e) {
+    console.warn('[Enterprise Engine v2] Global circuit breaker check failed (fail-open):', e);
+  }
+
+  // ─── P0: TENANT DAILY QUOTA ───
+  try {
+    const { data: quota } = await supabase.rpc('check_tenant_automation_quota', { p_tenant_id: tenantId });
+    if (quota && !quota.allowed) {
+      console.warn(`[Enterprise Engine v2] TENANT QUOTA EXHAUSTED for ${tenantId}: ${quota.current}/${quota.max}`);
+      return { evaluated: 0, triggered: 0, blocked: rules.length, decisions: 1, risk_score: undefined };
+    }
+  } catch (e) {
+    console.warn('[Enterprise Engine v2] Tenant quota check failed (fail-open):', e);
+  }
+
   const { data: metrics } = await supabase
     .from('agent_system_metrics_partitioned')
     .select('*')
@@ -824,6 +851,11 @@ async function evaluateForTenant(
       const execTimeMs = Date.now() - startTime;
 
       const success = status === 'executed';
+
+      // P0: Increment tenant daily quota counter on execution
+      if (success) {
+        try { await supabase.rpc('increment_tenant_quota', { p_tenant_id: tenantId }); } catch { /* non-critical */ }
+      }
 
       // Log to debounce table with idempotency key
       await logExecution(supabase, tenantId, candidate.agentId, rule.id, rule.action_type, success, protection.idempotencyKey, {
