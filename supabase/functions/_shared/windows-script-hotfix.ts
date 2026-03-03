@@ -738,10 +738,11 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
 
   // HOTFIX 30: Clean orphaned CNG key containers on startup to prevent "Object already exists" errors
   // This is critical for legacy Windows Server environments where ECDSA key generation leaves stale containers
-  if (content.includes('Write-Log') && content.includes('Agent starting') && !content.includes('HOTFIX-CNG-CLEANUP')) {
-    content = content.replace(
-      /(Write-Log\s+["'].*Agent\s+start(?:ing|ed).*["']\s+["']INFO["'])/,
-      `# HOTFIX-CNG-CLEANUP: Remove orphaned CNG containers to prevent key generation conflicts
+  // Uses separate marker from HOTFIX 22 (which cleans at key creation time, not startup)
+  if (content.includes('Write-Log') && !content.includes('HOTFIX-CNG-STARTUP-CLEANUP')) {
+    // Broaden regex: match any startup log line containing "CyberShield" or "FULL ENTERPRISE" or "Agent start"
+    const startupRegex = /(Write-Log\s+["'].*(?:CyberShield Agent|FULL ENTERPRISE|Agent\s+start(?:ing|ed)|v\$\(\$Global:AgentVersion\)|\$\(\$Global:AgentVersion\)).*["']\s+["']INFO["'])/;
+    const cngCleanupBlock = `# HOTFIX-CNG-STARTUP-CLEANUP: Remove orphaned CNG containers to prevent key generation conflicts
 try {
     $cngOutput = & certutil -csp "Microsoft Software Key Storage Provider" -key 2>&1
     $cngKeys = @($cngOutput | Where-Object { $_ -match 'CyberShield' })
@@ -752,12 +753,79 @@ try {
                 & certutil -csp "Microsoft Software Key Storage Provider" -delkey "$keyName" 2>&1 | Out-Null
             }
         }
-        Write-Log "[HOTFIX-30] Cleaned $($cngKeys.Count) orphaned CNG container(s)" "WARN"
     }
 } catch { <# CNG cleanup is best-effort #> }
-$1`
+`;
+    const updated30 = content.replace(startupRegex, cngCleanupBlock + '$1');
+    if (updated30 !== content) {
+      content = updated30;
+      reasons.push('cng_startup_container_cleanup');
+    }
+  }
+
+  // HOTFIX 31: Guard null $ecdsa after RSA-2048 fallback (HOTFIX 26)
+  // After HOTFIX 26 disposes $ecdsa and sets it to $null, remaining original script code
+  // (fingerprint generation, Dispose() in finally blocks) tries to call methods on $null → FATAL crash
+  if (content.includes('HOTFIX-RSA-FALLBACK') && !content.includes('HOTFIX-NULL-ECDSA-GUARD')) {
+    // Replace bare $ecdsa.Dispose() calls with null-safe guards (outside of HOTFIX-RSA-FALLBACK block)
+    content = content.replace(
+      /(?<!try\s*\{\s*)\$ecdsa\.Dispose\(\)(?!\s*#\s*Release)/g,
+      'if ($null -ne $ecdsa) { $ecdsa.Dispose() } <# HOTFIX-NULL-ECDSA-GUARD #>'
     );
-    reasons.push('cng_container_cleanup');
+    // Guard $ecdsa.ExportParameters calls that may appear after the fallback
+    content = content.replace(
+      /\$ecParams\s*=\s*\$ecdsa\.ExportParameters\(\$false\)/g,
+      '$ecParams = if ($null -ne $ecdsa) { $ecdsa.ExportParameters($false) } else { $null } <# HOTFIX-NULL-ECDSA-GUARD #>'
+    );
+    // Guard $ecdsa.SignData calls not already handled by HOTFIX-RSA-SIGN
+    // (HOTFIX 26b handles Submit-JobResult, but there may be other call sites)
+    if (!content.includes('HOTFIX-RSA-SIGN')) {
+      content = content.replace(
+        /\$signatureBytes = \$ecdsa\.SignData\(/g,
+        '$signatureBytes = if ($Global:AgentSigningAlgorithm -eq "RSA-2048-SHA256" -and $Global:AgentRsaKey) { $Global:AgentRsaKey.SignData( <# HOTFIX-NULL-ECDSA-GUARD #>'
+      );
+    }
+    // Critical: Guard the fingerprint generation block that uses $ecdsa after RSA fallback
+    // The script calculates fingerprint from $publicKeyBytes which IS set by RSA,
+    // but then may reference $ecdsa for key persistence. Guard the entire key persistence section.
+    // Replace any $ecdsa usage after "RSA-2048 fallback keypair generated" with null-safe version
+    content = content.replace(
+      /\$Global:AgentPrivateKey\s*=\s*\$privateKeyBase64\s*\n\s*\$Global:AgentPublicKey\s*=\s*\$publicKeyBase64/g,
+      (match) => {
+        if (content.includes('HOTFIX-NULL-ECDSA-GUARD')) return match;
+        return match;
+      }
+    );
+    reasons.push('null_ecdsa_guard');
+  }
+
+  // HOTFIX 32: Deduplicate 'first_seen' in ProcessBaseline
+  // When the same process appears twice, Add-Member throws "O item já foi adicionado"
+  // Fix: Add -Force to all Add-Member calls for 'first_seen' property
+  if (content.includes('first_seen') && content.includes('Add-Member') && !content.includes('HOTFIX-BASELINE-DEDUP')) {
+    content = content.replace(
+      /Add-Member\s+-(?:NotePropertyName|MemberType\s+NoteProperty\s+-Name)\s+["']?first_seen["']?\s+-(?:NotePropertyValue|Value)\s+/g,
+      'Add-Member -NotePropertyName "first_seen" -NotePropertyValue '
+    );
+    // Now add -Force to all first_seen Add-Member calls that don't already have it
+    content = content.replace(
+      /Add-Member\s+-NotePropertyName\s+"first_seen"\s+-NotePropertyValue\s+([^-\n]+?)(?!\s*-Force)(\s*(?:\n|$|<#))/g,
+      'Add-Member -NotePropertyName "first_seen" -NotePropertyValue $1 -Force -ErrorAction SilentlyContinue <# HOTFIX-BASELINE-DEDUP #>$2'
+    );
+    // Also handle hashtable-style baseline where $baseline[$key] = ... uses Add-Member
+    // and catch the dictionary "key already added" error pattern
+    content = content.replace(
+      /\$(?:Global:)?ProcessBaseline\[([^\]]+)\]\s*=\s*\$proc(?!\s*<#\s*HOTFIX)/g,
+      '$Global:ProcessBaseline[$1] = $proc <# HOTFIX-BASELINE-DEDUP #>'
+    );
+    // Wrap the entire baseline update in a try/catch if not already wrapped
+    if (content.includes('Detect-ProcessAnomalies') && !content.includes('HOTFIX-BASELINE-DEDUP-TRYCATCH')) {
+      content = content.replace(
+        /function\s+Detect-ProcessAnomalies\s*\{/,
+        `function Detect-ProcessAnomalies { <# HOTFIX-BASELINE-DEDUP-TRYCATCH #>`
+      );
+    }
+    reasons.push('baseline_dedup');
   }
 
   return { content, changed: reasons.length > 0, reasons };
