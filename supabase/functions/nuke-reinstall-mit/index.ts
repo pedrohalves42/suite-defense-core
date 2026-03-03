@@ -151,11 +151,10 @@ try {
     ${D}patched = ${D}raw -replace '(?m)^#Requires[^${BS}r${BS}n]*[${BS}r${BS}n]+', ''
 
     # Replace param() block with simple variable assignments
-    # Use [char]36 = dollar sign to build variable names in the replacement string
-    ${D}dollar = [char]36
-    ${D}nl = [char]10
-    ${D}varBlock = "${D}{dollar}ServerUrl  = ${BS}"${D}sUrl${BS}"${D}nl${D}{dollar}AgentToken = ${BS}"${D}aTok${BS}"${D}nl${D}{dollar}HmacSecret = ${BS}"${D}hSec${BS}"${D}nl${D}{dollar}AgentName  = ${BS}"${D}aName${BS}""
-    ${D}patched = ${D}patched -replace '(?s)param${BS}s*${BS}(.*?${BS})', ${D}varBlock
+    # Use single-quoted strings + concatenation to avoid PS variable expansion issues
+    ${D}patched = ${D}patched -replace '(?s)param${BS}s*${BS}(.*?${BS})', ''
+    ${D}insertBlock = '${D}ServerUrl  = "' + ${D}sUrl + '"' + [char]10 + '${D}AgentToken = "' + ${D}aTok + '"' + [char]10 + '${D}HmacSecret = "' + ${D}hSec + '"' + [char]10 + '${D}AgentName  = "' + ${D}aName + '"'
+    ${D}patched = ${D}insertBlock + [char]10 + ${D}patched
 
     Set-Content -Path ${D}tempFile -Value ${D}patched -Encoding UTF8 -Force
     ${D}patchedSize = (Get-Item ${D}tempFile).Length
