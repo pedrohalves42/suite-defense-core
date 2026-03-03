@@ -736,5 +736,29 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
     reasons.push('rng_net4x_compat');
   }
 
+  // HOTFIX 30: Clean orphaned CNG key containers on startup to prevent "Object already exists" errors
+  // This is critical for legacy Windows Server environments where ECDSA key generation leaves stale containers
+  if (content.includes('Write-Log') && content.includes('Agent starting') && !content.includes('HOTFIX-CNG-CLEANUP')) {
+    content = content.replace(
+      /(Write-Log\s+["'].*Agent\s+start(?:ing|ed).*["']\s+["']INFO["'])/,
+      `# HOTFIX-CNG-CLEANUP: Remove orphaned CNG containers to prevent key generation conflicts
+try {
+    $cngOutput = & certutil -csp "Microsoft Software Key Storage Provider" -key 2>&1
+    $cngKeys = @($cngOutput | Where-Object { $_ -match 'CyberShield' })
+    if ($cngKeys.Count -gt 0) {
+        foreach ($keyLine in $cngKeys) {
+            $keyName = ($keyLine -replace '\\s+$','').Trim()
+            if ($keyName) {
+                & certutil -csp "Microsoft Software Key Storage Provider" -delkey "$keyName" 2>&1 | Out-Null
+            }
+        }
+        Write-Log "[HOTFIX-30] Cleaned $($cngKeys.Count) orphaned CNG container(s)" "WARN"
+    }
+} catch { <# CNG cleanup is best-effort #> }
+$1`
+    );
+    reasons.push('cng_container_cleanup');
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }
