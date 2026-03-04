@@ -568,23 +568,24 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
   }
 
   // HOTFIX 24a: Persist skip_firewall_remediation flag locally and load it at startup.
-  // Prevents race condition where local detection runs before first heartbeat and re-enables firewall.
+  // DEFINITIVE FIX: Use hardcoded C:\CyberShield path, NOT $PSScriptRoot (empty in scheduled tasks)
   if (content.includes('$Global:SkipFirewallRemediation = $false') && !content.includes('HOTFIX-SKIP-FW-BOOT')) {
     content = content.replace(
       /\$Global:SkipFirewallRemediation = \$false[^\r\n]*/,
-      `$Global:SkipFirewallRemediation = $false  # v5.0.13: Set via heartbeat response for pfSense/external firewall environments\n# HOTFIX-SKIP-FW-BOOT: Load persisted skip flag to avoid pre-heartbeat remediation race\ntry {\n    $flagFile = Join-Path $PSScriptRoot "skip_firewall.flag"\n    if (Test-Path $flagFile) {\n        $Global:SkipFirewallRemediation = $true\n    }\n} catch {\n    # non-fatal\n} <# HOTFIX-SKIP-FW-BOOT #>`
+      `$Global:SkipFirewallRemediation = $false\n# HOTFIX-SKIP-FW-BOOT: Load persisted skip flag from HARDCODED path\ntry {\n    $flagPaths = @("C:\\\\CyberShield\\\\skip_firewall.flag")\n    if ($PSScriptRoot) { $flagPaths += Join-Path $PSScriptRoot "skip_firewall.flag" }\n    foreach ($fp in $flagPaths) { if (Test-Path $fp) { $Global:SkipFirewallRemediation = $true; break } }\n} catch { <# non-fatal #> } <# HOTFIX-SKIP-FW-BOOT #>`
     );
     reasons.push('skip_firewall_boot_persistence');
   }
 
   // HOTFIX 24b: Persist heartbeat toggle to disk so restarts keep the setting.
+  // DEFINITIVE FIX: Use hardcoded C:\CyberShield path
   if (
     content.includes('$Global:SkipFirewallRemediation = [bool]$response.skip_firewall_remediation') &&
     !content.includes('HOTFIX-SKIP-FW-PERSIST')
   ) {
     content = content.replace(
       /\$Global:SkipFirewallRemediation = \[bool\]\$response\.skip_firewall_remediation\s*\r?\n/g,
-      `$Global:SkipFirewallRemediation = [bool]$response.skip_firewall_remediation\n                        # HOTFIX-SKIP-FW-PERSIST: Persist flag locally for next boot\n                        try {\n                            $flagFile = Join-Path $PSScriptRoot "skip_firewall.flag"\n                            if ($Global:SkipFirewallRemediation) {\n                                "1" | Set-Content -Path $flagFile -Force -ErrorAction SilentlyContinue\n                            } else {\n                                if (Test-Path $flagFile) { Remove-Item $flagFile -Force -ErrorAction SilentlyContinue }\n                            }\n                        } catch {\n                            # non-fatal\n                        } <# HOTFIX-SKIP-FW-PERSIST #>\n`
+      `$Global:SkipFirewallRemediation = [bool]$response.skip_firewall_remediation\n                        # HOTFIX-SKIP-FW-PERSIST: Persist to HARDCODED C:\\\\CyberShield path\n                        try {\n                            $flagFile = "C:\\\\CyberShield\\\\skip_firewall.flag"\n                            if ($Global:SkipFirewallRemediation) {\n                                "1" | Set-Content -Path $flagFile -Force -ErrorAction SilentlyContinue\n                            } else {\n                                if (Test-Path $flagFile) { Remove-Item $flagFile -Force -ErrorAction SilentlyContinue }\n                            }\n                        } catch { <# non-fatal #> } <# HOTFIX-SKIP-FW-PERSIST #>\n`
     );
     reasons.push('skip_firewall_runtime_persistence');
   }
@@ -837,45 +838,36 @@ try {
   }
 
   // HOTFIX 24d: Guard firewall auto-remediation when skip_firewall_remediation is active
-  // The Test-FirewallStatus function always re-enables Windows Firewall when profiles are disabled.
-  // For servers using external firewalls (pfSense), this kills internet connectivity every 5 minutes.
+  // DEFINITIVE FIX: Triple-check (global var + C:\CyberShield flag + $PSScriptRoot flag)
   if (content.includes('Test-FirewallStatus') && !content.includes('HOTFIX-SKIP-FW-GUARD')) {
-    // Strategy 1: Match the exact auto-remediation comment pattern
+    // Strategy 1: Inject triple-check at start of Test-FirewallStatus function body
     let remedBlock = content.replace(
-      /# AUTO-REMEDIATION: Re-enable disabled firewall profiles\s*\r?\n(\s*)\$remediated = @\(\)\s*\r?\n(\s*)foreach \(\$profileName in \$disabledProfiles\) \{/,
-      `# AUTO-REMEDIATION: Re-enable disabled firewall profiles
-$1# HOTFIX-SKIP-FW-GUARD: Skip remediation if external firewall flag is set
-$1if (\$Global:SkipFirewallRemediation) {
-$1    Write-Log "[LOCAL-DETECT] Firewall disabled but skip_firewall_remediation=true (external firewall). Skipping remediation." "INFO"
-$1    Invoke-PushAlert -AlertType "firewall_disabled" -AlertMessage "Firewall desativado em \$env:COMPUTERNAME (profiles: \$(\$disabledProfiles -join ', ')). Remediacao pulada: firewall externo." -Severity "info" -Details @{ disabled_profiles = \$disabledProfiles; skip_reason = "external_firewall"; auto_remediated = \$false }
-$1    return @{ status = "skipped_external"; disabled_profiles = \$disabledProfiles }
-$1}
-$1\$remediated = @()
-$2foreach (\$profileName in \$disabledProfiles) {`
+      /(function Test-FirewallStatus\s*\{[\s\S]*?\$Global:LocalDetectionStats\.firewall_checks\+\+)/,
+      `$1\n        # HOTFIX-SKIP-FW-GUARD: Triple-check skip flag before ANY firewall operation\n        $shouldSkipFw = $false\n        if ($Global:SkipFirewallRemediation -eq $true) { $shouldSkipFw = $true }\n        elseif (Test-Path "C:\\\\CyberShield\\\\skip_firewall.flag" -ErrorAction SilentlyContinue) { $shouldSkipFw = $true; $Global:SkipFirewallRemediation = $true }`
     );
+    
     if (remedBlock !== content) {
+      // Also replace the remediation block to check $shouldSkipFw
+      remedBlock = remedBlock.replace(
+        /# AUTO-REMEDIATION: Re-enable disabled firewall profiles\s*\r?\n(\s*)\$remediated = @\(\)/,
+        `# AUTO-REMEDIATION: Re-enable disabled firewall profiles\n$1# HOTFIX-SKIP-FW-GUARD: If skip active, return immediately\n$1if (\\$shouldSkipFw) {\n$1    Write-Log "[LOCAL-DETECT] Firewall disabled but SKIP active (external firewall). NO remediation." "INFO"\n$1    return @{ status = "skipped_external"; disabled_profiles = \\$disabledProfiles }\n$1}\n$1\\$remediated = @()`
+      );
       content = remedBlock;
       reasons.push('skip_firewall_remediation_guard');
     } else {
-      // Strategy 2 (fallback): Match any $remediated = @() followed by foreach...disabledProfiles
+      // Strategy 2 (fallback): Match $remediated = @() followed by foreach...disabledProfiles
       remedBlock = content.replace(
         /(\s*)\$remediated\s*=\s*@\(\)\s*\r?\n(\s*)foreach\s*\(\s*\$profileName\s+in\s+\$disabledProfiles\s*\)\s*\{/,
-        `$1# HOTFIX-SKIP-FW-GUARD: Skip remediation if external firewall flag is set
-$1if (\$Global:SkipFirewallRemediation) {
-$1    Write-Log "[LOCAL-DETECT] Firewall disabled but skip_firewall_remediation=true. Skipping remediation." "INFO"
-$1    return @{ status = "skipped_external"; disabled_profiles = \$disabledProfiles }
-$1}
-$1\$remediated = @()
-$2foreach (\$profileName in \$disabledProfiles) {`
+        `$1# HOTFIX-SKIP-FW-GUARD: Skip if external firewall flag is set\n$1if (\\$Global:SkipFirewallRemediation -or (Test-Path "C:\\\\CyberShield\\\\skip_firewall.flag" -ErrorAction SilentlyContinue)) {\n$1    Write-Log "[LOCAL-DETECT] Firewall disabled but SKIP active. NO remediation." "INFO"\n$1    return @{ status = "skipped_external"; disabled_profiles = \\$disabledProfiles }\n$1}\n$1\\$remediated = @()\n$2foreach (\\$profileName in \\$disabledProfiles) {`
       );
       if (remedBlock !== content) {
         content = remedBlock;
         reasons.push('skip_firewall_remediation_guard');
       } else {
-        // Strategy 3 (last resort): Match Set-NetFirewallProfile calls and guard each
+        // Strategy 3 (last resort): Guard each Set-NetFirewallProfile call
         remedBlock = content.replace(
           /(\s*)(Set-NetFirewallProfile\s+-Name\s+\$profileName\s+-Enabled\s+True)/g,
-          `$1if (-not \$Global:SkipFirewallRemediation) { $2 } else { Write-Log "[LOCAL-DETECT] Skipped firewall re-enable (\$profileName) - external firewall" "INFO" } <# HOTFIX-SKIP-FW-GUARD #>`
+          `$1if (-not \\$Global:SkipFirewallRemediation -and -not (Test-Path "C:\\\\CyberShield\\\\skip_firewall.flag" -ErrorAction SilentlyContinue)) { $2 } else { Write-Log "[LOCAL-DETECT] Skipped firewall re-enable (\\$profileName) - external firewall" "INFO" } <# HOTFIX-SKIP-FW-GUARD #>`
         );
         if (remedBlock !== content) {
           content = remedBlock;
@@ -886,22 +878,22 @@ $2foreach (\$profileName in \$disabledProfiles) {`
   }
 
   // HOTFIX 24e: Initialize $Global:SkipFirewallRemediation from local flag file
-  // Ensures the variable exists before Test-FirewallStatus runs, even before first heartbeat
+  // DEFINITIVE FIX: Uses hardcoded C:\CyberShield path
   if (content.includes('Test-FirewallStatus') && !content.includes('HOTFIX-SKIP-FW-INIT')) {
     const needsInit = !content.includes('$Global:SkipFirewallRemediation');
     const needsFlagCheck = content.includes('$Global:SkipFirewallRemediation') && !content.includes('skip_firewall.flag');
     
     if (needsInit || needsFlagCheck) {
       const skipFwInit = `
-# HOTFIX-SKIP-FW-INIT: Initialize SkipFirewallRemediation from local flag file
-\$Global:SkipFirewallRemediation = \$false
+# HOTFIX-SKIP-FW-INIT: Initialize SkipFirewallRemediation from HARDCODED flag path
+\\$Global:SkipFirewallRemediation = \\$false
 try {
-    \$skipFwPaths = @("C:\\CyberShield\\skip_firewall.flag", (Join-Path \$PSScriptRoot "skip_firewall.flag"))
-    foreach (\$fp in \$skipFwPaths) { if (Test-Path \$fp) { \$Global:SkipFirewallRemediation = \$true; break } }
+    \\$skipFwPaths = @("C:\\\\CyberShield\\\\skip_firewall.flag")
+    if (\\$PSScriptRoot) { \\$skipFwPaths += Join-Path \\$PSScriptRoot "skip_firewall.flag" }
+    foreach (\\$fp in \\$skipFwPaths) { if (Test-Path \\$fp) { \\$Global:SkipFirewallRemediation = \\$true; break } }
 } catch { <# non-fatal #> }
 `;
       let injected24e = false;
-      // Try multiple injection points
       if (content.includes('$installDir = "C:\\CyberShield"')) {
         const updated24e = content.replace(
           /(\$installDir = "C:\\CyberShield"[^\r\n]*)/,

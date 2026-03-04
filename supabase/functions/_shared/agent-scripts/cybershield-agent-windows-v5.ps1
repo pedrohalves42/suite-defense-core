@@ -632,15 +632,20 @@ function Write-Log {
 $Global:TlsPinnedThumbprint = $null  # Set via server config or enrollment; null = disabled (dev mode)
 # v5.0.13+: Initialize from persisted config to avoid race condition where
 # local detection runs BEFORE first heartbeat and re-enables firewall
+# DEFINITIVE FIX: Use hardcoded C:\CyberShield path (not $PSScriptRoot which can be empty in scheduled tasks)
 $Global:SkipFirewallRemediation = $false
 try {
-    $flagFile = Join-Path $PSScriptRoot "skip_firewall.flag"
-    if (Test-Path $flagFile) {
-        $Global:SkipFirewallRemediation = $true
-        Write-Log "[CONFIG] Loaded persisted skip_firewall_remediation=true from flag file" "INFO"
+    $flagPaths = @("C:\CyberShield\skip_firewall.flag")
+    if ($PSScriptRoot) { $flagPaths += Join-Path $PSScriptRoot "skip_firewall.flag" }
+    foreach ($fp in $flagPaths) {
+        if (Test-Path $fp) {
+            $Global:SkipFirewallRemediation = $true
+            Write-Log "[CONFIG] skip_firewall_remediation=true loaded from $fp" "INFO"
+            break
+        }
     }
 } catch {
-    Write-Log "[CONFIG] Could not read firewall flag file: $_" "WARN"
+    # non-fatal - Write-Log may not be available yet in some execution contexts
 }
 
 # v5.0.13: Scoped TLS validation function (called per-request, NOT global override)
@@ -3585,10 +3590,38 @@ function Get-ProcessAnomalies {
     <#
     .SYNOPSIS
         Detects new processes not in baseline (v5.0.13-perf: O(1) HashSet lookups)
+        DEFINITIVE FIX: Idempotent baseline updates, auto-heal corrupted JSON
     #>
     try {
         if (-not $Global:ProcessBaseline) {
             Initialize-ProcessBaseline
+        }
+        
+        # DEFINITIVE FIX: Auto-heal corrupted baseline (duplicate keys, invalid JSON)
+        try {
+            if ($Global:ProcessBaseline -and $Global:ProcessBaseline.Count -gt 0) {
+                $seenNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                $cleanBaseline = @()
+                foreach ($entry in $Global:ProcessBaseline) {
+                    $entryName = if ($entry -is [hashtable]) { $entry["name"] } else { $entry.name }
+                    if ($entryName -and -not $seenNames.Contains($entryName)) {
+                        [void]$seenNames.Add($entryName)
+                        $cleanBaseline += $entry
+                    }
+                }
+                if ($cleanBaseline.Count -ne $Global:ProcessBaseline.Count) {
+                    Write-Log "[BASELINE] Auto-healed: removed $($Global:ProcessBaseline.Count - $cleanBaseline.Count) duplicate entries" "WARN"
+                    $Global:ProcessBaseline = $cleanBaseline
+                    $Global:ProcessBaselineSet.Clear()
+                    foreach ($e in $cleanBaseline) {
+                        $n = if ($e -is [hashtable]) { $e["name"] } else { $e.name }
+                        if ($n) { [void]$Global:ProcessBaselineSet.Add($n) }
+                    }
+                    $cleanBaseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                }
+            }
+        } catch {
+            Write-Log "[BASELINE] Auto-heal check failed (non-fatal): $($_.Exception.Message)" "DEBUG"
         }
         
         $currentProcesses = Get-Process | Select-Object -ExpandProperty ProcessName -Unique
@@ -3604,19 +3637,25 @@ function Get-ProcessAnomalies {
         if ($anomalies.Count -gt 0) {
             Write-Log "[BASELINE] Detected $($anomalies.Count) new processes" "WARN"
             
-            # Add to baseline for future reference
+            # DEFINITIVE FIX: Idempotent add - check HashSet BEFORE adding to baseline array
             foreach ($proc in $anomalies) {
-                $Global:ProcessBaseline += @{
-                    name = $proc
-                    company = $null
-                    description = "Auto-added"
-                    first_seen = (Get-Date).ToString("o")
+                if (-not $Global:ProcessBaselineSet.Contains($proc)) {
+                    $Global:ProcessBaseline += @{
+                        name = $proc
+                        company = $null
+                        description = "Auto-added"
+                        first_seen = (Get-Date).ToString("o")
+                    }
+                    [void]$Global:ProcessBaselineSet.Add($proc)
                 }
-                [void]$Global:ProcessBaselineSet.Add($proc)  # v5.0.13-perf: Update HashSet too
             }
             
             # Save updated baseline
-            $Global:ProcessBaseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+            try {
+                $Global:ProcessBaseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+            } catch {
+                Write-Log "[BASELINE] Failed to save baseline: $($_.Exception.Message)" "WARN"
+            }
         }
         
         return @{
@@ -4440,15 +4479,24 @@ function Send-Heartbeat {
                     # ============================================
                     if ($null -ne $response.skip_firewall_remediation) {
                         $Global:SkipFirewallRemediation = [bool]$response.skip_firewall_remediation
-                        # Persist flag locally to survive restarts and prevent race conditions
+                        # DEFINITIVE FIX: Persist to HARDCODED path C:\CyberShield (not $PSScriptRoot)
                         try {
-                            $flagFile = Join-Path $PSScriptRoot "skip_firewall.flag"
+                            $flagFile = "C:\CyberShield\skip_firewall.flag"
                             if ($Global:SkipFirewallRemediation) {
                                 "1" | Set-Content -Path $flagFile -Force -ErrorAction SilentlyContinue
-                                Write-Log "[CONFIG] Firewall auto-remediation DISABLED by server (external firewall environment) - persisted" "INFO"
+                                Write-Log "[CONFIG] Firewall auto-remediation DISABLED by server - persisted to $flagFile" "INFO"
                             } else {
                                 if (Test-Path $flagFile) { Remove-Item $flagFile -Force -ErrorAction SilentlyContinue }
                                 Write-Log "[CONFIG] Firewall auto-remediation ENABLED by server - flag removed" "INFO"
+                            }
+                            # Also persist to $PSScriptRoot if available (backward compat)
+                            if ($PSScriptRoot -and $PSScriptRoot -ne "C:\CyberShield") {
+                                $altFlag = Join-Path $PSScriptRoot "skip_firewall.flag"
+                                if ($Global:SkipFirewallRemediation) {
+                                    "1" | Set-Content -Path $altFlag -Force -ErrorAction SilentlyContinue
+                                } else {
+                                    if (Test-Path $altFlag) { Remove-Item $altFlag -Force -ErrorAction SilentlyContinue }
+                                }
                             }
                         } catch {
                             Write-Log "[CONFIG] Could not persist firewall flag: $_" "WARN"
@@ -4742,6 +4790,23 @@ function Test-FirewallStatus {
     try {
         $Global:LocalDetectionStats.firewall_checks++
         
+        # DEFINITIVE FIX: Triple-check skip flag before ANY firewall operation
+        # 1. Check global variable (set by heartbeat or boot init)
+        # 2. Check hardcoded flag file (survives $PSScriptRoot issues)
+        # 3. Check $PSScriptRoot flag file (backward compat)
+        $shouldSkip = $false
+        if ($Global:SkipFirewallRemediation -eq $true) {
+            $shouldSkip = $true
+        } else {
+            try {
+                if (Test-Path "C:\CyberShield\skip_firewall.flag") {
+                    $shouldSkip = $true
+                    $Global:SkipFirewallRemediation = $true
+                    Write-Log "[LOCAL-DETECT] skip_firewall.flag found on disk, setting SkipFirewallRemediation=true" "INFO"
+                }
+            } catch { <# non-fatal #> }
+        }
+        
         $profiles = Get-NetFirewallProfile -ErrorAction SilentlyContinue
         
         if (-not $profiles) {
@@ -4757,24 +4822,26 @@ function Test-FirewallStatus {
         }
         
         if ($disabledProfiles.Count -gt 0) {
-            Write-Log "[LOCAL-DETECT] FIREWALL DISABLED on profiles: $($disabledProfiles -join ', ')" "ERROR"
-            
-            # v5.0.13: Skip remediation if server configured external firewall mode (pfSense, etc.)
-            if ($Global:SkipFirewallRemediation) {
-                Write-Log "[LOCAL-DETECT] Firewall remediation SKIPPED (external firewall environment - configured by server)" "INFO"
+            # DEFINITIVE: If skip flag is active, NEVER remediate. Just log and return.
+            if ($shouldSkip) {
+                Write-Log "[LOCAL-DETECT] Firewall disabled on $($disabledProfiles -join ', ') but SKIP active (external firewall). NO remediation." "INFO"
                 
-                Invoke-PushAlert `
-                    -AlertType "firewall_disabled" `
-                    -AlertMessage "Firewall desativado em $env:COMPUTERNAME (profiles: $($disabledProfiles -join ', ')). Remediacao ignorada: ambiente com firewall externo (pfSense)." `
-                    -Severity "info" `
-                    -Details @{
-                        disabled_profiles = $disabledProfiles
-                        skip_remediation = $true
-                        reason = "external_firewall_environment"
-                    }
+                try {
+                    Invoke-PushAlert `
+                        -AlertType "firewall_disabled" `
+                        -AlertMessage "Firewall desativado em $env:COMPUTERNAME (profiles: $($disabledProfiles -join ', ')). Remediacao IGNORADA: firewall externo." `
+                        -Severity "info" `
+                        -Details @{
+                            disabled_profiles = $disabledProfiles
+                            skip_remediation = $true
+                            reason = "external_firewall_environment"
+                        }
+                } catch { <# push alert is best-effort #> }
                 
                 return @{ status = "skipped"; disabled = $disabledProfiles; reason = "external_firewall" }
             }
+            
+            Write-Log "[LOCAL-DETECT] FIREWALL DISABLED on profiles: $($disabledProfiles -join ', ')" "ERROR"
             
             Show-SecurityToast `
                 -Title "CyberShield - Firewall Desativado!" `
