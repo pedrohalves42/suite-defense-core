@@ -308,6 +308,8 @@ export default function AlertResolutionCenter() {
                         <ExplainableAlert
                           type={alert.alert_type}
                           severity={alert.severity === 'critical' ? 'error' : 'warning'}
+                          alertTitle={alert.title}
+                          alertMessage={alert.message}
                           showAnalogy
                           showActions
                           actions={[

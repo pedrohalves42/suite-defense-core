@@ -26,6 +26,10 @@ export type AlertSeverity = 'info' | 'success' | 'warning' | 'error';
 interface ExplainableAlertProps {
   type: keyof typeof ALERT_TYPE_LABELS | string;
   severity?: AlertSeverity;
+  /** Real alert title from the database (overrides generic type label) */
+  alertTitle?: string;
+  /** Real alert message from the database (overrides generic explanation) */
+  alertMessage?: string;
   showAnalogy?: boolean;
   showActions?: boolean;
   actions?: Array<{
@@ -63,6 +67,8 @@ const severityConfig = {
 export function ExplainableAlert({
   type,
   severity = 'warning',
+  alertTitle,
+  alertMessage,
   showAnalogy = true,
   showActions = true,
   actions,
@@ -74,12 +80,16 @@ export function ExplainableAlert({
   const explanation = getAlertExplanation(type);
   const config = severityConfig[severity];
   const Icon = config.icon;
+
+  // Use real alert data when available, fall back to generic type labels
+  const displayTitle = alertTitle || explanation.title;
+  const displayMessage = alertMessage || explanation.explanation;
   
   return (
     <Alert className={cn(config.containerClass, 'transition-all duration-200', className)}>
       <div className="flex items-start gap-3">
         {explanation.icon && (
-          <span className="text-2xl" role="img" aria-label={explanation.title}>
+          <span className="text-2xl" role="img" aria-label={displayTitle}>
             {explanation.icon}
           </span>
         )}
@@ -88,14 +98,14 @@ export function ExplainableAlert({
           <div className="flex items-center justify-between gap-2">
             <AlertTitle className="flex items-center gap-2 text-base">
               <Icon className={cn('h-4 w-4', config.iconClass)} />
-              {explanation.title}
+              {displayTitle}
             </AlertTitle>
             
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+              className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground flex-shrink-0"
             >
               {isExpanded ? (
                 <>
@@ -103,14 +113,14 @@ export function ExplainableAlert({
                 </>
               ) : (
                 <>
-                  Entender <ChevronDown className="h-3 w-3 ml-1" />
+                  Mais <ChevronDown className="h-3 w-3 ml-1" />
                 </>
               )}
             </Button>
           </div>
           
           <AlertDescription className="mt-1 text-sm">
-            {explanation.explanation}
+            {displayMessage}
           </AlertDescription>
           
           {/* Conteúdo expandido */}
@@ -163,11 +173,12 @@ export function ExplainableAlert({
 interface CompactAlertProps {
   type: keyof typeof ALERT_TYPE_LABELS | string;
   severity?: AlertSeverity;
+  alertTitle?: string;
   onClick?: () => void;
   className?: string;
 }
 
-export function CompactAlert({ type, severity = 'warning', onClick, className }: CompactAlertProps) {
+export function CompactAlert({ type, severity = 'warning', alertTitle, onClick, className }: CompactAlertProps) {
   const explanation = getAlertExplanation(type);
   const config = severityConfig[severity];
   const Icon = config.icon;
@@ -183,12 +194,12 @@ export function CompactAlert({ type, severity = 'warning', onClick, className }:
     >
       <div className="flex items-center gap-2">
         {explanation.icon && (
-          <span className="text-lg" role="img" aria-label={explanation.title}>
+          <span className="text-lg" role="img" aria-label={alertTitle || explanation.title}>
             {explanation.icon}
           </span>
         )}
         <Icon className={cn('h-4 w-4', config.iconClass)} />
-        <span className="font-medium text-sm">{explanation.title}</span>
+        <span className="font-medium text-sm">{alertTitle || explanation.title}</span>
       </div>
       <p className="text-xs text-muted-foreground mt-1 ml-10">
         {explanation.explanation}
