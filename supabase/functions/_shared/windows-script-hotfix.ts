@@ -590,6 +590,55 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
     reasons.push('skip_firewall_runtime_persistence');
   }
 
+  // HOTFIX 24h: Inject skip_firewall_remediation reader into Send-Heartbeat response handler
+  // ROOT CAUSE FIX: The script never reads skip_firewall_remediation from heartbeat response
+  // This injects the reader AFTER the dynamic interval adjustment block
+  if (
+    content.includes('heartbeat_interval_seconds') &&
+    content.includes('Send-Heartbeat') &&
+    !content.includes('HOTFIX-SKIP-FW-HEARTBEAT-READ')
+  ) {
+    // Inject after the poll_interval_seconds block
+    const skipFwReaderBlock = `
+                    # HOTFIX-SKIP-FW-HEARTBEAT-READ: Read skip_firewall_remediation from server
+                    if (Get-Member -InputObject $response -Name "skip_firewall_remediation" -ErrorAction SilentlyContinue) {
+                        $serverSkipFw = [bool]$response.skip_firewall_remediation
+                        if ($serverSkipFw -ne $Global:SkipFirewallRemediation) {
+                            Write-Log "[HEARTBEAT] skip_firewall_remediation changed: $($Global:SkipFirewallRemediation) -> $serverSkipFw" "INFO"
+                        }
+                        $Global:SkipFirewallRemediation = $serverSkipFw
+                        # Persist to disk flag file
+                        try {
+                            $fwFlagFile = "C:\\\\CyberShield\\\\skip_firewall.flag"
+                            if ($serverSkipFw) {
+                                "1" | Set-Content -Path $fwFlagFile -Force -ErrorAction SilentlyContinue
+                            } else {
+                                if (Test-Path $fwFlagFile) { Remove-Item $fwFlagFile -Force -ErrorAction SilentlyContinue }
+                            }
+                        } catch { <# non-fatal #> }
+                    }
+`;
+    // Try to inject after poll_interval_seconds block
+    const pollBlockEnd = content.match(/\$Global:JobPollIntervalSeconds = \$newJobInterval\s*\r?\n\s*\}\s*\r?\n\s*\}/);
+    if (pollBlockEnd) {
+      content = content.replace(
+        /(\$Global:JobPollIntervalSeconds = \$newJobInterval\s*\r?\n\s*\}\s*\r?\n\s*\})/,
+        '$1' + skipFwReaderBlock
+      );
+      reasons.push('skip_firewall_heartbeat_reader');
+    } else {
+      // Fallback: inject before force_update check
+      const forceUpdateCheck = content.match(/# ={3,}\s*\r?\n\s*# FORCE UPDATE VIA HEARTBEAT/);
+      if (forceUpdateCheck) {
+        content = content.replace(
+          /(# ={3,}\s*\r?\n\s*# FORCE UPDATE VIA HEARTBEAT)/,
+          skipFwReaderBlock + '\n                    $1'
+        );
+        reasons.push('skip_firewall_heartbeat_reader');
+      }
+    }
+  }
+
   // HOTFIX 24f: Upgrade OLD $PSScriptRoot flag paths to hardcoded C:\CyberShield paths
   // Runs EVEN WHEN markers already exist - fixes scripts hotfixed with the old pattern
   if (content.includes('Join-Path $PSScriptRoot "skip_firewall.flag"')) {
