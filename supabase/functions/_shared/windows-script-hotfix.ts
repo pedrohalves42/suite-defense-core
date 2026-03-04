@@ -800,29 +800,37 @@ try {
   }
 
   // HOTFIX 32: Deduplicate 'first_seen' in ProcessBaseline
-  // When the same process appears twice, Add-Member throws "O item já foi adicionado"
-  // Fix: Add -Force to all Add-Member calls for 'first_seen' property
-  if (content.includes('first_seen') && content.includes('Add-Member') && !content.includes('HOTFIX-BASELINE-DEDUP')) {
-    content = content.replace(
-      /Add-Member\s+-(?:NotePropertyName|MemberType\s+NoteProperty\s+-Name)\s+["']?first_seen["']?\s+-(?:NotePropertyValue|Value)\s+/g,
-      'Add-Member -NotePropertyName "first_seen" -NotePropertyValue '
-    );
-    // Now add -Force to all first_seen Add-Member calls that don't already have it
-    content = content.replace(
-      /Add-Member\s+-NotePropertyName\s+"first_seen"\s+-NotePropertyValue\s+([^-\n]+?)(?!\s*-Force)(\s*(?:\n|$|<#))/g,
-      'Add-Member -NotePropertyName "first_seen" -NotePropertyValue $1 -Force -ErrorAction SilentlyContinue <# HOTFIX-BASELINE-DEDUP #>$2'
-    );
-    // Also handle hashtable-style baseline where $baseline[$key] = ... uses Add-Member
-    // and catch the dictionary "key already added" error pattern
+  // Error: "O item já foi adicionado. Chave contida no dicionário: 'first_seen'"
+  // Root cause: Both Add-Member without -Force AND hashtable .Add() with duplicate keys
+  if (content.includes('first_seen') && !content.includes('HOTFIX-BASELINE-DEDUP')) {
+    // Fix 1: Add-Member calls for 'first_seen' — add -Force
+    if (content.includes('Add-Member')) {
+      content = content.replace(
+        /Add-Member\s+-(?:NotePropertyName|MemberType\s+NoteProperty\s+-Name)\s+["']?first_seen["']?\s+-(?:NotePropertyValue|Value)\s+/g,
+        'Add-Member -NotePropertyName "first_seen" -NotePropertyValue '
+      );
+      content = content.replace(
+        /Add-Member\s+-NotePropertyName\s+"first_seen"\s+-NotePropertyValue\s+([^-\n]+?)(?!\s*-Force)(\s*(?:\n|$|<#))/g,
+        'Add-Member -NotePropertyName "first_seen" -NotePropertyValue $1 -Force -ErrorAction SilentlyContinue <# HOTFIX-BASELINE-DEDUP #>$2'
+      );
+    }
+    // Fix 2: Hashtable assignment — use indexer instead of .Add()
     content = content.replace(
       /\$(?:Global:)?ProcessBaseline\[([^\]]+)\]\s*=\s*\$proc(?!\s*<#\s*HOTFIX)/g,
       '$Global:ProcessBaseline[$1] = $proc <# HOTFIX-BASELINE-DEDUP #>'
     );
-    // Wrap the entire baseline update in a try/catch if not already wrapped
+    // Fix 3: Catch .Add() calls on hashtables/dictionaries with 'first_seen'
+    content = content.replace(
+      /\.Add\(\s*["']first_seen["']\s*,/g,
+      '["first_seen"] = <# HOTFIX-BASELINE-DEDUP-ADD #>'
+    );
+    // Fix 4: Wrap Detect-ProcessAnomalies body in resilient try/catch
     if (content.includes('Detect-ProcessAnomalies') && !content.includes('HOTFIX-BASELINE-DEDUP-TRYCATCH')) {
       content = content.replace(
-        /function\s+Detect-ProcessAnomalies\s*\{/,
-        `function Detect-ProcessAnomalies { <# HOTFIX-BASELINE-DEDUP-TRYCATCH #>`
+        /function\s+Detect-ProcessAnomalies\s*\{([\s\S]*?)(\n\s*function\s|\n\s*#\s*={3,})/,
+        (match, body, next) => {
+          return `function Detect-ProcessAnomalies { <# HOTFIX-BASELINE-DEDUP-TRYCATCH #>\n    try {${body}\n    } catch {\n        Write-Log "[BASELINE] Process anomaly detection error (non-fatal): $($_.Exception.Message)" "WARN"\n        return @()\n    }\n${next}`;
+        }
       );
     }
     reasons.push('baseline_dedup');
