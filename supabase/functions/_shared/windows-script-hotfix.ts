@@ -828,5 +828,69 @@ try {
     reasons.push('baseline_dedup');
   }
 
+  // HOTFIX 24d: Guard firewall auto-remediation when skip_firewall_remediation is active
+  // The Test-FirewallStatus function always re-enables Windows Firewall when profiles are disabled.
+  // For servers using external firewalls (pfSense), this kills internet connectivity every 5 minutes.
+  if (content.includes('Test-FirewallStatus') && !content.includes('HOTFIX-SKIP-FW-GUARD')) {
+    const remedBlock = content.replace(
+      /# AUTO-REMEDIATION: Re-enable disabled firewall profiles\s*\r?\n(\s*)\$remediated = @\(\)\s*\r?\n(\s*)foreach \(\$profileName in \$disabledProfiles\) \{/,
+      `# AUTO-REMEDIATION: Re-enable disabled firewall profiles
+$1# HOTFIX-SKIP-FW-GUARD: Skip remediation if external firewall flag is set
+$1if (\$Global:SkipFirewallRemediation) {
+$1    Write-Log "[LOCAL-DETECT] Firewall disabled but skip_firewall_remediation=true (external firewall). Skipping remediation." "INFO"
+$1    Invoke-PushAlert -AlertType "firewall_disabled" -AlertMessage "Firewall desativado em \$env:COMPUTERNAME (profiles: \$(\$disabledProfiles -join ', ')). Remediacao pulada: firewall externo." -Severity "info" -Details @{ disabled_profiles = \$disabledProfiles; skip_reason = "external_firewall"; auto_remediated = \$false }
+$1    return @{ status = "skipped_external"; disabled_profiles = \$disabledProfiles }
+$1}
+$1\$remediated = @()
+$2foreach (\$profileName in \$disabledProfiles) {`
+    );
+    if (remedBlock !== content) {
+      content = remedBlock;
+      reasons.push('skip_firewall_remediation_guard');
+    }
+  }
+
+  // HOTFIX 24e: Initialize $Global:SkipFirewallRemediation from local flag file
+  // Ensures the variable exists before Test-FirewallStatus runs, even before first heartbeat
+  if (content.includes('Test-FirewallStatus') && !content.includes('HOTFIX-SKIP-FW-INIT')) {
+    // Check if the global variable declaration already exists
+    if (!content.includes('$Global:SkipFirewallRemediation')) {
+      const skipFwInit = `
+# HOTFIX-SKIP-FW-INIT: Initialize SkipFirewallRemediation from local flag file
+\$Global:SkipFirewallRemediation = \$false
+\$skipFwFlagPath = Join-Path \$installDir "skip_firewall.flag"
+if (Test-Path \$skipFwFlagPath) {
+    \$Global:SkipFirewallRemediation = \$true
+    Write-Log "[INIT] skip_firewall.flag found - firewall remediation will be skipped (external firewall)" "INFO"
+}
+`;
+      // Inject after installDir declaration or before Invoke-LocalDetection
+      let injected24e = false;
+      if (content.includes('$installDir = "C:\\CyberShield"')) {
+        const updated24e = content.replace(
+          /(\$installDir = "C:\\CyberShield"[^\r\n]*)/,
+          '$1' + skipFwInit
+        );
+        if (updated24e !== content) {
+          content = updated24e;
+          injected24e = true;
+        }
+      }
+      if (!injected24e && content.includes('Invoke-LocalDetection')) {
+        const updated24e = content.replace(
+          /(function Invoke-LocalDetection)/,
+          skipFwInit + '\n$1'
+        );
+        if (updated24e !== content) {
+          content = updated24e;
+          injected24e = true;
+        }
+      }
+      if (injected24e) {
+        reasons.push('skip_firewall_init');
+      }
+    }
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }
