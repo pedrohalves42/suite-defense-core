@@ -958,11 +958,11 @@ try {
     if (needsInit || needsFlagCheck) {
       const skipFwInit = `
 # HOTFIX-SKIP-FW-INIT: Initialize SkipFirewallRemediation from HARDCODED flag path
-\\$Global:SkipFirewallRemediation = \\$false
+$Global:SkipFirewallRemediation = $false
 try {
-    \\$skipFwPaths = @("C:\\\\CyberShield\\\\skip_firewall.flag")
-    if (\\$PSScriptRoot) { \\$skipFwPaths += Join-Path \\$PSScriptRoot "skip_firewall.flag" }
-    foreach (\\$fp in \\$skipFwPaths) { if (Test-Path \\$fp) { \\$Global:SkipFirewallRemediation = \\$true; break } }
+    $skipFwPaths = @("C:\\CyberShield\\skip_firewall.flag")
+    if ($PSScriptRoot) { $skipFwPaths += Join-Path $PSScriptRoot "skip_firewall.flag" }
+    foreach ($fp in $skipFwPaths) { if (Test-Path $fp) { $Global:SkipFirewallRemediation = $true; break } }
 } catch { <# non-fatal #> }
 `;
       let injected24e = false;
