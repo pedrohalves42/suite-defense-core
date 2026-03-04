@@ -19536,7 +19536,7 @@ export type Database = {
       scheduled_job_heartbeat: {
         Row: {
           created_at: string
-          expected_interval: unknown
+          expected_interval: string
           job_key: string
           last_error: string | null
           last_seen_at: string
@@ -19545,7 +19545,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          expected_interval?: unknown
+          expected_interval?: string
           job_key: string
           last_error?: string | null
           last_seen_at?: string
@@ -19554,7 +19554,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          expected_interval?: unknown
+          expected_interval?: string
           job_key?: string
           last_error?: string | null
           last_seen_at?: string
@@ -29447,16 +29447,16 @@ export type Database = {
       }
       v_cron_silence: {
         Row: {
-          expected_interval: unknown
+          expected_interval: string | null
           job_key: string | null
           last_error: string | null
           last_seen_at: string | null
           missed_count: number | null
-          silence_duration: unknown
+          silence_duration: string | null
           status: string | null
         }
         Insert: {
-          expected_interval?: unknown
+          expected_interval?: string | null
           job_key?: string | null
           last_error?: string | null
           last_seen_at?: string | null
@@ -29465,7 +29465,7 @@ export type Database = {
           status?: never
         }
         Update: {
-          expected_interval?: unknown
+          expected_interval?: string | null
           job_key?: string | null
           last_error?: string | null
           last_seen_at?: string | null
@@ -29872,7 +29872,7 @@ export type Database = {
           last_execution_index: number | null
           status: string | null
           tenant_id: string | null
-          time_since_last_execution: unknown
+          time_since_last_execution: string | null
           updated_at: string | null
         }
         Relationships: [

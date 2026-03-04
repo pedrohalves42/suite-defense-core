@@ -1,55 +1,37 @@
 
 
-# Plano: Corrigir MIT-SERVIDOR - Firewall sendo reativado pelo agente
+## Investigation Results
 
-## Problema Raiz
+**Root Cause**: Both agents are running **OLD scripts from disk**. All hotfixes (pipeline-safe, typesafe-status, registered_at, ProtectedProcessSet) are correctly applied in the database, but agents don't re-download on restart — they keep executing the stale `.ps1` file.
 
-O agente v5.0.13 tem a função `Test-FirewallStatus` que **sempre reativa o Windows Firewall** quando detecta profiles desabilitados. Embora exista a flag `skip_firewall_remediation = true` no banco de dados para o MIT-SERVIDOR, e hotfixes (24a/24b) para persistir essa flag localmente, **nenhum hotfix injeta a verificação dessa flag dentro da função `Test-FirewallStatus`**.
+**Evidence from DB query**: `has_pipeline_safe: true`, `has_typesafe_status: true`, `has_init_protectedset: true`, `has_trycatch: true` — but `has_registered_at_fix: false` (fix IS present in DB, just missing the marker string).
 
-Resultado: a cada 5 minutos, o agente detecta o firewall desligado, reativa ele, e derruba a internet do servidor (que usa firewall externo pfSense).
+**Evidence from logs**: pcteste1's latest runs (15:54-16:00) no longer show `script_sha256` or `ProtectedProcessSet` errors (those were from Feb 27), but STILL show `registered_at` error and 404 on sync — confirming OLD script on disk.
 
-## Solução
+## Errors and Fixes
 
-Adicionar um **HOTFIX 24d** no arquivo `windows-script-hotfix.ts` que injeta uma verificação de `$Global:SkipFirewallRemediation` no início do bloco de auto-remediação dentro de `Test-FirewallStatus`, **antes** do `Set-NetFirewallProfile`.
+| Error | Agent | Root Cause | Fix |
+|-------|-------|-----------|-----|
+| FATAL `.status` line 4854 | MIT-SERVIDOR | Old script, pipeline pollution | Force re-download |
+| `registered_at` property not found | Both | Old script doesn't have Add-Member fix | Force re-download |
+| 404 on SYNCING | Both | `serve-dns-filter` not deployed | Deploy function |
+| `script_sha256` not found | pcteste1 | Heartbeat standard response lacks this field | Add to response |
+| Force update won't trigger | Both | Heartbeat compares `force_update_version !== agent_version`, both are v5.0.13 | Fix comparison logic |
 
-### Arquivo: `supabase/functions/_shared/windows-script-hotfix.ts`
+## Implementation Plan
 
-**Novo HOTFIX 24d** — Injetar guard no `Test-FirewallStatus`:
+### Step 1: Fix heartbeat to include `script_sha256` in standard response
+Add `script_sha256: null` to the standard heartbeat response (line 361-367 of `agent-heartbeat/index.ts`) so old agents don't crash trying to access this property.
 
-Buscar o padrão no script:
-```
-# AUTO-REMEDIATION: Re-enable disabled firewall profiles
-$remediated = @()
-foreach ($profileName in $disabledProfiles) {
-```
+### Step 2: Fix force_update logic to support same-version pushes
+Currently `agent.force_update_version !== agent.agent_version` blocks same-version re-pushes. Change to check `force_update_at` being set (not null) as the trigger, regardless of version match. This allows pushing the fixed v5.0.13 script without a version bump.
 
-Substituir por:
-```
-# AUTO-REMEDIATION: Re-enable disabled firewall profiles
-# HOTFIX-SKIP-FW-GUARD: Skip remediation if external firewall flag is set
-if ($Global:SkipFirewallRemediation) {
-    Write-Log "[LOCAL-DETECT] Firewall disabled but skip_firewall_remediation=true (external firewall). Skipping remediation." "INFO"
-    # Still alert but mark as external_firewall, not auto-remediated
-    Invoke-PushAlert -AlertType "firewall_disabled" -AlertMessage "Firewall desativado em $env:COMPUTERNAME (profiles: $($disabledProfiles -join ', ')). Remediação pulada: firewall externo." -Severity "info" -Details @{ disabled_profiles = $disabledProfiles; skip_reason = "external_firewall"; auto_remediated = $false }
-    return @{ status = "skipped_external"; disabled_profiles = $disabledProfiles }
-}
-$remediated = @()
-foreach ($profileName in $disabledProfiles) {
-```
+### Step 3: SQL migration — trigger force_update on both agents
+Set `force_update_version = 'v5.0.13'`, `force_update_at = now()`, `force_update_reason = 'Critical hotfix: pipeline-safe + registered_at + ProtectedProcessSet'` on MIT-SERVIDOR and pcteste1. On next heartbeat, agents will receive the fixed script.
 
-Também garantir que a variável `$Global:SkipFirewallRemediation` é **inicializada** no script mesmo que não exista no base. Adicionar um **HOTFIX 24e** que injeta a inicialização caso não exista:
+### Step 4: Add registered_at HOTFIX marker to DB script
+Update `agent_releases` to include `HOTFIX-SAFE-REGISTERED-AT` comment in the DB script for consistency with other hotfix markers, preventing HOTFIX 12 from attempting to re-apply.
 
-Se o script contém `Test-FirewallStatus` mas NÃO contém `$Global:SkipFirewallRemediation`, injetar a declaração + flag file loader logo antes de `Invoke-LocalDetection`.
-
-### Também necessário no mesmo hotfix:
-
-Baixar a severidade do alerta `firewall_disabled` de `critical` para `info` quando `skip_firewall_remediation` está ativo, evitando poluição do journal com alertas críticos a cada 5 minutos.
-
-## Resumo das Alterações
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `supabase/functions/_shared/windows-script-hotfix.ts` | Adicionar HOTFIX 24d (guard no Test-FirewallStatus) + HOTFIX 24e (init da variável global) |
-
-Após deploy, o MIT-SERVIDOR receberá o script corrigido no próximo heartbeat (até 2 minutos) e parará de reativar o Windows Firewall.
+### Step 5: Deploy edge functions
+Deploy `agent-heartbeat` and `serve-dns-filter`.
 
