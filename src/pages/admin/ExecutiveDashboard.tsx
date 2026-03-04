@@ -62,8 +62,8 @@ export default function ExecutiveDashboard() {
 
       const [alertsRes, jobsTodayRes, jobs30dRes, blockedRes, evidence7dRes, evidence30dRes, complianceRes] = await Promise.all([
         sb.from('system_alerts').select('severity, status', { count: 'exact' }).eq('tenant_id', tenantId),
-        sb.from('jobs').select('status, job_type').eq('tenant_id', tenantId).gte('created_at', todayISO),
-        sb.from('jobs').select('status, job_type').eq('tenant_id', tenantId).gte('created_at', thirtyDaysAgo),
+        sb.from('jobs').select('status, type').eq('tenant_id', tenantId).gte('created_at', todayISO),
+        sb.from('jobs').select('status, type').eq('tenant_id', tenantId).gte('created_at', thirtyDaysAgo),
         sb.from('blocked_access_attempts').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).gte('attempted_at', sevenDaysAgo),
         sb.from('agent_evidence_logs').select('event_type, severity').eq('tenant_id', tenantId).gte('created_at', sevenDaysAgo),
         sb.from('agent_evidence_logs').select('event_type, severity').eq('tenant_id', tenantId).gte('created_at', thirtyDaysAgo),
