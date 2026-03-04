@@ -17,6 +17,7 @@ import { logger } from '../_shared/logger.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 import { hashToken } from '../_shared/token-hash.ts'
 import { encodeBase64 } from "https://deno.land/std@0.208.0/encoding/base64.ts"
+import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts'
 
 Deno.serve(async (req) => {
   // CORS preflight
@@ -313,6 +314,30 @@ Deno.serve(async (req) => {
       }
 
       if (release?.script_content) {
+        // PHASE 1 FIX: Apply runtime hotfixes before delivery
+        let scriptToDeliver = release.script_content;
+        if (platform === 'windows') {
+          try {
+            const hotfixResult = applyWindowsScriptHotfix(scriptToDeliver);
+            if (hotfixResult.changed) {
+              scriptToDeliver = hotfixResult.content;
+              logger.info('[PROXY] Applied runtime hotfixes to force_update script', {
+                agentName: agent.agent_name,
+                hotfixes: hotfixResult.reasons,
+              });
+              // Best-effort: persist hotfixed content back to agent_releases
+              const hfBytes = new TextEncoder().encode(scriptToDeliver);
+              const hfHashBuf = await crypto.subtle.digest('SHA-256', hfBytes);
+              const hfHash = Array.from(new Uint8Array(hfHashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+              await supabase.from('agent_releases')
+                .update({ script_content: scriptToDeliver, sha256: hfHash })
+                .eq('id', release.id);
+            }
+          } catch (hfErr) {
+            logger.warn('[PROXY] Hotfix injection failed (non-fatal)', { error: (hfErr as Error).message });
+          }
+        }
+
         logger.info('[PROXY] Sending force_update in response', { 
           agentName: agent.agent_name,
           targetVersion: release.version,
@@ -322,7 +347,7 @@ Deno.serve(async (req) => {
         })
 
         // Normalize line endings (CRLF for Windows)
-        let normalizedScript = release.script_content
+        let normalizedScript = scriptToDeliver
         if (platform === 'windows') {
           normalizedScript = normalizedScript.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n')
         }

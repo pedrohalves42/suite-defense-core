@@ -8,6 +8,7 @@ import { logger } from '../_shared/logger.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 import { hashToken } from '../_shared/token-hash.ts'
 import { normalizeVersion, normalizeForWindows } from '../_shared/hexagonal/update-decision-service.ts'
+import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts'
 // NOTE: Codebase script imports removed - .ps1 files are NOT bundled in Deno Deploy
 // All script content is served exclusively from the agent_releases DB table
 // Domain event dispatch removed from hot path to reduce latency
@@ -489,7 +490,7 @@ Deno.serve(async (req) => {
           
           const { data: release } = await supabase
             .from('agent_releases')
-            .select('version, script_content, sha256, signature_base64, signed_at')
+            .select('id, version, script_content, sha256, signature_base64, signed_at')
             .eq('version', effectiveForceVersion)
             .eq('platform', platform)
             .eq('is_active', true)
@@ -506,6 +507,34 @@ Deno.serve(async (req) => {
               // AUTHORITATIVE SOURCE: Always use DB release content
               // Codebase scripts are NOT available in Deno Deploy (.ps1 not bundled)
               let finalScript = release.script_content;
+
+              // PHASE 1 FIX: Apply runtime hotfixes to DB script before delivery
+              // This ensures agents receive HOTFIX 24d/24e (skip_firewall), HOTFIX 32 (baseline dedup), etc.
+              if (platform === 'windows' || platform === 'Windows') {
+                try {
+                  const hotfixResult = applyWindowsScriptHotfix(finalScript);
+                  if (hotfixResult.changed) {
+                    finalScript = hotfixResult.content;
+                    logger.info('Applied runtime hotfixes to force_update script', {
+                      agentName: agent.agent_name,
+                      hotfixes: hotfixResult.reasons,
+                      count: hotfixResult.reasons.length,
+                    });
+                    // Best-effort: persist hotfixed content back to agent_releases
+                    const hotfixBytes = new TextEncoder().encode(finalScript);
+                    const hotfixHashBuf = await crypto.subtle.digest('SHA-256', hotfixBytes);
+                    const hotfixHash = Array.from(new Uint8Array(hotfixHashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+                    await supabase.from('agent_releases')
+                      .update({ script_content: finalScript, sha256: hotfixHash })
+                      .eq('id', release.id);
+                  }
+                } catch (hotfixErr) {
+                  logger.warn('Hotfix injection failed (non-fatal), delivering original script', {
+                    agentName: agent.agent_name,
+                    error: (hotfixErr as Error).message,
+                  });
+                }
+              }
 
               // SAFETY: Version header validation - ensure script content matches target version
               const headerMatch = finalScript.match(/CyberShield\s+Agent\s*[-–]\s*\w+\s+v?([\d]+\.[\d]+)/i);
