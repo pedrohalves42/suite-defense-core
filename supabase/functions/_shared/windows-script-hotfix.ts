@@ -922,7 +922,7 @@ try {
       // Also replace the remediation block to check $shouldSkipFw
       remedBlock = remedBlock.replace(
         /# AUTO-REMEDIATION: Re-enable disabled firewall profiles\s*\r?\n(\s*)\$remediated = @\(\)/,
-        `# AUTO-REMEDIATION: Re-enable disabled firewall profiles\n$1# HOTFIX-SKIP-FW-GUARD: If skip active, return immediately\n$1if (\\$shouldSkipFw) {\n$1    Write-Log "[LOCAL-DETECT] Firewall disabled but SKIP active (external firewall). NO remediation." "INFO"\n$1    return @{ status = "skipped_external"; disabled_profiles = \\$disabledProfiles }\n$1}\n$1\\$remediated = @()`
+        `# AUTO-REMEDIATION: Re-enable disabled firewall profiles\n$1# HOTFIX-SKIP-FW-GUARD: If skip active, return immediately\n$1if ($shouldSkipFw) {\n$1    Write-Log "[LOCAL-DETECT] Firewall disabled but SKIP active (external firewall). NO remediation." "INFO"\n$1    return @{ status = "skipped_external"; disabled_profiles = $disabledProfiles }\n$1}\n$1$remediated = @()`
       );
       content = remedBlock;
       reasons.push('skip_firewall_remediation_guard');
@@ -930,7 +930,7 @@ try {
       // Strategy 2 (fallback): Match $remediated = @() followed by foreach...disabledProfiles
       remedBlock = content.replace(
         /(\s*)\$remediated\s*=\s*@\(\)\s*\r?\n(\s*)foreach\s*\(\s*\$profileName\s+in\s+\$disabledProfiles\s*\)\s*\{/,
-        `$1# HOTFIX-SKIP-FW-GUARD: Skip if external firewall flag is set\n$1if (\\$Global:SkipFirewallRemediation -or (Test-Path "C:\\\\CyberShield\\\\skip_firewall.flag" -ErrorAction SilentlyContinue)) {\n$1    Write-Log "[LOCAL-DETECT] Firewall disabled but SKIP active. NO remediation." "INFO"\n$1    return @{ status = "skipped_external"; disabled_profiles = \\$disabledProfiles }\n$1}\n$1\\$remediated = @()\n$2foreach (\\$profileName in \\$disabledProfiles) {`
+        `$1# HOTFIX-SKIP-FW-GUARD: Skip if external firewall flag is set\n$1if ($Global:SkipFirewallRemediation -or (Test-Path "C:\\\\CyberShield\\\\skip_firewall.flag" -ErrorAction SilentlyContinue)) {\n$1    Write-Log "[LOCAL-DETECT] Firewall disabled but SKIP active. NO remediation." "INFO"\n$1    return @{ status = "skipped_external"; disabled_profiles = $disabledProfiles }\n$1}\n$1$remediated = @()\n$2foreach ($profileName in $disabledProfiles) {`
       );
       if (remedBlock !== content) {
         content = remedBlock;
@@ -939,7 +939,7 @@ try {
         // Strategy 3 (last resort): Guard each Set-NetFirewallProfile call
         remedBlock = content.replace(
           /(\s*)(Set-NetFirewallProfile\s+-Name\s+\$profileName\s+-Enabled\s+True)/g,
-          `$1if (-not \\$Global:SkipFirewallRemediation -and -not (Test-Path "C:\\\\CyberShield\\\\skip_firewall.flag" -ErrorAction SilentlyContinue)) { $2 } else { Write-Log "[LOCAL-DETECT] Skipped firewall re-enable (\\$profileName) - external firewall" "INFO" } <# HOTFIX-SKIP-FW-GUARD #>`
+          `$1if (-not $Global:SkipFirewallRemediation -and -not (Test-Path "C:\\\\CyberShield\\\\skip_firewall.flag" -ErrorAction SilentlyContinue)) { $2 } else { Write-Log "[LOCAL-DETECT] Skipped firewall re-enable ($profileName) - external firewall" "INFO" } <# HOTFIX-SKIP-FW-GUARD #>`
         );
         if (remedBlock !== content) {
           content = remedBlock;
