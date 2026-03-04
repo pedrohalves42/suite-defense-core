@@ -590,6 +590,29 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
     reasons.push('skip_firewall_runtime_persistence');
   }
 
+  // HOTFIX 24f: Upgrade OLD $PSScriptRoot flag paths to hardcoded C:\CyberShield paths
+  // Runs EVEN WHEN markers already exist - fixes scripts hotfixed with the old pattern
+  if (content.includes('Join-Path $PSScriptRoot "skip_firewall.flag"')) {
+    content = content.replace(
+      /Join-Path \$PSScriptRoot "skip_firewall\.flag"/g,
+      '"C:\\\\CyberShield\\\\skip_firewall.flag"'
+    );
+    reasons.push('upgrade_flag_path_to_hardcoded');
+  }
+
+  // HOTFIX 24g: Ensure guard also checks flag file on disk (not just global var)
+  if (
+    content.includes('HOTFIX-SKIP-FW-GUARD') &&
+    content.includes('if ($Global:SkipFirewallRemediation)') &&
+    !content.includes('Test-Path "C:\\\\CyberShield\\\\skip_firewall.flag"')
+  ) {
+    content = content.replace(
+      /if \(\$Global:SkipFirewallRemediation\) \{/g,
+      'if ($Global:SkipFirewallRemediation -or (Test-Path "C:\\\\CyberShield\\\\skip_firewall.flag" -ErrorAction SilentlyContinue)) {'
+    );
+    reasons.push('upgrade_guard_to_check_file');
+  }
+
   // HOTFIX 24c: Repair previously persisted pre-logger calls that crash before Write-Log exists.
   // This runs even when HOTFIX markers already exist in script_content from older injections.
   if (content.includes('HOTFIX-TOCTOU-SELFHEAL') && content.includes('Write-Log "[TOCTOU-SELFHEAL]')) {
