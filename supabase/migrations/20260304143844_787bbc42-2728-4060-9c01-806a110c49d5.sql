@@ -1,0 +1,10 @@
+-- HOTFIX 24h: Inject skip_firewall_remediation reader into Send-Heartbeat response handler
+-- This is the ROOT CAUSE fix: the script never reads skip_firewall_remediation from heartbeat response
+UPDATE agent_releases
+SET script_content = replace(
+  script_content,
+  E'$Global:JobPollIntervalSeconds = $newJobInterval\r\n                        }\r\n                    }\r\n                    \r\n                    # ============================================\r\n                    # FORCE UPDATE VIA HEARTBEAT RESPONSE',
+  E'$Global:JobPollIntervalSeconds = $newJobInterval\r\n                        }\r\n                    }\r\n                    \r\n                    # HOTFIX-SKIP-FW-HEARTBEAT-READ: Read skip_firewall_remediation from server\r\n                    if (Get-Member -InputObject $response -Name "skip_firewall_remediation" -ErrorAction SilentlyContinue) {\r\n                        $serverSkipFw = [bool]$response.skip_firewall_remediation\r\n                        if ($serverSkipFw -ne $Global:SkipFirewallRemediation) {\r\n                            Write-Log "[HEARTBEAT] skip_firewall_remediation changed: $($Global:SkipFirewallRemediation) -> $serverSkipFw" "INFO"\r\n                        }\r\n                        $Global:SkipFirewallRemediation = $serverSkipFw\r\n                        try {\r\n                            $fwFlagFile = "C:\\CyberShield\\skip_firewall.flag"\r\n                            if ($serverSkipFw) {\r\n                                "1" | Set-Content -Path $fwFlagFile -Force -ErrorAction SilentlyContinue\r\n                            } else {\r\n                                if (Test-Path $fwFlagFile) { Remove-Item $fwFlagFile -Force -ErrorAction SilentlyContinue }\r\n                            }\r\n                        } catch { <# non-fatal #> }\r\n                    }\r\n                    \r\n                    # ============================================\r\n                    # FORCE UPDATE VIA HEARTBEAT RESPONSE'
+)
+WHERE id = 'a20b8ea9-1600-4305-b151-c5dc6450dab2'
+AND is_active = true;
