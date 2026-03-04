@@ -62,8 +62,8 @@ export default function ExecutiveDashboard() {
 
       const [alertsRes, jobsTodayRes, jobs30dRes, blockedRes, evidence7dRes, evidence30dRes, complianceRes] = await Promise.all([
         sb.from('system_alerts').select('severity, status', { count: 'exact' }).eq('tenant_id', tenantId),
-        sb.from('jobs').select('status, job_type').eq('tenant_id', tenantId).gte('created_at', todayISO),
-        sb.from('jobs').select('status, job_type').eq('tenant_id', tenantId).gte('created_at', thirtyDaysAgo),
+        sb.from('jobs').select('status, type').eq('tenant_id', tenantId).gte('created_at', todayISO),
+        sb.from('jobs').select('status, type').eq('tenant_id', tenantId).gte('created_at', thirtyDaysAgo),
         sb.from('blocked_access_attempts').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).gte('attempted_at', sevenDaysAgo),
         sb.from('agent_evidence_logs').select('event_type, severity').eq('tenant_id', tenantId).gte('created_at', sevenDaysAgo),
         sb.from('agent_evidence_logs').select('event_type, severity').eq('tenant_id', tenantId).gte('created_at', thirtyDaysAgo),
@@ -75,8 +75,8 @@ export default function ExecutiveDashboard() {
       const activeAlerts = alerts.filter(a => unresolvedStatuses.includes(a.status)).length;
       const criticalAlerts = alerts.filter(a => a.severity === 'critical' && unresolvedStatuses.includes(a.status)).length;
 
-      const jobsToday: Array<{ status: string; job_type: string }> = jobsTodayRes.data || [];
-      const jobs30d: Array<{ status: string; job_type: string }> = jobs30dRes.data || [];
+      const jobsToday: Array<{ status: string; type: string }> = jobsTodayRes.data || [];
+      const jobs30d: Array<{ status: string; type: string }> = jobs30dRes.data || [];
       const blockedThreats: number = blockedRes.count || 0;
 
       const evidence7d: Array<{ event_type: string; severity: string }> = evidence7dRes.data || [];
