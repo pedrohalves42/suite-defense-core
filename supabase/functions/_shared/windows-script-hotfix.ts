@@ -840,7 +840,8 @@ try {
   // The Test-FirewallStatus function always re-enables Windows Firewall when profiles are disabled.
   // For servers using external firewalls (pfSense), this kills internet connectivity every 5 minutes.
   if (content.includes('Test-FirewallStatus') && !content.includes('HOTFIX-SKIP-FW-GUARD')) {
-    const remedBlock = content.replace(
+    // Strategy 1: Match the exact auto-remediation comment pattern
+    let remedBlock = content.replace(
       /# AUTO-REMEDIATION: Re-enable disabled firewall profiles\s*\r?\n(\s*)\$remediated = @\(\)\s*\r?\n(\s*)foreach \(\$profileName in \$disabledProfiles\) \{/,
       `# AUTO-REMEDIATION: Re-enable disabled firewall profiles
 $1# HOTFIX-SKIP-FW-GUARD: Skip remediation if external firewall flag is set
@@ -855,44 +856,72 @@ $2foreach (\$profileName in \$disabledProfiles) {`
     if (remedBlock !== content) {
       content = remedBlock;
       reasons.push('skip_firewall_remediation_guard');
+    } else {
+      // Strategy 2 (fallback): Match any $remediated = @() followed by foreach...disabledProfiles
+      remedBlock = content.replace(
+        /(\s*)\$remediated\s*=\s*@\(\)\s*\r?\n(\s*)foreach\s*\(\s*\$profileName\s+in\s+\$disabledProfiles\s*\)\s*\{/,
+        `$1# HOTFIX-SKIP-FW-GUARD: Skip remediation if external firewall flag is set
+$1if (\$Global:SkipFirewallRemediation) {
+$1    Write-Log "[LOCAL-DETECT] Firewall disabled but skip_firewall_remediation=true. Skipping remediation." "INFO"
+$1    return @{ status = "skipped_external"; disabled_profiles = \$disabledProfiles }
+$1}
+$1\$remediated = @()
+$2foreach (\$profileName in \$disabledProfiles) {`
+      );
+      if (remedBlock !== content) {
+        content = remedBlock;
+        reasons.push('skip_firewall_remediation_guard');
+      } else {
+        // Strategy 3 (last resort): Match Set-NetFirewallProfile calls and guard each
+        remedBlock = content.replace(
+          /(\s*)(Set-NetFirewallProfile\s+-Name\s+\$profileName\s+-Enabled\s+True)/g,
+          `$1if (-not \$Global:SkipFirewallRemediation) { $2 } else { Write-Log "[LOCAL-DETECT] Skipped firewall re-enable (\$profileName) - external firewall" "INFO" } <# HOTFIX-SKIP-FW-GUARD #>`
+        );
+        if (remedBlock !== content) {
+          content = remedBlock;
+          reasons.push('skip_firewall_remediation_guard');
+        }
+      }
     }
   }
 
   // HOTFIX 24e: Initialize $Global:SkipFirewallRemediation from local flag file
   // Ensures the variable exists before Test-FirewallStatus runs, even before first heartbeat
   if (content.includes('Test-FirewallStatus') && !content.includes('HOTFIX-SKIP-FW-INIT')) {
-    // Check if the global variable declaration already exists
-    if (!content.includes('$Global:SkipFirewallRemediation')) {
+    const needsInit = !content.includes('$Global:SkipFirewallRemediation');
+    const needsFlagCheck = content.includes('$Global:SkipFirewallRemediation') && !content.includes('skip_firewall.flag');
+    
+    if (needsInit || needsFlagCheck) {
       const skipFwInit = `
 # HOTFIX-SKIP-FW-INIT: Initialize SkipFirewallRemediation from local flag file
 \$Global:SkipFirewallRemediation = \$false
-\$skipFwFlagPath = Join-Path \$installDir "skip_firewall.flag"
-if (Test-Path \$skipFwFlagPath) {
-    \$Global:SkipFirewallRemediation = \$true
-    Write-Log "[INIT] skip_firewall.flag found - firewall remediation will be skipped (external firewall)" "INFO"
-}
+try {
+    \$skipFwPaths = @("C:\\CyberShield\\skip_firewall.flag", (Join-Path \$PSScriptRoot "skip_firewall.flag"))
+    foreach (\$fp in \$skipFwPaths) { if (Test-Path \$fp) { \$Global:SkipFirewallRemediation = \$true; break } }
+} catch { <# non-fatal #> }
 `;
-      // Inject after installDir declaration or before Invoke-LocalDetection
       let injected24e = false;
+      // Try multiple injection points
       if (content.includes('$installDir = "C:\\CyberShield"')) {
         const updated24e = content.replace(
           /(\$installDir = "C:\\CyberShield"[^\r\n]*)/,
           '$1' + skipFwInit
         );
-        if (updated24e !== content) {
-          content = updated24e;
-          injected24e = true;
-        }
+        if (updated24e !== content) { content = updated24e; injected24e = true; }
+      }
+      if (!injected24e && content.includes('$Global:SecurityDegraded')) {
+        const updated24e = content.replace(
+          /(\$Global:SecurityDegraded = \$false[^\r\n]*)/,
+          '$1' + skipFwInit
+        );
+        if (updated24e !== content) { content = updated24e; injected24e = true; }
       }
       if (!injected24e && content.includes('Invoke-LocalDetection')) {
         const updated24e = content.replace(
           /(function Invoke-LocalDetection)/,
           skipFwInit + '\n$1'
         );
-        if (updated24e !== content) {
-          content = updated24e;
-          injected24e = true;
-        }
+        if (updated24e !== content) { content = updated24e; injected24e = true; }
       }
       if (injected24e) {
         reasons.push('skip_firewall_init');
