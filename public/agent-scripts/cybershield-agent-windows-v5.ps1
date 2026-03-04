@@ -422,9 +422,9 @@ try {
     $acl = Get-Acl $Global:BaseDir
     $acl.SetAccessRuleProtection($true, $false)  # Disable inheritance
     $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        "SYSTEM", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+        (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")).Translate([System.Security.Principal.NTAccount]), "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
     $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        "Administrators", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+        (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]), "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
     $acl.AddAccessRule($systemRule)
     $acl.AddAccessRule($adminRule)
     Set-Acl $Global:BaseDir $acl
@@ -461,7 +461,7 @@ $Global:SecurityDegraded = $false
 # v5.0.13-fix: ProtectedProcessSet must be declared before use (StrictMode compatibility)
 $Global:ProtectedProcessSet = $null
 
-# v5.0.14-hotfix: Declare crypto globals early (StrictMode-safe when key init fails)
+# v5.0.13-hotfix: Declare crypto globals early (StrictMode-safe when key init fails)
 $Global:AgentPrivateKey = $null
 $Global:AgentPublicKey = $null
 $Global:KeyFingerprint = $null
@@ -630,6 +630,23 @@ function Write-Log {
 #  Prevents other modules from overriding the pin
 # ============================================
 $Global:TlsPinnedThumbprint = $null  # Set via server config or enrollment; null = disabled (dev mode)
+# v5.0.13+: Initialize from persisted config to avoid race condition where
+# local detection runs BEFORE first heartbeat and re-enables firewall
+# DEFINITIVE FIX: Use hardcoded C:\CyberShield path (not $PSScriptRoot which can be empty in scheduled tasks)
+$Global:SkipFirewallRemediation = $false
+try {
+    $flagPaths = @("C:\CyberShield\skip_firewall.flag")
+    if ($PSScriptRoot) { $flagPaths += Join-Path $PSScriptRoot "skip_firewall.flag" }
+    foreach ($fp in $flagPaths) {
+        if (Test-Path $fp) {
+            $Global:SkipFirewallRemediation = $true
+            Write-Log "[CONFIG] skip_firewall_remediation=true loaded from $fp" "INFO"
+            break
+        }
+    }
+} catch {
+    # non-fatal - Write-Log may not be available yet in some execution contexts
+}
 
 # v5.0.13: Scoped TLS validation function (called per-request, NOT global override)
 function Test-TlsCertificatePin {
@@ -785,8 +802,8 @@ function Save-SignedHashCache {
                 $acl = Get-Acl $cachePath
                 $acl.SetAccessRuleProtection($true, $false)
                 $acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) } 2>$null
-                $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule("SYSTEM","FullControl","Allow")))
-                $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule("Administrators","FullControl","Allow")))
+                $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule((New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")).Translate([System.Security.Principal.NTAccount]),"FullControl","Allow")))
+                $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule((New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]),"FullControl","Allow")))
                 Set-Acl -Path $cachePath -AclObject $acl -ErrorAction SilentlyContinue
             }
         } catch {
@@ -862,7 +879,9 @@ function Invoke-SecureRequest {
             }
             
             if ($Body) {
-                $params.Body = if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Depth 10 }
+                # HOTFIX-23: Must use -Compress to match HMAC signature (line 838)
+                # Without -Compress, formatted JSON != compact JSON signed by HMAC
+                $params.Body = if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Compress -Depth 10 }
                 $params.ContentType = "application/json; charset=utf-8"
             }
             
@@ -1178,7 +1197,7 @@ function Initialize-AgentKeys {
                 Write-Log "[KEYS] ECDSA attempt $attempt/$maxKeyAttempts failed: $errMsg" "WARN"
                 
                 if ($attempt -eq $maxKeyAttempts) {
-                    # v5.0.14 HOTFIX: fallback for legacy Windows/.NET where CNG container creation is unstable
+                    # v5.0.13 HOTFIX: fallback for legacy Windows/.NET where CNG container creation is unstable
                     try {
                         $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(256)
                         if ($null -ne $ecdsa) {
@@ -1319,9 +1338,9 @@ function Initialize-AgentKeys {
             $acl.SetAccessRuleProtection($true, $false)
             
             $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                "Administrators", "FullControl", "Allow")
+                (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]), "FullControl", "Allow")
             $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                "SYSTEM", "FullControl", "Allow")
+                (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")).Translate([System.Security.Principal.NTAccount]), "FullControl", "Allow")
             
             $acl.AddAccessRule($adminRule)
             $acl.AddAccessRule($systemRule)
@@ -1756,6 +1775,28 @@ function Execute-Job {
                     agent_version = $Global:AgentVersion
                     timestamp = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
                     hostname = $env:COMPUTERNAME
+                }
+            }
+            "collect_certificates" {
+                try {
+                    $certs = @(Get-ChildItem -Path Cert:\LocalMachine\My -ErrorAction SilentlyContinue)
+                    $certList = @($certs | ForEach-Object {
+                        @{
+                            thumbprint = $_.Thumbprint
+                            subject = $_.Subject
+                            issuer = $_.Issuer
+                            valid_from = $_.NotBefore.ToString("o")
+                            valid_until = $_.NotAfter.ToString("o")
+                            serial_number = $_.SerialNumber
+                            is_self_signed = ($_.Subject -eq $_.Issuer)
+                            cert_store = "LocalMachine\My"
+                        }
+                    })
+                    $output = @{ certificates = $certList; count = $certList.Count; collected_at = (Get-Date).ToString("o") }
+                    Write-Log "[JOB] Collected $($certList.Count) certificates" "INFO"
+                } catch {
+                    $job_error_message = "collect_certificates failed: $($_.Exception.Message)"
+                    $status = "failed"
                 }
             }
             default {
@@ -3472,7 +3513,7 @@ function Get-UnauthorizedSoftware {
             checked = $true
             unauthorized_count = $unauthorized.Count
             unauthorized_list = $unauthorized
-            total_installed = $installedSoftware.Count
+            total_installed = @($installedSoftware).Count
         }
         
     } catch {
@@ -3549,10 +3590,38 @@ function Get-ProcessAnomalies {
     <#
     .SYNOPSIS
         Detects new processes not in baseline (v5.0.13-perf: O(1) HashSet lookups)
+        DEFINITIVE FIX: Idempotent baseline updates, auto-heal corrupted JSON
     #>
     try {
         if (-not $Global:ProcessBaseline) {
             Initialize-ProcessBaseline
+        }
+        
+        # DEFINITIVE FIX: Auto-heal corrupted baseline (duplicate keys, invalid JSON)
+        try {
+            if ($Global:ProcessBaseline -and $Global:ProcessBaseline.Count -gt 0) {
+                $seenNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                $cleanBaseline = @()
+                foreach ($entry in $Global:ProcessBaseline) {
+                    $entryName = if ($entry -is [hashtable]) { $entry["name"] } else { $entry.name }
+                    if ($entryName -and -not $seenNames.Contains($entryName)) {
+                        [void]$seenNames.Add($entryName)
+                        $cleanBaseline += $entry
+                    }
+                }
+                if ($cleanBaseline.Count -ne $Global:ProcessBaseline.Count) {
+                    Write-Log "[BASELINE] Auto-healed: removed $($Global:ProcessBaseline.Count - $cleanBaseline.Count) duplicate entries" "WARN"
+                    $Global:ProcessBaseline = $cleanBaseline
+                    $Global:ProcessBaselineSet.Clear()
+                    foreach ($e in $cleanBaseline) {
+                        $n = if ($e -is [hashtable]) { $e["name"] } else { $e.name }
+                        if ($n) { [void]$Global:ProcessBaselineSet.Add($n) }
+                    }
+                    $cleanBaseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                }
+            }
+        } catch {
+            Write-Log "[BASELINE] Auto-heal check failed (non-fatal): $($_.Exception.Message)" "DEBUG"
         }
         
         $currentProcesses = Get-Process | Select-Object -ExpandProperty ProcessName -Unique
@@ -3568,19 +3637,25 @@ function Get-ProcessAnomalies {
         if ($anomalies.Count -gt 0) {
             Write-Log "[BASELINE] Detected $($anomalies.Count) new processes" "WARN"
             
-            # Add to baseline for future reference
+            # DEFINITIVE FIX: Idempotent add - check HashSet BEFORE adding to baseline array
             foreach ($proc in $anomalies) {
-                $Global:ProcessBaseline += @{
-                    name = $proc
-                    company = $null
-                    description = "Auto-added"
-                    first_seen = (Get-Date).ToString("o")
+                if (-not $Global:ProcessBaselineSet.Contains($proc)) {
+                    $Global:ProcessBaseline += @{
+                        name = $proc
+                        company = $null
+                        description = "Auto-added"
+                        first_seen = (Get-Date).ToString("o")
+                    }
+                    [void]$Global:ProcessBaselineSet.Add($proc)
                 }
-                [void]$Global:ProcessBaselineSet.Add($proc)  # v5.0.13-perf: Update HashSet too
             }
             
             # Save updated baseline
-            $Global:ProcessBaseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+            try {
+                $Global:ProcessBaseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+            } catch {
+                Write-Log "[BASELINE] Failed to save baseline: $($_.Exception.Message)" "WARN"
+            }
         }
         
         return @{
@@ -4399,6 +4474,36 @@ function Send-Heartbeat {
                     }
                     
                     # ============================================
+                    # AGENT CONFIG FLAGS (v5.0.13)
+                    # Server-side feature toggles
+                    # ============================================
+                    if ($null -ne $response.skip_firewall_remediation) {
+                        $Global:SkipFirewallRemediation = [bool]$response.skip_firewall_remediation
+                        # DEFINITIVE FIX: Persist to HARDCODED path C:\CyberShield (not $PSScriptRoot)
+                        try {
+                            $flagFile = "C:\CyberShield\skip_firewall.flag"
+                            if ($Global:SkipFirewallRemediation) {
+                                "1" | Set-Content -Path $flagFile -Force -ErrorAction SilentlyContinue
+                                Write-Log "[CONFIG] Firewall auto-remediation DISABLED by server - persisted to $flagFile" "INFO"
+                            } else {
+                                if (Test-Path $flagFile) { Remove-Item $flagFile -Force -ErrorAction SilentlyContinue }
+                                Write-Log "[CONFIG] Firewall auto-remediation ENABLED by server - flag removed" "INFO"
+                            }
+                            # Also persist to $PSScriptRoot if available (backward compat)
+                            if ($PSScriptRoot -and $PSScriptRoot -ne "C:\CyberShield") {
+                                $altFlag = Join-Path $PSScriptRoot "skip_firewall.flag"
+                                if ($Global:SkipFirewallRemediation) {
+                                    "1" | Set-Content -Path $altFlag -Force -ErrorAction SilentlyContinue
+                                } else {
+                                    if (Test-Path $altFlag) { Remove-Item $altFlag -Force -ErrorAction SilentlyContinue }
+                                }
+                            }
+                        } catch {
+                            Write-Log "[CONFIG] Could not persist firewall flag: $_" "WARN"
+                        }
+                    }
+                    
+                    # ============================================
                     # FORCE UPDATE VIA HEARTBEAT RESPONSE
                     # Ported from v4 - bypasses job system completely
                     # ============================================
@@ -4685,6 +4790,23 @@ function Test-FirewallStatus {
     try {
         $Global:LocalDetectionStats.firewall_checks++
         
+        # DEFINITIVE FIX: Triple-check skip flag before ANY firewall operation
+        # 1. Check global variable (set by heartbeat or boot init)
+        # 2. Check hardcoded flag file (survives $PSScriptRoot issues)
+        # 3. Check $PSScriptRoot flag file (backward compat)
+        $shouldSkip = $false
+        if ($Global:SkipFirewallRemediation -eq $true) {
+            $shouldSkip = $true
+        } else {
+            try {
+                if (Test-Path "C:\CyberShield\skip_firewall.flag") {
+                    $shouldSkip = $true
+                    $Global:SkipFirewallRemediation = $true
+                    Write-Log "[LOCAL-DETECT] skip_firewall.flag found on disk, setting SkipFirewallRemediation=true" "INFO"
+                }
+            } catch { <# non-fatal #> }
+        }
+        
         $profiles = Get-NetFirewallProfile -ErrorAction SilentlyContinue
         
         if (-not $profiles) {
@@ -4700,6 +4822,25 @@ function Test-FirewallStatus {
         }
         
         if ($disabledProfiles.Count -gt 0) {
+            # DEFINITIVE: If skip flag is active, NEVER remediate. Just log and return.
+            if ($shouldSkip) {
+                Write-Log "[LOCAL-DETECT] Firewall disabled on $($disabledProfiles -join ', ') but SKIP active (external firewall). NO remediation." "INFO"
+                
+                try {
+                    Invoke-PushAlert `
+                        -AlertType "firewall_disabled" `
+                        -AlertMessage "Firewall desativado em $env:COMPUTERNAME (profiles: $($disabledProfiles -join ', ')). Remediacao IGNORADA: firewall externo." `
+                        -Severity "info" `
+                        -Details @{
+                            disabled_profiles = $disabledProfiles
+                            skip_remediation = $true
+                            reason = "external_firewall_environment"
+                        }
+                } catch { <# push alert is best-effort #> }
+                
+                return @{ status = "skipped"; disabled = $disabledProfiles; reason = "external_firewall" }
+            }
+            
             Write-Log "[LOCAL-DETECT] FIREWALL DISABLED on profiles: $($disabledProfiles -join ', ')" "ERROR"
             
             Show-SecurityToast `
@@ -4767,7 +4908,7 @@ function Test-UsbDevices {
         $usbDrives = Get-CimInstance -ClassName Win32_DiskDrive -ErrorAction SilentlyContinue | 
             Where-Object { $_.InterfaceType -eq "USB" }
         
-        if ($usbDrives -and $usbDrives.Count -gt 0) {
+        if ($usbDrives -and @($usbDrives).Count -gt 0) {
             foreach ($usb in $usbDrives) {
                 $usbInfo = @{
                     device_id = $usb.DeviceID
@@ -4796,7 +4937,7 @@ function Test-UsbDevices {
                 } -Severity "warning"
             }
             
-            return @{ status = "detected"; count = $usbDrives.Count; devices = $usbDrives | ForEach-Object { $_.Model } }
+            return @{ status = "detected"; count = @($usbDrives).Count; devices = @($usbDrives) | ForEach-Object { $_.Model } }
         }
         
         return @{ status = "none" }
@@ -5061,10 +5202,10 @@ if ($startupTaskHealth.checked -and $startupTaskHealth.repaired) {
 # ============================================
 # Bug 2 fix: Only enter ENFORCING if security is not degraded
 if ($Global:SecurityDegraded) {
-    Write-Log "[STARTUP] Agent v$($Global:AgentVersion) starting in DEGRADED mode (SecurityDegraded=TRUE, only recovery jobs allowed)" "WARN"
+    Write-Log "[STARTUP] Agent $($Global:AgentVersion) starting in DEGRADED mode (SecurityDegraded=TRUE, only recovery jobs allowed)" "WARN"
 } else {
     Set-AgentState -NewState "ENFORCING" -Reason "Normal operation"
-    Write-Log "[STARTUP] Agent v$($Global:AgentVersion) fully operational in ENFORCING state" "SUCCESS"
+    Write-Log "[STARTUP] Agent $($Global:AgentVersion) fully operational in ENFORCING state" "SUCCESS"
 }
 
 $lastHeartbeat = Get-Date
