@@ -1,37 +1,62 @@
 
+Objetivo: parar definitivamente a reativação do firewall no MIT-SERVIDOR e eliminar o erro de baseline `first_seen` sem depender de comandos manuais recorrentes.
 
-## Investigation Results
+Resumo do diagnóstico (confirmado no backend):
+1) O agente MIT-SERVIDOR está com `skip_firewall_remediation = true`, mas o script ativo em `agent_releases` (v5.0.13) NÃO contém:
+   - `HOTFIX-SKIP-FW-GUARD`
+   - `HOTFIX-SKIP-FW-BOOT/PERSIST`
+   - `HOTFIX-BASELINE-DEDUP`
+2) O script em código-fonte (`_shared/agent-scripts/cybershield-agent-windows-v5.ps1`) já tem lógica de skip firewall; o problema é sincronização/entrega do script que ficou defasado no banco.
+3) O endpoint `heartbeat` entrega force update direto do `agent_releases` sem aplicar hotfix runtime (ao contrário de `serve-agent-update`), então agentes podem continuar recebendo script “antigo”.
+4) O trigger `trg_auto_clear_force_update` ainda está permissivo demais (limpa flags só por igualdade de versão), o que fragiliza re-push de hotfix same-version.
+5) O 403 de DNS no log (`DNS Filter desabilitado`) é esperado/feature-flag e não é a causa da queda de internet.
 
-**Root Cause**: Both agents are running **OLD scripts from disk**. All hotfixes (pipeline-safe, typesafe-status, registered_at, ProtectedProcessSet) are correctly applied in the database, but agents don't re-download on restart — they keep executing the stale `.ps1` file.
+Plano de implementação:
 
-**Evidence from DB query**: `has_pipeline_safe: true`, `has_typesafe_status: true`, `has_init_protectedset: true`, `has_trycatch: true` — but `has_registered_at_fix: false` (fix IS present in DB, just missing the marker string).
+Fase 1 — Correção da entrega de script (principal)
+1. Atualizar `supabase/functions/heartbeat/index.ts`:
+   - Importar e aplicar `applyWindowsScriptHotfix()` no `release.script_content` dentro do branch de `force_update`.
+   - Persistir `script_content` hotfixado em `agent_releases` (best-effort), igual já é feito em `serve-agent-update`.
+2. Atualizar `supabase/functions/agent-heartbeat/index.ts` (proxy legado):
+   - Mesma lógica acima no retorno de force update, para não haver caminho legado entregando script sem hotfix.
 
-**Evidence from logs**: pcteste1's latest runs (15:54-16:00) no longer show `script_sha256` or `ProtectedProcessSet` errors (those were from Feb 27), but STILL show `registered_at` error and 404 on sync — confirming OLD script on disk.
+Fase 2 — Hardening do injetor de hotfix
+3. Ajustar `supabase/functions/_shared/windows-script-hotfix.ts`:
+   - Tornar HOTFIX 24d/24e resilientes quando o script base não tem exatamente os padrões esperados.
+   - Garantir fallback de injeção por blocos alternativos (não só regex estrita de comentário/linha).
+   - Garantir que, se `Test-FirewallStatus` existir e `SkipFirewallRemediation` não existir, a variável seja sempre inicializada antes do uso.
+4. Fortalecer HOTFIX 32 (baseline) para cobrir variantes reais do trecho que gera `first_seen` duplicado e manter fallback com try/catch não-fatal em `Detect-ProcessAnomalies`.
 
-## Errors and Fixes
+Fase 3 — Banco de dados (confiabilidade de re-push)
+5. Criar migração SQL para substituir a função do trigger `auto_clear_force_update_on_match`:
+   - Só limpar `force_update_*` quando houver mudança real de versão (`NEW.agent_version IS DISTINCT FROM OLD.agent_version`) e match com target.
+   - Evitar limpeza prematura em cenários de hotfix same-version.
+6. Criar migração SQL de re-disparo:
+   - Reativar `force_update_version='v5.0.13'`, `force_update_at=now()` para MIT-SERVIDOR (e opcionalmente outros agentes críticos com mesmo sintoma), com motivo explícito de emergency hotfix.
 
-| Error | Agent | Root Cause | Fix |
-|-------|-------|-----------|-----|
-| FATAL `.status` line 4854 | MIT-SERVIDOR | Old script, pipeline pollution | Force re-download |
-| `registered_at` property not found | Both | Old script doesn't have Add-Member fix | Force re-download |
-| 404 on SYNCING | Both | `serve-dns-filter` not deployed | Deploy function |
-| `script_sha256` not found | pcteste1 | Heartbeat standard response lacks this field | Add to response |
-| Force update won't trigger | Both | Heartbeat compares `force_update_version !== agent_version`, both are v5.0.13 | Fix comparison logic |
+Fase 4 — Validação operacional
+7. Validar no banco que `agent_releases.script_content` ativo passou a conter:
+   - `HOTFIX-SKIP-FW-GUARD`
+   - `HOTFIX-SKIP-FW-BOOT`/`HOTFIX-SKIP-FW-PERSIST` (ou init equivalente)
+   - `HOTFIX-BASELINE-DEDUP`
+8. Validar logs do MIT após novo heartbeat:
+   - Deve aparecer “skip firewall remediation” (INFO),
+   - Não deve mais aparecer `AUTO-REMEDIATE Firewall re-enabled...`,
+   - Não deve mais alternar `ENFORCING -> DEGRADED` logo após detecção de firewall,
+   - Erro `first_seen` deve desaparecer.
+9. Critério de sucesso:
+   - Firewall permanece desativado (quando ambiente externo/pfSense exige),
+   - Conectividade não cai,
+   - Agente continua batendo heartbeat normalmente.
 
-## Implementation Plan
-
-### Step 1: Fix heartbeat to include `script_sha256` in standard response
-Add `script_sha256: null` to the standard heartbeat response (line 361-367 of `agent-heartbeat/index.ts`) so old agents don't crash trying to access this property.
-
-### Step 2: Fix force_update logic to support same-version pushes
-Currently `agent.force_update_version !== agent.agent_version` blocks same-version re-pushes. Change to check `force_update_at` being set (not null) as the trigger, regardless of version match. This allows pushing the fixed v5.0.13 script without a version bump.
-
-### Step 3: SQL migration — trigger force_update on both agents
-Set `force_update_version = 'v5.0.13'`, `force_update_at = now()`, `force_update_reason = 'Critical hotfix: pipeline-safe + registered_at + ProtectedProcessSet'` on MIT-SERVIDOR and pcteste1. On next heartbeat, agents will receive the fixed script.
-
-### Step 4: Add registered_at HOTFIX marker to DB script
-Update `agent_releases` to include `HOTFIX-SAFE-REGISTERED-AT` comment in the DB script for consistency with other hotfix markers, preventing HOTFIX 12 from attempting to re-apply.
-
-### Step 5: Deploy edge functions
-Deploy `agent-heartbeat` and `serve-dns-filter`.
+Detalhes técnicos (para implementação)
+- Arquivos-alvo:
+  - `supabase/functions/heartbeat/index.ts`
+  - `supabase/functions/agent-heartbeat/index.ts`
+  - `supabase/functions/_shared/windows-script-hotfix.ts`
+  - nova migration SQL para função/trigger + nova migration SQL para force update
+- Risco principal:
+  - regex de injeção frágil; mitigação: fallback por múltiplos padrões + validação por marcador.
+- Estratégia de rollback:
+  - manter versão atual e apenas limpar `force_update_*` dos agentes afetados se qualquer regressão for detectada.
 
