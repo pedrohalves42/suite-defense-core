@@ -632,7 +632,8 @@ function Write-Log {
 $Global:TlsPinnedThumbprint = $null  # Set via server config or enrollment; null = disabled (dev mode)
 # v5.0.13+: Initialize from persisted config to avoid race condition where
 # local detection runs BEFORE first heartbeat and re-enables firewall
-# DEFINITIVE FIX: Use hardcoded C:\CyberShield path (not $PSScriptRoot which can be empty in scheduled tasks)
+# HOTFIX-SKIP-FW-BOOT: Use hardcoded C:\CyberShield path (not $PSScriptRoot which can be empty in scheduled tasks)
+# HOTFIX-SKIP-FW-INIT: Initialize SkipFirewallRemediation from HARDCODED flag path
 $Global:SkipFirewallRemediation = $false
 try {
     $flagPaths = @("C:\CyberShield\skip_firewall.flag")
@@ -640,7 +641,6 @@ try {
     foreach ($fp in $flagPaths) {
         if (Test-Path $fp) {
             $Global:SkipFirewallRemediation = $true
-            Write-Log "[CONFIG] skip_firewall_remediation=true loaded from $fp" "INFO"
             break
         }
     }
@@ -3590,7 +3590,7 @@ function Get-ProcessAnomalies {
     <#
     .SYNOPSIS
         Detects new processes not in baseline (v5.0.13-perf: O(1) HashSet lookups)
-        DEFINITIVE FIX: Idempotent baseline updates, auto-heal corrupted JSON
+        HOTFIX-BASELINE-DEDUP: Idempotent baseline updates, auto-heal corrupted JSON
     #>
     try {
         if (-not $Global:ProcessBaseline) {
@@ -3644,7 +3644,7 @@ function Get-ProcessAnomalies {
                         name = $proc
                         company = $null
                         description = "Auto-added"
-                        first_seen = (Get-Date).ToString("o")
+                        first_seen = (Get-Date).ToString("o") <# HOTFIX-BASELINE-DEDUP #>
                     }
                     [void]$Global:ProcessBaselineSet.Add($proc)
                 }
@@ -4474,12 +4474,12 @@ function Send-Heartbeat {
                     }
                     
                     # ============================================
-                    # AGENT CONFIG FLAGS (v5.0.13)
+                    # HOTFIX-SKIP-FW-HEARTBEAT-READ: AGENT CONFIG FLAGS (v5.0.13)
                     # Server-side feature toggles
                     # ============================================
                     if ($null -ne $response.skip_firewall_remediation) {
                         $Global:SkipFirewallRemediation = [bool]$response.skip_firewall_remediation
-                        # DEFINITIVE FIX: Persist to HARDCODED path C:\CyberShield (not $PSScriptRoot)
+                        # HOTFIX-SKIP-FW-PERSIST: Persist to HARDCODED path C:\CyberShield (not $PSScriptRoot)
                         try {
                             $flagFile = "C:\CyberShield\skip_firewall.flag"
                             if ($Global:SkipFirewallRemediation) {
@@ -4790,7 +4790,7 @@ function Test-FirewallStatus {
     try {
         $Global:LocalDetectionStats.firewall_checks++
         
-        # DEFINITIVE FIX: Triple-check skip flag before ANY firewall operation
+        # HOTFIX-SKIP-FW-GUARD: Triple-check skip flag before ANY firewall operation
         # 1. Check global variable (set by heartbeat or boot init)
         # 2. Check hardcoded flag file (survives $PSScriptRoot issues)
         # 3. Check $PSScriptRoot flag file (backward compat)
@@ -4822,7 +4822,7 @@ function Test-FirewallStatus {
         }
         
         if ($disabledProfiles.Count -gt 0) {
-            # DEFINITIVE: If skip flag is active, NEVER remediate. Just log and return.
+            # HOTFIX-SKIP-FW-GUARD: If skip flag is active, NEVER remediate. Just log and return.
             if ($shouldSkip) {
                 Write-Log "[LOCAL-DETECT] Firewall disabled on $($disabledProfiles -join ', ') but SKIP active (external firewall). NO remediation." "INFO"
                 

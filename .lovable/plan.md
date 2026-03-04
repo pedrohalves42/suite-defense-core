@@ -1,59 +1,37 @@
 
 
-# Diagnóstico definitivo: Por que o agente CRASH após force update
+## Investigation Results
 
-## Causa raiz confirmada
+**Root Cause**: Both agents are running **OLD scripts from disk**. All hotfixes (pipeline-safe, typesafe-status, registered_at, ProtectedProcessSet) are correctly applied in the database, but agents don't re-download on restart — they keep executing the stale `.ps1` file.
 
-O script base (`cybershield-agent-windows-v5.ps1`) já tem **TODA a lógica correta** nativamente:
-- Boot init com `C:\CyberShield\skip_firewall.flag` (linha 636-649)
-- Heartbeat reader de `skip_firewall_remediation` (linha 4480-4503)
-- Guard no `Test-FirewallStatus` com triple-check (linha 4797-4841)
-- Baseline dedup com HashSet (linha 3600-3624)
+**Evidence from DB query**: `has_pipeline_safe: true`, `has_typesafe_status: true`, `has_init_protectedset: true`, `has_trycatch: true` — but `has_registered_at_fix: false` (fix IS present in DB, just missing the marker string).
 
-**MAS** o script NÃO tem os comentários-marcador (`HOTFIX-SKIP-FW-BOOT`, `HOTFIX-SKIP-FW-GUARD`, etc.).
+**Evidence from logs**: pcteste1's latest runs (15:54-16:00) no longer show `script_sha256` or `ProtectedProcessSet` errors (those were from Feb 27), but STILL show `registered_at` error and 404 on sync — confirming OLD script on disk.
 
-Quando o heartbeat entrega o script, `applyWindowsScriptHotfix()` não encontra os marcadores → dispara TODOS os HOTFIXes 24a/24b/24d/24e/24h/32 → injeta código DUPLICADO com escaping incorreto (`\\$shouldSkipFw` vira `\$shouldSkipFw` no PowerShell = **erro de sintaxe fatal**) → agente crashou silenciosamente após 11:20.
+## Errors and Fixes
 
-## Plano de correção (3 passos)
+| Error | Agent | Root Cause | Fix |
+|-------|-------|-----------|-----|
+| FATAL `.status` line 4854 | MIT-SERVIDOR | Old script, pipeline pollution | Force re-download |
+| `registered_at` property not found | Both | Old script doesn't have Add-Member fix | Force re-download |
+| 404 on SYNCING | Both | `serve-dns-filter` not deployed | Deploy function |
+| `script_sha256` not found | pcteste1 | Heartbeat standard response lacks this field | Add to response |
+| Force update won't trigger | Both | Heartbeat compares `force_update_version !== agent_version`, both are v5.0.13 | Fix comparison logic |
 
-### 1. Adicionar marcadores ao script base (.ps1)
+## Implementation Plan
 
-Arquivo: `supabase/functions/_shared/agent-scripts/cybershield-agent-windows-v5.ps1`
+### Step 1: Fix heartbeat to include `script_sha256` in standard response
+Add `script_sha256: null` to the standard heartbeat response (line 361-367 of `agent-heartbeat/index.ts`) so old agents don't crash trying to access this property.
 
-Alterações mínimas — apenas adicionar comentários-marcador nas linhas corretas para que o injector PULE esses blocos:
+### Step 2: Fix force_update logic to support same-version pushes
+Currently `agent.force_update_version !== agent.agent_version` blocks same-version re-pushes. Change to check `force_update_at` being set (not null) as the trigger, regardless of version match. This allows pushing the fixed v5.0.13 script without a version bump.
 
-| Linha | Antes | Depois |
-|-------|-------|--------|
-| 635 | `# DEFINITIVE FIX: Use hardcoded C:\CyberShield...` | `# HOTFIX-SKIP-FW-BOOT: Use hardcoded C:\CyberShield...` |
-| 643 | `Write-Log "[CONFIG] skip_firewall...` | Remover (Write-Log antes da definição da função) |
-| 4477 | `# AGENT CONFIG FLAGS (v5.0.13)` | `# HOTFIX-SKIP-FW-HEARTBEAT-READ: AGENT CONFIG FLAGS (v5.0.13)` |
-| 4482 | `# DEFINITIVE FIX: Persist to HARDCODED...` | `# HOTFIX-SKIP-FW-PERSIST: Persist to HARDCODED...` |
-| 4793 | `# DEFINITIVE FIX: Triple-check skip flag...` | `# HOTFIX-SKIP-FW-GUARD: Triple-check skip flag...` |
-| 4825 | `# DEFINITIVE: If skip flag is active...` | `# HOTFIX-SKIP-FW-GUARD: If skip flag is active...` |
-| 3593 | synopsis comment | Adicionar `HOTFIX-BASELINE-DEDUP` no docstring |
-| 3647 | `first_seen = (Get-Date)...` | Adicionar `<# HOTFIX-BASELINE-DEDUP #>` |
+### Step 3: SQL migration — trigger force_update on both agents
+Set `force_update_version = 'v5.0.13'`, `force_update_at = now()`, `force_update_reason = 'Critical hotfix: pipeline-safe + registered_at + ProtectedProcessSet'` on MIT-SERVIDOR and pcteste1. On next heartbeat, agents will receive the fixed script.
 
-Também adicionar `HOTFIX-SKIP-FW-INIT` como comentário perto da declaração da variável para evitar HOTFIX 24e.
+### Step 4: Add registered_at HOTFIX marker to DB script
+Update `agent_releases` to include `HOTFIX-SAFE-REGISTERED-AT` comment in the DB script for consistency with other hotfix markers, preventing HOTFIX 12 from attempting to re-apply.
 
-### 2. Corrigir escaping no hotfix injector (prevenção futura)
-
-Arquivo: `supabase/functions/_shared/windows-script-hotfix.ts`
-
-Os HOTFIX 24d estratégia 2/3 (linhas 923-942) usam `\\$shouldSkipFw` e `\\$Global:` nos replacement strings. No JavaScript `.replace()`, `\\` é literal backslash, produzindo `\$shouldSkipFw` no PowerShell — sintaxe inválida.
-
-Correção: remover os `\\` extras nos replacement strings das estratégias 2 e 3 do HOTFIX 24d. Embora com os marcadores esses blocos não devam mais disparar, é importante corrigir para scripts legados.
-
-### 3. Migração SQL: re-sync e force update
-
-Duas migrações:
-1. **Substituir o script inteiro** no `agent_releases` pelo conteúdo correto com marcadores. Recalcular SHA256.
-2. **Reset force_update** para MIT-SERVIDOR com motivo "HOTFIX-MARKERS: prevent duplicate injection crash".
-
-## Por que esta correção é definitiva
-
-- Com os marcadores, `applyWindowsScriptHotfix()` verá `HOTFIX-SKIP-FW-BOOT`, `HOTFIX-SKIP-FW-GUARD`, etc. e **pulará** todos esses blocos
-- Zero injeção = zero código duplicado = zero erro de sintaxe = agente inicia normalmente
-- A lógica nativa do script base (que já está correta) roda sem interferência
-- O `skip_firewall.flag` já está criado no disco (comando manual executado)
-- No próximo heartbeat, o agente receberá o script limpo, iniciará sem crash, lerá a flag do disco, e **não reativará o firewall**
+### Step 5: Deploy edge functions
+Deploy `agent-heartbeat` and `serve-dns-filter`.
 
