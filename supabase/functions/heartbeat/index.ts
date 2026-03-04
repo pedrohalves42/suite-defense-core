@@ -490,7 +490,7 @@ Deno.serve(async (req) => {
           
           const { data: release } = await supabase
             .from('agent_releases')
-            .select('version, script_content, sha256, signature_base64, signed_at')
+            .select('id, version, script_content, sha256, signature_base64, signed_at')
             .eq('version', effectiveForceVersion)
             .eq('platform', platform)
             .eq('is_active', true)
