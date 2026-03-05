@@ -19,11 +19,22 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
 // Vite glob import for all markdown files in docs/
-const markdownModules = import.meta.glob('/docs/**/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+// Load markdown files - try multiple glob patterns
+const markdownModulesRoot = import.meta.glob('/docs/**/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const markdownModulesPublic = import.meta.glob('/public/docs/**/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+
+const markdownModules: Record<string, string> = { ...markdownModulesRoot, ...markdownModulesPublic };
+
+console.log('[DocsExport] Available markdown files:', Object.keys(markdownModules));
 
 function getDocContent(path: string): string | null {
   // Try different path formats
-  const candidates = [`/docs/${path}`, `docs/${path}`];
+  const candidates = [
+    `/docs/${path}`,
+    `docs/${path}`,
+    `/public/docs/${path}`,
+    `public/docs/${path}`,
+  ];
   for (const candidate of candidates) {
     if (markdownModules[candidate]) return markdownModules[candidate];
   }
