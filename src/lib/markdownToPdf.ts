@@ -211,7 +211,7 @@ function renderCoverPage(ctx: PDFContext, subtitle?: string, docCount?: number):
     doc.setFontSize(16);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...COLORS.textLight);
-    const subLines = wrapText(doc, subtitle, 140);
+    const subLines = wrapText(doc, sanitizeForPdf(subtitle), 140);
     subLines.forEach((sl: string) => {
       doc.text(sl, pageWidth / 2, y, { align: 'center' });
       y += 8;
@@ -306,8 +306,8 @@ function renderTableOfContents(
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...COLORS.text);
     const maxTitleWidth = ctx.contentWidth - 20;
-    const titleText = item.title.length > 70 ? item.title.substring(0, 67) + '...' : item.title;
-    doc.text(titleText, marginLeft + 16, ctx.y);
+    const rawTitle = sanitizeForPdf(item.title);
+    const titleText = rawTitle.length > 70 ? rawTitle.substring(0, 67) + '...' : rawTitle;
     
     // Dotted line
     doc.setDrawColor(...COLORS.tableBorder);
