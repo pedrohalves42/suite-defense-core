@@ -76,7 +76,7 @@ function getDisplayName(provider: AIProviderName): string {
     'openrouter': 'OpenRouter (Gemini 2.0 Free)',
     'cerebras': 'Cerebras (Llama 3.3-70B)',
     'mistral': 'Mistral AI (Small 3.1)',
-    'lovable': 'Lovable AI (Gemini 2.5 Flash)',
+    'lovable': 'CyberShield AI (Gemini 2.5 Flash)',
   };
   return names[provider] || provider;
 }

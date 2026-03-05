@@ -12,7 +12,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // The published app URL where public/ files are served
-const APP_BASE_URL = 'https://id-preview--affc1ab5-463f-41f7-ae33-f788e864f6ee.lovable.app';
+const APP_BASE_URL = Deno.env.get('SITE_URL') || 'https://cybershield.com.br';
 
 const PLATFORM_FILES: Record<string, { file: string; versionRegex: RegExp }> = {
   windows: { file: 'cybershield-agent-windows-v5.ps1', versionRegex: /AgentVersion\s*=\s*"([^"]+)"/ },

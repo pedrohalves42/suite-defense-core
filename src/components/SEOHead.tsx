@@ -13,8 +13,8 @@ interface SEOHeadProps {
 const DEFAULT_TITLE = "CyberShield - Seguranca Cibernetica Inteligente para PMEs Brasileiras";
 const DEFAULT_DESCRIPTION = "Protecao completa para sua empresa: antivirus, monitoramento 24/7 e compliance LGPD em um so lugar. Empresa 100% brasileira com suporte em portugues. Trial gratuito de 14 dias.";
 const DEFAULT_KEYWORDS = "seguranca cibernetica, antivirus empresarial, PME Brasil, protecao de dados, compliance LGPD, monitoramento de rede, seguranca da informacao";
-const DEFAULT_OG_IMAGE = "https://cybershield-audit.lovable.app/og-image.png";
-const BASE_URL = "https://cybershield-audit.lovable.app";
+const DEFAULT_OG_IMAGE = "https://cybershield.com.br/og-image.png";
+const BASE_URL = "https://cybershield.com.br";
 
 export function SEOHead({
   title = DEFAULT_TITLE,

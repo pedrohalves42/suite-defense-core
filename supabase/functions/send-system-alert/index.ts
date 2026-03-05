@@ -213,7 +213,7 @@ async function sendEmailAlert(
                     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
                       <tr>
                         <td align="center">
-                          <a href="${Deno.env.get('SITE_URL') || 'https://suite-defense-core.lovable.app'}/dashboard" 
+                          <a href="${Deno.env.get('SITE_URL') || 'https://cybershield.com.br'}/dashboard" 
                              style="display: inline-block; padding: 14px 28px; background-color: ${color}; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
                             Ver no Dashboard
                           </a>

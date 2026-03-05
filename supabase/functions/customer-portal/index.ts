@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
       apiVersion: "2025-08-27.basil",
     });
 
-    const origin = req.headers.get("origin") || Deno.env.get("SITE_URL") || "https://suite-defense-core.lovable.app";
+    const origin = req.headers.get("origin") || Deno.env.get("SITE_URL") || "https://cybershield.com.br";
     
     // Create portal session with flow_data to show subscription info
     const sessionConfig: Stripe.BillingPortal.SessionCreateParams = {
