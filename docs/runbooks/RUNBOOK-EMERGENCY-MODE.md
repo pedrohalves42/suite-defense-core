@@ -1,178 +1,178 @@
-# Runbook: Emergency Mode (Kill Switch)
+# Runbook: Modo de Emergência (Kill Switch)
 
-**Severity**: Critical  
-**MTTR Target**: < 5 minutes (activation), < 15 minutes (full recovery)  
-**Authority**: Requires Sr. Engineer or above
-
----
-
-## Emergency Mode States
-
-| State | Description | Behavior |
-|-------|-------------|----------|
-| `normal` | System operating normally | All features enabled |
-| `restricted` | Limited operations | Non-critical features disabled |
-| `emergency_stop` | Full emergency mode | All mutations blocked, read-only |
+**Severidade**: Crítica  
+**Meta MTTR**: < 5 minutos (ativação), < 15 minutos (recuperação completa)  
+**Autoridade**: Requer Engenheiro Sênior ou superior
 
 ---
 
-## When to Activate Emergency Mode
+## Estados do Modo de Emergência
 
-### Activate Immediately For:
-
-- ❌ **Active security breach** (data exfiltration, unauthorized access)
-- ❌ **Mass data corruption** (cascade deletes, wrong updates)
-- ❌ **Runaway automation** (infinite loops, recursive triggers)
-- ❌ **Critical infrastructure failure** (DB connection storms)
-
-### Consider Activation For:
-
-- ⚠️ **Sustained high error rates** (> 50% failures for 5+ min)
-- ⚠️ **Unusual access patterns** (potential attack)
-- ⚠️ **Degraded performance** affecting all users
+| Estado | Descrição | Comportamento |
+|--------|-----------|---------------|
+| `normal` | Sistema operando normalmente | Todas as funcionalidades habilitadas |
+| `restricted` | Operações limitadas | Funcionalidades não-críticas desabilitadas |
+| `emergency_stop` | Modo de emergência total | Todas as mutações bloqueadas, somente leitura |
 
 ---
 
-## Activation Procedure
+## Quando Ativar o Modo de Emergência
 
-### Step 1: Activate Emergency Mode
+### Ativar Imediatamente Para:
+
+- ❌ **Brecha de segurança ativa** (exfiltração de dados, acesso não autorizado)
+- ❌ **Corrupção massiva de dados** (exclusões em cascata, atualizações incorretas)
+- ❌ **Automação descontrolada** (loops infinitos, triggers recursivos)
+- ❌ **Falha crítica de infraestrutura** (tempestade de conexões DB)
+
+### Considerar Ativação Para:
+
+- ⚠️ **Taxas altas e sustentadas de erro** (> 50% de falhas por 5+ min)
+- ⚠️ **Padrões de acesso incomuns** (potencial ataque)
+- ⚠️ **Performance degradada** afetando todos os usuários
+
+---
+
+## Procedimento de Ativação
+
+### Passo 1: Ativar Modo de Emergência
 
 ```sql
--- CRITICAL: Run this to stop all mutations
+-- CRÍTICO: Execute isso para bloquear todas as mutações
 UPDATE system_global_state 
 SET 
   mode = 'emergency_stop',
   updated_at = NOW(),
-  changed_by = 'OPERATOR_NAME - INCIDENT_ID'
+  changed_by = 'NOME_OPERADOR - ID_INCIDENTE'
 WHERE id = (SELECT id FROM system_global_state LIMIT 1);
 ```
 
-### Step 2: Verify Activation
+### Passo 2: Verificar Ativação
 
 ```sql
 SELECT * FROM is_emergency_mode();
--- Should return: true
+-- Deve retornar: true
 
 SELECT * FROM get_system_mode_safe();
--- Should return: 'emergency_stop'
+-- Deve retornar: 'emergency_stop'
 ```
 
-### Step 3: Notify Team
+### Passo 3: Notificar Equipe
 
-1. Post in #incidents Slack channel
-2. Page on-call engineer if not already engaged
-3. Log incident in system
+1. Postar no canal #incidentes do Slack
+2. Acionar engenheiro de plantão se não já envolvido
+3. Registrar incidente no sistema
 
-### Step 4: Document in Audit Log
+### Passo 4: Documentar no Log de Auditoria
 
 ```sql
 INSERT INTO audit_logs (event_type, actor_id, details, tenant_id)
 VALUES (
   'emergency_mode_activated',
-  'OPERATOR_USER_ID',
+  'USER_ID_OPERADOR',
   jsonb_build_object(
-    'reason', 'BRIEF_REASON',
-    'incident_id', 'INCIDENT_ID',
-    'activated_at', NOW()
+    'motivo', 'MOTIVO_BREVE',
+    'incident_id', 'ID_INCIDENTE',
+    'ativado_em', NOW()
   ),
-  NULL  -- System-wide, no tenant
+  NULL  -- Nível de sistema, sem tenant
 );
 ```
 
 ---
 
-## What Happens in Emergency Mode
+## O Que Acontece no Modo de Emergência
 
 ### Edge Functions
 
-- Return HTTP 503 with `Retry-After: 300`
-- Response includes `error: 'SYSTEM_EMERGENCY_MODE'`
-- Health probe middleware blocks processing
+- Retornam HTTP 503 com `Retry-After: 300`
+- Resposta inclui `error: 'SYSTEM_EMERGENCY_MODE'`
+- Middleware de health probe bloqueia processamento
 
-### Scheduled Jobs
+### Jobs Agendados
 
-- `assert_system_allows_jobs()` throws exception
-- Jobs abort before execution
-- Logged to job failure table
+- `assert_system_allows_jobs()` lança exceção
+- Jobs abortam antes da execução
+- Registrado na tabela de falhas de jobs
 
-### Database
+### Banco de Dados
 
-- Write operations blocked by RLS policies (if configured)
-- Read operations continue for monitoring
-- Audit logs still writable
+- Operações de escrita bloqueadas por políticas RLS (se configurado)
+- Operações de leitura continuam para monitoramento
+- Logs de auditoria ainda podem ser escritos
 
-### UI
+### Interface do Usuário
 
-- Should display emergency banner
-- Forms disabled
-- Actions show "System in maintenance" message
+- Deve exibir banner de emergência
+- Formulários desabilitados
+- Ações mostram mensagem "Sistema em manutenção"
 
 ---
 
-## Recovery Procedure
+## Procedimento de Recuperação
 
-### Pre-Recovery Checklist
+### Checklist Pré-Recuperação
 
-- [ ] Root cause identified
-- [ ] Fix deployed or issue mitigated
-- [ ] No ongoing attack/corruption
-- [ ] Team ready to monitor
+- [ ] Causa raiz identificada
+- [ ] Correção implantada ou problema mitigado
+- [ ] Nenhum ataque/corrupção em andamento
+- [ ] Equipe pronta para monitorar
 
-### Step 1: Switch to Restricted Mode First
+### Passo 1: Mudar para Modo Restrito Primeiro
 
 ```sql
--- Don't go directly to normal - test with restricted first
+-- Não vá diretamente para normal - teste com restrito primeiro
 UPDATE system_global_state 
 SET 
   mode = 'restricted',
   updated_at = NOW(),
-  changed_by = 'OPERATOR_NAME - RECOVERY'
+  changed_by = 'NOME_OPERADOR - RECUPERACAO'
 WHERE id = (SELECT id FROM system_global_state LIMIT 1);
 ```
 
-### Step 2: Verify Critical Functions
+### Passo 2: Verificar Funções Críticas
 
 ```bash
-# Test key Edge Functions
+# Testar Edge Functions principais
 curl -X POST "${SUPABASE_URL}/functions/v1/health" \
   -H "Authorization: Bearer ${SUPABASE_ANON_KEY}"
 
-# Should return 200, not 503
+# Deve retornar 200, não 503
 ```
 
-### Step 3: Switch to Normal Mode
+### Passo 3: Mudar para Modo Normal
 
 ```sql
 UPDATE system_global_state 
 SET 
   mode = 'normal',
   updated_at = NOW(),
-  changed_by = 'OPERATOR_NAME - FULL_RECOVERY'
+  changed_by = 'NOME_OPERADOR - RECUPERACAO_COMPLETA'
 WHERE id = (SELECT id FROM system_global_state LIMIT 1);
 ```
 
-### Step 4: Verify Full Recovery
+### Passo 4: Verificar Recuperação Completa
 
 ```sql
 SELECT * FROM is_emergency_mode();
--- Should return: false
+-- Deve retornar: false
 
 SELECT * FROM get_system_mode_safe();
--- Should return: 'normal'
+-- Deve retornar: 'normal'
 ```
 
-### Step 5: Document Recovery
+### Passo 5: Documentar Recuperação
 
 ```sql
 INSERT INTO audit_logs (event_type, actor_id, details, tenant_id)
 VALUES (
   'emergency_mode_deactivated',
-  'OPERATOR_USER_ID',
+  'USER_ID_OPERADOR',
   jsonb_build_object(
-    'incident_id', 'INCIDENT_ID',
-    'duration_minutes', EXTRACT(EPOCH FROM (NOW() - activation_time)) / 60,
-    'root_cause', 'BRIEF_DESCRIPTION',
-    'deactivated_at', NOW()
+    'incident_id', 'ID_INCIDENTE',
+    'duracao_minutos', EXTRACT(EPOCH FROM (NOW() - tempo_ativacao)) / 60,
+    'causa_raiz', 'DESCRICAO_BREVE',
+    'desativado_em', NOW()
   ),
   NULL
 );
@@ -180,87 +180,87 @@ VALUES (
 
 ---
 
-## Monitoring During Emergency
+## Monitoramento Durante Emergência
 
-### Key Queries
+### Queries Principais
 
 ```sql
--- Check system alerts created during emergency
+-- Verificar alertas do sistema criados durante emergência
 SELECT * FROM system_alerts 
-WHERE created_at > 'ACTIVATION_TIMESTAMP'
+WHERE created_at > 'TIMESTAMP_ATIVACAO'
 ORDER BY created_at DESC;
 
--- Check failed operations
+-- Verificar operações que falharam
 SELECT * FROM security_logs
 WHERE severity = 'high' 
-AND created_at > 'ACTIVATION_TIMESTAMP'
+AND created_at > 'TIMESTAMP_ATIVACAO'
 ORDER BY created_at DESC
 LIMIT 100;
 
--- Check job failures
+-- Verificar falhas de jobs
 SELECT * FROM scheduled_jobs
 WHERE status = 'failed'
-AND updated_at > 'ACTIVATION_TIMESTAMP';
+AND updated_at > 'TIMESTAMP_ATIVACAO';
 ```
 
-### Dashboard Items
+### Itens do Dashboard
 
-- Edge Function error rates
-- Database connection count
-- API latency percentiles
-- Active user sessions
+- Taxas de erro de Edge Functions
+- Contagem de conexões do banco
+- Percentis de latência da API
+- Sessões ativas de usuários
 
 ---
 
-## Post-Incident
+## Pós-Incidente
 
-### Required Actions
+### Ações Obrigatórias
 
-1. **Incident report** within 24 hours
-2. **Post-mortem** for incidents > 15 minutes
-3. **Update runbook** if new scenario discovered
-4. **Add automated detection** if applicable
+1. **Relatório de incidente** em até 24 horas
+2. **Post-mortem** para incidentes > 15 minutos
+3. **Atualizar runbook** se novo cenário descoberto
+4. **Adicionar detecção automatizada** se aplicável
 
-### Incident Report Template
+### Template de Relatório de Incidente
 
 ```markdown
-## Incident Summary
-- **Date/Time**: 
-- **Duration**: 
-- **Impact**: 
-- **Root Cause**: 
+## Resumo do Incidente
+- **Data/Hora**: 
+- **Duração**: 
+- **Impacto**: 
+- **Causa Raiz**: 
 
-## Timeline
-- HH:MM - Issue detected
-- HH:MM - Emergency mode activated
-- HH:MM - Root cause identified
-- HH:MM - Fix deployed
-- HH:MM - Normal mode restored
+## Linha do Tempo
+- HH:MM - Problema detectado
+- HH:MM - Modo de emergência ativado
+- HH:MM - Causa raiz identificada
+- HH:MM - Correção implantada
+- HH:MM - Modo normal restaurado
 
-## What Went Well
+## O Que Funcionou Bem
 - 
 
-## What Could Improve
+## O Que Pode Melhorar
 - 
 
-## Action Items
+## Itens de Ação
 - [ ] 
 ```
 
 ---
 
-## Emergency Contacts
+## Contatos de Emergência
 
-| Role | Contact Method |
-|------|---------------|
-| On-Call Engineer | PagerDuty |
-| Security Team | #security Slack |
-| Database Admin | #database Slack |
-| Engineering Lead | Direct message |
+| Papel | Método de Contato |
+|-------|------------------|
+| Engenheiro de Plantão | PagerDuty |
+| Equipe de Segurança | #seguranca Slack |
+| DBA | #banco-de-dados Slack |
+| Líder de Engenharia | Mensagem direta |
 
 ---
 
-## Related Runbooks
+## Runbooks Relacionados
 
 - [RUNBOOK-EDGE-500.md](./RUNBOOK-EDGE-500.md)
 - [RUNBOOK-SCHEMA-DRIFT.md](./RUNBOOK-SCHEMA-DRIFT.md)

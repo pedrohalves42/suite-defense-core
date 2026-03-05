@@ -1,32 +1,32 @@
-# Runbook: Schema Drift Detection
+# Runbook: Detecção de Schema Drift
 
-**Severity**: Critical  
-**MTTR Target**: < 30 minutes  
-**Escalation**: Immediate if production impacted
-
----
-
-## Symptoms
-
-- Contract tests failing in CI
-- Edge Functions returning 500/503
-- Error messages mentioning missing columns/tables
-- `SCHEMA_DRIFT` in health probe responses
+**Severidade**: Crítica  
+**Meta MTTR**: < 30 minutos  
+**Escalação**: Imediata se produção afetada
 
 ---
 
-## Definition
+## Sintomas
 
-**Schema Drift** occurs when:
-- Edge Functions expect columns/tables that don't exist
-- Database schema is modified without updating dependent code
-- Migrations run in wrong order
+- Testes de contrato falhando no CI
+- Edge Functions retornando 500/503
+- Mensagens de erro mencionando colunas/tabelas ausentes
+- `SCHEMA_DRIFT` em respostas de health probe
 
 ---
 
-## Quick Diagnosis
+## Definição
 
-### 1. Run Contract Tests
+**Schema Drift** ocorre quando:
+- Edge Functions esperam colunas/tabelas que não existem
+- Schema do banco é modificado sem atualizar código dependente
+- Migrations executam em ordem errada
+
+---
+
+## Diagnóstico Rápido
+
+### 1. Executar Testes de Contrato
 
 ```bash
 cd contracts
@@ -34,19 +34,19 @@ npm install
 npx playwright test
 ```
 
-Failed tests indicate specific drift:
-- `audit_logs.contract.ts` → audit_logs table issues
-- `agents.contract.ts` → agents table issues
+Testes falhando indicam drift específico:
+- `audit_logs.contract.ts` → problemas na tabela audit_logs
+- `agents.contract.ts` → problemas na tabela agents
 
-### 2. Check describe_table RPC
+### 2. Verificar RPC describe_table
 
 ```sql
-SELECT * FROM describe_table('affected_table_name');
+SELECT * FROM describe_table('nome_tabela_afetada');
 ```
 
-Compare against expected schema in `contracts/schemas/`.
+Comparar com schema esperado em `contracts/schemas/`.
 
-### 3. Review Recent Migrations
+### 3. Revisar Migrations Recentes
 
 ```sql
 SELECT * FROM supabase_migrations.schema_migrations
@@ -56,78 +56,78 @@ LIMIT 10;
 
 ---
 
-## Common Drift Scenarios
+## Cenários Comuns de Drift
 
-### A. Missing Column
+### A. Coluna Ausente
 
-**Symptom**: `column "X" does not exist`
+**Sintoma**: `column "X" does not exist`
 
-**Fix**:
+**Correção**:
 ```sql
-ALTER TABLE table_name 
-ADD COLUMN column_name data_type DEFAULT default_value;
+ALTER TABLE nome_tabela 
+ADD COLUMN nome_coluna tipo_dado DEFAULT valor_padrao;
 ```
 
-### B. Column Type Mismatch
+### B. Tipo de Coluna Incompatível
 
-**Symptom**: Type casting errors or unexpected nulls
+**Sintoma**: Erros de casting ou nulos inesperados
 
-**Fix**:
+**Correção**:
 ```sql
-ALTER TABLE table_name 
-ALTER COLUMN column_name TYPE new_type USING column_name::new_type;
+ALTER TABLE nome_tabela 
+ALTER COLUMN nome_coluna TYPE novo_tipo USING nome_coluna::novo_tipo;
 ```
 
-### C. Forbidden Column Still Exists
+### C. Coluna Proibida Ainda Existe
 
-**Symptom**: Contract test fails on `forbiddenColumns`
+**Sintoma**: Teste de contrato falha em `forbiddenColumns`
 
-**Fix**:
+**Correção**:
 ```sql
--- CAUTION: This deletes data
-ALTER TABLE table_name DROP COLUMN column_name;
+-- CUIDADO: Isso exclui dados
+ALTER TABLE nome_tabela DROP COLUMN nome_coluna;
 
--- Safer: Rename to deprecated
-ALTER TABLE table_name RENAME COLUMN column_name TO _deprecated_column_name;
+-- Mais seguro: Renomear para deprecated
+ALTER TABLE nome_tabela RENAME COLUMN nome_coluna TO _deprecated_nome_coluna;
 ```
 
-### D. Missing Table
+### D. Tabela Ausente
 
-**Symptom**: `relation "X" does not exist`
+**Sintoma**: `relation "X" does not exist`
 
-**Fix**:
-1. Review migration that should create table
-2. Run missing migration
-3. Verify with contract test
+**Correção**:
+1. Revisar migration que deveria criar a tabela
+2. Executar migration ausente
+3. Verificar com teste de contrato
 
-### E. Missing RPC/Function
+### E. RPC/Função Ausente
 
-**Symptom**: `function "X" does not exist`
+**Sintoma**: `function "X" does not exist`
 
-**Fix**:
-1. Check `docs/architecture/` for function definition
-2. Run appropriate migration
-3. Verify function exists:
+**Correção**:
+1. Verificar `docs/architecture/` para definição da função
+2. Executar migration apropriada
+3. Verificar se a função existe:
    ```sql
-   SELECT proname FROM pg_proc WHERE proname = 'function_name';
+   SELECT proname FROM pg_proc WHERE proname = 'nome_funcao';
    ```
 
 ---
 
-## Recovery Procedure
+## Procedimento de Recuperação
 
-### Immediate (< 10 min)
+### Imediato (< 10 min)
 
-1. **Identify scope of drift**
+1. **Identificar escopo do drift**
    ```bash
    npx playwright test --reporter=list 2>&1 | grep -E "(FAIL|PASS)"
    ```
 
-2. **Assess production impact**
-   - Check Edge Function logs
-   - Check `system_alerts` for recent failures
+2. **Avaliar impacto em produção**
+   - Verificar logs de Edge Functions
+   - Verificar `system_alerts` para falhas recentes
 
-3. **If critical, activate emergency mode**
+3. **Se crítico, ativar modo de emergência**
    ```sql
    UPDATE system_global_state 
    SET mode = 'restricted', 
@@ -136,34 +136,34 @@ ALTER TABLE table_name RENAME COLUMN column_name TO _deprecated_column_name;
    WHERE id = (SELECT id FROM system_global_state LIMIT 1);
    ```
 
-### Fix (< 20 min)
+### Correção (< 20 min)
 
-1. **Create migration to fix drift**
+1. **Criar migration para corrigir drift**
    ```sql
-   -- Example: Add missing column
+   -- Exemplo: Adicionar coluna ausente
    ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS actor_id UUID;
    ```
 
-2. **Run migration in transaction**
+2. **Executar migration em transação**
    ```sql
    BEGIN;
-   -- migration SQL here
+   -- SQL da migration aqui
    COMMIT;
    ```
 
-3. **Verify fix**
+3. **Verificar correção**
    ```bash
-   npx playwright test contracts/schemas/affected.contract.ts
+   npx playwright test contracts/schemas/afetado.contract.ts
    ```
 
-### Restore (< 5 min)
+### Restaurar (< 5 min)
 
-1. **Redeploy affected Edge Functions**
+1. **Reimplantar Edge Functions afetadas**
    ```bash
-   npx supabase functions deploy function-name
+   npx supabase functions deploy nome-funcao
    ```
 
-2. **Clear emergency mode if activated**
+2. **Desativar modo de emergência se ativado**
    ```sql
    UPDATE system_global_state 
    SET mode = 'normal', 
@@ -172,49 +172,49 @@ ALTER TABLE table_name RENAME COLUMN column_name TO _deprecated_column_name;
    WHERE id = (SELECT id FROM system_global_state LIMIT 1);
    ```
 
-3. **Verify recovery**
-   - Check Edge Function responses
-   - Verify no 503 errors
+3. **Verificar recuperação**
+   - Verificar respostas de Edge Functions
+   - Confirmar que não há erros 503
 
 ---
 
-## Prevention
+## Prevenção
 
-### 1. Always Run Contract Tests in CI
+### 1. Sempre Executar Testes de Contrato no CI
 
 ```yaml
-- name: Contract Tests
+- name: Testes de Contrato
   run: |
     cd contracts
     npm ci
     npx playwright test
 ```
 
-### 2. Use Migration Tool for All Schema Changes
+### 2. Usar Ferramenta de Migration para Todas as Mudanças de Schema
 
-Never modify schema directly in production. Always use:
+Nunca modificar schema diretamente em produção. Sempre usar:
 ```bash
-npx supabase migration new description_of_change
+npx supabase migration new descricao_da_mudanca
 ```
 
-### 3. Update Contracts Before Migrations
+### 3. Atualizar Contratos Antes das Migrations
 
-1. Add new required columns to contract
-2. Run test (should fail)
-3. Create migration
-4. Run test (should pass)
-5. Merge PR
+1. Adicionar novas colunas obrigatórias ao contrato
+2. Executar teste (deve falhar)
+3. Criar migration
+4. Executar teste (deve passar)
+5. Fazer merge do PR
 
-### 4. Document Edge ↔ DB Dependencies
+### 4. Documentar Dependências Edge ↔ DB
 
-See [ADR-027-edge-contracts.md](../architecture/ADR-027-edge-contracts.md)
+Ver [ADR-027-edge-contracts.md](../architecture/ADR-027-edge-contracts.md)
 
 ---
 
-## Contract Schema Reference
+## Referência de Schema de Contrato
 
-| Contract File | Table | Critical Columns |
-|--------------|-------|------------------|
+| Arquivo de Contrato | Tabela | Colunas Críticas |
+|---------------------|--------|-----------------|
 | `audit_logs.contract.ts` | audit_logs | id, event_type, actor_id, tenant_id |
 | `system_alerts.contract.ts` | system_alerts | id, alert_type, severity, status |
 | `agents.contract.ts` | agents | id, tenant_id, agent_name, status |
@@ -222,7 +222,7 @@ See [ADR-027-edge-contracts.md](../architecture/ADR-027-edge-contracts.md)
 
 ---
 
-## Related Runbooks
+## Runbooks Relacionados
 
 - [RUNBOOK-EDGE-500.md](./RUNBOOK-EDGE-500.md)
 - [RUNBOOK-EMERGENCY-MODE.md](./RUNBOOK-EMERGENCY-MODE.md)
