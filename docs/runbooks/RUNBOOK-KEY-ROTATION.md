@@ -1,4 +1,4 @@
-# Runbook: Key Rotation
+# Runbook: Rotação de Chaves
 
 | Campo | Valor |
 |-------|-------|
@@ -7,21 +7,21 @@
 
 ---
 
-## 1. Ed25519 Server Key Rotation
+## 1. Rotação de Chave Ed25519 do Servidor
 
 **Frequência:** Anual ou após incidente
 
 ```
-1. Gerar nova keypair Ed25519
-2. Adicionar nova private key como secret (ED25519_PRIVATE_KEY_V2)
+1. Gerar novo par de chaves Ed25519
+2. Adicionar nova chave privada como secret (ED25519_PRIVATE_KEY_V2)
 3. Atualizar Edge Functions para usar nova chave
 4. Assinar próximas releases com nova chave
-5. Embarcar nova public key nas releases
+5. Embarcar nova chave pública nas releases
 6. Após 100% da frota atualizada: remover chave antiga
 7. Registrar rotação em audit_logs
 ```
 
-## 2. HMAC Secret Rotation (por agente)
+## 2. Rotação de HMAC Secret (por agente)
 
 **Frequência:** Na reinstalação ou comprometimento
 
@@ -33,30 +33,30 @@
 5. Verificar heartbeat com novo token
 ```
 
-## 3. Stripe API Key Rotation
+## 3. Rotação de Chave de API Stripe
 
 **Frequência:** Trimestral
 
 ```
-1. Gerar nova key no Stripe Dashboard
+1. Gerar nova chave no Stripe Dashboard
 2. Atualizar secret STRIPE_SECRET_KEY no Vault
 3. Atualizar STRIPE_WEBHOOK_SECRET se necessário
 4. Testar checkout e webhook
-5. Revogar key antiga no Stripe
+5. Revogar chave antiga no Stripe
 ```
 
-## 4. Internal Secret Rotation
+## 4. Rotação de Secret Interno
 
 **Frequência:** Trimestral
 
 ```
-1. Gerar novo secret (64 chars hex)
+1. Gerar novo secret (64 caracteres hex)
 2. Atualizar INTERNAL_SECRET no Vault
 3. Todas as Edge Functions usam o novo valor automaticamente
 4. Testar comunicação inter-function
 ```
 
-## 5. ECDSA Agent Key Rotation
+## 5. Rotação de Chave ECDSA do Agente
 
 **Frequência:** Automática (N+N-1)
 

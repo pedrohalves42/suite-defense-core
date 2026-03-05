@@ -1,4 +1,4 @@
-# Runbook: Tenant Onboarding / Offboarding
+# Runbook: Ciclo de Vida do Tenant (Onboarding / Offboarding)
 
 | Campo | Valor |
 |-------|-------|
@@ -22,7 +22,7 @@
 4. Verificar heartbeat dos primeiros agentes
 
 ### 3. Configuração Inicial
-1. Configurar alert rules padrão
+1. Configurar regras de alerta padrão
 2. Ativar playbooks SOAR recomendados
 3. Configurar notificações (email, webhook)
 4. Treinamento do operador MSP
@@ -51,13 +51,13 @@
 
 ### 3. Retenção (D+0 a D+90)
 1. Dados mantidos por 90 dias (período de exportação)
-2. Acesso read-only para exportação mediante solicitação
+2. Acesso somente leitura para exportação mediante solicitação
 3. Logs de auditoria retidos conforme política (5 anos)
 
-### 4. Deleção (D+90)
-1. Deletar dados operacionais (agentes, jobs, telemetria)
+### 4. Exclusão (D+90)
+1. Excluir dados operacionais (agentes, jobs, telemetria)
 2. Anonimizar dados em logs de auditoria
-3. Certificado de deleção emitido ao MSP
+3. Certificado de exclusão emitido ao MSP
 4. Registro em `audit_logs`
 
 ---

@@ -1,162 +1,162 @@
-# Vendor Risk Management Policy
+# Política de Gestão de Riscos de Fornecedores
 
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Policy Code** | VRP-001 |
-| **Version** | 1.0 |
-| **Status** | Approved |
-| **Owner** | Security Officer |
-| **Effective Date** | 2025-01-01 |
-| **Review Date** | 2026-01-01 |
-| **SOC 2 Criteria** | CC9 |
+| **Código** | VRP-001 |
+| **Versão** | 1.0 |
+| **Status** | Aprovado |
+| **Responsável** | Security Officer |
+| **Data Efetiva** | 2025-01-01 |
+| **Revisão** | 2026-01-01 |
+| **Critério SOC 2** | CC9 |
 
 ---
 
-## 1. Purpose
+## 1. Objetivo
 
-To assess and manage risks related to third-party service providers.
-
----
-
-## 2. Scope
-
-This policy applies to all third-party vendors that:
-- Process, store, or have access to CyberShield data
-- Provide critical infrastructure or services
-- Integrate with CyberShield systems
+Avaliar e gerenciar riscos relacionados a prestadores de serviço terceirizados.
 
 ---
 
-## 3. Critical Vendors
+## 2. Escopo
 
-### 3.1 Vendor Categories
-
-| Category | Examples | Criticality |
-|----------|----------|-------------|
-| Cloud Infrastructure | Supabase, hosting | Critical |
-| Payment Processing | Stripe | Critical |
-| Database | PostgreSQL (Supabase) | Critical |
-| Email Services | Email provider | High |
-| Development Tools | GitHub, CI/CD | Medium |
-| Analytics | Monitoring tools | Low |
-
-### 3.2 Current Critical Vendors
-
-| Vendor | Services | Certifications | Review Date |
-|--------|----------|----------------|-------------|
-| Supabase | Database, Auth, Storage | SOC 2 Type II | [DATE] |
-| Stripe | Payment processing | PCI-DSS, SOC 2 | [DATE] |
-| [Cloud Provider] | Hosting, CDN | SOC 2, ISO 27001 | [DATE] |
+Esta política se aplica a todos os fornecedores terceirizados que:
+- Processam, armazenam ou têm acesso a dados do CyberShield
+- Fornecem infraestrutura ou serviços críticos
+- Integram com os sistemas do CyberShield
 
 ---
 
-## 4. Vendor Assessment
+## 3. Fornecedores Críticos
 
-### 4.1 Selection Criteria
-Before engaging a vendor:
-- Security posture evaluation
-- Compliance certifications review
-- Service level agreements
-- Data handling practices
-- Incident response capabilities
+### 3.1 Categorias de Fornecedores
 
-### 4.2 Assessment Process
-1. Complete vendor questionnaire
-2. Review security documentation
-3. Verify compliance certifications
-4. Assess data handling practices
-5. Document risk acceptance
+| Categoria | Exemplos | Criticidade |
+|-----------|----------|-------------|
+| Infraestrutura Cloud | Supabase, hospedagem | Crítica |
+| Processamento de Pagamentos | Stripe | Crítica |
+| Banco de Dados | PostgreSQL (Supabase) | Crítica |
+| Serviços de Email | Provedor de email | Alta |
+| Ferramentas de Desenvolvimento | GitHub, CI/CD | Média |
+| Analytics | Ferramentas de monitoramento | Baixa |
 
-### 4.3 Risk Scoring
+### 3.2 Fornecedores Críticos Atuais
 
-| Score | Level | Action |
-|-------|-------|--------|
-| 0-25 | Low | Standard review |
-| 26-50 | Medium | Enhanced monitoring |
-| 51-75 | High | Risk mitigation required |
-| 76-100 | Critical | Executive approval required |
+| Fornecedor | Serviços | Certificações | Data de Revisão |
+|------------|----------|---------------|-----------------|
+| Supabase | Banco de Dados, Auth, Storage | SOC 2 Type II | [DATA] |
+| Stripe | Processamento de pagamentos | PCI-DSS, SOC 2 | [DATA] |
+| [Provedor Cloud] | Hospedagem, CDN | SOC 2, ISO 27001 | [DATA] |
 
 ---
 
-## 5. Ongoing Monitoring
+## 4. Avaliação de Fornecedores
 
-### 5.1 Review Schedule
+### 4.1 Critérios de Seleção
+Antes de contratar um fornecedor:
+- Avaliação da postura de segurança
+- Revisão de certificações de conformidade
+- Acordos de nível de serviço
+- Práticas de manuseio de dados
+- Capacidades de resposta a incidentes
 
-| Criticality | Review Frequency |
-|-------------|-----------------|
-| Critical | Quarterly |
-| High | Semi-annually |
-| Medium | Annually |
-| Low | Every 2 years |
+### 4.2 Processo de Avaliação
+1. Completar questionário do fornecedor
+2. Revisar documentação de segurança
+3. Verificar certificações de conformidade
+4. Avaliar práticas de manuseio de dados
+5. Documentar aceitação de risco
 
-### 5.2 Review Activities
-- Verify current certifications
-- Review security incidents
-- Assess performance against SLA
-- Update risk assessment
+### 4.3 Pontuação de Risco
 
-### 5.3 Change Notification
-Vendors must notify of:
-- Security incidents affecting our data
-- Material changes to services
-- Compliance status changes
-- Subprocessor changes
-
----
-
-## 6. Data Sharing
-
-### 6.1 Data Categories Shared
-
-| Vendor | Data Types | Purpose |
-|--------|------------|---------|
-| Supabase | All application data | Platform operation |
-| Stripe | Payment, customer info | Payment processing |
-| Email | Email addresses | Notifications |
-
-### 6.2 Data Protection Requirements
-- Data processing agreements in place
-- Encryption requirements specified
-- Data residency requirements met
-- Deletion procedures defined
+| Pontuação | Nível | Ação |
+|-----------|-------|------|
+| 0-25 | Baixo | Revisão padrão |
+| 26-50 | Médio | Monitoramento aprimorado |
+| 51-75 | Alto | Mitigação de risco necessária |
+| 76-100 | Crítico | Aprovação executiva necessária |
 
 ---
 
-## 7. Contract Requirements
+## 5. Monitoramento Contínuo
 
-All vendor contracts must include:
-- Security requirements
-- Compliance obligations
-- Audit rights
-- Breach notification requirements
-- Data return/deletion provisions
-- Liability provisions
+### 5.1 Cronograma de Revisão
 
----
+| Criticidade | Frequência de Revisão |
+|-------------|----------------------|
+| Crítica | Trimestral |
+| Alta | Semestral |
+| Média | Anual |
+| Baixa | A cada 2 anos |
 
-## 8. Vendor Exit
+### 5.2 Atividades de Revisão
+- Verificar certificações atuais
+- Revisar incidentes de segurança
+- Avaliar desempenho em relação ao SLA
+- Atualizar avaliação de risco
 
-When terminating a vendor:
-- Data return verified
-- Data deletion confirmed
-- Access revoked
-- Exit documented
-
----
-
-## 9. Technical Evidences
-
-| Control | Implementation | Evidence |
-|---------|----------------|----------|
-| Vendor registry | `vendor_risk_registry` | Database table |
-| Risk assessment | Documented evaluations | Assessment records |
-| Certifications | Vendor documentation | Certificate copies |
-| Reviews | Periodic assessments | Review records |
+### 5.3 Notificação de Mudanças
+Fornecedores devem notificar sobre:
+- Incidentes de segurança que afetem nossos dados
+- Mudanças materiais nos serviços
+- Alterações no status de conformidade
+- Mudanças de subprocessadores
 
 ---
 
-## Document History
+## 6. Compartilhamento de Dados
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | 2025-01-01 | CyberShield Security Team | Initial version |
+### 6.1 Categorias de Dados Compartilhados
+
+| Fornecedor | Tipos de Dados | Finalidade |
+|------------|---------------|-----------|
+| Supabase | Todos os dados da aplicação | Operação da plataforma |
+| Stripe | Pagamento, info do cliente | Processamento de pagamentos |
+| Email | Endereços de email | Notificações |
+
+### 6.2 Requisitos de Proteção de Dados
+- Acordos de processamento de dados em vigor
+- Requisitos de criptografia especificados
+- Requisitos de residência de dados atendidos
+- Procedimentos de exclusão definidos
+
+---
+
+## 7. Requisitos Contratuais
+
+Todos os contratos com fornecedores devem incluir:
+- Requisitos de segurança
+- Obrigações de conformidade
+- Direitos de auditoria
+- Requisitos de notificação de violação
+- Provisões de retorno/exclusão de dados
+- Provisões de responsabilidade
+
+---
+
+## 8. Saída de Fornecedor
+
+Ao encerrar um fornecedor:
+- Retorno de dados verificado
+- Exclusão de dados confirmada
+- Acesso revogado
+- Saída documentada
+
+---
+
+## 9. Evidências Técnicas
+
+| Controle | Implementação | Evidência |
+|----------|--------------|-----------|
+| Registro de fornecedores | `vendor_risk_registry` | Tabela do banco |
+| Avaliação de risco | Avaliações documentadas | Registros de avaliação |
+| Certificações | Documentação do fornecedor | Cópias de certificados |
+| Revisões | Avaliações periódicas | Registros de revisão |
+
+---
+
+## Histórico
+
+| Versão | Data | Autor | Alterações |
+|--------|------|-------|------------|
+| 1.0 | 2025-01-01 | CyberShield Security Team | Versão inicial |

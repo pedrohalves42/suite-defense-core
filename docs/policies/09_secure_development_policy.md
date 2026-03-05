@@ -1,174 +1,174 @@
-# Secure Development Policy
+# Política de Desenvolvimento Seguro
 
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Policy Code** | SDP-001 |
-| **Version** | 1.0 |
-| **Status** | Approved |
-| **Owner** | Security Officer |
-| **Effective Date** | 2025-01-01 |
-| **Review Date** | 2026-01-01 |
-| **SOC 2 Criteria** | CC5, CC8 |
+| **Código** | SDP-001 |
+| **Versão** | 1.0 |
+| **Status** | Aprovado |
+| **Responsável** | Security Officer |
+| **Data Efetiva** | 2025-01-01 |
+| **Revisão** | 2026-01-01 |
+| **Critério SOC 2** | CC5, CC8 |
 
 ---
 
-## 1. Purpose
+## 1. Objetivo
 
-To ensure secure software development practices throughout the development lifecycle.
-
----
-
-## 2. Scope
-
-This policy applies to:
-- All application code
-- Database scripts and migrations
-- Infrastructure as code
-- Configuration files
-- Third-party integrations
+Garantir práticas de desenvolvimento seguro de software ao longo de todo o ciclo de vida de desenvolvimento.
 
 ---
 
-## 3. Secure Development Principles
+## 2. Escopo
 
-### 3.1 Security by Design
-- Security requirements in specifications
-- Threat modeling for new features
-- Security review of architecture
-
-### 3.2 Defense in Depth
-- Multiple validation layers
-- Input validation at all boundaries
-- Output encoding
-
-### 3.3 Least Privilege
-- Minimum permissions in code
-- No hardcoded credentials
-- Secrets managed securely
+Esta política se aplica a:
+- Todo o código da aplicação
+- Scripts e migrations de banco de dados
+- Infraestrutura como código
+- Arquivos de configuração
+- Integrações com terceiros
 
 ---
 
-## 4. Development Controls
+## 3. Princípios de Desenvolvimento Seguro
 
-### 4.1 Backend Validation
-- All input validated server-side
-- Type checking with TypeScript/Zod
-- Business logic on backend only
+### 3.1 Segurança por Design
+- Requisitos de segurança nas especificações
+- Modelagem de ameaças para novas funcionalidades
+- Revisão de segurança da arquitetura
 
-### 4.2 Input Sanitization
-- SQL injection prevention (parameterized queries)
-- XSS prevention (output encoding)
-- Command injection prevention
+### 3.2 Defesa em Profundidade
+- Múltiplas camadas de validação
+- Validação de entrada em todos os limites
+- Codificação de saída
 
-### 4.3 Authentication & Authorization
-- Authentication at API gateway
-- Authorization checked per request
-- Session management secure
-
-### 4.4 Data Protection
-- Sensitive data encrypted
-- Secrets not in code
-- PII minimized
+### 3.3 Menor Privilégio
+- Permissões mínimas no código
+- Nenhuma credencial hardcoded
+- Segredos gerenciados de forma segura
 
 ---
 
-## 5. Code Review
+## 4. Controles de Desenvolvimento
 
-### 5.1 Review Requirements
-- All changes require peer review
-- Security-sensitive changes flagged
-- Automated checks must pass
+### 4.1 Validação no Backend
+- Toda entrada validada no servidor
+- Type checking com TypeScript/Zod
+- Lógica de negócios apenas no backend
 
-### 5.2 Review Checklist
-- [ ] Input validation present
-- [ ] Authorization checks implemented
-- [ ] No hardcoded secrets
-- [ ] Error handling appropriate
-- [ ] Logging adequate (no PII)
-- [ ] Tests included
+### 4.2 Sanitização de Entrada
+- Prevenção de SQL injection (queries parametrizadas)
+- Prevenção de XSS (codificação de saída)
+- Prevenção de command injection
 
-### 5.3 Security-Sensitive Areas
-Changes to these areas require additional review:
-- Authentication/authorization
-- Cryptographic operations
-- Database access patterns
-- API endpoints
-- File handling
+### 4.3 Autenticação e Autorização
+- Autenticação no gateway da API
+- Autorização verificada por request
+- Gestão de sessão segura
 
----
-
-## 6. Testing
-
-### 6.1 Security Testing
-- Static analysis in CI/CD
-- Dependency scanning
-- Secret scanning
-
-### 6.2 Test Requirements
-- Unit tests for security functions
-- Integration tests for auth flows
-- Error handling tested
+### 4.4 Proteção de Dados
+- Dados sensíveis criptografados
+- Segredos fora do código
+- PII minimizado
 
 ---
 
-## 7. Environment Separation
+## 5. Revisão de Código
 
-### 7.1 Environments
+### 5.1 Requisitos de Revisão
+- Todas as mudanças requerem revisão por pares
+- Mudanças sensíveis à segurança são sinalizadas
+- Verificações automatizadas devem passar
 
-| Environment | Purpose | Data |
-|-------------|---------|------|
-| Development | Feature development | Synthetic |
-| Staging | Pre-production testing | Anonymized |
-| Production | Live service | Real |
+### 5.2 Checklist de Revisão
+- [ ] Validação de entrada presente
+- [ ] Verificações de autorização implementadas
+- [ ] Nenhum segredo hardcoded
+- [ ] Tratamento de erros adequado
+- [ ] Logging adequado (sem PII)
+- [ ] Testes incluídos
 
-### 7.2 Access Control
-- Production access restricted
-- Environment credentials separate
-- No production data in dev
-
----
-
-## 8. Dependency Management
-
-### 8.1 Third-Party Code
-- Dependencies reviewed before adoption
-- Regular updates for security patches
-- Automated vulnerability scanning
-
-### 8.2 Version Pinning
-- Dependencies version locked
-- Updates reviewed and tested
-- Breaking changes documented
+### 5.3 Áreas Sensíveis à Segurança
+Mudanças nestas áreas requerem revisão adicional:
+- Autenticação/autorização
+- Operações criptográficas
+- Padrões de acesso ao banco de dados
+- Endpoints de API
+- Manipulação de arquivos
 
 ---
 
-## 9. Technical Evidences
+## 6. Testes
 
-| Control | Implementation | Evidence |
-|---------|----------------|----------|
-| Validation | Edge Functions + Zod | Function code |
-| Defense | SQL Triggers | Trigger definitions |
-| Isolation | Environment separation | Configuration |
-| Review | Pull request process | Git history |
+### 6.1 Testes de Segurança
+- Análise estática no CI/CD
+- Varredura de dependências
+- Varredura de segredos
 
----
-
-## 10. Training
-
-### 10.1 Security Awareness
-- Secure coding training annually
-- OWASP Top 10 awareness
-- Incident response procedures
-
-### 10.2 New Developer Onboarding
-- Security policies review
-- Access control setup
-- Secure development guidelines
+### 6.2 Requisitos de Teste
+- Testes unitários para funções de segurança
+- Testes de integração para fluxos de autenticação
+- Tratamento de erros testado
 
 ---
 
-## Document History
+## 7. Separação de Ambientes
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | 2025-01-01 | CyberShield Security Team | Initial version |
+### 7.1 Ambientes
+
+| Ambiente | Finalidade | Dados |
+|----------|-----------|-------|
+| Desenvolvimento | Desenvolvimento de funcionalidades | Sintéticos |
+| Staging | Testes pré-produção | Anonimizados |
+| Produção | Serviço em operação | Reais |
+
+### 7.2 Controle de Acesso
+- Acesso à produção restrito
+- Credenciais de ambiente separadas
+- Sem dados de produção em desenvolvimento
+
+---
+
+## 8. Gestão de Dependências
+
+### 8.1 Código de Terceiros
+- Dependências revisadas antes da adoção
+- Atualizações regulares para patches de segurança
+- Varredura automatizada de vulnerabilidades
+
+### 8.2 Fixação de Versão
+- Dependências com versão fixada
+- Atualizações revisadas e testadas
+- Breaking changes documentadas
+
+---
+
+## 9. Evidências Técnicas
+
+| Controle | Implementação | Evidência |
+|----------|--------------|-----------|
+| Validação | Edge Functions + Zod | Código das funções |
+| Defesa | SQL Triggers | Definições de triggers |
+| Isolamento | Separação de ambientes | Configuração |
+| Revisão | Processo de pull request | Histórico Git |
+
+---
+
+## 10. Treinamento
+
+### 10.1 Conscientização em Segurança
+- Treinamento de codificação segura anualmente
+- Conscientização sobre OWASP Top 10
+- Procedimentos de resposta a incidentes
+
+### 10.2 Onboarding de Novos Desenvolvedores
+- Revisão das políticas de segurança
+- Configuração de controle de acesso
+- Diretrizes de desenvolvimento seguro
+
+---
+
+## Histórico
+
+| Versão | Data | Autor | Alterações |
+|--------|------|-------|------------|
+| 1.0 | 2025-01-01 | CyberShield Security Team | Versão inicial |

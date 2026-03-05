@@ -1,142 +1,142 @@
-# Logging & Monitoring Policy
+# Política de Logging e Monitoramento
 
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Policy Code** | LMP-001 |
-| **Version** | 1.0 |
-| **Status** | Approved |
-| **Owner** | Security Officer |
-| **Effective Date** | 2025-01-01 |
-| **Review Date** | 2026-01-01 |
-| **SOC 2 Criteria** | CC4, CC7 |
+| **Código** | LMP-001 |
+| **Versão** | 1.0 |
+| **Status** | Aprovado |
+| **Responsável** | Security Officer |
+| **Data Efetiva** | 2025-01-01 |
+| **Revisão** | 2026-01-01 |
+| **Critério SOC 2** | CC4, CC7 |
 
 ---
 
-## 1. Purpose
+## 1. Objetivo
 
-To ensure that security-relevant events are logged, protected, and monitored.
-
----
-
-## 2. Scope
-
-This policy applies to:
-- Application logs
-- Security events
-- Audit trails
-- System metrics
-- Access logs
+Garantir que eventos relevantes de segurança sejam registrados, protegidos e monitorados.
 
 ---
 
-## 3. Logging Requirements
+## 2. Escopo
 
-### 3.1 Events to Log
-- Authentication events (login, logout, failures)
-- Authorization decisions (access granted/denied)
-- Policy enforcement actions
-- Job execution (start, complete, fail)
-- Security violations
-- Configuration changes
-- Administrative actions
+Esta política se aplica a:
+- Logs da aplicação
+- Eventos de segurança
+- Trilhas de auditoria
+- Métricas do sistema
+- Logs de acesso
 
-### 3.2 Log Content
-Each log entry must include:
+---
+
+## 3. Requisitos de Logging
+
+### 3.1 Eventos a Registrar
+- Eventos de autenticação (login, logout, falhas)
+- Decisões de autorização (acesso concedido/negado)
+- Ações de aplicação de políticas
+- Execução de jobs (início, conclusão, falha)
+- Violações de segurança
+- Mudanças de configuração
+- Ações administrativas
+
+### 3.2 Conteúdo do Log
+Cada entrada de log deve incluir:
 - Timestamp (UTC)
-- Event type
-- Actor (user, agent, system)
-- Target resource
-- Action performed
-- Result (success/failure)
-- Relevant context
+- Tipo de evento
+- Ator (usuário, agente, sistema)
+- Recurso alvo
+- Ação realizada
+- Resultado (sucesso/falha)
+- Contexto relevante
 
-### 3.3 Sensitive Data
-- Passwords are never logged
-- PII is minimized in logs
-- Secrets are redacted
-
----
-
-## 4. Log Protection
-
-### 4.1 Immutability
-- Audit logs cannot be modified
-- Deletion is prevented by RLS policies
-- Database triggers enforce immutability
-
-### 4.2 Integrity
-- Logs include cryptographic hashes
-- Hash chain enables verification
-- Tampering is detectable
-
-### 4.3 Access Control
-- Log access is restricted to authorized personnel
-- Access to logs is itself logged
-- Super admin required for cross-tenant logs
+### 3.3 Dados Sensíveis
+- Senhas nunca são registradas
+- PII é minimizado nos logs
+- Segredos são ofuscados
 
 ---
 
-## 5. Retention
+## 4. Proteção de Logs
 
-### 5.1 Retention Periods
+### 4.1 Imutabilidade
+- Logs de auditoria não podem ser modificados
+- Exclusão é prevenida por políticas RLS
+- Triggers de banco de dados garantem imutabilidade
 
-| Log Type | Retention | Justification |
-|----------|-----------|---------------|
-| Security events | 7 years | Compliance |
-| Audit logs | 7 years | Compliance |
-| Job executions | 2 years | Operational |
-| System metrics | 1 year | Performance |
-| Application logs | 90 days | Debugging |
+### 4.2 Integridade
+- Logs incluem hashes criptográficos
+- Cadeia de hash permite verificação
+- Adulteração é detectável
 
-### 5.2 Deletion
-- Logs are deleted only after retention period
-- Deletion is automated and logged
-- Backup copies follow same retention
-
----
-
-## 6. Monitoring
-
-### 6.1 Real-time Monitoring
-- Security events trigger alerts
-- Threshold breaches are flagged
-- Anomalies are detected
-
-### 6.2 Periodic Review
-- Security logs reviewed daily
-- Audit logs reviewed weekly
-- Full audit monthly
-
-### 6.3 Alerting
-- Critical events trigger immediate notification
-- Alert escalation procedures defined
-- False positive reduction ongoing
+### 4.3 Controle de Acesso
+- Acesso a logs é restrito ao pessoal autorizado
+- Acesso a logs é registrado
+- Super admin necessário para logs cross-tenant
 
 ---
 
-## 7. Technical Evidences
+## 5. Retenção
 
-| Control | Implementation | Evidence |
-|---------|----------------|----------|
-| Immutability | No DELETE/UPDATE RLS | Policy definitions |
-| Integrity | Hash + nonce | Log records |
-| Authenticity | HMAC | Signature verification |
-| Traceability | `job_executions` | Execution records |
+### 5.1 Períodos de Retenção
 
----
+| Tipo de Log | Retenção | Justificativa |
+|-------------|----------|---------------|
+| Eventos de segurança | 7 anos | Conformidade |
+| Logs de auditoria | 7 anos | Conformidade |
+| Execuções de jobs | 2 anos | Operacional |
+| Métricas do sistema | 1 ano | Performance |
+| Logs da aplicação | 90 dias | Debugging |
 
-## 8. Compliance
-
-Log data supports compliance with:
-- SOC 2 audit requirements
-- LGPD data processing records
-- ISO 27001 controls
-- Internal investigations
+### 5.2 Exclusão
+- Logs são excluídos apenas após o período de retenção
+- Exclusão é automatizada e registrada
+- Cópias de backup seguem a mesma retenção
 
 ---
 
-## Document History
+## 6. Monitoramento
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | 2025-01-01 | CyberShield Security Team | Initial version |
+### 6.1 Monitoramento em Tempo Real
+- Eventos de segurança disparam alertas
+- Violações de limites são sinalizadas
+- Anomalias são detectadas
+
+### 6.2 Revisão Periódica
+- Logs de segurança revisados diariamente
+- Logs de auditoria revisados semanalmente
+- Auditoria completa mensalmente
+
+### 6.3 Alertas
+- Eventos críticos disparam notificação imediata
+- Procedimentos de escalação de alertas definidos
+- Redução contínua de falsos positivos
+
+---
+
+## 7. Evidências Técnicas
+
+| Controle | Implementação | Evidência |
+|----------|--------------|-----------|
+| Imutabilidade | RLS sem DELETE/UPDATE | Definições de políticas |
+| Integridade | Hash + nonce | Registros de logs |
+| Autenticidade | HMAC | Verificação de assinatura |
+| Rastreabilidade | `job_executions` | Registros de execução |
+
+---
+
+## 8. Conformidade
+
+Dados de logs suportam conformidade com:
+- Requisitos de auditoria SOC 2
+- Registros de processamento de dados LGPD
+- Controles ISO 27001
+- Investigações internas
+
+---
+
+## Histórico
+
+| Versão | Data | Autor | Alterações |
+|--------|------|-------|------------|
+| 1.0 | 2025-01-01 | CyberShield Security Team | Versão inicial |

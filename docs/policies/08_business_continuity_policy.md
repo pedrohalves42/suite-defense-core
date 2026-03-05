@@ -1,163 +1,163 @@
-# Business Continuity & Availability Policy
+# Política de Continuidade de Negócios e Disponibilidade
 
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Policy Code** | BCP-001 |
-| **Version** | 1.0 |
-| **Status** | Approved |
-| **Owner** | Security Officer |
-| **Effective Date** | 2025-01-01 |
-| **Review Date** | 2026-01-01 |
-| **SOC 2 Criteria** | CC7, CC9 |
+| **Código** | BCP-001 |
+| **Versão** | 1.0 |
+| **Status** | Aprovado |
+| **Responsável** | Security Officer |
+| **Data Efetiva** | 2025-01-01 |
+| **Revisão** | 2026-01-01 |
+| **Critério SOC 2** | CC7, CC9 |
 
 ---
 
-## 1. Purpose
+## 1. Objetivo
 
-To ensure system availability and recovery from failures.
-
----
-
-## 2. Scope
-
-This policy applies to:
-- All production systems
-- Data backup and recovery
-- Disaster recovery procedures
-- Service availability
+Garantir a disponibilidade do sistema e a recuperação de falhas.
 
 ---
 
-## 3. Availability Objectives
+## 2. Escopo
 
-### 3.1 Service Level Targets
-
-| Service | Target Availability | Measurement |
-|---------|--------------------| ------------|
-| API | 99.9% | Monthly |
-| Web Application | 99.9% | Monthly |
-| Agent Communication | 99.5% | Monthly |
-| Data Processing | 99.0% | Monthly |
-
-### 3.2 Recovery Objectives
-
-| Metric | Target | Description |
-|--------|--------|-------------|
-| RTO (Recovery Time Objective) | 4 hours | Maximum downtime |
-| RPO (Recovery Point Objective) | 1 hour | Maximum data loss |
+Esta política se aplica a:
+- Todos os sistemas em produção
+- Backup e recuperação de dados
+- Procedimentos de recuperação de desastres
+- Disponibilidade de serviço
 
 ---
 
-## 4. Controls
+## 3. Objetivos de Disponibilidade
 
-### 4.1 Infrastructure
-- Managed cloud infrastructure
-- Automatic failover
-- Geographic redundancy
-- Load balancing
+### 3.1 Metas de Nível de Serviço
 
-### 4.2 Automated Backups
-- Database backups: Daily
-- Point-in-time recovery: 7 days
-- Backup encryption: Yes
-- Backup testing: Monthly
+| Serviço | Disponibilidade Alvo | Medição |
+|---------|---------------------|---------|
+| API | 99,9% | Mensal |
+| Aplicação Web | 99,9% | Mensal |
+| Comunicação de Agentes | 99,5% | Mensal |
+| Processamento de Dados | 99,0% | Mensal |
 
-### 4.3 Monitoring
-- System health checks every minute
-- Alerting on anomalies
-- Performance metrics tracked
-- Capacity planning
+### 3.2 Objetivos de Recuperação
 
-### 4.4 Job Recovery
-- Failed jobs are retried
-- Stuck jobs are cleaned up
-- Offline agents handled gracefully
-- State preserved across failures
+| Métrica | Meta | Descrição |
+|---------|------|-----------|
+| RTO (Tempo de Recuperação) | 4 horas | Tempo máximo de inatividade |
+| RPO (Ponto de Recuperação) | 1 hora | Perda máxima de dados |
 
 ---
 
-## 5. Disaster Recovery
+## 4. Controles
 
-### 5.1 Scenarios
+### 4.1 Infraestrutura
+- Infraestrutura cloud gerenciada
+- Failover automático
+- Redundância geográfica
+- Balanceamento de carga
 
-| Scenario | Response | Recovery Time |
-|----------|----------|---------------|
-| Database failure | Automatic failover | < 5 minutes |
-| Region outage | Manual failover | < 4 hours |
-| Data corruption | Point-in-time restore | < 2 hours |
-| Full disaster | Full restore | < 24 hours |
+### 4.2 Backups Automatizados
+- Backups de banco de dados: Diários
+- Recuperação point-in-time: 7 dias
+- Criptografia de backup: Sim
+- Teste de backup: Mensal
 
-### 5.2 Recovery Procedures
-- Documented runbooks
-- Trained personnel
-- Regular testing
-- Post-recovery verification
+### 4.3 Monitoramento
+- Verificações de saúde a cada minuto
+- Alertas sobre anomalias
+- Métricas de performance rastreadas
+- Planejamento de capacidade
 
----
-
-## 6. Incident Management
-
-### 6.1 Escalation
-
-| Severity | Response Time | Notification |
-|----------|---------------|--------------|
-| P1 (Critical) | Immediate | All stakeholders |
-| P2 (High) | 1 hour | Operations team |
-| P3 (Medium) | 4 hours | Support team |
-| P4 (Low) | Next business day | Logged |
-
-### 6.2 Communication
-- Status page updated
-- Stakeholders notified
-- Root cause documented
-- Post-mortem conducted
+### 4.4 Recuperação de Jobs
+- Jobs com falha são retentados
+- Jobs travados são limpos
+- Agentes offline tratados com graciosidade
+- Estado preservado entre falhas
 
 ---
 
-## 7. Testing
+## 5. Recuperação de Desastres
 
-### 7.1 Test Schedule
+### 5.1 Cenários
 
-| Test Type | Frequency | Scope |
-|-----------|-----------|-------|
-| Backup restore | Monthly | Sample data |
-| Failover | Quarterly | Non-production |
-| Full DR | Annually | Full simulation |
+| Cenário | Resposta | Tempo de Recuperação |
+|---------|----------|---------------------|
+| Falha de banco de dados | Failover automático | < 5 minutos |
+| Queda de região | Failover manual | < 4 horas |
+| Corrupção de dados | Restauração point-in-time | < 2 horas |
+| Desastre completo | Restauração total | < 24 horas |
 
-### 7.2 Test Documentation
-- Test plans documented
-- Results recorded
-- Issues tracked to resolution
-- Improvements implemented
-
----
-
-## 8. Technical Evidences
-
-| Control | Implementation | Evidence |
-|---------|----------------|----------|
-| Recovery | Automated backups | Backup logs |
-| Resilience | Cleanup jobs | `cleanup_offline_agents_jobs` |
-| Monitoring | Health checks | Monitoring dashboards |
-| Failover | Managed infrastructure | Provider SLA |
+### 5.2 Procedimentos de Recuperação
+- Runbooks documentados
+- Pessoal treinado
+- Testes regulares
+- Verificação pós-recuperação
 
 ---
 
-## 9. Dependencies
+## 6. Gestão de Incidentes
 
-### 9.1 Critical Dependencies
+### 6.1 Escalação
 
-| Dependency | Mitigation |
-|------------|------------|
-| Supabase | Provider SLA, backups |
-| Cloud Provider | Multi-region capable |
-| DNS | Multiple providers |
-| CDN | Failover configured |
+| Severidade | Tempo de Resposta | Notificação |
+|:----------:|:-----------------:|:-----------:|
+| P1 (Crítico) | Imediata | Todas as partes |
+| P2 (Alto) | 1 hora | Equipe de operações |
+| P3 (Médio) | 4 horas | Equipe de suporte |
+| P4 (Baixo) | Próximo dia útil | Registrado |
+
+### 6.2 Comunicação
+- Página de status atualizada
+- Partes interessadas notificadas
+- Causa raiz documentada
+- Post-mortem conduzido
 
 ---
 
-## Document History
+## 7. Testes
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | 2025-01-01 | CyberShield Security Team | Initial version |
+### 7.1 Cronograma de Testes
+
+| Tipo de Teste | Frequência | Escopo |
+|---------------|-----------|--------|
+| Restauração de backup | Mensal | Amostra de dados |
+| Failover | Trimestral | Não-produção |
+| DR completo | Anual | Simulação completa |
+
+### 7.2 Documentação de Testes
+- Planos de teste documentados
+- Resultados registrados
+- Problemas rastreados até resolução
+- Melhorias implementadas
+
+---
+
+## 8. Evidências Técnicas
+
+| Controle | Implementação | Evidência |
+|----------|--------------|-----------|
+| Recuperação | Backups automatizados | Logs de backup |
+| Resiliência | Jobs de limpeza | `cleanup_offline_agents_jobs` |
+| Monitoramento | Verificações de saúde | Dashboards de monitoramento |
+| Failover | Infraestrutura gerenciada | SLA do provedor |
+
+---
+
+## 9. Dependências
+
+### 9.1 Dependências Críticas
+
+| Dependência | Mitigação |
+|------------|-----------|
+| Supabase | SLA do provedor, backups |
+| Provedor Cloud | Capacidade multi-região |
+| DNS | Múltiplos provedores |
+| CDN | Failover configurado |
+
+---
+
+## Histórico
+
+| Versão | Data | Autor | Alterações |
+|--------|------|-------|------------|
+| 1.0 | 2025-01-01 | CyberShield Security Team | Versão inicial |
