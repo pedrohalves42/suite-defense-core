@@ -148,6 +148,7 @@ import ComplianceAutomation from "./pages/admin/ComplianceAutomation";
 import ThreatIntelligence from "./pages/admin/ThreatIntelligence";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 import AIFeedbackDashboard from "./pages/admin/AIFeedbackDashboard";
+import DocsExport from "./pages/docs/DocsExport";
 
 const App = () => (
   <ErrorBoundary>
@@ -188,6 +189,7 @@ const App = () => (
             <Route path="/docs/exe-build" element={<ExeBuild />} />
             <Route path="/docs/onboarding" element={<ClientOnboarding />} />
             <Route path="/docs/installation" element={<ClientOnboarding />} />
+            <Route path="/docs/export" element={<DocsExport />} />
             
             {/* Debug Routes - Protected */}
             <Route path="/debug/auth" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
