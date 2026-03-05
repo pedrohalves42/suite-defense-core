@@ -10,8 +10,8 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
  * Reads the agent scripts from the codebase (bundled with the function)
  * and syncs them to the agent_releases table.
  * 
- * This is necessary because Lovable Cloud doesn't bundle .ps1/.sh files,
- * but DOES bundle .ts files that import them via URL.
+ * This is necessary because cloud edge functions don't bundle .ps1/.sh files,
+ * but DO bundle .ts files that import them via URL.
  */
 
 // Import scripts at module level - bundled with the function

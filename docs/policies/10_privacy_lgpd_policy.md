@@ -149,12 +149,12 @@ O Encarregado de Proteção de Dados é designado formalmente e registrado junto
 
 | Sub-processador | Dados Compartilhados | Finalidade | Localização | DPA |
 |-----------------|---------------------|------------|-------------|-----|
-| Lovable Cloud (Supabase) | Todos os dados da plataforma | Infraestrutura de banco de dados | EUA (AWS) | Sim |
+| CyberShield Cloud (Supabase) | Todos os dados da plataforma | Infraestrutura de banco de dados | EUA (AWS) | Sim |
 | Stripe | Email, nome do titular da conta | Processamento de pagamentos | EUA | Sim |
 | GitHub Actions | Hash de scripts, metadados de build | CI/CD de agentes | EUA | Sim |
 
 ### 9.2 Transferência Internacional
-- Dados armazenados em servidores nos EUA (Lovable Cloud)
+- Dados armazenados em servidores nos EUA (CyberShield Cloud)
 - Garantias: Cláusulas Contratuais Padrão (SCCs) e medidas técnicas suplementares
 - Criptografia em trânsito (TLS 1.3) e em repouso (AES-256)
 
@@ -167,7 +167,7 @@ O Encarregado de Proteção de Dados é designado formalmente e registrado junto
 | Controle | Implementação |
 |----------|--------------|
 | Criptografia em trânsito | TLS 1.3 obrigatório |
-| Criptografia em repouso | AES-256 (Lovable Cloud) |
+| Criptografia em repouso | AES-256 (CyberShield Cloud) |
 | Autenticação de agentes | HMAC-SHA256 com nonce anti-replay |
 | Integridade de comandos | Ed25519 digital signatures |
 | Isolamento de dados | Row Level Security (RLS) por tenant |

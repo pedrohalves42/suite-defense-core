@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const siteUrl = Deno.env.get('SITE_URL') || 'https://suite-defense-core.lovable.app';
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://cybershield.com.br';
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 

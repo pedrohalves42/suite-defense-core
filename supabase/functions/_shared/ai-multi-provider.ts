@@ -7,7 +7,7 @@
  * - OpenRouter (Gemini 2.0 Flash) — 15% weight, free
  * - Google Gemini (2.5 Flash) — 15% weight, free tier
   * - Mistral (Small 3.1) — 10% weight, free tier 1B tokens/month
-  * - Lovable AI (Gemini 3 Flash) — 0% weight, emergency-only fallback
+  * - Platform AI (Gemini 3 Flash) — 0% weight, emergency-only fallback
  * 
  * Features:
  * - Weighted round-robin distribution for cost optimization
@@ -216,7 +216,7 @@ const PROVIDERS: AIProviderConfig[] = [
   },
   {
     name: 'lovable',
-    displayName: 'Lovable AI',
+    displayName: 'Platform AI',
     baseUrl: 'https://ai.gateway.lovable.dev/v1/chat/completions',
     model: 'google/gemini-3-flash-preview',
     headers: () => ({

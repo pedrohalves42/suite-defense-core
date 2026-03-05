@@ -162,9 +162,9 @@ Um breaking change ocorre quando:
 
 | Versão | Autor | Aprovador | Data |
 |--------|-------|-----------|------|
-| 1.4.0 | Lovable AI | Security Lead | 2026-01-31 |
-| 1.1.0 | Lovable AI | Security Lead | 2025-12-17 |
-| 1.0.0 | Lovable AI | Security Lead | 2025-12-17 |
+| 1.4.0 | CyberShield Security | Security Lead | 2026-01-31 |
+| 1.1.0 | CyberShield Security | Security Lead | 2025-12-17 |
+| 1.0.0 | CyberShield Security | Security Lead | 2025-12-17 |
 
 ---
 

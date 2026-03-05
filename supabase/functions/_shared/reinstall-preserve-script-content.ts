@@ -392,7 +392,7 @@ $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 # Primary: fetch from backend release endpoint (source of truth)
 $dlUrl = "$ServerUrl/functions/v1/get-latest-agent-script?platform=windows&format=plain&cb=$cacheBust"
 # Fallback: published app static asset
-$dlUrlFallback = "https://cybershield-audit.lovable.app/agent-scripts/cybershield-agent-windows-v5.ps1?cb=$cacheBust"
+$dlUrlFallback = "$ServerUrl/agent-scripts/cybershield-agent-windows-v5.ps1?cb=$cacheBust"
 Write-Status "Primary URL: $dlUrl" "INFO"
 
 # Method 1: Invoke-RestMethod from backend (preferred)

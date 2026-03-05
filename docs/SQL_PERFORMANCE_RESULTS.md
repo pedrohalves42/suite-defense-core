@@ -1,7 +1,7 @@
 # Resultados dos Testes de Performance SQL - CyberShield
 
 **Data de Execução:** 2025-11-14  
-**Ambiente:** Produção (Lovable Cloud)  
+**Ambiente:** Produção (CyberShield Cloud)  
 **Dataset:** ~25 agentes, ~100 eventos de instalação  
 
 ---

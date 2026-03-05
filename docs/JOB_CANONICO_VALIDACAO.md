@@ -361,7 +361,7 @@ error_message            = "Tipo de job não suportado: tipo_inexistente_xpto"
 
 ### Onde Ver Logs das Edge Functions
 
-1. Acesse: **Lovable Cloud Backend** → **Edge Functions** → `submit-job-result` → **Logs**
+1. Acesse: **Backend** → **Edge Functions** → `submit-job-result` → **Logs**
 2. Filtrar por timestamp correspondente ao job
 3. Procurar por:
    - `job_id`

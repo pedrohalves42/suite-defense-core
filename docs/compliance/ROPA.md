@@ -32,7 +32,7 @@ Manter um registro completo e atualizado de todas as operações de tratamento d
 | **Categorias de Titulares** | Funcionários dos clientes MSP |
 | **Fonte** | Agente CyberShield instalado no endpoint |
 | **Destinatários** | MSP administrador (via dashboard) |
-| **Transferência Internacional** | Sim — EUA (Lovable Cloud/AWS) |
+| **Transferência Internacional** | Sim — EUA (AWS) |
 | **Salvaguardas** | TLS 1.3, AES-256, RLS multi-tenant |
 | **Retenção** | 90-365 dias conforme tipo de dado |
 | **RIPD Necessária?** | Sim (RIPD-001) |
@@ -49,7 +49,7 @@ Manter um registro completo e atualizado de todas as operações de tratamento d
 | **Categorias de Titulares** | Operadores MSP, administradores |
 | **Fonte** | Formulário de cadastro e login |
 | **Destinatários** | Internos (equipe de suporte, segurança) |
-| **Transferência Internacional** | Sim — EUA (Lovable Cloud/AWS) |
+| **Transferência Internacional** | Sim — EUA (AWS) |
 | **Salvaguardas** | MFA, JWT tokens, sessões com expiração |
 | **Retenção** | Duração do contrato + 90 dias |
 | **RIPD Necessária?** | Não |
@@ -83,7 +83,7 @@ Manter um registro completo e atualizado de todas as operações de tratamento d
 | **Categorias de Titulares** | Todos os usuários da plataforma |
 | **Fonte** | Sistema automático (triggers, Edge Functions) |
 | **Destinatários** | Internos (auditoria, segurança) |
-| **Transferência Internacional** | Sim — EUA (Lovable Cloud/AWS) |
+| **Transferência Internacional** | Sim — EUA (AWS) |
 | **Salvaguardas** | Imutabilidade (triggers), hash encadeado, RLS |
 | **Retenção** | 5 anos |
 | **RIPD Necessária?** | Não |
@@ -131,7 +131,7 @@ Endpoints (Agente)
   → [HMAC + TLS 1.3] →
     Edge Functions (Validação + RLS)
       → [RLS Isolation] →
-        Database (Lovable Cloud/AWS US)
+        Database (CyberShield Cloud/AWS US)
           → [Dashboard] →
             MSP Operador (browser)
 
@@ -146,7 +146,7 @@ Stripe (Pagamentos)
 
 | Sub-processador | País | Dados | DPA | Certificações |
 |----------------|------|-------|-----|---------------|
-| Lovable Cloud (Supabase) | EUA | Todos os dados da plataforma | Sim | SOC 2 Type II |
+| CyberShield Cloud (Supabase) | EUA | Todos os dados da plataforma | Sim | SOC 2 Type II |
 | Stripe | EUA | Dados de pagamento | Sim | PCI-DSS Level 1 |
 | GitHub Actions | EUA | Hashes de builds, metadados | Sim | SOC 2 |
 

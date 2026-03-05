@@ -2,7 +2,7 @@
 
 📌 **Projeto**: CyberShield Audit  
 📅 **Data da Organização**: 2026-02-21  
-🏗️ **Plataforma**: Lovable Cloud (Supabase)  
+🏗️ **Plataforma**: CyberShield Cloud (Supabase)  
 🔒 **Arquitetura**: Multi-tenant com RLS + HMAC  
 
 ---
