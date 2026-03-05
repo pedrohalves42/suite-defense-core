@@ -608,9 +608,9 @@ Deno.serve(async (req) => {
                     new_version: release.version,
                     old_version: currentVersion || 'unknown',
                   },
-                  // COST-OPT v3: 120s→300s heartbeat, 60s→120s poll (~60% cost reduction)
-                  heartbeat_interval_seconds: 300,
-                  poll_interval_seconds: 120,
+                  // COST-OPT v4: 300s→600s heartbeat, 120s→300s poll (~75% cost reduction)
+                  heartbeat_interval_seconds: 600,
+                  poll_interval_seconds: 300,
                 }),
                 {
                   headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -642,9 +642,9 @@ Deno.serve(async (req) => {
         agent: agent.agent_name,
         timestamp: new Date().toISOString(),
         script_sha256: null, // Compatibility field for legacy/v5.0.13 parsing
-        // COST-OPT v3: 120s→300s heartbeat, 60s→120s poll (~60% cost reduction)
-        heartbeat_interval_seconds: 300,   // Heartbeat every 5min (was 2min)
-        poll_interval_seconds: 120,        // Poll jobs every 2min (was 1min)
+        // COST-OPT v4: 300s→600s heartbeat, 120s→300s poll (~75% cost reduction target: R$10/endpoint/mês)
+        heartbeat_interval_seconds: 600,   // Heartbeat every 10min (was 5min)
+        poll_interval_seconds: 300,        // Poll jobs every 5min (was 2min)
         // Agent config flags
         skip_firewall_remediation: agent.skip_firewall_remediation || false,
       }),
