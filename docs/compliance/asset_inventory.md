@@ -133,7 +133,7 @@ Manter inventário completo de todos os componentes técnicos do CyberShield par
 
 | Secret | Armazenamento | Rotação |
 |--------|---------------|---------|
-| `ED25519_PRIVATE_KEY` | Supabase Vault | Anual |
+| `ED25519_PRIVATE_KEY` | CyberShield Cloud Vault | Anual |
 | `INTERNAL_SECRET` | Supabase Vault | Trimestral |
 | `STRIPE_SECRET_KEY` | Supabase Vault | Trimestral |
 | `STRIPE_WEBHOOK_SECRET` | Supabase Vault | Por necessidade |
