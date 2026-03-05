@@ -17,14 +17,14 @@ export const AGENT_STATUS_THRESHOLDS = {
   // Thresholds de Tempo Real (UI)
   // ========================================
   
-  /** Até X minutos desde o último heartbeat = Online (verde) */
-  ONLINE_MAX_MINUTES: 2,
+  /** Até X minutos desde o último heartbeat = Online (verde) - COST-OPT v4: ajustado para heartbeat de 10min */
+  ONLINE_MAX_MINUTES: 12,
   
   /** Entre ONLINE e WARNING = Intermitente (amarelo) */
-  WARNING_MAX_MINUTES: 5,
+  WARNING_MAX_MINUTES: 20,
   
   /** Mais de X minutos sem heartbeat = Offline (vermelho) */
-  OFFLINE_MIN_MINUTES: 10,
+  OFFLINE_MIN_MINUTES: 30,
   
   // ========================================
   // Thresholds de Alertas de Segurança
