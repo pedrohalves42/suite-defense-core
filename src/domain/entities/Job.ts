@@ -27,6 +27,7 @@ export enum JobStatus {
   FAILED = 'failed',
   TIMEOUT = 'timeout',
   CANCELLED = 'cancelled',
+  EXPIRED = 'expired',
 }
 
 export enum JobPriority {
