@@ -34,6 +34,11 @@ export const docsManifest: DocCategory[] = [
       { title: 'Privacidade de Dados', path: 'policies/13_data_privacy_policy.md' },
       { title: 'Uso Aceitável', path: 'policies/14_acceptable_use_policy.md' },
       { title: 'Divulgação Responsável', path: 'policies/15_responsible_disclosure_policy.md' },
+      { title: 'Política de Senhas', path: 'policies/16_password_policy.md' },
+      { title: 'Política de Backup e Restore', path: 'policies/17_backup_restore_policy.md' },
+      { title: 'Gestão de Patches', path: 'policies/18_patch_management_policy.md' },
+      { title: 'Classificação da Informação', path: 'policies/19_information_classification_policy.md' },
+      { title: 'Trabalho Remoto', path: 'policies/20_remote_work_policy.md' },
     ],
   },
   {
@@ -52,6 +57,7 @@ export const docsManifest: DocCategory[] = [
       { title: 'Plano de Remediação de Riscos', path: 'compliance/risk_remediation_plan.md' },
       { title: 'Matriz de Riscos', path: 'compliance/risk_matrix.md' },
       { title: 'Controles de Segurança', path: 'compliance/security_controls.md' },
+      { title: 'Registro de Consentimento (LGPD)', path: 'compliance/consent_register.md' },
     ],
   },
   {
@@ -129,6 +135,7 @@ export const docsManifest: DocCategory[] = [
       { title: 'Guia de Setup', path: 'operacoes/SETUP_GUIDE.md' },
       { title: 'Troubleshooting', path: 'operacoes/TROUBLESHOOTING.md' },
       { title: 'Guia de Linguagem', path: 'operacoes/LANGUAGE_GUIDE.md' },
+      { title: 'Plano de Capacidade', path: 'operacoes/capacity_plan.md' },
     ],
   },
   {
