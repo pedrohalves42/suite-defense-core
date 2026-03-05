@@ -240,7 +240,7 @@ export async function generatePDFFromMarkdown(
   }
 
   // Add footers to all pages
-  const totalPages = doc.internal.getNumberOfPages();
+  const totalPages = (doc as any).getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
     addFooter(p);
@@ -458,7 +458,7 @@ export async function generateConsolidatedPDF(
   }
 
   // Add page numbers
-  const totalPages = doc.internal.getNumberOfPages();
+  const totalPages = (doc as any).getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
     doc.setFontSize(8);

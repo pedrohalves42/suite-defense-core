@@ -262,7 +262,7 @@ function CategoryCard({
                 >
                   <div className="flex items-center gap-2">
                     {hasContent ? (
-                      <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                      <CheckCircle className="h-3.5 w-3.5 text-primary" />
                     ) : (
                       <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                     )}
