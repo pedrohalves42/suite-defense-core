@@ -8,8 +8,8 @@
 
 | Pasta | Conteúdo | Qtd |
 |-------|----------|:---:|
-| [`policies/`](./policies/) | Políticas de segurança e governança (ISP, ACP, CMP, etc.) | 15 |
-| [`compliance/`](./compliance/) | Conformidade SOC 2, LGPD, DPIA, SLA, matriz de riscos | 12 |
+| [`policies/`](./policies/) | Políticas de segurança e governança (ISP, ACP, CMP, PWD, BKP, PMP, ICL, RWP, etc.) | 20 |
+| [`compliance/`](./compliance/) | Conformidade SOC 2, LGPD, DPIA, SLA, matriz de riscos, registro de consentimento | 13 |
 | [`legal/`](./legal/) | Termos de serviço, DPA | 2 |
 | [`procedures/`](./procedures/) | Procedimentos operacionais (break glass, DR, MFA, incidentes) | 4 |
 | [`runbooks/`](./runbooks/) | Runbooks técnicos para resposta a incidentes | 6 |
@@ -18,7 +18,7 @@
 | [`agente/`](./agente/) | Guias de deploy, instalação, troubleshooting do agente | 20 |
 | [`jobs/`](./jobs/) | Engine de jobs, migração v3, governança | 6 |
 | [`api/`](./api/) | Documentação de API | 2 |
-| [`operacoes/`](./operacoes/) | Guias operacionais, troubleshooting, performance | 15 |
+| [`operacoes/`](./operacoes/) | Guias operacionais, troubleshooting, performance, capacidade | 16 |
 | [`governanca/`](./governanca/) | Whitepaper, framework de auditoria, governança IA | 5 |
 | [`testes/`](./testes/) | Validações, testes E2E, resultados de fases | 6 |
 | [`adr/`](./adr/) | Índice de Architecture Decision Records | 5 |
