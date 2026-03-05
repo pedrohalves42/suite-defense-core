@@ -216,7 +216,7 @@ const PROVIDERS: AIProviderConfig[] = [
   },
   {
     name: 'lovable',
-    displayName: 'Lovable AI',
+    displayName: 'Platform AI',
     baseUrl: 'https://ai.gateway.lovable.dev/v1/chat/completions',
     model: 'google/gemini-3-flash-preview',
     headers: () => ({

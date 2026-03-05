@@ -1,6 +1,6 @@
 // This module exports agent script content as TypeScript strings
-// so they can be accessed by Edge Functions at runtime in Lovable Cloud
-// (non-TS files are not bundled for deployment)
+// so they can be accessed by Edge Functions at runtime
+// (non-TS files are not bundled for cloud deployment)
 
 // To regenerate: read the .ps1/.sh files and paste content here as template literals
 // Only include the ACTIVE version that needs syncing

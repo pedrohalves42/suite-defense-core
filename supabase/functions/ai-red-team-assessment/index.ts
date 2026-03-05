@@ -166,7 +166,7 @@ serve(async (req) => {
       .replace('{metrics}', JSON.stringify(metrics, null, 2))
       .replace('{ana_summary}', anaSummary);
 
-    // Call AI via multi-provider routing (replaces direct Lovable AI call)
+    // Call AI via multi-provider routing
     const messages: AIMessage[] = [
       { role: 'system', content: personaPrompt.content },
       { role: 'user', content: analysisPrompt }

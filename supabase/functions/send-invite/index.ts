@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
     if (inviteError) throw inviteError;
 
     // Send email
-    const inviteLink = `${Deno.env.get('SITE_URL') || 'https://suite-defense-core.lovable.app'}/accept-invite?token=${inviteToken}`;
+    const inviteLink = `${Deno.env.get('SITE_URL') || 'https://cybershield.com.br'}/accept-invite?token=${inviteToken}`;
     
     // Get tenant name for email
     const { data: tenantData } = await supabaseAdmin
