@@ -1,0 +1,5 @@
+Contact: mailto:security@cybshield.com.br
+Expires: 2027-03-05T00:00:00.000Z
+Preferred-Languages: pt-BR, en
+Canonical: https://cybshield.com.br/.well-known/security.txt
+Policy: https://cybshield.com.br/politica-de-seguranca

@@ -1,8 +1,12 @@
 User-agent: Googlebot
 Allow: /
+Disallow: /admin
+Disallow: /api/
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin
+Disallow: /api/
 
 User-agent: Twitterbot
 Allow: /
@@ -12,3 +16,9 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /debug
+Disallow: /internal
+
+Sitemap: https://cybshield.com.br/sitemap.xml
