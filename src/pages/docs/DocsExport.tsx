@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
 // Vite glob import for all markdown files in docs/
-const markdownModules = import.meta.glob('/docs/**/*.md', { as: 'raw', eager: true }) as Record<string, string>;
+const markdownModules = import.meta.glob('/docs/**/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
 function getDocContent(path: string): string | null {
   // Try different path formats
