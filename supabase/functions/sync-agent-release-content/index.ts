@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
       } catch (readErr) {
         console.warn(`[sync] Codebase read failed, trying remote sources: ${(readErr as Error).message}`);
 
-        const publishedUrl = `https://cybershield-audit.lovable.app/agent-scripts/${filename}?cb=${Date.now()}`;
+        const publishedUrl = `${Deno.env.get('SITE_URL') || 'https://cybershield.com.br'}/agent-scripts/${filename}?cb=${Date.now()}`;
         const candidateUrls = [sourceUrl, publishedUrl].filter(Boolean);
         let fetchError = '';
 

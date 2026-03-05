@@ -1,5 +1,5 @@
 // Auto-generated: Agent script v5.0.8 embedded as TypeScript string
-// This file exists because .ps1 files are not bundled in Lovable Cloud deploys
+// This file exists because .ps1 files are not bundled in cloud edge function deploys
 // Generated from: supabase/functions/_shared/agent-scripts/cybershield-agent-windows-v5.ps1
 
 let _cachedContent: string | null = null;

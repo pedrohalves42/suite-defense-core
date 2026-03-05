@@ -1,14 +1,14 @@
 /**
  * AI Provider Helper - Backwards Compatible Bridge
  * 
- * This file provides a drop-in replacement for direct Lovable AI calls,
+ * This file provides a drop-in replacement for direct platform AI calls,
  * routing them through the multi-provider system while maintaining
  * backwards compatibility with existing code.
  * 
  * Usage (in existing edge functions):
  * 
  * BEFORE:
- * const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {...});
+ * const response = await fetch('https://ai.gateway.example.com/v1/chat/completions', {...});
  * 
  * AFTER:
  * import { callAI, callAIWithFallback } from '../_shared/ai-provider-helper.ts';
