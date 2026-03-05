@@ -19,24 +19,22 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
 // Vite glob import for all markdown files in docs/
-// Load markdown files - try multiple glob patterns
-const markdownModulesRoot = import.meta.glob('/docs/**/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
-const markdownModulesPublic = import.meta.glob('/public/docs/**/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
-
-const markdownModules: Record<string, string> = { ...markdownModulesRoot, ...markdownModulesPublic };
-
-console.log('[DocsExport] Available markdown files:', Object.keys(markdownModules));
-
-function getDocContent(path: string): string | null {
-  // Try different path formats
-  const candidates = [
-    `/docs/${path}`,
-    `docs/${path}`,
-    `/public/docs/${path}`,
-    `public/docs/${path}`,
-  ];
-  for (const candidate of candidates) {
-    if (markdownModules[candidate]) return markdownModules[candidate];
+async function fetchDocContent(path: string): Promise<string | null> {
+  // Try fetching from public/docs/ first, then root docs/ via base URL
+  const urls = [`/docs/${path}`];
+  for (const url of urls) {
+    try {
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const text = await resp.text();
+        // Verify it's actually markdown, not an HTML page (SPA fallback)
+        if (!text.startsWith('<!DOCTYPE') && !text.startsWith('<html')) {
+          return text;
+        }
+      }
+    } catch {
+      // continue to next
+    }
   }
   return null;
 }
