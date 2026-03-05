@@ -212,18 +212,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Atualizar heartbeat e last_used_at do token (usando hash)
-    // V-607 FIX: Usar ID único em vez de agent_name para evitar conflitos cross-tenant
-    await Promise.all([
-      supabase
-        .from('agents')
-        .update({ last_heartbeat: now.toISOString() })
-        .eq('id', token.agent_id),
-      supabase
-        .from('agent_tokens')
-        .update({ last_used_at: now.toISOString() })
-        .eq('token_hash', tokenHash)
-    ])
+    // COST-OPT v4.1: Removido update de last_heartbeat aqui — já feito pelo heartbeat dedicado (10min)
+    // Apenas atualizar last_used_at do token para tracking de uso
+    await supabase
+      .from('agent_tokens')
+      .update({ last_used_at: now.toISOString() })
+      .eq('token_hash', tokenHash)
 
     logger.info('Fetching jobs for agent', { agentName: agent.agent_name, agentId: token.agent_id })
     
