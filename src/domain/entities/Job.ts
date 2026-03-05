@@ -27,6 +27,7 @@ export enum JobStatus {
   FAILED = 'failed',
   TIMEOUT = 'timeout',
   CANCELLED = 'cancelled',
+  EXPIRED = 'expired',
 }
 
 export enum JobPriority {
@@ -226,6 +227,16 @@ export class Job extends Entity<JobId> {
     return Result.success(undefined);
   }
 
+  expire(): Result<void, DomainError> {
+    if (this.isTerminal()) {
+      return Result.failure(new DomainError(`Job ${this.id.value} is already in terminal state`));
+    }
+    this._status = JobStatus.EXPIRED;
+    this._completedAt = new Date();
+    this._error = 'Job expired - TTL exceeded without completion';
+    return Result.success(undefined);
+  }
+
   queue(): Result<void, DomainError> {
     if (this._status !== JobStatus.PENDING) {
       return Result.failure(new DomainError(`Job ${this.id.value} cannot be queued from status ${this._status}`));
@@ -244,7 +255,7 @@ export class Job extends Entity<JobId> {
   }
 
   isTerminal(): boolean {
-    return [JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.TIMEOUT, JobStatus.CANCELLED]
+    return [JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.TIMEOUT, JobStatus.CANCELLED, JobStatus.EXPIRED]
       .includes(this._status);
   }
 
