@@ -36,10 +36,10 @@ Definir procedimentos técnicos para recuperação de serviços em caso de desas
 
 | Componente | Provider | Região | Redundância |
 |-----------|----------|--------|-------------|
-| Banco de Dados | Lovable Cloud (Supabase/AWS) | us-east-1 | Multi-AZ |
-| Edge Functions | Lovable Cloud (Deno Deploy) | Global Edge | Automática |
-| Autenticação | Lovable Cloud (GoTrue) | us-east-1 | Multi-AZ |
-| Frontend | Lovable CDN | Global | Multi-POP |
+| Banco de Dados | CyberShield Cloud (Supabase/AWS) | us-east-1 | Multi-AZ |
+| Edge Functions | CyberShield Cloud (Deno Deploy) | Global Edge | Automática |
+| Autenticação | CyberShield Cloud (GoTrue) | us-east-1 | Multi-AZ |
+| Frontend | CyberShield CDN | Global | Multi-POP |
 | Pagamentos | Stripe | Global | N/A |
 | CI/CD | GitHub Actions | Global | N/A |
 
