@@ -1,7 +1,33 @@
 /**
- * Converts markdown content to a formatted PDF using jsPDF.
- * Handles headers, paragraphs, lists, code blocks, tables, and bold/italic text.
+ * Professional PDF generator from Markdown content using jsPDF.
+ * Features: branded cover page, colored headers, styled tables, 
+ * code blocks, blockquotes, proper footers, and logo integration.
  */
+
+import { loadLogoForPDF, addLogoToPDF } from './pdfLogoHelper';
+
+// ─── Brand Colors (RGB) ───────────────────────────────────────
+const COLORS = {
+  brand:       [0, 102, 204] as const,     // #0066CC - CyberShield blue
+  brandDark:   [0, 71, 153] as const,      // darker blue
+  brandLight:  [230, 242, 255] as const,   // light blue bg
+  text:        [30, 41, 59] as const,      // slate-800
+  textLight:   [100, 116, 139] as const,   // slate-500
+  textMuted:   [148, 163, 184] as const,   // slate-400
+  heading:     [15, 23, 42] as const,      // slate-900
+  codeBg:      [241, 245, 249] as const,   // slate-100
+  codeBorder:  [203, 213, 225] as const,   // slate-300
+  tableBg:     [248, 250, 252] as const,   // slate-50
+  tableHeader: [15, 23, 42] as const,      // slate-900
+  tableBorder: [226, 232, 240] as const,   // slate-200
+  quoteBorder: [0, 102, 204] as const,
+  quoteBg:     [240, 247, 255] as const,
+  hrColor:     [226, 232, 240] as const,
+  white:       [255, 255, 255] as const,
+  success:     [22, 163, 74] as const,
+  warning:     [234, 179, 8] as const,
+  danger:      [220, 38, 38] as const,
+};
 
 interface PDFContext {
   doc: any;
@@ -12,22 +38,29 @@ interface PDFContext {
   marginRight: number;
   marginTop: number;
   marginBottom: number;
-  lineHeight: number;
+  contentWidth: number;
+  pageNumber: number;
+  title: string;
+  logoDataUrl: string | null;
 }
 
-function checkPageBreak(ctx: PDFContext, neededSpace: number = 10): PDFContext {
-  if (ctx.y + neededSpace > ctx.pageHeight - ctx.marginBottom) {
-    ctx.doc.addPage();
-    ctx.y = ctx.marginTop;
+function newPage(ctx: PDFContext): void {
+  ctx.doc.addPage();
+  ctx.pageNumber++;
+  ctx.y = ctx.marginTop;
+}
+
+function checkPageBreak(ctx: PDFContext, needed: number = 10): void {
+  if (ctx.y + needed > ctx.pageHeight - ctx.marginBottom) {
+    newPage(ctx);
   }
-  return ctx;
 }
 
 function wrapText(doc: any, text: string, maxWidth: number): string[] {
   return doc.splitTextToSize(text, maxWidth);
 }
 
-function stripMarkdownFormatting(text: string): string {
+function strip(text: string): string {
   return text
     .replace(/\*\*(.*?)\*\*/g, '$1')
     .replace(/\*(.*?)\*/g, '$1')
@@ -36,20 +69,537 @@ function stripMarkdownFormatting(text: string): string {
     .replace(/~~(.*?)~~/g, '$1');
 }
 
+// ─── Header/Footer Rendering ─────────────────────────────────
+
+function renderHeader(ctx: PDFContext): void {
+  const { doc, pageWidth, marginLeft, marginRight } = ctx;
+  // Thin brand line at top
+  doc.setDrawColor(...COLORS.brand);
+  doc.setLineWidth(0.8);
+  doc.line(0, 0, pageWidth, 0);
+  
+  // Small logo + title in header area
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...COLORS.textMuted);
+  doc.text('CYBERSHIELD', marginLeft, 8);
+  
+  // Thin separator
+  doc.setDrawColor(...COLORS.tableBorder);
+  doc.setLineWidth(0.2);
+  doc.line(marginLeft, 10, pageWidth - marginRight, 10);
+}
+
+function renderFooter(ctx: PDFContext, pageNum: number, totalPages: number): void {
+  const { doc, pageWidth, pageHeight, marginLeft, marginRight } = ctx;
+  const footerY = pageHeight - 8;
+  
+  // Separator line
+  doc.setDrawColor(...COLORS.tableBorder);
+  doc.setLineWidth(0.2);
+  doc.line(marginLeft, footerY - 4, pageWidth - marginRight, footerY - 4);
+  
+  // Left: document title
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...COLORS.textMuted);
+  const footerTitle = ctx.title.length > 50 ? ctx.title.substring(0, 47) + '...' : ctx.title;
+  doc.text(footerTitle, marginLeft, footerY);
+  
+  // Center: "Confidencial"
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.textMuted);
+  doc.text('CONFIDENCIAL', pageWidth / 2, footerY, { align: 'center' });
+  
+  // Right: page number
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${pageNum} / ${totalPages}`, pageWidth - marginRight, footerY, { align: 'right' });
+}
+
+// ─── Cover Page ───────────────────────────────────────────────
+
+function renderCoverPage(ctx: PDFContext, subtitle?: string, docCount?: number): void {
+  const { doc, pageWidth, pageHeight } = ctx;
+  
+  // Full-height brand gradient bar on left
+  doc.setFillColor(...COLORS.brand);
+  doc.rect(0, 0, 8, pageHeight, 'F');
+  
+  // Top brand line
+  doc.setFillColor(...COLORS.brand);
+  doc.rect(0, 0, pageWidth, 3, 'F');
+  
+  // Logo
+  const logoY = 55;
+  addLogoToPDF(doc, ctx.logoDataUrl, pageWidth / 2, logoY, 28);
+  
+  // Title
+  let y = logoY + 38;
+  doc.setFontSize(34);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.heading);
+  doc.text('CyberShield', pageWidth / 2, y, { align: 'center' });
+  y += 12;
+  
+  // Decorative line
+  doc.setDrawColor(...COLORS.brand);
+  doc.setLineWidth(1);
+  doc.line(pageWidth / 2 - 30, y, pageWidth / 2 + 30, y);
+  y += 12;
+  
+  // Subtitle
+  if (subtitle) {
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.textLight);
+    const subLines = wrapText(doc, subtitle, 140);
+    subLines.forEach((sl: string) => {
+      doc.text(sl, pageWidth / 2, y, { align: 'center' });
+      y += 8;
+    });
+  }
+  
+  if (docCount) {
+    y += 5;
+    doc.setFontSize(11);
+    doc.setTextColor(...COLORS.textMuted);
+    doc.text(`${docCount} documentos`, pageWidth / 2, y, { align: 'center' });
+    y += 8;
+  }
+  
+  // Date box at bottom
+  const boxY = pageHeight - 50;
+  doc.setFillColor(...COLORS.brandLight);
+  doc.roundedRect(pageWidth / 2 - 50, boxY, 100, 22, 3, 3, 'F');
+  
+  const now = new Date();
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...COLORS.brand);
+  doc.text('Data de geração', pageWidth / 2, boxY + 8, { align: 'center' });
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text(
+    `${now.toLocaleDateString('pt-BR')} • ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`,
+    pageWidth / 2, boxY + 16, { align: 'center' }
+  );
+  
+  // Bottom brand bar
+  doc.setFillColor(...COLORS.brand);
+  doc.rect(0, pageHeight - 6, pageWidth, 6, 'F');
+}
+
+// ─── Table of Contents ────────────────────────────────────────
+
+function renderTableOfContents(
+  ctx: PDFContext,
+  documents: { title: string; category: string }[]
+): void {
+  newPage(ctx);
+  const { doc, marginLeft, marginRight, pageWidth } = ctx;
+  
+  // TOC title
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...COLORS.heading);
+  doc.text('Índice', marginLeft, ctx.y);
+  ctx.y += 4;
+  
+  doc.setDrawColor(...COLORS.brand);
+  doc.setLineWidth(0.8);
+  doc.line(marginLeft, ctx.y, marginLeft + 25, ctx.y);
+  ctx.y += 10;
+  
+  let currentCategory = '';
+  let docIndex = 0;
+  
+  documents.forEach((item) => {
+    if (item.category !== currentCategory) {
+      currentCategory = item.category;
+      checkPageBreak(ctx, 14);
+      ctx.y += 4;
+      
+      // Category heading with brand accent
+      doc.setFillColor(...COLORS.brand);
+      doc.rect(marginLeft, ctx.y - 4, 2, 6, 'F');
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...COLORS.brand);
+      doc.text(currentCategory, marginLeft + 6, ctx.y);
+      ctx.y += 7;
+    }
+    
+    docIndex++;
+    checkPageBreak(ctx, 6);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.text);
+    
+    // Number
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...COLORS.textMuted);
+    const numStr = String(docIndex).padStart(2, '0');
+    doc.text(numStr, marginLeft + 6, ctx.y);
+    
+    // Title with dot leaders
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.text);
+    const maxTitleWidth = ctx.contentWidth - 20;
+    const titleText = item.title.length > 70 ? item.title.substring(0, 67) + '...' : item.title;
+    doc.text(titleText, marginLeft + 16, ctx.y);
+    
+    // Dotted line
+    doc.setDrawColor(...COLORS.tableBorder);
+    doc.setLineDashPattern([0.5, 1.5], 0);
+    const titleWidth = doc.getTextWidth(titleText);
+    const dotsStart = marginLeft + 17 + titleWidth;
+    const dotsEnd = pageWidth - marginRight;
+    if (dotsEnd > dotsStart + 5) {
+      doc.line(dotsStart, ctx.y - 0.5, dotsEnd, ctx.y - 0.5);
+    }
+    doc.setLineDashPattern([], 0);
+    
+    ctx.y += 5.5;
+  });
+}
+
+// ─── Content Rendering ────────────────────────────────────────
+
+function renderMarkdownContent(ctx: PDFContext, content: string): void {
+  const lines = content.split('\n');
+  let inCodeBlock = false;
+  let inTable = false;
+  let tableRows: string[][] = [];
+  let inBlockquote = false;
+  let blockquoteLines: string[] = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // ── Code blocks ──
+    if (line.startsWith('```')) {
+      if (inCodeBlock) {
+        inCodeBlock = false;
+        ctx.y += 3;
+      } else {
+        inCodeBlock = true;
+        ctx.y += 2;
+      }
+      continue;
+    }
+    
+    if (inCodeBlock) {
+      renderCodeLine(ctx, line);
+      continue;
+    }
+    
+    // ── Blockquotes ──
+    if (line.startsWith('>')) {
+      const quoteText = line.replace(/^>\s?/, '');
+      if (!inBlockquote) {
+        inBlockquote = true;
+        blockquoteLines = [];
+      }
+      blockquoteLines.push(quoteText);
+      
+      const nextLine = lines[i + 1];
+      if (!nextLine || !nextLine.startsWith('>')) {
+        renderBlockquote(ctx, blockquoteLines.join(' '));
+        inBlockquote = false;
+        blockquoteLines = [];
+      }
+      continue;
+    }
+    
+    // ── Tables ──
+    if (line.includes('|') && line.trim().startsWith('|')) {
+      const cells = line.split('|').filter(c => c.trim() !== '').map(c => c.trim());
+      if (cells.every(c => /^[-:]+$/.test(c))) continue;
+      
+      if (!inTable) {
+        inTable = true;
+        tableRows = [];
+      }
+      tableRows.push(cells);
+      
+      const nextLine = lines[i + 1];
+      if (!nextLine || !(nextLine.includes('|') && nextLine.trim().startsWith('|'))) {
+        renderTable(ctx, tableRows);
+        inTable = false;
+        tableRows = [];
+        ctx.y += 4;
+      }
+      continue;
+    }
+    
+    // ── Empty line ──
+    if (line.trim() === '') {
+      ctx.y += 3;
+      continue;
+    }
+    
+    // ── Headers ──
+    const headerMatch = line.match(/^(#{1,6})\s+(.+)/);
+    if (headerMatch) {
+      renderHeading(ctx, headerMatch[1].length, strip(headerMatch[2]));
+      continue;
+    }
+    
+    // ── List items ──
+    const listMatch = line.match(/^(\s*)([-*+]|\d+\.)\s+(.+)/);
+    if (listMatch) {
+      renderListItem(ctx, listMatch);
+      continue;
+    }
+    
+    // ── Horizontal rule ──
+    if (/^---+$/.test(line.trim()) || /^\*\*\*+$/.test(line.trim())) {
+      renderHorizontalRule(ctx);
+      continue;
+    }
+    
+    // ── Regular paragraph ──
+    renderParagraph(ctx, strip(line));
+  }
+}
+
+function renderHeading(ctx: PDFContext, level: number, text: string): void {
+  const { doc, marginLeft, contentWidth } = ctx;
+  const config: Record<number, { size: number; spacing: number; underline: boolean; color: readonly [number, number, number] }> = {
+    1: { size: 18, spacing: 10, underline: true, color: COLORS.heading },
+    2: { size: 15, spacing: 8, underline: true, color: COLORS.heading },
+    3: { size: 13, spacing: 6, underline: false, color: COLORS.brand },
+    4: { size: 11, spacing: 5, underline: false, color: COLORS.text },
+    5: { size: 10, spacing: 4, underline: false, color: COLORS.textLight },
+    6: { size: 9, spacing: 4, underline: false, color: COLORS.textLight },
+  };
+  const cfg = config[level] || config[6];
+  
+  checkPageBreak(ctx, cfg.size + cfg.spacing + 5);
+  ctx.y += cfg.spacing;
+  
+  // Accent bar for H1/H2
+  if (level <= 2) {
+    doc.setFillColor(...COLORS.brand);
+    doc.rect(marginLeft, ctx.y - 5, 3, cfg.size * 0.6, 'F');
+  }
+  
+  doc.setFontSize(cfg.size);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...cfg.color);
+  
+  const xOffset = level <= 2 ? 7 : 0;
+  const headerLines = wrapText(doc, text, contentWidth - xOffset);
+  headerLines.forEach((hl: string) => {
+    checkPageBreak(ctx, cfg.size * 0.5 + 1);
+    doc.text(hl, marginLeft + xOffset, ctx.y);
+    ctx.y += cfg.size * 0.5 + 1;
+  });
+  
+  if (cfg.underline) {
+    ctx.y += 1;
+    doc.setDrawColor(...COLORS.tableBorder);
+    doc.setLineWidth(0.3);
+    doc.line(marginLeft, ctx.y, marginLeft + contentWidth, ctx.y);
+    ctx.y += 3;
+  }
+  ctx.y += 2;
+}
+
+function renderCodeLine(ctx: PDFContext, line: string): void {
+  const { doc, marginLeft, contentWidth } = ctx;
+  checkPageBreak(ctx, 6);
+  
+  doc.setFontSize(8);
+  doc.setFont('courier', 'normal');
+  doc.setTextColor(30, 41, 59);
+  
+  const codeLines = wrapText(doc, line || ' ', contentWidth - 12);
+  codeLines.forEach((cl: string) => {
+    checkPageBreak(ctx, 5);
+    // Background
+    doc.setFillColor(...COLORS.codeBg);
+    doc.rect(marginLeft, ctx.y - 3.5, contentWidth, 5, 'F');
+    // Left border accent
+    doc.setFillColor(...COLORS.codeBorder);
+    doc.rect(marginLeft, ctx.y - 3.5, 1, 5, 'F');
+    doc.text(cl, marginLeft + 5, ctx.y);
+    ctx.y += 4.5;
+  });
+}
+
+function renderBlockquote(ctx: PDFContext, text: string): void {
+  const { doc, marginLeft, contentWidth } = ctx;
+  const cleanText = strip(text);
+  
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'italic');
+  const qLines = wrapText(doc, cleanText, contentWidth - 14);
+  const blockHeight = qLines.length * 5 + 4;
+  
+  checkPageBreak(ctx, blockHeight);
+  
+  // Background
+  doc.setFillColor(...COLORS.quoteBg);
+  doc.rect(marginLeft, ctx.y - 3, contentWidth, blockHeight, 'F');
+  // Left border
+  doc.setFillColor(...COLORS.quoteBorder);
+  doc.rect(marginLeft, ctx.y - 3, 2.5, blockHeight, 'F');
+  
+  ctx.y += 1;
+  doc.setTextColor(...COLORS.text);
+  qLines.forEach((ql: string) => {
+    doc.text(ql, marginLeft + 8, ctx.y);
+    ctx.y += 5;
+  });
+  ctx.y += 3;
+}
+
+function renderTable(ctx: PDFContext, rows: string[][]): void {
+  if (rows.length === 0) return;
+  const { doc, marginLeft, contentWidth } = ctx;
+  
+  const colCount = Math.max(...rows.map(r => r.length));
+  const colWidth = contentWidth / colCount;
+  const rowHeight = 6.5;
+  
+  // Calculate total table height for page break check
+  const totalHeight = rows.length * rowHeight + 2;
+  checkPageBreak(ctx, Math.min(totalHeight, 40));
+  
+  rows.forEach((row, rowIdx) => {
+    checkPageBreak(ctx, rowHeight + 1);
+    const isHeader = rowIdx === 0;
+    const rowY = ctx.y - 4;
+    
+    if (isHeader) {
+      // Dark header
+      doc.setFillColor(...COLORS.tableHeader);
+      doc.rect(marginLeft, rowY, contentWidth, rowHeight, 'F');
+    } else if (rowIdx % 2 === 0) {
+      // Zebra striping
+      doc.setFillColor(...COLORS.tableBg);
+      doc.rect(marginLeft, rowY, contentWidth, rowHeight, 'F');
+    }
+    
+    // Cell borders
+    doc.setDrawColor(...COLORS.tableBorder);
+    doc.setLineWidth(0.15);
+    doc.rect(marginLeft, rowY, contentWidth, rowHeight, 'S');
+    
+    // Vertical lines
+    for (let c = 1; c < colCount; c++) {
+      doc.line(marginLeft + c * colWidth, rowY, marginLeft + c * colWidth, rowY + rowHeight);
+    }
+    
+    // Cell text
+    doc.setFontSize(8);
+    doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
+    doc.setTextColor(isHeader ? 255 : COLORS.text[0], isHeader ? 255 : COLORS.text[1], isHeader ? 255 : COLORS.text[2]);
+    
+    row.forEach((cell, colIdx) => {
+      const x = marginLeft + colIdx * colWidth + 2;
+      const text = strip(cell);
+      const maxCellWidth = colWidth - 4;
+      const truncated = doc.getTextWidth(text) > maxCellWidth
+        ? text.substring(0, Math.floor(text.length * maxCellWidth / doc.getTextWidth(text))) + '…'
+        : text;
+      doc.text(truncated, x, ctx.y);
+    });
+    ctx.y += rowHeight;
+  });
+}
+
+function renderListItem(ctx: PDFContext, match: RegExpMatchArray): void {
+  const { doc, marginLeft, contentWidth } = ctx;
+  const indent = Math.min(Math.floor(match[1].length / 2) * 5, 20);
+  const text = strip(match[3]);
+  const isOrdered = /\d+\./.test(match[2]);
+  
+  checkPageBreak(ctx, 6);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...COLORS.text);
+  
+  const bulletX = marginLeft + indent;
+  
+  if (isOrdered) {
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...COLORS.brand);
+    doc.text(match[2], bulletX, ctx.y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.text);
+  } else {
+    // Filled circle bullet
+    doc.setFillColor(...COLORS.brand);
+    doc.circle(bulletX + 1.5, ctx.y - 1.2, 0.8, 'F');
+  }
+  
+  const itemLines = wrapText(doc, text, contentWidth - indent - 10);
+  itemLines.forEach((il: string, idx: number) => {
+    if (idx > 0) checkPageBreak(ctx, 5);
+    doc.text(il, bulletX + 6, ctx.y);
+    if (idx < itemLines.length - 1) ctx.y += 5;
+  });
+  ctx.y += 5.5;
+}
+
+function renderHorizontalRule(ctx: PDFContext): void {
+  const { doc, marginLeft, pageWidth, marginRight } = ctx;
+  checkPageBreak(ctx, 8);
+  ctx.y += 4;
+  doc.setDrawColor(...COLORS.hrColor);
+  doc.setLineWidth(0.4);
+  const center = pageWidth / 2;
+  doc.line(marginLeft, ctx.y, center - 5, ctx.y);
+  // Diamond ornament
+  doc.setFillColor(...COLORS.brand);
+  doc.setDrawColor(...COLORS.brand);
+  // Small diamond shape via lines
+  const d = 1.5;
+  doc.line(center - d, ctx.y, center, ctx.y - d);
+  doc.line(center, ctx.y - d, center + d, ctx.y);
+  doc.line(center + d, ctx.y, center, ctx.y + d);
+  doc.line(center, ctx.y + d, center - d, ctx.y);
+  
+  doc.setDrawColor(...COLORS.hrColor);
+  doc.line(center + 5, ctx.y, pageWidth - marginRight, ctx.y);
+  ctx.y += 6;
+}
+
+function renderParagraph(ctx: PDFContext, text: string): void {
+  const { doc, marginLeft, contentWidth } = ctx;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...COLORS.text);
+  
+  const pLines = wrapText(doc, text, contentWidth);
+  pLines.forEach((pl: string) => {
+    checkPageBreak(ctx, 5);
+    doc.text(pl, marginLeft, ctx.y);
+    ctx.y += 5;
+  });
+  ctx.y += 1;
+}
+
+// ─── Public API ───────────────────────────────────────────────
+
 export async function generatePDFFromMarkdown(
   title: string,
   markdownContent: string
 ): Promise<Blob> {
   const { default: jsPDF } = await import('jspdf');
+  const logoDataUrl = await loadLogoForPDF();
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const marginLeft = 15;
-  const marginRight = 15;
-  const marginTop = 20;
-  const marginBottom = 20;
-  const contentWidth = pageWidth - marginLeft - marginRight;
+  const marginLeft = 18;
+  const marginRight = 18;
+  const marginTop = 16;
+  const marginBottom = 16;
 
   const ctx: PDFContext = {
     doc,
@@ -60,412 +610,112 @@ export async function generatePDFFromMarkdown(
     marginRight,
     marginTop,
     marginBottom,
-    lineHeight: 6,
+    contentWidth: pageWidth - marginLeft - marginRight,
+    pageNumber: 1,
+    title,
+    logoDataUrl,
   };
 
-  // Title page
-  doc.setFontSize(22);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(15, 23, 42); // slate-900
-  const titleLines = wrapText(doc, title, contentWidth);
-  titleLines.forEach((line: string) => {
-    checkPageBreak(ctx, 12);
-    doc.text(line, marginLeft, ctx.y);
-    ctx.y += 10;
-  });
+  // Cover page
+  renderCoverPage(ctx, title);
+  
+  // Content starts on next page
+  newPage(ctx);
+  ctx.y = marginTop + 4;
+  
+  renderMarkdownContent(ctx, markdownContent);
 
-  ctx.y += 5;
-  doc.setDrawColor(59, 130, 246); // blue-500
-  doc.setLineWidth(0.5);
-  doc.line(marginLeft, ctx.y, pageWidth - marginRight, ctx.y);
-  ctx.y += 10;
-
-  // Footer with page number and date
-  const addFooter = (pageNum: number) => {
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(148, 163, 184);
-    doc.text(`CyberShield • ${title}`, marginLeft, pageHeight - 10);
-    doc.text(`Página ${pageNum}`, pageWidth - marginRight, pageHeight - 10, { align: 'right' });
-  };
-
-  // Parse and render markdown
-  const lines = markdownContent.split('\n');
-  let inCodeBlock = false;
-  let inTable = false;
-  let tableRows: string[][] = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // Code blocks
-    if (line.startsWith('```')) {
-      if (inCodeBlock) {
-        inCodeBlock = false;
-        ctx.y += 3;
-        continue;
-      }
-      inCodeBlock = true;
-      ctx.y += 2;
-      continue;
-    }
-
-    if (inCodeBlock) {
-      checkPageBreak(ctx, 6);
-      doc.setFontSize(8);
-      doc.setFont('courier', 'normal');
-      doc.setTextColor(30, 41, 59);
-      doc.setFillColor(241, 245, 249); // slate-100
-      const codeLines = wrapText(doc, line || ' ', contentWidth - 10);
-      codeLines.forEach((cl: string) => {
-        checkPageBreak(ctx, 5);
-        doc.rect(marginLeft, ctx.y - 3.5, contentWidth, 5, 'F');
-        doc.text(cl, marginLeft + 3, ctx.y);
-        ctx.y += 4.5;
-      });
-      continue;
-    }
-
-    // Table detection
-    if (line.includes('|') && line.trim().startsWith('|')) {
-      const cells = line.split('|').filter(c => c.trim() !== '').map(c => c.trim());
-      // Skip separator rows
-      if (cells.every(c => /^[-:]+$/.test(c))) continue;
-      
-      if (!inTable) {
-        inTable = true;
-        tableRows = [];
-      }
-      tableRows.push(cells);
-      
-      // Check if next line is not a table
-      const nextLine = lines[i + 1];
-      if (!nextLine || !(nextLine.includes('|') && nextLine.trim().startsWith('|'))) {
-        // Render table
-        renderSimpleTable(ctx, tableRows, contentWidth);
-        inTable = false;
-        tableRows = [];
-        ctx.y += 3;
-      }
-      continue;
-    }
-
-    // Empty line
-    if (line.trim() === '') {
-      ctx.y += 3;
-      continue;
-    }
-
-    // Headers
-    const headerMatch = line.match(/^(#{1,6})\s+(.+)/);
-    if (headerMatch) {
-      const level = headerMatch[1].length;
-      const text = stripMarkdownFormatting(headerMatch[2]);
-      const sizes = [18, 15, 13, 11, 10, 9];
-      const fontSize = sizes[level - 1] || 9;
-
-      checkPageBreak(ctx, fontSize + 5);
-      ctx.y += level <= 2 ? 8 : 4;
-      doc.setFontSize(fontSize);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(15, 23, 42);
-
-      const headerLines = wrapText(doc, text, contentWidth);
-      headerLines.forEach((hl: string) => {
-        checkPageBreak(ctx, fontSize * 0.5);
-        doc.text(hl, marginLeft, ctx.y);
-        ctx.y += fontSize * 0.5 + 1;
-      });
-
-      if (level <= 2) {
-        doc.setDrawColor(226, 232, 240);
-        doc.setLineWidth(0.3);
-        doc.line(marginLeft, ctx.y, pageWidth - marginRight, ctx.y);
-        ctx.y += 3;
-      }
-      ctx.y += 2;
-      continue;
-    }
-
-    // List items
-    const listMatch = line.match(/^(\s*)([-*+]|\d+\.)\s+(.+)/);
-    if (listMatch) {
-      const indent = Math.min(Math.floor(listMatch[1].length / 2) * 5, 20);
-      const text = stripMarkdownFormatting(listMatch[3]);
-      const isOrdered = /\d+\./.test(listMatch[2]);
-
-      checkPageBreak(ctx, 6);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(51, 65, 85);
-
-      const bullet = isOrdered ? listMatch[2] : '•';
-      const bulletX = marginLeft + indent;
-      doc.text(bullet, bulletX, ctx.y);
-
-      const itemLines = wrapText(doc, text, contentWidth - indent - 8);
-      itemLines.forEach((il: string, idx: number) => {
-        if (idx > 0) checkPageBreak(ctx, 5);
-        doc.text(il, bulletX + 6, ctx.y);
-        if (idx < itemLines.length - 1) ctx.y += 5;
-      });
-      ctx.y += 5;
-      continue;
-    }
-
-    // Horizontal rule
-    if (/^---+$/.test(line.trim())) {
-      checkPageBreak(ctx, 5);
-      ctx.y += 3;
-      doc.setDrawColor(203, 213, 225);
-      doc.setLineWidth(0.3);
-      doc.line(marginLeft, ctx.y, pageWidth - marginRight, ctx.y);
-      ctx.y += 5;
-      continue;
-    }
-
-    // Regular paragraph
-    const text = stripMarkdownFormatting(line);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(51, 65, 85);
-
-    const pLines = wrapText(doc, text, contentWidth);
-    pLines.forEach((pl: string) => {
-      checkPageBreak(ctx, 5);
-      doc.text(pl, marginLeft, ctx.y);
-      ctx.y += 5;
-    });
-    ctx.y += 1;
-  }
-
-  // Add footers to all pages
+  // Apply headers & footers to all pages (skip cover)
   const totalPages = (doc as any).getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
-    addFooter(p);
+    if (p === 1) continue; // skip cover
+    renderHeader(ctx);
+    renderFooter(ctx, p - 1, totalPages - 1);
   }
 
   return doc.output('blob');
 }
 
-function renderSimpleTable(ctx: PDFContext, rows: string[][], contentWidth: number) {
-  if (rows.length === 0) return;
-
-  const colCount = Math.max(...rows.map(r => r.length));
-  const colWidth = contentWidth / colCount;
-
-  rows.forEach((row, rowIdx) => {
-    checkPageBreak(ctx, 7);
-    const isHeader = rowIdx === 0;
-
-    if (isHeader) {
-      ctx.doc.setFillColor(241, 245, 249);
-      ctx.doc.rect(ctx.marginLeft, ctx.y - 4, contentWidth, 6, 'F');
-    }
-
-    ctx.doc.setFontSize(8);
-    ctx.doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
-    ctx.doc.setTextColor(30, 41, 59);
-
-    row.forEach((cell, colIdx) => {
-      const x = ctx.marginLeft + colIdx * colWidth + 2;
-      const text = stripMarkdownFormatting(cell);
-      const truncated = text.length > 40 ? text.substring(0, 37) + '...' : text;
-      ctx.doc.text(truncated, x, ctx.y);
-    });
-    ctx.y += 5;
-  });
-}
-
-/**
- * Generate a single consolidated PDF from multiple documents
- */
 export async function generateConsolidatedPDF(
   documents: { title: string; category: string; content: string }[]
 ): Promise<Blob> {
   const { default: jsPDF } = await import('jspdf');
+  const logoDataUrl = await loadLogoForPDF();
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const marginLeft = 15;
-  const marginRight = 15;
-  const marginTop = 20;
-  const marginBottom = 20;
-  const contentWidth = pageWidth - marginLeft - marginRight;
-  let y = marginTop;
+  const marginLeft = 18;
+  const marginRight = 18;
+  const marginTop = 16;
+  const marginBottom = 16;
 
-  // Cover page
-  y = 80;
-  doc.setFontSize(32);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(15, 23, 42);
-  doc.text('CyberShield', pageWidth / 2, y, { align: 'center' });
-  y += 15;
+  const ctx: PDFContext = {
+    doc,
+    y: marginTop,
+    pageHeight,
+    pageWidth,
+    marginLeft,
+    marginRight,
+    marginTop,
+    marginBottom,
+    contentWidth: pageWidth - marginLeft - marginRight,
+    pageNumber: 1,
+    title: 'Documentação Completa',
+    logoDataUrl,
+  };
 
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(71, 85, 105);
-  doc.text('Documentação Completa', pageWidth / 2, y, { align: 'center' });
-  y += 10;
+  // Cover
+  renderCoverPage(ctx, 'Documentação Completa de Governança, Segurança e Operações', documents.length);
 
-  doc.setFontSize(11);
-  doc.text(`${documents.length} documentos`, pageWidth / 2, y, { align: 'center' });
-  y += 8;
-
-  const now = new Date();
-  doc.setFontSize(10);
-  doc.setTextColor(148, 163, 184);
-  doc.text(
-    `Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`,
-    pageWidth / 2, y, { align: 'center' }
-  );
-
-  // Table of contents
-  doc.addPage();
-  y = marginTop;
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(15, 23, 42);
-  doc.text('Índice', marginLeft, y);
-  y += 12;
-
-  let currentCategory = '';
-  documents.forEach((docItem, idx) => {
-    if (docItem.category !== currentCategory) {
-      currentCategory = docItem.category;
-      if (y + 12 > pageHeight - marginBottom) {
-        doc.addPage();
-        y = marginTop;
-      }
-      y += 4;
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(59, 130, 246);
-      doc.text(currentCategory, marginLeft, y);
-      y += 6;
-    }
-
-    if (y + 6 > pageHeight - marginBottom) {
-      doc.addPage();
-      y = marginTop;
-    }
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(71, 85, 105);
-    const tocText = `${idx + 1}. ${docItem.title}`;
-    doc.text(tocText.length > 80 ? tocText.substring(0, 77) + '...' : tocText, marginLeft + 5, y);
-    y += 5;
-  });
+  // Table of Contents
+  renderTableOfContents(ctx, documents);
 
   // Each document
   for (const docItem of documents) {
-    doc.addPage();
-    // Use the single-doc renderer for content
-    const singleBlob = await generatePDFFromMarkdown(docItem.title, docItem.content);
-    // We can't merge blobs, so render inline instead
-    y = marginTop;
-
+    newPage(ctx);
+    ctx.y = ctx.marginTop + 4;
+    
     // Category badge
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(59, 130, 246);
-    doc.text(docItem.category.toUpperCase(), marginLeft, y);
-    y += 8;
-
-    // Title
+    doc.setFillColor(...COLORS.brandLight);
+    doc.setDrawColor(...COLORS.brand);
+    const catText = docItem.category.toUpperCase();
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    const catWidth = doc.getTextWidth(catText) + 6;
+    doc.roundedRect(marginLeft, ctx.y - 4, catWidth, 6, 1.5, 1.5, 'FD');
+    doc.setTextColor(...COLORS.brand);
+    doc.text(catText, marginLeft + 3, ctx.y);
+    ctx.y += 8;
+    
+    // Document title
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(15, 23, 42);
-    const titleLines = doc.splitTextToSize(docItem.title, contentWidth);
+    doc.setTextColor(...COLORS.heading);
+    const titleLines = wrapText(doc, docItem.title, ctx.contentWidth);
     titleLines.forEach((tl: string) => {
-      doc.text(tl, marginLeft, y);
-      y += 8;
+      doc.text(tl, marginLeft, ctx.y);
+      ctx.y += 8;
     });
-
-    doc.setDrawColor(59, 130, 246);
-    doc.setLineWidth(0.5);
-    doc.line(marginLeft, y, pageWidth - marginRight, y);
-    y += 8;
-
-    // Content - simplified rendering
-    const lines = docItem.content.split('\n');
-    let inCodeBlock = false;
-
-    for (const line of lines) {
-      if (line.startsWith('```')) {
-        inCodeBlock = !inCodeBlock;
-        y += 2;
-        continue;
-      }
-
-      if (y + 6 > pageHeight - marginBottom) {
-        doc.addPage();
-        y = marginTop;
-      }
-
-      if (line.trim() === '') {
-        y += 3;
-        continue;
-      }
-
-      const headerMatch = line.match(/^(#{1,6})\s+(.+)/);
-      if (headerMatch) {
-        const level = headerMatch[1].length;
-        const text = stripMarkdownFormatting(headerMatch[2]);
-        const sizes = [15, 13, 11, 10, 9, 9];
-        doc.setFontSize(sizes[level - 1]);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(15, 23, 42);
-        y += level <= 2 ? 5 : 3;
-        const hLines = doc.splitTextToSize(text, contentWidth);
-        hLines.forEach((hl: string) => {
-          if (y + 6 > pageHeight - marginBottom) { doc.addPage(); y = marginTop; }
-          doc.text(hl, marginLeft, y);
-          y += 6;
-        });
-        y += 2;
-        continue;
-      }
-
-      const text = stripMarkdownFormatting(line);
-      if (inCodeBlock) {
-        doc.setFontSize(8);
-        doc.setFont('courier', 'normal');
-        doc.setTextColor(30, 41, 59);
-        doc.setFillColor(241, 245, 249);
-        const cLines = doc.splitTextToSize(text || ' ', contentWidth - 6);
-        cLines.forEach((cl: string) => {
-          if (y + 5 > pageHeight - marginBottom) { doc.addPage(); y = marginTop; }
-          doc.rect(marginLeft, y - 3.5, contentWidth, 5, 'F');
-          doc.text(cl, marginLeft + 3, y);
-          y += 4.5;
-        });
-      } else {
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(51, 65, 85);
-        const pLines = doc.splitTextToSize(text, contentWidth);
-        pLines.forEach((pl: string) => {
-          if (y + 5 > pageHeight - marginBottom) { doc.addPage(); y = marginTop; }
-          doc.text(pl, marginLeft, y);
-          y += 5;
-        });
-      }
-    }
+    
+    // Accent line
+    doc.setDrawColor(...COLORS.brand);
+    doc.setLineWidth(0.8);
+    doc.line(marginLeft, ctx.y, marginLeft + 40, ctx.y);
+    ctx.y += 8;
+    
+    // Content
+    renderMarkdownContent(ctx, docItem.content);
   }
 
-  // Add page numbers
+  // Apply headers & footers (skip cover page = page 1)
   const totalPages = (doc as any).getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(148, 163, 184);
-    doc.text('CyberShield - Documentação', marginLeft, pageHeight - 10);
-    doc.text(`${p} / ${totalPages}`, pageWidth - marginRight, pageHeight - 10, { align: 'right' });
+    if (p === 1) continue;
+    renderHeader(ctx);
+    renderFooter(ctx, p - 1, totalPages - 1);
   }
 
   return doc.output('blob');
