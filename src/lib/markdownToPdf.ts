@@ -308,6 +308,7 @@ function renderTableOfContents(
     const maxTitleWidth = ctx.contentWidth - 20;
     const rawTitle = sanitizeForPdf(item.title);
     const titleText = rawTitle.length > 70 ? rawTitle.substring(0, 67) + '...' : rawTitle;
+    doc.text(titleText, marginLeft + 16, ctx.y);
     
     // Dotted line
     doc.setDrawColor(...COLORS.tableBorder);
