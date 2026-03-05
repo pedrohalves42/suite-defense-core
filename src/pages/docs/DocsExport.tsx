@@ -8,7 +8,6 @@ import {
   FileText,
   Download,
   Loader2,
-  CheckCircle,
   FolderOpen,
   FileDown,
   Package,
@@ -18,14 +17,26 @@ import { generatePDFFromMarkdown, generateConsolidatedPDF } from "@/lib/markdown
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
-// Vite glob import for all markdown files in docs/
-const markdownModules = import.meta.glob('/docs/**/*.md', { as: 'raw', eager: true }) as Record<string, string>;
+// Import all markdown files at build time using Vite's glob import
+const mdFiles: Record<string, string> = import.meta.glob(
+  ['/docs/**/*.md', '/public/docs/**/*.md'],
+  { query: '?raw', import: 'default', eager: true }
+);
 
 function getDocContent(path: string): string | null {
-  // Try different path formats
-  const candidates = [`/docs/${path}`, `docs/${path}`];
-  for (const candidate of candidates) {
-    if (markdownModules[candidate]) return markdownModules[candidate];
+  const keys = Object.keys(mdFiles);
+  const candidates = [
+    `/docs/${path}`,
+    `/public/docs/${path}`,
+  ];
+  for (const c of candidates) {
+    if (mdFiles[c]) return mdFiles[c];
+  }
+  // Fuzzy match by filename
+  const filename = path.split('/').pop();
+  if (filename) {
+    const match = keys.find(k => k.endsWith(`/${filename}`));
+    if (match) return mdFiles[match];
   }
   return null;
 }
@@ -131,6 +142,8 @@ const DocsExport = () => {
     .filter((c) => selectedCategories.has(c.name))
     .reduce((s, c) => s + c.docs.length, 0);
 
+  const availableTotal = Object.keys(mdFiles).length;
+
   return (
     <div className="container mx-auto p-6 max-w-5xl space-y-6">
       {/* Header */}
@@ -139,7 +152,7 @@ const DocsExport = () => {
         <div>
           <h1 className="text-3xl font-bold">Exportar Documentação</h1>
           <p className="text-muted-foreground">
-            Baixe todos os documentos do CyberShield em formato PDF
+            Baixe todos os documentos do CyberShield em formato PDF ({availableTotal} arquivos disponíveis)
           </p>
         </div>
       </div>
@@ -261,14 +274,15 @@ function CategoryCard({
                   className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50 text-sm"
                 >
                   <div className="flex items-center gap-2">
-                    {hasContent ? (
-                      <CheckCircle className="h-3.5 w-3.5 text-primary" />
-                    ) : (
-                      <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                    )}
-                    <span className={hasContent ? "" : "text-muted-foreground line-through"}>
+                    <FileText className={`h-3.5 w-3.5 ${hasContent ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className={hasContent ? "" : "text-muted-foreground"}>
                       {doc.title}
                     </span>
+                    {!hasContent && (
+                      <Badge variant="outline" className="text-[10px] px-1 py-0">
+                        indisponível
+                      </Badge>
+                    )}
                   </div>
                   {hasContent && (
                     <Button
