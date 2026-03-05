@@ -1,147 +1,147 @@
-# Data Classification & Retention Policy
+# Política de Classificação e Retenção de Dados
 
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Policy Code** | DRP-001 |
-| **Version** | 1.0 |
-| **Status** | Approved |
-| **Owner** | Security Officer |
-| **Effective Date** | 2025-01-01 |
-| **Review Date** | 2026-01-01 |
-| **SOC 2 Criteria** | CC5 |
+| **Código** | DRP-001 |
+| **Versão** | 1.0 |
+| **Status** | Aprovado |
+| **Responsável** | Security Officer |
+| **Data Efetiva** | 2025-01-01 |
+| **Revisão** | 2026-01-01 |
+| **Critério SOC 2** | CC5 |
 
 ---
 
-## 1. Purpose
+## 1. Objetivo
 
-To define how data is classified, protected, and retained.
-
----
-
-## 2. Scope
-
-This policy applies to all data processed, stored, or transmitted by CyberShield, including:
-- Operational data
-- Audit data
-- Security metadata
-- User data
-- System configuration
+Definir como os dados são classificados, protegidos e retidos.
 
 ---
 
-## 3. Data Classification
+## 2. Escopo
 
-### 3.1 Classification Levels
-
-| Level | Description | Examples | Protection |
-|-------|-------------|----------|------------|
-| Public | Non-sensitive information | Marketing content | Standard |
-| Internal | Business information | Documentation | Access control |
-| Confidential | Sensitive business data | Customer data | Encryption + access control |
-| Restricted | Highly sensitive | Credentials, keys | Encryption + strict access |
-
-### 3.2 Data Types
-
-| Data Type | Classification | Retention | Location |
-|-----------|---------------|-----------|----------|
-| Audit logs | Confidential | 7 years | `audit_logs` |
-| Security events | Confidential | 7 years | `security_events` |
-| Job executions | Internal | 2 years | `job_executions` |
-| System metrics | Internal | 1 year | `agent_system_metrics` |
-| Agent data | Confidential | While active | `agents` |
-| User credentials | Restricted | While active | Auth system |
+Esta política se aplica a todos os dados processados, armazenados ou transmitidos pelo CyberShield, incluindo:
+- Dados operacionais
+- Dados de auditoria
+- Metadados de segurança
+- Dados de usuários
+- Configuração do sistema
 
 ---
 
-## 4. Retention Requirements
+## 3. Classificação de Dados
 
-### 4.1 Compliance-Driven Retention
-- LGPD: Data subject rights respected
-- SOC 2: Audit evidence preserved
-- Legal holds: Data preserved as required
+### 3.1 Níveis de Classificação
 
-### 4.2 Retention Schedule
+| Nível | Descrição | Exemplos | Proteção |
+|-------|-----------|----------|----------|
+| Público | Informação não sensível | Conteúdo de marketing | Padrão |
+| Interno | Informação de negócios | Documentação | Controle de acesso |
+| Confidencial | Dados sensíveis de negócios | Dados de clientes | Criptografia + controle de acesso |
+| Restrito | Altamente sensível | Credenciais, chaves | Criptografia + acesso restrito |
 
-| Data Category | Minimum | Maximum | Deletion Method |
-|---------------|---------|---------|-----------------|
-| Audit evidence | 7 years | 10 years | Secure delete |
-| Operational data | 1 year | 3 years | Automated cleanup |
-| Temporary data | 24 hours | 7 days | Automated cleanup |
-| Backup data | 30 days | 90 days | Rotation |
+### 3.2 Tipos de Dados
 
-### 4.3 Automated Cleanup
-- Cleanup jobs run on schedule
-- Deletion is logged
-- Confirmation before permanent deletion
-
----
-
-## 5. Data Handling
-
-### 5.1 Storage
-- Data is stored in secure databases
-- Encryption at rest where applicable
-- Access controlled by RLS
-
-### 5.2 Transmission
-- All data transmitted over TLS
-- API calls authenticated
-- HMAC for agent communication
-
-### 5.3 Deletion
-- Soft delete used where audit required
-- Hard delete only after retention period
-- Deletion is logged and verified
+| Tipo de Dado | Classificação | Retenção | Localização |
+|-------------|---------------|----------|-------------|
+| Logs de auditoria | Confidencial | 7 anos | `audit_logs` |
+| Eventos de segurança | Confidencial | 7 anos | `security_events` |
+| Execuções de jobs | Interno | 2 anos | `job_executions` |
+| Métricas do sistema | Interno | 1 ano | `agent_system_metrics` |
+| Dados de agentes | Confidencial | Enquanto ativo | `agents` |
+| Credenciais de usuários | Restrito | Enquanto ativo | Sistema de autenticação |
 
 ---
 
-## 6. LGPD Compliance
+## 4. Requisitos de Retenção
 
-### 6.1 Data Subject Rights
-- Right to access: Data can be exported
-- Right to rectification: Data can be corrected
-- Right to deletion: Request processing defined
-- Right to portability: Export in standard format
+### 4.1 Retenção por Conformidade
+- LGPD: Direitos dos titulares respeitados
+- SOC 2: Evidências de auditoria preservadas
+- Retenções legais: Dados preservados conforme necessário
 
-### 6.2 Processing Records
-- All processing activities documented
-- Legal basis identified
-- Retention justification provided
+### 4.2 Cronograma de Retenção
+
+| Categoria de Dados | Mínimo | Máximo | Método de Exclusão |
+|--------------------|--------|--------|-------------------|
+| Evidências de auditoria | 7 anos | 10 anos | Exclusão segura |
+| Dados operacionais | 1 ano | 3 anos | Limpeza automatizada |
+| Dados temporários | 24 horas | 7 dias | Limpeza automatizada |
+| Dados de backup | 30 dias | 90 dias | Rotação |
+
+### 4.3 Limpeza Automatizada
+- Jobs de limpeza executam em cronograma
+- Exclusão é registrada
+- Confirmação antes da exclusão permanente
 
 ---
 
-## 7. Technical Evidences
+## 5. Manuseio de Dados
 
-| Control | Implementation | Evidence |
-|---------|----------------|----------|
-| Data separation | Dedicated tables | Schema design |
-| Retention | Cleanup jobs | Automated processes |
-| Non-repudiation | Immutable logs | Log policies |
-| LGPD readiness | Soft delete | Delete flags |
+### 5.1 Armazenamento
+- Dados são armazenados em bancos de dados seguros
+- Criptografia em repouso quando aplicável
+- Acesso controlado por RLS
+
+### 5.2 Transmissão
+- Todos os dados transmitidos via TLS
+- Chamadas de API autenticadas
+- HMAC para comunicação de agentes
+
+### 5.3 Exclusão
+- Soft delete utilizado quando auditoria é necessária
+- Hard delete apenas após período de retenção
+- Exclusão é registrada e verificada
+
+---
+
+## 6. Conformidade LGPD
+
+### 6.1 Direitos dos Titulares
+- Direito de acesso: Dados podem ser exportados
+- Direito de retificação: Dados podem ser corrigidos
+- Direito de exclusão: Processamento de solicitações definido
+- Direito de portabilidade: Exportação em formato padrão
+
+### 6.2 Registros de Processamento
+- Todas as atividades de processamento documentadas
+- Base legal identificada
+- Justificativa de retenção fornecida
+
+---
+
+## 7. Evidências Técnicas
+
+| Controle | Implementação | Evidência |
+|----------|--------------|-----------|
+| Separação de dados | Tabelas dedicadas | Design do schema |
+| Retenção | Jobs de limpeza | Processos automatizados |
+| Não-repúdio | Logs imutáveis | Políticas de logs |
+| Prontidão LGPD | Soft delete | Flags de exclusão |
 
 ---
 
 ## 8. Backup
 
-### 8.1 Backup Schedule
-- Database: Daily
-- Configuration: On change
-- Logs: Continuous
+### 8.1 Cronograma de Backup
+- Banco de dados: Diário
+- Configuração: A cada mudança
+- Logs: Contínuo
 
-### 8.2 Backup Retention
-- Daily backups: 7 days
-- Weekly backups: 4 weeks
-- Monthly backups: 12 months
+### 8.2 Retenção de Backup
+- Backups diários: 7 dias
+- Backups semanais: 4 semanas
+- Backups mensais: 12 meses
 
-### 8.3 Recovery Testing
-- Backup restoration tested quarterly
-- Results documented
-- Issues remediated
+### 8.3 Teste de Recuperação
+- Restauração de backup testada trimestralmente
+- Resultados documentados
+- Problemas remediados
 
 ---
 
-## Document History
+## Histórico
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | 2025-01-01 | CyberShield Security Team | Initial version |
+| Versão | Data | Autor | Alterações |
+|--------|------|-------|------------|
+| 1.0 | 2025-01-01 | CyberShield Security Team | Versão inicial |

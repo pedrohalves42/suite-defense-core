@@ -1,156 +1,156 @@
-# Access Control Policy
+# Política de Controle de Acesso
 
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Policy Code** | ACP-001 |
-| **Version** | 1.0 |
-| **Status** | Approved |
-| **Owner** | Security Officer |
-| **Effective Date** | 2025-01-01 |
-| **Review Date** | 2026-01-01 |
-| **SOC 2 Criteria** | CC1, CC6 |
+| **Código** | ACP-001 |
+| **Versão** | 1.1 |
+| **Status** | Aprovado |
+| **Responsável** | Security Officer |
+| **Data Efetiva** | 2025-01-01 |
+| **Revisão** | 2026-01-01 |
+| **Critério SOC 2** | CC1, CC6 |
 
 ---
 
-## 1. Purpose
+## 1. Objetivo
 
-To ensure that access to systems and data is restricted based on business need and the principle of least privilege.
-
----
-
-## 2. Scope
-
-This policy applies to:
-- All user accounts and credentials
-- System service accounts
-- API keys and tokens
-- Database access
-- Administrative access
+Garantir que o acesso a sistemas e dados seja restrito com base na necessidade de negócio e no princípio do menor privilégio.
 
 ---
 
-## 3. Authentication
+## 2. Escopo
 
-### 3.1 User Authentication
-- All users authenticate via a centralized identity provider
-- Passwords must meet complexity requirements
-- Multi-factor authentication is required for administrative access
-
-### 3.2 Token Management
-- Tokens have defined expiration periods
-- Tokens are validated server-side for every request
-- Expired tokens are automatically rejected
-
-### 3.3 Agent Authentication
-- Agents authenticate using HMAC signatures
-- Each agent has a unique secret
-- Signatures include nonce to prevent replay attacks
+Esta política se aplica a:
+- Todas as contas e credenciais de usuários
+- Contas de serviço do sistema
+- Chaves de API e tokens
+- Acesso ao banco de dados
+- Acesso administrativo
 
 ---
 
-## 4. Authorization
+## 3. Autenticação
 
-### 4.1 Role-Based Access Control (RBAC)
-The system implements the following roles:
+### 3.1 Autenticação de Usuários
+- Todos os usuários se autenticam via provedor de identidade centralizado
+- Senhas devem atender aos requisitos de complexidade
+- Autenticação multifator é obrigatória para acesso administrativo
 
-| Role | Permissions |
-|------|-------------|
-| super_admin | Full system access across all tenants |
-| admin | Full access within assigned tenant |
-| analyst | Read-only access with audit log visibility (cannot modify users/roles) |
-| operator | Operational access (jobs, agents) within tenant |
-| viewer | Read-only access within tenant |
+### 3.2 Gestão de Tokens
+- Tokens possuem períodos de expiração definidos
+- Tokens são validados no servidor a cada request
+- Tokens expirados são automaticamente rejeitados
 
-### 4.2 Tenant Isolation
-- All data queries are filtered by tenant_id
-- Row Level Security (RLS) enforces isolation at database level
-- Cross-tenant access is technically impossible
-
-### 4.3 Permission Checks
-- All authorization is performed on the backend
-- Frontend permissions are for UI display only
-- Edge Functions validate permissions before operations
+### 3.3 Autenticação de Agentes
+- Agentes se autenticam usando assinaturas HMAC
+- Cada agente possui um segredo único
+- Assinaturas incluem nonce para prevenir ataques de replay
 
 ---
 
-## 5. Administrative Access
+## 4. Autorização
 
-### 5.1 Privileged Access
-- Administrative access is limited to authorized personnel
-- Production access requires explicit approval
-- All administrative actions are logged
+### 4.1 Controle de Acesso Baseado em Papéis (RBAC)
+O sistema implementa os seguintes papéis:
 
-### 5.2 Super Admin Access
-- Super admin accounts have cross-tenant visibility
-- Usage is audited and reviewed
-- Requires additional authentication factors
+| Papel | Permissões |
+|-------|------------|
+| super_admin | Acesso total ao sistema em todos os tenants |
+| admin | Acesso total dentro do tenant atribuído |
+| analyst | Acesso somente leitura com visibilidade de logs de auditoria (não pode modificar usuários/roles) |
+| operator | Acesso operacional (jobs, agentes) dentro do tenant |
+| viewer | Acesso somente leitura dentro do tenant |
 
-### 5.3 Break Glass Access
-- Emergency access mechanism for critical situations
-- Requires two-person authorization
-- Session limited to 1 hour maximum
-- Full action logging with enhanced detail
-- See: [Break Glass Procedure](../procedures/break_glass_procedure.md)
+### 4.2 Isolamento de Tenant
+- Todas as consultas de dados são filtradas por tenant_id
+- Row Level Security (RLS) aplica isolamento no nível do banco de dados
+- Acesso cross-tenant é tecnicamente impossível
 
-### 5.4 Analyst Role Restrictions
-Analyst role is explicitly denied:
-- Creating or modifying users
-- Changing user roles
-- Modifying security policies
-- Altering MFA settings
-This prevents auditors from becoming operators.
+### 4.3 Verificação de Permissões
+- Toda autorização é realizada no backend
+- Permissões no frontend são apenas para exibição da interface
+- Edge Functions validam permissões antes das operações
 
 ---
 
-## 6. User Lifecycle
+## 5. Acesso Administrativo
 
-### 6.1 Provisioning
-- Access is provisioned upon written approval
-- Role assignment follows least privilege principle
-- Initial credentials are securely delivered
+### 5.1 Acesso Privilegiado
+- Acesso administrativo é limitado ao pessoal autorizado
+- Acesso à produção requer aprovação explícita
+- Todas as ações administrativas são registradas
 
-### 6.2 Access Review
-- Access rights are reviewed quarterly
-- Inactive accounts are disabled after 90 days
-- Role changes require re-approval
+### 5.2 Acesso Super Admin
+- Contas super admin possuem visibilidade cross-tenant
+- Uso é auditado e revisado
+- Requer fatores de autenticação adicionais
 
-### 6.3 Deprovisioning
-- Access is revoked immediately upon termination
-- All tokens and credentials are invalidated
-- Access logs are retained for audit
+### 5.3 Acesso Break Glass
+- Mecanismo de acesso emergencial para situações críticas
+- Requer autorização de duas pessoas
+- Sessão limitada a 1 hora no máximo
+- Log completo de ações com detalhes aprimorados
+- Ver: [Procedimento Break Glass](../procedures/break_glass_procedure.md)
 
----
-
-## 7. Technical Evidences
-
-| Requirement | Implementation | Evidence |
-|-------------|----------------|----------|
-| RBAC | `user_roles` table | Database schema |
-| Least Privilege | Role-based policies | RLS policy definitions |
-| Tenant Isolation | RLS + tenant_id | All table policies |
-| Token Expiration | Automatic invalidation | `agent_tokens` table |
-| Cross-tenant Protection | Explicit checks | Edge Function code |
+### 5.4 Restrições do Papel Analyst
+O papel analyst é explicitamente impedido de:
+- Criar ou modificar usuários
+- Alterar papéis de usuários
+- Modificar políticas de segurança
+- Alterar configurações de MFA
+Isso previne que auditores se tornem operadores.
 
 ---
 
-## 8. Related Procedures
+## 6. Ciclo de Vida do Usuário
 
-| Procedure | Description |
-|-----------|-------------|
-| [MFA Reset Procedure](../procedures/mfa_reset_procedure.md) | Process for resetting user MFA |
-| [Break Glass Procedure](../procedures/break_glass_procedure.md) | Emergency access mechanism |
+### 6.1 Provisionamento
+- Acesso é provisionado mediante aprovação por escrito
+- Atribuição de papéis segue o princípio do menor privilégio
+- Credenciais iniciais são entregues de forma segura
+
+### 6.2 Revisão de Acesso
+- Direitos de acesso são revisados trimestralmente
+- Contas inativas são desabilitadas após 90 dias
+- Mudanças de papel requerem re-aprovação
+
+### 6.3 Desprovisionamento
+- Acesso é revogado imediatamente na rescisão
+- Todos os tokens e credenciais são invalidados
+- Logs de acesso são retidos para auditoria
 
 ---
 
-## 9. Compliance
+## 7. Evidências Técnicas
 
-Violations of this policy will result in immediate access revocation and may lead to disciplinary action.
+| Requisito | Implementação | Evidência |
+|-----------|--------------|-----------|
+| RBAC | Tabela `user_roles` | Schema do banco |
+| Menor Privilégio | Políticas baseadas em papéis | Definições de políticas RLS |
+| Isolamento de Tenant | RLS + tenant_id | Políticas em todas as tabelas |
+| Expiração de Token | Invalidação automática | Tabela `agent_tokens` |
+| Proteção Cross-tenant | Verificações explícitas | Código de Edge Functions |
 
 ---
 
-## Document History
+## 8. Procedimentos Relacionados
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | 2025-01-01 | CyberShield Security Team | Initial version |
-| 1.1 | 2025-01-04 | CyberShield Security Team | Added analyst role, break glass, MFA procedures |
+| Procedimento | Descrição |
+|-------------|-----------|
+| [Procedimento de Reset MFA](../procedures/mfa_reset_procedure.md) | Processo para redefinição de MFA do usuário |
+| [Procedimento Break Glass](../procedures/break_glass_procedure.md) | Mecanismo de acesso emergencial |
+
+---
+
+## 9. Conformidade
+
+Violações desta política resultarão em revogação imediata de acesso e podem levar a ações disciplinares.
+
+---
+
+## Histórico
+
+| Versão | Data | Autor | Alterações |
+|--------|------|-------|------------|
+| 1.0 | 2025-01-01 | CyberShield Security Team | Versão inicial |
+| 1.1 | 2025-01-04 | CyberShield Security Team | Adicionado papel analyst, break glass, procedimentos MFA |

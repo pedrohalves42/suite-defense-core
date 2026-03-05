@@ -1,140 +1,140 @@
-# Incident Response Policy
+# Política de Resposta a Incidentes
 
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Policy Code** | IRP-001 |
-| **Version** | 1.0 |
-| **Status** | Approved |
-| **Owner** | Security Officer |
-| **Effective Date** | 2025-01-01 |
-| **Review Date** | 2026-01-01 |
-| **SOC 2 Criteria** | CC7 |
+| **Código** | IRP-001 |
+| **Versão** | 1.0 |
+| **Status** | Aprovado |
+| **Responsável** | Security Officer |
+| **Data Efetiva** | 2025-01-01 |
+| **Revisão** | 2026-01-01 |
+| **Critério SOC 2** | CC7 |
 
 ---
 
-## 1. Purpose
+## 1. Objetivo
 
-To define how CyberShield detects, responds to, and documents security incidents.
-
----
-
-## 2. Scope
-
-This policy applies to:
-- All security incidents
-- Service disruptions
-- Data breaches
-- Unauthorized access attempts
-- Policy violations
+Definir como o CyberShield detecta, responde e documenta incidentes de segurança.
 
 ---
 
-## 3. Incident Classification
+## 2. Escopo
 
-### 3.1 Severity Levels
+Esta política se aplica a:
+- Todos os incidentes de segurança
+- Interrupções de serviço
+- Violações de dados
+- Tentativas de acesso não autorizado
+- Violações de políticas
 
-| Level | Description | Response Time | Example |
-|-------|-------------|---------------|---------|
-| Critical | Service down or data breach | 1 hour | Active exploitation, data exfiltration |
-| High | Significant security risk | 4 hours | Unauthorized access attempt, vulnerability |
-| Medium | Potential security concern | 24 hours | Suspicious activity, policy violation |
-| Low | Minor security issue | 72 hours | Informational alert, false positive |
+---
 
-### 3.2 Incident Types
-- Unauthorized access
+## 3. Classificação de Incidentes
+
+### 3.1 Níveis de Severidade
+
+| Nível | Descrição | Tempo de Resposta | Exemplo |
+|-------|-----------|-------------------|---------|
+| Crítico | Serviço fora do ar ou violação de dados | 1 hora | Exploração ativa, exfiltração de dados |
+| Alto | Risco significativo de segurança | 4 horas | Tentativa de acesso não autorizado, vulnerabilidade |
+| Médio | Potencial preocupação de segurança | 24 horas | Atividade suspeita, violação de política |
+| Baixo | Questão menor de segurança | 72 horas | Alerta informativo, falso positivo |
+
+### 3.2 Tipos de Incidente
+- Acesso não autorizado
 - Malware/ransomware
-- Data breach
-- Denial of service
-- System compromise
-- Policy violation
+- Violação de dados
+- Negação de serviço
+- Comprometimento de sistema
+- Violação de política
 
 ---
 
-## 4. Response Process
+## 4. Processo de Resposta
 
-### 4.1 Detection
-- Automated monitoring detects anomalies
-- Users report suspicious activity
-- Third parties report issues
+### 4.1 Detecção
+- Monitoramento automatizado detecta anomalias
+- Usuários reportam atividade suspeita
+- Terceiros reportam problemas
 
-### 4.2 Containment
-- Isolate affected systems
-- Block malicious actors
-- Preserve evidence
+### 4.2 Contenção
+- Isolar sistemas afetados
+- Bloquear atores maliciosos
+- Preservar evidências
 
-### 4.3 Investigation
-- Determine scope and impact
-- Identify root cause
-- Collect and preserve logs
+### 4.3 Investigação
+- Determinar escopo e impacto
+- Identificar causa raiz
+- Coletar e preservar logs
 
-### 4.4 Remediation
-- Fix vulnerabilities
-- Restore systems
-- Implement preventive measures
+### 4.4 Remediação
+- Corrigir vulnerabilidades
+- Restaurar sistemas
+- Implementar medidas preventivas
 
-### 4.5 Documentation
-- Create incident report
-- Update procedures
-- Notify stakeholders
-
----
-
-## 5. Communication
-
-### 5.1 Internal Communication
-- Incidents are logged in the system
-- Relevant teams are notified
-- Status updates are provided
-
-### 5.2 External Communication
-- Affected customers are notified per legal requirements
-- Regulatory bodies are notified if required
-- Public communication follows approval process
-
-### 5.3 Stakeholder Notification
-
-| Severity | Internal | Customer | Regulatory |
-|----------|----------|----------|------------|
-| Critical | Immediate | Within 24h | As required |
-| High | Within 4h | Within 48h | As required |
-| Medium | Within 24h | As needed | N/A |
-| Low | Weekly report | N/A | N/A |
+### 4.5 Documentação
+- Criar relatório de incidente
+- Atualizar procedimentos
+- Notificar partes interessadas
 
 ---
 
-## 6. Technical Evidences
+## 5. Comunicação
 
-| Control | Implementation | Evidence |
-|---------|----------------|----------|
-| Detection | `security_events` table | Event logs |
-| Logging | Immutable logs | `audit_logs` |
-| Classification | Severity field | Event records |
-| Investigation | Audit trail | Job executions, logs |
-| Prevention | Rate limiting + blocks | Edge Functions |
+### 5.1 Comunicação Interna
+- Incidentes são registrados no sistema
+- Equipes relevantes são notificadas
+- Atualizações de status são fornecidas
 
----
+### 5.2 Comunicação Externa
+- Clientes afetados são notificados conforme requisitos legais
+- Órgãos reguladores são notificados se necessário
+- Comunicação pública segue processo de aprovação
 
-## 7. Post-Incident Review
+### 5.3 Notificação de Partes Interessadas
 
-After each Critical or High incident:
-- Conduct post-mortem within 5 business days
-- Document lessons learned
-- Update procedures and controls
-- Share findings with team
-
----
-
-## 8. Testing
-
-Incident response procedures are tested:
-- Tabletop exercises quarterly
-- Full simulations annually
-- After significant system changes
+| Severidade | Interna | Cliente | Regulatório |
+|:----------:|:-------:|:-------:|:-----------:|
+| Crítico | Imediata | Em até 24h | Conforme necessário |
+| Alto | Em até 4h | Em até 48h | Conforme necessário |
+| Médio | Em até 24h | Conforme necessário | N/A |
+| Baixo | Relatório semanal | N/A | N/A |
 
 ---
 
-## Document History
+## 6. Evidências Técnicas
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | 2025-01-01 | CyberShield Security Team | Initial version |
+| Controle | Implementação | Evidência |
+|----------|--------------|-----------|
+| Detecção | Tabela `security_events` | Logs de eventos |
+| Registro | Logs imutáveis | `audit_logs` |
+| Classificação | Campo de severidade | Registros de eventos |
+| Investigação | Trilha de auditoria | Execuções de jobs, logs |
+| Prevenção | Rate limiting + bloqueios | Edge Functions |
+
+---
+
+## 7. Revisão Pós-Incidente
+
+Após cada incidente Crítico ou Alto:
+- Conduzir post-mortem em até 5 dias úteis
+- Documentar lições aprendidas
+- Atualizar procedimentos e controles
+- Compartilhar descobertas com a equipe
+
+---
+
+## 8. Testes
+
+Procedimentos de resposta a incidentes são testados:
+- Exercícios tabletop trimestralmente
+- Simulações completas anualmente
+- Após mudanças significativas no sistema
+
+---
+
+## Histórico
+
+| Versão | Data | Autor | Alterações |
+|--------|------|-------|------------|
+| 1.0 | 2025-01-01 | CyberShield Security Team | Versão inicial |
