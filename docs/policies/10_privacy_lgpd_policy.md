@@ -149,7 +149,7 @@ O Encarregado de Proteção de Dados é designado formalmente e registrado junto
 
 | Sub-processador | Dados Compartilhados | Finalidade | Localização | DPA |
 |-----------------|---------------------|------------|-------------|-----|
-| Lovable Cloud (Supabase) | Todos os dados da plataforma | Infraestrutura de banco de dados | EUA (AWS) | Sim |
+| CyberShield Cloud (Supabase) | Todos os dados da plataforma | Infraestrutura de banco de dados | EUA (AWS) | Sim |
 | Stripe | Email, nome do titular da conta | Processamento de pagamentos | EUA | Sim |
 | GitHub Actions | Hash de scripts, metadados de build | CI/CD de agentes | EUA | Sim |
 

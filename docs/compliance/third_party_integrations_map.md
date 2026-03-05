@@ -19,7 +19,7 @@ Documentar todas as integrações com serviços de terceiros, avaliando riscos e
 
 ## 2. Inventário de Integrações
 
-### 2.1 Lovable Cloud (Supabase)
+### 2.1 CyberShield Cloud (Supabase)
 
 | Aspecto | Detalhe |
 |---------|--------|
@@ -70,7 +70,7 @@ Documentar todas as integrações com serviços de terceiros, avaliando riscos e
 
 | Integração | Disponibilidade | Integridade | Confidencialidade | Risco Total |
 |-----------|:--------------:|:-----------:|:-----------------:|:-----------:|
-| Lovable Cloud | 🟠 Alto | 🟢 Baixo | 🟡 Médio | 🟠 Alto |
+| CyberShield Cloud | 🟠 Alto | 🟢 Baixo | 🟡 Médio | 🟠 Alto |
 | Stripe | 🟡 Médio | 🟢 Baixo | 🟡 Médio | 🟡 Médio |
 | GitHub Actions | 🟡 Médio | 🟡 Médio | 🟢 Baixo | 🟡 Médio |
 
@@ -81,9 +81,9 @@ Documentar todas as integrações com serviços de terceiros, avaliando riscos e
 ```
 [Agente Windows] 
   → TLS 1.3 + HMAC →
-    [Lovable Cloud Edge Functions]
+    [CyberShield Cloud Edge Functions]
       → RLS →
-        [Lovable Cloud PostgreSQL]
+        [CyberShield Cloud PostgreSQL]
           ↔ [Stripe] (pagamentos)
           ← [GitHub Actions] (builds assinados)
 ```
@@ -94,7 +94,7 @@ Documentar todas as integrações com serviços de terceiros, avaliando riscos e
 
 | Integração | Lock-in | Alternativas | Esforço de Migração |
 |-----------|:-------:|-------------|:-------------------:|
-| Lovable Cloud | Alto | AWS/GCP + Supabase self-hosted | 3-6 meses |
+| CyberShield Cloud | Alto | AWS/GCP + Supabase self-hosted | 3-6 meses |
 | Stripe | Baixo | PagSeguro, Mercado Pago | 2-4 semanas |
 | GitHub Actions | Baixo | GitLab CI, Jenkins | 1-2 semanas |
 

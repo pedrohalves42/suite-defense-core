@@ -80,7 +80,7 @@ O MSP se compromete a:
 
 ## 6. Transferência Internacional de Dados
 
-6.1. Os dados são armazenados nos Estados Unidos (Lovable Cloud / AWS)
+6.1. Os dados são armazenados nos Estados Unidos (CyberShield Cloud / AWS)
 
 6.2. Garantias para transferência:
 - Cláusulas Contratuais Padrão (SCCs) da Comissão Europeia
@@ -95,7 +95,7 @@ O MSP se compromete a:
 
 | Sub-operador | Serviço | País | Dados Processados | Certificações |
 |-------------|---------|------|-------------------|---------------|
-| Lovable Cloud (Supabase Inc.) | Banco de dados, autenticação, Edge Functions | EUA | Todos os dados da plataforma | SOC 2 Type II |
+| CyberShield Cloud (Supabase Inc.) | Banco de dados, autenticação, Edge Functions | EUA | Todos os dados da plataforma | SOC 2 Type II |
 | Stripe Inc. | Processamento de pagamentos | EUA | Nome, email, dados de pagamento | PCI-DSS Level 1 |
 | GitHub Inc. | CI/CD (build de agentes) | EUA | Hashes de scripts, metadados de build | SOC 2 |
 
