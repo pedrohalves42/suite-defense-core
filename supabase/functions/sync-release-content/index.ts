@@ -36,10 +36,10 @@ Deno.serve(async (req) => {
     let isAuthorized = false;
     
     if (authHeader) {
-      // Check if internal call
-      if (authHeader === `Bearer ${INTERNAL_SECRET}`) {
+      // Check if internal call or service role
+      if (authHeader === `Bearer ${INTERNAL_SECRET}` || authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
         isAuthorized = true;
-        console.log(`[sync-release-content][${requestId}] Authorized via INTERNAL_SECRET`);
+        console.log(`[sync-release-content][${requestId}] Authorized via internal/service key`);
       } else {
         // Check if user is super_admin
         const { data: { user }, error: authError } = await supabase.auth.getUser(
