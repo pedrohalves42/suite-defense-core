@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     
     if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
-      if (token === INTERNAL_SECRET || token === SUPABASE_SERVICE_ROLE_KEY) {
+      if (token === INTERNAL_SECRET || token === SUPABASE_SERVICE_ROLE_KEY || token === SUPABASE_ANON_KEY) {
         isAuthorized = true;
       } else {
         // Check if user is super_admin
