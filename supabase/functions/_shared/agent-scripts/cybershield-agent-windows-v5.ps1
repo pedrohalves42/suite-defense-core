@@ -1389,7 +1389,7 @@ function Register-AgentKey {
         $payload = @{
             public_key = $Global:AgentPublicKey
             key_fingerprint = $Global:KeyFingerprint
-            algorithm = "ECDSA-P256-SHA256"
+            algorithm = $(if ($Global:AgentSigningAlgorithm) { $Global:AgentSigningAlgorithm } else { "ECDSA-P256-SHA256" })
         }
         
         $result = Invoke-SecureRequest `
