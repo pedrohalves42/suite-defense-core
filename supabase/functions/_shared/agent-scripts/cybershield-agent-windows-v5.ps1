@@ -3733,12 +3733,29 @@ function Get-ProcessAnomalies {
         }
         
     } catch {
-        Write-Log "[BASELINE] Failed to detect process anomalies: $($_.Exception.Message)" "WARN"
+        $errMsg = $_.Exception.Message
+        Write-Log "[BASELINE] Failed to detect process anomalies: $errMsg" "WARN"
+
+        if ($errMsg -like "*first_seen*") {
+            Write-Log "[BASELINE] Corrupted baseline detected (duplicate first_seen). Rebuilding baseline..." "WARN"
+            try {
+                if (Test-Path $Global:ProcessBaselinePath) {
+                    $backupPath = "$($Global:ProcessBaselinePath).corrupt.$((Get-Date).ToString('yyyyMMddHHmmss'))"
+                    Move-Item -Path $Global:ProcessBaselinePath -Destination $backupPath -Force -ErrorAction SilentlyContinue
+                }
+                $Global:ProcessBaseline = @()
+                $Global:ProcessBaselineSet.Clear()
+                Initialize-ProcessBaseline | Out-Null
+            } catch {
+                Write-Log "[BASELINE] Rebuild failed: $($_.Exception.Message)" "WARN"
+            }
+        }
+
         return @{
             checked = $false
             anomaly_count = 0
             anomalies = @()
-            error = $_.Exception.Message
+            error = $errMsg
         }
     }
 }
