@@ -466,6 +466,7 @@ $Global:AgentPrivateKey = $null
 $Global:AgentPublicKey = $null
 $Global:KeyFingerprint = $null
 $Global:KeyVersion = 0
+$Global:AgentSigningAlgorithm = "ECDSA-P256-SHA256"
 
 # v5.0.13-fix: Evidence buffer for Add-EvidenceEntry (BUG 1)
 $Global:EvidenceBuffer = [System.Collections.ArrayList]::new()
