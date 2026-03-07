@@ -7,6 +7,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ED25519_PRIVATE_KEY = Deno.env.get('ED25519_PRIVATE_KEY');
 const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
 
 /**
  * Sync Release Content
