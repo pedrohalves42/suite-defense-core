@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const version = url.searchParams.get('version') || 'v5.0.9';
+    const version = url.searchParams.get('version') || 'v5.0.13';
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const results: Record<string, unknown> = {};
