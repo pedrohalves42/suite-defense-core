@@ -850,14 +850,8 @@ try {
       /\$ecParams\s*=\s*\$ecdsa\.ExportParameters\(\$false\)/g,
       '$ecParams = if ($null -ne $ecdsa) { $ecdsa.ExportParameters($false) } else { $null } <# HOTFIX-NULL-ECDSA-GUARD #>'
     );
-    // Guard $ecdsa.SignData calls not already handled by HOTFIX-RSA-SIGN
-    // (HOTFIX 26b handles Submit-JobResult, but there may be other call sites)
-    if (!content.includes('HOTFIX-RSA-SIGN')) {
-      content = content.replace(
-        /\$signatureBytes = \$ecdsa\.SignData\(/g,
-        '$signatureBytes = if ($Global:AgentSigningAlgorithm -eq "RSA-2048-SHA256" -and $Global:AgentRsaKey) { $Global:AgentRsaKey.SignData( <# HOTFIX-NULL-ECDSA-GUARD #>'
-      );
-    }
+    // Guard $ecdsa.SignData calls is handled by HOTFIX-SIGN-COMPAT below.
+    // Avoid partial token replacements here because they can corrupt script syntax.
     // Critical: Guard the fingerprint generation block that uses $ecdsa after RSA fallback
     // The script calculates fingerprint from $publicKeyBytes which IS set by RSA,
     // but then may reference $ecdsa for key persistence. Guard the entire key persistence section.
