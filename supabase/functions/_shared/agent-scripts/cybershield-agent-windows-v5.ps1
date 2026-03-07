@@ -1430,7 +1430,7 @@ function Register-AgentKey {
 function Invoke-SignResult {
     <#
     .SYNOPSIS
-        Signs job result with ECDSA P-256
+        Signs job result with agent cryptographic identity (ECDSA/RSA)
     .PARAMETER ExecutionId
         Execution ID
     .PARAMETER JobId
@@ -1455,25 +1455,87 @@ function Invoke-SignResult {
             Write-Log "[SIGN] No private key available for signing" "ERROR"
             return $null
         }
-        
+
+        $algorithm = if ($Global:AgentSigningAlgorithm) { $Global:AgentSigningAlgorithm } else { "ECDSA-P256-SHA256" }
+
         # Canonical payload: execution_id:job_id:status:output_hash:finished_at
         $canonicalPayload = "$ExecutionId`:$JobId`:$Status`:$OutputHash`:$FinishedAt"
-        
-        # Import private key
-        $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
-        $ecdsa = [System.Security.Cryptography.ECDsaCng]::new()
-        $ecdsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$null)
-        
-        # Sign payload
         $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($canonicalPayload)
-        $signatureBytes = $ecdsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
-        $signature = [Convert]::ToBase64String($signatureBytes)
-        
-        $ecdsa.Dispose()
-        
-        Write-Log "[SIGN] Signed result for execution $ExecutionId" "DEBUG"
-        return $signature
-        
+
+        if ($algorithm -eq "RSA-2048-XML") {
+            $rsaXml = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Global:AgentPrivateKey))
+            $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider
+            try {
+                $rsa.FromXmlString($rsaXml)
+                $signatureBytes = $rsa.SignData($payloadBytes, "SHA256")
+                $signature = [Convert]::ToBase64String($signatureBytes)
+                Write-Log "[SIGN] Signed result for execution $ExecutionId using $algorithm" "DEBUG"
+                return $signature
+            } finally {
+                $rsa.Dispose()
+            }
+        }
+
+        if ($algorithm -eq "RSA-2048-SHA256") {
+            $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
+            $rsa = $null
+            try {
+                try {
+                    $rsa = [System.Security.Cryptography.RSA]::Create()
+                    $bytesRead = 0
+                    $null = $rsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$bytesRead)
+                    $signatureBytes = $rsa.SignData(
+                        $payloadBytes,
+                        [System.Security.Cryptography.HashAlgorithmName]::SHA256,
+                        [System.Security.Cryptography.RSASignaturePadding]::Pkcs1
+                    )
+                } catch {
+                    if ($null -ne $rsa) { $rsa.Dispose(); $rsa = $null }
+                    $rsaLegacy = New-Object System.Security.Cryptography.RSACryptoServiceProvider
+                    $rsaLegacy.ImportCspBlob($privateKeyBytes)
+                    $signatureBytes = $rsaLegacy.SignData($payloadBytes, "SHA256")
+                    $rsaLegacy.Dispose()
+                }
+
+                $signature = [Convert]::ToBase64String($signatureBytes)
+                Write-Log "[SIGN] Signed result for execution $ExecutionId using $algorithm" "DEBUG"
+                return $signature
+            } finally {
+                if ($null -ne $rsa) { $rsa.Dispose() }
+            }
+        }
+
+        # Default: ECDSA-P256-SHA256
+        $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
+        $ecdsa = $null
+        try {
+            $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
+            if ($null -eq $ecdsa) {
+                throw "ECDsa.Create() retornou null"
+            }
+
+            $bytesRead = 0
+            try {
+                $null = $ecdsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$bytesRead)
+            } catch {
+                Write-Log "[SIGN] ImportPkcs8PrivateKey indisponível, tentando fallback CngKey.Import" "WARN"
+                if ($null -ne $ecdsa) { $ecdsa.Dispose(); $ecdsa = $null }
+                $cngKey = [System.Security.Cryptography.CngKey]::Import(
+                    $privateKeyBytes,
+                    [System.Security.Cryptography.CngKeyBlobFormat]::Pkcs8PrivateBlob
+                )
+                $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
+            }
+
+            $signatureBytes = $ecdsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+            $signature = [Convert]::ToBase64String($signatureBytes)
+
+            Write-Log "[SIGN] Signed result for execution $ExecutionId using $algorithm" "DEBUG"
+            return $signature
+        } finally {
+            if ($null -ne $ecdsa) { $ecdsa.Dispose() }
+        }
+
     } catch {
         Write-Log "[SIGN] Error signing result: $($_.Exception.Message)" "ERROR"
         return $null
