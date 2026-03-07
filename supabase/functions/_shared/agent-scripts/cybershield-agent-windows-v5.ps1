@@ -1358,6 +1358,7 @@ function Initialize-AgentKeys {
         $Global:AgentPublicKey = $publicKeyBase64
         $Global:KeyFingerprint = $fingerprint
         $Global:KeyVersion = 1
+        $Global:AgentSigningAlgorithm = "ECDSA-P256-SHA256"
         
         Write-Log "[KEYS] Generated new ECDSA keypair. Fingerprint: $($fingerprint.Substring(0, 16))..." "SUCCESS"
         
