@@ -31,31 +31,24 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
-    // Verify internal authentication or super_admin or user auth from preview
+    // Verify auth: internal secret, service role, super_admin, or Supabase test tool
     const authHeader = req.headers.get('Authorization');
     let isAuthorized = false;
     
     if (authHeader) {
-      // Check if internal call or service role
-      if (authHeader === `Bearer ${INTERNAL_SECRET}` || authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
+      const token = authHeader.replace('Bearer ', '');
+      if (token === INTERNAL_SECRET || token === SUPABASE_SERVICE_ROLE_KEY) {
         isAuthorized = true;
-        console.log(`[sync-release-content][${requestId}] Authorized via internal/service key`);
       } else {
         // Check if user is super_admin
-        const { data: { user }, error: authError } = await supabase.auth.getUser(
-          authHeader.replace('Bearer ', '')
-        );
-
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
         if (!authError && user) {
           const { data: roles } = await supabase
             .from('user_roles')
             .select('role')
             .eq('user_id', user.id);
-
-          const isSuperAdmin = roles?.some(r => r.role === 'super_admin');
-          if (isSuperAdmin) {
+          if (roles?.some(r => r.role === 'super_admin')) {
             isAuthorized = true;
-            console.log(`[sync-release-content][${requestId}] Authorized via super_admin user`);
           }
         }
       }
@@ -63,7 +56,7 @@ Deno.serve(async (req) => {
     
     if (!isAuthorized) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - requires super_admin or internal secret', requestId }),
+        JSON.stringify({ error: 'Unauthorized', requestId }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
