@@ -850,14 +850,8 @@ try {
       /\$ecParams\s*=\s*\$ecdsa\.ExportParameters\(\$false\)/g,
       '$ecParams = if ($null -ne $ecdsa) { $ecdsa.ExportParameters($false) } else { $null } <# HOTFIX-NULL-ECDSA-GUARD #>'
     );
-    // Guard $ecdsa.SignData calls not already handled by HOTFIX-RSA-SIGN
-    // (HOTFIX 26b handles Submit-JobResult, but there may be other call sites)
-    if (!content.includes('HOTFIX-RSA-SIGN')) {
-      content = content.replace(
-        /\$signatureBytes = \$ecdsa\.SignData\(/g,
-        '$signatureBytes = if ($Global:AgentSigningAlgorithm -eq "RSA-2048-SHA256" -and $Global:AgentRsaKey) { $Global:AgentRsaKey.SignData( <# HOTFIX-NULL-ECDSA-GUARD #>'
-      );
-    }
+    // Guard $ecdsa.SignData calls is handled by HOTFIX-SIGN-COMPAT below.
+    // Avoid partial token replacements here because they can corrupt script syntax.
     // Critical: Guard the fingerprint generation block that uses $ecdsa after RSA fallback
     // The script calculates fingerprint from $publicKeyBytes which IS set by RSA,
     // but then may reference $ecdsa for key persistence. Guard the entire key persistence section.
@@ -990,6 +984,64 @@ try {
       if (injected24e) {
         reasons.push('skip_firewall_init');
       }
+    }
+  }
+
+  // HOTFIX 33: Legacy-compatible result signing (fix ImportPkcs8PrivateKey missing on ECDsaCng)
+  if (content.includes('function Invoke-SignResult') && content.includes('ImportPkcs8PrivateKey') && !content.includes('HOTFIX-SIGN-COMPAT')) {
+    const updatedSignCompat = content.replace(
+      /# Import private key\s*\r?\n\s*\$privateKeyBytes = \[Convert\]::FromBase64String\(\$Global:AgentPrivateKey\)\s*\r?\n\s*\$ecdsa = \[System\.Security\.Cryptography\.ECDsaCng\]::new\(\)\s*\r?\n\s*\$ecdsa\.ImportPkcs8PrivateKey\(\$privateKeyBytes, \[ref\]\$null\)\s*\r?\n\s*\r?\n\s*# Sign payload\s*\r?\n\s*\$payloadBytes = \[System\.Text\.Encoding\]::UTF8\.GetBytes\(\$canonicalPayload\)\s*\r?\n\s*\$signatureBytes = \$ecdsa\.SignData\(\$payloadBytes, \[System\.Security\.Cryptography\.HashAlgorithmName\]::SHA256\)\s*\r?\n\s*\$signature = \[Convert\]::ToBase64String\(\$signatureBytes\)\s*\r?\n\s*\r?\n\s*\$ecdsa\.Dispose\(\)/m,
+      `# HOTFIX-SIGN-COMPAT: legacy-safe signer (ECDSA/RSA)
+        $algorithm = if ($Global:AgentSigningAlgorithm) { $Global:AgentSigningAlgorithm } else { "ECDSA-P256-SHA256" }
+        $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($canonicalPayload)
+
+        if ($algorithm -eq "RSA-2048-XML") {
+            $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider
+            try {
+                $rsaXml = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Global:AgentPrivateKey))
+                $rsa.FromXmlString($rsaXml)
+                $signatureBytes = $rsa.SignData($payloadBytes, "SHA256")
+            } finally {
+                $rsa.Dispose()
+            }
+        } elseif ($algorithm -eq "RSA-2048-SHA256") {
+            $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
+            try {
+                $rsa = [System.Security.Cryptography.RSA]::Create()
+                $bytesRead = 0
+                $null = $rsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$bytesRead)
+                $signatureBytes = $rsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+                $rsa.Dispose()
+            } catch {
+                $rsaLegacy = New-Object System.Security.Cryptography.RSACryptoServiceProvider
+                $rsaLegacy.ImportCspBlob($privateKeyBytes)
+                $signatureBytes = $rsaLegacy.SignData($payloadBytes, "SHA256")
+                $rsaLegacy.Dispose()
+            }
+        } else {
+            $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
+            $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
+            try {
+                $bytesRead = 0
+                try {
+                    $null = $ecdsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$bytesRead)
+                } catch {
+                    $ecdsa.Dispose()
+                    $cngKey = [System.Security.Cryptography.CngKey]::Import($privateKeyBytes, [System.Security.Cryptography.CngKeyBlobFormat]::Pkcs8PrivateBlob)
+                    $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
+                }
+                $signatureBytes = $ecdsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+            } finally {
+                if ($null -ne $ecdsa) { $ecdsa.Dispose() }
+            }
+        }
+
+        $signature = [Convert]::ToBase64String($signatureBytes) <# HOTFIX-SIGN-COMPAT #>`
+    );
+
+    if (updatedSignCompat !== content) {
+      content = updatedSignCompat;
+      reasons.push('sign_result_legacy_compat');
     }
   }
 

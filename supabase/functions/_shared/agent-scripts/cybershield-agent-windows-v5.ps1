@@ -466,6 +466,7 @@ $Global:AgentPrivateKey = $null
 $Global:AgentPublicKey = $null
 $Global:KeyFingerprint = $null
 $Global:KeyVersion = 0
+$Global:AgentSigningAlgorithm = "ECDSA-P256-SHA256"
 
 # v5.0.13-fix: Evidence buffer for Add-EvidenceEntry (BUG 1)
 $Global:EvidenceBuffer = [System.Collections.ArrayList]::new()
@@ -1143,11 +1144,13 @@ function Initialize-AgentKeys {
             $keys = Get-Content $Global:KeyStorePath -Raw | ConvertFrom-Json
             
             if ($keys.private_key -and $keys.public_key) {
-                Write-Log "[KEYS] Loaded existing ECDSA keypair (version: $($keys.version))" "INFO"
+                $loadedAlgorithm = if ($keys.algorithm) { [string]$keys.algorithm } else { "ECDSA-P256-SHA256" }
+                Write-Log "[KEYS] Loaded existing keypair ($loadedAlgorithm, version: $($keys.version))" "INFO"
                 $Global:AgentPrivateKey = $keys.private_key
                 $Global:AgentPublicKey = $keys.public_key
                 $Global:KeyFingerprint = $keys.fingerprint
                 $Global:KeyVersion = $keys.version
+                $Global:AgentSigningAlgorithm = $loadedAlgorithm
                 return $true
             }
         }
@@ -1253,6 +1256,7 @@ function Initialize-AgentKeys {
                             $Global:AgentPublicKey = $publicKeyBase64
                             $Global:KeyFingerprint = $fp
                             $Global:KeyVersion = 1
+                            $Global:AgentSigningAlgorithm = "RSA-2048-SHA256"
                             
                             Write-Log "[KEYS] RSA-2048 fallback keypair generated. Fingerprint: $($fp.Substring(0, 16))..." "SUCCESS"
                             $rsa.Dispose()
@@ -1291,6 +1295,7 @@ function Initialize-AgentKeys {
                         $Global:AgentPublicKey = $pubB64
                         $Global:KeyFingerprint = $fp2
                         $Global:KeyVersion = 1
+                        $Global:AgentSigningAlgorithm = "RSA-2048-XML"
                         
                         Write-Log "[KEYS] RSACryptoServiceProvider fallback generated. Fingerprint: $($fp2.Substring(0, 16))..." "SUCCESS"
                         $rsaCsp.Dispose()
@@ -1353,6 +1358,7 @@ function Initialize-AgentKeys {
         $Global:AgentPublicKey = $publicKeyBase64
         $Global:KeyFingerprint = $fingerprint
         $Global:KeyVersion = 1
+        $Global:AgentSigningAlgorithm = "ECDSA-P256-SHA256"
         
         Write-Log "[KEYS] Generated new ECDSA keypair. Fingerprint: $($fingerprint.Substring(0, 16))..." "SUCCESS"
         
@@ -1383,7 +1389,7 @@ function Register-AgentKey {
         $payload = @{
             public_key = $Global:AgentPublicKey
             key_fingerprint = $Global:KeyFingerprint
-            algorithm = "ECDSA-P256-SHA256"
+            algorithm = $(if ($Global:AgentSigningAlgorithm) { $Global:AgentSigningAlgorithm } else { "ECDSA-P256-SHA256" })
         }
         
         $result = Invoke-SecureRequest `
@@ -1424,7 +1430,7 @@ function Register-AgentKey {
 function Invoke-SignResult {
     <#
     .SYNOPSIS
-        Signs job result with ECDSA P-256
+        Signs job result with agent cryptographic identity (ECDSA/RSA)
     .PARAMETER ExecutionId
         Execution ID
     .PARAMETER JobId
@@ -1449,25 +1455,87 @@ function Invoke-SignResult {
             Write-Log "[SIGN] No private key available for signing" "ERROR"
             return $null
         }
-        
+
+        $algorithm = if ($Global:AgentSigningAlgorithm) { $Global:AgentSigningAlgorithm } else { "ECDSA-P256-SHA256" }
+
         # Canonical payload: execution_id:job_id:status:output_hash:finished_at
         $canonicalPayload = "$ExecutionId`:$JobId`:$Status`:$OutputHash`:$FinishedAt"
-        
-        # Import private key
-        $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
-        $ecdsa = [System.Security.Cryptography.ECDsaCng]::new()
-        $ecdsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$null)
-        
-        # Sign payload
         $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($canonicalPayload)
-        $signatureBytes = $ecdsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
-        $signature = [Convert]::ToBase64String($signatureBytes)
-        
-        $ecdsa.Dispose()
-        
-        Write-Log "[SIGN] Signed result for execution $ExecutionId" "DEBUG"
-        return $signature
-        
+
+        if ($algorithm -eq "RSA-2048-XML") {
+            $rsaXml = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Global:AgentPrivateKey))
+            $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider
+            try {
+                $rsa.FromXmlString($rsaXml)
+                $signatureBytes = $rsa.SignData($payloadBytes, "SHA256")
+                $signature = [Convert]::ToBase64String($signatureBytes)
+                Write-Log "[SIGN] Signed result for execution $ExecutionId using $algorithm" "DEBUG"
+                return $signature
+            } finally {
+                $rsa.Dispose()
+            }
+        }
+
+        if ($algorithm -eq "RSA-2048-SHA256") {
+            $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
+            $rsa = $null
+            try {
+                try {
+                    $rsa = [System.Security.Cryptography.RSA]::Create()
+                    $bytesRead = 0
+                    $null = $rsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$bytesRead)
+                    $signatureBytes = $rsa.SignData(
+                        $payloadBytes,
+                        [System.Security.Cryptography.HashAlgorithmName]::SHA256,
+                        [System.Security.Cryptography.RSASignaturePadding]::Pkcs1
+                    )
+                } catch {
+                    if ($null -ne $rsa) { $rsa.Dispose(); $rsa = $null }
+                    $rsaLegacy = New-Object System.Security.Cryptography.RSACryptoServiceProvider
+                    $rsaLegacy.ImportCspBlob($privateKeyBytes)
+                    $signatureBytes = $rsaLegacy.SignData($payloadBytes, "SHA256")
+                    $rsaLegacy.Dispose()
+                }
+
+                $signature = [Convert]::ToBase64String($signatureBytes)
+                Write-Log "[SIGN] Signed result for execution $ExecutionId using $algorithm" "DEBUG"
+                return $signature
+            } finally {
+                if ($null -ne $rsa) { $rsa.Dispose() }
+            }
+        }
+
+        # Default: ECDSA-P256-SHA256
+        $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
+        $ecdsa = $null
+        try {
+            $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
+            if ($null -eq $ecdsa) {
+                throw "ECDsa.Create() retornou null"
+            }
+
+            $bytesRead = 0
+            try {
+                $null = $ecdsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$bytesRead)
+            } catch {
+                Write-Log "[SIGN] ImportPkcs8PrivateKey indisponível, tentando fallback CngKey.Import" "WARN"
+                if ($null -ne $ecdsa) { $ecdsa.Dispose(); $ecdsa = $null }
+                $cngKey = [System.Security.Cryptography.CngKey]::Import(
+                    $privateKeyBytes,
+                    [System.Security.Cryptography.CngKeyBlobFormat]::Pkcs8PrivateBlob
+                )
+                $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
+            }
+
+            $signatureBytes = $ecdsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+            $signature = [Convert]::ToBase64String($signatureBytes)
+
+            Write-Log "[SIGN] Signed result for execution $ExecutionId using $algorithm" "DEBUG"
+            return $signature
+        } finally {
+            if ($null -ne $ecdsa) { $ecdsa.Dispose() }
+        }
+
     } catch {
         Write-Log "[SIGN] Error signing result: $($_.Exception.Message)" "ERROR"
         return $null
@@ -3665,12 +3733,29 @@ function Get-ProcessAnomalies {
         }
         
     } catch {
-        Write-Log "[BASELINE] Failed to detect process anomalies: $($_.Exception.Message)" "WARN"
+        $errMsg = $_.Exception.Message
+        Write-Log "[BASELINE] Failed to detect process anomalies: $errMsg" "WARN"
+
+        if ($errMsg -like "*first_seen*") {
+            Write-Log "[BASELINE] Corrupted baseline detected (duplicate first_seen). Rebuilding baseline..." "WARN"
+            try {
+                if (Test-Path $Global:ProcessBaselinePath) {
+                    $backupPath = "$($Global:ProcessBaselinePath).corrupt.$((Get-Date).ToString('yyyyMMddHHmmss'))"
+                    Move-Item -Path $Global:ProcessBaselinePath -Destination $backupPath -Force -ErrorAction SilentlyContinue
+                }
+                $Global:ProcessBaseline = @()
+                $Global:ProcessBaselineSet.Clear()
+                Initialize-ProcessBaseline | Out-Null
+            } catch {
+                Write-Log "[BASELINE] Rebuild failed: $($_.Exception.Message)" "WARN"
+            }
+        }
+
         return @{
             checked = $false
             anomaly_count = 0
             anomalies = @()
-            error = $_.Exception.Message
+            error = $errMsg
         }
     }
 }
