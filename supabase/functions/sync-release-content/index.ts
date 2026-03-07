@@ -75,13 +75,29 @@ Deno.serve(async (req) => {
 
     const results: Record<string, unknown> = {};
 
-    // Get script content based on platform (Windows only for now)
-    const getScriptContent = (platform: string): string | null => {
-      switch (platform) {
-        case 'windows': return AGENT_SCRIPT_WINDOWS_CONTENT;
-        // Linux and macOS scripts have encoding issues - skip for now
-        default: return null;
+    // Get script content based on platform
+    const getScriptContent = async (platform: string): Promise<string | null> => {
+      // Try TS module first
+      if (platform === 'windows' && AGENT_SCRIPT_WINDOWS_CONTENT) {
+        return AGENT_SCRIPT_WINDOWS_CONTENT;
       }
+      // Fallback: read from _shared/agent-scripts/ directory
+      const filenames: Record<string, string> = {
+        windows: 'cybershield-agent-windows-v5.ps1',
+      };
+      const fname = filenames[platform];
+      if (!fname) return null;
+      try {
+        const url = new URL(`../_shared/agent-scripts/${fname}`, import.meta.url);
+        const content = await Deno.readTextFile(url);
+        if (content && content.length > 1000) {
+          console.log(`[sync-release-content][${requestId}] Loaded ${platform} from file: ${content.length} chars`);
+          return content;
+        }
+      } catch (e) {
+        console.log(`[sync-release-content][${requestId}] File read failed for ${platform}: ${(e as Error).message}`);
+      }
+      return null;
     };
 
     // Only sync Windows for now due to encoding issues in other platforms
