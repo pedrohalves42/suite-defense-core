@@ -1144,11 +1144,13 @@ function Initialize-AgentKeys {
             $keys = Get-Content $Global:KeyStorePath -Raw | ConvertFrom-Json
             
             if ($keys.private_key -and $keys.public_key) {
-                Write-Log "[KEYS] Loaded existing ECDSA keypair (version: $($keys.version))" "INFO"
+                $loadedAlgorithm = if ($keys.algorithm) { [string]$keys.algorithm } else { "ECDSA-P256-SHA256" }
+                Write-Log "[KEYS] Loaded existing keypair ($loadedAlgorithm, version: $($keys.version))" "INFO"
                 $Global:AgentPrivateKey = $keys.private_key
                 $Global:AgentPublicKey = $keys.public_key
                 $Global:KeyFingerprint = $keys.fingerprint
                 $Global:KeyVersion = $keys.version
+                $Global:AgentSigningAlgorithm = $loadedAlgorithm
                 return $true
             }
         }
