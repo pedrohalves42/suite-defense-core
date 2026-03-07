@@ -1256,6 +1256,7 @@ function Initialize-AgentKeys {
                             $Global:AgentPublicKey = $publicKeyBase64
                             $Global:KeyFingerprint = $fp
                             $Global:KeyVersion = 1
+                            $Global:AgentSigningAlgorithm = "RSA-2048-SHA256"
                             
                             Write-Log "[KEYS] RSA-2048 fallback keypair generated. Fingerprint: $($fp.Substring(0, 16))..." "SUCCESS"
                             $rsa.Dispose()
