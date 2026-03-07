@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
 
     for (const platform of platforms) {
       try {
-        const scriptContent = getScriptContent(platform);
+        const scriptContent = await getScriptContent(platform);
         
         if (!scriptContent) {
           results[platform] = { success: false, error: 'Platform not supported yet' };
