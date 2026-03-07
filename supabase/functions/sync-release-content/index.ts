@@ -80,6 +80,7 @@ Deno.serve(async (req) => {
       };
       const fname = filenames[platform];
       if (!fname) return null;
+      // Try file system first
       try {
         const url = new URL(`../_shared/agent-scripts/${fname}`, import.meta.url);
         const content = await Deno.readTextFile(url);
@@ -87,8 +88,23 @@ Deno.serve(async (req) => {
           console.log(`[sync-release-content][${requestId}] Loaded ${platform} from file: ${content.length} chars`);
           return content;
         }
+      } catch {
+        console.log(`[sync-release-content][${requestId}] File read failed, trying storage bucket`);
+      }
+      // Fallback: read from storage bucket
+      try {
+        const { data: fileData, error: storageError } = await supabase.storage
+          .from('agent-installers')
+          .download(`scripts/${fname}`);
+        if (!storageError && fileData) {
+          const content = await fileData.text();
+          if (content && content.length > 1000 && !content.trimStart().startsWith('<!DOCTYPE')) {
+            console.log(`[sync-release-content][${requestId}] Loaded ${platform} from storage: ${content.length} chars`);
+            return content;
+          }
+        }
       } catch (e) {
-        console.log(`[sync-release-content][${requestId}] File read failed for ${platform}: ${(e as Error).message}`);
+        console.log(`[sync-release-content][${requestId}] Storage read failed: ${(e as Error).message}`);
       }
       return null;
     };
