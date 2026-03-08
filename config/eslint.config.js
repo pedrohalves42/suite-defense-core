@@ -4,7 +4,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 // ADR-026: Multi-tenant enforcement plugin
-import multitenantPlugin from "./eslint-plugin-multitenant/dist/index.js";
+import multitenantPlugin from "../eslint-plugin-multitenant/dist/index.js";
 
 export default tseslint.config(
   // 1. Global ignores for build directories
