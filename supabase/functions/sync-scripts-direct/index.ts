@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const version = url.searchParams.get('version') || 'v5.0.13';
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const scripts = await loadScripts();
 
     const results: Record<string, unknown> = {};
 
