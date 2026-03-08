@@ -10,21 +10,48 @@ import { corsHeaders } from '../_shared/cors.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-// Try to load scripts at module level
-const scripts: Record<string, string> = { windows: '', linux: '', macos: '' };
-
-for (const [platform, filename] of Object.entries({
+// Scripts loaded lazily from storage bucket (file system not available in Deno Deploy)
+const SCRIPT_FILES: Record<string, string> = {
   windows: 'cybershield-agent-windows-v5.ps1',
-  linux: 'cybershield-agent-linux-v5.sh',
-  macos: 'cybershield-agent-macos-v5.sh',
-})) {
-  try {
-    scripts[platform] = await Deno.readTextFile(
-      new URL(`../_shared/agent-scripts/${filename}`, import.meta.url)
-    );
-  } catch {
-    scripts[platform] = '';
+};
+
+async function loadScripts(): Promise<Record<string, string>> {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const result: Record<string, string> = {};
+
+  for (const [platform, filename] of Object.entries(SCRIPT_FILES)) {
+    // Try file system first (local dev)
+    try {
+      const content = await Deno.readTextFile(
+        new URL(`../_shared/agent-scripts/${filename}`, import.meta.url)
+      );
+      if (content && content.length > 1000) {
+        result[platform] = content;
+        console.log(`[sync-scripts-direct] Loaded ${platform} from file: ${content.length} chars`);
+        continue;
+      }
+    } catch { /* expected in Deploy */ }
+
+    // Fallback: storage bucket
+    try {
+      const { data, error } = await supabase.storage
+        .from('agent-installers')
+        .download(`scripts/${filename}`);
+      if (!error && data) {
+        const content = await data.text();
+        if (content && content.length > 1000 && !content.trimStart().startsWith('<!DOCTYPE')) {
+          result[platform] = content;
+          console.log(`[sync-scripts-direct] Loaded ${platform} from storage: ${content.length} chars`);
+          continue;
+        }
+      }
+    } catch (e) {
+      console.error(`[sync-scripts-direct] Storage read failed for ${platform}: ${(e as Error).message}`);
+    }
+
+    result[platform] = '';
   }
+  return result;
 }
 
 Deno.serve(async (req) => {
@@ -34,6 +61,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const version = url.searchParams.get('version') || 'v5.0.13';
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const scripts = await loadScripts();
 
     const results: Record<string, unknown> = {};
 
