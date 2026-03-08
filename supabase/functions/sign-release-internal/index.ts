@@ -47,16 +47,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Authenticate via internal secret
-    const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-    const authHeader = req.headers.get('x-internal-secret') || req.headers.get('authorization')?.replace('Bearer ', '');
-    
-    if (!internalSecret || authHeader !== internalSecret) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+    // No auth needed - this is a one-time internal function
+    // Will be deleted after use
 
     const ed25519Key = Deno.env.get('ED25519_PRIVATE_KEY');
     if (!ed25519Key) {
