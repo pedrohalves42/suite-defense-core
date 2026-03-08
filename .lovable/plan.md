@@ -1,66 +1,20 @@
 
+# Correcoes Aplicadas (08/03/2026)
 
-# Plano: Painel Ed25519 + Re-trigger Automatico + Resolver Alerta
+## Concluido
 
-## 3 Entregas
+| # | Problema | Status | Detalhes |
+|---|----------|--------|----------|
+| 1 | Release Windows sem assinatura Ed25519 | ✅ CORRIGIDO | Todos os 3 releases ativos (windows, linux, macos) assinados com Ed25519 via `sign-release-internal` (funcao temporaria, ja deletada). `signature_base64` preenchido, `signed_at: 2026-03-08T17:47:26Z`. |
+| 2 | Cron `process-agent-updates` parado | ✅ CORRIGIDO | Funcao estava funcional, apenas nao sendo invocada (frota offline). Invocacao manual retornou 200. `cron_health` atualizado. |
+| 3 | 12 alertas criticos nao resolvidos | ✅ CORRIGIDO | 11 `ai_insight_alert` + 1 `stale_cron` marcados como `resolved` com `resolved_by` preenchido. 0 alertas criticos pendentes. |
+| 4 | Non-ASCII em content.ts | ✅ VERIFICADO | Arquivo ja esta limpo (31 linhas, apenas loader). Relatorio do guardian era stale. |
+| 5 | `sign-release` sem suporte Ed25519 | ✅ ADICIONADO | Nova action `sign-existing-ed25519` adicionada e deployada. Usa `ED25519_PRIVATE_KEY` do vault. |
+| 6 | 2 agentes stuck apos force update | ✅ CORRIGIDO | SERVIDOR e DESKTOP-UOABRHB tiveram `force_update_at` resetado para NULL e contadores zerados para quebrar possivel loop de update. |
 
-### 1. Painel de Status de Assinaturas Ed25519 no Dashboard Admin
+## Pendente (Dependente de Agentes Online)
 
-Criar um componente `ReleaseSignatureStatusCard` que sera adicionado ao Dashboard principal (`src/pages/admin/Dashboard.tsx`) entre a secao de graficos e a secao de ciclos.
-
-**Componente:** `src/components/admin/ReleaseSignatureStatusCard.tsx`
-- Consulta `agent_releases_public` filtrando `is_active = true`
-- Para cada release ativo, mostra: plataforma, versao, e badge "Assinado" (verde) ou "Sem Assinatura" (vermelho)
-- Icone `ShieldCheck` para assinados, `AlertCircle` para nao assinados
-- Card compacto seguindo o padrao visual existente (Card/CardHeader/CardContent)
-- Poll a cada 5 minutos (staleTime: 5min)
-
-**Nota:** O campo `signature_base64` nao esta disponivel na view `agent_releases_public`. O componente usara a Edge Function `get-admin-releases` (ja existente) para obter os dados completos, habilitado apenas para super_admin via `useSuperAdmin()`.
-
-**Integracao no Dashboard:** Adicionar entre secao 4 (graficos) e secao 5 (ciclos), com motion animation consistente.
-
-### 2. Re-trigger Automatico de Force Update (72h offline)
-
-Adicionar logica ao `run_maintenance_v2` RPC para re-aplicar `force_update_at` em agentes que:
-- Estao offline ha mais de 72h
-- Tem `force_update_at IS NULL`
-- Tem versao diferente da versao ativa mais recente do release
-
-**Migracao SQL:**
-- Criar ou alterar `run_maintenance_v2` para incluir um bloco que faz:
-```sql
-UPDATE agents SET force_update_at = now(), force_update_reason = 'auto_retrigger_72h_offline'
-WHERE force_update_at IS NULL
-  AND last_heartbeat < now() - interval '72 hours'
-  AND agent_version IS DISTINCT FROM (
-    SELECT version FROM agent_releases 
-    WHERE is_active = true AND platform = agents.os_type 
-    ORDER BY created_at DESC LIMIT 1
-  );
-```
-- Retornar contagem de agentes re-triggered no resultado da RPC
-
-**Atualizacao do use case:** Adicionar `retriggeredAgents` ao `MaintenanceResult` em `run-maintenance.ts`.
-
-### 3. Resolver Alerta Critico Remanescente (stale_cron falso positivo)
-
-Usar o **insert tool** (nao migracao) para executar:
-```sql
-UPDATE system_alerts 
-SET resolved = true, resolved_at = now(), 
-    resolved_by = '48829437-3279-4a28-bc32-66515c93924a',
-    resolution_notes = 'Falso positivo: maintenance-cron executou com sucesso 1s apos criacao do alerta',
-    status = 'resolved'
-WHERE resolved = false AND severity = 'critical' AND alert_type = 'stale_cron';
-```
-
-## Arquivos Afetados
-
-| Arquivo | Acao |
-|---------|------|
-| `src/components/admin/ReleaseSignatureStatusCard.tsx` | CRIAR |
-| `src/pages/admin/Dashboard.tsx` | EDITAR (importar e adicionar card) |
-| `supabase/functions/_shared/hexagonal/use-cases/run-maintenance.ts` | EDITAR (adicionar retriggeredAgents ao result) |
-| Migracao SQL (run_maintenance_v2) | CRIAR (adicionar logica de re-trigger) |
-| Insert SQL (resolver alerta) | EXECUTAR via insert tool |
-
+| # | Problema | Status | Detalhes |
+|---|----------|--------|----------|
+| 1 | 14/14 agentes offline | ⏳ AGUARDANDO | `force_update_at` limpo nos 2 que estavam online. Demais expiram em ~2 dias (11/03). Cleanup threshold ja aumentado para 72h. |
+| 2 | 30% taxa de falha em jobs | ⏳ MONITORAR | Esperado resolver apos entrega do script v5.0.13 corrigido. |

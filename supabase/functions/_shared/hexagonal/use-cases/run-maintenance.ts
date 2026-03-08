@@ -15,6 +15,7 @@ export interface MaintenanceResult {
   expiredJobsProcessed: number;
   archivedExecutions: number;
   staleForceFlagsCleaned: number;
+  retriggeredAgents: number;
   durationMs: number;
 }
 
@@ -44,6 +45,7 @@ export class RunMaintenanceUseCase {
       expiredJobsProcessed: data?.expired_jobs ?? 0,
       archivedExecutions: data?.archived_executions ?? 0,
       staleForceFlagsCleaned: data?.stale_flags_cleaned ?? 0,
+      retriggeredAgents: data?.retriggered_agents ?? 0,
       durationMs: Date.now() - startedAt,
     };
 
@@ -59,6 +61,7 @@ export class RunMaintenanceUseCase {
         expired_jobs_processed: result.expiredJobsProcessed,
         archived_executions: result.archivedExecutions,
         stale_force_flags_cleaned: result.staleForceFlagsCleaned,
+        retriggered_agents: result.retriggeredAgents,
         duration_ms: result.durationMs,
       },
     }).then(({ error: healthErr }: { error: any }) => {
