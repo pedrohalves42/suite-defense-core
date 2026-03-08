@@ -56,6 +56,28 @@ async function signWithPrivateKey(content: string, privateKeyBase64: string) {
   return arrayBufferToBase64(signatureBuffer);
 }
 
+// Ed25519 signing function for Zero Trust supply chain
+async function signWithEd25519(content: string, privateKeyBase64: string): Promise<string> {
+  const privateKeyBuffer = base64ToArrayBuffer(privateKeyBase64);
+  
+  const privateKey = await crypto.subtle.importKey(
+    'pkcs8',
+    privateKeyBuffer,
+    { name: 'Ed25519' },
+    false,
+    ['sign']
+  );
+
+  const encoder = new TextEncoder();
+  const signatureBuffer = await crypto.subtle.sign(
+    'Ed25519',
+    privateKey,
+    encoder.encode(content)
+  );
+
+  return arrayBufferToBase64(signatureBuffer);
+}
+
 async function verifyWithPublicKey(content: string, signatureBase64: string, publicKeyBase64: string) {
   try {
     const publicKeyBuffer = base64ToArrayBuffer(publicKeyBase64);
@@ -592,11 +614,125 @@ Deno.serve(async (req) => {
         );
       }
 
+      case 'sign-existing-ed25519': {
+        // Sign existing releases with Ed25519 using ED25519_PRIVATE_KEY from secrets
+        const ed25519PrivateKey = Deno.env.get('ED25519_PRIVATE_KEY');
+        if (!ed25519PrivateKey) {
+          return new Response(
+            JSON.stringify({ error: 'Missing ED25519_PRIVATE_KEY secret' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        logger.info('[sign-release] Signing existing releases with Ed25519', { requestId });
+
+        // Get active releases without signatures
+        const { data: ed25519Releases, error: ed25519FetchError } = await supabase
+          .from('agent_releases')
+          .select('id, version, platform, sha256, signature_base64')
+          .eq('is_active', true)
+          .is('signature_base64', null);
+
+        if (ed25519FetchError) throw ed25519FetchError;
+
+        if (!ed25519Releases || ed25519Releases.length === 0) {
+          // Also check ALL active releases to re-sign with Ed25519
+          const { data: allActive } = await supabase
+            .from('agent_releases')
+            .select('id, version, platform, sha256, signature_base64')
+            .eq('is_active', true);
+
+          // Re-sign all active releases with Ed25519 (overwrite ECDSA signatures)
+          const releasesToSign = allActive || [];
+          if (releasesToSign.length === 0) {
+            return new Response(
+              JSON.stringify({ success: true, message: 'No active releases found', signed_count: 0 }),
+              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          const ed25519Results = [];
+          const now = new Date().toISOString();
+
+          for (const release of releasesToSign) {
+            try {
+              const sig = await signWithEd25519(release.sha256, ed25519PrivateKey);
+              const { error: updErr } = await supabase
+                .from('agent_releases')
+                .update({ signature_base64: sig, signed_at: now, signed_by: user.email })
+                .eq('id', release.id);
+
+              ed25519Results.push({
+                id: release.id, version: release.version, platform: release.platform,
+                success: !updErr, error: updErr?.message,
+                signature_preview: sig.substring(0, 20) + '...'
+              });
+            } catch (e) {
+              ed25519Results.push({
+                id: release.id, version: release.version, platform: release.platform,
+                success: false, error: (e as Error).message
+              });
+            }
+          }
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              algorithm: 'Ed25519',
+              signed_count: ed25519Results.filter(r => r.success).length,
+              total_count: releasesToSign.length,
+              signed_at: now,
+              signed_by: user.email,
+              results: ed25519Results
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Sign unsigned releases
+        const ed25519Results = [];
+        const now = new Date().toISOString();
+
+        for (const release of ed25519Releases) {
+          try {
+            const sig = await signWithEd25519(release.sha256, ed25519PrivateKey);
+            const { error: updErr } = await supabase
+              .from('agent_releases')
+              .update({ signature_base64: sig, signed_at: now, signed_by: user.email })
+              .eq('id', release.id);
+
+            ed25519Results.push({
+              id: release.id, version: release.version, platform: release.platform,
+              success: !updErr, error: updErr?.message,
+              signature_preview: sig.substring(0, 20) + '...'
+            });
+          } catch (e) {
+            ed25519Results.push({
+              id: release.id, version: release.version, platform: release.platform,
+              success: false, error: (e as Error).message
+            });
+          }
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            algorithm: 'Ed25519',
+            signed_count: ed25519Results.filter(r => r.success).length,
+            total_count: ed25519Releases.length,
+            signed_at: now,
+            signed_by: user.email,
+            results: ed25519Results
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       default:
         return new Response(
           JSON.stringify({ 
             error: 'Invalid action',
-            valid_actions: ['generate-keypair', 'sign', 'verify', 'sign-existing', 'sign-and-register', 'sign-document']
+            valid_actions: ['generate-keypair', 'sign', 'verify', 'sign-existing', 'sign-existing-ed25519', 'sign-and-register', 'sign-document']
           }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
