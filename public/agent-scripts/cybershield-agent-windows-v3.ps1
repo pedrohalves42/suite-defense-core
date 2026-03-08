@@ -596,7 +596,7 @@ function Invoke-LightVulnScanJob {
 
     Write-Log "[VULN-SCAN] Iniciando light vuln scan..." "INFO"
 
-    # OTIMIZACAO: Usar ArrayList em vez de += para melhor performance
+    # OPTIMIZATION: Use ArrayList instead of += for better performance
     $findings = New-Object System.Collections.ArrayList
 
     try {
