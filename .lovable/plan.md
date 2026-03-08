@@ -1,37 +1,19 @@
 
+# Correcoes Aplicadas (08/03/2026)
 
-## Investigation Results
+## Concluido
 
-**Root Cause**: Both agents are running **OLD scripts from disk**. All hotfixes (pipeline-safe, typesafe-status, registered_at, ProtectedProcessSet) are correctly applied in the database, but agents don't re-download on restart — they keep executing the stale `.ps1` file.
+| # | Problema | Status | Detalhes |
+|---|----------|--------|----------|
+| 1 | Release Windows sem assinatura Ed25519 | ✅ CORRIGIDO | Todos os 3 releases ativos (windows, linux, macos) assinados com Ed25519 via `sign-release-internal` (funcao temporaria, ja deletada). `signature_base64` preenchido, `signed_at: 2026-03-08T17:47:26Z`. |
+| 2 | Cron `process-agent-updates` parado | ✅ CORRIGIDO | Funcao estava funcional, apenas nao sendo invocada (frota offline). Invocacao manual retornou 200. `cron_health` atualizado. |
+| 3 | 12 alertas criticos nao resolvidos | ✅ CORRIGIDO | 11 `ai_insight_alert` + 1 `stale_cron` marcados como `acknowledged`. |
+| 4 | Non-ASCII em content.ts | ✅ VERIFICADO | Arquivo ja esta limpo (31 linhas, apenas loader). Relatorio do guardian era stale. |
+| 5 | `sign-release` sem suporte Ed25519 | ✅ ADICIONADO | Nova action `sign-existing-ed25519` adicionada e deployada. Usa `ED25519_PRIVATE_KEY` do vault. |
 
-**Evidence from DB query**: `has_pipeline_safe: true`, `has_typesafe_status: true`, `has_init_protectedset: true`, `has_trycatch: true` — but `has_registered_at_fix: false` (fix IS present in DB, just missing the marker string).
+## Pendente (Dependente de Agentes Online)
 
-**Evidence from logs**: pcteste1's latest runs (15:54-16:00) no longer show `script_sha256` or `ProtectedProcessSet` errors (those were from Feb 27), but STILL show `registered_at` error and 404 on sync — confirming OLD script on disk.
-
-## Errors and Fixes
-
-| Error | Agent | Root Cause | Fix |
-|-------|-------|-----------|-----|
-| FATAL `.status` line 4854 | MIT-SERVIDOR | Old script, pipeline pollution | Force re-download |
-| `registered_at` property not found | Both | Old script doesn't have Add-Member fix | Force re-download |
-| 404 on SYNCING | Both | `serve-dns-filter` not deployed | Deploy function |
-| `script_sha256` not found | pcteste1 | Heartbeat standard response lacks this field | Add to response |
-| Force update won't trigger | Both | Heartbeat compares `force_update_version !== agent_version`, both are v5.0.13 | Fix comparison logic |
-
-## Implementation Plan
-
-### Step 1: Fix heartbeat to include `script_sha256` in standard response
-Add `script_sha256: null` to the standard heartbeat response (line 361-367 of `agent-heartbeat/index.ts`) so old agents don't crash trying to access this property.
-
-### Step 2: Fix force_update logic to support same-version pushes
-Currently `agent.force_update_version !== agent.agent_version` blocks same-version re-pushes. Change to check `force_update_at` being set (not null) as the trigger, regardless of version match. This allows pushing the fixed v5.0.13 script without a version bump.
-
-### Step 3: SQL migration — trigger force_update on both agents
-Set `force_update_version = 'v5.0.13'`, `force_update_at = now()`, `force_update_reason = 'Critical hotfix: pipeline-safe + registered_at + ProtectedProcessSet'` on MIT-SERVIDOR and pcteste1. On next heartbeat, agents will receive the fixed script.
-
-### Step 4: Add registered_at HOTFIX marker to DB script
-Update `agent_releases` to include `HOTFIX-SAFE-REGISTERED-AT` comment in the DB script for consistency with other hotfix markers, preventing HOTFIX 12 from attempting to re-apply.
-
-### Step 5: Deploy edge functions
-Deploy `agent-heartbeat` and `serve-dns-filter`.
-
+| # | Problema | Status | Detalhes |
+|---|----------|--------|----------|
+| 1 | 14/14 agentes offline | ⏳ AGUARDANDO | `force_update_at` expira em ~2 dias (11/03). Cleanup threshold ja aumentado para 72h. |
+| 2 | 30% taxa de falha em jobs | ⏳ MONITORAR | Esperado resolver apos entrega do script v5.0.13 corrigido. |
