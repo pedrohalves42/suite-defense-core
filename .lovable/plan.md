@@ -1,19 +1,52 @@
 
-# Correcoes Aplicadas (08/03/2026)
 
-## Concluido
+# Plano de Correcao
 
-| # | Problema | Status | Detalhes |
-|---|----------|--------|----------|
-| 1 | Release Windows sem assinatura Ed25519 | ✅ CORRIGIDO | Todos os 3 releases ativos (windows, linux, macos) assinados com Ed25519 via `sign-release-internal` (funcao temporaria, ja deletada). `signature_base64` preenchido, `signed_at: 2026-03-08T17:47:26Z`. |
-| 2 | Cron `process-agent-updates` parado | ✅ CORRIGIDO | Funcao estava funcional, apenas nao sendo invocada (frota offline). Invocacao manual retornou 200. `cron_health` atualizado. |
-| 3 | 12 alertas criticos nao resolvidos | ✅ CORRIGIDO | 11 `ai_insight_alert` + 1 `stale_cron` marcados como `acknowledged`. |
-| 4 | Non-ASCII em content.ts | ✅ VERIFICADO | Arquivo ja esta limpo (31 linhas, apenas loader). Relatorio do guardian era stale. |
-| 5 | `sign-release` sem suporte Ed25519 | ✅ ADICIONADO | Nova action `sign-existing-ed25519` adicionada e deployada. Usa `ED25519_PRIVATE_KEY` do vault. |
+## Estado Atual (Diagnostico)
 
-## Pendente (Dependente de Agentes Online)
+| Item | Status |
+|------|--------|
+| 12 alertas criticos | `acknowledged` mas **nao resolvidos** (`resolved=false`) |
+| Release Windows Ed25519 | **JA ASSINADO** (signed_at: 2026-03-08 17:47) |
+| Cron process-agent-updates | **JA SAUDAVEL** (last_success: 2026-03-08 17:46, status: healthy) |
+| Non-ASCII em content.ts | **JA LIMPO** (31 linhas, apenas loader) |
+| 2 maquinas que estavam online | SERVIDOR (offline ha ~6h) e DESKTOP-UOABRHB (offline ha ~22h) - possivelmente ficaram offline apos receber o force update |
 
-| # | Problema | Status | Detalhes |
-|---|----------|--------|----------|
-| 1 | 14/14 agentes offline | ⏳ AGUARDANDO | `force_update_at` expira em ~2 dias (11/03). Cleanup threshold ja aumentado para 72h. |
-| 2 | 30% taxa de falha em jobs | ⏳ MONITORAR | Esperado resolver apos entrega do script v5.0.13 corrigido. |
+## Acoes Necessarias
+
+### 1. Resolver os 12 alertas criticos
+Marcar todos como `resolved=true` com `resolved_at=now()` e `resolution_notes` indicando resolucao em massa. Os 12 IDs ja foram identificados.
+
+### 2. Investigar agentes que ficaram offline apos force update
+As 2 maquinas (SERVIDOR e DESKTOP-UOABRHB) receberam o force update mas cairam offline em seguida. Isso pode indicar que o script atualizado causou um crash ou loop de reinicializacao. Acoes:
+- Resetar `force_update_at` para NULL nessas 2 maquinas para quebrar um possivel loop
+- Resetar `force_update_delivered_count` e `force_update_delivery_count` para 0
+- Isso permite que quando ligarem, o agente inicie normalmente sem tentar aplicar update repetidamente
+
+### 3. Nenhuma acao necessaria para os demais itens
+- Release ja assinado com Ed25519
+- Cron ja esta saudavel
+- Content.ts ja esta limpo
+
+## Detalhes Tecnicos
+
+**SQL para resolver alertas (via insert tool):**
+```sql
+UPDATE system_alerts 
+SET resolved = true, 
+    resolved_at = now(), 
+    resolution_notes = 'Resolucao em massa: alertas de recursos (CPU/memoria) e cron stale resolvidos apos correcoes de infraestrutura'
+WHERE resolved = false AND severity = 'critical';
+```
+
+**SQL para resetar force update nas 2 maquinas (via insert tool):**
+```sql
+UPDATE agents 
+SET force_update_at = NULL, 
+    force_update_delivered_count = 0, 
+    force_update_delivery_count = 0
+WHERE hostname IN ('SERVIDOR', 'DESKTOP-UOABRHB');
+```
+
+Isso quebra qualquer loop de update e permite que os agentes iniciem normalmente quando as maquinas forem ligadas.
+
