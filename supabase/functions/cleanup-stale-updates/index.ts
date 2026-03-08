@@ -11,8 +11,8 @@ import { corsHeaders } from '../_shared/cors.ts';
  * Auth: Internal or service-role only.
  */
 
-const MAX_DELIVERY_COUNT = 5;
-const MAX_STALE_HOURS = 4;
+const MAX_DELIVERY_COUNT = 10;
+const MAX_STALE_HOURS = 72;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });

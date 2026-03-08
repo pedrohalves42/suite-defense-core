@@ -529,7 +529,7 @@ function Invoke-SoftwareInventoryJob {
 
     Write-Log "[SOFTWARE-INVENTORY] Iniciando coleta de inventario de software..." "INFO"
 
-    # OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n?)
+    # OPTIMIZATION: Use ArrayList instead of += for better performance O(n) vs O(n^2)
     $items = New-Object System.Collections.ArrayList
 
     try {
@@ -596,7 +596,7 @@ function Invoke-LightVulnScanJob {
 
     Write-Log "[VULN-SCAN] Iniciando light vuln scan..." "INFO"
 
-    # OTIMIZACAO: Usar ArrayList em vez de += para melhor performance
+    # OPTIMIZATION: Use ArrayList instead of += for better performance
     $findings = New-Object System.Collections.ArrayList
 
     try {
