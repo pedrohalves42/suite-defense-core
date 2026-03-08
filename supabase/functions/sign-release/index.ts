@@ -56,6 +56,28 @@ async function signWithPrivateKey(content: string, privateKeyBase64: string) {
   return arrayBufferToBase64(signatureBuffer);
 }
 
+// Ed25519 signing function for Zero Trust supply chain
+async function signWithEd25519(content: string, privateKeyBase64: string): Promise<string> {
+  const privateKeyBuffer = base64ToArrayBuffer(privateKeyBase64);
+  
+  const privateKey = await crypto.subtle.importKey(
+    'pkcs8',
+    privateKeyBuffer,
+    { name: 'Ed25519' },
+    false,
+    ['sign']
+  );
+
+  const encoder = new TextEncoder();
+  const signatureBuffer = await crypto.subtle.sign(
+    'Ed25519',
+    privateKey,
+    encoder.encode(content)
+  );
+
+  return arrayBufferToBase64(signatureBuffer);
+}
+
 async function verifyWithPublicKey(content: string, signatureBase64: string, publicKeyBase64: string) {
   try {
     const publicKeyBuffer = base64ToArrayBuffer(publicKeyBase64);
