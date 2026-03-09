@@ -4,15 +4,19 @@ import { corsHeaders } from '../_shared/cors.ts';
 /**
  * cleanup-stale-updates
  * 
- * Auto-cancels force_update flags stuck for >4 hours OR delivered >5 times
+ * Auto-cancels force_update flags stuck for >168h (7 days) OR delivered >10 times
  * without confirmation. This prevents infinite update loops.
+ * 
+ * IMPORTANT: Skips agents recently re-triggered by auto_retrigger_72h_offline
+ * that have NOT yet been delivered (delivery_count = 0), to avoid clearing
+ * flags before offline agents come back online.
  * 
  * Should be called periodically (e.g., every hour via cron or heartbeat).
  * Auth: Internal or service-role only.
  */
 
 const MAX_DELIVERY_COUNT = 10;
-const MAX_STALE_HOURS = 72;
+const MAX_STALE_HOURS = 168; // 7 days - gives offline agents time to come back
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -25,20 +29,19 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Find agents with stale force_update flags
     const staleThreshold = new Date(Date.now() - MAX_STALE_HOURS * 60 * 60 * 1000).toISOString();
 
-    // Case 1: force_update_at is too old
+    // Case 1: force_update_at is too old (>7 days)
     const { data: staleByTime, error: err1 } = await supabase
       .from('agents')
-      .select('id, agent_name, agent_version, force_update_version, force_update_at, force_update_delivery_count')
+      .select('id, agent_name, agent_version, force_update_version, force_update_at, force_update_delivery_count, force_update_reason, tenant_id')
       .not('force_update_version', 'is', null)
       .lt('force_update_at', staleThreshold);
 
-    // Case 2: too many deliveries without confirmation
+    // Case 2: too many deliveries without confirmation (>10)
     const { data: staleByCount, error: err2 } = await supabase
       .from('agents')
-      .select('id, agent_name, agent_version, force_update_version, force_update_at, force_update_delivery_count')
+      .select('id, agent_name, agent_version, force_update_version, force_update_at, force_update_delivery_count, force_update_reason, tenant_id')
       .not('force_update_version', 'is', null)
       .gte('force_update_delivery_count', MAX_DELIVERY_COUNT);
 
@@ -52,7 +55,18 @@ Deno.serve(async (req) => {
       allStale.set(agent.id, agent);
     }
 
-    const staleAgents = Array.from(allStale.values());
+    // Filter out agents that were recently re-triggered but never delivered yet
+    // These are offline agents waiting to come back - don't clear their flags
+    const staleAgents = Array.from(allStale.values()).filter(agent => {
+      if (
+        agent.force_update_reason === 'auto_retrigger_72h_offline' &&
+        (agent.force_update_delivery_count || 0) === 0
+      ) {
+        console.log(`[${requestId}] Skipping ${agent.agent_name}: re-triggered but not yet delivered (waiting for agent to come online)`);
+        return false;
+      }
+      return true;
+    });
 
     if (staleAgents.length === 0) {
       return new Response(JSON.stringify({ 
@@ -86,16 +100,17 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Log evidence
+      // Log evidence (tenant_id already in select, no N+1 query)
       await supabase.from('agent_evidence_logs').insert({
         agent_id: agent.id,
         agent_name: agent.agent_name,
         agent_version: agent.agent_version,
-        tenant_id: (await supabase.from('agents').select('tenant_id').eq('id', agent.id).single()).data?.tenant_id,
+        tenant_id: agent.tenant_id,
         event_type: 'force_update_auto_cancelled',
         event_data: {
           cancelled_version: agent.force_update_version,
           reason,
+          original_trigger: agent.force_update_reason,
           delivery_count: agent.force_update_delivery_count || 0,
           force_update_at: agent.force_update_at,
           cleaned_at: new Date().toISOString()
@@ -116,7 +131,8 @@ Deno.serve(async (req) => {
       agents: staleAgents.map(a => ({
         name: a.agent_name,
         stuck_version: a.force_update_version,
-        delivery_count: a.force_update_delivery_count
+        delivery_count: a.force_update_delivery_count,
+        trigger_reason: a.force_update_reason
       }))
     }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
