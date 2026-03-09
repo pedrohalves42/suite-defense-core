@@ -1071,6 +1071,41 @@ try {
     }
   }
 
+  // HOTFIX 33b: Detect null/empty private_key with ECDSA algorithm and force RSA regen at startup
+  // When agent_keys.json has algorithm=ECDSA-P256-SHA256 but private_key=null, signing always fails
+  if (content.includes('Initialize-AgentKeys') && content.includes('agent_keys.json') && !content.includes('HOTFIX-NULL-PRIVKEY-REGEN')) {
+    const nullKeyCheck = content.replace(
+      /(if\s*\(\$keys\.algorithm\s*-and\s*\$keys\.private_key\s*-and\s*\$keys\.public_key\))/,
+      `# HOTFIX-NULL-PRIVKEY-REGEN: If algorithm is ECDSA but private_key is null/empty, delete keys and regen
+            if ($keys.algorithm -like "ECDSA*" -and (-not $keys.private_key -or $keys.private_key -eq "null")) {
+                Write-Log "[KEYS] Detected ECDSA keys with null private_key - deleting for RSA regen" "WARN"
+                Remove-Item $keysPath -Force -ErrorAction SilentlyContinue
+                $keys = $null
+            }
+            $1`
+    );
+    if (nullKeyCheck !== content) {
+      content = nullKeyCheck;
+      reasons.push('null_privkey_regen');
+    } else {
+      // Broader fallback: inject after loading agent_keys.json
+      const fallback33b = content.replace(
+        /(\$keys\s*=\s*(?:Get-Content\s+\$keysPath\s+-Raw\s*\|\s*ConvertFrom-Json|\$keysContent\s*\|\s*ConvertFrom-Json)[^\n]*)/,
+        `$1
+            # HOTFIX-NULL-PRIVKEY-REGEN: If ECDSA keys have null private_key, force RSA regen
+            if ($keys -and $keys.algorithm -like "ECDSA*" -and (-not $keys.private_key -or $keys.private_key -eq "null")) {
+                Write-Log "[KEYS] Detected ECDSA keys with null private_key - forcing RSA regen" "WARN"
+                Remove-Item $keysPath -Force -ErrorAction SilentlyContinue
+                $keys = $null
+            }`
+      );
+      if (fallback33b !== content) {
+        content = fallback33b;
+        reasons.push('null_privkey_regen');
+      }
+    }
+  }
+
   // HOTFIX 34: Robust baseline loading - wrap ConvertFrom-Json in try/catch
   // PS 5.1 can produce corrupted JSON with duplicate keys when mixing hashtables and PSCustomObjects
   if (content.includes('Initialize-ProcessBaseline') && content.includes('ConvertFrom-Json') && !content.includes('HOTFIX-BASELINE-LOAD-SAFE')) {
