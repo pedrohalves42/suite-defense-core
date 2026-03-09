@@ -1075,7 +1075,7 @@ try {
   // PS 5.1 can produce corrupted JSON with duplicate keys when mixing hashtables and PSCustomObjects
   if (content.includes('Initialize-ProcessBaseline') && content.includes('ConvertFrom-Json') && !content.includes('HOTFIX-BASELINE-LOAD-SAFE')) {
     const updatedBaselineLoad = content.replace(
-      /(\$Global:ProcessBaseline = Get-Content \$Global:ProcessBaselinePath -Raw \| ConvertFrom-Json)/,
+      /\$Global:ProcessBaseline\s*=\s*Get-Content\s+\$Global:ProcessBaselinePath\s+-Raw\s*\|\s*ConvertFrom-Json/,
       `# HOTFIX-BASELINE-LOAD-SAFE: Robust JSON loading for PS 5.1 compatibility
             try {
                 $rawJson = Get-Content $Global:ProcessBaselinePath -Raw
