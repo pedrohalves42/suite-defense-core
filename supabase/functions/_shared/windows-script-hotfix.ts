@@ -987,62 +987,136 @@ try {
     }
   }
 
-  // HOTFIX 33: Legacy-compatible result signing (fix ImportPkcs8PrivateKey missing on ECDsaCng)
-  if (content.includes('function Invoke-SignResult') && content.includes('ImportPkcs8PrivateKey') && !content.includes('HOTFIX-SIGN-COMPAT')) {
-    const updatedSignCompat = content.replace(
-      /# Import private key\s*\r?\n\s*\$privateKeyBytes = \[Convert\]::FromBase64String\(\$Global:AgentPrivateKey\)\s*\r?\n\s*\$ecdsa = \[System\.Security\.Cryptography\.ECDsaCng\]::new\(\)\s*\r?\n\s*\$ecdsa\.ImportPkcs8PrivateKey\(\$privateKeyBytes, \[ref\]\$null\)\s*\r?\n\s*\r?\n\s*# Sign payload\s*\r?\n\s*\$payloadBytes = \[System\.Text\.Encoding\]::UTF8\.GetBytes\(\$canonicalPayload\)\s*\r?\n\s*\$signatureBytes = \$ecdsa\.SignData\(\$payloadBytes, \[System\.Security\.Cryptography\.HashAlgorithmName\]::SHA256\)\s*\r?\n\s*\$signature = \[Convert\]::ToBase64String\(\$signatureBytes\)\s*\r?\n\s*\r?\n\s*\$ecdsa\.Dispose\(\)/m,
-      `# HOTFIX-SIGN-COMPAT: legacy-safe signer (ECDSA/RSA)
-        $algorithm = if ($Global:AgentSigningAlgorithm) { $Global:AgentSigningAlgorithm } else { "ECDSA-P256-SHA256" }
-        $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($canonicalPayload)
-
-        if ($algorithm -eq "RSA-2048-XML") {
-            $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider
-            try {
-                $rsaXml = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Global:AgentPrivateKey))
-                $rsa.FromXmlString($rsaXml)
-                $signatureBytes = $rsa.SignData($payloadBytes, "SHA256")
-            } finally {
-                $rsa.Dispose()
-            }
-        } elseif ($algorithm -eq "RSA-2048-SHA256") {
-            $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
-            try {
-                $rsa = [System.Security.Cryptography.RSA]::Create()
-                $bytesRead = 0
-                $null = $rsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$bytesRead)
-                $signatureBytes = $rsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
-                $rsa.Dispose()
-            } catch {
-                $rsaLegacy = New-Object System.Security.Cryptography.RSACryptoServiceProvider
-                $rsaLegacy.ImportCspBlob($privateKeyBytes)
-                $signatureBytes = $rsaLegacy.SignData($payloadBytes, "SHA256")
-                $rsaLegacy.Dispose()
-            }
-        } else {
-            $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
+  // HOTFIX 33: Replace entire ECDSA default signing block with RSA auto-regen fallback
+  // The canonical script's ECDSA path fails on PS 5.1 (.NET 4.x) because neither
+  // ImportPkcs8PrivateKey nor CngKey.Import work for ECDSA on legacy systems.
+  // Fix: when ECDSA fails, auto-regenerate keys as RSA-2048-XML and persist.
+  if (content.includes('# Default: ECDSA-P256-SHA256') && !content.includes('HOTFIX-ECDSA-RSA-AUTOREGEN')) {
+    const updatedEcdsaBlock = content.replace(
+      /# Default: ECDSA-P256-SHA256\s*\r?\n\s*\$privateKeyBytes = \[Convert\]::FromBase64String\(\$Global:AgentPrivateKey\)\s*\r?\n\s*\$ecdsa = \$null\s*\r?\n\s*try \{[\s\S]*?\$ecdsa\.SignData\(\$payloadBytes[\s\S]*?\} finally \{\s*\r?\n\s*if \(\$null -ne \$ecdsa\) \{ \$ecdsa\.Dispose\(\) \}\s*\r?\n\s*\}/m,
+      `# Default: ECDSA-P256-SHA256 with RSA auto-regeneration fallback <# HOTFIX-ECDSA-RSA-AUTOREGEN #>
+        $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
+        $ecdsa = $null
+        $ecdsaFailed = $false
+        try {
             $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
+            if ($null -eq $ecdsa) { throw "ECDsa.Create() returned null" }
+            $bytesRead = 0
             try {
-                $bytesRead = 0
+                $null = $ecdsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$bytesRead)
+            } catch {
+                Write-Log "[SIGN] ImportPkcs8PrivateKey unavailable, trying CngKey.Import" "WARN"
+                if ($null -ne $ecdsa) { $ecdsa.Dispose(); $ecdsa = $null }
                 try {
-                    $null = $ecdsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$bytesRead)
-                } catch {
-                    $ecdsa.Dispose()
-                    $cngKey = [System.Security.Cryptography.CngKey]::Import($privateKeyBytes, [System.Security.Cryptography.CngKeyBlobFormat]::Pkcs8PrivateBlob)
+                    $cngKey = [System.Security.Cryptography.CngKey]::Import(
+                        $privateKeyBytes,
+                        [System.Security.Cryptography.CngKeyBlobFormat]::Pkcs8PrivateBlob
+                    )
                     $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
+                } catch {
+                    Write-Log "[SIGN] CngKey.Import also failed. Triggering RSA auto-regeneration." "WARN"
+                    $ecdsaFailed = $true
                 }
-                $signatureBytes = $ecdsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
-            } finally {
-                if ($null -ne $ecdsa) { $ecdsa.Dispose() }
             }
+            if (-not $ecdsaFailed) {
+                $signatureBytes = $ecdsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+                $signature = [Convert]::ToBase64String($signatureBytes)
+                Write-Log "[SIGN] Signed result for execution $ExecutionId using $algorithm" "DEBUG"
+                return $signature
+            }
+        } catch {
+            Write-Log "[SIGN] ECDSA signing failed completely: $($_.Exception.Message). Triggering RSA auto-regen." "WARN"
+            $ecdsaFailed = $true
+        } finally {
+            if ($null -ne $ecdsa) { $ecdsa.Dispose() }
         }
 
-        $signature = [Convert]::ToBase64String($signatureBytes) <# HOTFIX-SIGN-COMPAT #>`
+        # ECDSA failed on this system - auto-regenerate as RSA-2048-XML for permanent fix
+        if ($ecdsaFailed) {
+            Write-Log "[SIGN] Auto-regenerating keys as RSA-2048-XML for PS 5.1 compatibility..." "WARN"
+            try {
+                $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
+                $rsaXml = $rsa.ToXmlString($true)
+                $rsaPublicXml = $rsa.ToXmlString($false)
+                $Global:AgentPrivateKey = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($rsaXml))
+                $Global:AgentSigningAlgorithm = "RSA-2048-XML"
+                $Global:AgentPublicKey = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($rsaPublicXml))
+                
+                # Persist new keys
+                $keyDir = "C:\\CyberShield\\keys"
+                if (-not (Test-Path $keyDir)) { New-Item -ItemType Directory -Path $keyDir -Force | Out-Null }
+                $rsaXml | Out-File "$keyDir\\agent_private.xml" -Encoding UTF8 -Force
+                $rsaPublicXml | Out-File "$keyDir\\agent_public.xml" -Encoding UTF8 -Force
+                "RSA-2048-XML" | Out-File "$keyDir\\algorithm.txt" -Encoding UTF8 -Force
+                
+                # Sign with new RSA key
+                $signatureBytes = $rsa.SignData($payloadBytes, "SHA256")
+                $signature = [Convert]::ToBase64String($signatureBytes)
+                $rsa.Dispose()
+                
+                Write-Log "[SIGN] RSA-2048-XML keys generated and persisted. Signed successfully." "SUCCESS"
+                return $signature
+            } catch {
+                Write-Log "[SIGN] RSA auto-regen failed: $($_.Exception.Message)" "ERROR"
+                return $null
+            }
+        }`
     );
 
-    if (updatedSignCompat !== content) {
-      content = updatedSignCompat;
-      reasons.push('sign_result_legacy_compat');
+    if (updatedEcdsaBlock !== content) {
+      content = updatedEcdsaBlock;
+      reasons.push('ecdsa_rsa_autoregen');
     }
+  }
+
+  // HOTFIX 34: Robust baseline loading - wrap ConvertFrom-Json in try/catch
+  // PS 5.1 can produce corrupted JSON with duplicate keys when mixing hashtables and PSCustomObjects
+  if (content.includes('Initialize-ProcessBaseline') && content.includes('ConvertFrom-Json') && !content.includes('HOTFIX-BASELINE-LOAD-SAFE')) {
+    const updatedBaselineLoad = content.replace(
+      /(\$Global:ProcessBaseline = Get-Content \$Global:ProcessBaselinePath -Raw \| ConvertFrom-Json)/,
+      `# HOTFIX-BASELINE-LOAD-SAFE: Robust JSON loading for PS 5.1 compatibility
+            try {
+                $rawJson = Get-Content $Global:ProcessBaselinePath -Raw
+                $loaded = $rawJson | ConvertFrom-Json
+                if ($loaded -is [array]) {
+                    $Global:ProcessBaseline = $loaded
+                } else {
+                    $Global:ProcessBaseline = @($loaded)
+                }
+            } catch {
+                Write-Log "[BASELINE] Corrupted baseline JSON detected: $($_.Exception.Message). Rebuilding..." "WARN"
+                try {
+                    $backupPath = "$($Global:ProcessBaselinePath).corrupt.$((Get-Date).ToString('yyyyMMddHHmmss'))"
+                    Move-Item -Path $Global:ProcessBaselinePath -Destination $backupPath -Force -ErrorAction SilentlyContinue
+                } catch { <# ignore #> }
+                $Global:ProcessBaseline = @()
+                # Force rebuild below
+            }`
+    );
+
+    if (updatedBaselineLoad !== content) {
+      content = updatedBaselineLoad;
+      reasons.push('baseline_load_safe');
+    }
+  }
+
+  // HOTFIX 35: Normalize baseline entries before save to prevent PS 5.1 serialization issues
+  if (content.includes('ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath') && !content.includes('HOTFIX-BASELINE-NORMALIZE-SAVE')) {
+    content = content.replace(
+      /(\$Global:ProcessBaseline \| ConvertTo-Json -Depth 5 \| Out-File \$Global:ProcessBaselinePath[^\n]*)/g,
+      `# HOTFIX-BASELINE-NORMALIZE-SAVE: Convert all entries to hashtables before save
+                $normalizedBaseline = @()
+                foreach ($be in $Global:ProcessBaseline) {
+                    $normalizedBaseline += @{
+                        name = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
+                        company = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
+                        description = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
+                        first_seen = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
+                    }
+                }
+                $normalizedBaseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8`
+    );
+    reasons.push('baseline_normalize_save');
   }
 
   return { content, changed: reasons.length > 0, reasons };
