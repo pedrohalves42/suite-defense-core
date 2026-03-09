@@ -1103,9 +1103,9 @@ try {
   }
 
   // HOTFIX 35: Normalize baseline entries before save to prevent PS 5.1 serialization issues
-  if (content.includes('ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath') && !content.includes('HOTFIX-BASELINE-NORMALIZE-SAVE')) {
+  if (content.includes('ConvertTo-Json -Depth 5') && content.includes('ProcessBaselinePath') && !content.includes('HOTFIX-BASELINE-NORMALIZE-SAVE')) {
     content = content.replace(
-      /(\$Global:ProcessBaseline \| ConvertTo-Json -Depth 5 \| Out-File \$Global:ProcessBaselinePath[^\n]*)/g,
+      /\$Global:ProcessBaseline\s*\|\s*ConvertTo-Json\s+-Depth\s+5\s*\|\s*Out-File\s+\$Global:ProcessBaselinePath[^\n]*/g,
       `# HOTFIX-BASELINE-NORMALIZE-SAVE: Convert all entries to hashtables before save
                 $normalizedBaseline = @()
                 foreach ($be in $Global:ProcessBaseline) {
