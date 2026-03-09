@@ -992,8 +992,10 @@ try {
   // ImportPkcs8PrivateKey nor CngKey.Import work for ECDSA on legacy systems.
   // Fix: when ECDSA fails, auto-regenerate keys as RSA-2048-XML and persist.
   if (content.includes('# Default: ECDSA-P256-SHA256') && !content.includes('HOTFIX-ECDSA-RSA-AUTOREGEN')) {
+    // Flexible regex: match from "# Default: ECDSA-P256-SHA256" through the finally block,
+    // accepting BOTH bare $ecdsa.Dispose() AND guarded if($null -ne $ecdsa){$ecdsa.Dispose()}
     const updatedEcdsaBlock = content.replace(
-      /# Default: ECDSA-P256-SHA256\s*\r?\n\s*\$privateKeyBytes = \[Convert\]::FromBase64String\(\$Global:AgentPrivateKey\)\s*\r?\n\s*\$ecdsa = \$null\s*\r?\n\s*try \{[\s\S]*?\$ecdsa\.SignData\(\$payloadBytes[\s\S]*?\} finally \{\s*\r?\n\s*if \(\$null -ne \$ecdsa\) \{ \$ecdsa\.Dispose\(\) \}\s*\r?\n\s*\}/m,
+      /# Default: ECDSA-P256-SHA256\s*\r?\n\s*\$privateKeyBytes = \[Convert\]::FromBase64String\(\$Global:AgentPrivateKey\)\s*\r?\n\s*\$ecdsa = \$null\s*\r?\n\s*try \{[\s\S]*?\$ecdsa\.SignData\(\$payloadBytes[\s\S]*?\}\s*finally\s*\{[\s\S]*?\$ecdsa\.Dispose\(\)[\s\S]*?\}/m,
       `# Default: ECDSA-P256-SHA256 with RSA auto-regeneration fallback <# HOTFIX-ECDSA-RSA-AUTOREGEN #>
         $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
         $ecdsa = $null
