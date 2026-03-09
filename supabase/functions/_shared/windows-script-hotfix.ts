@@ -992,8 +992,10 @@ try {
   // ImportPkcs8PrivateKey nor CngKey.Import work for ECDSA on legacy systems.
   // Fix: when ECDSA fails, auto-regenerate keys as RSA-2048-XML and persist.
   if (content.includes('# Default: ECDSA-P256-SHA256') && !content.includes('HOTFIX-ECDSA-RSA-AUTOREGEN')) {
+    // Flexible regex: match from "# Default: ECDSA-P256-SHA256" through the finally block,
+    // accepting BOTH bare $ecdsa.Dispose() AND guarded if($null -ne $ecdsa){$ecdsa.Dispose()}
     const updatedEcdsaBlock = content.replace(
-      /# Default: ECDSA-P256-SHA256\s*\r?\n\s*\$privateKeyBytes = \[Convert\]::FromBase64String\(\$Global:AgentPrivateKey\)\s*\r?\n\s*\$ecdsa = \$null\s*\r?\n\s*try \{[\s\S]*?\$ecdsa\.SignData\(\$payloadBytes[\s\S]*?\} finally \{\s*\r?\n\s*if \(\$null -ne \$ecdsa\) \{ \$ecdsa\.Dispose\(\) \}\s*\r?\n\s*\}/m,
+      /# Default: ECDSA-P256-SHA256\s*\r?\n\s*\$privateKeyBytes = \[Convert\]::FromBase64String\(\$Global:AgentPrivateKey\)\s*\r?\n\s*\$ecdsa = \$null\s*\r?\n\s*try \{[\s\S]*?\$ecdsa\.SignData\(\$payloadBytes[\s\S]*?\}\s*finally\s*\{[\s\S]*?\$ecdsa\.Dispose\(\)[\s\S]*?\}/m,
       `# Default: ECDSA-P256-SHA256 with RSA auto-regeneration fallback <# HOTFIX-ECDSA-RSA-AUTOREGEN #>
         $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
         $ecdsa = $null
@@ -1069,11 +1071,46 @@ try {
     }
   }
 
+  // HOTFIX 33b: Detect null/empty private_key with ECDSA algorithm and force RSA regen at startup
+  // When agent_keys.json has algorithm=ECDSA-P256-SHA256 but private_key=null, signing always fails
+  if (content.includes('Initialize-AgentKeys') && content.includes('agent_keys.json') && !content.includes('HOTFIX-NULL-PRIVKEY-REGEN')) {
+    const nullKeyCheck = content.replace(
+      /(if\s*\(\$keys\.algorithm\s*-and\s*\$keys\.private_key\s*-and\s*\$keys\.public_key\))/,
+      `# HOTFIX-NULL-PRIVKEY-REGEN: If algorithm is ECDSA but private_key is null/empty, delete keys and regen
+            if ($keys.algorithm -like "ECDSA*" -and (-not $keys.private_key -or $keys.private_key -eq "null")) {
+                Write-Log "[KEYS] Detected ECDSA keys with null private_key - deleting for RSA regen" "WARN"
+                Remove-Item $keysPath -Force -ErrorAction SilentlyContinue
+                $keys = $null
+            }
+            $1`
+    );
+    if (nullKeyCheck !== content) {
+      content = nullKeyCheck;
+      reasons.push('null_privkey_regen');
+    } else {
+      // Broader fallback: inject after loading agent_keys.json
+      const fallback33b = content.replace(
+        /(\$keys\s*=\s*(?:Get-Content\s+\$keysPath\s+-Raw\s*\|\s*ConvertFrom-Json|\$keysContent\s*\|\s*ConvertFrom-Json)[^\n]*)/,
+        `$1
+            # HOTFIX-NULL-PRIVKEY-REGEN: If ECDSA keys have null private_key, force RSA regen
+            if ($keys -and $keys.algorithm -like "ECDSA*" -and (-not $keys.private_key -or $keys.private_key -eq "null")) {
+                Write-Log "[KEYS] Detected ECDSA keys with null private_key - forcing RSA regen" "WARN"
+                Remove-Item $keysPath -Force -ErrorAction SilentlyContinue
+                $keys = $null
+            }`
+      );
+      if (fallback33b !== content) {
+        content = fallback33b;
+        reasons.push('null_privkey_regen');
+      }
+    }
+  }
+
   // HOTFIX 34: Robust baseline loading - wrap ConvertFrom-Json in try/catch
   // PS 5.1 can produce corrupted JSON with duplicate keys when mixing hashtables and PSCustomObjects
   if (content.includes('Initialize-ProcessBaseline') && content.includes('ConvertFrom-Json') && !content.includes('HOTFIX-BASELINE-LOAD-SAFE')) {
     const updatedBaselineLoad = content.replace(
-      /(\$Global:ProcessBaseline = Get-Content \$Global:ProcessBaselinePath -Raw \| ConvertFrom-Json)/,
+      /\$Global:ProcessBaseline\s*=\s*Get-Content\s+\$Global:ProcessBaselinePath\s+-Raw\s*\|\s*ConvertFrom-Json/,
       `# HOTFIX-BASELINE-LOAD-SAFE: Robust JSON loading for PS 5.1 compatibility
             try {
                 $rawJson = Get-Content $Global:ProcessBaselinePath -Raw
@@ -1101,9 +1138,9 @@ try {
   }
 
   // HOTFIX 35: Normalize baseline entries before save to prevent PS 5.1 serialization issues
-  if (content.includes('ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath') && !content.includes('HOTFIX-BASELINE-NORMALIZE-SAVE')) {
+  if (content.includes('ConvertTo-Json -Depth 5') && content.includes('ProcessBaselinePath') && !content.includes('HOTFIX-BASELINE-NORMALIZE-SAVE')) {
     content = content.replace(
-      /(\$Global:ProcessBaseline \| ConvertTo-Json -Depth 5 \| Out-File \$Global:ProcessBaselinePath[^\n]*)/g,
+      /\$Global:ProcessBaseline\s*\|\s*ConvertTo-Json\s+-Depth\s+5\s*\|\s*Out-File\s+\$Global:ProcessBaselinePath[^\n]*/g,
       `# HOTFIX-BASELINE-NORMALIZE-SAVE: Convert all entries to hashtables before save
                 $normalizedBaseline = @()
                 foreach ($be in $Global:ProcessBaseline) {
