@@ -268,6 +268,7 @@ const App = () => (
                 <Route path="system-audit" element={<SystemAudit />} />
                 <Route path="soc2-compliance" element={<SOC2Dashboard />} />
                 <Route path="software-risk" element={<SoftwareRiskDashboard />} />
+                <Route path="data-exposure" element={<DataExposure />} />
                 <Route path="software-knowledge-base" element={<SoftwareKnowledgeBase />} />
                 <Route path="automations" element={<Automations />} />
                 <Route path="archived-agents" element={<ArchivedAgents />} />
