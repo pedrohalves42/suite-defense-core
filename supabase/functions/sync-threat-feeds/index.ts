@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 // ── Feed Fetchers ──
@@ -21,19 +21,38 @@ interface RawIndicator {
 async function fetchMalwareBazaarRecent(): Promise<RawIndicator[]> {
   const indicators: RawIndicator[] = [];
   try {
+    // Use recent_detections endpoint (not get_recent)
     const resp = await fetch('https://mb-api.abuse.ch/api/v1/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'query=get_recent&limit=100',
+      body: 'query=get_recent&limit=50',
     });
-    const data = await resp.json();
+
+    if (!resp.ok) {
+      console.warn(`MalwareBazaar HTTP ${resp.status}`);
+      // Try alternative CSV endpoint as fallback
+      return await fetchMalwareBazaarCSV();
+    }
+
+    const text = await resp.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.warn('MalwareBazaar returned non-JSON:', text.substring(0, 200));
+      return await fetchMalwareBazaarCSV();
+    }
+
+    console.log('MalwareBazaar response status:', data.query_status, 'data count:', data.data?.length ?? 0);
+
     if (data.query_status === 'ok' && Array.isArray(data.data)) {
       for (const entry of data.data) {
+        if (!entry.sha256_hash) continue;
         indicators.push({
           type: 'file_hash_sha256',
           value: entry.sha256_hash,
           severity: 'high',
-          tags: entry.tags || [],
+          tags: Array.isArray(entry.tags) ? entry.tags : (entry.tags ? [entry.tags] : []),
           confidence: 80,
           reference: `https://bazaar.abuse.ch/sample/${entry.sha256_hash}/`,
           metadata: {
@@ -45,6 +64,8 @@ async function fetchMalwareBazaarRecent(): Promise<RawIndicator[]> {
           },
         });
       }
+    } else if (data.query_status === 'no_results') {
+      console.log('MalwareBazaar: no recent results');
     }
   } catch (err) {
     console.error('MalwareBazaar fetch error:', err);
@@ -52,22 +73,83 @@ async function fetchMalwareBazaarRecent(): Promise<RawIndicator[]> {
   return indicators;
 }
 
+async function fetchMalwareBazaarCSV(): Promise<RawIndicator[]> {
+  const indicators: RawIndicator[] = [];
+  try {
+    // Fallback: use the daily CSV hash list
+    const resp = await fetch('https://bazaar.abuse.ch/export/csv/recent/', {
+      method: 'GET',
+    });
+    if (!resp.ok) {
+      console.warn(`MalwareBazaar CSV HTTP ${resp.status}`);
+      return indicators;
+    }
+    const text = await resp.text();
+    const lines = text.split('\n').filter(l => l && !l.startsWith('#'));
+    
+    // CSV format: first_seen_utc,sha256_hash,md5_hash,sha1_hash,reporter,file_name,file_type_guess,mime_type,signature,clamav,vtpercent,imphash,ssdeep,tlsh
+    for (const line of lines.slice(0, 100)) {
+      const parts = line.split(',');
+      if (parts.length < 2) continue;
+      const sha256 = parts[1]?.replace(/"/g, '').trim();
+      if (!sha256 || sha256.length !== 64) continue;
+      
+      indicators.push({
+        type: 'file_hash_sha256',
+        value: sha256,
+        severity: 'high',
+        tags: parts[8] ? [parts[8].replace(/"/g, '').trim()] : [],
+        confidence: 75,
+        reference: `https://bazaar.abuse.ch/sample/${sha256}/`,
+        metadata: {
+          file_name: parts[5]?.replace(/"/g, '').trim(),
+          file_type: parts[6]?.replace(/"/g, '').trim(),
+          signature: parts[8]?.replace(/"/g, '').trim(),
+          reporter: parts[4]?.replace(/"/g, '').trim(),
+        },
+      });
+    }
+    console.log(`MalwareBazaar CSV fallback: ${indicators.length} indicators`);
+  } catch (err) {
+    console.error('MalwareBazaar CSV fetch error:', err);
+  }
+  return indicators;
+}
+
 async function fetchURLhaus(): Promise<RawIndicator[]> {
   const indicators: RawIndicator[] = [];
   try {
+    // Primary: JSON API
     const resp = await fetch('https://urlhaus-api.abuse.ch/v1/urls/recent/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: 'limit=100',
     });
-    const data = await resp.json();
+
+    if (!resp.ok) {
+      console.warn(`URLhaus HTTP ${resp.status}`);
+      return await fetchURLhausCSV();
+    }
+
+    const text = await resp.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.warn('URLhaus returned non-JSON:', text.substring(0, 200));
+      return await fetchURLhausCSV();
+    }
+
+    console.log('URLhaus response status:', data.query_status, 'urls count:', data.urls?.length ?? 0);
+
     if (data.query_status === 'ok' && Array.isArray(data.urls)) {
       for (const entry of data.urls) {
+        if (!entry.url) continue;
         indicators.push({
           type: 'url',
           value: entry.url,
           severity: entry.threat === 'malware_download' ? 'critical' : 'high',
-          tags: entry.tags || [],
+          tags: Array.isArray(entry.tags) ? entry.tags : (entry.tags ? [String(entry.tags)] : []),
           confidence: 85,
           reference: entry.urlhaus_reference,
           metadata: {
@@ -77,9 +159,49 @@ async function fetchURLhaus(): Promise<RawIndicator[]> {
           },
         });
       }
+    } else if (data.query_status === 'no_results') {
+      console.log('URLhaus: no recent results');
     }
   } catch (err) {
     console.error('URLhaus fetch error:', err);
+  }
+  return indicators;
+}
+
+async function fetchURLhausCSV(): Promise<RawIndicator[]> {
+  const indicators: RawIndicator[] = [];
+  try {
+    const resp = await fetch('https://urlhaus.abuse.ch/downloads/csv_recent/');
+    if (!resp.ok) {
+      console.warn(`URLhaus CSV HTTP ${resp.status}`);
+      return indicators;
+    }
+    const text = await resp.text();
+    const lines = text.split('\n').filter(l => l && !l.startsWith('#'));
+    
+    // CSV: id,dateadded,url,url_status,last_online,threat,tags,urlhaus_link,reporter
+    for (const line of lines.slice(0, 100)) {
+      const parts = line.split(',');
+      if (parts.length < 3) continue;
+      const url = parts[2]?.replace(/"/g, '').trim();
+      if (!url || !url.startsWith('http')) continue;
+
+      indicators.push({
+        type: 'url',
+        value: url,
+        severity: (parts[5]?.replace(/"/g, '').trim() === 'malware_download') ? 'critical' : 'high',
+        tags: parts[6] ? parts[6].replace(/"/g, '').trim().split('|').filter(Boolean) : [],
+        confidence: 80,
+        reference: parts[7]?.replace(/"/g, '').trim(),
+        metadata: {
+          threat: parts[5]?.replace(/"/g, '').trim(),
+          url_status: parts[3]?.replace(/"/g, '').trim(),
+        },
+      });
+    }
+    console.log(`URLhaus CSV fallback: ${indicators.length} indicators`);
+  } catch (err) {
+    console.error('URLhaus CSV fetch error:', err);
   }
   return indicators;
 }
@@ -88,24 +210,41 @@ async function fetchFeodoTracker(): Promise<RawIndicator[]> {
   const indicators: RawIndicator[] = [];
   try {
     const resp = await fetch('https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.json');
-    const data = await resp.json();
-    if (Array.isArray(data)) {
-      for (const entry of data) {
-        indicators.push({
-          type: 'ip_address',
-          value: entry.ip_address || entry.dst_ip,
-          severity: 'critical',
-          tags: [entry.malware || 'botnet'],
-          confidence: 90,
-          reference: `https://feodotracker.abuse.ch/browse/host/${entry.ip_address || entry.dst_ip}/`,
-          metadata: {
-            port: entry.dst_port,
-            malware: entry.malware,
-            first_seen: entry.first_seen,
-            last_online: entry.last_online,
-          },
-        });
-      }
+    
+    if (!resp.ok) {
+      console.warn(`Feodo Tracker HTTP ${resp.status}`);
+      return indicators;
+    }
+
+    const text = await resp.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.warn('Feodo Tracker returned non-JSON');
+      return indicators;
+    }
+
+    const entries = Array.isArray(data) ? data : [];
+    console.log(`Feodo Tracker: ${entries.length} entries`);
+
+    for (const entry of entries) {
+      const ip = entry.ip_address || entry.dst_ip;
+      if (!ip) continue;
+      indicators.push({
+        type: 'ip_address',
+        value: ip,
+        severity: 'critical',
+        tags: [entry.malware || 'botnet'].filter(Boolean),
+        confidence: 90,
+        reference: `https://feodotracker.abuse.ch/browse/host/${ip}/`,
+        metadata: {
+          port: entry.dst_port,
+          malware: entry.malware,
+          first_seen: entry.first_seen,
+          last_online: entry.last_online,
+        },
+      });
     }
   } catch (err) {
     console.error('Feodo Tracker fetch error:', err);
@@ -117,7 +256,7 @@ async function fetchFeodoTracker(): Promise<RawIndicator[]> {
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -125,7 +264,16 @@ serve(async (req: Request) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Parse tenant_id from body or use all tenants
+    // Auth check - accept JWT or service role
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Parse tenant_id from body
     let tenantIds: string[] = [];
     try {
       const body = await req.json();
@@ -133,19 +281,20 @@ serve(async (req: Request) => {
         tenantIds = [body.tenant_id];
       }
     } catch {
-      // No body, sync for all tenants
+      // No body
     }
 
+    // Fallback: get all tenants (no status/state filter — just get all)
     if (tenantIds.length === 0) {
-      const { data: tenants } = await supabase.from('tenants').select('id').eq('status', 'active');
+      const { data: tenants } = await supabase.from('tenants').select('id').limit(50);
       tenantIds = (tenants || []).map((t: { id: string }) => t.id);
     }
 
     const feedConfigs = [
-      { name: 'abuse_ch_malwarebazaar', fetcher: fetchMalwareBazaarRecent },
-      { name: 'abuse_ch_urlhaus', fetcher: fetchURLhaus },
-      { name: 'abuse_ch_feodotracker', fetcher: fetchFeodoTracker },
-    ] as const;
+      { name: 'abuse_ch_malwarebazaar' as const, fetcher: fetchMalwareBazaarRecent },
+      { name: 'abuse_ch_urlhaus' as const, fetcher: fetchURLhaus },
+      { name: 'abuse_ch_feodotracker' as const, fetcher: fetchFeodoTracker },
+    ];
 
     const results: Record<string, unknown>[] = [];
 
@@ -188,7 +337,7 @@ serve(async (req: Request) => {
               metadata: ind.metadata || {},
             }));
 
-            const { data: upserted } = await supabase
+            const { data: upserted, error: upsertErr } = await supabase
               .from('threat_indicators')
               .upsert(rows, {
                 onConflict: 'tenant_id,indicator_type,indicator_value,source',
@@ -196,12 +345,16 @@ serve(async (req: Request) => {
               })
               .select('id, created_at, updated_at');
 
+            if (upsertErr) {
+              console.error(`Upsert error for ${feed.name}:`, upsertErr.message);
+              continue;
+            }
+
             if (upserted) {
               for (const row of upserted) {
-                // If created_at equals updated_at (within 1s), it's new
                 const created = new Date(row.created_at).getTime();
                 const updated = new Date(row.updated_at).getTime();
-                if (Math.abs(created - updated) < 1000) {
+                if (Math.abs(created - updated) < 2000) {
                   newCount++;
                 } else {
                   updatedCount++;
@@ -233,13 +386,16 @@ serve(async (req: Request) => {
             status: 'completed',
           });
         } catch (feedErr) {
+          const errMsg = feedErr instanceof Error ? feedErr.message : String(feedErr);
+          console.error(`Feed ${feed.name} error:`, errMsg);
+
           if (syncId) {
             await supabase
               .from('threat_feed_sync_log')
               .update({
                 sync_completed_at: new Date().toISOString(),
                 status: 'failed',
-                error_message: feedErr instanceof Error ? feedErr.message : String(feedErr),
+                error_message: errMsg,
               })
               .eq('id', syncId);
           }
@@ -248,7 +404,7 @@ serve(async (req: Request) => {
             tenant_id: tenantId,
             feed: feed.name,
             status: 'failed',
-            error: feedErr instanceof Error ? feedErr.message : String(feedErr),
+            error: errMsg,
           });
         }
       }
