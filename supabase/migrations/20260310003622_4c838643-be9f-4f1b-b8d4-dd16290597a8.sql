@@ -1,0 +1,1 @@
+UPDATE agents SET force_update_at = NOW() WHERE hostname = 'PCTESTE1';
