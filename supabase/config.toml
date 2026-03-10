@@ -552,10 +552,9 @@ schedule = "0 */6 * * *"
 verify_jwt = false
 schedule = "0 */6 * * *"
 
-# === Executive Report Generator (daily at 6:00 UTC) ===
+# === Executive Report Generator - DISABLED schedule COST-OPT-V5 ===
 [functions.generate-executive-report]
 verify_jwt = false
-schedule = "0 6 * * *"
 
 # === Weekly Security Report (Sunday at 23:00 UTC) ===
 [functions.generate-weekly-report]
