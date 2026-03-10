@@ -2,21 +2,31 @@ import { ArrowRight, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useLandingContent } from "@/hooks/useLandingContent";
+import { motion } from "framer-motion";
 
 export function CTASection() {
   const { ctaFinal } = useLandingContent();
 
   return (
-    <section className="py-16 bg-accent text-white">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h2 className="text-2xl md:text-3xl font-bold mb-6 text-white">
+    <section className="py-24 relative overflow-hidden">
+      {/* Dark background with accent glow */}
+      <div className="absolute inset-0 bg-primary" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-accent/15 rounded-full blur-[120px]" />
+      
+      <motion.div 
+        className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+      >
+        <h2 className="text-3xl md:text-4xl font-bold mb-8 text-primary-foreground leading-tight">
           {ctaFinal.title}
         </h2>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button 
             asChild 
             size="lg" 
-            className="text-lg h-14 px-10 bg-white text-accent hover:bg-white/90 font-semibold"
+            className="text-lg h-14 px-10 bg-accent hover:bg-accent/90 text-accent-foreground font-semibold shadow-lg shadow-accent/25"
           >
             <Link to="/signup">
               {ctaFinal.cta}
@@ -27,7 +37,7 @@ export function CTASection() {
             asChild 
             size="lg" 
             variant="outline"
-            className="text-lg h-14 px-10 border-white/40 text-white hover:bg-white/10"
+            className="text-lg h-14 px-10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
           >
             <a href="#mini-diagnostico">
               <Calendar className="mr-2 h-5 w-5" />
@@ -35,8 +45,8 @@ export function CTASection() {
             </a>
           </Button>
         </div>
-        <p className="text-sm text-white/70 mt-4">{ctaFinal.subtitle}</p>
-      </div>
+        <p className="text-sm text-primary-foreground/50 mt-6">{ctaFinal.subtitle}</p>
+      </motion.div>
     </section>
   );
 }

@@ -1,5 +1,6 @@
 import { Shield, AlertTriangle, CheckCircle, Monitor, FileText, Bell } from "lucide-react";
 import { SectionHeader } from "./shared/SectionHeader";
+import { motion } from "framer-motion";
 
 const dashboardStats = [
   { label: "Dispositivos Monitorados", value: "32", icon: Monitor },
@@ -23,7 +24,7 @@ const lgpdItems = [
 
 export function ProductPreviewSection() {
   return (
-    <section className="py-20">
+    <section className="py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
           title="Veja o CyberShield funcionando"
@@ -32,7 +33,12 @@ export function ProductPreviewSection() {
 
         <div className="grid lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {/* Dashboard Preview */}
-          <div className="card-enterprise rounded-xl overflow-hidden">
+          <motion.div 
+            className="rounded-2xl bg-card border border-border overflow-hidden hover:border-accent/20 transition-colors"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
             <div className="bg-primary/5 border-b border-border px-5 py-3 flex items-center gap-2">
               <div className="flex gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-destructive/60" />
@@ -45,7 +51,7 @@ export function ProductPreviewSection() {
               {dashboardStats.map((stat, i) => {
                 const Icon = stat.icon;
                 return (
-                  <div key={i} className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+                  <div key={i} className="flex items-center justify-between p-3 bg-muted/40 rounded-xl">
                     <div className="flex items-center gap-2">
                       <Icon className="w-4 h-4 text-accent" />
                       <span className="text-sm text-muted-foreground">{stat.label}</span>
@@ -54,17 +60,23 @@ export function ProductPreviewSection() {
                   </div>
                 );
               })}
-              <div className="p-3 bg-warning/10 rounded-lg border border-warning/20">
+              <div className="p-3 bg-warning/10 rounded-xl border border-warning/20">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-warning" />
                   <span className="text-sm font-medium text-warning">2 máquinas precisam de atenção</span>
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Real-time Alerts */}
-          <div className="card-enterprise rounded-xl overflow-hidden">
+          <motion.div 
+            className="rounded-2xl bg-card border border-border overflow-hidden hover:border-accent/20 transition-colors"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+          >
             <div className="bg-primary/5 border-b border-border px-5 py-3 flex items-center gap-2">
               <Bell className="w-4 h-4 text-accent" />
               <span className="text-xs text-muted-foreground font-medium">Alertas em Tempo Real</span>
@@ -83,7 +95,7 @@ export function ProductPreviewSection() {
                   info: "text-success",
                 };
                 return (
-                  <div key={i} className={`p-3 rounded-lg border ${severityStyles[alert.severity as keyof typeof severityStyles]}`}>
+                  <div key={i} className={`p-3 rounded-xl border ${severityStyles[alert.severity as keyof typeof severityStyles]}`}>
                     <div className="flex items-start gap-2">
                       <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${iconColor[alert.severity as keyof typeof iconColor]}`} />
                       <div className="flex-1 min-w-0">
@@ -98,10 +110,16 @@ export function ProductPreviewSection() {
                 Alertas reais enviados por email e WhatsApp
               </p>
             </div>
-          </div>
+          </motion.div>
 
           {/* LGPD Report Preview */}
-          <div className="card-enterprise rounded-xl overflow-hidden">
+          <motion.div 
+            className="rounded-2xl bg-card border border-border overflow-hidden hover:border-accent/20 transition-colors"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+          >
             <div className="bg-primary/5 border-b border-border px-5 py-3 flex items-center gap-2">
               <FileText className="w-4 h-4 text-accent" />
               <span className="text-xs text-muted-foreground font-medium">Relatório LGPD</span>
@@ -111,24 +129,24 @@ export function ProductPreviewSection() {
                 <span className="text-sm font-medium text-foreground">Conformidade LGPD</span>
                 <span className="text-lg font-bold text-success">92%</span>
               </div>
-              <div className="w-full h-2 bg-muted rounded-full mb-4 overflow-hidden">
+              <div className="w-full h-2 bg-muted rounded-full mb-5 overflow-hidden">
                 <div className="h-full bg-success rounded-full" style={{ width: "92%" }} />
               </div>
-              <ul className="space-y-2.5">
+              <ul className="space-y-3">
                 {lgpdItems.map((item, i) => (
-                  <li key={i} className="flex items-center gap-2">
+                  <li key={i} className="flex items-center gap-3">
                     <CheckCircle className="w-4 h-4 text-success shrink-0" />
                     <span className="text-sm text-muted-foreground">{item}</span>
                   </li>
                 ))}
               </ul>
-              <div className="mt-4 p-3 bg-muted/40 rounded-lg text-center">
+              <div className="mt-5 p-3 bg-muted/40 rounded-xl text-center">
                 <p className="text-xs text-muted-foreground">
                   📄 Relatório exportável em PDF — pronto para auditoria
                 </p>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>
