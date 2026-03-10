@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion } from 'framer-motion';
 import { SecurityControlPlane } from '@/components/security/SecurityControlPlane';
+import { ThreatIntelDashboard } from '@/components/security/ThreatIntelDashboard';
 
 interface SecurityLog {
   id: string;
