@@ -665,15 +665,15 @@ verify_jwt = false
 [functions.set-active-tenant]
 verify_jwt = false
 
-# === ADR-032: SLO Burn Rate Evaluation (every 2 hours) COST-OPT-V2 ===
+# === ADR-032: SLO Burn Rate Evaluation (every 12 hours) COST-OPT-V5 ===
 [functions.evaluate-job-slo]
 verify_jwt = false
-schedule = "0 */2 * * *"
+schedule = "0 */12 * * *"
 
-# === Task SLA Breach Check (every 2 hours) COST-OPT-V2 ===
+# === Task SLA Breach Check (every 12 hours) COST-OPT-V5 ===
 [functions.check-task-sla-breach]
 verify_jwt = false
-schedule = "0 */2 * * *"
+schedule = "0 */12 * * *"
 
 # === Detect Stuck Installations (every 2 hours) COST-OPT ===
 [functions.detect-stuck-installations]
