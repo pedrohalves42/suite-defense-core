@@ -7,6 +7,8 @@ import { motion } from 'framer-motion';
 import { QuickActions, SmartNotificationBanner } from './QuickActions';
 import { useSmartNotifications } from '@/hooks/useSmartNotifications';
 import { BackupAwarenessCard } from './BackupAwarenessCard';
+import { DataExposureCard } from './DataExposureCard';
+import { RansomwareAlertCard } from './RansomwareAlertCard';
 import { toast } from 'sonner';
 
 interface SimpleDashboardProps {
@@ -203,8 +205,12 @@ export function SimpleDashboard({ globalStatus, stats, isLoading, tenantId }: Si
         </motion.div>
       </div>
 
-      {/* Backup Awareness */}
-      <BackupAwarenessCard />
+      {/* Security Monitoring Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <BackupAwarenessCard />
+        <DataExposureCard />
+        <RansomwareAlertCard />
+      </div>
 
       {/* Ações Rápidas */}
       <QuickActions 

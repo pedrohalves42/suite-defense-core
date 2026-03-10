@@ -11983,6 +11983,191 @@ export type Database = {
         }
         Relationships: []
       }
+      data_exposure_findings: {
+        Row: {
+          agent_id: string
+          collected_at: string | null
+          confidence_score: number | null
+          created_at: string | null
+          data_category: string
+          details: Json | null
+          detected_at: string | null
+          detection_method: string | null
+          file_name: string | null
+          file_owner: string | null
+          file_path: string
+          file_size_bytes: number | null
+          finding_type: string
+          id: string
+          match_count: number
+          remediated_at: string | null
+          remediated_by: string | null
+          sample_preview: string | null
+          severity: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string | null
+          confidence_score?: number | null
+          created_at?: string | null
+          data_category: string
+          details?: Json | null
+          detected_at?: string | null
+          detection_method?: string | null
+          file_name?: string | null
+          file_owner?: string | null
+          file_path: string
+          file_size_bytes?: number | null
+          finding_type?: string
+          id?: string
+          match_count?: number
+          remediated_at?: string | null
+          remediated_by?: string | null
+          sample_preview?: string | null
+          severity?: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string | null
+          confidence_score?: number | null
+          created_at?: string | null
+          data_category?: string
+          details?: Json | null
+          detected_at?: string | null
+          detection_method?: string | null
+          file_name?: string | null
+          file_owner?: string | null
+          file_path?: string
+          file_size_bytes?: number | null
+          finding_type?: string
+          id?: string
+          match_count?: number
+          remediated_at?: string | null
+          remediated_by?: string | null
+          sample_preview?: string | null
+          severity?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_exposure_findings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "data_exposure_findings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       decision_events: {
         Row: {
           action: string
@@ -18451,6 +18636,188 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "virus_scans"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      ransomware_indicators: {
+        Row: {
+          affected_files_count: number | null
+          affected_path: string | null
+          agent_id: string
+          auto_response_taken: string | null
+          contained_at: string | null
+          created_at: string | null
+          details: Json | null
+          detected_at: string | null
+          entropy_score: number | null
+          evidence_hash: string | null
+          files_per_second: number | null
+          id: string
+          indicator_type: string
+          process_name: string | null
+          process_path: string | null
+          process_pid: number | null
+          sample_files: string[] | null
+          severity: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          affected_files_count?: number | null
+          affected_path?: string | null
+          agent_id: string
+          auto_response_taken?: string | null
+          contained_at?: string | null
+          created_at?: string | null
+          details?: Json | null
+          detected_at?: string | null
+          entropy_score?: number | null
+          evidence_hash?: string | null
+          files_per_second?: number | null
+          id?: string
+          indicator_type: string
+          process_name?: string | null
+          process_path?: string | null
+          process_pid?: number | null
+          sample_files?: string[] | null
+          severity?: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          affected_files_count?: number | null
+          affected_path?: string | null
+          agent_id?: string
+          auto_response_taken?: string | null
+          contained_at?: string | null
+          created_at?: string | null
+          details?: Json | null
+          detected_at?: string | null
+          entropy_score?: number | null
+          evidence_hash?: string | null
+          files_per_second?: number | null
+          id?: string
+          indicator_type?: string
+          process_name?: string | null
+          process_path?: string | null
+          process_pid?: number | null
+          sample_files?: string[] | null
+          severity?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ransomware_indicators_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ransomware_indicators_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
           },
         ]
       }
