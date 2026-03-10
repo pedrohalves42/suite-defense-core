@@ -266,6 +266,10 @@ export default function SecurityDashboard() {
                 <User className="h-4 w-4 mr-2" />
                 Logins Falhados ({failedAttempts?.length || 0})
               </TabsTrigger>
+              <TabsTrigger value="threat-intel">
+                <Activity className="h-4 w-4 mr-2" />
+                Threat Intel
+              </TabsTrigger>
             </>
           )}
         </TabsList>
