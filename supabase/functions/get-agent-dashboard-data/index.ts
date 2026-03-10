@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
 
     // Calcular estatisticas agregadas
     const now = new Date();
-    const twoMinutesAgo = new Date(now.getTime() - 2 * 60 * 1000);
+    const offlineThreshold = new Date(now.getTime() - OFFLINE_THRESHOLD_MINUTES * 60 * 1000);
 
     let totalAgents = 0;
     let onlineAgents = 0;
