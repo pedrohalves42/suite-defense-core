@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Shield, ArrowRight, AlertTriangle, CheckCircle, Monitor } from "lucide-react";
+import { ArrowRight, AlertTriangle, CheckCircle, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 const questions = [
   {
@@ -81,24 +82,31 @@ export function MiniDiagnosticSection() {
   };
 
   return (
-    <section id="mini-diagnostico" className="py-20 bg-muted/30">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-8">
+    <section id="mini-diagnostico" className="py-24 relative">
+      <div className="absolute inset-0 bg-gradient-to-b from-muted/40 to-background" />
+      
+      <div className="relative max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div 
+          className="text-center mb-10"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 mb-4">
             <Monitor className="w-4 h-4 text-accent" />
             <span className="text-sm font-medium">Mini Diagnóstico — 30 segundos</span>
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground">
             Sua empresa está protegida?
           </h2>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-3 text-lg">
             Responda 4 perguntas rápidas e descubra seu nível de risco
           </p>
-        </div>
+        </motion.div>
 
-        <div className="card-enterprise rounded-xl p-6 md:p-8">
+        <div className="rounded-2xl bg-card border border-border p-8 md:p-10 shadow-elevated">
           {/* Progress bar */}
-          <div className="w-full h-2 bg-muted rounded-full mb-6 overflow-hidden">
+          <div className="w-full h-1.5 bg-muted rounded-full mb-8 overflow-hidden">
             <div
               className="h-full bg-accent rounded-full transition-all duration-500 ease-out"
               style={{ width: `${progress}%` }}
@@ -106,12 +114,12 @@ export function MiniDiagnosticSection() {
           </div>
 
           {!showResult ? (
-            <div className="space-y-6 animate-fade-in" key={currentStep}>
+            <div className="space-y-8 animate-fade-in" key={currentStep}>
               <div className="text-center">
-                <span className="text-xs text-muted-foreground font-medium">
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                   Pergunta {currentStep + 1} de {questions.length}
                 </span>
-                <h3 className="text-lg font-semibold mt-2 text-foreground">
+                <h3 className="text-xl font-semibold mt-3 text-foreground">
                   {questions[currentStep].question}
                 </h3>
               </div>
@@ -122,34 +130,34 @@ export function MiniDiagnosticSection() {
                     key={idx}
                     onClick={() => handleAnswer(questions[currentStep].id, option.score)}
                     className={cn(
-                      "w-full p-4 rounded-lg border text-left transition-all duration-200",
-                      "hover:border-accent hover:bg-accent/5",
+                      "w-full p-5 rounded-xl border text-left transition-all duration-200",
+                      "hover:border-accent hover:bg-accent/5 hover:shadow-sm",
                       answers[questions[currentStep].id] === option.score
                         ? "border-accent bg-accent/10"
                         : "border-border bg-card"
                     )}
                   >
-                    <span className="text-sm font-medium">{option.label}</span>
+                    <span className="font-medium">{option.label}</span>
                   </button>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="text-center space-y-6 animate-fade-in">
-              <div className={cn("inline-flex items-center gap-3 px-6 py-4 rounded-xl border", risk.bg)}>
-                <RiskIcon className={cn("w-8 h-8", risk.color)} />
+            <div className="text-center space-y-8 animate-fade-in">
+              <div className={cn("inline-flex items-center gap-4 px-8 py-5 rounded-2xl border", risk.bg)}>
+                <RiskIcon className={cn("w-10 h-10", risk.color)} />
                 <div className="text-left">
-                  <p className="text-xs text-muted-foreground font-medium">Seu nível de risco é</p>
-                  <p className={cn("text-2xl font-bold", risk.color)}>{risk.level}</p>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Seu nível de risco é</p>
+                  <p className={cn("text-3xl font-bold", risk.color)}>{risk.level}</p>
                 </div>
               </div>
 
-              <p className="text-muted-foreground max-w-md mx-auto">
+              <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
                 {risk.message}
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-                <Button asChild size="lg" className="btn-enterprise h-12">
+                <Button asChild size="lg" className="h-12 bg-accent hover:bg-accent/90 text-accent-foreground font-semibold">
                   <Link to="/signup">
                     Fazer diagnóstico completo grátis
                     <ArrowRight className="ml-2 h-4 w-4" />
