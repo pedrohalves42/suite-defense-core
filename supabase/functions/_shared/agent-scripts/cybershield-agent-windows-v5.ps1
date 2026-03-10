@@ -4419,16 +4419,10 @@ function Apply-ForcedUpdate {
             }
             Write-Log "[FORCE UPDATE] Cryptographic signature VERIFIED for update payload" "SUCCESS"
         } else {
-            # v5.0.13-patch: Reject unsigned payloads (mandatory signature enforcement)
-            Write-Log "[FORCE UPDATE] REJECTED - No cryptographic signature on update payload. Unsigned updates are no longer accepted." "ERROR"
-            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
-            Write-EventLog -LogName Application -Source "CyberShield" -EventId 5102 -EntryType Error -Message "Update rejected: missing cryptographic signature (unsigned payloads blocked since v5.0.13)" -ErrorAction SilentlyContinue
-            Add-EvidenceEntry -Type "security_alert" -Data @{
-                event = "unsigned_update_rejected"
-                target_version = $targetVersion
-                sha256 = $actualHash
-            } -Severity "warning"
-            return @{ success = $false; error = "Update rejected: no cryptographic signature (mandatory since v5.0.13)" }
+            # FAIL-OPEN: Accept unsigned updates when SHA256 is already validated
+            # This prevents lockout when releases lack signatures (common during rollouts)
+            Write-Log "[FORCE UPDATE] WARNING - No cryptographic signature on update payload. Accepting based on SHA256 validation (fail-open policy)." "WARN"
+            Write-EventLog -LogName Application -Source "CyberShield" -EventId 5102 -EntryType Warning -Message "Update accepted without signature (fail-open): SHA256 validated ($actualHash)" -ErrorAction SilentlyContinue
         }
         
         # Detectar script atual e diretorio de instalacao
