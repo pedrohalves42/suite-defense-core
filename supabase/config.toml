@@ -675,10 +675,10 @@ schedule = "0 */12 * * *"
 verify_jwt = false
 schedule = "0 */12 * * *"
 
-# === Detect Stuck Installations (every 2 hours) COST-OPT ===
+# === Detect Stuck Installations (every 12 hours) COST-OPT-V5 ===
 [functions.detect-stuck-installations]
 verify_jwt = false
-schedule = "0 */2 * * *"
+schedule = "0 */12 * * *"
 
 # === ADR-FINAL: Cron Sentinel (every 6 hours) COST-OPT-V2 ===
 # Detects cron jobs silent failures and creates P0 tasks
