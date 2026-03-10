@@ -207,10 +207,10 @@ verify_jwt = true
 [functions.api-tenant-stats]
 verify_jwt = true
 
-# === Monitoring Functions ===
+# === Monitoring Functions (every 6 hours) COST-OPT-V5 ===
 [functions.monitor-agent-health]
 verify_jwt = false
-schedule = "0 */2 * * *"
+schedule = "0 */6 * * *"
 
 [functions.monitor-thresholds]
 verify_jwt = false
