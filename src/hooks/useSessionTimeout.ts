@@ -14,7 +14,7 @@ import { logger } from '@/lib/logger';
 export const useSessionTimeout = () => {
   const { user } = useAuth();
   const lastActivityRef = useRef(Date.now());
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const warningShownRef = useRef(false);
   const isSuperAdminRef = useRef(false);
 
