@@ -741,3 +741,10 @@ verify_jwt = false
 # === Phase 4: AI Security Copilot ===
 [functions.ai-security-copilot]
 verify_jwt = false
+
+# === Phase 2: Data Exposure & Ransomware Detection ===
+[functions.submit-data-exposure]
+verify_jwt = false
+
+[functions.submit-ransomware-indicator]
+verify_jwt = false
