@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     const tokenHash = await hashToken(agentToken)
     const { data: token } = await supabase
       .from('agent_tokens')
-      .select('agent_id, agents!inner(agent_name, hmac_secret)')
+      .select('agent_id, agents!inner(agent_name, hmac_secret, agent_version)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
