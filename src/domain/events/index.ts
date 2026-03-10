@@ -40,3 +40,8 @@ export {
   ComplianceScoreChangedEvent,
   SoarPlaybookTriggeredEvent,
 } from './SecurityEvents';
+
+export {
+  ThreatIndicatorMatchedEvent,
+  ThreatFeedSyncCompletedEvent,
+} from './ThreatIntelEvents';
