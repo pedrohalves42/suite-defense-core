@@ -648,10 +648,10 @@ schedule = "0 */12 * * *"
 [functions.analyze-job-failure-patterns]
 verify_jwt = true
 
-# === Log Integrity Verification (daily at 2:00 UTC) ===
+# === Log Integrity Verification (weekly Sunday at 2:00 UTC) COST-OPT-V5 ===
 [functions.verify-log-integrity]
 verify_jwt = false
-schedule = "0 2 * * *"
+schedule = "0 2 * * 0"
 
 # === Confidence Gap Trend Analysis ===
 [functions.analyze-confidence-gap-trend]
