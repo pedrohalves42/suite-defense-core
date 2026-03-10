@@ -205,8 +205,12 @@ export function SimpleDashboard({ globalStatus, stats, isLoading, tenantId }: Si
         </motion.div>
       </div>
 
-      {/* Backup Awareness */}
-      <BackupAwarenessCard />
+      {/* Security Monitoring Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <BackupAwarenessCard />
+        <DataExposureCard />
+        <RansomwareAlertCard />
+      </div>
 
       {/* Ações Rápidas */}
       <QuickActions 
