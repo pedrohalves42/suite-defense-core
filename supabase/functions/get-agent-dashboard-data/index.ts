@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
       totalAgents++;
       
       const lastHeartbeat = agent.last_heartbeat ? new Date(agent.last_heartbeat) : null;
-      const isOnline = lastHeartbeat && lastHeartbeat >= twoMinutesAgo;
+      const isOnline = !!lastHeartbeat && lastHeartbeat >= offlineThreshold;
       
       if (isOnline) {
         onlineAgents++;
