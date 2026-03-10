@@ -30,11 +30,10 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
+import { buildAgentReinstallCommand } from '@/lib/agentReinstallCommand';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const DASHBOARD_ORIGIN = typeof window !== 'undefined' ? window.location.origin : '';
-
-const escapeForSingleQuotedPowerShell = (value: string) => value.replace(/'/g, "''");
 
 // Comando interativo legado (mantido como fallback)
 const INTERACTIVE_COMMAND = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" | iex`;
