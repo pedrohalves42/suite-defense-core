@@ -7,6 +7,8 @@ import { motion } from 'framer-motion';
 import { QuickActions, SmartNotificationBanner } from './QuickActions';
 import { useSmartNotifications } from '@/hooks/useSmartNotifications';
 import { BackupAwarenessCard } from './BackupAwarenessCard';
+import { DataExposureCard } from './DataExposureCard';
+import { RansomwareAlertCard } from './RansomwareAlertCard';
 import { toast } from 'sonner';
 
 interface SimpleDashboardProps {
