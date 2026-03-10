@@ -1362,7 +1362,7 @@ function Initialize-AgentKeys {
         
         Write-Log "[KEYS] Generated new ECDSA keypair. Fingerprint: $($fingerprint.Substring(0, 16))..." "SUCCESS"
         
-        $ecdsa.Dispose()
+        if ($null -ne $ecdsa) { $ecdsa.Dispose() } <# HOTFIX-NULL-ECDSA-GUARD #>
         return $true
         
     } catch {
