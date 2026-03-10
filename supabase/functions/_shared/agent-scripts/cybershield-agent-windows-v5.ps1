@@ -1362,7 +1362,7 @@ function Initialize-AgentKeys {
         
         Write-Log "[KEYS] Generated new ECDSA keypair. Fingerprint: $($fingerprint.Substring(0, 16))..." "SUCCESS"
         
-        $ecdsa.Dispose()
+        if ($null -ne $ecdsa) { $ecdsa.Dispose() } <# HOTFIX-NULL-ECDSA-GUARD #>
         return $true
         
     } catch {
@@ -1505,35 +1505,72 @@ function Invoke-SignResult {
             }
         }
 
-        # Default: ECDSA-P256-SHA256
+        # Default: ECDSA-P256-SHA256 with RSA auto-regeneration fallback <# HOTFIX-ECDSA-RSA-AUTOREGEN #>
         $privateKeyBytes = [Convert]::FromBase64String($Global:AgentPrivateKey)
         $ecdsa = $null
+        $ecdsaFailed = $false
         try {
             $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
-            if ($null -eq $ecdsa) {
-                throw "ECDsa.Create() retornou null"
-            }
-
+            if ($null -eq $ecdsa) { throw "ECDsa.Create() returned null" }
             $bytesRead = 0
             try {
                 $null = $ecdsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$bytesRead)
             } catch {
-                Write-Log "[SIGN] ImportPkcs8PrivateKey indisponível, tentando fallback CngKey.Import" "WARN"
+                Write-Log "[SIGN] ImportPkcs8PrivateKey unavailable, trying CngKey.Import" "WARN"
                 if ($null -ne $ecdsa) { $ecdsa.Dispose(); $ecdsa = $null }
-                $cngKey = [System.Security.Cryptography.CngKey]::Import(
-                    $privateKeyBytes,
-                    [System.Security.Cryptography.CngKeyBlobFormat]::Pkcs8PrivateBlob
-                )
-                $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
+                try {
+                    $cngKey = [System.Security.Cryptography.CngKey]::Import(
+                        $privateKeyBytes,
+                        [System.Security.Cryptography.CngKeyBlobFormat]::Pkcs8PrivateBlob
+                    )
+                    $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
+                } catch {
+                    Write-Log "[SIGN] CngKey.Import also failed. Triggering RSA auto-regeneration." "WARN"
+                    $ecdsaFailed = $true
+                }
             }
-
-            $signatureBytes = $ecdsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
-            $signature = [Convert]::ToBase64String($signatureBytes)
-
-            Write-Log "[SIGN] Signed result for execution $ExecutionId using $algorithm" "DEBUG"
-            return $signature
+            if (-not $ecdsaFailed) {
+                $signatureBytes = $ecdsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+                $signature = [Convert]::ToBase64String($signatureBytes)
+                Write-Log "[SIGN] Signed result for execution $ExecutionId using $algorithm" "DEBUG"
+                return $signature
+            }
+        } catch {
+            Write-Log "[SIGN] ECDSA signing failed completely: $($_.Exception.Message). Triggering RSA auto-regen." "WARN"
+            $ecdsaFailed = $true
         } finally {
-            if ($null -ne $ecdsa) { $ecdsa.Dispose() }
+            if ($null -ne $ecdsa) { $ecdsa.Dispose() } <# HOTFIX-NULL-ECDSA-GUARD #>
+        }
+
+        # ECDSA failed on this system - auto-regenerate as RSA-2048-XML for permanent fix
+        if ($ecdsaFailed) {
+            Write-Log "[SIGN] Auto-regenerating keys as RSA-2048-XML for PS 5.1 compatibility..." "WARN"
+            try {
+                $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
+                $rsaXml = $rsa.ToXmlString($true)
+                $rsaPublicXml = $rsa.ToXmlString($false)
+                $Global:AgentPrivateKey = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($rsaXml))
+                $Global:AgentSigningAlgorithm = "RSA-2048-XML"
+                $Global:AgentPublicKey = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($rsaPublicXml))
+
+                # Persist new keys
+                $keyDir = "C:\CyberShield\keys"
+                if (-not (Test-Path $keyDir)) { New-Item -ItemType Directory -Path $keyDir -Force | Out-Null }
+                $rsaXml | Out-File "$keyDir\agent_private.xml" -Encoding UTF8 -Force
+                $rsaPublicXml | Out-File "$keyDir\agent_public.xml" -Encoding UTF8 -Force
+                "RSA-2048-XML" | Out-File "$keyDir\algorithm.txt" -Encoding UTF8 -Force
+
+                # Sign with new RSA key
+                $signatureBytes = $rsa.SignData($payloadBytes, "SHA256")
+                $signature = [Convert]::ToBase64String($signatureBytes)
+                $rsa.Dispose()
+
+                Write-Log "[SIGN] RSA-2048-XML keys generated and persisted. Signed successfully." "SUCCESS"
+                return $signature
+            } catch {
+                Write-Log "[SIGN] RSA auto-regen failed: $($_.Exception.Message)" "ERROR"
+                return $null
+            }
         }
 
     } catch {
