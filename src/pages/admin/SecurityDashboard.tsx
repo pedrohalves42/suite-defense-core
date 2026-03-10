@@ -279,6 +279,9 @@ export default function SecurityDashboard() {
           <TabsContent value="control-plane">
             <SecurityControlPlane />
           </TabsContent>
+          <TabsContent value="threat-intel">
+            <ThreatIntelDashboard />
+          </TabsContent>
         )}
 
         {/* Security Logs Tab */}
