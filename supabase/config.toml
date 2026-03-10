@@ -725,21 +725,18 @@ verify_jwt = false
 [functions.ai-provider-status]
 verify_jwt = false
 
-# === Phase 3: AI Prediction & Correlation Functions ===
-# Predict agent failures (every 2 hours) COST-OPT
+# === Phase 3: AI Prediction & Correlation - ALL DISABLED schedule COST-OPT-V5 ===
+# Predict agent failures (invoke manually)
 [functions.ai-predict-agent-failure]
 verify_jwt = false
-schedule = "0 */2 * * *"
 
-# Correlate alerts for RCA (every 4 hours) COST-OPT
+# Correlate alerts for RCA (invoke manually)
 [functions.ai-correlate-alerts]
 verify_jwt = false
-schedule = "0 */4 * * *"
 
-# Behavioral anomaly detection (every 6 hours) COST-OPT-V2
+# Behavioral anomaly detection (invoke manually)
 [functions.ai-behavioral-anomaly-detector]
 verify_jwt = false
-schedule = "0 */6 * * *"
 
 # === Phase 4: AI Security Copilot ===
 [functions.ai-security-copilot]
