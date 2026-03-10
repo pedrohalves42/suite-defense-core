@@ -29,8 +29,8 @@ async function fetchMalwareBazaarRecent(): Promise<RawIndicator[]> {
     });
 
     if (!resp.ok) {
-      console.warn(`MalwareBazaar HTTP ${resp.status}`);
-      // Try alternative CSV endpoint as fallback
+      console.log(`MalwareBazaar JSON API unavailable (${resp.status}), using CSV fallback`);
+      await resp.text(); // consume body
       return await fetchMalwareBazaarCSV();
     }
 
