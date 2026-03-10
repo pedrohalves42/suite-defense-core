@@ -17,13 +17,12 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { buildAgentReinstallCommand } from '@/lib/agentReinstallCommand';
 
 interface AgentReinstallCommandProps {
   agentId: string;
   agentName: string;
 }
-
-const escapeForSingleQuotedPowerShell = (value: string) => value.replace(/'/g, "''");
 
 export function AgentReinstallCommand({ agentId, agentName }: AgentReinstallCommandProps) {
   const { toast } = useToast();
