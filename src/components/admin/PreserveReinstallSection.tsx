@@ -105,67 +105,15 @@ export function PreserveReinstallSection({ defaultAgentName }: PreserveReinstall
         throw new Error(data?.error || 'Resposta inválida do servidor');
       }
 
-      const serverUrlEscaped = escapeForSingleQuotedPowerShell(SUPABASE_URL);
-      const fallbackOriginEscaped = escapeForSingleQuotedPowerShell(DASHBOARD_ORIGIN);
-      const tokenEscaped = escapeForSingleQuotedPowerShell(data.agentToken);
-      const hmacEscaped = escapeForSingleQuotedPowerShell(data.hmacSecret);
-      const nameEscaped = escapeForSingleQuotedPowerShell(data.agentName);
+      const command = buildAgentReinstallCommand({
+        serverUrl: SUPABASE_URL,
+        fallbackServerUrl: DASHBOARD_ORIGIN,
+        agentToken: data.agentToken,
+        hmacSecret: data.hmacSecret,
+        agentName: data.agentName,
+      });
 
-      const commandParts = [
-        // 1. Kill zombie processes and tasks FIRST
-        "Get-ScheduledTask -TaskName 'CyberShield*' -ErrorAction SilentlyContinue | ForEach-Object { Stop-ScheduledTask -TaskName $_.TaskName -ErrorAction SilentlyContinue; Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue };",
-        "Get-Process powershell -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne $PID -and $_.CommandLine -match 'cybershield-agent' } | Stop-Process -Force -ErrorAction SilentlyContinue;",
-        '[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;',
-        "$dir='C:\\CyberShield'; if (!(Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null };",
-        // 2. Clear stale integrity cache
-        '$hashDir = "$dir\\data"; if (!(Test-Path $hashDir)) { New-Item -ItemType Directory -Path $hashDir -Force | Out-Null };',
-        '$hashJson = "$hashDir\\expected_script_hash.json"; $hashTxt = "$hashDir\\expected_script_hash.txt";',
-        'if (Test-Path $hashJson) { Remove-Item $hashJson -Force -ErrorAction SilentlyContinue };',
-        'if (Test-Path $hashTxt) { Remove-Item $hashTxt -Force -ErrorAction SilentlyContinue };',
-        // 3. Set credentials and endpoint candidates
-        `$serverUrl='${serverUrlEscaped}';`,
-        `$fallbackServerUrl='${fallbackOriginEscaped}';`,
-        `$agentToken='${tokenEscaped}';`,
-        `$hmacSecret='${hmacEscaped}';`,
-        `$agentName='${nameEscaped}';`,
-        '$baseUrls = @($serverUrl, $fallbackServerUrl) | Where-Object { $_ -and $_.Trim() -ne "" } | Select-Object -Unique;',
-        '$resp = $null; $resolvedBaseUrl = $null; $lastErr = $null;',
-        // 4. Download script with endpoint + transport fallback
-        'foreach ($baseUrl in $baseUrls) {',
-        '  try {',
-        '    $url = "$baseUrl/functions/v1/get-latest-agent-script?platform=windows&format=json&include_plain=1&cb=$(Get-Random)";',
-        '    try {',
-        '      $resp = Invoke-RestMethod -Uri $url -Method GET -TimeoutSec 60 -ErrorAction Stop;',
-        '    } catch {',
-        '      $raw = (Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop).Content;',
-        '      if ($raw) { $resp = $raw | ConvertFrom-Json -ErrorAction Stop }',
-        '    }',
-        '    if ($resp -and $resp.script_content) { $resolvedBaseUrl = $baseUrl; break }',
-        '  } catch {',
-        '    $lastErr = $_.Exception.Message;',
-        '    Write-Host ("Falha ao baixar script em " + $baseUrl + ": " + $lastErr) -ForegroundColor Yellow;',
-        '  }',
-        '}',
-        'if ($resp -and $resp.script_content) {',
-        '  $effectiveServerUrl = if ($resolvedBaseUrl) { $resolvedBaseUrl } else { $serverUrl };',
-        '  $scriptPath = "$dir\\cybershield-agent-$agentName.ps1";',
-        '  $resp.script_content | Set-Content -Path $scriptPath -Encoding UTF8 -Force;',
-        // 5. Write config.json
-        '  $cfg = @{ ServerUrl=$effectiveServerUrl; AgentToken=$agentToken; HMACSecret=$hmacSecret; AgentName=$agentName };',
-        '  $cfg | ConvertTo-Json | Set-Content -Path "$dir\\config.json" -Encoding UTF8 -Force;',
-        // 6. Create scheduled task with watchdog settings
-        "  $arg = '-ExecutionPolicy Bypass -WindowStyle Hidden -File \"' + $scriptPath + '\" -ServerUrl \"' + $effectiveServerUrl + '\" -AgentToken \"' + $agentToken + '\" -HmacSecret \"' + $hmacSecret + '\" -AgentName \"' + $agentName + '\"';",
-        "  $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arg;",
-        '  $trigger1 = New-ScheduledTaskTrigger -AtStartup;',
-        '  $trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 365);',
-        '  $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit (New-TimeSpan -Days 0);',
-        "  Register-ScheduledTask -TaskName 'CyberShieldAgent' -Action $action -Trigger @($trigger1,$trigger2) -Settings $settings -User 'SYSTEM' -RunLevel Highest -Force;",
-        "  Start-ScheduledTask -TaskName 'CyberShieldAgent';",
-        "  Write-Host ('CyberShield reinstalado com sucesso! Endpoint: ' + $effectiveServerUrl) -ForegroundColor Green",
-        "} else { Write-Host ('Erro: servidor nao retornou script. Ultimo erro: ' + $lastErr) -ForegroundColor Red }",
-      ];
-
-      setAutoCommand(commandParts.join(' '));
+      setAutoCommand(command);
       toast.success('Comando automático gerado com autenticação do painel.');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao gerar comando automático');
