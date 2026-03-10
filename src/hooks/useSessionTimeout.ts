@@ -17,6 +17,7 @@ export const useSessionTimeout = () => {
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const warningShownRef = useRef(false);
   const isSuperAdminRef = useRef(false);
+  const serverCheckCountRef = useRef(0); // V-706: counter for server-side checks
 
   // Get timeout based on user role from app_metadata
   const getTimeoutMinutes = useCallback(() => {
