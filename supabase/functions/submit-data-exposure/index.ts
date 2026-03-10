@@ -1,11 +1,14 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { authenticateAgent } from '../_shared/agent-auth.ts';
 
 /**
  * submit-data-exposure: Receives sensitive data exposure findings from agents
  * 
  * Detects: CPF, CNPJ, credit cards, medical records, API keys, passwords
  * Agent scans configured directories and reports matches with masked previews.
+ * 
+ * Auth: X-Agent-Token header (standard agent authentication)
  */
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -48,26 +51,20 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const body = await req.json();
-    const { agent_id, findings } = body as { agent_id: string; findings: ExposureFinding[] };
 
-    if (!agent_id || !Array.isArray(findings)) {
-      return new Response(JSON.stringify({ error: 'Missing agent_id or findings array' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Authenticate agent via X-Agent-Token
+    const authResult = await authenticateAgent(supabase, req, 'submit-data-exposure');
+    if (!authResult.success) {
+      return authResult.response;
     }
+    const agent = authResult.agent;
 
-    // Validate agent
-    const { data: agent, error: agentError } = await supabase
-      .from('agents')
-      .select('id, tenant_id, agent_name')
-      .eq('id', agent_id)
-      .single();
+    const body = await req.json();
+    const { findings } = body as { findings: ExposureFinding[] };
 
-    if (agentError || !agent) {
-      return new Response(JSON.stringify({ error: 'Agent not found' }), {
-        status: 404,
+    if (!Array.isArray(findings)) {
+      return new Response(JSON.stringify({ error: 'Missing findings array' }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -127,8 +124,8 @@ Deno.serve(async (req) => {
           .insert({
             tenant_id: agent.tenant_id,
             agent_id: agent.id,
+            alert_type: 'data_exposure',
             severity: severity === 'critical' ? 'critical' : 'high',
-            category: 'data_exposure',
             title: 'Dados Sensíveis Expostos',
             message: `${finding.match_count} ocorrência(s) de ${categoryLabels[finding.data_category] || finding.data_category} encontrada(s) em ${finding.file_path} no endpoint ${agent.agent_name}`,
             acknowledged: false,

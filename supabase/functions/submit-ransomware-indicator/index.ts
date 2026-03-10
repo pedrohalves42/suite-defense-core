@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { authenticateAgent } from '../_shared/agent-auth.ts';
 
 /**
  * submit-ransomware-indicator: Receives ransomware detection signals from agents
@@ -7,14 +8,15 @@ import { corsHeaders } from '../_shared/cors.ts';
  * Detects: mass encryption, rapid file rename, suspicious processes,
  * canary file triggers, entropy spikes.
  * 
- * Auto-response: Creates critical alerts and can trigger SOAR playbooks.
+ * Auth: X-Agent-Token header (standard agent authentication)
+ * Auto-response: Creates critical alerts and logs forensic evidence.
  */
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 interface RansomwareIndicator {
-  indicator_type: string;  // mass_encryption, rapid_rename, suspicious_process, canary_triggered, entropy_spike
+  indicator_type: string;
   process_name?: string;
   process_pid?: number;
   process_path?: string;
@@ -27,7 +29,6 @@ interface RansomwareIndicator {
   details?: Record<string, unknown>;
 }
 
-// Severity by indicator type
 const INDICATOR_SEVERITY: Record<string, string> = {
   mass_encryption: 'critical',
   canary_triggered: 'critical',
@@ -45,26 +46,20 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const body = await req.json();
-    const { agent_id, indicators } = body as { agent_id: string; indicators: RansomwareIndicator[] };
 
-    if (!agent_id || !Array.isArray(indicators) || indicators.length === 0) {
-      return new Response(JSON.stringify({ error: 'Missing agent_id or indicators array' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Authenticate agent via X-Agent-Token
+    const authResult = await authenticateAgent(supabase, req, 'submit-ransomware-indicator');
+    if (!authResult.success) {
+      return authResult.response;
     }
+    const agent = authResult.agent;
 
-    // Validate agent
-    const { data: agent, error: agentError } = await supabase
-      .from('agents')
-      .select('id, tenant_id, agent_name, hostname')
-      .eq('id', agent_id)
-      .single();
+    const body = await req.json();
+    const { indicators } = body as { indicators: RansomwareIndicator[] };
 
-    if (agentError || !agent) {
-      return new Response(JSON.stringify({ error: 'Agent not found' }), {
-        status: 404,
+    if (!Array.isArray(indicators) || indicators.length === 0) {
+      return new Response(JSON.stringify({ error: 'Missing indicators array' }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -74,7 +69,7 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString();
 
     // Generate evidence hash for the batch
-    const evidenceData = JSON.stringify({ agent_id, indicators, timestamp: now });
+    const evidenceData = JSON.stringify({ agent_id: agent.id, indicators, timestamp: now });
     const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(evidenceData));
     const evidenceHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 
@@ -126,10 +121,10 @@ Deno.serve(async (req) => {
         .insert({
           tenant_id: agent.tenant_id,
           agent_id: agent.id,
+          alert_type: 'ransomware',
           severity: 'critical',
-          category: 'ransomware',
           title: '🚨 ALERTA DE RANSOMWARE',
-          message: `${typeLabels[indicator.indicator_type] || indicator.indicator_type} no endpoint ${agent.agent_name || agent.hostname}. ${
+          message: `${typeLabels[indicator.indicator_type] || indicator.indicator_type} no endpoint ${agent.agent_name}. ${
             indicator.affected_files_count ? `${indicator.affected_files_count} arquivos afetados.` : ''
           } ${indicator.process_name ? `Processo: ${indicator.process_name}` : ''} ${
             indicator.auto_response_taken ? `Ação automática: ${indicator.auto_response_taken}` : 'AÇÃO MANUAL NECESSÁRIA'
@@ -140,11 +135,11 @@ Deno.serve(async (req) => {
       if (!alertError) alertsCreated++;
     }
 
-    // Log evidence
+    // Log forensic evidence
     await supabase.from('agent_evidence_logs').insert({
       agent_id: agent.id,
       tenant_id: agent.tenant_id,
-      agent_name: agent.agent_name || 'unknown',
+      agent_name: agent.agent_name,
       event_type: 'ransomware_detection',
       event_data: { indicators, evidence_hash: evidenceHash },
       evidence_hash: evidenceHash,
