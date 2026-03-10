@@ -1,5 +1,13 @@
 <#
-    CyberShield Agent - Windows v5.0.13 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.14 FULL ENTERPRISE
+
+    v5.0.14: THREAT NETWORK + PROCESS LINEAGE + ZERO-TOUCH DEPLOY
+    - NEW: collect_process_lineage handler - Collects process trees with parent-child relationships
+    - NEW: Suspicious process detection heuristics (LOLBins, Office macro spawns, encoded PS)
+    - NEW: submit-process-lineage endpoint integration for EDR visibility
+    - NEW: CyberShield Threat Network integration - IoCs shared across fleet
+    - IMPROVED: collect_backup_status handler for backup monitoring
+    - IMPROVED: Agent features array updated with new capabilities
 
     v5.0.13-perf: PERFORMANCE TUNING - Parity with Linux/macOS optimizations
     v5.0.13-perf: Performance tuning (cached timestamps, HashSet O(1) lookups, HMAC reuse, log rotation throttling, CIM caching)
@@ -176,7 +184,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.13"
+    [string]$AgentVersion = "v5.0.14"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -1903,6 +1911,14 @@ function Execute-Job {
                     $job_error_message = "collect_certificates failed: $($_.Exception.Message)"
                     $status = "failed"
                 }
+            }
+            # v5.0.14: Process Lineage EDR
+            "collect_process_lineage" {
+                $output = Invoke-CollectProcessLineage -Payload $Job.payload
+            }
+            # v5.0.14: Backup Status Collection
+            "collect_backup_status" {
+                $output = Invoke-CollectBackupStatus -Payload $Job.payload
             }
             default {
                 $job_error_message = "Unknown job type: $($Job.job_type)"
@@ -5593,6 +5609,230 @@ while ($true) {
     
     # v5.0.13-perf: Flush log buffer on each cycle boundary
     Flush-LogBuffer
+}
+
+# ============================================
+#  v5.0.14: PROCESS LINEAGE EDR HANDLER
+# ============================================
+function Invoke-CollectProcessLineage {
+    param([object]$Payload)
+    
+    Write-Log "[PROCESS-LINEAGE] Collecting process tree for EDR visibility..." "INFO"
+    
+    try {
+        # Collect all running processes with parent info via CIM (faster than WMI)
+        $processes = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | 
+            Select-Object ProcessId, ParentProcessId, Name, CommandLine, 
+                          ExecutablePath, CreationDate, @{N='UserName';E={
+                              try { 
+                                  $owner = Invoke-CimMethod -InputObject $_ -MethodName GetOwner -ErrorAction SilentlyContinue
+                                  if ($owner.Domain) { "$($owner.Domain)\$($owner.User)" } else { $owner.User }
+                              } catch { "UNKNOWN" }
+                          }}
+        
+        if (-not $processes) {
+            Write-Log "[PROCESS-LINEAGE] No processes found" "WARN"
+            return @{ processes = @(); count = 0; collected_at = (Get-Date).ToString("o") }
+        }
+        
+        # Build process name lookup for parent resolution
+        $processNameMap = @{}
+        foreach ($p in $processes) {
+            $processNameMap[$p.ProcessId] = $p.Name
+        }
+        
+        # Known suspicious processes (offensive tools)
+        $suspiciousTools = [System.Collections.Generic.HashSet[string]]::new(
+            @("mimikatz", "lazagne", "procdump", "sharphound", "bloodhound",
+              "rubeus", "covenant", "psexec", "wce", "fgdump", "gsecdump",
+              "pwdump", "crackmapexec", "impacket", "cobalt"),
+            [System.StringComparer]::OrdinalIgnoreCase
+        )
+        
+        # Suspicious parent-child patterns
+        $suspiciousParentChild = @{
+            "WINWORD"    = @("cmd", "powershell", "wscript", "cscript", "mshta")
+            "EXCEL"      = @("cmd", "powershell", "wscript", "cscript", "mshta")
+            "OUTLOOK"    = @("cmd", "powershell")
+            "POWERPNT"   = @("cmd", "powershell")
+            "mshta"      = @("powershell", "cmd")
+            "wscript"    = @("cmd", "powershell")
+            "cscript"    = @("powershell", "cmd")
+            "rundll32"   = @("cmd", "powershell")
+        }
+        
+        $processEntries = @()
+        $suspiciousCount = 0
+        
+        foreach ($proc in $processes) {
+            $parentName = if ($processNameMap.ContainsKey($proc.ParentProcessId)) { 
+                $processNameMap[$proc.ParentProcessId] 
+            } else { $null }
+            
+            $procBaseName = [System.IO.Path]::GetFileNameWithoutExtension($proc.Name)
+            $parentBaseName = if ($parentName) { [System.IO.Path]::GetFileNameWithoutExtension($parentName) } else { $null }
+            
+            # Detect suspicious patterns
+            $reasons = @()
+            
+            # Check known offensive tools
+            if ($suspiciousTools.Contains($procBaseName)) {
+                $reasons += "Known offensive tool: $($proc.Name)"
+            }
+            
+            # Check parent-child anomalies
+            if ($parentBaseName -and $suspiciousParentChild.ContainsKey($parentBaseName)) {
+                $badChildren = $suspiciousParentChild[$parentBaseName]
+                if ($procBaseName -in $badChildren) {
+                    $reasons += "Suspicious parent-child: $parentName -> $($proc.Name)"
+                }
+            }
+            
+            # Check encoded PowerShell
+            if ($procBaseName -eq "powershell" -and $proc.CommandLine) {
+                $cmd = $proc.CommandLine.ToLower()
+                if ($cmd -match '-enc\s' -or $cmd -match '-encodedcommand') {
+                    $reasons += "Encoded PowerShell command"
+                }
+                if ($cmd -match 'downloadstring|downloadfile|invoke-webrequest') {
+                    $reasons += "PowerShell download detected"
+                }
+                if ($cmd -match '-windowstyle\s+hidden|-w\s+hidden') {
+                    $reasons += "Hidden PowerShell window"
+                }
+            }
+            
+            # Check processes from temp dirs
+            if ($proc.ExecutablePath) {
+                $pathLower = $proc.ExecutablePath.ToLower()
+                if ($pathLower -match '\\temp\\|\\tmp\\' -and $procBaseName -notin @("msiexec", "setup")) {
+                    $reasons += "Process running from temp directory"
+                }
+            }
+            
+            $isSuspicious = $reasons.Count -gt 0
+            if ($isSuspicious) { $suspiciousCount++ }
+            
+            $startTime = $null
+            if ($proc.CreationDate) {
+                try { $startTime = $proc.CreationDate.ToUniversalTime().ToString("o") } catch { }
+            }
+            
+            $processEntries += @{
+                name = $proc.Name
+                pid = $proc.ProcessId
+                ppid = $proc.ParentProcessId
+                parent_name = $parentName
+                cmd = if ($proc.CommandLine) { $proc.CommandLine.Substring(0, [Math]::Min($proc.CommandLine.Length, 2048)) } else { $null }
+                user = $proc.UserName
+                start_time = $startTime
+                path = $proc.ExecutablePath
+                is_suspicious = $isSuspicious
+                reasons = $reasons
+            }
+        }
+        
+        Write-Log "[PROCESS-LINEAGE] Collected $($processEntries.Count) processes ($suspiciousCount suspicious)" "INFO"
+        
+        # Submit to backend
+        $body = @{
+            processes = $processEntries
+        }
+        
+        $submitResult = Invoke-SecureRequest `
+            -Path "/functions/v1/submit-process-lineage" `
+            -Method "POST" `
+            -Body $body `
+            -TimeoutSec 30
+        
+        if ($submitResult.Success) {
+            Write-Log "[PROCESS-LINEAGE] Submitted successfully" "SUCCESS"
+        } else {
+            Write-Log "[PROCESS-LINEAGE] Submit failed: HTTP $($submitResult.StatusCode)" "WARN"
+        }
+        
+        return @{
+            total_processes = $processEntries.Count
+            suspicious_count = $suspiciousCount
+            collected_at = (Get-Date).ToString("o")
+            submitted = $submitResult.Success
+        }
+        
+    } catch {
+        Write-Log "[PROCESS-LINEAGE] Error: $($_.Exception.Message)" "ERROR"
+        return @{ error = $_.Exception.Message; collected_at = (Get-Date).ToString("o") }
+    }
+}
+
+# ============================================
+#  v5.0.14: BACKUP STATUS HANDLER
+# ============================================
+function Invoke-CollectBackupStatus {
+    param([object]$Payload)
+    
+    Write-Log "[BACKUP] Collecting backup status..." "INFO"
+    
+    try {
+        $backupInfo = @{
+            windows_backup = @{ enabled = $false; last_backup = $null }
+            vss_shadows = @()
+            collected_at = (Get-Date).ToString("o")
+        }
+        
+        # Check Windows Backup status
+        try {
+            $wbSummary = Get-WBSummary -ErrorAction SilentlyContinue
+            if ($wbSummary) {
+                $backupInfo.windows_backup = @{
+                    enabled = $true
+                    last_backup = if ($wbSummary.LastBackupTime) { $wbSummary.LastBackupTime.ToString("o") } else { $null }
+                    last_result = $wbSummary.LastBackupResultHR
+                    next_backup = if ($wbSummary.NextBackupTime) { $wbSummary.NextBackupTime.ToString("o") } else { $null }
+                }
+            }
+        } catch {
+            # Windows Backup not available (common on workstations)
+            Write-Log "[BACKUP] Windows Backup not available: $($_.Exception.Message)" "DEBUG"
+        }
+        
+        # Check VSS Shadow Copies
+        try {
+            $shadows = Get-CimInstance Win32_ShadowCopy -ErrorAction SilentlyContinue
+            if ($shadows) {
+                $backupInfo.vss_shadows = @($shadows | Select-Object -First 10 | ForEach-Object {
+                    @{
+                        id = $_.ID
+                        volume = $_.VolumeName
+                        created_at = $_.InstallDate.ToString("o")
+                        size_bytes = $_.MaxSpace
+                    }
+                })
+            }
+        } catch {
+            Write-Log "[BACKUP] VSS check failed: $($_.Exception.Message)" "DEBUG"
+        }
+        
+        # Check for third-party backup solutions
+        $backupSoftware = @()
+        $knownBackupProcesses = @("veeam", "acronis", "carbonite", "backblaze", "crashplan", "cobian")
+        
+        $runningProcesses = Get-Process -ErrorAction SilentlyContinue | Select-Object -ExpandProperty ProcessName -Unique
+        foreach ($bp in $knownBackupProcesses) {
+            $found = $runningProcesses | Where-Object { $_ -like "*$bp*" }
+            if ($found) {
+                $backupSoftware += @{ name = $bp; running = $true }
+            }
+        }
+        $backupInfo['third_party_software'] = $backupSoftware
+        
+        Write-Log "[BACKUP] Backup status collected. VSS shadows: $($backupInfo.vss_shadows.Count)" "INFO"
+        
+        return $backupInfo
+        
+    } catch {
+        Write-Log "[BACKUP] Error: $($_.Exception.Message)" "ERROR"
+        return @{ error = $_.Exception.Message; collected_at = (Get-Date).ToString("o") }
+    }
 }
 
 # BUG FIX #7: Ensure mutex is released on any exit path (Dispose in finally equivalent)

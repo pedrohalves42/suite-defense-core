@@ -78,6 +78,12 @@ const COLLECTION_TEMPLATES: CollectionJobTemplate[] = [
     ttl_hours: 2,
     payload: { source: 'auto-seed' },
   },
+  {
+    type: 'collect_process_lineage',
+    priority: 4,
+    ttl_hours: 2,
+    payload: { source: 'auto-seed' },
+  },
 ];
 
 Deno.serve(async (req) => {

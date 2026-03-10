@@ -3065,6 +3065,176 @@ export type Database = {
           },
         ]
       }
+      agent_process_lineage: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          command_line: string | null
+          created_at: string
+          hash_sha256: string | null
+          id: string
+          is_suspicious: boolean | null
+          parent_process_id: number | null
+          parent_process_name: string | null
+          path: string | null
+          process_id: number
+          process_name: string
+          start_time: string | null
+          suspicion_reasons: string[] | null
+          tenant_id: string
+          user_name: string | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          command_line?: string | null
+          created_at?: string
+          hash_sha256?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          parent_process_id?: number | null
+          parent_process_name?: string | null
+          path?: string | null
+          process_id: number
+          process_name: string
+          start_time?: string | null
+          suspicion_reasons?: string[] | null
+          tenant_id: string
+          user_name?: string | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          command_line?: string | null
+          created_at?: string
+          hash_sha256?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          parent_process_id?: number | null
+          parent_process_name?: string | null
+          path?: string | null
+          process_id?: number
+          process_name?: string
+          start_time?: string | null
+          suspicion_reasons?: string[] | null
+          tenant_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_process_lineage_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agent_process_lineage_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       agent_processes: {
         Row: {
           agent_id: string
@@ -25684,6 +25854,51 @@ export type Database = {
           },
         ]
       }
+      threat_network_reputation: {
+        Row: {
+          confidence_score: number
+          created_at: string
+          first_reported_at: string
+          id: string
+          indicator_type: string
+          indicator_value: string
+          is_active: boolean
+          last_reported_at: string
+          reporting_tenants_count: number
+          severity: string
+          source_context: Json | null
+          updated_at: string
+        }
+        Insert: {
+          confidence_score?: number
+          created_at?: string
+          first_reported_at?: string
+          id?: string
+          indicator_type: string
+          indicator_value: string
+          is_active?: boolean
+          last_reported_at?: string
+          reporting_tenants_count?: number
+          severity?: string
+          source_context?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          confidence_score?: number
+          created_at?: string
+          first_reported_at?: string
+          id?: string
+          indicator_type?: string
+          indicator_value?: string
+          is_active?: boolean
+          last_reported_at?: string
+          reporting_tenants_count?: number
+          severity?: string
+          source_context?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       token_validation_failures: {
         Row: {
           client_ip: string | null
@@ -34622,6 +34837,7 @@ export type Database = {
         | "virustotal"
         | "manual"
         | "internal"
+        | "cybershield_network"
       threat_indicator_type:
         | "ip_address"
         | "domain"
@@ -34776,6 +34992,7 @@ export const Constants = {
         "virustotal",
         "manual",
         "internal",
+        "cybershield_network",
       ],
       threat_indicator_type: [
         "ip_address",

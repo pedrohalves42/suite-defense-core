@@ -146,6 +146,59 @@ Deno.serve(async (req) => {
       severity: 'critical',
     });
 
+    // P0: CyberShield Threat Network - Publish IoCs to collective network
+    try {
+      const iocs: Array<{ type: string; value: string; severity: string; tags: string[]; context: string; source_tenant_id: string; metadata: Record<string, unknown> }> = [];
+      
+      for (const indicator of indicators) {
+        // Extract process hashes as IoCs
+        if (indicator.process_name) {
+          iocs.push({
+            type: 'domain',
+            value: `process:${indicator.process_name.toLowerCase()}`,
+            severity: 'critical',
+            tags: ['ransomware', indicator.indicator_type, 'cybershield_network'],
+            context: 'ransomware_indicator',
+            source_tenant_id: agent.tenant_id,
+            metadata: {
+              indicator_type: indicator.indicator_type,
+              affected_files_count: indicator.affected_files_count,
+              source_agent: agent.agent_name,
+            },
+          });
+        }
+        // Extract file extensions being encrypted (common ransomware pattern)
+        if (indicator.details?.extension) {
+          iocs.push({
+            type: 'domain',
+            value: `ransomware_extension:${indicator.details.extension}`,
+            severity: 'high',
+            tags: ['ransomware', 'file_extension', 'cybershield_network'],
+            context: 'ransomware_indicator',
+            source_tenant_id: agent.tenant_id,
+            metadata: { extension: indicator.details.extension },
+          });
+        }
+      }
+
+      if (iocs.length > 0) {
+        const internalSecret = Deno.env.get('INTERNAL_SECRET');
+        if (internalSecret) {
+          await supabase.functions.invoke('publish-threat-ioc', {
+            body: {
+              iocs,
+              detection_type: 'ransomware',
+              source_agent_name: agent.agent_name,
+            },
+            headers: { 'X-Internal-Secret': internalSecret },
+          });
+          console.log(`[${requestId}] Published ${iocs.length} IoCs to CyberShield Threat Network`);
+        }
+      }
+    } catch (threatNetErr) {
+      console.error(`[${requestId}] Failed to publish to Threat Network (non-blocking):`, threatNetErr);
+    }
+
     console.log(`[${requestId}] RANSOMWARE ALERT: ${insertedCount} indicators from ${agent.agent_name}, ${alertsCreated} alerts created`);
 
     return new Response(
