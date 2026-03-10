@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - macOS v5.0.13
+# CyberShield Agent - macOS v5.0.14
 #
 # v5.0.13-perf: PERFORMANCE TUNING
 # - OPT: Replace python3 with jq for JSON parsing (~60x faster: 300ms→5ms per call)
