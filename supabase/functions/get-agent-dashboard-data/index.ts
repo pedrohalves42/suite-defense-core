@@ -5,6 +5,9 @@ import { getValidatedTenantId } from '../_shared/tenant.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+// COST-OPT v4: heartbeat padrão de 10min → considerar offline apenas após 30min
+const OFFLINE_THRESHOLD_MINUTES = 30;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
