@@ -20,11 +20,13 @@ interface RawIndicator {
 
 async function fetchMalwareBazaarRecent(): Promise<RawIndicator[]> {
   const indicators: RawIndicator[] = [];
+  const abuseKey = Deno.env.get('ABUSE_CH_API_KEY');
   try {
-    // Use recent_detections endpoint (not get_recent)
+    const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
+    if (abuseKey) headers['Auth-Key'] = abuseKey;
     const resp = await fetch('https://mb-api.abuse.ch/api/v1/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers,
       body: 'query=get_recent&limit=50',
     });
 
