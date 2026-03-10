@@ -455,10 +455,9 @@ verify_jwt = true
 verify_jwt = false
 schedule = "0 */12 * * *"
 
-# === AI Quality & Governance (P2/P3) ===
+# === AI Quality - DISABLED schedule COST-OPT-V5 (invoke manually) ===
 [functions.ai-quality-check]
 verify_jwt = false
-schedule = "0 8 * * *"
 
 # === Auto Report Generation ===
 [functions.auto-generate-report]
