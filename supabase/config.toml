@@ -494,10 +494,9 @@ verify_jwt = false
 [functions.integrity-sentinel]
 verify_jwt = false
 
-# === Chaos Test (Zero Trust Validation) ===
+# === Chaos Test - DISABLED schedule COST-OPT-V5 ===
 [functions.chaos-test]
 verify_jwt = false
-schedule = "0 3 * * 0"
 
 # === ECDSA Release Signing ===
 [functions.sign-release]
