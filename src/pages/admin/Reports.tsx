@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tech-tooltip";
 import { GeneratedReportsList } from "@/components/admin/GeneratedReportsList";
 import { ComplianceReportGenerator } from "@/components/admin/ComplianceReportGenerator";
+import { LGPDMonthlyReport } from "@/components/admin/LGPDMonthlyReport";
 import { SecurityAuditReport } from "@/components/security/SecurityAuditReport";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { useTenant } from "@/hooks/useTenant";
