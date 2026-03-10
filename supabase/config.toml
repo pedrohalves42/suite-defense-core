@@ -634,15 +634,15 @@ verify_jwt = false
 [functions.admin-create-user]
 verify_jwt = true
 
-# === Credential Rotation Check (daily at 4:00 UTC) ===
+# === Credential Rotation Check (weekly Sunday at 4:00 UTC) COST-OPT-V5 ===
 [functions.check-credential-rotation]
 verify_jwt = false
-schedule = "0 4 * * *"
+schedule = "0 4 * * 0"
 
-# === Agent Integrity Check (every 6 hours) COST-OPT-V2 ===
+# === Agent Integrity Check (every 12 hours) COST-OPT-V5 ===
 [functions.check-agent-integrity]
 verify_jwt = false
-schedule = "0 */6 * * *"
+schedule = "0 */12 * * *"
 
 # === Job Failure Pattern Analysis ===
 [functions.analyze-job-failure-patterns]
