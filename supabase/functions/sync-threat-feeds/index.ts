@@ -127,7 +127,8 @@ async function fetchURLhaus(): Promise<RawIndicator[]> {
     });
 
     if (!resp.ok) {
-      console.warn(`URLhaus HTTP ${resp.status}`);
+      console.log(`URLhaus JSON API unavailable (${resp.status}), using CSV fallback`);
+      await resp.text(); // consume body
       return await fetchURLhausCSV();
     }
 
