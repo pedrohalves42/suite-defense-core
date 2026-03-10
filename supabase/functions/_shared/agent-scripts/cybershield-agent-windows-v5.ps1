@@ -1912,6 +1912,14 @@ function Execute-Job {
                     $status = "failed"
                 }
             }
+            # v5.0.14: Process Lineage EDR
+            "collect_process_lineage" {
+                $output = Invoke-CollectProcessLineage -Payload $Job.payload
+            }
+            # v5.0.14: Backup Status Collection
+            "collect_backup_status" {
+                $output = Invoke-CollectBackupStatus -Payload $Job.payload
+            }
             default {
                 $job_error_message = "Unknown job type: $($Job.job_type)"
                 $status = "failed"
