@@ -24714,6 +24714,163 @@ export type Database = {
         }
         Relationships: []
       }
+      threat_feed_sync_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          feed_source: Database["public"]["Enums"]["threat_feed_source"]
+          id: string
+          indicators_fetched: number | null
+          indicators_new: number | null
+          indicators_updated: number | null
+          status: string
+          sync_completed_at: string | null
+          sync_started_at: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          feed_source: Database["public"]["Enums"]["threat_feed_source"]
+          id?: string
+          indicators_fetched?: number | null
+          indicators_new?: number | null
+          indicators_updated?: number | null
+          status?: string
+          sync_completed_at?: string | null
+          sync_started_at?: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          feed_source?: Database["public"]["Enums"]["threat_feed_source"]
+          id?: string
+          indicators_fetched?: number | null
+          indicators_new?: number | null
+          indicators_updated?: number | null
+          status?: string
+          sync_completed_at?: string | null
+          sync_started_at?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "threat_feed_sync_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threat_feed_sync_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "threat_feed_sync_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "threat_feed_sync_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      threat_indicators: {
+        Row: {
+          confidence_score: number | null
+          created_at: string
+          expires_at: string | null
+          first_seen_at: string
+          id: string
+          indicator_type: Database["public"]["Enums"]["threat_indicator_type"]
+          indicator_value: string
+          is_active: boolean
+          last_seen_at: string
+          metadata: Json | null
+          severity: Database["public"]["Enums"]["threat_severity"]
+          source: Database["public"]["Enums"]["threat_feed_source"]
+          source_reference: string | null
+          tags: string[] | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string
+          expires_at?: string | null
+          first_seen_at?: string
+          id?: string
+          indicator_type: Database["public"]["Enums"]["threat_indicator_type"]
+          indicator_value: string
+          is_active?: boolean
+          last_seen_at?: string
+          metadata?: Json | null
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          source: Database["public"]["Enums"]["threat_feed_source"]
+          source_reference?: string | null
+          tags?: string[] | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string
+          expires_at?: string | null
+          first_seen_at?: string
+          id?: string
+          indicator_type?: Database["public"]["Enums"]["threat_indicator_type"]
+          indicator_value?: string
+          is_active?: boolean
+          last_seen_at?: string
+          metadata?: Json | null
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          source?: Database["public"]["Enums"]["threat_feed_source"]
+          source_reference?: string | null
+          tags?: string[] | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "threat_indicators_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threat_indicators_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "threat_indicators_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "threat_indicators_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       threat_intelligence_cache: {
         Row: {
           cached_at: string | null
@@ -24812,6 +24969,168 @@ export type Database = {
           },
           {
             foreignKeyName: "threat_intelligence_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      threat_matches: {
+        Row: {
+          agent_id: string
+          created_at: string
+          id: string
+          indicator_id: string
+          match_context: string
+          match_details: Json | null
+          responded_at: string | null
+          response_action: string | null
+          severity: Database["public"]["Enums"]["threat_severity"]
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          id?: string
+          indicator_id: string
+          match_context: string
+          match_details?: Json | null
+          responded_at?: string | null
+          response_action?: string | null
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          id?: string
+          indicator_id?: string
+          match_context?: string
+          match_details?: Json | null
+          responded_at?: string | null
+          response_action?: string | null
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "threat_matches_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threat_matches_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "threat_matches_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threat_matches_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threat_matches_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threat_matches_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "threat_matches_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "threat_matches_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "threat_matches_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threat_matches_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "threat_matches_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threat_matches_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threat_matches_indicator_id_fkey"
+            columns: ["indicator_id"]
+            isOneToOne: false
+            referencedRelation: "threat_indicators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threat_matches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threat_matches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "threat_matches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "threat_matches_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -33284,6 +33603,7 @@ export type Database = {
       }
       get_system_mode_safe: { Args: never; Returns: string }
       get_tenant_mfa_policy: { Args: { _tenant_id: string }; Returns: Json }
+      get_threat_intel_stats: { Args: { p_tenant_id: string }; Returns: Json }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {
@@ -33748,6 +34068,24 @@ export type Database = {
         | "member"
         | "analyst"
       system_operational_mode: "normal" | "degraded" | "read_only" | "halt_jobs"
+      threat_feed_source:
+        | "abuse_ch_malwarebazaar"
+        | "abuse_ch_urlhaus"
+        | "abuse_ch_feodotracker"
+        | "alienvault_otx"
+        | "virustotal"
+        | "manual"
+        | "internal"
+      threat_indicator_type:
+        | "ip_address"
+        | "domain"
+        | "url"
+        | "file_hash_md5"
+        | "file_hash_sha1"
+        | "file_hash_sha256"
+        | "email"
+        | "cve"
+      threat_severity: "unknown" | "low" | "medium" | "high" | "critical"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -33884,6 +34222,26 @@ export const Constants = {
         "analyst",
       ],
       system_operational_mode: ["normal", "degraded", "read_only", "halt_jobs"],
+      threat_feed_source: [
+        "abuse_ch_malwarebazaar",
+        "abuse_ch_urlhaus",
+        "abuse_ch_feodotracker",
+        "alienvault_otx",
+        "virustotal",
+        "manual",
+        "internal",
+      ],
+      threat_indicator_type: [
+        "ip_address",
+        "domain",
+        "url",
+        "file_hash_md5",
+        "file_hash_sha1",
+        "file_hash_sha256",
+        "email",
+        "cve",
+      ],
+      threat_severity: ["unknown", "low", "medium", "high", "critical"],
     },
   },
 } as const

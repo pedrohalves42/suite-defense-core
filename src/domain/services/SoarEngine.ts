@@ -13,6 +13,7 @@ export enum TriggerType {
   NETWORK_ANOMALY = 'network_anomaly',
   ANTIVIRUS_OUTDATED = 'antivirus_outdated',
   PROCESS_SUSPICIOUS = 'process_suspicious',
+  THREAT_INTEL_MATCH = 'threat_intel_match',
 }
 
 export enum ActionType {

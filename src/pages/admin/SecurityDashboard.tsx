@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion } from 'framer-motion';
 import { SecurityControlPlane } from '@/components/security/SecurityControlPlane';
+import { ThreatIntelDashboard } from '@/components/security/ThreatIntelDashboard';
 
 interface SecurityLog {
   id: string;
@@ -265,15 +266,24 @@ export default function SecurityDashboard() {
                 <User className="h-4 w-4 mr-2" />
                 Logins Falhados ({failedAttempts?.length || 0})
               </TabsTrigger>
+              <TabsTrigger value="threat-intel">
+                <Activity className="h-4 w-4 mr-2" />
+                Threat Intel
+              </TabsTrigger>
             </>
           )}
         </TabsList>
 
         {/* Security Control Plane Tab (Super Admin Only) */}
         {isSuperAdmin && (
-          <TabsContent value="control-plane">
-            <SecurityControlPlane />
-          </TabsContent>
+          <>
+            <TabsContent value="control-plane">
+              <SecurityControlPlane />
+            </TabsContent>
+            <TabsContent value="threat-intel">
+              <ThreatIntelDashboard />
+            </TabsContent>
+          </>
         )}
 
         {/* Security Logs Tab */}

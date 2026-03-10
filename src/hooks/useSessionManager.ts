@@ -15,7 +15,7 @@ const SESSION_ID_KEY = 'cybershield_session_id';
 export const useSessionManager = () => {
   const { user } = useAuth();
   const sessionIdRef = useRef<string | null>(null);
-  const activityIntervalRef = useRef<NodeJS.Timeout>();
+  const activityIntervalRef = useRef<ReturnType<typeof setInterval>>();
 
   const logSessionStart = useCallback(async () => {
     if (!user) return null;

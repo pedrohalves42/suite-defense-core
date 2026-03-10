@@ -233,4 +233,58 @@ export const DEFAULT_PLAYBOOKS: PlaybookDefinition[] = [
       },
     ],
   },
+
+  // ── Threat Intelligence Match Response ──
+  {
+    id: 'pb-threat-intel-match',
+    name: 'Threat Intelligence IoC Match Response',
+    description: 'Responds to confirmed threat indicator matches on endpoints',
+    triggerType: TriggerType.THREAT_INTEL_MATCH,
+    isActive: true,
+    requiresApproval: false,
+    autoApproveForCritical: true,
+    rules: [
+      {
+        name: 'Critical Threat Match - Isolate',
+        condition: (t: SoarTrigger) =>
+          t.severity === PlaybookSeverity.CRITICAL,
+        actions: [
+          {
+            type: ActionType.LOG_EVIDENCE,
+            config: { evidenceType: 'threat_intel_match' },
+            description: 'Log threat indicator match evidence',
+          },
+          {
+            type: ActionType.QUARANTINE,
+            config: { target: 'agent', action: 'network_isolate' },
+            description: 'Network-isolate compromised endpoint',
+          },
+          {
+            type: ActionType.SEND_ALERT,
+            config: { channel: 'all', priority: 'critical' },
+            description: 'Critical IoC match alert to security team',
+          },
+        ],
+        failFast: true,
+      },
+      {
+        name: 'High Threat Match - Alert & Log',
+        condition: (t: SoarTrigger) =>
+          t.severity === PlaybookSeverity.HIGH,
+        actions: [
+          {
+            type: ActionType.LOG_EVIDENCE,
+            config: { evidenceType: 'threat_intel_match' },
+            description: 'Log threat indicator match evidence',
+          },
+          {
+            type: ActionType.SEND_ALERT,
+            config: { channel: 'all', priority: 'high' },
+            description: 'High-severity IoC match alert',
+          },
+        ],
+        failFast: false,
+      },
+    ],
+  },
 ];

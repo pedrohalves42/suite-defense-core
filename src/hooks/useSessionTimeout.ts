@@ -14,7 +14,7 @@ import { logger } from '@/lib/logger';
 export const useSessionTimeout = () => {
   const { user } = useAuth();
   const lastActivityRef = useRef(Date.now());
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const warningShownRef = useRef(false);
   const isSuperAdminRef = useRef(false);
 
@@ -91,7 +91,7 @@ export const useSessionTimeout = () => {
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
     
     // Debounce activity reset to avoid excessive updates
-    let activityDebounce: NodeJS.Timeout;
+    let activityDebounce: ReturnType<typeof setTimeout>;
     const handleActivity = () => {
       clearTimeout(activityDebounce);
       activityDebounce = setTimeout(resetTimer, 1000);
