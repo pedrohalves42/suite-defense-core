@@ -203,6 +203,9 @@ export function SimpleDashboard({ globalStatus, stats, isLoading, tenantId }: Si
         </motion.div>
       </div>
 
+      {/* Backup Awareness */}
+      <BackupAwarenessCard />
+
       {/* Ações Rápidas */}
       <QuickActions 
         onRunScan={handleRunScan}
