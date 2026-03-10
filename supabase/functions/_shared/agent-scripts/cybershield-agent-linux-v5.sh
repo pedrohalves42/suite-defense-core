@@ -2259,3 +2259,77 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
      
      sleep "$sleep_time"
  done
+
+# ============================================
+#  v5.0.14: PROCESS LINEAGE HANDLER
+# ============================================
+collect_process_lineage_handler() {
+    log "INFO" "[PROCESS-LINEAGE] Collecting process tree for EDR visibility"
+    
+    local collected_at
+    collected_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    local processes='[]'
+    if [[ -d /proc ]]; then
+        processes=$(ps -eo pid,ppid,comm,user,args --no-headers 2>/dev/null | head -200 | while IFS= read -r line; do
+            local pid ppid name user cmd
+            pid=$(echo "$line" | awk '{print $1}')
+            ppid=$(echo "$line" | awk '{print $2}')
+            name=$(echo "$line" | awk '{print $3}')
+            user=$(echo "$line" | awk '{print $4}')
+            cmd=$(echo "$line" | awk '{for(i=5;i<=NF;i++) printf "%s ", $i; print ""}' | head -c 2048)
+            
+            # Get parent name
+            local parent_name=""
+            if [[ -f "/proc/$ppid/comm" ]]; then
+                parent_name=$(cat "/proc/$ppid/comm" 2>/dev/null || echo "")
+            fi
+            
+            # Get executable path
+            local exe_path=""
+            if [[ -L "/proc/$pid/exe" ]]; then
+                exe_path=$(readlink -f "/proc/$pid/exe" 2>/dev/null || echo "")
+            fi
+            
+            printf '{"name":"%s","pid":%s,"ppid":%s,"parent_name":"%s","cmd":"%s","user":"%s","path":"%s"},' \
+                "$name" "$pid" "$ppid" "$parent_name" "$(echo "$cmd" | sed 's/"/\\"/g' | tr -d '\n')" "$user" "$exe_path"
+        done | sed 's/,$//' | sed 's/^/[/' | sed 's/$/]/')
+    fi
+    
+    # Submit to backend
+    local submit_body='{"processes":'"${processes:-[]}"'}'
+    local submit_result
+    submit_result=$(make_authenticated_request "POST" "/functions/v1/submit-process-lineage" "$submit_body" 2>/dev/null)
+    
+    echo '{"total_processes":'"$(echo "${processes:-[]}" | jq 'length' 2>/dev/null || echo 0)"',"collected_at":"'"$collected_at"'","source":"linux"}'
+}
+
+# ============================================
+#  v5.0.14: BACKUP STATUS HANDLER
+# ============================================
+collect_backup_status_handler() {
+    log "INFO" "[BACKUP] Collecting backup status"
+    
+    local collected_at
+    collected_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    # Check for common backup tools
+    local backup_tools='[]'
+    for tool in rsnapshot borgbackup duplicity restic rdiff-backup timeshift; do
+        if command -v "$tool" &>/dev/null; then
+            backup_tools=$(echo "$backup_tools" | jq --arg t "$tool" '. + [{"name": $t, "installed": true}]' 2>/dev/null || echo "$backup_tools")
+        fi
+    done
+    
+    # Check systemd timers for backup jobs
+    local backup_timers='[]'
+    if command -v systemctl &>/dev/null; then
+        backup_timers=$(systemctl list-timers --all 2>/dev/null | grep -i "backup\|snapshot\|borg\|restic" | head -5 | jq -R -s '[split("\n")[] | select(length > 0) | {timer: .}]' 2>/dev/null || echo '[]')
+    fi
+    
+    # Check cron for backup jobs
+    local backup_crons='[]'
+    backup_crons=$(crontab -l 2>/dev/null | grep -i "backup\|rsync\|borg\|restic\|tar.*gz" | head -5 | jq -R -s '[split("\n")[] | select(length > 0) | {cron: .}]' 2>/dev/null || echo '[]')
+    
+    echo '{"backup_tools":'"$backup_tools"',"backup_timers":'"$backup_timers"',"backup_crons":'"$backup_crons"',"collected_at":"'"$collected_at"'","source":"linux"}'
+}
