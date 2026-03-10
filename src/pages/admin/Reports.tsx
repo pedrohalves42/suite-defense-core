@@ -1329,10 +1329,18 @@ export default function Reports() {
             <Shield className="h-4 w-4" />
             Auditoria
           </TabsTrigger>
+          <TabsTrigger value="lgpd-monthly" className="flex items-center gap-2">
+            <Scale className="h-4 w-4" />
+            LGPD Mensal
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="compliance" className="space-y-4">
           <ComplianceReportGenerator />
+        </TabsContent>
+
+        <TabsContent value="lgpd-monthly" className="space-y-4">
+          <LGPDMonthlyReport />
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
