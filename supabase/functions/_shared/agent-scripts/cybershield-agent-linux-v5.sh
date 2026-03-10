@@ -86,7 +86,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.13"
+AGENT_VERSION="v5.0.14"
 BASE_DIR="/opt/cybershield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
