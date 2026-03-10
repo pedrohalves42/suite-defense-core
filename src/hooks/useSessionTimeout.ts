@@ -107,15 +107,8 @@ export const useSessionTimeout = () => {
     }
   }, [user, getTimeoutMinutes]);
 
-    // Warning 1 minute before expiration (only for super_admin with short timeout)
-    if (remainingMs <= 60000 && !warningShownRef.current && isSuperAdminRef.current) {
-      warningShownRef.current = true;
-      toast.info('Sua sessão expirará em 1 minuto', {
-        description: 'Mova o mouse ou pressione uma tecla para estender.',
-        duration: 10000
-      });
-    }
-  }, [user, getTimeoutMinutes]);
+
+
 
   useEffect(() => {
     if (!user) return;
