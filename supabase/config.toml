@@ -680,11 +680,10 @@ schedule = "0 */12 * * *"
 verify_jwt = false
 schedule = "0 */12 * * *"
 
-# === ADR-FINAL: Cron Sentinel (every 6 hours) COST-OPT-V2 ===
-# Detects cron jobs silent failures and creates P0 tasks
+# === ADR-FINAL: Cron Sentinel (every 12 hours) COST-OPT-V5 ===
 [functions.cron-sentinel]
 verify_jwt = false
-schedule = "0 */6 * * *"
+schedule = "0 */12 * * *"
 
 # === Security Operations Framework ===
 # V-002 Fix: Allow cron calls without JWT (function validates internally via x-cron-source header)
