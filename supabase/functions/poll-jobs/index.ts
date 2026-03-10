@@ -87,20 +87,14 @@ Deno.serve(async (req) => {
       })
     }
 
-    // FASE 1.2: HMAC verification with token-only fallback for pre-hotfix agents
-    if (!agent.hmac_secret) {
-      logger.error('CRITICAL SECURITY: Agent without HMAC secret', { agentName: agent.agent_name })
-      return new Response(
-        JSON.stringify({ error: 'HMAC secret not configured for agent' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-    
-    // COMPAT: v5.0.3 pre-hotfix agents use GET without HMAC headers
-    // Allow token-only auth (like heartbeat) to unblock job delivery
-    // while agents receive the script update via serve-agent-update
+    // V-702 FIX: HMAC enforcement for modern agents (v5.0.12+)
+    const HMAC_REQUIRED_MIN_VERSION = '5.0.12'
+    const agentVersionStr = (agent as any).agent_version || ''
+    const currentNormV = normalizeVersion(agentVersionStr)
+    const hmacMinNormV = normalizeVersion(HMAC_REQUIRED_MIN_VERSION)
+    const isModernAgent = !!(currentNormV && hmacMinNormV && currentNormV >= hmacMinNormV)
+
     if (hasAnyHmacHeader) {
-      // HMAC headers present - verify signature
       const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret, {
         agentId: token.agent_id,
         tenantId: undefined,
@@ -108,21 +102,44 @@ Deno.serve(async (req) => {
         ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined
       })
       if (!hmacResult.valid) {
-        // COMPAT: Accept with token-only auth if HMAC fails (encoding bugs in v5.0.3)
-        logger.warn('HMAC verification failed but accepting poll-jobs (token-authenticated)', {
+        if (isModernAgent) {
+          // V-702: BLOCK modern agents with invalid HMAC
+          logger.error('SECURITY: HMAC verification FAILED for modern agent poll-jobs - BLOCKED', {
+            agent: agent.agent_name,
+            agentVersion: agentVersionStr,
+            errorCode: hmacResult.errorCode,
+            ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
+          })
+          return new Response(
+            JSON.stringify({ error: 'HMAC verification failed', code: 'HMAC_INVALID' }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        logger.warn('HMAC verification failed - accepting legacy agent poll-jobs', {
           agent: agent.agent_name,
+          agentVersion: agentVersionStr,
           errorCode: hmacResult.errorCode,
-          method: httpMethod,
           ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
         })
       } else {
         logger.debug('HMAC verified for poll-jobs', { agent: agent.agent_name })
       }
     } else {
-      // No HMAC headers - pre-hotfix agent authenticated by token only
-      logger.warn('Poll-jobs accepted without HMAC (token-only auth, pre-hotfix agent)', {
+      if (isModernAgent) {
+        // V-702: BLOCK modern agents without HMAC headers
+        logger.error('SECURITY: Modern agent poll-jobs WITHOUT HMAC headers - BLOCKED', {
+          agent: agent.agent_name,
+          agentVersion: agentVersionStr,
+          ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
+        })
+        return new Response(
+          JSON.stringify({ error: 'HMAC headers required', code: 'HMAC_MISSING' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      logger.warn('Poll-jobs accepted without HMAC (legacy agent)', {
         agent: agent.agent_name,
-        method: httpMethod,
+        agentVersion: agentVersionStr,
         ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
       })
     }
