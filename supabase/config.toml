@@ -569,10 +569,9 @@ verify_jwt = false
 [functions.verify-compliance-report]
 verify_jwt = false
 
-# === Auto Execute AI Actions (every 2 hours) COST-OPT ===
+# === Auto Execute AI Actions - DISABLED schedule COST-OPT-V5 ===
 [functions.auto-execute-ai-actions]
 verify_jwt = false
-schedule = "0 */2 * * *"
 
 # === AI System Audit (Ana Persona) ===
 [functions.ai-system-audit]
