@@ -5,7 +5,8 @@
  * @author Dr. Atlas Verus - P2 Security Testing
  */
 import { describe, it, expect, beforeAll, vi } from 'vitest';
-import { createHmac, randomBytes } from 'node:crypto';
+// @ts-expect-error - crypto is available in vitest/node environment
+import { createHmac, randomBytes } from 'crypto';
 
 // Mock Supabase client for testing
 const mockSupabase = {
