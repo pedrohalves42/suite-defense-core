@@ -490,10 +490,9 @@ verify_jwt = false
 [functions.sync-agent-release-content]
 verify_jwt = false
 
-# === Zero Trust Integrity Sentinel (every 6 hours) COST-OPT-V2 ===
+# === Zero Trust Integrity Sentinel - DISABLED schedule COST-OPT-V5 ===
 [functions.integrity-sentinel]
 verify_jwt = false
-schedule = "0 */6 * * *"
 
 # === Chaos Test (Zero Trust Validation) ===
 [functions.chaos-test]
