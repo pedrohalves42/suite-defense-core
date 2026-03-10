@@ -594,25 +594,25 @@ verify_jwt = false
 verify_jwt = false
 schedule = "*/30 * * * *"
 
-# === P0: Cleanup Stale Playbooks (every 2 hours) COST-OPT-V2 ===
+# === P0: Cleanup Stale Playbooks (every 12 hours) COST-OPT-V5 ===
 [functions.cleanup-stale-playbooks]
 verify_jwt = false
-schedule = "0 */2 * * *"
+schedule = "0 */12 * * *"
 
-# === P0: Process Failed Jobs (every 2 hours) COST-OPT-V2 ===
+# === P0: Process Failed Jobs (every 6 hours) COST-OPT-V5 ===
 [functions.process-failed-jobs]
-verify_jwt = false
-schedule = "0 */2 * * *"
-
-# === P1: Cleanup Stale Reports (every 6 hours) COST-OPT-V2 ===
-[functions.cleanup-stale-reports]
 verify_jwt = false
 schedule = "0 */6 * * *"
 
-# === P1: Job Health Monitor (every 2 hours) COST-OPT-V2 ===
+# === P1: Cleanup Stale Reports (every 12 hours) COST-OPT-V5 ===
+[functions.cleanup-stale-reports]
+verify_jwt = false
+schedule = "0 */12 * * *"
+
+# === P1: Job Health Monitor (every 6 hours) COST-OPT-V5 ===
 [functions.job-health-monitor]
 verify_jwt = false
-schedule = "0 */2 * * *"
+schedule = "0 */6 * * *"
 
 # === AI Execute Solution ===
 [functions.ai-execute-solution]
