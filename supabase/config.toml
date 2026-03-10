@@ -235,9 +235,10 @@ schedule = "0 */12 * * *"
 verify_jwt = false
 schedule = "0 */6 * * *"
 
+# Production health (every 12 hours) COST-OPT-V5
 [functions.check-production-health]
 verify_jwt = false
-schedule = "0 */2 * * *"
+schedule = "0 */12 * * *"
 
 # === Alert Functions ===
 [functions.send-alert-email]
