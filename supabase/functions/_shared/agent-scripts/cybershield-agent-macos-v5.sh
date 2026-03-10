@@ -2242,3 +2242,40 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
      
      sleep "$sleep_time"
  done
+
+# ============================================
+#  v5.0.14: PROCESS LINEAGE HANDLER (macOS)
+# ============================================
+collect_process_lineage_handler() {
+    log "INFO" "[PROCESS-LINEAGE] Collecting process tree"
+    local collected_at
+    collected_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local processes
+    processes=$(ps -eo pid,ppid,comm,user,args 2>/dev/null | tail -n +2 | head -200 | while IFS= read -r line; do
+        local pid ppid name user cmd
+        pid=$(echo "$line" | awk '{print $1}')
+        ppid=$(echo "$line" | awk '{print $2}')
+        name=$(echo "$line" | awk '{print $3}')
+        user=$(echo "$line" | awk '{print $4}')
+        cmd=$(echo "$line" | awk '{for(i=5;i<=NF;i++) printf "%s ", $i}' | head -c 2048 | sed 's/"/\\"/g' | tr -d '\n')
+        printf '{"name":"%s","pid":%s,"ppid":%s,"user":"%s","cmd":"%s"},' "$name" "$pid" "$ppid" "$user" "$cmd"
+    done | sed 's/,$//' | sed 's/^/[/' | sed 's/$/]/')
+    local submit_body='{"processes":'"${processes:-[]}"'}'
+    make_authenticated_request "POST" "/functions/v1/submit-process-lineage" "$submit_body" 2>/dev/null || true
+    echo '{"total_processes":'"$(echo "${processes:-[]}" | jq 'length' 2>/dev/null || echo 0)"',"collected_at":"'"$collected_at"'","source":"macos"}'
+}
+
+collect_backup_status_handler() {
+    log "INFO" "[BACKUP] Collecting backup status"
+    local collected_at
+    collected_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local tm_status='{"enabled":false}'
+    if command -v tmutil &>/dev/null; then
+        local tm_dest
+        tm_dest=$(tmutil destinationinfo 2>/dev/null | head -10 | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
+        local last_backup
+        last_backup=$(tmutil latestbackup 2>/dev/null || echo "none")
+        tm_status='{"enabled":true,"last_backup":"'"$last_backup"'","destinations":'"$tm_dest"'}'
+    fi
+    echo '{"time_machine":'"$tm_status"',"collected_at":"'"$collected_at"'","source":"macos"}'
+}
