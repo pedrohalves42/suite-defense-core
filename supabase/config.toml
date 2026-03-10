@@ -450,10 +450,10 @@ verify_jwt = true
 [functions.translate-cve]
 verify_jwt = true
 
-# === HMAC Cleanup (every 2 hours) ===
+# === HMAC Cleanup (every 12 hours) COST-OPT-V5 ===
 [functions.hmac-cleanup-scheduled]
 verify_jwt = false
-schedule = "0 */2 * * *"
+schedule = "0 */12 * * *"
 
 # === AI Quality & Governance (P2/P3) ===
 [functions.ai-quality-check]
