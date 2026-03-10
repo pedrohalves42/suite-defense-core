@@ -1075,6 +1075,14 @@ restart_service_handler() {
         "integration_test_v3")
             output='{"pong":true,"agent_version":"'"$AGENT_VERSION"'","timestamp":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","hostname":"'"$(hostname)"'"}'
             ;;
+        # v5.0.14: Process Lineage EDR
+        "collect_process_lineage")
+            output=$(collect_process_lineage_handler)
+            ;;
+        # v5.0.14: Backup Status
+        "collect_backup_status")
+            output=$(collect_backup_status_handler)
+            ;;
         *)
             error_message="Unknown job type: $job_type"
             status="failed"
