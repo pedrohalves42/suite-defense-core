@@ -5,7 +5,7 @@
  * @author Dr. Atlas Verus - P2 Security Testing
  */
 import { describe, it, expect, beforeAll, vi } from 'vitest';
-import { createHmac, randomBytes } from 'crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 
 // Mock Supabase client for testing
 const mockSupabase = {

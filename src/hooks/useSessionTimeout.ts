@@ -91,7 +91,7 @@ export const useSessionTimeout = () => {
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
     
     // Debounce activity reset to avoid excessive updates
-    let activityDebounce: NodeJS.Timeout;
+    let activityDebounce: ReturnType<typeof setTimeout>;
     const handleActivity = () => {
       clearTimeout(activityDebounce);
       activityDebounce = setTimeout(resetTimer, 1000);
