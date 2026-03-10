@@ -120,11 +120,13 @@ async function fetchMalwareBazaarCSV(): Promise<RawIndicator[]> {
 
 async function fetchURLhaus(): Promise<RawIndicator[]> {
   const indicators: RawIndicator[] = [];
+  const abuseKey = Deno.env.get('ABUSE_CH_API_KEY');
   try {
-    // Primary: JSON API
+    const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
+    if (abuseKey) headers['Auth-Key'] = abuseKey;
     const resp = await fetch('https://urlhaus-api.abuse.ch/v1/urls/recent/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers,
       body: 'limit=100',
     });
 
