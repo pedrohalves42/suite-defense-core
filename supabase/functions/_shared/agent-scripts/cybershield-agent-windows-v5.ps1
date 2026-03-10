@@ -1,5 +1,13 @@
 <#
-    CyberShield Agent - Windows v5.0.13 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.14 FULL ENTERPRISE
+
+    v5.0.14: THREAT NETWORK + PROCESS LINEAGE + ZERO-TOUCH DEPLOY
+    - NEW: collect_process_lineage handler - Collects process trees with parent-child relationships
+    - NEW: Suspicious process detection heuristics (LOLBins, Office macro spawns, encoded PS)
+    - NEW: submit-process-lineage endpoint integration for EDR visibility
+    - NEW: CyberShield Threat Network integration - IoCs shared across fleet
+    - IMPROVED: collect_backup_status handler for backup monitoring
+    - IMPROVED: Agent features array updated with new capabilities
 
     v5.0.13-perf: PERFORMANCE TUNING - Parity with Linux/macOS optimizations
     v5.0.13-perf: Performance tuning (cached timestamps, HashSet O(1) lookups, HMAC reuse, log rotation throttling, CIM caching)
