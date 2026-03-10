@@ -5,6 +5,9 @@ import { getValidatedTenantId } from '../_shared/tenant.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+// COST-OPT v4: heartbeat padrão de 10min → considerar offline apenas após 30min
+const OFFLINE_THRESHOLD_MINUTES = 30;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -85,7 +88,7 @@ Deno.serve(async (req) => {
 
     // Calcular estatisticas agregadas
     const now = new Date();
-    const twoMinutesAgo = new Date(now.getTime() - 2 * 60 * 1000);
+    const offlineThreshold = new Date(now.getTime() - OFFLINE_THRESHOLD_MINUTES * 60 * 1000);
 
     let totalAgents = 0;
     let onlineAgents = 0;
@@ -101,7 +104,7 @@ Deno.serve(async (req) => {
       totalAgents++;
       
       const lastHeartbeat = agent.last_heartbeat ? new Date(agent.last_heartbeat) : null;
-      const isOnline = lastHeartbeat && lastHeartbeat >= twoMinutesAgo;
+      const isOnline = !!lastHeartbeat && lastHeartbeat >= offlineThreshold;
       
       if (isOnline) {
         onlineAgents++;
