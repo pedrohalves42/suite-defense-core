@@ -542,15 +542,15 @@ verify_jwt = true
 [functions.register-agent-key]
 verify_jwt = false
 
-# === FASE 1: Autonomous SAFE_MODE (every 2 hours) COST-OPT-V2 ===
+# === FASE 1: Autonomous SAFE_MODE (every 6 hours) COST-OPT-V5 ===
 [functions.autonomous-safe-mode]
 verify_jwt = false
-schedule = "0 */2 * * *"
+schedule = "0 */6 * * *"
 
-# === Watchdog Non-Execution Detection (every 2 hours) COST-OPT-V2 ===
+# === Watchdog Non-Execution Detection (every 6 hours) COST-OPT-V5 ===
 [functions.watchdog-non-execution]
 verify_jwt = false
-schedule = "0 */2 * * *"
+schedule = "0 */6 * * *"
 
 # === Executive Report Generator (daily at 6:00 UTC) ===
 [functions.generate-executive-report]
