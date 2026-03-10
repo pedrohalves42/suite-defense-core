@@ -657,10 +657,9 @@ schedule = "0 2 * * 0"
 [functions.analyze-confidence-gap-trend]
 verify_jwt = true
 
-# === Auto-Triage AI Insights (daily at 6 AM) ===
+# === Auto-Triage AI Insights - DISABLED schedule COST-OPT-V5 ===
 [functions.auto-triage-insights]
 verify_jwt = false
-schedule = "0 6 * * *"
 
 # === ADR-026: Multi-Tenant Active Context ===
 [functions.set-active-tenant]
