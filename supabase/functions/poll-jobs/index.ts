@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts'
 import { AgentTokenSchema } from '../_shared/validation.ts'
 import { handleException, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
