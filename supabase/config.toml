@@ -618,10 +618,9 @@ schedule = "0 */6 * * *"
 [functions.ai-execute-solution]
 verify_jwt = true
 
-# === Check Action Effectiveness (every 6 hours) COST-OPT-V2 ===
+# === Check Action Effectiveness - DISABLED schedule COST-OPT-V5 ===
 [functions.check-action-effectiveness]
 verify_jwt = false
-schedule = "0 */6 * * *"
 
 # === Generate Explainable AI Report ===
 [functions.generate-explainable-report]
