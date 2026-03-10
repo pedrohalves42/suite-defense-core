@@ -338,13 +338,15 @@ verify_jwt = true
 [functions.health]
 verify_jwt = false
 
+# Health check (every 12 hours) COST-OPT-V5
 [functions.check-installation-health]
 verify_jwt = false
-schedule = "0 */6 * * *"
+schedule = "0 */12 * * *"
 
+# Monitor stuck agents (every 6 hours) COST-OPT-V5
 [functions.monitor-stuck-agents]
 verify_jwt = false
-schedule = "0 */2 * * *"
+schedule = "0 */6 * * *"
 
 # === FASE 3+4: Agent Release Management ===
 [functions.register-agent-release]
