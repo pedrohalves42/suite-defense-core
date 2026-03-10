@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tech-tooltip";
 import { GeneratedReportsList } from "@/components/admin/GeneratedReportsList";
 import { ComplianceReportGenerator } from "@/components/admin/ComplianceReportGenerator";
+import { LGPDMonthlyReport } from "@/components/admin/LGPDMonthlyReport";
 import { SecurityAuditReport } from "@/components/security/SecurityAuditReport";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { useTenant } from "@/hooks/useTenant";
@@ -1328,10 +1329,18 @@ export default function Reports() {
             <Shield className="h-4 w-4" />
             Auditoria
           </TabsTrigger>
+          <TabsTrigger value="lgpd-monthly" className="flex items-center gap-2">
+            <Scale className="h-4 w-4" />
+            LGPD Mensal
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="compliance" className="space-y-4">
           <ComplianceReportGenerator />
+        </TabsContent>
+
+        <TabsContent value="lgpd-monthly" className="space-y-4">
+          <LGPDMonthlyReport />
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">

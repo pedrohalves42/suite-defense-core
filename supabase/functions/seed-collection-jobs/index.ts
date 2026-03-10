@@ -66,6 +66,12 @@ const COLLECTION_TEMPLATES: CollectionJobTemplate[] = [
     payload: { source: 'auto-seed' },
   },
   // collect_disk_metrics REMOVED: disk metrics are collected via heartbeat (push model), not jobs
+  {
+    type: 'collect_backup_status',
+    priority: 3,
+    ttl_hours: 2,
+    payload: { source: 'auto-seed' },
+  },
 ];
 
 Deno.serve(async (req) => {
