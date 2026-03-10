@@ -3600,12 +3600,45 @@ function Initialize-ProcessBaseline {
     <#
     .SYNOPSIS
         Initializes or loads process baseline with O(1) HashSet index
+        HOTFIX-BASELINE-LOAD-SAFE: Resilient loading for PS 5.1 duplicate key issues
     #>
     try {
         if (Test-Path $Global:ProcessBaselinePath) {
-            $Global:ProcessBaseline = Get-Content $Global:ProcessBaselinePath -Raw | ConvertFrom-Json
-            Write-Log "[BASELINE] Loaded baseline with $($Global:ProcessBaseline.Count) processes" "INFO"
-        } else {
+            # HOTFIX-BASELINE-LOAD-SAFE: Wrap ConvertFrom-Json in try/catch for PS 5.1 duplicate key errors
+            $loadedBaseline = $null
+            try {
+                $rawJson = Get-Content $Global:ProcessBaselinePath -Raw -ErrorAction Stop
+                if ($rawJson -and $rawJson.Trim().Length -gt 2) {
+                    $loadedBaseline = $rawJson | ConvertFrom-Json -ErrorAction Stop
+                }
+            } catch {
+                Write-Log "[BASELINE] HOTFIX-BASELINE-LOAD-SAFE: ConvertFrom-Json failed ($($_.Exception.Message)). Rebuilding baseline..." "WARN"
+                # Rename corrupted file and rebuild
+                $corruptPath = "$($Global:ProcessBaselinePath).corrupt.$((Get-Date).ToString('yyyyMMddHHmmss'))"
+                Move-Item -Path $Global:ProcessBaselinePath -Destination $corruptPath -Force -ErrorAction SilentlyContinue
+                $loadedBaseline = $null
+            }
+
+            if ($loadedBaseline) {
+                # HOTFIX-BASELINE-NORMALIZE-SAVE: Normalize all entries to hashtables to avoid PS 5.1 mixed-type serialization issues
+                $normalizedBaseline = @()
+                foreach ($be in $loadedBaseline) {
+                    $normalizedBaseline += @{
+                        name        = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
+                        company     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
+                        description = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
+                        first_seen  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
+                    }
+                }
+                $Global:ProcessBaseline = $normalizedBaseline
+                Write-Log "[BASELINE] Loaded and normalized baseline with $($normalizedBaseline.Count) processes" "INFO"
+            } else {
+                # File missing or corrupted — create fresh
+                $Global:ProcessBaseline = $null
+            }
+        }
+
+        if (-not $Global:ProcessBaseline -or $Global:ProcessBaseline.Count -eq 0) {
             Write-Log "[BASELINE] Creating initial process baseline..." "INFO"
 
             $processes = Get-Process | Select-Object ProcessName, Company, Description
@@ -3631,7 +3664,8 @@ function Initialize-ProcessBaseline {
         # v5.0.13-perf: Build HashSet index for O(1) lookups
         $Global:ProcessBaselineSet.Clear()
         foreach ($entry in $Global:ProcessBaseline) {
-            [void]$Global:ProcessBaselineSet.Add($entry.name)
+            $n = if ($entry -is [hashtable]) { $entry["name"] } else { $entry.name }
+            if ($n) { [void]$Global:ProcessBaselineSet.Add($n) }
         }
         Write-Log "[BASELINE] Built O(1) HashSet index with $($Global:ProcessBaselineSet.Count) entries" "DEBUG"
 
