@@ -157,10 +157,10 @@ verify_jwt = true
 [functions.cleanup-expired-enrollment-keys]
 verify_jwt = true
 
-# Auto-renew enrollment keys (every 2 hours) COST-OPT
+# Auto-renew enrollment keys (every 12 hours) COST-OPT-V5
 [functions.auto-renew-enrollment-keys]
 verify_jwt = false
-schedule = "0 */2 * * *"
+schedule = "0 */12 * * *"
 
 [functions.cleanup-orphaned-data]
 verify_jwt = true
