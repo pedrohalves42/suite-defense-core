@@ -47,9 +47,36 @@ export const useSessionTimeout = () => {
     
     const timeoutMs = getTimeoutMinutes() * 60 * 1000;
     const elapsed = Date.now() - lastActivityRef.current;
-    const remainingMs = timeoutMs - elapsed;
 
-    // Session expired
+    // V-706 FIX: Server-side session validation every 5 checks (~2.5 min)
+    serverCheckCountRef.current += 1;
+    if (serverCheckCountRef.current >= 5) {
+      serverCheckCountRef.current = 0;
+      try {
+        const { data: session } = await supabase
+          .from('active_sessions')
+          .select('expires_at')
+          .eq('user_id', user.id)
+          .gt('expires_at', new Date().toISOString())
+          .limit(1)
+          .maybeSingle();
+        
+        if (!session) {
+          logger.info('[SessionTimeout] Server-side session expired or not found');
+          toast.warning('Sessão expirada pelo servidor', {
+            description: 'Você será redirecionado para a tela de login.',
+            duration: 5000
+          });
+          setTimeout(async () => { await supabase.auth.signOut(); }, 1500);
+          return;
+        }
+      } catch (err) {
+        // Non-blocking: if server check fails, fall through to client-side check
+        logger.warn('[SessionTimeout] Server session check failed', err);
+      }
+    }
+
+    // Client-side check (defense in depth)
     if (elapsed >= timeoutMs) {
       logger.info('[SessionTimeout] Session expired due to inactivity', { 
         role: isSuperAdminRef.current ? 'super_admin' : 'user',
@@ -62,12 +89,22 @@ export const useSessionTimeout = () => {
         duration: 5000
       });
       
-      // Small delay before logout to show toast
       setTimeout(async () => {
         await supabase.auth.signOut();
       }, 1500);
       return;
     }
+
+    // Warning 1 minute before expiration (only for super_admin with short timeout)
+    const remainingMs = timeoutMs - elapsed;
+    if (remainingMs <= 60000 && !warningShownRef.current && isSuperAdminRef.current) {
+      warningShownRef.current = true;
+      toast.info('Sua sessão expirará em 1 minuto', {
+        description: 'Mova o mouse ou pressione uma tecla para estender.',
+        duration: 10000
+      });
+    }
+  }, [user, getTimeoutMinutes]);
 
     // Warning 1 minute before expiration (only for super_admin with short timeout)
     if (remainingMs <= 60000 && !warningShownRef.current && isSuperAdminRef.current) {
