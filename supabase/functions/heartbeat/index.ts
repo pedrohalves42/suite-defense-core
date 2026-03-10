@@ -91,39 +91,68 @@ Deno.serve(async (req) => {
       )
     }
     
-    // Verificar HMAC - try verification, but allow through if headers are missing
-    // COMPAT: v5.0.3 agents only send HMAC headers when body is present
-    // Heartbeats without body will have no HMAC headers
+    // V-702 FIX: HMAC enforcement for modern agents (v5.0.12+)
+    // Legacy agents (pre-v5.0.12) still allowed token-only auth for backward compat
+    const HMAC_REQUIRED_MIN_VERSION = '5.0.12'
+    const currentAgentVersion = agent.agent_version || ''
+    const currentNormV = normalizeVersion(currentAgentVersion)
+    const hmacMinNormV = normalizeVersion(HMAC_REQUIRED_MIN_VERSION)
+    const isModernAgent = !!(currentNormV && hmacMinNormV && currentNormV >= hmacMinNormV)
+    
     const hasHmacHeaders = req.headers.get('X-HMAC-Signature') || req.headers.get('X-Timestamp') || req.headers.get('X-HMAC-Timestamp')
     
     let hmacResult: { valid: boolean; rawBody?: string; errorCode?: string; errorMessage?: string; transient?: boolean }
     
     if (hasHmacHeaders) {
-      // HMAC headers present - try to verify
+      // HMAC headers present - verify
       hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
       if (!hmacResult.valid) {
-        // COMPAT: v5.0.3 has HMAC encoding bugs - accept heartbeat with token-only auth
-        // Log the failure but don't block the heartbeat
-        logger.warn('HMAC verification failed but accepting heartbeat (token-authenticated)', { 
+        if (isModernAgent) {
+          // V-702: BLOCK modern agents with invalid HMAC (no downgrade allowed)
+          logger.error('SECURITY: HMAC verification FAILED for modern agent - BLOCKED', { 
+            agentName: agent.agent_name, 
+            agentVersion: currentAgentVersion,
+            errorCode: hmacResult.errorCode,
+            ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
+          })
+          return new Response(
+            JSON.stringify({ error: 'HMAC verification failed', code: 'HMAC_INVALID' }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        // Legacy agent: accept with warning (backward compat)
+        logger.warn('HMAC verification failed - accepting legacy agent (token-only)', { 
           agentName: agent.agent_name, 
+          agentVersion: currentAgentVersion,
           errorCode: hmacResult.errorCode,
           ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
         })
-        // Re-read body since verifyHmacSignature consumed it
         let rawBody = ''
         try { rawBody = hmacResult.rawBody || '' } catch { rawBody = '' }
         hmacResult = { valid: true, rawBody }
       }
     } else {
-      // No HMAC headers - agent authenticated by token only (v5.0.3 no-body heartbeat)
-      // Read body manually since verifyHmacSignature won't be called
+      if (isModernAgent) {
+        // V-702: BLOCK modern agents without HMAC headers entirely
+        logger.error('SECURITY: Modern agent sent heartbeat WITHOUT HMAC headers - BLOCKED', { 
+          agentName: agent.agent_name,
+          agentVersion: currentAgentVersion,
+          ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
+        })
+        return new Response(
+          JSON.stringify({ error: 'HMAC headers required', code: 'HMAC_MISSING' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      // Legacy agent without HMAC headers - read body manually
       let rawBody = ''
       try {
         rawBody = await req.clone().text()
       } catch { rawBody = '' }
       hmacResult = { valid: true, rawBody }
-      logger.warn('Heartbeat accepted without HMAC (token-only auth)', { 
+      logger.warn('Heartbeat accepted without HMAC (legacy agent)', { 
         agentName: agent.agent_name,
+        agentVersion: currentAgentVersion,
         ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
       })
     }
