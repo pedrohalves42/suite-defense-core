@@ -748,3 +748,15 @@ verify_jwt = false
 
 [functions.submit-ransomware-indicator]
 verify_jwt = false
+
+# === P0: CyberShield Threat Network ===
+[functions.publish-threat-ioc]
+verify_jwt = false
+
+# === P1: Process Lineage EDR ===
+[functions.submit-process-lineage]
+verify_jwt = false
+
+# === P2: Zero-touch Deploy ===
+[functions.generate-deploy-package]
+verify_jwt = false
