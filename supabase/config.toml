@@ -305,10 +305,10 @@ verify_jwt = false
 [functions.submit-contact]
 verify_jwt = false
 
-# === Monitoring Functions (FASE 4.1) ===
+# === Monitoring Functions (every 12 hours) COST-OPT-V5 ===
 [functions.monitor-slow-operations]
 verify_jwt = false
-schedule = "0 */2 * * *"
+schedule = "0 */12 * * *"
 
 # === Test Functions ===
 [functions.test-virustotal-integration]
