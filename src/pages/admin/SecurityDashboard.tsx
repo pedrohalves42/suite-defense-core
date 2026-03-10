@@ -276,12 +276,14 @@ export default function SecurityDashboard() {
 
         {/* Security Control Plane Tab (Super Admin Only) */}
         {isSuperAdmin && (
-          <TabsContent value="control-plane">
-            <SecurityControlPlane />
-          </TabsContent>
-          <TabsContent value="threat-intel">
-            <ThreatIntelDashboard />
-          </TabsContent>
+          <>
+            <TabsContent value="control-plane">
+              <SecurityControlPlane />
+            </TabsContent>
+            <TabsContent value="threat-intel">
+              <ThreatIntelDashboard />
+            </TabsContent>
+          </>
         )}
 
         {/* Security Logs Tab */}
