@@ -594,7 +594,7 @@ verify_jwt = false
 # === Invoke Scheduled Jobs (every 15 minutes) COST-OPT-V2 ===
 [functions.invoke-scheduled-jobs]
 verify_jwt = false
-schedule = "*/15 * * * *"
+schedule = "*/30 * * * *"
 
 # === P0: Cleanup Stale Playbooks (every 2 hours) COST-OPT-V2 ===
 [functions.cleanup-stale-playbooks]
