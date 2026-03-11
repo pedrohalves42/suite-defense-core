@@ -350,7 +350,7 @@
         },
         "enterprise": {
           "name": "Enterprise / MSP",
-          "priceLabel": "Sob consulta",
+          "priceLabel": "A partir de",
           "description": "Para empresas +200 dispositivos ou MSPs",
           "cta": "Falar com especialista",
           "features": {
@@ -869,7 +869,7 @@
     "free": { "name": "Free", "description": "Para conhecer o sistema", "price": "Grátis", "priceNote": "3 computadores" },
     "starter": { "name": "Starter", "description": "Para empresas que querem saber se está tudo bem", "price": "R$ 149", "priceNote": "/mês • 5 computadores", "priceExtra": "+R$ 19 por computador adicional", "maxDevices": "Até 30 computadores" },
     "business": { "name": "Business", "description": "Para empresas que não podem ser surpreendidas por falhas invisíveis", "price": "R$ 399", "priceNote": "/mês • 25 computadores", "priceExtra": "+R$ 17 por computador adicional", "maxDevices": "Até 200 computadores" },
-    "enterprise": { "name": "Enterprise", "description": "Para empresas onde um incidente vira problema jurídico", "price": "Sob consulta" },
+    "enterprise": { "name": "Enterprise", "description": "Para empresas onde um incidente vira problema jurídico", "price": "A partir de R$ 2.000" },
     "features": {
       "free": ["Até 3 computadores", "Visibilidade básica de riscos", "Inventário de software", "Status do antivírus"],
       "starter": ["5 computadores inclusos", "+R$ 19/computador adicional", "Verificações automáticas de segurança", "Alertas por email", "Relatórios de risco mensais", "Suporte por email", "14 dias de trial grátis"],

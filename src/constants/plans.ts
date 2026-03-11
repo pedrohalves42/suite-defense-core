@@ -100,15 +100,35 @@ export const PLAN_CONFIG = {
 // STRIPE MAPPING
 // ============================================
 export const STRIPE_PLAN_MAP = {
-  // Base plans
+  // Base plans - Monthly
   starter_compliance: {
-    priceId: 'price_1Sj531FeHfNScQDP8kMvWUpP',
-    productId: 'prod_TgRwgJlh0NC2mI',
+    priceId: 'price_1T9ltDFeHfNScQDPDCs2evWV',
+    productId: 'prod_U81x6fHQIeM2B8',
+    type: 'base' as const,
+  },
+  starter_compliance_semiannual: {
+    priceId: 'price_1T9ltFFeHfNScQDPeRUkIwPy',
+    productId: 'prod_U81x5Z106W0Pl4',
+    type: 'base' as const,
+  },
+  starter_compliance_annual: {
+    priceId: 'price_1T9ltGFeHfNScQDPF824aEpL',
+    productId: 'prod_U81xt5IIkzkAS8',
     type: 'base' as const,
   },
   business: {
     priceId: 'price_1T9lV8FeHfNScQDPfQJhglVa',
     productId: 'prod_U81YkX1Yl5sjcV',
+    type: 'base' as const,
+  },
+  business_semiannual: {
+    priceId: 'price_1T9ltIFeHfNScQDPJUHs3Jmt',
+    productId: 'prod_U81xJiwcNhif30',
+    type: 'base' as const,
+  },
+  business_annual: {
+    priceId: 'price_1T9ltJFeHfNScQDPplay00VK',
+    productId: 'prod_U81xa1XgLZIgzg',
     type: 'base' as const,
   },
   // Device addons

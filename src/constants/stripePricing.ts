@@ -4,10 +4,12 @@
 export const STRIPE_PRODUCTS = {
   // Starter Compliance - R$ 499/mês base (10 dispositivos)
   starterCompliance: {
-    productId: "prod_TgRwgJlh0NC2mI",
+    productId: "prod_U81x6fHQIeM2B8",
     name: "CyberShield – Starter Compliance",
     prices: {
-      monthly: "price_1Sj531FeHfNScQDP8kMvWUpP", // R$ 499/mês
+      monthly: "price_1T9ltDFeHfNScQDPDCs2evWV", // R$ 499/mês
+      semiannual: "price_1T9ltFFeHfNScQDPeRUkIwPy", // R$ 2.694/semestre (~R$449/mês)
+      annual: "price_1T9ltGFeHfNScQDPF824aEpL", // R$ 4.790/ano (~R$399/mês)
     },
     baseDevices: 10,
     maxDevices: 50,
@@ -20,6 +22,8 @@ export const STRIPE_PRODUCTS = {
     name: "CyberShield – Business",
     prices: {
       monthly: "price_1T9lV8FeHfNScQDPfQJhglVa", // R$ 899/mês
+      semiannual: "price_1T9ltIFeHfNScQDPJUHs3Jmt", // R$ 4.854/semestre (~R$809/mês)
+      annual: "price_1T9ltJFeHfNScQDPplay00VK", // R$ 8.990/ano (~R$749/mês)
     },
     baseDevices: 20,
     maxDevices: 200,

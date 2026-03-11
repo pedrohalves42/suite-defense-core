@@ -227,7 +227,7 @@ export default function PlanUpgradeNew() {
       color: 'text-red-500',
       bgColor: 'bg-red-500/10',
       description: 'Para grandes organizações e MSPs',
-      price: 'Sob consulta',
+      price: 'A partir de R$ 2.000/mês',
       features: [...PLAN_CONFIG.enterprise.features],
     },
   };
