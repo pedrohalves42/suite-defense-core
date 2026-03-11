@@ -399,24 +399,14 @@ foreach ($stale in $staleHashFiles) {
 
 $taskArgStr = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $q$scriptPath$q -ServerUrl $q$ServerUrl$q -AgentToken $q$AgentToken$q -HmacSecret $q$HmacSecret$q -AgentName $q$AgentName$q"
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $taskArgStr
-$trigger = New-ScheduledTaskTrigger -AtStartup
+$trigger1 = New-ScheduledTaskTrigger -AtStartup
+$trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 365)
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
 $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 
 $taskFullName = "$TaskName-$AgentName"
-Register-ScheduledTask -TaskName $taskFullName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
-Write-Status "Task registered: $taskFullName" "SUCCESS"
-
-# Add 5-minute repetition
-try {
-    $task = Get-ScheduledTask -TaskName $taskFullName
-    $task.Triggers[0].Repetition.Interval = "PT5M"
-    $task.Triggers[0].Repetition.StopAtDurationEnd = $false
-    Set-ScheduledTask -InputObject $task | Out-Null
-    Write-Status "Repetition: every 5 minutes" "SUCCESS"
-} catch {
-    Write-Status "Repetition config skipped: $($_.Exception.Message)" "WARN"
-}
+Register-ScheduledTask -TaskName $taskFullName -Action $action -Trigger @($trigger1,$trigger2) -Settings $settings -Principal $principal -Force | Out-Null
+Write-Status "Task registered: $taskFullName (AtStartup + every 5min)" "SUCCESS"
 
 Start-ScheduledTask -TaskName $taskFullName
 Write-Status "Task started" "SUCCESS"
