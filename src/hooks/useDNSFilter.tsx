@@ -35,6 +35,44 @@ export function useDNSFilter() {
   const queryClient = useQueryClient();
   const { tenant } = useTenant();
 
+  type TenantAgent = {
+    id: string;
+    agent_name: string;
+    display_name: string | null;
+    last_heartbeat: string | null;
+    last_block_sync_at: string | null;
+    status: string | null;
+  };
+
+  const fetchTenantAgents = async (): Promise<TenantAgent[]> => {
+    if (!tenant?.id) return [];
+
+    // ADR-026: usar RPC com tenant explícito para evitar desync de JWT/tenant em views
+    const { data, error } = await supabase.rpc('get_agents_list', {
+      p_tenant_id: tenant.id,
+      p_include_archived: false,
+    });
+
+    if (error) {
+      console.error('[useDNSFilter] Error fetching tenant agents via RPC:', error);
+      throw error;
+    }
+
+    const agents = ((data ?? []) as any[])
+      .filter((agent) => agent?.id && agent?.agent_name)
+      .map((agent) => ({
+        id: agent.id as string,
+        agent_name: agent.agent_name as string,
+        display_name: (agent.display_name as string | null) ?? null,
+        last_heartbeat: (agent.last_heartbeat as string | null) ?? null,
+        last_block_sync_at: (agent.last_block_sync_at as string | null) ?? null,
+        status: (agent.status as string | null) ?? null,
+      }))
+      .sort((a, b) => a.agent_name.localeCompare(b.agent_name));
+
+    return agents;
+  };
+
   // Check if DNS Filter feature is enabled for tenant
   const { data: isEnabled, isLoading: isCheckingEnabled } = useQuery({
     queryKey: ['dns-filter-enabled', tenant?.id],
@@ -63,18 +101,8 @@ export function useDNSFilter() {
     queryFn: async (): Promise<DNSFilterStatus[]> => {
       if (!tenant?.id) return [];
 
-      // Get agents with their DNS filter status
-      const { data: agents, error } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name, display_name, last_heartbeat, last_block_sync_at, status')
-        .eq('tenant_id', tenant.id)
-        .is('archived_at', null)
-        .order('agent_name');
-
-      if (error) {
-        console.error('[useDNSFilter] Error fetching agents:', error);
-        throw error;
-      }
+      // Get agents with tenant-safe RPC source
+      const agents = await fetchTenantAgents();
 
       // Check pending jobs for each agent
       const agentIds = (agents?.map(a => a.id).filter((id): id is string => !!id)) || [];
@@ -166,12 +194,8 @@ export function useDNSFilter() {
     mutationFn: async (agentIds: string[]) => {
       if (!tenant?.id) throw new Error('Tenant not found');
 
-      const { data: agents } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name')
-        .in('id', agentIds)
-        .eq('tenant_id', tenant.id)
-        .is('archived_at', null);
+      const allTenantAgents = await fetchTenantAgents();
+      const agents = allTenantAgents.filter((agent) => agentIds.includes(agent.id));
 
       if (!agents?.length) throw new Error('No agents found');
 
@@ -230,25 +254,18 @@ export function useDNSFilter() {
     mutationFn: async (agentIds?: string[]) => {
       if (!tenant?.id) throw new Error('Tenant not found');
 
+      const allTenantAgents = await fetchTenantAgents();
       let agents;
+
       if (agentIds?.length) {
-        const { data } = await supabase
-          .from('agents_safe')
-          .select('id, agent_name')
-          .in('id', agentIds)
-          .eq('tenant_id', tenant.id)
-          .is('archived_at', null);
-        agents = data;
+        agents = allTenantAgents.filter((agent) => agentIds.includes(agent.id));
       } else {
         // Get all online agents
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-        const { data } = await supabase
-          .from('agents_safe')
-          .select('id, agent_name')
-          .eq('tenant_id', tenant.id)
-          .is('archived_at', null)
-          .gt('last_heartbeat', fiveMinutesAgo);
-        agents = data;
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        agents = allTenantAgents.filter((agent) => {
+          if (!agent.last_heartbeat) return false;
+          return new Date(agent.last_heartbeat) > fiveMinutesAgo;
+        });
       }
 
       if (!agents?.length) {
