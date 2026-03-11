@@ -47,7 +47,7 @@ export function TestimonialsSection() {
                 <div className="absolute bottom-2 left-3 right-3">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/20 text-accent text-[11px] font-semibold backdrop-blur-sm border border-accent/20">
                     <CheckCircle className="w-3 h-3" />
-                    {(testimonial as any).metric}
+                    {testimonial.metric}
                   </span>
                 </div>
               </div>
