@@ -219,7 +219,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Presentation, label: 'Pipeline', to: '/super-admin/sales-pipeline' },
     { icon: Scale, label: 'Apresentação', to: '/super-admin/pitch-deck' },
     { icon: AlertTriangle, label: 'Riscos', to: '/super-admin/risk-analysis' },
-    { icon: Wallet, label: 'Fluxo de Caixa', to: '/super-admin/cash-flow' },
+    
     { icon: CreditCard, label: 'Pagamentos', to: '/super-admin/stripe-setup' },
   ], []);
 
