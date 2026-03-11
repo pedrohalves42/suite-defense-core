@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
     }
 
     // COMPAT: Detectar versão do agente para formato de resposta
-    const agentVersionStr = agentData.agent_version || 'v0.0.0'
+    const agentVersionForCompat = agentData.agent_version || 'v0.0.0'
     const parseVersion = (v: string): number[] => {
       const m = v.replace(/^v/, '').match(/^(\d+)\.(\d+)\.(\d+)/)
       return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [0, 0, 0]
