@@ -275,6 +275,7 @@ export default function WebActivity() {
     }
   };
 
+  return (
     <AdminPageLayout
       title="Atividade Web"
       description="Visualize e gerencie domínios acessados pelos agentes"
