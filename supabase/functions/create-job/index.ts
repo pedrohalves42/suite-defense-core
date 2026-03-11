@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
       software_inventory_collect: { include_32bit: true, include_updates: true },
       light_vuln_scan: { scan_depth: 'standard', include_cve_check: true },
       collect_antivirus_status: { check_definitions: true },
-      collect_web_activity: { browsers: ['chrome', 'firefox', 'edge'], days_back: 7 },
+      collect_web_activity: { browsers: ['chrome', 'firefox', 'edge'], days_back: 7, max_domains: 500 },
       collect_network_info: { include_open_ports: true, include_active_connections: true },
       fix_firewall: { enable_public: true, enable_private: true, enable_domain: true },
       update_agent: { force: false },

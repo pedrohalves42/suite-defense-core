@@ -42,6 +42,10 @@ export function SecurityJobDispatcher({ agents }: { agents: Agent[] }) {
 
       if (!tenant) throw new Error("Tenant não selecionado");
 
+      const defaultPayloadByType: Record<string, Record<string, unknown>> = {
+        collect_web_activity: { max_domains: 500, browsers: ['chrome', 'firefox', 'edge'], days_back: 7 },
+      };
+
       // Create job
       const jobData = await prepareJobForInsert({
         tenant_id: tenant.id,
@@ -49,7 +53,7 @@ export function SecurityJobDispatcher({ agents }: { agents: Agent[] }) {
         agent_name: agent.agent_name,
         type: jobType,
         status: 'queued',
-        payload: {},
+        payload: defaultPayloadByType[jobType] ?? {},
         approved: true
       });
 
