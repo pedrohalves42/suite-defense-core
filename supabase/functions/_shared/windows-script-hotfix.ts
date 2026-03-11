@@ -809,32 +809,10 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
     reasons.push('rng_net4x_compat');
   }
 
-  // HOTFIX 30: Clean orphaned CNG key containers on startup to prevent "Object already exists" errors
-  // This is critical for legacy Windows Server environments where ECDSA key generation leaves stale containers
-  // Uses separate marker from HOTFIX 22 (which cleans at key creation time, not startup)
-  if (content.includes('Write-Log') && !content.includes('HOTFIX-CNG-STARTUP-CLEANUP')) {
-    // Broaden regex: match any startup log line containing "CyberShield" or "FULL ENTERPRISE" or "Agent start"
-    const startupRegex = /(Write-Log\s+["'].*(?:CyberShield Agent|FULL ENTERPRISE|Agent\s+start(?:ing|ed)|v\$\(\$Global:AgentVersion\)|\$\(\$Global:AgentVersion\)).*["']\s+["']INFO["'])/;
-    const cngCleanupBlock = `# HOTFIX-CNG-STARTUP-CLEANUP: Remove orphaned CNG containers to prevent key generation conflicts
-try {
-    $cngOutput = & certutil -csp "Microsoft Software Key Storage Provider" -key 2>&1
-    $cngKeys = @($cngOutput | Where-Object { $_ -match 'CyberShield' })
-    if ($cngKeys.Count -gt 0) {
-        foreach ($keyLine in $cngKeys) {
-            $keyName = ($keyLine -replace '\\s+$','').Trim()
-            if ($keyName) {
-                & certutil -csp "Microsoft Software Key Storage Provider" -delkey "$keyName" 2>&1 | Out-Null
-            }
-        }
-    }
-} catch { <# CNG cleanup is best-effort #> }
-`;
-    const updated30 = content.replace(startupRegex, (_match: string, p1: string) => cngCleanupBlock + p1);
-    if (updated30 !== content) {
-      content = updated30;
-      reasons.push('cng_startup_container_cleanup');
-    }
-  }
+  // HOTFIX 30: DISABLED - was corrupting script structure by splitting try/catch across the main loop.
+  // CNG cleanup is now handled directly in the canonical agent script (v5.0.13 base).
+  // Keeping marker check so it won't re-apply on scripts that already have it.
+
 
   // HOTFIX 31: Guard null $ecdsa after RSA-2048 fallback (HOTFIX 26)
   // After HOTFIX 26 disposes $ecdsa and sets it to $null, remaining original script code
