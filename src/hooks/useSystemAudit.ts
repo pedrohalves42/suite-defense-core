@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { callEdgeFunction } from '@/lib/edge-function-client';
+import { useActiveTenant } from './useActiveTenant';
 import { toast } from 'sonner';
 
 export interface AuditDimension {
