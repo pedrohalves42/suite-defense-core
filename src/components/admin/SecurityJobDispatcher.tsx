@@ -42,7 +42,11 @@ export function SecurityJobDispatcher({ agents }: { agents: Agent[] }) {
 
       if (!tenant) throw new Error("Tenant não selecionado");
 
-      const defaultPayloadByType: Record<string, Record<string, unknown>> = {
+      const defaultPayloadByType: Partial<Record<string, {
+        max_domains: number;
+        browsers: string[];
+        days_back: number;
+      }>> = {
         collect_web_activity: { max_domains: 500, browsers: ['chrome', 'firefox', 'edge'], days_back: 7 },
       };
 
