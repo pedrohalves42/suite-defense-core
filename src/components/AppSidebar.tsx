@@ -9,7 +9,7 @@ import {
   AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch, Tag, Crosshair,
   Zap, X, UserPlus, Archive, ListTodo, BookOpen, ShieldAlert, Fingerprint,
   Eye, Workflow, Database, HardDrive, Plug, Palette, Headphones, Map, Code,
-  BrainCircuit, Sparkles, BarChart, ThumbsUp, Bot, Layers, Wallet
+  BrainCircuit, Sparkles, BarChart, ThumbsUp, Bot, Layers
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
