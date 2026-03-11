@@ -1512,65 +1512,74 @@ const AgentInstaller = () => {
             <TabsContent value="exe-build" className="space-y-4 mt-4">
               <Alert className="bg-purple-50/50 dark:bg-purple-950/20 border-purple-500/30">
                 <FileCheck className="h-4 w-4 text-purple-600" />
-                <AlertTitle className="text-purple-700 dark:text-purple-300">🖥️ Arquivo .EXE portátil para Windows</AlertTitle>
+                <AlertTitle className="text-purple-700 dark:text-purple-300">🖥️ Instalador Portátil para Windows</AlertTitle>
                 <AlertDescription className="text-muted-foreground">
-                  Executável independente que não requer PowerShell. Leva 2-3 minutos para compilar.
+                  Arquivo .CMD auto-executável que instala o agente com um duplo-clique. Geração instantânea, sem dependências externas.
                 </AlertDescription>
               </Alert>
 
-              {/* FASE 1.1: Alerta de GitHub nao configurado */}
-              {githubHealthy === false && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>GitHub Nao Configurado</AlertTitle>
-                  <AlertDescription>
-                    O build automatico requer configuracao do GitHub. Contate o administrador do sistema.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {/* FASE 2.1: Botao simplificado - gera credenciais + build em um clique */}
               <Button 
-                onClick={handleGenerateExeDirectly} 
-                disabled={!isNameValid || exeBuildStatus === 'building' || circuitBreakerOpen || githubHealthy === false}
+                onClick={handleGeneratePortableInstaller} 
+                disabled={!isNameValid || exeBuildStatus === 'building' || circuitBreakerOpen}
                 className="w-full"
                 size="lg"
               >
                 {exeBuildStatus === 'building' ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Compilando...
+                    Gerando...
                   </>
-                ) : exeBuildStatus === 'cached' ? (
+                ) : exeBuildStatus === 'completed' ? (
                   <>
-                    <Zap className="h-5 w-5 mr-2" />
-                    ⚡ Cache Hit - Download Pronto!
+                    <CheckCircle2 className="h-5 w-5 mr-2" />
+                    Instalador Pronto!
                   </>
                 ) : (
                   <>
                     <Zap className="h-5 w-5 mr-2" />
-                    Gerar Instalador EXE (2-3 minutos)
+                    Gerar Instalador Portátil (instantâneo)
                   </>
                 )}
               </Button>
               
               <p className="text-sm text-muted-foreground text-center">
-                Gera automaticamente credenciais e compila instalador executavel
+                Gera credenciais e cria instalador auto-executável em segundos
               </p>
 
-              {/* Opcao avancada: build manual (para quem ja tem credenciais) */}
-              {lastEnrollmentKey && exeBuildStatus !== 'building' && (
-                <div className="mt-4 p-3 border rounded-lg bg-muted/30">
-                  <p className="text-xs text-muted-foreground mb-2">Opcao Avancada:</p>
+              {exeBuildStatus === 'completed' && exeDownloadUrl && (
+                <div className="mt-4 p-4 border rounded-lg bg-green-50/50 dark:bg-green-950/20 border-green-500/30 space-y-3">
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                    <CheckCircle2 className="h-5 w-5" />
+                    <span className="font-semibold">Instalador gerado com sucesso!</span>
+                  </div>
+                  
                   <Button 
-                    onClick={handleBuildExe} 
-                    disabled={!isNameValid || !lastEnrollmentKey || circuitBreakerOpen}
-                    variant="outline"
-                    size="sm"
+                    onClick={() => window.open(exeDownloadUrl, '_blank')}
                     className="w-full"
+                    variant="default"
                   >
-                    Rebuildar EXE com credenciais existentes
+                    <Download className="h-4 w-4 mr-2" />
+                    Baixar Instalador (.cmd)
                   </Button>
+
+                  {exeFileSize && (
+                    <p className="text-xs text-muted-foreground">
+                      Tamanho: {(exeFileSize / 1024).toFixed(0)} KB
+                    </p>
+                  )}
+                  
+                  {exeSha256 && (
+                    <div className="text-xs font-mono bg-muted/50 p-2 rounded break-all">
+                      <span className="text-muted-foreground">SHA256: </span>{exeSha256}
+                    </div>
+                  )}
+
+                  <Alert>
+                    <Shield className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      Execute como Administrador no servidor de destino. O instalador eleva privilégios automaticamente.
+                    </AlertDescription>
+                  </Alert>
                 </div>
               )}
             </TabsContent>
