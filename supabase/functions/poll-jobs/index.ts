@@ -460,7 +460,7 @@ Deno.serve(async (req) => {
             .from('jobs')
             .update({ 
               status: 'cancelled', 
-              error_message: `Blocked: agent ${agentVersionStr} is legacy and cannot process this job type. Update required.`
+              error_message: `Blocked: agent ${agentVersionForCompat} is legacy and cannot process this job type. Update required.`
             })
             .in('id', blockedJobIds)
         }
