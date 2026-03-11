@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
     if (isLegacyAgent) {
       logger.warn('COMPAT: Legacy agent detected, will use flat array response', {
         agentName: agent.agent_name,
-        agentVersion: agentVersionStr,
+        agentVersion: agentVersionForCompat,
       })
     }
 
