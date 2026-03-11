@@ -636,53 +636,93 @@ Deno.serve(async (req) => {
       }
       
       // PROCESS WEB ACTIVITY (ANTES do update)
-      if (job.type === 'collect_web_activity' && (outputData.dns_cache || outputData.browser_history)) {
+      if (job.type === 'collect_web_activity') {
         try {
           console.log('[submit-job-result] [ZERO_TRUST] Processing web activity BEFORE marking completed...')
-          
-          const dnsCache = outputData.dns_cache || []
-          const browserHistory = outputData.browser_history || []
-          
+
+          const dnsCache = Array.isArray(outputData.dns_cache) ? outputData.dns_cache : []
+
+          const rawBrowserHistory = outputData.browser_history
+          const browserHistory = Array.isArray(rawBrowserHistory)
+            ? rawBrowserHistory
+            : Array.isArray((rawBrowserHistory as Record<string, unknown>)?.items)
+              ? ((rawBrowserHistory as Record<string, unknown>).items as unknown[])
+              : []
+
+          const webActivityRaw = outputData.web_activity ?? outputData.activity ?? outputData.domains ?? []
+
           // Collect unique domains with metadata
           const domainMap = new Map<string, { visitCount: number; source: string; lastSeen: string }>()
-          
-          // Process DNS cache
-          if (Array.isArray(dnsCache)) {
-            for (const entry of dnsCache) {
-              const domain = String(entry.domain || entry.Name || entry.RecordName || '').toLowerCase().trim()
-              if (domain && domain.length > 0) {
-                const existing = domainMap.get(domain)
-                if (existing) {
-                  existing.visitCount++
-                } else {
-                  domainMap.set(domain, { visitCount: 1, source: 'dns_cache', lastSeen: new Date().toISOString() })
-                }
+
+          const upsertDomain = (rawDomain: unknown, source: string, visitCount = 1, visitedAt?: unknown) => {
+            const domain = String(rawDomain || '').toLowerCase().trim()
+            if (!domain) return
+
+            const normalizedCount = Number(visitCount)
+            const safeCount = Number.isFinite(normalizedCount) && normalizedCount > 0 ? normalizedCount : 1
+            const safeVisitedAt = visitedAt ? String(visitedAt) : new Date().toISOString()
+
+            const existing = domainMap.get(domain)
+            if (existing) {
+              existing.visitCount += safeCount
+              existing.lastSeen = safeVisitedAt > existing.lastSeen ? safeVisitedAt : existing.lastSeen
+              if (source === 'browser_history' || source === 'web_activity_v2') {
+                existing.source = source
               }
+            } else {
+              domainMap.set(domain, {
+                visitCount: safeCount,
+                source,
+                lastSeen: safeVisitedAt,
+              })
             }
           }
-          
-          // Process browser history
-          if (Array.isArray(browserHistory)) {
-            for (const entry of browserHistory) {
-              let domain = entry.domain
-              if (!domain && entry.url) {
+
+          // Process DNS cache (legacy)
+          for (const entry of dnsCache) {
+            const rec = (entry || {}) as Record<string, unknown>
+            upsertDomain(rec.domain || rec.Name || rec.RecordName, 'dns_cache', 1, rec.visited_at || rec.timestamp)
+          }
+
+          // Process browser history (legacy)
+          for (const entry of browserHistory) {
+            const rec = (entry || {}) as Record<string, unknown>
+            let domain = rec.domain
+            if (!domain && rec.url) {
+              try {
+                domain = new URL(String(rec.url)).hostname
+              } catch {
+                // ignore invalid URL
+              }
+            }
+            upsertDomain(domain, 'browser_history', Number(rec.visit_count || rec.count || 1), rec.visited_at || rec.last_visit)
+          }
+
+          // Process web_activity v2 / aggregated payloads
+          if (Array.isArray(webActivityRaw)) {
+            for (const entry of webActivityRaw) {
+              const rec = (entry || {}) as Record<string, unknown>
+              let domain = rec.domain || rec.hostname || rec.host
+              if (!domain && rec.url) {
                 try {
-                  domain = new URL(entry.url).hostname
-                } catch { /* ignore */ }
-              }
-              if (domain) {
-                domain = domain.toLowerCase().trim()
-                const existing = domainMap.get(domain)
-                if (existing) {
-                  existing.visitCount++
-                  existing.source = 'browser_history'
-                } else {
-                  domainMap.set(domain, { visitCount: 1, source: 'browser_history', lastSeen: new Date().toISOString() })
+                  domain = new URL(String(rec.url)).hostname
+                } catch {
+                  // ignore invalid URL
                 }
               }
+              upsertDomain(
+                domain,
+                'web_activity_v2',
+                Number(rec.visit_count || rec.hits || rec.count || 1),
+                rec.visited_at || rec.last_seen_at || rec.last_visit
+              )
+            }
+          } else if (webActivityRaw && typeof webActivityRaw === 'object') {
+            for (const [domain, count] of Object.entries(webActivityRaw as Record<string, unknown>)) {
+              upsertDomain(domain, 'web_activity_v2', Number(count || 1), new Date().toISOString())
             }
           }
-          
+
           if (domainMap.size > 0) {
             // Fetch blocked websites to mark is_blocked
             const { data: blockedSites } = await supabase
@@ -690,9 +730,9 @@ Deno.serve(async (req) => {
               .select('domain_pattern')
               .eq('tenant_id', agent.tenant_id)
               .eq('is_active', true)
-            
+
             const blockedPatterns = (blockedSites || []).map(s => s.domain_pattern.toLowerCase())
-            
+
             // Prepare records
             const activityRecords = Array.from(domainMap.entries()).map(([domain, data]) => {
               // Check if domain is blocked
@@ -709,7 +749,7 @@ Deno.serve(async (req) => {
                   break
                 }
               }
-              
+
               return {
                 tenant_id: agent.tenant_id,
                 agent_id: job.agent_id,
@@ -720,7 +760,7 @@ Deno.serve(async (req) => {
                 is_blocked: isBlocked
               }
             })
-            
+
             // Batch insert
             const batchSize = 100
             let insertedCount = 0
@@ -729,20 +769,22 @@ Deno.serve(async (req) => {
               const { error: insertError } = await supabase
                 .from('agent_web_activity')
                 .insert(batch)
-              
+
               if (insertError) {
                 console.error(`[submit-job-result] Error inserting web activity batch ${i}:`, insertError)
               } else {
                 insertedCount += batch.length
               }
             }
-            
+
             console.log(`[submit-job-result] [ZERO_TRUST] Inserted ${insertedCount}/${activityRecords.length} web activity records`)
-            
+
             if (insertedCount > 0) {
               sideEffectsInserted = true
               insertedRecordsCount = insertedCount
             }
+          } else {
+            console.log('[submit-job-result] [ZERO_TRUST] No web activity domains found in payload')
           }
         } catch (webErr) {
           console.error('[submit-job-result] Error processing web activity:', webErr)
