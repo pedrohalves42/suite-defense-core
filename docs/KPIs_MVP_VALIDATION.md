@@ -149,10 +149,26 @@ O MVP do CyberShield coletou **dados operacionais reais** em ambiente de produç
 11. ⚠️ Taxa de agentes ativos (6.7% → meta 80%)
 12. ⚠️ Taxa de reconhecimento de alertas (51% → meta 90%)
 
-### 🔴 Não Validados (sem uso em produção)
-13. 🔴 Playbooks SOAR (0 execuções)
-14. 🔴 Attack Simulation (0 execuções)
-15. 🔴 Compliance Benchmark (0 cálculos)
+### 🔴 Não Validados (sem uso em produção) — DIAGNÓSTICO COMPLETO
+
+**13. Playbooks SOAR (0 execuções)**
+- **Causa raiz**: Pipeline funcional mas desconectado dos eventos atuais
+- O cron `evaluate-automation-rules` roda a cada 2h e já acumulou **699 triggers** na regra "Suspicious Process Detection"
+- Porém, os playbooks (13 cadastrados, todos `is_enabled=true`) usam trigger_types diferentes (agent_offline, dns_blocked, etc.)
+- Com apenas **1 agente ativo** e sem eventos recentes matching, nenhum playbook foi disparado
+- **Ação**: Problema de **dados/adoção**, não de código. Mais agentes ativos → playbooks disparam automaticamente
+
+**14. Attack Simulation (0 execuções)**
+- **Causa raiz**: Edge function `run-attack-simulation` funcional, testada e pronta
+- Requer agentes com `status='active'` e `agent_mode != 'SAFE_MODE'`
+- Com 1 agente ativo, a feature está disponível mas ninguém clicou "Executar Simulação"
+- **Ação**: Problema de **adoção/UX**. Considerar auto-run na primeira ativação do agente
+
+**15. ✅ Compliance Benchmark — CORRIGIDO**
+- **Causa raiz**: Não existia edge function para computar benchmarks
+- **Correção aplicada**: Criada `compute-compliance-benchmarks` + cron diário (5am UTC)
+- **Resultado**: 12 tenants analisados, score médio **39.4/100**, mediana **35**, máximo **62**
+- Categories: agent_coverage=1%, alert_response=93%, evidence_coverage=17%, job_reliability=12%, threat_intelligence=100%
 
 ---
 
