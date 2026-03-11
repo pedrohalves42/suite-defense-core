@@ -54,6 +54,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { supabase } from '@/integrations/supabase/client';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { exportToCSV } from '@/lib/csv-export';
+import { loadLogoForPDF, addLogoToPDF } from '@/lib/pdfLogoHelper';
 
 export default function WebActivity() {
   const [selectedAgent, setSelectedAgent] = useState<string>('');
