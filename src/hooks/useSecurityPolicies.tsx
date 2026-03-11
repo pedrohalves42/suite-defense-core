@@ -94,6 +94,7 @@ export const useSecurityPolicies = () => {
 };
 
 export const usePolicyRules = (policyId: string | null) => {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   const { data: rules = [], isLoading } = useQuery({
@@ -122,9 +123,10 @@ export const usePolicyRules = (policyId: string | null) => {
       conditions?: Json;
       is_enabled?: boolean;
     }) => {
+      if (!tenant?.id) throw new Error('Tenant não selecionado');
       const { data, error } = await supabase
         .from('security_policy_rules')
-        .insert(rule)
+        .insert({ ...rule, tenant_id: tenant.id })
         .select()
         .single();
       

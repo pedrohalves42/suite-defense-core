@@ -15605,7 +15605,7 @@ export type Database = {
           id: string
           ip_address: string
           reason: string
-          tenant_id: string | null
+          tenant_id: string
         }
         Insert: {
           blocked_until: string
@@ -15613,7 +15613,7 @@ export type Database = {
           id?: string
           ip_address: string
           reason: string
-          tenant_id?: string | null
+          tenant_id: string
         }
         Update: {
           blocked_until?: string
@@ -15621,7 +15621,7 @@ export type Database = {
           id?: string
           ip_address?: string
           reason?: string
-          tenant_id?: string | null
+          tenant_id?: string
         }
         Relationships: [
           {
@@ -18962,7 +18962,7 @@ export type Database = {
           policy_id: string
           priority: number
           rule_type: string
-          tenant_id: string | null
+          tenant_id: string
         }
         Insert: {
           action: Json
@@ -18972,7 +18972,7 @@ export type Database = {
           policy_id: string
           priority?: number
           rule_type: string
-          tenant_id?: string | null
+          tenant_id: string
         }
         Update: {
           action?: Json
@@ -18982,7 +18982,7 @@ export type Database = {
           policy_id?: string
           priority?: number
           rule_type?: string
-          tenant_id?: string | null
+          tenant_id?: string
         }
         Relationships: [
           {
@@ -21799,7 +21799,7 @@ export type Database = {
           policy_id: string
           rule_type: string
           target: string
-          tenant_id: string | null
+          tenant_id: string
         }
         Insert: {
           action: string
@@ -21810,7 +21810,7 @@ export type Database = {
           policy_id: string
           rule_type: string
           target: string
-          tenant_id?: string | null
+          tenant_id: string
         }
         Update: {
           action?: string
@@ -21821,7 +21821,7 @@ export type Database = {
           policy_id?: string
           rule_type?: string
           target?: string
-          tenant_id?: string | null
+          tenant_id?: string
         }
         Relationships: [
           {
@@ -22093,7 +22093,7 @@ export type Database = {
           min_approvers: number
           require_different_departments: boolean | null
           required_roles: string[]
-          tenant_id: string | null
+          tenant_id: string
           updated_at: string | null
         }
         Insert: {
@@ -22106,7 +22106,7 @@ export type Database = {
           min_approvers?: number
           require_different_departments?: boolean | null
           required_roles?: string[]
-          tenant_id?: string | null
+          tenant_id: string
           updated_at?: string | null
         }
         Update: {
@@ -22119,7 +22119,7 @@ export type Database = {
           min_approvers?: number
           require_different_departments?: boolean | null
           required_roles?: string[]
-          tenant_id?: string | null
+          tenant_id?: string
           updated_at?: string | null
         }
         Relationships: [
@@ -23010,7 +23010,7 @@ export type Database = {
           diff_summary: string | null
           id: string
           playbook_id: string
-          tenant_id: string | null
+          tenant_id: string
           version: number
         }
         Insert: {
@@ -23021,7 +23021,7 @@ export type Database = {
           diff_summary?: string | null
           id?: string
           playbook_id: string
-          tenant_id?: string | null
+          tenant_id: string
           version?: number
         }
         Update: {
@@ -23032,7 +23032,7 @@ export type Database = {
           diff_summary?: string | null
           id?: string
           playbook_id?: string
-          tenant_id?: string | null
+          tenant_id?: string
           version?: number
         }
         Relationships: [
