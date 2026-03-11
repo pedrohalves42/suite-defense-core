@@ -1385,11 +1385,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Para coletas web sem dados disponíveis, evitar violação de integridade e registrar warning explícito
+    // Para coletas web sem dados disponíveis, marcar como completed com warning na mensagem (não usar completed_with_warning que não é status válido)
     if (job.type === 'collect_web_activity' && status === 'completed' && !sideEffectsInserted) {
-      updateData.status = 'completed_with_warning'
-      updateData.error_message = 'Coleta web concluída sem histórico disponível no endpoint (sem DNS cache/browser history neste ciclo).'
-      console.warn('[submit-job-result] [WEB_ACTIVITY_EMPTY] Completed sem dados de atividade web - status downgraded to completed_with_warning', {
+      updateData.status = 'completed'
+      updateData.error_message = '[WARNING] Coleta web concluída sem histórico disponível no endpoint (sem DNS cache/browser history neste ciclo).'
+      console.warn('[submit-job-result] [WEB_ACTIVITY_EMPTY] Completed sem dados de atividade web', {
         job_id,
         agent: agent.agent_name
       })
