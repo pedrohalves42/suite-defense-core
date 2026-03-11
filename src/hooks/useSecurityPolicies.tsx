@@ -94,6 +94,7 @@ export const useSecurityPolicies = () => {
 };
 
 export const usePolicyRules = (policyId: string | null) => {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   const { data: rules = [], isLoading } = useQuery({
