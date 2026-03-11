@@ -181,7 +181,7 @@ export default function AgentHealthMonitor() {
           agents={agentsHealth.map(a => ({
             id: a.id || '',
             agent_name: a.agent_name || 'Computador',
-            health_status: a.health_status as 'healthy' | 'critical' | 'offline' | 'never_connected',
+            health_status: a.health_status as 'healthy' | 'warning' | 'critical' | 'offline' | 'never_connected',
           }))}
           isLoading={isLoading}
           onAgentClick={(agent) => tenant?.id && setSelectedAgent({
