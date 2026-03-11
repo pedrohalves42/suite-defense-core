@@ -48,8 +48,8 @@ export async function callEdgeFunction<T = any>(
     hasPayload: !!payload
   });
 
-  // Get active tenant from localStorage for multi-tenant support
-  const activeTenantId = localStorage.getItem('cybershield_active_tenant_id');
+  // Get active tenant from JWT metadata (not localStorage - V-802 security fix)
+  const activeTenantId = session.user?.app_metadata?.active_tenant_id ?? null;
 
   try {
     const headers: Record<string, string> = {

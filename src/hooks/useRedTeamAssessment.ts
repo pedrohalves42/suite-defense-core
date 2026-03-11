@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useActiveTenant } from './useActiveTenant';
 
 export interface AttackVector {
   name: string;
@@ -86,7 +87,8 @@ export function useRedTeamById(id: string | null) {
 }
 
 export function useLatestRedTeam() {
-  const activeTenantId = localStorage.getItem('cybershield_active_tenant_id');
+  const { activeTenant } = useActiveTenant();
+  const activeTenantId = activeTenant?.id ?? null;
 
   return useQuery({
     queryKey: ['red-team-latest', activeTenantId],

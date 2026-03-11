@@ -135,10 +135,10 @@ export const useAssignTag = () => {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ agentId, tagId }: { agentId: string; tagId: string }) => {
+    mutationFn: async ({ agentId, tagId, tenantId }: { agentId: string; tagId: string; tenantId: string }) => {
       const { error } = await supabase
         .from('agent_tag_assignments')
-        .insert({ agent_id: agentId, tag_id: tagId, assigned_by: user?.id });
+        .insert({ agent_id: agentId, tag_id: tagId, assigned_by: user?.id, tenant_id: tenantId });
       if (error) throw error;
     },
     onSuccess: () => {

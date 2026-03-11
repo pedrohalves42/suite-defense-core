@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { callEdgeFunction } from '@/lib/edge-function-client';
+import { useActiveTenant } from './useActiveTenant';
 import { toast } from 'sonner';
 
 export interface AuditDimension {
@@ -66,7 +67,8 @@ export interface AuditResult {
 
 // Fetch audit history (filtered by active tenant)
 export function useAuditHistory(limit = 10) {
-  const activeTenantId = localStorage.getItem('cybershield_active_tenant_id');
+  const { activeTenant } = useActiveTenant();
+  const activeTenantId = activeTenant?.id ?? null;
   
   return useQuery({
     queryKey: ['system-audits', limit, activeTenantId],
@@ -141,7 +143,8 @@ export function useRunAudit() {
 
 // Get latest audit (filtered by active tenant)
 export function useLatestAudit() {
-  const activeTenantId = localStorage.getItem('cybershield_active_tenant_id');
+  const { activeTenant } = useActiveTenant();
+  const activeTenantId = activeTenant?.id ?? null;
 
   return useQuery({
     queryKey: ['system-audits', 'latest', activeTenantId],

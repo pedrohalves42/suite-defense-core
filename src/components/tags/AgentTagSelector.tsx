@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAgentTags, useAgentTagAssignments, useAssignTag, useRemoveTagAssignment } from '@/hooks/useAgentTags';
+import { useTenant } from '@/hooks/useTenant';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -14,6 +15,7 @@ export const AgentTagSelector = ({ agentId }: AgentTagSelectorProps) => {
   const { data: assignments } = useAgentTagAssignments(agentId);
   const assignTag = useAssignTag();
   const removeTag = useRemoveTagAssignment();
+  const { tenant } = useTenant();
   const [open, setOpen] = useState(false);
 
   const assignedTagIds = new Set(assignments?.map((a: any) => a.tag_id) || []);
@@ -22,7 +24,7 @@ export const AgentTagSelector = ({ agentId }: AgentTagSelectorProps) => {
     if (assignedTagIds.has(tagId)) {
       await removeTag.mutateAsync({ agentId, tagId });
     } else {
-      await assignTag.mutateAsync({ agentId, tagId });
+      await assignTag.mutateAsync({ agentId, tagId, tenantId: tenant?.id ?? '' });
     }
   };
 
