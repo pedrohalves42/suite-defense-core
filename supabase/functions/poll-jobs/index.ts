@@ -441,7 +441,7 @@ Deno.serve(async (req) => {
       if (blockedCount > 0) {
         logger.warn('COMPAT: Blocked operational jobs for legacy agent (would waste cycles)', {
           agentName: agent.agent_name,
-          agentVersion: agentVersionStr,
+           agentVersion: agentVersionForCompat,
           blocked: blockedCount,
           delivered: recoveryJobs.length,
           blockedTypes: jobsResponse
