@@ -1150,5 +1150,99 @@ try {
     }
   }
 
+  // HOTFIX 37: Add Brave, Opera, OperaGX, Vivaldi browser collection + multi-profile Chrome/Edge
+  // Injects additional Chromium browser collection after Firefox section in Invoke-CollectWebActivity
+  if (content.includes('Invoke-CollectWebActivity') && !content.includes('HOTFIX-MULTI-BROWSER')) {
+    // Find the marker after Firefox collection and before the summary Write-Log
+    const firefoxEndMarker = /(\} catch \{\}\s*\r?\n\s*\}\s*\r?\n\s*Write-Log "\[WEB-ACTIVITY-V5(?:\.14)?\] Collected:)/;
+    
+    if (firefoxEndMarker.test(content)) {
+      const additionalBrowsers = `} catch {}
+        }
+        
+        # HOTFIX-MULTI-BROWSER: Collect Brave, Opera, OperaGX, Vivaldi + multi-profile Chrome/Edge
+        $extraChromiumBrowsers = @(
+            @{ Name = "Brave";   Path = "AppData\\Local\\BraveSoftware\\Brave-Browser\\User Data" },
+            @{ Name = "Opera";   Path = "AppData\\Roaming\\Opera Software\\Opera Stable" },
+            @{ Name = "OperaGX"; Path = "AppData\\Roaming\\Opera Software\\Opera GX Stable" },
+            @{ Name = "Vivaldi"; Path = "AppData\\Local\\Vivaldi\\User Data" }
+        )
+        foreach ($extraBrowser in $extraChromiumBrowsers) {
+            try {
+                $browserUserData = Join-Path $userPath $extraBrowser.Path
+                if (-not (Test-Path $browserUserData)) { continue }
+                $profileDirs = @()
+                $defaultDir = Join-Path $browserUserData "Default"
+                if (Test-Path $defaultDir) { $profileDirs += $defaultDir }
+                try { $profileDirs += (Get-ChildItem $browserUserData -Directory -Filter "Profile *" -EA SilentlyContinue).FullName | Where-Object { $_ } } catch {}
+                if ($extraBrowser.Name -in @("Opera","OperaGX") -and (Test-Path (Join-Path $browserUserData "History"))) { $profileDirs += $browserUserData }
+                foreach ($profDir in $profileDirs) {
+                    $histFile = Join-Path $profDir "History"
+                    if (-not (Test-Path $histFile)) { continue }
+                    $profName = Split-Path $profDir -Leaf
+                    $srcName = "$($extraBrowser.Name.ToLower())_\${userName}_\${profName}"
+                    $tmpPath = "$env:TEMP\\$($extraBrowser.Name.ToLower())_hist_$(Get-Random).db"
+                    try {
+                        Copy-Item $histFile $tmpPath -Force -EA SilentlyContinue
+                        if (Test-Path $tmpPath) {
+                            $sqlRes = $null
+                            try { $sqlRes = Get-BrowserHistorySQLite -DbPath $tmpPath -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" -BrowserName $extraBrowser.Name -UserName $userName } catch {}
+                            if ($sqlRes -and $sqlRes.Count -gt 0) {
+                                foreach ($r in $sqlRes) {
+                                    $d = Extract-DomainFromUrl $r.url
+                                    if (-not $d -or $d -like "localhost*" -or $d -like "*.local") { continue }
+                                    $vAt = ConvertFrom-WebKitTimestamp $r.last_visit_time
+                                    [void]$browserHistory.Add(@{ domain = $d; url = $r.url; source = $srcName; browser = $extraBrowser.Name.ToLower(); visited_at = if ($vAt) { $vAt.ToString("o") } else { $nowUtc.ToString("o") }; visit_count = [int]$r.visit_count })
+                                }
+                            } else {
+                                try {
+                                    $mxB = 5*1024*1024; $fi = Get-Item $tmpPath; $btr = [Math]::Min($fi.Length, $mxB)
+                                    $fs = [IO.File]::OpenRead($tmpPath); $buf = New-Object byte[] $btr; [void]$fs.Read($buf,0,$btr); $fs.Close(); $fs.Dispose()
+                                    if ($buf) { $ds = [Text.Encoding]::UTF8.GetString($buf); $um = [regex]::Matches($ds,'https?://([a-zA-Z0-9][a-zA-Z0-9\\-\\.]*[a-zA-Z0-9]\\.[a-zA-Z]{2,})'); $doms = $um | ForEach-Object { $_.Groups[1].Value } | Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" } | Select-Object -Unique -First 50; foreach ($dom in $doms) { [void]$browserHistory.Add(@{ domain = $dom; source = $srcName; browser = $extraBrowser.Name.ToLower(); visited_at = $nowUtc.ToString("o"); visit_count = 1 }) }; $buf=$null; $ds=$null }
+                                } catch {}
+                            }
+                        }
+                    } catch {} finally { Remove-Item $tmpPath -Force -EA SilentlyContinue }
+                }
+            } catch {}
+        }
+        
+        # HOTFIX-MULTI-PROFILE: Scan additional Chrome/Edge profiles (Profile 1, Profile 2, etc.)
+        foreach ($chromiumExtra in @(@{Name="Chrome";Base="AppData\\Local\\Google\\Chrome\\User Data"},@{Name="Edge";Base="AppData\\Local\\Microsoft\\Edge\\User Data"})) {
+            try {
+                $udPath = Join-Path $userPath $chromiumExtra.Base
+                if (-not (Test-Path $udPath)) { continue }
+                $extraProfs = Get-ChildItem $udPath -Directory -Filter "Profile *" -EA SilentlyContinue
+                foreach ($ep in $extraProfs) {
+                    $epHist = Join-Path $ep.FullName "History"
+                    if (-not (Test-Path $epHist)) { continue }
+                    $epSrc = "$($chromiumExtra.Name.ToLower())_\${userName}_$($ep.Name)"
+                    $epTmp = "$env:TEMP\\$($chromiumExtra.Name.ToLower())_profile_hist_$(Get-Random).db"
+                    try {
+                        Copy-Item $epHist $epTmp -Force -EA SilentlyContinue
+                        if (Test-Path $epTmp) {
+                            $epSql = $null
+                            try { $epSql = Get-BrowserHistorySQLite -DbPath $epTmp -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" -BrowserName $chromiumExtra.Name -UserName $userName } catch {}
+                            if ($epSql -and $epSql.Count -gt 0) {
+                                foreach ($r in $epSql) {
+                                    $d = Extract-DomainFromUrl $r.url
+                                    if (-not $d -or $d -like "localhost*" -or $d -like "*.local") { continue }
+                                    $vAt = ConvertFrom-WebKitTimestamp $r.last_visit_time
+                                    [void]$browserHistory.Add(@{ domain = $d; url = $r.url; source = $epSrc; browser = $chromiumExtra.Name.ToLower(); visited_at = if ($vAt) { $vAt.ToString("o") } else { $nowUtc.ToString("o") }; visit_count = [int]$r.visit_count })
+                                }
+                            }
+                        }
+                    } catch {} finally { Remove-Item $epTmp -Force -EA SilentlyContinue }
+                }
+            } catch {}
+        }
+
+        Write-Log "[WEB-ACTIVITY-V5`;
+
+      content = content.replace(firefoxEndMarker, additionalBrowsers);
+      reasons.push('multi_browser_brave_opera_vivaldi');
+    }
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }
