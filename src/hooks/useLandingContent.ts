@@ -158,8 +158,8 @@ export function useLandingContent() {
           cta: t('landing.pricing.plans.starter.cta'), highlighted: false,
         },
         {
-          id: "business", name: t('landing.pricing.plans.business.name'), price: 599, period: t('landing.pricing.perMonth'),
-          baseDevices: 30, maxDevices: 200, pricePerExtra: 24,
+          id: "business", name: t('landing.pricing.plans.business.name'), price: 899, period: t('landing.pricing.perMonth'),
+          baseDevices: 20, maxDevices: 200, pricePerExtra: 24,
           description: t('landing.pricing.plans.business.description'),
           features: Array.from({ length: 6 }, (_, i) => t(`landing.pricing.plans.business.features.${i}`)),
           cta: t('landing.pricing.plans.business.cta'), highlighted: true, badge: t('landing.pricing.plans.business.badge'),

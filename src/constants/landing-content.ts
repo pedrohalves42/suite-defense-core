@@ -180,9 +180,9 @@ export const LANDING_CONTENT = {
       {
         id: "business",
         name: "Business",
-        price: 599,
+        price: 899,
         period: "/mês",
-        baseDevices: 30,
+        baseDevices: 20,
         maxDevices: 200,
         pricePerExtra: 24,
         description: "Para empresas que não podem parar nem errar",

@@ -107,8 +107,8 @@ export const STRIPE_PLAN_MAP = {
     type: 'base' as const,
   },
   business: {
-    priceId: 'price_1Sj53TFeHfNScQDPyAN6B3RG',
-    productId: 'prod_TgRxIiwsfoAmGU',
+    priceId: 'price_1T9lV8FeHfNScQDPfQJhglVa',
+    productId: 'prod_U81YkX1Yl5sjcV',
     type: 'base' as const,
   },
   // Device addons

@@ -14,16 +14,16 @@ export const STRIPE_PRODUCTS = {
     basePriceCents: 24900,
   },
 
-  // Business - R$ 599/mês base (30 dispositivos)
+  // Business - R$ 899/mês base (20 dispositivos)
   business: {
-    productId: "prod_TgRxIiwsfoAmGU",
+    productId: "prod_U81YkX1Yl5sjcV",
     name: "CyberShield – Business",
     prices: {
-      monthly: "price_1Sj53TFeHfNScQDPyAN6B3RG", // R$ 599/mês
+      monthly: "price_1T9lV8FeHfNScQDPfQJhglVa", // R$ 899/mês
     },
-    baseDevices: 30,
+    baseDevices: 20,
     maxDevices: 200,
-    basePriceCents: 59900,
+    basePriceCents: 89900,
   },
 
   // Dispositivo Adicional Starter - R$ 29/dispositivo
