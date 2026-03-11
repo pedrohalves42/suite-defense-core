@@ -60,9 +60,9 @@ export const PLAN_CONFIG = {
   business: {
     name: 'Business',
     displayName: 'CyberShield – Business',
-    baseDevices: 30,
+    baseDevices: 20,
     maxDevices: 200,
-    basePriceCents: 59900, // R$ 599/mês
+    basePriceCents: 89900, // R$ 899/mês
     addonPriceCents: 2400, // R$ 24/dispositivo adicional
     tier: 2,
     features: [
