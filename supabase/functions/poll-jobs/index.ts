@@ -180,19 +180,19 @@ Deno.serve(async (req) => {
     }
 
     // COMPAT: Detectar versão do agente para formato de resposta
-    const agentVersionStr = agentData.agent_version || 'v0.0.0'
+    const agentVersionForCompat = agentData.agent_version || 'v0.0.0'
     const parseVersion = (v: string): number[] => {
       const m = v.replace(/^v/, '').match(/^(\d+)\.(\d+)\.(\d+)/)
       return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [0, 0, 0]
     }
-    const agentVer = parseVersion(agentVersionStr)
+    const agentVer = parseVersion(agentVersionForCompat)
     // Agentes <= v5.0.11 esperam array plano; >= v5.0.12 suportam formato encapsulado
     const isLegacyAgent = agentVer[0] < 5 || (agentVer[0] === 5 && agentVer[1] === 0 && agentVer[2] <= 11)
     
     if (isLegacyAgent) {
       logger.warn('COMPAT: Legacy agent detected, will use flat array response', {
         agentName: agent.agent_name,
-        agentVersion: agentVersionStr,
+        agentVersion: agentVersionForCompat,
       })
     }
 
@@ -429,7 +429,7 @@ Deno.serve(async (req) => {
     if (isLegacyAgent) {
       logger.info('COMPAT: Returning flat array for legacy agent', {
         agentName: agent.agent_name,
-        agentVersion: agentVersionStr,
+        agentVersion: agentVersionForCompat,
         jobCount: jobsResponse.length,
       })
       // PROTEÇÃO: Para agentes legacy, entregar APENAS jobs de recuperação
@@ -441,7 +441,7 @@ Deno.serve(async (req) => {
       if (blockedCount > 0) {
         logger.warn('COMPAT: Blocked operational jobs for legacy agent (would waste cycles)', {
           agentName: agent.agent_name,
-          agentVersion: agentVersionStr,
+           agentVersion: agentVersionForCompat,
           blocked: blockedCount,
           delivered: recoveryJobs.length,
           blockedTypes: jobsResponse
@@ -460,7 +460,7 @@ Deno.serve(async (req) => {
             .from('jobs')
             .update({ 
               status: 'cancelled', 
-              error_message: `Blocked: agent ${agentVersionStr} is legacy and cannot process this job type. Update required.`
+              error_message: `Blocked: agent ${agentVersionForCompat} is legacy and cannot process this job type. Update required.`
             })
             .in('id', blockedJobIds)
         }
