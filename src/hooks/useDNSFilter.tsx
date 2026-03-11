@@ -194,12 +194,8 @@ export function useDNSFilter() {
     mutationFn: async (agentIds: string[]) => {
       if (!tenant?.id) throw new Error('Tenant not found');
 
-      const { data: agents } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name')
-        .in('id', agentIds)
-        .eq('tenant_id', tenant.id)
-        .is('archived_at', null);
+      const allTenantAgents = await fetchTenantAgents();
+      const agents = allTenantAgents.filter((agent) => agentIds.includes(agent.id));
 
       if (!agents?.length) throw new Error('No agents found');
 
