@@ -70,7 +70,7 @@ const COLLECTION_TEMPLATES: CollectionJobTemplate[] = [
     type: 'collect_web_activity',
     priority: 3,
     ttl_hours: 2,
-    payload: { source: 'auto-seed' },
+    payload: { source: 'auto-seed', max_domains: 500 },
   },
   {
     type: 'collect_backup_status',
