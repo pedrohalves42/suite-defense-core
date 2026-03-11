@@ -381,7 +381,7 @@
         "1": {
           "quote": "Nuestro ERP corre en 3 máquinas que nunca habían sido auditadas. CyberShield mostró que tenían RDP abierto a internet. Cerramos la brecha en 20 minutos por el panel. Si no fuera por eso, era cuestión de tiempo.",
           "name": "Ana Carolina Souza",
-          "role": "Gerente de TI • Red FarmaVida (MG) — 14 tiendas",
+          "role": "Gerente de TI • Red de Farmacias (MG) — 14 tiendas",
           "devices": "120 endpoints • Plan Enterprise",
           "metric": "3 brechas críticas cerradas en 20min"
         },
