@@ -67,7 +67,8 @@ export interface AuditResult {
 
 // Fetch audit history (filtered by active tenant)
 export function useAuditHistory(limit = 10) {
-  const activeTenantId = localStorage.getItem('cybershield_active_tenant_id');
+  const { activeTenant } = useActiveTenant();
+  const activeTenantId = activeTenant?.id ?? null;
   
   return useQuery({
     queryKey: ['system-audits', limit, activeTenantId],
