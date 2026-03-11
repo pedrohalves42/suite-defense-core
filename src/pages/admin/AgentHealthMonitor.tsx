@@ -404,7 +404,7 @@ export default function AgentHealthMonitor() {
           ) : (
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {filteredAgents.map((agent, idx) => {
-                const isOnline = agent.health_status === 'healthy' || agent.health_status === 'critical';
+                const isOnline = agent.health_status === 'healthy' || agent.health_status === 'warning' || agent.health_status === 'critical';
                 const hasSpecialStatus = agent.is_throttled || agent.is_isolated || agent.is_in_safe_mode;
                 const agentMetrics = agent.id ? systemMetrics[agent.id] : undefined;
                 const agentDisks = agent.id ? diskMetrics[agent.id] : undefined;
