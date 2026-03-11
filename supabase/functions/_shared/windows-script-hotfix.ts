@@ -1134,5 +1134,21 @@ try {
     reasons.push('baseline_normalize_save');
   }
 
+  // HOTFIX 36: Remove orphan closing brace left by HOTFIX 33 regex mismatch
+  // When HOTFIX 33 replaced the ECDSA signing block, its regex sometimes left behind
+  // the original finally block's closing brace, causing "Unexpected token '}'" at parse time.
+  // Pattern in DB: "}\n        }\n        }\n\n    } catch {" → should be "}\n        }\n\n    } catch {"
+  if (content.includes('HOTFIX-ECDSA-RSA-AUTOREGEN')) {
+    // Match: close-catch "}" + close-if "}" + ORPHAN "}" + function-catch "} catch {"
+    // We need to remove only the ORPHAN brace between if-close and function-catch
+    const orphanPattern = /(\}\s*\r?\n\s*\})\s*\r?\n(\s*\})\s*(\r?\n\s*\r?\n\s*\} catch \{\s*\r?\n\s*Write-Log "\[SIGN\] Error signing result)/;
+    if (orphanPattern.test(content)) {
+      content = content.replace(orphanPattern, (_match, p1, _orphan, p3) => {
+        return p1 + p3;
+      });
+      reasons.push('orphan_brace_cleanup');
+    }
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }
