@@ -2467,14 +2467,99 @@ function Get-BrowserHistorySQLite {
 }
 
 # ============================================
-#  v5.0.5: FULL WEB ACTIVITY COLLECTION (ported from v4)
-#  CRITICAL: Must return dns_cache/browser_history format
-#  for submit-job-result enforce_job_side_effects trigger
+#  v5.0.14: FULL WEB ACTIVITY COLLECTION
+#  Supports: Chrome, Edge, Firefox, Brave, Opera, Vivaldi
+#  + Multiple browser profiles (Profile 1, Profile 2, etc.)
 # ============================================
+
+function Get-ChromiumBrowserHistory {
+    param(
+        [string]$UserDataPath,
+        [string]$BrowserName,
+        [string]$UserName,
+        [System.Collections.ArrayList]$HistoryList,
+        [DateTime]$NowUtc
+    )
+    
+    if (-not (Test-Path $UserDataPath)) { return }
+    
+    # Find all profiles: Default, Profile 1, Profile 2, etc.
+    $profileDirs = @()
+    $defaultPath = Join-Path $UserDataPath "Default"
+    if (Test-Path $defaultPath) { $profileDirs += $defaultPath }
+    
+    try {
+        $extraProfiles = Get-ChildItem -Path $UserDataPath -Directory -Filter "Profile *" -ErrorAction SilentlyContinue
+        if ($extraProfiles) { $profileDirs += $extraProfiles.FullName }
+    } catch {}
+    
+    foreach ($profileDir in $profileDirs) {
+        $profileName = Split-Path $profileDir -Leaf
+        $historyFile = Join-Path $profileDir "History"
+        if (-not (Test-Path $historyFile)) { continue }
+        
+        $sourceName = "$($BrowserName.ToLower())_${UserName}_${profileName}"
+        $tempPath = "$env:TEMP\$($BrowserName.ToLower())_history_$(Get-Random).db"
+        
+        try {
+            Copy-Item -Path $historyFile -Destination $tempPath -Force -ErrorAction SilentlyContinue
+            if (-not (Test-Path $tempPath)) { continue }
+            
+            $sqlResults = $null
+            try {
+                $sqlResults = Get-BrowserHistorySQLite -DbPath $tempPath `
+                    -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" `
+                    -BrowserName $BrowserName -UserName $UserName
+            } catch {}
+            
+            if ($sqlResults -and $sqlResults.Count -gt 0) {
+                foreach ($row in $sqlResults) {
+                    $domain = Extract-DomainFromUrl $row.url
+                    if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local") { continue }
+                    $visitedAt = ConvertFrom-WebKitTimestamp $row.last_visit_time
+                    [void]$HistoryList.Add(@{
+                        domain = $domain; url = $row.url
+                        source = $sourceName; browser = $BrowserName.ToLower()
+                        visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $NowUtc.ToString("o") }
+                        visit_count = [int]$row.visit_count
+                    })
+                }
+            } else {
+                # Fallback: regex extraction from binary
+                try {
+                    $maxBytes = 5 * 1024 * 1024
+                    $fileInfo = Get-Item $tempPath
+                    $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
+                    $fileStream = [System.IO.File]::OpenRead($tempPath)
+                    $buffer = New-Object byte[] $bytesToRead
+                    [void]$fileStream.Read($buffer, 0, $bytesToRead)
+                    $fileStream.Close(); $fileStream.Dispose()
+                    if ($buffer) {
+                        $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
+                        $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+                        $domains = $urlMatches | ForEach-Object { $_.Groups[1].Value } |
+                            Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" } |
+                            Select-Object -Unique -First 50
+                        foreach ($domain in $domains) {
+                            [void]$HistoryList.Add(@{
+                                domain = $domain; source = $sourceName; browser = $BrowserName.ToLower()
+                                visited_at = $NowUtc.ToString("o"); visit_count = 1
+                            })
+                        }
+                        $buffer = $null; $dataString = $null
+                    }
+                } catch {}
+            }
+        } catch {} finally {
+            Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 function Invoke-CollectWebActivity {
     param([object]$Payload)
     
-    Write-Log "[WEB-ACTIVITY-V5] Starting web activity collection..." "INFO"
+    Write-Log "[WEB-ACTIVITY-V5.14] Starting web activity collection (multi-browser + multi-profile)..." "INFO"
     
     try {
         $maxDomains = 500
@@ -2485,7 +2570,7 @@ function Invoke-CollectWebActivity {
         $browserHistory = New-Object System.Collections.ArrayList
         
         # 1. Collect DNS Cache
-        Write-Log "[WEB-ACTIVITY-V5] Collecting DNS cache..." "INFO"
+        Write-Log "[WEB-ACTIVITY-V5.14] Collecting DNS cache..." "INFO"
         try {
             $dnsEntries = Get-DnsClientCache -ErrorAction SilentlyContinue
             if ($dnsEntries) {
@@ -2507,139 +2592,42 @@ function Invoke-CollectWebActivity {
                         visited_at = $nowUtc.ToString("o")
                     })
                 }
-                Write-Log "[WEB-ACTIVITY-V5] DNS cache: $($dnsCache.Count) domains" "INFO"
+                Write-Log "[WEB-ACTIVITY-V5.14] DNS cache: $($dnsCache.Count) domains" "INFO"
             }
         } catch {
-            Write-Log "[WEB-ACTIVITY-V5] DNS cache error: $($_.Exception.Message)" "WARN"
+            Write-Log "[WEB-ACTIVITY-V5.14] DNS cache error: $($_.Exception.Message)" "WARN"
         }
         
-        # 2. Collect browser history from ALL user profiles
-        Write-Log "[WEB-ACTIVITY-V5] Collecting browser history..." "INFO"
+        # 2. Collect browser history from ALL user profiles + ALL browser profiles
+        Write-Log "[WEB-ACTIVITY-V5.14] Collecting browser history (Chrome, Edge, Brave, Opera, Vivaldi, Firefox)..." "INFO"
         $userProfiles = @()
         try {
             $userProfiles = Get-ChildItem -Path "C:\Users" -Directory -ErrorAction SilentlyContinue |
                 Where-Object { $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') }
         } catch {}
         
+        # Define all Chromium-based browsers and their User Data paths
+        $chromiumBrowsers = @(
+            @{ Name = "Chrome";  RelPath = "AppData\Local\Google\Chrome\User Data" },
+            @{ Name = "Edge";    RelPath = "AppData\Local\Microsoft\Edge\User Data" },
+            @{ Name = "Brave";   RelPath = "AppData\Local\BraveSoftware\Brave-Browser\User Data" },
+            @{ Name = "Opera";   RelPath = "AppData\Roaming\Opera Software\Opera Stable" },
+            @{ Name = "OperaGX"; RelPath = "AppData\Roaming\Opera Software\Opera GX Stable" },
+            @{ Name = "Vivaldi"; RelPath = "AppData\Local\Vivaldi\User Data" }
+        )
+        
         foreach ($userProfile in $userProfiles) {
             $userName = $userProfile.Name
             $userPath = $userProfile.FullName
             
-            # Chrome
-            try {
-                $chromeHistoryPath = Join-Path $userPath "AppData\Local\Google\Chrome\User Data\Default\History"
-                if (Test-Path $chromeHistoryPath) {
-                    $tempPath = "$env:TEMP\chrome_history_$(Get-Random).db"
-                    Copy-Item -Path $chromeHistoryPath -Destination $tempPath -Force -ErrorAction SilentlyContinue
-                    if (Test-Path $tempPath) {
-                        $sqlResults = $null
-                        try {
-                            $sqlResults = Get-BrowserHistorySQLite -DbPath $tempPath `
-                                -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" `
-                                -BrowserName "Chrome" -UserName $userName
-                        } catch {}
-                        
-                        if ($sqlResults -and $sqlResults.Count -gt 0) {
-                            foreach ($row in $sqlResults) {
-                                $domain = Extract-DomainFromUrl $row.url
-                                if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local") { continue }
-                                $visitedAt = ConvertFrom-WebKitTimestamp $row.last_visit_time
-                                [void]$browserHistory.Add(@{
-                                    domain = $domain
-                                    url = $row.url
-                                    source = "chrome"
-                                    browser = "chrome"
-                                    visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
-                                    visit_count = [int]$row.visit_count
-                                })
-                            }
-                        } else {
-                            # Fallback: regex extraction
-                            try {
-                                $maxBytes = 5 * 1024 * 1024
-                                $fileInfo = Get-Item $tempPath
-                                $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
-                                $fileStream = [System.IO.File]::OpenRead($tempPath)
-                                $buffer = New-Object byte[] $bytesToRead
-                                [void]$fileStream.Read($buffer, 0, $bytesToRead)
-                                $fileStream.Close(); $fileStream.Dispose()
-                                if ($buffer) {
-                                    $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
-                                    $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
-                                    $domains = $urlMatches | ForEach-Object { $_.Groups[1].Value } |
-                                        Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" } |
-                                        Select-Object -Unique -First 50
-                                    foreach ($domain in $domains) {
-                                        [void]$browserHistory.Add(@{
-                                            domain = $domain; source = "chrome"; browser = "chrome"
-                                            visited_at = $nowUtc.ToString("o"); visit_count = 1
-                                        })
-                                    }
-                                    $buffer = $null; $dataString = $null
-                                }
-                            } catch {}
-                        }
-                        Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
-                    }
-                }
-            } catch {}
+            # Collect from all Chromium browsers
+            foreach ($browser in $chromiumBrowsers) {
+                $userDataPath = Join-Path $userPath $browser.RelPath
+                Get-ChromiumBrowserHistory -UserDataPath $userDataPath -BrowserName $browser.Name `
+                    -UserName $userName -HistoryList $browserHistory -NowUtc $nowUtc
+            }
             
-            # Edge
-            try {
-                $edgeHistoryPath = Join-Path $userPath "AppData\Local\Microsoft\Edge\User Data\Default\History"
-                if (Test-Path $edgeHistoryPath) {
-                    $tempPath = "$env:TEMP\edge_history_$(Get-Random).db"
-                    Copy-Item -Path $edgeHistoryPath -Destination $tempPath -Force -ErrorAction SilentlyContinue
-                    if (Test-Path $tempPath) {
-                        $sqlResults = $null
-                        try {
-                            $sqlResults = Get-BrowserHistorySQLite -DbPath $tempPath `
-                                -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" `
-                                -BrowserName "Edge" -UserName $userName
-                        } catch {}
-                        
-                        if ($sqlResults -and $sqlResults.Count -gt 0) {
-                            foreach ($row in $sqlResults) {
-                                $domain = Extract-DomainFromUrl $row.url
-                                if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local") { continue }
-                                $visitedAt = ConvertFrom-WebKitTimestamp $row.last_visit_time
-                                [void]$browserHistory.Add(@{
-                                    domain = $domain; url = $row.url; source = "edge"; browser = "edge"
-                                    visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
-                                    visit_count = [int]$row.visit_count
-                                })
-                            }
-                        } else {
-                            try {
-                                $maxBytes = 5 * 1024 * 1024
-                                $fileInfo = Get-Item $tempPath
-                                $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
-                                $fileStream = [System.IO.File]::OpenRead($tempPath)
-                                $buffer = New-Object byte[] $bytesToRead
-                                [void]$fileStream.Read($buffer, 0, $bytesToRead)
-                                $fileStream.Close(); $fileStream.Dispose()
-                                if ($buffer) {
-                                    $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
-                                    $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
-                                    $domains = $urlMatches | ForEach-Object { $_.Groups[1].Value } |
-                                        Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" } |
-                                        Select-Object -Unique -First 50
-                                    foreach ($domain in $domains) {
-                                        [void]$browserHistory.Add(@{
-                                            domain = $domain; source = "edge"; browser = "edge"
-                                            visited_at = $nowUtc.ToString("o"); visit_count = 1
-                                        })
-                                    }
-                                    $buffer = $null; $dataString = $null
-                                }
-                            } catch {}
-                        }
-                        Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
-                    }
-                }
-            } catch {}
-            
-            # Firefox
+            # Firefox (uses different DB schema - moz_places)
             try {
                 $firefoxProfilesPath = Join-Path $userPath "AppData\Roaming\Mozilla\Firefox\Profiles"
                 if (Test-Path $firefoxProfilesPath) {
@@ -2663,7 +2651,8 @@ function Invoke-CollectWebActivity {
                                         if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local") { continue }
                                         $visitedAt = ConvertFrom-PRTime $row.last_visit_time
                                         [void]$browserHistory.Add(@{
-                                            domain = $domain; url = $row.url; source = "firefox"; browser = "firefox"
+                                            domain = $domain; url = $row.url
+                                            source = "firefox_${userName}_$($profile.Name)"; browser = "firefox"
                                             visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
                                             visit_count = [int]$row.visit_count
                                         })
@@ -2685,7 +2674,7 @@ function Invoke-CollectWebActivity {
                                                 Select-Object -Unique -First 50
                                             foreach ($domain in $domains) {
                                                 [void]$browserHistory.Add(@{
-                                                    domain = $domain; source = "firefox"; browser = "firefox"
+                                                    domain = $domain; source = "firefox_${userName}_$($profile.Name)"; browser = "firefox"
                                                     visited_at = $nowUtc.ToString("o"); visit_count = 1
                                                 })
                                             }
@@ -2695,14 +2684,20 @@ function Invoke-CollectWebActivity {
                                 }
                                 Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
                             }
-                            break
                         }
                     }
                 }
             } catch {}
         }
         
-        Write-Log "[WEB-ACTIVITY-V5] Collected: $($dnsCache.Count) DNS + $($browserHistory.Count) browser entries" "INFO"
+        # Summarize browsers found
+        $browserSummary = @{}
+        foreach ($entry in $browserHistory) {
+            $b = $entry.browser
+            if ($browserSummary.ContainsKey($b)) { $browserSummary[$b]++ } else { $browserSummary[$b] = 1 }
+        }
+        $summaryStr = ($browserSummary.GetEnumerator() | ForEach-Object { "$($_.Key):$($_.Value)" }) -join ", "
+        Write-Log "[WEB-ACTIVITY-V5.14] Collected: $($dnsCache.Count) DNS + $($browserHistory.Count) browser entries ($summaryStr)" "INFO"
         
         # Return in format expected by submit-job-result (dns_cache + browser_history)
         return @{
@@ -2710,11 +2705,12 @@ function Invoke-CollectWebActivity {
             browser_history = @($browserHistory)
             total_dns = $dnsCache.Count
             total_browser = $browserHistory.Count
+            browsers_found = $browserSummary.Keys -join ","
             collected_at = $nowUtc.ToString("o")
         }
         
     } catch {
-        Write-Log "[WEB-ACTIVITY-V5] Error: $($_.Exception.Message)" "ERROR"
+        Write-Log "[WEB-ACTIVITY-V5.14] Error: $($_.Exception.Message)" "ERROR"
         return @{ error = $_.Exception.Message }
     }
 }
