@@ -11699,6 +11699,51 @@ export type Database = {
           },
         ]
       }
+      cash_flow_transactions: {
+        Row: {
+          amount_cents: number
+          category: string
+          created_at: string | null
+          created_by: string | null
+          description: string
+          id: string
+          is_recurring: boolean | null
+          notes: string | null
+          recurrence_interval: string | null
+          transaction_date: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount_cents: number
+          category: string
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          id?: string
+          is_recurring?: boolean | null
+          notes?: string | null
+          recurrence_interval?: string | null
+          transaction_date?: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          id?: string
+          is_recurring?: boolean | null
+          notes?: string | null
+          recurrence_interval?: string | null
+          transaction_date?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       chaos_test_results: {
         Row: {
           created_at: string
