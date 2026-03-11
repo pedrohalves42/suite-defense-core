@@ -141,6 +141,10 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: ShieldAlert, label: 'Risco de Software', to: '/admin/software-risk' },
     { icon: FileSearch, label: 'Histórico', to: '/admin/agent-timeline' },
     { icon: AlertCircle, label: 'Resolver Alertas', to: '/admin/alert-resolution' },
+    { icon: Crosshair, label: 'Attack Simulation', to: '/admin/attack-simulation' },
+    { icon: Eye, label: 'Shadow IT', to: '/admin/shadow-it' },
+    { icon: Key, label: 'Identity Security', to: '/admin/identity-security' },
+    { icon: Network, label: 'Security Graph', to: '/admin/security-graph' },
   ], []);
 
   const managementItems = useMemo<MenuItem[]>(() => [
