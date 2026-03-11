@@ -295,6 +295,12 @@ const App = () => (
                 <Route path="compliance-automation" element={<ComplianceAutomation />} />
                 <Route path="threat-intelligence" element={<ThreatIntelligence />} />
                 <Route path="cron-health" element={<CronHealthDashboard />} />
+                <Route path="shadow-it" element={<ShadowITDiscovery />} />
+                <Route path="attack-simulation" element={<AttackSimulation />} />
+                <Route path="identity-security" element={<IdentitySecurity />} />
+                <Route path="security-graph" element={<SecurityGraph />} />
+                <Route path="ransomware-incident" element={<RansomwareIncident />} />
+                <Route path="security-benchmark" element={<SecurityBenchmark />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) - Protected by MFA Guard */}
