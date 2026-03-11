@@ -150,6 +150,12 @@ import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 import AIFeedbackDashboard from "./pages/admin/AIFeedbackDashboard";
 import DocsExport from "./pages/docs/DocsExport";
 import DataExposure from "./pages/admin/DataExposure";
+import ShadowITDiscovery from "./pages/admin/ShadowITDiscovery";
+import AttackSimulation from "./pages/admin/AttackSimulation";
+import IdentitySecurity from "./pages/admin/IdentitySecurity";
+import SecurityGraph from "./pages/admin/SecurityGraph";
+import RansomwareIncident from "./pages/admin/RansomwareIncident";
+import SecurityBenchmark from "./pages/admin/SecurityBenchmark";
 
 const App = () => (
   <ErrorBoundary>
