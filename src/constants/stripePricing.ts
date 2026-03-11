@@ -26,14 +26,14 @@ export const STRIPE_PRODUCTS = {
     basePriceCents: 89900,
   },
 
-  // Dispositivo Adicional Starter - R$ 29/dispositivo
+  // Dispositivo Adicional Starter - R$ 39/dispositivo
   deviceAddonStarter: {
     productId: "prod_TgRxLbexC5TDBS",
     name: "CyberShield – Dispositivo Adicional Starter",
     prices: {
-      monthly: "price_1Sj53iFeHfNScQDPS7pve80k", // R$ 29/dispositivo
+      monthly: "price_1Sj53iFeHfNScQDPS7pve80k", // R$ 39/dispositivo
     },
-    priceCentsPerUnit: 2900,
+    priceCentsPerUnit: 3900,
   },
 
   // Dispositivo Adicional Business - R$ 24/dispositivo

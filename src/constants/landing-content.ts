@@ -201,8 +201,8 @@ export const LANDING_CONTENT = {
       {
         id: "enterprise",
         name: "Enterprise / MSP",
-        price: null,
-        priceLabel: "Sob consulta",
+        price: 2000,
+        priceLabel: "A partir de",
         description: "Para empresas +200 dispositivos ou MSPs",
         features: [
           "Tudo do Business, mais:",

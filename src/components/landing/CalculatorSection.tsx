@@ -25,9 +25,9 @@ function calculateTier(devices: number): TierResult {
     return { price: 0, plan: 'Free', baseDevices: 3, maxDevices: 3, basePrice: 0, extraDevices: 0, extraPrice: 0, pricePerExtra: 0, isEnterprise: false };
   }
   if (devices <= 50) {
-    const basePrice = 249;
+    const basePrice = 499;
     const baseDevices = 10;
-    const pricePerExtra = 29;
+    const pricePerExtra = 39;
     const extraDevices = Math.max(0, devices - baseDevices);
     const extraPrice = extraDevices * pricePerExtra;
     return { price: basePrice + extraPrice, plan: 'Starter Compliance', baseDevices, maxDevices: 50, basePrice, extraDevices, extraPrice, pricePerExtra, isEnterprise: false };

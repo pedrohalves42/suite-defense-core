@@ -165,7 +165,7 @@ export function useLandingContent() {
           cta: t('landing.pricing.plans.business.cta'), highlighted: true, badge: t('landing.pricing.plans.business.badge'),
         },
         {
-          id: "enterprise", name: t('landing.pricing.plans.enterprise.name'), price: null,
+          id: "enterprise", name: t('landing.pricing.plans.enterprise.name'), price: 2000,
           priceLabel: t('landing.pricing.plans.enterprise.priceLabel'),
           description: t('landing.pricing.plans.enterprise.description'),
           features: Array.from({ length: 6 }, (_, i) => t(`landing.pricing.plans.enterprise.features.${i}`)),

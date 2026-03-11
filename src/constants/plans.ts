@@ -44,8 +44,8 @@ export const PLAN_CONFIG = {
     displayName: 'CyberShield – Starter Compliance',
     baseDevices: 10,
     maxDevices: 50,
-    basePriceCents: 24900, // R$ 249/mês
-    addonPriceCents: 2900, // R$ 29/dispositivo adicional
+    basePriceCents: 49900, // R$ 499/mês
+    addonPriceCents: 3900, // R$ 39/dispositivo adicional
     tier: 1,
     features: [
       'Até 10 dispositivos base',
