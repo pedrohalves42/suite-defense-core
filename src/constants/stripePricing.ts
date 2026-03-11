@@ -2,16 +2,16 @@
 // Criado em: 2025-12-27
 
 export const STRIPE_PRODUCTS = {
-  // Starter Compliance - R$ 249/mês base (10 dispositivos)
+  // Starter Compliance - R$ 499/mês base (10 dispositivos)
   starterCompliance: {
     productId: "prod_TgRwgJlh0NC2mI",
     name: "CyberShield – Starter Compliance",
     prices: {
-      monthly: "price_1Sj531FeHfNScQDP8kMvWUpP", // R$ 249/mês
+      monthly: "price_1Sj531FeHfNScQDP8kMvWUpP", // R$ 499/mês
     },
     baseDevices: 10,
     maxDevices: 50,
-    basePriceCents: 24900,
+    basePriceCents: 49900,
   },
 
   // Business - R$ 899/mês base (20 dispositivos)
@@ -26,14 +26,14 @@ export const STRIPE_PRODUCTS = {
     basePriceCents: 89900,
   },
 
-  // Dispositivo Adicional Starter - R$ 29/dispositivo
+  // Dispositivo Adicional Starter - R$ 39/dispositivo
   deviceAddonStarter: {
     productId: "prod_TgRxLbexC5TDBS",
     name: "CyberShield – Dispositivo Adicional Starter",
     prices: {
-      monthly: "price_1Sj53iFeHfNScQDPS7pve80k", // R$ 29/dispositivo
+      monthly: "price_1Sj53iFeHfNScQDPS7pve80k", // R$ 39/dispositivo
     },
-    priceCentsPerUnit: 2900,
+    priceCentsPerUnit: 3900,
   },
 
   // Dispositivo Adicional Business - R$ 24/dispositivo

@@ -63,13 +63,18 @@ export function PricingSection() {
 
                 {/* Price — consistent sizing */}
                 <div className="mb-2 min-h-[3rem] flex items-baseline">
-                  {plan.price ? (
+                {plan.price ? (
                     <>
+                      {isEnterprise && plan.priceLabel && (
+                        <span className={`text-sm mr-1 ${isHighlighted ? 'opacity-70' : 'text-muted-foreground'}`}>
+                          {plan.priceLabel}
+                        </span>
+                      )}
                       <span className={`text-4xl font-bold ${isHighlighted ? '' : 'text-foreground'}`}>
                         R$ {plan.price.toLocaleString('pt-BR')}
                       </span>
                       <span className={`text-sm ml-1 ${isHighlighted ? 'opacity-70' : 'text-muted-foreground'}`}>
-                        {plan.period}
+                        {plan.period || '/mês'}
                       </span>
                     </>
                   ) : (

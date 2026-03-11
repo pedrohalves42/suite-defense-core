@@ -12,9 +12,9 @@ CyberShield V4 pricing structure with B2B-only focus, device addons, and MSP vol
 
 | Plan | Base Price | Base Devices | Max Devices | Addon Price |
 |------|------------|--------------|-------------|-------------|
-| **Starter Compliance** | R$ 249/mês | 10 | 50 | R$ 29/dispositivo |
+| **Starter Compliance** | R$ 499/mês | 10 | 50 | R$ 39/dispositivo |
 | **Business** | R$ 899/mês | 20 | 200 | R$ 24/dispositivo |
-| **Enterprise** | Sob consulta | 200+ | Unlimited | Custom |
+| **Enterprise** | A partir de R$ 2.000/mês | 200+ | Unlimited | Custom |
 
 ### Stripe Price IDs
 
