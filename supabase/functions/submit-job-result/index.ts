@@ -1545,41 +1545,64 @@ Deno.serve(async (req) => {
       try {
         console.log('[submit-job-result] Analyzing web activity for blocked access attempts...')
         
-        // Extrair domínios do DNS cache e browser history
-        const outputData = typeof output === 'object' ? output : {}
-        const dnsCache = outputData.dns_cache || []
-        const browserHistory = outputData.browser_history || []
-        
+        // Extrair domínios do DNS cache, browser history e payload web_activity v2
+        const outputData = typeof output === 'object' ? output as Record<string, unknown> : {}
+        const dnsCache = Array.isArray(outputData.dns_cache) ? outputData.dns_cache : []
+
+        const rawBrowserHistory = outputData.browser_history
+        const browserHistory = Array.isArray(rawBrowserHistory)
+          ? rawBrowserHistory
+          : Array.isArray((rawBrowserHistory as Record<string, unknown>)?.items)
+            ? ((rawBrowserHistory as Record<string, unknown>).items as unknown[])
+            : []
+
+        const webActivityRaw = outputData.web_activity ?? outputData.activity ?? outputData.domains ?? []
+
         // Coletar todos os domínios acessados
         const accessedDomains = new Set<string>()
-        
+
+        const addDomain = (raw: unknown) => {
+          const normalized = String(raw || '').toLowerCase().trim()
+          if (normalized) accessedDomains.add(normalized)
+        }
+
         // De DNS cache
-        if (Array.isArray(dnsCache)) {
-          for (const entry of dnsCache) {
-            if (entry.domain || entry.Name || entry.RecordName) {
-              const domain = (entry.domain || entry.Name || entry.RecordName || '').toLowerCase().trim()
-              if (domain && domain.length > 0) {
-                accessedDomains.add(domain)
-              }
+        for (const entry of dnsCache) {
+          const rec = (entry || {}) as Record<string, unknown>
+          addDomain(rec.domain || rec.Name || rec.RecordName)
+        }
+
+        // De browser history
+        for (const entry of browserHistory) {
+          const rec = (entry || {}) as Record<string, unknown>
+          if (rec.domain) {
+            addDomain(rec.domain)
+          } else if (rec.url) {
+            try {
+              addDomain(new URL(String(rec.url)).hostname)
+            } catch {
+              // ignore invalid URL
             }
           }
         }
-        
-        // De browser history
-        if (Array.isArray(browserHistory)) {
-          for (const entry of browserHistory) {
-            if (entry.domain || entry.url) {
-              let domain = entry.domain
-              if (!domain && entry.url) {
-                try {
-                  const url = new URL(entry.url)
-                  domain = url.hostname
-                } catch { /* ignore invalid URLs */ }
-              }
-              if (domain) {
-                accessedDomains.add(domain.toLowerCase().trim())
+
+        // De web_activity v2 (agregado)
+        if (Array.isArray(webActivityRaw)) {
+          for (const entry of webActivityRaw) {
+            const rec = (entry || {}) as Record<string, unknown>
+            if (rec.domain || rec.hostname || rec.host) {
+              addDomain(rec.domain || rec.hostname || rec.host)
+            } else if (rec.url) {
+              try {
+                addDomain(new URL(String(rec.url)).hostname)
+              } catch {
+                // ignore invalid URL
               }
             }
+          }
+        } else if (webActivityRaw && typeof webActivityRaw === 'object') {
+          for (const domain of Object.keys(webActivityRaw as Record<string, unknown>)) {
+            addDomain(domain)
           }
         }
         
