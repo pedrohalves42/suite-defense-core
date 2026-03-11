@@ -141,6 +141,10 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: ShieldAlert, label: 'Risco de Software', to: '/admin/software-risk' },
     { icon: FileSearch, label: 'Histórico', to: '/admin/agent-timeline' },
     { icon: AlertCircle, label: 'Resolver Alertas', to: '/admin/alert-resolution' },
+    { icon: Crosshair, label: 'Attack Simulation', to: '/admin/attack-simulation' },
+    { icon: Eye, label: 'Shadow IT', to: '/admin/shadow-it' },
+    { icon: Key, label: 'Identity Security', to: '/admin/identity-security' },
+    { icon: Network, label: 'Security Graph', to: '/admin/security-graph' },
   ], []);
 
   const managementItems = useMemo<MenuItem[]>(() => [
@@ -165,6 +169,8 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: BookOpen, label: 'Evidências', to: '/admin/evidence-bundle' },
     { icon: Workflow, label: 'Playbooks', to: '/admin/playbooks' },
     { icon: BarChart3, label: 'Score de Risco', to: '/admin/risk-score' },
+    { icon: Target, label: 'Benchmark', to: '/admin/security-benchmark' },
+    { icon: ShieldAlert, label: 'Ransomware', to: '/admin/ransomware-incident' },
   ], []);
 
   const intelligenceItems = useMemo<MenuItem[]>(() => [

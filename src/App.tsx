@@ -150,6 +150,12 @@ import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 import AIFeedbackDashboard from "./pages/admin/AIFeedbackDashboard";
 import DocsExport from "./pages/docs/DocsExport";
 import DataExposure from "./pages/admin/DataExposure";
+import ShadowITDiscovery from "./pages/admin/ShadowITDiscovery";
+import AttackSimulation from "./pages/admin/AttackSimulation";
+import IdentitySecurity from "./pages/admin/IdentitySecurity";
+import SecurityGraph from "./pages/admin/SecurityGraph";
+import RansomwareIncident from "./pages/admin/RansomwareIncident";
+import SecurityBenchmark from "./pages/admin/SecurityBenchmark";
 
 const App = () => (
   <ErrorBoundary>
@@ -289,6 +295,12 @@ const App = () => (
                 <Route path="compliance-automation" element={<ComplianceAutomation />} />
                 <Route path="threat-intelligence" element={<ThreatIntelligence />} />
                 <Route path="cron-health" element={<CronHealthDashboard />} />
+                <Route path="shadow-it" element={<ShadowITDiscovery />} />
+                <Route path="attack-simulation" element={<AttackSimulation />} />
+                <Route path="identity-security" element={<IdentitySecurity />} />
+                <Route path="security-graph" element={<SecurityGraph />} />
+                <Route path="ransomware-incident" element={<RansomwareIncident />} />
+                <Route path="security-benchmark" element={<SecurityBenchmark />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) - Protected by MFA Guard */}

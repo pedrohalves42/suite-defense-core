@@ -9310,6 +9310,170 @@ export type Database = {
           },
         ]
       }
+      attack_simulation_results: {
+        Row: {
+          agent_hostname: string | null
+          agent_id: string
+          created_at: string | null
+          details: Json | null
+          detected: boolean | null
+          detection_method: string | null
+          detection_time_ms: number | null
+          id: string
+          simulation_id: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_hostname?: string | null
+          agent_id: string
+          created_at?: string | null
+          details?: Json | null
+          detected?: boolean | null
+          detection_method?: string | null
+          detection_time_ms?: number | null
+          id?: string
+          simulation_id: string
+          tenant_id: string
+        }
+        Update: {
+          agent_hostname?: string | null
+          agent_id?: string
+          created_at?: string | null
+          details?: Json | null
+          detected?: boolean | null
+          detection_method?: string | null
+          detection_time_ms?: number | null
+          id?: string
+          simulation_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attack_simulation_results_simulation_id_fkey"
+            columns: ["simulation_id"]
+            isOneToOne: false
+            referencedRelation: "attack_simulations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attack_simulation_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attack_simulation_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "attack_simulation_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "attack_simulation_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      attack_simulations: {
+        Row: {
+          completed_at: string | null
+          config: Json | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          detected_count: number | null
+          detection_rate: number | null
+          id: string
+          missed_count: number | null
+          results_summary: Json | null
+          simulation_type: string
+          started_at: string | null
+          status: string
+          target_agent_ids: string[] | null
+          tenant_id: string
+          title: string
+          total_agents: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          config?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          detected_count?: number | null
+          detection_rate?: number | null
+          id?: string
+          missed_count?: number | null
+          results_summary?: Json | null
+          simulation_type: string
+          started_at?: string | null
+          status?: string
+          target_agent_ids?: string[] | null
+          tenant_id: string
+          title: string
+          total_agents?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          config?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          detected_count?: number | null
+          detection_rate?: number | null
+          id?: string
+          missed_count?: number | null
+          results_summary?: Json | null
+          simulation_type?: string
+          started_at?: string | null
+          status?: string
+          target_agent_ids?: string[] | null
+          tenant_id?: string
+          title?: string
+          total_agents?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attack_simulations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attack_simulations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "attack_simulations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "attack_simulations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       audit_confidence_gaps: {
         Row: {
           alert_reason: string | null
@@ -11667,6 +11831,45 @@ export type Database = {
           },
         ]
       }
+      compliance_benchmarks: {
+        Row: {
+          avg_score: number | null
+          category_averages: Json | null
+          created_at: string | null
+          id: string
+          industry_segment: string
+          max_score: number | null
+          median_score: number | null
+          min_score: number | null
+          period_month: string
+          tenant_count: number | null
+        }
+        Insert: {
+          avg_score?: number | null
+          category_averages?: Json | null
+          created_at?: string | null
+          id?: string
+          industry_segment?: string
+          max_score?: number | null
+          median_score?: number | null
+          min_score?: number | null
+          period_month: string
+          tenant_count?: number | null
+        }
+        Update: {
+          avg_score?: number | null
+          category_averages?: Json | null
+          created_at?: string | null
+          id?: string
+          industry_segment?: string
+          max_score?: number | null
+          median_score?: number | null
+          min_score?: number | null
+          period_month?: string
+          tenant_count?: number | null
+        }
+        Relationships: []
+      }
       compliance_policies: {
         Row: {
           approved_at: string | null
@@ -11861,6 +12064,142 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_compliance_snapshots_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      credential_leaks: {
+        Row: {
+          breach_date: string | null
+          breach_name: string | null
+          breach_source: string | null
+          created_at: string | null
+          data_types_exposed: string[] | null
+          detected_at: string | null
+          email: string
+          id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string | null
+          status: string | null
+          tenant_id: string
+        }
+        Insert: {
+          breach_date?: string | null
+          breach_name?: string | null
+          breach_source?: string | null
+          created_at?: string | null
+          data_types_exposed?: string[] | null
+          detected_at?: string | null
+          email: string
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+          status?: string | null
+          tenant_id: string
+        }
+        Update: {
+          breach_date?: string | null
+          breach_name?: string | null
+          breach_source?: string | null
+          created_at?: string | null
+          data_types_exposed?: string[] | null
+          detected_at?: string | null
+          email?: string
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+          status?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credential_leaks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credential_leaks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "credential_leaks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "credential_leaks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      credential_monitors: {
+        Row: {
+          created_at: string | null
+          email_domain: string
+          id: string
+          last_check_at: string | null
+          monitored_emails: string[] | null
+          monitoring_enabled: boolean | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email_domain: string
+          id?: string
+          last_check_at?: string | null
+          monitored_emails?: string[] | null
+          monitoring_enabled?: boolean | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email_domain?: string
+          id?: string
+          last_check_at?: string | null
+          monitored_emails?: string[] | null
+          monitoring_enabled?: boolean | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credential_monitors_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credential_monitors_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "credential_monitors_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "credential_monitors_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -21057,6 +21396,150 @@ export type Database = {
           },
         ]
       }
+      security_graph_edges: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          relationship: string
+          source_node_id: string
+          target_node_id: string
+          tenant_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          relationship: string
+          source_node_id: string
+          target_node_id: string
+          tenant_id: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          relationship?: string
+          source_node_id?: string
+          target_node_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_graph_edges_source_node_id_fkey"
+            columns: ["source_node_id"]
+            isOneToOne: false
+            referencedRelation: "security_graph_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_graph_edges_target_node_id_fkey"
+            columns: ["target_node_id"]
+            isOneToOne: false
+            referencedRelation: "security_graph_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_graph_edges_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_graph_edges_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "security_graph_edges_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "security_graph_edges_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      security_graph_nodes: {
+        Row: {
+          created_at: string | null
+          first_seen_at: string | null
+          id: string
+          label: string | null
+          last_seen_at: string | null
+          metadata: Json | null
+          node_type: string
+          node_value: string
+          risk_score: number | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          first_seen_at?: string | null
+          id?: string
+          label?: string | null
+          last_seen_at?: string | null
+          metadata?: Json | null
+          node_type: string
+          node_value: string
+          risk_score?: number | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string | null
+          first_seen_at?: string | null
+          id?: string
+          label?: string | null
+          last_seen_at?: string | null
+          metadata?: Json | null
+          node_type?: string
+          node_value?: string
+          risk_score?: number | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_graph_nodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_graph_nodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "security_graph_nodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "security_graph_nodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       security_logs: {
         Row: {
           attack_type: string
@@ -21646,6 +22129,148 @@ export type Database = {
           },
           {
             foreignKeyName: "segregation_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      shadow_it_catalog: {
+        Row: {
+          agent_ids: string[] | null
+          agents_count: number | null
+          ai_classification: Json | null
+          app_category: string | null
+          app_name: string
+          created_at: string | null
+          data_sensitivity: string | null
+          first_seen_at: string | null
+          id: string
+          last_seen_at: string | null
+          risk_level: string | null
+          risk_score: number | null
+          source: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          agent_ids?: string[] | null
+          agents_count?: number | null
+          ai_classification?: Json | null
+          app_category?: string | null
+          app_name: string
+          created_at?: string | null
+          data_sensitivity?: string | null
+          first_seen_at?: string | null
+          id?: string
+          last_seen_at?: string | null
+          risk_level?: string | null
+          risk_score?: number | null
+          source?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          agent_ids?: string[] | null
+          agents_count?: number | null
+          ai_classification?: Json | null
+          app_category?: string | null
+          app_name?: string
+          created_at?: string | null
+          data_sensitivity?: string | null
+          first_seen_at?: string | null
+          id?: string
+          last_seen_at?: string | null
+          risk_level?: string | null
+          risk_score?: number | null
+          source?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shadow_it_catalog_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shadow_it_catalog_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "shadow_it_catalog_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "shadow_it_catalog_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      shadow_it_policies: {
+        Row: {
+          action: string
+          app_pattern: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          reason: string | null
+          tenant_id: string
+        }
+        Insert: {
+          action?: string
+          app_pattern: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          reason?: string | null
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          app_pattern?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          reason?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shadow_it_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shadow_it_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "shadow_it_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "shadow_it_policies_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -25352,6 +25977,7 @@ export type Database = {
           created_at: string
           deletion_scheduled_at: string | null
           id: string
+          industry_segment: string | null
           last_activity_at: string | null
           mfa_policy: Json | null
           name: string
@@ -25382,6 +26008,7 @@ export type Database = {
           created_at?: string
           deletion_scheduled_at?: string | null
           id?: string
+          industry_segment?: string | null
           last_activity_at?: string | null
           mfa_policy?: Json | null
           name: string
@@ -25412,6 +26039,7 @@ export type Database = {
           created_at?: string
           deletion_scheduled_at?: string | null
           id?: string
+          industry_segment?: string | null
           last_activity_at?: string | null
           mfa_policy?: Json | null
           name?: string
