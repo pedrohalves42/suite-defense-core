@@ -37,7 +37,7 @@ export function CTASection() {
             asChild 
             size="lg" 
             variant="outline"
-            className="text-lg h-14 px-10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
+            className="text-lg h-14 px-10 border-accent/40 text-accent hover:bg-accent/10 hover:text-accent"
           >
             <a href="#mini-diagnostico">
               <Calendar className="mr-2 h-5 w-5" />
