@@ -2,16 +2,16 @@
 // Criado em: 2025-12-27
 
 export const STRIPE_PRODUCTS = {
-  // Starter Compliance - R$ 249/mês base (10 dispositivos)
+  // Starter Compliance - R$ 499/mês base (10 dispositivos)
   starterCompliance: {
     productId: "prod_TgRwgJlh0NC2mI",
     name: "CyberShield – Starter Compliance",
     prices: {
-      monthly: "price_1Sj531FeHfNScQDP8kMvWUpP", // R$ 249/mês
+      monthly: "price_1Sj531FeHfNScQDP8kMvWUpP", // R$ 499/mês
     },
     baseDevices: 10,
     maxDevices: 50,
-    basePriceCents: 24900,
+    basePriceCents: 49900,
   },
 
   // Business - R$ 899/mês base (20 dispositivos)
