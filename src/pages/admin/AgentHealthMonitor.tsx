@@ -8,7 +8,7 @@ import { Activity, AlertCircle, Server, Clock, CheckCircle, Wifi, WifiOff, Shiel
 import { getOsDisplayName } from "@/lib/os-utils";
 import { toast } from "sonner";
 import { ErrorState } from "@/components/ErrorState";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
