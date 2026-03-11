@@ -272,10 +272,11 @@ export async function verifyHmacSignature(
               })
             }
 
-            if (context?.agentId) {
+            if (context?.agentId && resolvedTenantId) {
               supabase.from('agent_hmac_format_cache').upsert(
                 {
                   agent_id: context.agentId,
+                  tenant_id: resolvedTenantId,
                   key_encoding: keyVariant.name,
                   separator: variant.sep,
                   body_format: variant.fmt,
