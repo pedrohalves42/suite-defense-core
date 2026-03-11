@@ -33,8 +33,8 @@ function calculateTier(devices: number): TierResult {
     return { price: basePrice + extraPrice, plan: 'Starter Compliance', baseDevices, maxDevices: 50, basePrice, extraDevices, extraPrice, pricePerExtra, isEnterprise: false };
   }
   if (devices <= 200) {
-    const basePrice = 599;
-    const baseDevices = 30;
+    const basePrice = 899;
+    const baseDevices = 20;
     const pricePerExtra = 24;
     const extraDevices = Math.max(0, devices - baseDevices);
     const extraPrice = extraDevices * pricePerExtra;
