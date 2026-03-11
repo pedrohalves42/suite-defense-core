@@ -87,7 +87,7 @@ export function HeroSection() {
                 asChild 
                 size="lg" 
                 variant="outline"
-                className="text-lg h-14 px-8 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
+                className="text-lg h-14 px-8 border-accent/40 text-accent hover:bg-accent/10 hover:text-accent"
               >
                 <a href="#mini-diagnostico" aria-label="Agendar diagnóstico gratuito">
                   {hero.ctaSecondary || "Agendar diagnóstico gratuito de 15 min"}
