@@ -239,6 +239,7 @@ function SimpleAgentItem({
     switch (status) {
       case 'healthy':
         return { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-950/30' };
+      case 'warning':
       case 'critical':
         return { icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-950/30' };
       default:
