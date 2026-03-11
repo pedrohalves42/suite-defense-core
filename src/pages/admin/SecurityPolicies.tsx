@@ -160,6 +160,7 @@ export default function SecurityPolicies() {
     await assignPolicy.mutateAsync({
       group_id: groupId,
       policy_id: selectedPolicy.id,
+      tenant_id: selectedPolicy.tenant_id ?? '',
     });
     
     setIsAssignDialogOpen(false);
