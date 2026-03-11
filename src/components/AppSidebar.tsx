@@ -9,7 +9,7 @@ import {
   AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch, Tag, Crosshair,
   Zap, X, UserPlus, Archive, ListTodo, BookOpen, ShieldAlert, Fingerprint,
   Eye, Workflow, Database, HardDrive, Plug, Palette, Headphones, Map, Code,
-  BrainCircuit, Sparkles, BarChart, ThumbsUp, Bot, Layers, Wallet
+  BrainCircuit, Sparkles, BarChart, ThumbsUp, Bot, Layers
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -219,7 +219,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Presentation, label: 'Pipeline', to: '/super-admin/sales-pipeline' },
     { icon: Scale, label: 'Apresentação', to: '/super-admin/pitch-deck' },
     { icon: AlertTriangle, label: 'Riscos', to: '/super-admin/risk-analysis' },
-    { icon: Wallet, label: 'Fluxo de Caixa', to: '/super-admin/cash-flow' },
+    
     { icon: CreditCard, label: 'Pagamentos', to: '/super-admin/stripe-setup' },
   ], []);
 
