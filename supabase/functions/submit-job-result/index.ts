@@ -1344,9 +1344,9 @@ Deno.serve(async (req) => {
       const hasRealEnforcement = hostsModified > 0 || dnsFilterRunning
       
       if (blockedDomainsCount > 0 && !hasRealEnforcement) {
-        // Domínios para bloquear mas nenhum enforcement
-        updateData.status = 'completed_with_warning'
-        updateData.error_message = `${blockedDomainsCount} domínios para bloquear mas enforcement_method=${enforcementMethod}. Nenhuma modificação real aplicada.`
+        // Domínios para bloquear mas nenhum enforcement - use 'completed' (valid transition) with warning in error_message
+        updateData.status = 'completed'
+        updateData.error_message = `[WARNING] ${blockedDomainsCount} domínios para bloquear mas enforcement_method=${enforcementMethod}. Nenhuma modificação real aplicada.`
         console.warn('[submit-job-result] [GOVERNANCE] ENFORCEMENT FALHOU: sites salvos mas nao bloqueados', {
           job_id,
           agent: agent.agent_name,
