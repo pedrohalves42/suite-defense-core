@@ -169,6 +169,8 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: BookOpen, label: 'Evidências', to: '/admin/evidence-bundle' },
     { icon: Workflow, label: 'Playbooks', to: '/admin/playbooks' },
     { icon: BarChart3, label: 'Score de Risco', to: '/admin/risk-score' },
+    { icon: Target, label: 'Benchmark', to: '/admin/security-benchmark' },
+    { icon: ShieldAlert, label: 'Ransomware', to: '/admin/ransomware-incident' },
   ], []);
 
   const intelligenceItems = useMemo<MenuItem[]>(() => [
