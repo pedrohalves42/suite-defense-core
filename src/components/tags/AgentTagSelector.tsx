@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAgentTags, useAgentTagAssignments, useAssignTag, useRemoveTagAssignment } from '@/hooks/useAgentTags';
+import { useTenant } from '@/hooks/useTenant';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
