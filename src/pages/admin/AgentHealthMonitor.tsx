@@ -92,7 +92,7 @@ export default function AgentHealthMonitor() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [tenant?.id, tenant?.id, queryClient]);
+  }, [tenant?.id, queryClient]);
 
   // Calculate health counts from real data - MUST be before conditional returns
   const counts = useMemo(() => agentsHealth.reduce(
