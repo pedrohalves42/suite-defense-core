@@ -434,7 +434,7 @@ export default function WebActivity() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-4">
+                <div className="flex flex-wrap gap-4 items-end">
                   <div className="flex-1 min-w-[200px]">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -460,6 +460,16 @@ export default function WebActivity() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={!filteredActivity.length}>
+                      <FileSpreadsheet className="h-4 w-4 mr-1" />
+                      CSV
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={!filteredActivity.length}>
+                      <FileText className="h-4 w-4 mr-1" />
+                      PDF
+                    </Button>
                   </div>
                 </div>
               </CardContent>
