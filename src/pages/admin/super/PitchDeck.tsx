@@ -397,7 +397,7 @@ export default function PitchDeck() {
                 {[
                   { name: 'Starter', price: 'R$ 59,90/dispositivo', devices: '5-10 PCs', features: 'Inventário, Vulnerabilidades, Antivírus' },
                   { name: 'Professional', price: 'R$ 149,90/dispositivo', devices: '10-50 PCs', features: '+ IA, Relatórios, Prioridade' },
-                  { name: 'Enterprise', price: 'Sob consulta', devices: '50+ PCs', features: '+ SLA, API, Customização' },
+                  { name: 'Enterprise', price: 'A partir de R$ 2.000/mês', devices: '50+ PCs', features: '+ SLA, API, Customização' },
                 ].map((plan, i) => (
                   <Card key={i} className="p-4">
                     <div className="flex items-center justify-between mb-2">
