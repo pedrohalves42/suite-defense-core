@@ -254,25 +254,18 @@ export function useDNSFilter() {
     mutationFn: async (agentIds?: string[]) => {
       if (!tenant?.id) throw new Error('Tenant not found');
 
+      const allTenantAgents = await fetchTenantAgents();
       let agents;
+
       if (agentIds?.length) {
-        const { data } = await supabase
-          .from('agents_safe')
-          .select('id, agent_name')
-          .in('id', agentIds)
-          .eq('tenant_id', tenant.id)
-          .is('archived_at', null);
-        agents = data;
+        agents = allTenantAgents.filter((agent) => agentIds.includes(agent.id));
       } else {
         // Get all online agents
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-        const { data } = await supabase
-          .from('agents_safe')
-          .select('id, agent_name')
-          .eq('tenant_id', tenant.id)
-          .is('archived_at', null)
-          .gt('last_heartbeat', fiveMinutesAgo);
-        agents = data;
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        agents = allTenantAgents.filter((agent) => {
+          if (!agent.last_heartbeat) return false;
+          return new Date(agent.last_heartbeat) > fiveMinutesAgo;
+        });
       }
 
       if (!agents?.length) {
