@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
       const m = v.replace(/^v/, '').match(/^(\d+)\.(\d+)\.(\d+)/)
       return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [0, 0, 0]
     }
-    const agentVer = parseVersion(agentVersionStr)
+    const agentVer = parseVersion(agentVersionForCompat)
     // Agentes <= v5.0.11 esperam array plano; >= v5.0.12 suportam formato encapsulado
     const isLegacyAgent = agentVer[0] < 5 || (agentVer[0] === 5 && agentVer[1] === 0 && agentVer[2] <= 11)
     
