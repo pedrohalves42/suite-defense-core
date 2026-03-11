@@ -101,18 +101,8 @@ export function useDNSFilter() {
     queryFn: async (): Promise<DNSFilterStatus[]> => {
       if (!tenant?.id) return [];
 
-      // Get agents with their DNS filter status
-      const { data: agents, error } = await supabase
-        .from('agents_safe')
-        .select('id, agent_name, display_name, last_heartbeat, last_block_sync_at, status')
-        .eq('tenant_id', tenant.id)
-        .is('archived_at', null)
-        .order('agent_name');
-
-      if (error) {
-        console.error('[useDNSFilter] Error fetching agents:', error);
-        throw error;
-      }
+      // Get agents with tenant-safe RPC source
+      const agents = await fetchTenantAgents();
 
       // Check pending jobs for each agent
       const agentIds = (agents?.map(a => a.id).filter((id): id is string => !!id)) || [];
