@@ -509,7 +509,8 @@ Write-Status "Task args: $($taskArgStr.Length) chars" "INFO"
 # Create Scheduled Task components
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $taskArgStr
 
-$trigger = New-ScheduledTaskTrigger -AtStartup
+$trigger1 = New-ScheduledTaskTrigger -AtStartup
+$trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 365)
 
 # Settings: RestartInterval = 1 minute (MINIMUM allowed), RestartCount = 3
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
@@ -519,20 +520,9 @@ $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccou
 $taskFullName = "$TaskName-$AgentName"
 Write-Status "Registering task: $taskFullName" "INFO"
 
-# Register the task
-Register-ScheduledTask -TaskName $taskFullName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
-Write-Status "Task registered: $taskFullName" "SUCCESS"
-
-# Add repetition trigger (every 5 minutes) via CIM
-try {
-    $task = Get-ScheduledTask -TaskName $taskFullName
-    $task.Triggers[0].Repetition.Interval = "PT5M"
-    $task.Triggers[0].Repetition.StopAtDurationEnd = $false
-    Set-ScheduledTask -InputObject $task | Out-Null
-    Write-Status "Repetition: every 5 minutes" "SUCCESS"
-} catch {
-    Write-Status "Repetition config skipped: $($_.Exception.Message)" "WARN"
-}
+# Register the task with dual triggers (AtStartup + 5min repetition)
+Register-ScheduledTask -TaskName $taskFullName -Action $action -Trigger @($trigger1,$trigger2) -Settings $settings -Principal $principal -Force | Out-Null
+Write-Status "Task registered: $taskFullName (AtStartup + every 5min)" "SUCCESS"
 
 # Start the task
 Start-ScheduledTask -TaskName $taskFullName
