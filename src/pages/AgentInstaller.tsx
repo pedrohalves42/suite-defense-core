@@ -864,53 +864,78 @@ const AgentInstaller = () => {
     }
   };
 
-  // FASE 2.1: Gerar credenciais + build EXE em um clique
-  const handleGenerateExeDirectly = async () => {
+  // Gerar instalador portátil (sem GitHub)
+  const handleGeneratePortableInstaller = async () => {
     if (!isNameValid) {
       toast.error('Informe um nome valido para o agente');
       return;
     }
 
-    // FASE 1.1: Verificar health do GitHub
-    if (githubHealthy === false) {
-      toast.error('[ERROR]  GitHub nao configurado. Contate o administrador.');
-      return;
-    }
-
     try {
-      // FASE 2.2: Progresso - Preparando
       setBuildProgress({ 
         currentStep: 'preparing', 
         status: 'active', 
-        message: 'Gerando credenciais e preparando ambiente...' 
+        message: 'Gerando credenciais...' 
       });
-      toast.info('? Gerando credenciais...');
+      setExeBuildStatus('building');
+      toast.info('🔧 Gerando instalador portátil...');
       
       // Se nao tem enrollment_key, gerar automaticamente
-      if (!lastEnrollmentKey) {
+      let enrollmentKey = lastEnrollmentKey;
+      if (!enrollmentKey) {
         const credentials = await generateCredentials();
         if (!credentials) {
-          setBuildProgress({ 
-            currentStep: 'preparing', 
-            status: 'error', 
-            message: 'Falha ao gerar credenciais' 
-          });
+          setBuildProgress({ currentStep: 'preparing', status: 'error', message: 'Falha ao gerar credenciais' });
+          setExeBuildStatus('idle');
           return;
         }
+        enrollmentKey = lastEnrollmentKey;
       }
 
-      // Iniciar build EXE
-      await handleBuildExe();
+      setBuildProgress({ 
+        currentStep: 'compiling', 
+        status: 'active', 
+        message: 'Gerando instalador portátil...' 
+      });
+
+      const { data, error } = await supabase.functions.invoke('generate-portable-installer', {
+        body: {
+          agent_name: agentName.trim(),
+          enrollment_key: enrollmentKey
+        }
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Falha ao gerar instalador');
+
+      setExeDownloadUrl(data.download_url);
+      setExeSha256(data.sha256_hash);
+      setExeFileSize(data.file_size_bytes);
+      setExeBuildStatus('completed');
+      setBuildProgress({ 
+        currentStep: 'completed', 
+        status: 'completed', 
+        message: 'Instalador pronto para download!' 
+      });
+
+      toast.success('✅ Instalador portátil gerado com sucesso!');
+
     } catch (error: any) {
-      logger.error('[Build] Erro ao gerar instalador', error);
+      logger.error('[Portable] Erro ao gerar instalador', error);
       toast.error(`Erro: ${error.message}`);
-      setExeBuildStatus('idle');
+      setExeBuildStatus('failed');
       setBuildProgress({ 
         currentStep: 'preparing', 
         status: 'error', 
         message: error.message || 'Erro desconhecido' 
       });
     }
+  };
+
+  // FASE 2.1: Gerar credenciais + build EXE em um clique (legacy GitHub)
+  const handleGenerateExeDirectly = async () => {
+    // Usar o novo portable installer por padrão
+    await handleGeneratePortableInstaller();
   };
 
   const handleBuildExe = async () => {
