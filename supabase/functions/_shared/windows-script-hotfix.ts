@@ -829,7 +829,7 @@ try {
     }
 } catch { <# CNG cleanup is best-effort #> }
 `;
-    const updated30 = content.replace(startupRegex, cngCleanupBlock + '$1');
+    const updated30 = content.replace(startupRegex, (_match: string, p1: string) => cngCleanupBlock + p1);
     if (updated30 !== content) {
       content = updated30;
       reasons.push('cng_startup_container_cleanup');
