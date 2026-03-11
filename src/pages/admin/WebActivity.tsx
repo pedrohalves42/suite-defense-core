@@ -227,8 +227,10 @@ export default function WebActivity() {
       return;
     }
     try {
-      const { jsPDF } = await import('jspdf');
-      const autoTable = (await import('jspdf-autotable')).default;
+      const jsPDFModule = await import('jspdf');
+      const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF;
+      const autoTableModule = await import('jspdf-autotable');
+      const autoTable = autoTableModule.default;
       
       const doc = new jsPDF('landscape', 'mm', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
