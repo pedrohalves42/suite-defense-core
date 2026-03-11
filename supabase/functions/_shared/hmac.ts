@@ -189,7 +189,19 @@ export async function verifyHmacSignature(
 
   // Cache de formato para reduzir tentativas e manter compatibilidade
   let cachedFormat: { key_encoding: string; separator: string; body_format: string } | null = null
+  let resolvedTenantId: string | null = context?.tenantId ?? null
+
   if (context?.agentId) {
+    // If caller did not pass tenantId, resolve it once from agents table
+    if (!resolvedTenantId) {
+      const { data: agentRow } = await supabase
+        .from('agents')
+        .select('tenant_id')
+        .eq('id', context.agentId)
+        .maybeSingle()
+      resolvedTenantId = agentRow?.tenant_id ?? null
+    }
+
     const { data: cache } = await supabase
       .from('agent_hmac_format_cache')
       .select('key_encoding, separator, body_format')
@@ -260,10 +272,11 @@ export async function verifyHmacSignature(
               })
             }
 
-            if (context?.agentId) {
+            if (context?.agentId && resolvedTenantId) {
               supabase.from('agent_hmac_format_cache').upsert(
                 {
                   agent_id: context.agentId,
+                  tenant_id: resolvedTenantId,
                   key_encoding: keyVariant.name,
                   separator: variant.sep,
                   body_format: variant.fmt,
