@@ -126,6 +126,7 @@ export function useAgentGroups() {
 }
 
 export function useAgentGroupMembers(groupId: string | null) {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   // Fetch members of a group with agent details

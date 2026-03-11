@@ -66,8 +66,8 @@ export default function AgentGroups() {
     const newGroup = await createGroup.mutateAsync({ name: groupName, description: groupDescription || undefined });
     // If agents were selected, add them to the new group
     if (createSelectedAgentIds.length > 0 && newGroup?.id) {
-      const { tenant } = await import('@/hooks/useTenant').then(() => ({ tenant: newGroup }));
-      const inserts = createSelectedAgentIds.map(agent_id => ({ agent_id, group_id: newGroup.id, tenant_id: newGroup.tenant_id }));
+      const tenantId = (newGroup as any).tenant_id;
+      const inserts = createSelectedAgentIds.map(agent_id => ({ agent_id, group_id: newGroup.id, tenant_id: tenantId }));
       await supabase.from('agents_groups').insert(inserts);
     }
     setGroupName('');

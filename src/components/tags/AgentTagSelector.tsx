@@ -24,7 +24,7 @@ export const AgentTagSelector = ({ agentId }: AgentTagSelectorProps) => {
     if (assignedTagIds.has(tagId)) {
       await removeTag.mutateAsync({ agentId, tagId });
     } else {
-      await assignTag.mutateAsync({ agentId, tagId });
+      await assignTag.mutateAsync({ agentId, tagId, tenantId: tenant?.id ?? '' });
     }
   };
 
