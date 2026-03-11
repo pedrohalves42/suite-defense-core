@@ -160,11 +160,11 @@ export const LANDING_CONTENT = {
       {
         id: "starter",
         name: "Starter Compliance",
-        price: 249,
+        price: 499,
         period: "/mês",
         baseDevices: 10,
         maxDevices: 50,
-        pricePerExtra: 29,
+        pricePerExtra: 39,
         description: "Compliance básico para PMEs em crescimento",
         features: [
           "Monitoramento em tempo real",
