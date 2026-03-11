@@ -139,7 +139,7 @@ export default function Dashboard() {
   const hasAgentData = agentsFetched && agents && agents.length > 0;
   const totalAgents = hasAgentData ? agents.length : 0;
   const onlineAgents = hasAgentData 
-    ? agents.filter((a: any) => a.health_status === 'healthy' || a.health_status === 'critical').length 
+    ? agents.filter((a: any) => a.health_status === 'healthy' || a.health_status === 'warning' || a.health_status === 'critical').length 
     : 0;
   const offlineAgents = hasAgentData 
     ? agents.filter((a: any) => a.health_status === 'offline' || a.health_status === 'never_connected').length 

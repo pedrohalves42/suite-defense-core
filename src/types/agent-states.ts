@@ -125,8 +125,8 @@ export function getDetailedAgentStatus(agent: {
     return 'online';
   }
 
-  // Stale heartbeat (ONLINE to WARNING threshold)
-  if (minutesSinceHeartbeat < AGENT_STATUS_THRESHOLDS.WARNING_MAX_MINUTES) {
+  // Stale heartbeat (between ONLINE and OFFLINE thresholds)
+  if (minutesSinceHeartbeat < AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES) {
     return 'stale_heartbeat';
   }
 
