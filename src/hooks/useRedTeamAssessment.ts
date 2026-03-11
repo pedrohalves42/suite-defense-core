@@ -87,7 +87,8 @@ export function useRedTeamById(id: string | null) {
 }
 
 export function useLatestRedTeam() {
-  const activeTenantId = localStorage.getItem('cybershield_active_tenant_id');
+  const { activeTenant } = useActiveTenant();
+  const activeTenantId = activeTenant?.id ?? null;
 
   return useQuery({
     queryKey: ['red-team-latest', activeTenantId],

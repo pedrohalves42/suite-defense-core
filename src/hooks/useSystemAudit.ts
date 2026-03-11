@@ -143,7 +143,8 @@ export function useRunAudit() {
 
 // Get latest audit (filtered by active tenant)
 export function useLatestAudit() {
-  const activeTenantId = localStorage.getItem('cybershield_active_tenant_id');
+  const { activeTenant } = useActiveTenant();
+  const activeTenantId = activeTenant?.id ?? null;
 
   return useQuery({
     queryKey: ['system-audits', 'latest', activeTenantId],
