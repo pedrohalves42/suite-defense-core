@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 interface Agent {
   id: string;
   agent_name: string;
-  health_status: 'healthy' | 'critical' | 'offline' | 'never_connected';
+  health_status: 'healthy' | 'warning' | 'critical' | 'offline' | 'never_connected';
 }
 
 interface SimpleAgentListProps {
@@ -56,7 +56,7 @@ export function SimpleAgentList({ agents, isLoading, onAgentClick }: SimpleAgent
   }
 
   const healthy = agents.filter(a => a.health_status === 'healthy');
-  const problems = agents.filter(a => a.health_status === 'critical');
+  const problems = agents.filter(a => a.health_status === 'warning' || a.health_status === 'critical');
   const offline = agents.filter(a => a.health_status === 'offline' || a.health_status === 'never_connected');
 
   const getStatusConfig = (status: Agent['health_status']) => {
@@ -68,6 +68,7 @@ export function SimpleAgentList({ agents, isLoading, onAgentClick }: SimpleAgent
           color: 'text-green-600',
           bgColor: 'bg-green-50 dark:bg-green-950/30',
         };
+      case 'warning':
       case 'critical':
         return {
           icon: AlertTriangle,
@@ -238,6 +239,7 @@ function SimpleAgentItem({
     switch (status) {
       case 'healthy':
         return { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-950/30' };
+      case 'warning':
       case 'critical':
         return { icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-950/30' };
       default:

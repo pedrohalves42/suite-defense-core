@@ -1,5 +1,5 @@
 // Utility functions for agent display names and formatting
-import { AGENT_STATUS_THRESHOLDS } from './agent-status-constants';
+import { getAgentOnlineStatus } from './agent-status-constants';
 
 /**
  * Get a user-friendly display name for an agent
@@ -25,37 +25,35 @@ export function getAgentDisplayName(agent: {
 
 /**
  * Get status display info for agent
- * Usa thresholds centralizados de AGENT_STATUS_THRESHOLDS
+ * Usa cálculo centralizado de status
  */
 export function getAgentStatusInfo(agent: {
   status?: string;
   last_heartbeat?: string | null;
+  agent_state?: string | null;
 }): {
   label: string;
   variant: 'default' | 'secondary' | 'destructive' | 'outline';
   isOnline: boolean;
 } {
-  const now = new Date();
-  const lastHeartbeat = agent.last_heartbeat ? new Date(agent.last_heartbeat) : null;
-  const onlineThreshold = new Date(now.getTime() - AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES * 60 * 1000);
-  const warningThreshold = new Date(now.getTime() - AGENT_STATUS_THRESHOLDS.WARNING_MAX_MINUTES * 60 * 1000);
-  const offlineThreshold = new Date(now.getTime() - AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES * 60 * 1000);
-  
-  if (!lastHeartbeat) {
-    return { label: 'Nunca Conectou', variant: 'outline', isOnline: false };
-  }
-  
-  // Online: menos de 2 minutos
-  if (lastHeartbeat > onlineThreshold) {
+  const calculatedStatus = getAgentOnlineStatus({
+    status: agent.status,
+    last_heartbeat: agent.last_heartbeat,
+    agent_state: agent.agent_state ?? undefined,
+  });
+
+  if (calculatedStatus === 'online') {
     return { label: 'Online', variant: 'default', isOnline: true };
   }
-  
-  // Warning/Intermitente: entre 2 e 5 minutos
-  if (lastHeartbeat > warningThreshold) {
-    return { label: 'Intermitente', variant: 'secondary', isOnline: false };
+
+  if (calculatedStatus === 'warning') {
+    return { label: 'Atenção', variant: 'secondary', isOnline: true };
   }
-  
-  // Offline: mais de 10 minutos (antes era 5)
+
+  if (calculatedStatus === 'never_connected') {
+    return { label: 'Nunca Conectou', variant: 'outline', isOnline: false };
+  }
+
   return { label: 'Offline', variant: 'destructive', isOnline: false };
 }
 

@@ -16,30 +16,30 @@ export const AGENT_STATUS_THRESHOLDS = {
   // ========================================
   // Thresholds de Tempo Real (UI)
   // ========================================
-  
-  /** Até X minutos desde o último heartbeat = Online (verde) - COST-OPT v4: ajustado para heartbeat de 10min */
+
+  /** Até X minutos desde o último heartbeat = Online (verde) */
   ONLINE_MAX_MINUTES: 12,
-  
-  /** Entre ONLINE e WARNING = Intermitente (amarelo) */
-  WARNING_MAX_MINUTES: 20,
-  
+
+  /** Entre ONLINE e OFFLINE = Intermitente/Atenção (amarelo) */
+  WARNING_MAX_MINUTES: 30,
+
   /** Mais de X minutos sem heartbeat = Offline (vermelho) */
   OFFLINE_MIN_MINUTES: 30,
-  
+
   // ========================================
   // Thresholds de Alertas de Segurança
   // ========================================
-  
+
   /** Após X horas sem heartbeat = Alerta de segurança (usado em SecurityMonitoring) */
   OFFLINE_ALERT_HOURS: 1,
-  
+
   /** Após X horas sem heartbeat = Problema silencioso (usado em detecção de issues) */
   SILENT_PROBLEM_HOURS: 48,
-  
+
   // ========================================
   // Cache e Performance
   // ========================================
-  
+
   /** TTL de cache de status em segundos */
   CACHE_TTL_SECONDS: 30,
 } as const;
@@ -70,12 +70,11 @@ export type AgentStatusLabel = keyof typeof AGENT_STATUS_LABELS;
 
 /**
  * Determina se o agente está online baseado no heartbeat.
- * USA OS THRESHOLDS CENTRALIZADOS - não hardcode 5*60*1000 em outros arquivos!
+ * Considera WARNING como online (conectado, porém com atenção).
  */
 export function isAgentOnline(lastHeartbeat: string | null | undefined): boolean {
-  if (!lastHeartbeat) return false;
-  const elapsed = Date.now() - new Date(lastHeartbeat).getTime();
-  return elapsed < AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES * 60 * 1000;
+  const status = getAgentOnlineStatus({ last_heartbeat: lastHeartbeat });
+  return status === 'online' || status === 'warning';
 }
 
 /**
@@ -108,11 +107,13 @@ export function getAgentOnlineStatus(
 
   // 2. Fallback para cálculo por heartbeat
   if (!agent.last_heartbeat) return 'never_connected';
+
   const minutesSince = (Date.now() - new Date(agent.last_heartbeat).getTime()) / (1000 * 60);
-  if (minutesSince < AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES) return 'online';
-  if (minutesSince < AGENT_STATUS_THRESHOLDS.WARNING_MAX_MINUTES) return 'warning';
+
+  if (minutesSince <= AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES) return 'online';
+  if (minutesSince <= AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES) return 'warning';
   return 'offline';
 }
 
-/** Milliseconds for offline threshold - use in place of hardcoded 5*60*1000 */
+/** Milliseconds for offline threshold - use in place of hardcoded values */
 export const OFFLINE_THRESHOLD_MS = AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES * 60 * 1000;

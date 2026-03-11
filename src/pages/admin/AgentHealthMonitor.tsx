@@ -8,7 +8,7 @@ import { Activity, AlertCircle, Server, Clock, CheckCircle, Wifi, WifiOff, Shiel
 import { getOsDisplayName } from "@/lib/os-utils";
 import { toast } from "sonner";
 import { ErrorState } from "@/components/ErrorState";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -47,6 +47,7 @@ export default function AgentHealthMonitor() {
   
   // Simple Mode - visualização simplificada
   const { isSimple } = useSimpleModeContext();
+  const queryClient = useQueryClient();
 
   // Fetch agent health metrics using RPC
   // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
@@ -81,6 +82,7 @@ export default function AgentHealthMonitor() {
           const agentName = payload.new.agent_name;
           setLiveHeartbeats(prev => prev + 1);
           setRecentHeartbeats(prev => [agentName, ...prev.slice(0, 4)]);
+          queryClient.invalidateQueries({ queryKey: ['agent-health', tenant.id] });
           
           toast.success(`✓ ${agentName} conectado`, { duration: 2000 });
         }
@@ -90,7 +92,7 @@ export default function AgentHealthMonitor() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [tenant?.id]);
+  }, [tenant?.id, queryClient]);
 
   // Calculate health counts from real data - MUST be before conditional returns
   const counts = useMemo(() => agentsHealth.reduce(
@@ -179,7 +181,7 @@ export default function AgentHealthMonitor() {
           agents={agentsHealth.map(a => ({
             id: a.id || '',
             agent_name: a.agent_name || 'Computador',
-            health_status: a.health_status as 'healthy' | 'critical' | 'offline' | 'never_connected',
+            health_status: a.health_status as 'healthy' | 'warning' | 'critical' | 'offline' | 'never_connected',
           }))}
           isLoading={isLoading}
           onAgentClick={(agent) => tenant?.id && setSelectedAgent({
@@ -402,7 +404,7 @@ export default function AgentHealthMonitor() {
           ) : (
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {filteredAgents.map((agent, idx) => {
-                const isOnline = agent.health_status === 'healthy' || agent.health_status === 'critical';
+                const isOnline = agent.health_status === 'healthy' || agent.health_status === 'warning' || agent.health_status === 'critical';
                 const hasSpecialStatus = agent.is_throttled || agent.is_isolated || agent.is_in_safe_mode;
                 const agentMetrics = agent.id ? systemMetrics[agent.id] : undefined;
                 const agentDisks = agent.id ? diskMetrics[agent.id] : undefined;
