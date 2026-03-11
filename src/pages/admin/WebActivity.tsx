@@ -190,7 +190,91 @@ export default function WebActivity() {
     }
   });
 
-  return (
+  const handleExportCSV = () => {
+    if (!filteredActivity.length) {
+      toast.error('Nenhum dado para exportar');
+      return;
+    }
+    try {
+      exportToCSV(
+        filteredActivity.map(item => ({
+          domain: item.domain,
+          category: item.category?.name || 'Desconhecido',
+          hits: item.hits,
+          first_seen: formatBrazilDateTime(item.first_seen_at),
+          last_seen: formatBrazilDateTime(item.last_seen_at),
+          status: item.isBlocked ? 'Bloqueado' : 'Permitido',
+        })),
+        'relatorio-web-activity',
+        [
+          { key: 'domain', label: 'Domínio' },
+          { key: 'category', label: 'Categoria' },
+          { key: 'hits', label: 'Acessos' },
+          { key: 'first_seen', label: 'Primeiro Acesso' },
+          { key: 'last_seen', label: 'Último Acesso' },
+          { key: 'status', label: 'Status' },
+        ]
+      );
+      toast.success('Relatório CSV exportado com sucesso');
+    } catch (err) {
+      toast.error('Erro ao exportar CSV');
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (!filteredActivity.length) {
+      toast.error('Nenhum dado para exportar');
+      return;
+    }
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      
+      const doc = new jsPDF('landscape', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const logoDataUrl = await loadLogoForPDF();
+
+      // Header
+      addLogoToPDF(doc, logoDataUrl, pageWidth / 2, 8, 16);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Relatório de Atividade Web', pageWidth / 2, 32, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Gerado em: ${formatBrazilDateTime(new Date().toISOString())}`, pageWidth / 2, 39, { align: 'center' });
+      doc.text(`Total: ${filteredActivity.length} domínios | ${totalHits} acessos | ${blockedCount} bloqueados`, pageWidth / 2, 45, { align: 'center' });
+
+      // Table
+      autoTable(doc, {
+        startY: 52,
+        head: [['Domínio', 'Categoria', 'Acessos', 'Primeiro Acesso', 'Último Acesso', 'Status']],
+        body: filteredActivity.map(item => [
+          item.domain,
+          item.category?.name || 'Desconhecido',
+          String(item.hits),
+          formatBrazilDateTime(item.first_seen_at),
+          formatBrazilDateTime(item.last_seen_at),
+          item.isBlocked ? 'Bloqueado' : 'Permitido',
+        ]),
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [241, 245, 249] },
+        columnStyles: {
+          0: { cellWidth: 60 },
+          2: { halign: 'center', cellWidth: 20 },
+          5: { cellWidth: 25 },
+        },
+      });
+
+      doc.save(`relatorio-web-activity-${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success('Relatório PDF exportado com sucesso');
+    } catch (err) {
+      console.error('PDF export error:', err);
+      toast.error('Erro ao exportar PDF');
+    }
+  };
+
     <AdminPageLayout
       title="Atividade Web"
       description="Visualize e gerencie domínios acessados pelos agentes"
