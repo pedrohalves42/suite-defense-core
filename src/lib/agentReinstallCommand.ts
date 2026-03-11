@@ -66,7 +66,7 @@ export function buildAgentReinstallCommand({
     "    Write-Host ('Falha ao baixar script em ' + $baseUrl + ': ' + $lastErr) -ForegroundColor Yellow;",
     '  }',
     '}',
-    '  $effectiveServerUrl = if ($resolvedBaseUrl) { $resolvedBaseUrl } else { $serverUrl };',
+    'if ($scriptContent) {',
     '  $effectiveServerUrl = if ($resolvedBaseUrl) { $resolvedBaseUrl } else { $serverUrl };',
     '  $scriptPath = "$dir\\cybershield-agent-$agentName.ps1";',
     '  [System.IO.File]::WriteAllText($scriptPath, $scriptContent, [System.Text.UTF8Encoding]::new($true));',
