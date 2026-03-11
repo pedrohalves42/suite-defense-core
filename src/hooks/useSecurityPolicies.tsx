@@ -213,7 +213,7 @@ export const useAgentGroupPolicies = () => {
   });
 
   const assignPolicy = useMutation({
-    mutationFn: async ({ group_id, policy_id }: { group_id: string; policy_id: string }) => {
+    mutationFn: async ({ group_id, policy_id, tenant_id }: { group_id: string; policy_id: string; tenant_id: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       
       const { data, error } = await supabase
@@ -222,6 +222,7 @@ export const useAgentGroupPolicies = () => {
           group_id,
           policy_id,
           assigned_by: user?.id,
+          tenant_id,
         })
         .select()
         .single();

@@ -158,7 +158,8 @@ export function useAgentGroupMembers(groupId: string | null) {
   const addAgents = useMutation({
     mutationFn: async (agentIds: string[]) => {
       if (!groupId) throw new Error('Group not selected');
-      const inserts = agentIds.map(agent_id => ({ agent_id, group_id: groupId }));
+      if (!tenant?.id) throw new Error('Tenant not selected');
+      const inserts = agentIds.map(agent_id => ({ agent_id, group_id: groupId, tenant_id: tenant.id }));
       const { error } = await supabase.from('agents_groups').insert(inserts);
       if (error) throw error;
     },
