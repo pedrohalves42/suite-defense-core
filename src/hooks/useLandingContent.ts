@@ -151,8 +151,8 @@ export function useLandingContent() {
       subtitle: t('landing.pricing.subtitle'),
       plans: [
         {
-          id: "starter", name: t('landing.pricing.plans.starter.name'), price: 249, period: t('landing.pricing.perMonth'),
-          baseDevices: 10, maxDevices: 50, pricePerExtra: 29,
+          id: "starter", name: t('landing.pricing.plans.starter.name'), price: 499, period: t('landing.pricing.perMonth'),
+          baseDevices: 10, maxDevices: 50, pricePerExtra: 39,
           description: t('landing.pricing.plans.starter.description'),
           features: Array.from({ length: 6 }, (_, i) => t(`landing.pricing.plans.starter.features.${i}`)),
           cta: t('landing.pricing.plans.starter.cta'), highlighted: false,
