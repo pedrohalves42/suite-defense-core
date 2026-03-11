@@ -15,6 +15,7 @@ export const AgentTagSelector = ({ agentId }: AgentTagSelectorProps) => {
   const { data: assignments } = useAgentTagAssignments(agentId);
   const assignTag = useAssignTag();
   const removeTag = useRemoveTagAssignment();
+  const { tenant } = useTenant();
   const [open, setOpen] = useState(false);
 
   const assignedTagIds = new Set(assignments?.map((a: any) => a.tag_id) || []);
