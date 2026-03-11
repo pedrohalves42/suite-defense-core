@@ -33,7 +33,10 @@ import {
   RefreshCw,
   ShieldX,
   BarChart3,
-  Users
+  Users,
+  Download,
+  FileText,
+  FileSpreadsheet
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatBrazilDateTime } from '@/lib/date-utils';
