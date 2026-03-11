@@ -368,26 +368,29 @@
       "extraDevice": "por dispositivo extra"
     },
     "testimonials": {
-      "title": "Lo Que Dicen Nuestros Clientes",
-      "subtitle": "Resultados reales de empresas como la suya",
+      "title": "Resultados Comprobados por PYMEs Brasileñas",
+      "subtitle": "Vea lo que gestores como usted descubrieron en los primeros 7 días",
       "items": {
         "0": {
-          "quote": "Pensábamos que todo estaba bien. En dos días surgieron problemas que nunca habían sido detectados. No fue cómodo de ver, pero evitamos algo mucho peor.",
+          "quote": "En el segundo día el diagnóstico encontró 12 vulnerabilidades críticas que nuestro antivirus no detectaba. Dos estaban en máquinas del financiero. Si un ransomware entrara ahí, la fábrica pararía. Hoy recibo alertas antes de que el problema se vuelva pérdida.",
           "name": "Roberto Costa",
-          "role": "Director de TI • Industria",
-          "devices": "65 computadoras monitoreadas"
+          "role": "Director de TI • Metalúrgica Costamed (SP)",
+          "devices": "65 endpoints • Plan Business",
+          "metric": "12 amenazas bloqueadas en la 1ª semana"
         },
         "1": {
-          "quote": "Lo instalamos pensando solo en antivirus. Descubrimos que 3 máquinas de producción estaban expuestas sin que nadie lo supiera. Lo resolvimos antes de que se convirtiera en incidente.",
-          "name": "Ana Silva",
-          "role": "Gerente de Seguridad • Retail",
-          "devices": "120 computadoras protegidas"
+          "quote": "Nuestro ERP corre en 3 máquinas que nunca habían sido auditadas. CyberShield mostró que tenían RDP abierto a internet. Cerramos la brecha en 20 minutos por el panel. Si no fuera por eso, era cuestión de tiempo.",
+          "name": "Ana Carolina Souza",
+          "role": "Gerente de TI • Red FarmaVida (MG) — 14 tiendas",
+          "devices": "120 endpoints • Plan Enterprise",
+          "metric": "3 brechas críticas cerradas en 20min"
         },
         "2": {
-          "quote": "El soporte es rápido y directo — sin rodeos técnicos. Cuando tuve una duda sobre cumplimiento, me enviaron un informe listo.",
-          "name": "Marcos Ferreira",
-          "role": "CEO • Startup SaaS",
-          "devices": "28 computadoras protegidas"
+          "quote": "Necesitaba probar al inversor que estábamos en conformidad con la LGPD. En 48h CyberShield generó un informe completo con score de 97%. El inversor quedó impresionado. Cerramos la ronda una semana después.",
+          "name": "Marcos Ferreira Lima",
+          "role": "CTO • Fintech Pagou.ai (RJ) — Ronda Seed",
+          "devices": "28 endpoints • Plan Starter",
+          "metric": "Informe LGPD generado en 48h"
         }
       }
     },

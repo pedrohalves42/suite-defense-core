@@ -177,9 +177,9 @@ export function useLandingContent() {
       title: t('landing.testimonials.title'),
       subtitle: t('landing.testimonials.subtitle'),
       items: [
-        { quote: t('landing.testimonials.items.0.quote'), name: t('landing.testimonials.items.0.name'), role: t('landing.testimonials.items.0.role'), devices: t('landing.testimonials.items.0.devices'), initials: "RC" },
-        { quote: t('landing.testimonials.items.1.quote'), name: t('landing.testimonials.items.1.name'), role: t('landing.testimonials.items.1.role'), devices: t('landing.testimonials.items.1.devices'), initials: "AS" },
-        { quote: t('landing.testimonials.items.2.quote'), name: t('landing.testimonials.items.2.name'), role: t('landing.testimonials.items.2.role'), devices: t('landing.testimonials.items.2.devices'), initials: "MF" },
+        { quote: t('landing.testimonials.items.0.quote'), name: t('landing.testimonials.items.0.name'), role: t('landing.testimonials.items.0.role'), devices: t('landing.testimonials.items.0.devices'), metric: t('landing.testimonials.items.0.metric'), initials: "RC" },
+        { quote: t('landing.testimonials.items.1.quote'), name: t('landing.testimonials.items.1.name'), role: t('landing.testimonials.items.1.role'), devices: t('landing.testimonials.items.1.devices'), metric: t('landing.testimonials.items.1.metric'), initials: "ACS" },
+        { quote: t('landing.testimonials.items.2.quote'), name: t('landing.testimonials.items.2.name'), role: t('landing.testimonials.items.2.role'), devices: t('landing.testimonials.items.2.devices'), metric: t('landing.testimonials.items.2.metric'), initials: "MF" },
       ],
     },
     faq: {
