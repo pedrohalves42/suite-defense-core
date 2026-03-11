@@ -374,21 +374,21 @@
         "0": {
           "quote": "No segundo dia o diagnóstico achou 12 vulnerabilidades críticas que nosso antivírus não pegava. Duas estavam em máquinas do financeiro. Se um ransomware entrasse ali, a fábrica parava. Hoje recebo alerta antes do problema virar prejuízo.",
           "name": "Roberto Costa",
-          "role": "Diretor de TI • Metalúrgica Costamed (SP)",
+          "role": "Diretor de TI • Indústria Metalúrgica (SP)",
           "devices": "65 endpoints • Plano Business",
           "metric": "12 ameaças bloqueadas na 1ª semana"
         },
         "1": {
           "quote": "Nosso ERP roda em 3 máquinas que nunca tinham sido auditadas. O CyberShield mostrou que estavam com RDP aberto pra internet. Fechamos a brecha em 20 minutos pelo painel. Se não fosse isso, era questão de tempo até invadirem.",
           "name": "Ana Carolina Souza",
-          "role": "Gerente de TI • Rede FarmaVida (MG) — 14 lojas",
+          "role": "Gerente de TI • Rede de Farmácias (MG) — 14 lojas",
           "devices": "120 endpoints • Plano Enterprise",
           "metric": "3 brechas críticas fechadas em 20min"
         },
         "2": {
           "quote": "Precisava provar pro investidor que estávamos em conformidade com a LGPD. Em 48h o CyberShield gerou um relatório completo com score de 97%. O investidor ficou impressionado. Fechamos a rodada uma semana depois.",
           "name": "Marcos Ferreira Lima",
-          "role": "CTO • Fintech Pagou.ai (RJ) — Série Seed",
+          "role": "CTO • Fintech (RJ) — Série Seed",
           "devices": "28 endpoints • Plano Starter",
           "metric": "Relatório LGPD gerado em 48h"
         }
