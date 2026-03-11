@@ -23,21 +23,19 @@ export default function SecurityBenchmark() {
     },
   });
 
-  // Get tenant's own score from compliance data
+  // Get tenant's own score via RPC or fallback
   const { data: tenantScore } = useQuery({
     queryKey: ["tenant-compliance-score", tenant?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("compliance_scores")
-        .select("overall_score, grade, calculated_at, category_scores")
-        .eq("tenant_id", tenant!.id)
-        .order("calculated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
+      // Try to get from compliance calculation edge function
+      const { data, error } = await supabase.functions.invoke("calculate-compliance", {
+        body: { tenant_id: tenant!.id },
+      });
+      if (error) return { overall_score: 0, grade: "N/A" };
+      return data as { overall_score: number; grade: string };
     },
     enabled: !!tenant?.id,
+    staleTime: 5 * 60 * 1000,
   });
 
   const latestBenchmark = benchmarks[0];

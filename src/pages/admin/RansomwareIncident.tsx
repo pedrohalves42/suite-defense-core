@@ -13,10 +13,10 @@ export default function RansomwareIncident() {
     queryKey: ["ransomware-alerts", tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("security_alerts")
+        .from("system_alerts")
         .select("*")
         .eq("tenant_id", tenant!.id)
-        .eq("alert_type", "ransomware_detected")
+        .ilike("alert_type", "%ransomware%")
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
