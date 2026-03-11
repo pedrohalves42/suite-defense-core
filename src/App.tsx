@@ -331,6 +331,7 @@ const App = () => (
                 <Route path="risk-analysis" element={<RiskAnalysis />} />
                 <Route path="rollout-policies" element={<RolloutPolicies />} />
                 <Route path="tenant-suspension" element={<TenantSuspensionManager />} />
+                <Route path="cash-flow" element={<CashFlow />} />
               </Route>
 
               {/* Client Routes (Viewers/Operators) */}
