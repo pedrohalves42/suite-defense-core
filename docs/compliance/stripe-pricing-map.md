@@ -18,12 +18,16 @@ CyberShield V4 pricing structure with B2B-only focus, device addons, and MSP vol
 
 ### Stripe Price IDs
 
-| Description | Price ID | Product ID |
-|-------------|----------|------------|
-| Starter Compliance (base) | `price_1Sj531FeHfNScQDP8kMvWUpP` | `prod_TgRwgJlh0NC2mI` |
-| Business (base) | `price_1T9lV8FeHfNScQDPfQJhglVa` | `prod_U81YkX1Yl5sjcV` |
-| Starter Device Addon | `price_1Sj53iFeHfNScQDPS7pve80k` | `prod_TgRxLbexC5TDBS` |
-| Business Device Addon | `price_1Sj542FeHfNScQDPpgdjaKx1` | `prod_TgRxsLyISsc36X` |
+| Description | Price ID | Product ID | Intervalo |
+|-------------|----------|------------|-----------|
+| Starter Compliance (mensal) | `price_1T9ltDFeHfNScQDPDCs2evWV` | `prod_U81x6fHQIeM2B8` | Mensal |
+| Starter Compliance (semestral) | `price_1T9ltFFeHfNScQDPeRUkIwPy` | `prod_U81x5Z106W0Pl4` | Semestral |
+| Starter Compliance (anual) | `price_1T9ltGFeHfNScQDPF824aEpL` | `prod_U81xt5IIkzkAS8` | Anual |
+| Business (mensal) | `price_1T9lV8FeHfNScQDPfQJhglVa` | `prod_U81YkX1Yl5sjcV` | Mensal |
+| Business (semestral) | `price_1T9ltIFeHfNScQDPJUHs3Jmt` | `prod_U81xJiwcNhif30` | Semestral |
+| Business (anual) | `price_1T9ltJFeHfNScQDPplay00VK` | `prod_U81xa1XgLZIgzg` | Anual |
+| Starter Device Addon | `price_1Sj53iFeHfNScQDPS7pve80k` | `prod_TgRxLbexC5TDBS` | Mensal |
+| Business Device Addon | `price_1Sj542FeHfNScQDPpgdjaKx1` | `prod_TgRxsLyISsc36X` | Mensal |
 
 ### MSP Coupons (Volume Discounts)
 
