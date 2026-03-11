@@ -429,7 +429,7 @@ Deno.serve(async (req) => {
     if (isLegacyAgent) {
       logger.info('COMPAT: Returning flat array for legacy agent', {
         agentName: agent.agent_name,
-        agentVersion: agentVersionStr,
+        agentVersion: agentVersionForCompat,
         jobCount: jobsResponse.length,
       })
       // PROTEÇÃO: Para agentes legacy, entregar APENAS jobs de recuperação
