@@ -113,6 +113,20 @@ serve(async (req) => {
 
     console.log(`[sync-blocked-websites] Creating jobs for ${agents.length} online agents`);
 
+    // Cancel any existing pending/queued/delivered sync jobs for these agents to avoid dedup constraint
+    const agentIds = agents.map(a => a.id);
+    const { error: cancelError } = await supabase
+      .from('jobs')
+      .update({ status: 'cancelled', error_message: 'Superseded by new sync request' })
+      .eq('type', 'sync_blocked_websites')
+      .eq('tenant_id', tenantId)
+      .in('agent_id', agentIds)
+      .in('status', ['pending', 'queued', 'delivered']);
+
+    if (cancelError) {
+      console.warn('[sync-blocked-websites] Error cancelling old jobs:', cancelError);
+    }
+
     // Create sync_blocked_websites job for each online agent
     const jobsToCreate = agents.map(agent => ({
       agent_id: agent.id,
@@ -125,8 +139,8 @@ serve(async (req) => {
       payload: {
         blocked_domains: blockedDomains,
         action: 'sync',
-        apply_to_hosts: true,  // CRITICAL: Enable actual hosts file blocking
-        flush_dns: true,       // Ensure DNS cache is cleared after blocking
+        apply_to_hosts: true,
+        flush_dns: true,
         timestamp: new Date().toISOString()
       }
     }));
