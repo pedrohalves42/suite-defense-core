@@ -73,11 +73,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Buscar alertas nao reconhecidos
+    // Buscar alertas pendentes (não resolvidos E não reconhecidos)
     const { data: recentAlerts, error: alertsError } = await supabase
       .from('system_alerts')
       .select('*')
       .eq('tenant_id', tenantId)
+      .eq('resolved', false)
       .eq('acknowledged', false)
       .order('created_at', { ascending: false })
       .limit(50);
