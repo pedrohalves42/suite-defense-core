@@ -82,6 +82,7 @@ export default function AgentHealthMonitor() {
           const agentName = payload.new.agent_name;
           setLiveHeartbeats(prev => prev + 1);
           setRecentHeartbeats(prev => [agentName, ...prev.slice(0, 4)]);
+          queryClient.invalidateQueries({ queryKey: ['agent-health', tenant.id] });
           
           toast.success(`✓ ${agentName} conectado`, { duration: 2000 });
         }
