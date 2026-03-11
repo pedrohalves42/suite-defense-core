@@ -200,7 +200,7 @@ export function UpgradeModal({
           {/* Preço e CTA */}
           <div className="text-center space-y-4">
             <div>
-              <span className="text-3xl font-bold">R$ 599</span>
+              <span className="text-3xl font-bold">R$ 899</span>
               <span className="text-muted-foreground">/mês</span>
             </div>
             <p className="text-sm text-muted-foreground">
