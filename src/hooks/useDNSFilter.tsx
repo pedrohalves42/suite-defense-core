@@ -35,6 +35,44 @@ export function useDNSFilter() {
   const queryClient = useQueryClient();
   const { tenant } = useTenant();
 
+  type TenantAgent = {
+    id: string;
+    agent_name: string;
+    display_name: string | null;
+    last_heartbeat: string | null;
+    last_block_sync_at: string | null;
+    status: string | null;
+  };
+
+  const fetchTenantAgents = async (): Promise<TenantAgent[]> => {
+    if (!tenant?.id) return [];
+
+    // ADR-026: usar RPC com tenant explícito para evitar desync de JWT/tenant em views
+    const { data, error } = await supabase.rpc('get_agents_list', {
+      p_tenant_id: tenant.id,
+      p_include_archived: false,
+    });
+
+    if (error) {
+      console.error('[useDNSFilter] Error fetching tenant agents via RPC:', error);
+      throw error;
+    }
+
+    const agents = ((data ?? []) as any[])
+      .filter((agent) => agent?.id && agent?.agent_name)
+      .map((agent) => ({
+        id: agent.id as string,
+        agent_name: agent.agent_name as string,
+        display_name: (agent.display_name as string | null) ?? null,
+        last_heartbeat: (agent.last_heartbeat as string | null) ?? null,
+        last_block_sync_at: (agent.last_block_sync_at as string | null) ?? null,
+        status: (agent.status as string | null) ?? null,
+      }))
+      .sort((a, b) => a.agent_name.localeCompare(b.agent_name));
+
+    return agents;
+  };
+
   // Check if DNS Filter feature is enabled for tenant
   const { data: isEnabled, isLoading: isCheckingEnabled } = useQuery({
     queryKey: ['dns-filter-enabled', tenant?.id],
