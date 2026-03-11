@@ -47,6 +47,7 @@ export default function AgentHealthMonitor() {
   
   // Simple Mode - visualização simplificada
   const { isSimple } = useSimpleModeContext();
+  const queryClient = useQueryClient();
 
   // Fetch agent health metrics using RPC
   // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
