@@ -158,7 +158,7 @@ export function DashboardCharts({ jobs, virusScans, loading }: DashboardChartsPr
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? <p className="text-center text-muted-foreground py-8">Carregando...</p> :
+          {loading ? <ChartItemSkeleton /> :
            jobTypeData.length === 0 ? <EmptyChart icon={PieChart} text="Sem dados para exibir" /> : (() => {
             const maxVal = Math.max(...jobTypeData.map(d => d.value));
             return (
