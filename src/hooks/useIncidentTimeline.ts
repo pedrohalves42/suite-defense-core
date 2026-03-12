@@ -133,6 +133,7 @@ export function useReconstructTimeline() {
 }
 
 export function useUpdateIncidentStatus() {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   return useMutation({
