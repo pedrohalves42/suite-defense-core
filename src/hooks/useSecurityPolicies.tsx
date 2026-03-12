@@ -47,10 +47,13 @@ export const useSecurityPolicies = () => {
 
   const updatePolicy = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<SecurityPolicy> & { id: string }) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1032 FIX: Add tenant_id filter
       const { data, error } = await supabase
         .from('security_policies')
         .update(updates)
         .eq('id', id)
+        .eq('tenant_id', tenant.id)
         .select()
         .single();
       
@@ -68,10 +71,13 @@ export const useSecurityPolicies = () => {
 
   const deletePolicy = useMutation({
     mutationFn: async (id: string) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1032 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('security_policies')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenant.id);
       
       if (error) throw error;
     },
@@ -144,10 +150,13 @@ export const usePolicyRules = (policyId: string | null) => {
 
   const updateRule = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; is_enabled?: boolean; action?: string; target?: string }) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1032 FIX: Add tenant_id filter
       const { data, error } = await supabase
         .from('security_policy_rules')
         .update(updates)
         .eq('id', id)
+        .eq('tenant_id', tenant.id)
         .select()
         .single();
       
@@ -165,10 +174,13 @@ export const usePolicyRules = (policyId: string | null) => {
 
   const deleteRule = useMutation({
     mutationFn: async (id: string) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1032 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('security_policy_rules')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenant.id);
       
       if (error) throw error;
     },
@@ -243,10 +255,13 @@ export const useAgentGroupPolicies = () => {
 
   const unassignPolicy = useMutation({
     mutationFn: async (id: string) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1032 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('agent_group_policies')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenant.id);
       
       if (error) throw error;
     },

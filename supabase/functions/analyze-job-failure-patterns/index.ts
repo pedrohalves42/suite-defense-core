@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validateCallerTenant } from '../_shared/validate-caller-tenant.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,6 +36,17 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { tenant_id, hours_back = 24, threshold = 50 } = await req.json().catch(() => ({}));
+
+    // V-1042 FIX: Validate caller has access to requested tenant (if specified)
+    if (tenant_id) {
+      const validation = await validateCallerTenant(req, supabase, tenant_id);
+      if (!validation.authorized) {
+        return new Response(
+          JSON.stringify({ error: validation.error }),
+          { status: validation.statusCode || 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     console.log(`Analyzing job failure patterns for ${tenant_id || 'all tenants'}, last ${hours_back}h`);
 

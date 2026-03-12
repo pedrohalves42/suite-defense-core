@@ -133,6 +133,7 @@ export function useReconstructTimeline() {
 }
 
 export function useUpdateIncidentStatus() {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -158,10 +159,13 @@ export function useUpdateIncidentStatus() {
         updates.resolution = resolution;
       }
 
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1034 FIX: Add tenant_id filter
       const { data, error } = await supabase
         .from('incident_timelines')
         .update(updates)
         .eq('id', incidentId)
+        .eq('tenant_id', tenant.id)
         .select()
         .single();
 

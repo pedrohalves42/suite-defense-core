@@ -42,9 +42,11 @@ export const useIncidentGroups = (limit = 50) => {
       
       // Note: v_incident_groups aggregates cross-tenant data for super admins
       // RLS on base tables (failure_fingerprints, failure_occurrences) provides isolation
+      // V-1038 FIX: Add tenant_id filter to view
       const { data, error } = await supabase
         .from('v_incident_groups' as any)
         .select('*')
+        .eq('tenant_id', activeTenant.id)
         .limit(limit);
 
       if (error) throw error;

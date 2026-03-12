@@ -75,9 +75,12 @@ export function useDlqPendingAttention() {
   return useQuery({
     queryKey: ['dlq-pending-attention', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return [];
+      // V-1036 FIX: Add tenant filter to view query
       const { data, error } = await supabase
         .from('v_dlq_pending_attention')
         .select('*')
+        .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -89,10 +92,12 @@ export function useDlqPendingAttention() {
 }
 
 export function useResolveDlqItem() {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ dlqItemId, resolutionNotes, resolutionSource = 'human' }: ResolveDlqParams) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
       // 1. Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not authenticated');
@@ -112,7 +117,8 @@ export function useResolveDlqItem() {
           resolution_notes: resolutionNotes,
           resolution_source: resolutionSource,
         })
-        .eq('id', dlqItemId);
+        .eq('id', dlqItemId)
+        .eq('tenant_id', tenant.id); // V-1031 FIX: tenant isolation
 
       if (updateError) throw updateError;
 
@@ -132,14 +138,16 @@ export function useResolveDlqItem() {
 }
 
 export function useResolveDlqBatch() {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ dlqItemIds, resolutionNotes, resolutionSource = 'human' }: { 
+    mutationFn: async ({ dlqItemIds, resolutionNotes, resolutionSource = 'human' }: {
       dlqItemIds: string[]; 
       resolutionNotes: string;
       resolutionSource?: 'human' | 'system' | 'auto_cleanup';
     }) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
       // 1. Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not authenticated');
@@ -149,7 +157,7 @@ export function useResolveDlqBatch() {
         throw new Error('Notas de resolução são obrigatórias (mínimo 5 caracteres)');
       }
 
-      // 3. Update all items
+      // 3. Update all items - V-1031 FIX: tenant isolation
       const { error: updateError } = await supabase
         .from('failed_jobs_dlq')
         .update({
@@ -159,7 +167,8 @@ export function useResolveDlqBatch() {
           resolution_notes: resolutionNotes,
           resolution_source: resolutionSource,
         })
-        .in('id', dlqItemIds);
+        .in('id', dlqItemIds)
+        .eq('tenant_id', tenant.id);
 
       if (updateError) throw updateError;
 

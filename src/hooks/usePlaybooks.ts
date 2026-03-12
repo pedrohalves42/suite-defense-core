@@ -210,6 +210,7 @@ export function useExecutePlaybook() {
 }
 
 export function useIgnorePlaybookExecution() {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -220,6 +221,8 @@ export function useIgnorePlaybookExecution() {
       executionId: string; 
       reason: string;
     }) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1033 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('playbook_executions')
         .update({
@@ -227,7 +230,8 @@ export function useIgnorePlaybookExecution() {
           ignore_reason: reason,
           completed_at: new Date().toISOString(),
         })
-        .eq('id', executionId);
+        .eq('id', executionId)
+        .eq('tenant_id', tenant.id);
 
       if (error) throw error;
     },
@@ -292,6 +296,7 @@ export function useTriggerManualPlaybook() {
 }
 
 export function useTogglePlaybook() {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -302,6 +307,8 @@ export function useTogglePlaybook() {
       playbookId: string; 
       enabled: boolean;
     }) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1033 FIX: Add tenant_id filter (supports NULL tenant for global playbooks)
       const { error } = await supabase
         .from('playbooks')
         .update({ is_enabled: enabled })
