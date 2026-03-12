@@ -1,13 +1,12 @@
-import { useState, useCallback, useMemo } from "react";
-import { Responsive, WidthProvider, Layout } from "react-grid-layout";
+import { useState, useCallback, useMemo, useRef } from "react";
+import { ResponsiveGridLayout, useContainerWidth } from "react-grid-layout";
+import type { LayoutItem, ResponsiveLayouts } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GripVertical, Lock, Unlock, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const ResponsiveGridLayout = WidthProvider(Responsive);
 
 interface DashboardWidget {
   id: string;
@@ -25,11 +24,11 @@ interface CustomizableDashboardProps {
 
 const DEFAULT_COLS = { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 };
 
-function getDefaultLayouts(widgets: DashboardWidget[]): Record<string, Layout[]> {
+function getDefaultLayouts(widgets: DashboardWidget[]): ResponsiveLayouts {
   let x = 0;
   let y = 0;
-  const lgLayout: Layout[] = widgets.map((w) => {
-    const layout: Layout = {
+  const lgLayout: LayoutItem[] = widgets.map((w) => {
+    const layout: LayoutItem = {
       i: w.id,
       x: x % 12,
       y,
@@ -51,8 +50,10 @@ function getDefaultLayouts(widgets: DashboardWidget[]): Record<string, Layout[]>
 
 export function CustomizableDashboard({ widgets, storageKey = "dashboard-layout" }: CustomizableDashboardProps) {
   const defaultLayouts = useMemo(() => getDefaultLayouts(widgets), [widgets]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { width } = useContainerWidth(containerRef);
 
-  const [layouts, setLayouts] = useState<Record<string, Layout[]>>(() => {
+  const [layouts, setLayouts] = useState<ResponsiveLayouts>(() => {
     try {
       const saved = localStorage.getItem(storageKey);
       return saved ? JSON.parse(saved) : defaultLayouts;
@@ -63,7 +64,7 @@ export function CustomizableDashboard({ widgets, storageKey = "dashboard-layout"
 
   const [isLocked, setIsLocked] = useState(true);
 
-  const handleLayoutChange = useCallback((_: Layout[], allLayouts: Record<string, Layout[]>) => {
+  const handleLayoutChange = useCallback((_: LayoutItem[], allLayouts: ResponsiveLayouts) => {
     setLayouts(allLayouts);
     try {
       localStorage.setItem(storageKey, JSON.stringify(allLayouts));
@@ -75,14 +76,8 @@ export function CustomizableDashboard({ widgets, storageKey = "dashboard-layout"
     localStorage.removeItem(storageKey);
   }, [defaultLayouts, storageKey]);
 
-  const widgetMap = useMemo(() => {
-    const map = new Map<string, DashboardWidget>();
-    widgets.forEach(w => map.set(w.id, w));
-    return map;
-  }, [widgets]);
-
   return (
-    <div className="space-y-3">
+    <div ref={containerRef} className="space-y-3">
       <div className="flex items-center justify-end gap-2">
         <Button
           variant="outline"
@@ -101,37 +96,40 @@ export function CustomizableDashboard({ widgets, storageKey = "dashboard-layout"
         )}
       </div>
 
-      <ResponsiveGridLayout
-        className="layout"
-        layouts={layouts}
-        cols={DEFAULT_COLS}
-        rowHeight={80}
-        isDraggable={!isLocked}
-        isResizable={!isLocked}
-        onLayoutChange={handleLayoutChange}
-        draggableHandle=".drag-handle"
-        compactType="vertical"
-        margin={[12, 12]}
-      >
-        {widgets.map((widget) => (
-          <div key={widget.id}>
-            <Card className={cn(
-              "h-full overflow-hidden transition-shadow",
-              !isLocked && "ring-1 ring-dashed ring-primary/30 hover:ring-primary/60"
-            )}>
-              <CardHeader className="pb-2 flex flex-row items-center gap-2">
-                {!isLocked && (
-                  <GripVertical className="drag-handle h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing shrink-0" />
-                )}
-                <CardTitle className="text-sm font-medium">{widget.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 h-[calc(100%-3rem)] overflow-auto">
-                {widget.component}
-              </CardContent>
-            </Card>
-          </div>
-        ))}
-      </ResponsiveGridLayout>
+      {width > 0 && (
+        <ResponsiveGridLayout
+          className="layout"
+          layouts={layouts}
+          cols={DEFAULT_COLS}
+          rowHeight={80}
+          width={width}
+          isDraggable={!isLocked}
+          isResizable={!isLocked}
+          onLayoutChange={handleLayoutChange}
+          draggableHandle=".drag-handle"
+          compactType="vertical"
+          margin={[12, 12]}
+        >
+          {widgets.map((widget) => (
+            <div key={widget.id}>
+              <Card className={cn(
+                "h-full overflow-hidden transition-shadow",
+                !isLocked && "ring-1 ring-dashed ring-primary/30 hover:ring-primary/60"
+              )}>
+                <CardHeader className="pb-2 flex flex-row items-center gap-2">
+                  {!isLocked && (
+                    <GripVertical className="drag-handle h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing shrink-0" />
+                  )}
+                  <CardTitle className="text-sm font-medium">{widget.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 h-[calc(100%-3rem)] overflow-auto">
+                  {widget.component}
+                </CardContent>
+              </Card>
+            </div>
+          ))}
+        </ResponsiveGridLayout>
+      )}
     </div>
   );
 }
