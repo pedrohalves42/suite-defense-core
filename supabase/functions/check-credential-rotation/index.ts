@@ -23,6 +23,8 @@ interface TokenRotationCheck {
   status: 'warning' | 'expired' | 'ok';
 }
 
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startedAt = Date.now();
@@ -30,6 +32,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // V-1117: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   if (req.method !== 'POST') {
     return new Response(

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 /**
  * cleanup-stale-updates
@@ -7,19 +8,18 @@ import { corsHeaders } from '../_shared/cors.ts';
  * Auto-cancels force_update flags stuck for >168h (7 days) OR delivered >10 times
  * without confirmation. This prevents infinite update loops.
  * 
- * IMPORTANT: Skips agents recently re-triggered by auto_retrigger_72h_offline
- * that have NOT yet been delivered (delivery_count = 0), to avoid clearing
- * flags before offline agents come back online.
- * 
- * Should be called periodically (e.g., every hour via cron or heartbeat).
  * Auth: Internal or service-role only.
  */
 
 const MAX_DELIVERY_COUNT = 10;
-const MAX_STALE_HOURS = 168; // 7 days - gives offline agents time to come back
+const MAX_STALE_HOURS = 168; // 7 days
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+
+  // V-1118: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   const requestId = crypto.randomUUID();
 
