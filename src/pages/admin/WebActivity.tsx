@@ -405,11 +405,24 @@ export default function WebActivity() {
     >
       <div className="space-y-6">
         {/* Observation Label */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <Badge variant="outline" className="gap-1 text-xs border-amber-500/50 text-amber-600 dark:text-amber-400">
             <Eye className="h-3 w-3" />
             Modo Registro — Acessos são registrados, bloqueio requer configuração manual
           </Badge>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleCollectAllWebActivity}
+            disabled={isCollectingAll || onlineAgents.length === 0}
+          >
+            {isCollectingAll ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Atualizar Todos ({onlineAgents.length} online)
+          </Button>
         </div>
 
         {/* Tabs for Activity vs Stats */}
