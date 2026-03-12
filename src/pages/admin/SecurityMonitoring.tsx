@@ -39,21 +39,83 @@ export default function SecurityMonitoring() {
       const since = getTimeRangeDate().toISOString();
       const sb = supabase as any;
 
-      const [rateLimitsRes, failedLoginsRes, blockedIpsRes, securityEventsRes, agentsRes] = await Promise.all([
+      const [rateLimitsRes, failedLoginsRes, blockedIpsRes, securityEventsRes, agentsRes, blockedAttemptsRes, evidenceRes, alertsRes] = await Promise.all([
         sb.from('rate_limits').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('window_start', since).not('blocked_until', 'is', null),
         sb.from('failed_login_attempts').select('ip_address, created_at').eq('tenant_id', tenant.id).gte('created_at', since),
         sb.from('ip_blocklist').select('*').eq('tenant_id', tenant.id).gte('blocked_until', new Date().toISOString()).order('created_at', { ascending: false }).limit(20),
         sb.from('security_logs').select('*').eq('tenant_id', tenant.id).gte('created_at', since).order('created_at', { ascending: false }).limit(50),
         supabase.rpc('get_agents_list', { p_tenant_id: tenant.id, p_include_archived: false }),
+        // Additional sources that SimpleDashboard uses
+        sb.from('blocked_access_attempts').select('id, agent_name, domain, attempted_at, blocked_by').eq('tenant_id', tenant.id).gte('attempted_at', since).order('attempted_at', { ascending: false }).limit(50),
+        sb.from('agent_evidence_logs').select('id, event_type, severity, agent_name, created_at, event_data').eq('tenant_id', tenant.id).gte('created_at', since).order('created_at', { ascending: false }).limit(50),
+        sb.from('system_alerts').select('id, title, severity, status, alert_type, created_at').eq('tenant_id', tenant.id).eq('resolved', false).order('created_at', { ascending: false }).limit(20),
       ]);
 
-      // Process security events
-      const events = (securityEventsRes.data || []) as Array<{
+      // Process security events from security_logs
+      const secLogEvents = (securityEventsRes.data || []) as Array<{
         id: string; attack_type: string; severity: string; ip_address: string;
         endpoint: string; details: Record<string, unknown>; created_at: string; blocked: boolean;
       }>;
-      
-      const criticalCount = events.filter(e => e.severity === 'high' || e.severity === 'critical').length;
+
+      // Process blocked access attempts  
+      const blockedAttempts = (blockedAttemptsRes.data || []) as Array<{
+        id: string; agent_name: string; domain: string; attempted_at: string; blocked_by: string;
+      }>;
+
+      // Process evidence logs (security events from agents)
+      const evidenceLogs = (evidenceRes.data || []) as Array<{
+        id: string; event_type: string; severity: string; agent_name: string; created_at: string; event_data: Record<string, unknown>;
+      }>;
+
+      // Process system alerts
+      const activeAlerts = (alertsRes.data || []) as Array<{
+        id: string; title: string; severity: string; status: string; alert_type: string; created_at: string;
+      }>;
+
+      // Merge all events into a unified timeline
+      const unifiedEvents: Array<{
+        id: string; type: string; label: string; detail: string; severity: string;
+        created_at: string; source: string;
+      }> = [];
+
+      // From security_logs
+      secLogEvents.forEach(e => {
+        unifiedEvents.push({
+          id: e.id, type: e.attack_type, label: getAttackTypeLabel(e.attack_type),
+          detail: e.ip_address || '', severity: e.severity, created_at: e.created_at,
+          source: 'security_logs',
+        });
+      });
+
+      // From blocked_access_attempts
+      blockedAttempts.forEach(e => {
+        unifiedEvents.push({
+          id: e.id, type: 'blocked_access', label: 'Tentativa de acesso negada',
+          detail: `${e.domain} — ${e.agent_name}`, severity: 'warning',
+          created_at: e.attempted_at, source: 'blocked_attempts',
+        });
+      });
+
+      // From agent_evidence_logs (only actionable ones)
+      evidenceLogs.filter(e => e.severity !== 'info' && e.severity !== 'debug').forEach(e => {
+        const labelMap: Record<string, string> = {
+          security_event: 'Evento de segurança',
+          auto_repair: 'Reparo automático',
+          auto_recovery: 'Restauração de serviço',
+          policy_drift: 'Desvio de conformidade',
+        };
+        unifiedEvents.push({
+          id: e.id, type: e.event_type, label: labelMap[e.event_type] || e.event_type,
+          detail: e.agent_name, severity: e.severity, created_at: e.created_at,
+          source: 'evidence_logs',
+        });
+      });
+
+      // Sort by date desc
+      unifiedEvents.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      // Compute combined metrics
+      const criticalCount = unifiedEvents.filter(e => e.severity === 'high' || e.severity === 'critical').length;
 
       // Process agents offline
       const offlineThreshold = subHours(new Date(), AGENT_STATUS_THRESHOLDS.OFFLINE_ALERT_HOURS).toISOString();
@@ -73,13 +135,13 @@ export default function SecurityMonitoring() {
         .sort((a, b) => b.count - a.count)
         .slice(0, 10);
 
-      // Chart data
+      // Chart data from unified events
       const chartMap: Record<string, { hour: string; eventos: number; bloqueados: number }> = {};
-      events.forEach(event => {
+      unifiedEvents.forEach(event => {
         const h = `${String(new Date(event.created_at).getHours()).padStart(2, '0')}:00`;
         if (!chartMap[h]) chartMap[h] = { hour: h, eventos: 0, bloqueados: 0 };
         chartMap[h].eventos++;
-        if (event.blocked) chartMap[h].bloqueados++;
+        if (event.source === 'blocked_attempts') chartMap[h].bloqueados++;
       });
 
       return {
@@ -89,11 +151,14 @@ export default function SecurityMonitoring() {
           blockedIps: (blockedIpsRes.data || []).length,
           criticalEvents: criticalCount,
           agentsOffline: offlineAgents,
+          blockedAttempts: blockedAttempts.length,
+          activeAlerts: activeAlerts.length,
         },
-        events,
+        unifiedEvents,
         blockedIPs: (blockedIpsRes.data || []) as Array<{ id: string; ip_address: string; reason: string; blocked_until: string }>,
         failedLoginStats,
-        chartData: Object.values(chartMap).slice(-12),
+        activeAlerts,
+        chartData: Object.values(chartMap).sort((a, b) => a.hour.localeCompare(b.hour)).slice(-12),
       };
     },
     enabled: !!tenant?.id,
@@ -120,7 +185,7 @@ export default function SecurityMonitoring() {
   };
 
   const m = data?.metrics;
-  const hasActivity = m && (m.rateLimitBreaches > 0 || m.failedLogins > 0 || m.criticalEvents > 0 || m.blockedIps > 0);
+  const hasActivity = m && (m.rateLimitBreaches > 0 || m.failedLogins > 0 || m.criticalEvents > 0 || m.blockedIps > 0 || m.blockedAttempts > 0 || m.activeAlerts > 0);
   const hasCritical = m && m.criticalEvents > 0;
 
   if (isLoading) {
@@ -182,6 +247,7 @@ export default function SecurityMonitoring() {
                   <div>
                     <p className="text-sm font-medium text-amber-500">Atividade detectada no período</p>
                     <p className="text-xs text-muted-foreground">
+                      {m.blockedAttempts > 0 && `${m.blockedAttempts} acesso${m.blockedAttempts > 1 ? 's' : ''} bloqueado${m.blockedAttempts > 1 ? 's' : ''}. `}
                       {m.failedLogins > 0 && `${m.failedLogins} tentativa${m.failedLogins > 1 ? 's' : ''} de login. `}
                       {m.blockedIps > 0 && `${m.blockedIps} IP${m.blockedIps > 1 ? 's' : ''} bloqueado${m.blockedIps > 1 ? 's' : ''}. `}
                       {m.rateLimitBreaches > 0 && `${m.rateLimitBreaches} limite${m.rateLimitBreaches > 1 ? 's' : ''} excedido${m.rateLimitBreaches > 1 ? 's' : ''}.`}
@@ -202,12 +268,18 @@ export default function SecurityMonitoring() {
         </motion.div>
 
         {/* === KEY METRICS (only show if there's data) === */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <MetricCard
             label="Alertas Importantes"
-            value={m?.criticalEvents || 0}
+            value={(m?.criticalEvents || 0) + (m?.activeAlerts || 0)}
             icon={<AlertTriangle className="h-4 w-4" />}
-            color={m?.criticalEvents ? 'red' : 'muted'}
+            color={(m?.criticalEvents || m?.activeAlerts) ? 'red' : 'muted'}
+          />
+          <MetricCard
+            label="Acessos Bloqueados"
+            value={m?.blockedAttempts || 0}
+            icon={<Ban className="h-4 w-4" />}
+            color={m?.blockedAttempts ? 'amber' : 'muted'}
           />
           <MetricCard
             label="Tentativas de Login"
@@ -260,27 +332,33 @@ export default function SecurityMonitoring() {
               <CardDescription className="text-xs">Últimas detecções de segurança</CardDescription>
             </CardHeader>
             <CardContent>
-              {data?.events && data.events.length > 0 ? (
+              {data?.unifiedEvents && data.unifiedEvents.length > 0 ? (
                 <div className="max-h-[350px] overflow-y-auto space-y-2">
-                  {data.events.slice(0, 10).map((event) => {
-                    const info = getSeverityInfo(event.severity);
+                  {data.unifiedEvents.slice(0, 15).map((event) => {
+                    const severityColor = {
+                      critical: 'bg-red-500',
+                      high: 'bg-amber-500',
+                      error: 'bg-amber-500',
+                      warning: 'bg-yellow-500',
+                      medium: 'bg-yellow-500',
+                    }[event.severity] || 'bg-muted-foreground/30';
+                    const sourceIcon = {
+                      blocked_attempts: <Ban className="h-3 w-3 text-red-400" />,
+                      evidence_logs: <Activity className="h-3 w-3 text-blue-400" />,
+                      security_logs: <Shield className="h-3 w-3 text-amber-400" />,
+                    }[event.source] || <Shield className="h-3 w-3" />;
                     return (
                       <div key={event.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-muted/20">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className={cn(
-                            "w-2 h-2 rounded-full shrink-0",
-                            event.severity === 'critical' && "bg-red-500",
-                            event.severity === 'high' && "bg-amber-500",
-                            event.severity === 'medium' && "bg-yellow-500",
-                            (!event.severity || event.severity === 'low') && "bg-muted-foreground/30"
-                          )} />
+                          <span className={cn("w-2 h-2 rounded-full shrink-0", severityColor)} />
+                          {sourceIcon}
                           <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{getAttackTypeLabel(event.attack_type)}</p>
-                            <p className="text-[11px] text-muted-foreground font-mono">{event.ip_address?.slice(0, 18)}</p>
+                            <p className="text-sm font-medium truncate">{event.label}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">{event.detail}</p>
                           </div>
                         </div>
                         <span className="text-[11px] text-muted-foreground shrink-0 ml-2">
-                          {formatBrazilDateTime(event.created_at, 'time')}
+                          {formatBrazilDateTime(event.created_at, 'short')}
                         </span>
                       </div>
                     );
