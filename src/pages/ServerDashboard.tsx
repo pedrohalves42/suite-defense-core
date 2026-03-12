@@ -72,6 +72,7 @@ const ServerDashboard = () => {
               </p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
           {isAdmin && (
             <DashboardPDFReport
               agents={agents}
