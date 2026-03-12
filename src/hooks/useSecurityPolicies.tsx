@@ -150,10 +150,13 @@ export const usePolicyRules = (policyId: string | null) => {
 
   const updateRule = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; is_enabled?: boolean; action?: string; target?: string }) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1032 FIX: Add tenant_id filter
       const { data, error } = await supabase
         .from('security_policy_rules')
         .update(updates)
         .eq('id', id)
+        .eq('tenant_id', tenant.id)
         .select()
         .single();
       
