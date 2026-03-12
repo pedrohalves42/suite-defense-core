@@ -14,6 +14,8 @@ import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { SecurityTimeline } from "@/components/dashboard/SecurityTimeline";
 import { DashboardTabs } from "@/components/dashboard/DashboardTabs";
 import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState";
+import { DashboardPDFReport } from "@/components/dashboard/DashboardPDFReport";
+import { SystemBannerSkeleton, MetricCardsSkeleton, ChartsSkeleton, TimelineSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 const ServerDashboard = () => {
   const { showOnboarding, completeOnboarding, dismissFor7Days } = useOnboarding();
@@ -48,43 +50,62 @@ const ServerDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background p-3 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
-            <Server className="h-8 w-8 text-primary animate-pulse-glow" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 sm:p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
+              <Server className="h-6 w-6 sm:h-8 sm:w-8 text-primary animate-pulse-glow" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                Painel Principal
+              </h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                {tenant.name} — Visão global do sistema
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Painel Principal
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {tenant.name} — Visão global do sistema
-            </p>
-          </div>
+          {isAdmin && (
+            <DashboardPDFReport
+              agents={agents}
+              jobs={jobs}
+              tenantName={tenant.name}
+              onlinePercentage={onlinePercentage}
+              successRate={successRate}
+              offlineCount={offlineCount}
+              failedJobs={failedJobs}
+              alerts={alerts}
+              systemState={systemState}
+            />
+          )}
         </div>
 
         {/* Layer 1: Global Status */}
-        <SystemStatusBanner
-          systemState={systemState}
-          onlinePercentage={onlinePercentage}
-          offlineCount={offlineCount}
-          failedJobs={failedJobs}
-          tenantsWithIssues={tenantsWithIssues}
-          totalAgents={agents.length}
-          totalTenants={Object.keys(agentsByTenant).length}
-        />
+        {loading ? <SystemBannerSkeleton /> : (
+          <SystemStatusBanner
+            systemState={systemState}
+            onlinePercentage={onlinePercentage}
+            offlineCount={offlineCount}
+            failedJobs={failedJobs}
+            tenantsWithIssues={tenantsWithIssues}
+            totalAgents={agents.length}
+            totalTenants={Object.keys(agentsByTenant).length}
+          />
+        )}
 
         {/* Layer 2: Metric Cards */}
-        <MetricCards
-          totalAgents={agents.length}
-          onlinePercentage={onlinePercentage}
-          offlineCount={offlineCount}
-          alerts={alerts}
-          successRate={successRate}
-          failedJobs={failedJobs}
-        />
+        {loading ? <MetricCardsSkeleton /> : (
+          <MetricCards
+            totalAgents={agents.length}
+            onlinePercentage={onlinePercentage}
+            offlineCount={offlineCount}
+            alerts={alerts}
+            successRate={successRate}
+            failedJobs={failedJobs}
+          />
+        )}
 
         {/* Layer 2.5: Admin Metrics */}
         {isAdmin && (

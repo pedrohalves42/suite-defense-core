@@ -2,6 +2,7 @@ import { Users, Download } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { getJobTypeLabel } from "@/lib/job-labels";
 import { formatBrazilDateTime } from "@/lib/date-utils";
@@ -26,7 +27,22 @@ export default function AgentsTab({ agents, jobs, reports, loading, tenantNames 
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="text-center text-muted-foreground py-8">Carregando...</p>
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="p-4 bg-secondary/30 rounded-lg border border-border">
+                <div className="flex items-start gap-4">
+                  <Skeleton className="h-3 w-3 rounded-full mt-1" />
+                  <div className="flex-1 space-y-3">
+                    <Skeleton className="h-5 w-40" />
+                    <div className="flex gap-2"><Skeleton className="h-4 w-20 rounded-full" /><Skeleton className="h-4 w-16 rounded-full" /></div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {Array.from({ length: 4 }).map((_, j) => (<div key={j}><Skeleton className="h-3 w-16 mb-1" /><Skeleton className="h-4 w-12" /></div>))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : agents.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />

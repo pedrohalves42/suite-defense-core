@@ -2,9 +2,18 @@ import { useMemo } from "react";
 import { Activity, Shield, LineChart, PieChart, BarChart3, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Line, LineChart as RechartsLineChart, Bar, BarChart as RechartsBarChart, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Tooltip } from "recharts";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getJobTypeLabelNoEmoji } from "@/lib/job-labels";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import type { DashboardJob, DashboardVirusScan } from "@/hooks/useDashboardData";
+
+const ChartItemSkeleton = () => (
+  <div className="h-[250px] flex items-end gap-2 px-4 py-4">
+    {Array.from({ length: 7 }).map((_, j) => (
+      <Skeleton key={j} className="flex-1 rounded-t" style={{ height: `${30 + Math.random() * 60}%` }} />
+    ))}
+  </div>
+);
 
 const COLORS = [
   'hsl(217 91% 60%)', 'hsl(142 71% 45%)', 'hsl(38 92% 50%)', 'hsl(262 83% 58%)',
@@ -96,7 +105,7 @@ export function DashboardCharts({ jobs, virusScans, loading }: DashboardChartsPr
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? <p className="text-center text-muted-foreground py-8">Carregando...</p> :
+          {loading ? <ChartItemSkeleton /> :
            jobsTrendData.every(d => d.total === 0) ? <EmptyChart icon={Activity} text="Nenhuma verificação nos últimos 7 dias" /> : (
             <ResponsiveContainer width="100%" height={250}>
               <RechartsLineChart data={jobsTrendData}>
@@ -126,7 +135,7 @@ export function DashboardCharts({ jobs, virusScans, loading }: DashboardChartsPr
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? <p className="text-center text-muted-foreground py-8">Carregando...</p> :
+          {loading ? <ChartItemSkeleton /> :
            scansTrendData.every(d => d.total === 0) ? <EmptyChart icon={Shield} text="Nenhuma verificação nos últimos 7 dias" /> : (
             <ResponsiveContainer width="100%" height={250}>
               <RechartsLineChart data={scansTrendData}>
@@ -158,7 +167,7 @@ export function DashboardCharts({ jobs, virusScans, loading }: DashboardChartsPr
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? <p className="text-center text-muted-foreground py-8">Carregando...</p> :
+          {loading ? <ChartItemSkeleton /> :
            jobTypeData.length === 0 ? <EmptyChart icon={PieChart} text="Sem dados para exibir" /> : (() => {
             const maxVal = Math.max(...jobTypeData.map(d => d.value));
             return (
@@ -196,7 +205,7 @@ export function DashboardCharts({ jobs, virusScans, loading }: DashboardChartsPr
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? <p className="text-center text-muted-foreground py-8">Carregando...</p> :
+          {loading ? <ChartItemSkeleton /> :
            jobsByAgentData.length === 0 ? <EmptyChart icon={BarChart3} text="Sem dados para exibir" /> : (
             <ResponsiveContainer width="100%" height={250}>
               <RechartsBarChart data={jobsByAgentData} layout="vertical">

@@ -2,6 +2,7 @@ import { Activity, Key, ShieldAlert, Clock, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { DashboardAgent, DashboardAgentToken, DashboardRateLimit } from "@/hooks/useDashboardData";
 
 interface SecurityTabProps {
@@ -97,7 +98,7 @@ export default function SecurityTab({ agents, agentTokens, rateLimits, loading, 
           <CardDescription>Atividade recente dos agentes</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? <p className="text-center text-muted-foreground py-4">Carregando...</p> :
+          {loading ? <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => (<div key={i} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg"><div className="flex items-center gap-3"><Skeleton className="h-2 w-2 rounded-full" /><div><Skeleton className="h-4 w-32 mb-1" /><Skeleton className="h-3 w-24" /></div></div><Skeleton className="h-3 w-16" /></div>))}</div> :
            agents.filter(a => a.last_heartbeat).length === 0 ? <p className="text-center text-muted-foreground py-4">Nenhum heartbeat registrado</p> : (
             <div className="space-y-2">
               {agents.filter(a => a.last_heartbeat)
@@ -136,7 +137,7 @@ export default function SecurityTab({ agents, agentTokens, rateLimits, loading, 
           <CardDescription>Tokens que precisam de atenção</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? <p className="text-center text-muted-foreground py-4">Carregando...</p> : (() => {
+          {loading ? <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => (<div key={i} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg"><Skeleton className="h-4 w-32" /><Skeleton className="h-5 w-16 rounded-full" /></div>))}</div> : (() => {
             const expiredOrInactive = agentTokens.filter(t => !t.is_active || (t.expires_at && new Date(t.expires_at) < new Date()));
             return expiredOrInactive.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
@@ -174,7 +175,7 @@ export default function SecurityTab({ agents, agentTokens, rateLimits, loading, 
           <CardDescription>Proteção contra abuso de recursos</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? <p className="text-center text-muted-foreground py-4">Carregando...</p> :
+          {loading ? <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => (<div key={i} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg"><Skeleton className="h-4 w-40" /><Skeleton className="h-5 w-20 rounded-full" /></div>))}</div> :
            rateLimits.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-success/50" />

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Clock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import type { DashboardAuditLog } from "@/hooks/useDashboardData";
@@ -97,7 +98,23 @@ export function SecurityTimeline({ auditLogs, loading }: SecurityTimelineProps) 
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="text-center text-muted-foreground py-4">Carregando...</p>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <div className="space-y-1">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <div className="text-right space-y-1">
+                  <Skeleton className="h-5 w-16 rounded-full ml-auto" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : securityEvents.length === 0 ? (
           <div className="text-center py-8">
             <Clock className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />

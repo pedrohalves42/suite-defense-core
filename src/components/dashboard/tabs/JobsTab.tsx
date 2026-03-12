@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getJobTypeLabel } from "@/lib/job-labels";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import type { DashboardJob } from "@/hooks/useDashboardData";
@@ -18,13 +19,18 @@ export default function JobsTab({ jobs, loading }: JobsTabProps) {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="text-center text-muted-foreground py-8">Carregando...</p>
+          <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg">
+              <div className="space-y-2"><div className="flex gap-2"><Skeleton className="h-4 w-24 rounded-full" /><Skeleton className="h-4 w-32" /></div><Skeleton className="h-3 w-40" /></div>
+              <Skeleton className="h-5 w-20 rounded-full" />
+            </div>
+          ))}</div>
         ) : jobs.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">Nenhuma verificação encontrada</p>
         ) : (
           <div className="space-y-2 max-h-[600px] overflow-y-auto">
             {jobs.map((job) => (
-              <div key={job.id} className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg border border-border">
+              <div key={job.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-secondary/30 rounded-lg border border-border gap-2">
                 <div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-xs">{getJobTypeLabel(job.type)}</Badge>
