@@ -2,11 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
 import { useTodayRiskDelta, getDeltaInfo, formatCurrency } from '@/hooks/useRiskDelta';
+import { useUnifiedMetrics, COST_MODEL } from '@/hooks/useUnifiedMetrics';
 import { 
   ShieldCheck, ShieldAlert, ShieldX, Shield,
   Monitor, MonitorOff, AlertTriangle, CheckCircle2,
@@ -25,153 +24,100 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-// === Modelo de custo conservador para PMEs brasileiras (2025-2026) ===
-// Fontes: CERT.br, mercado local de suporte TI para pequenas empresas
-// Valores calibrados para operações de 1-50 máquinas
-const COST_MODEL = {
-  security_event_critical: 500,   // Incidente crítico contido (ex: ransomware bloqueado)
-  security_event_high: 200,       // Ameaça alta neutralizada
-  security_event_medium: 60,      // Alerta médio tratado automaticamente
-  auto_repair: 45,                // Chamado técnico remoto evitado
-  auto_recovery: 150,             // Restauração de serviço sem visita
-  policy_drift: 60,               // Correção de conformidade automática
-  blocked_access: 120,            // Tentativa de acesso indevido bloqueada
-  firewall_enforcement: 40,       // Regra de firewall aplicada
-  agent_offline_per_hour: 25,     // Custo por hora de máquina desprotegida
-};
-
 export default function ExecutiveDashboard() {
-  const { activeTenant, loading: tenantLoading } = useActiveTenant();
-  const tenantId = activeTenant?.id;
-
-  const { data: snapshots, isLoading: snapshotsLoading } = useAgentSnapshots();
-  const agentCounts = getAgentStatusCounts(snapshots);
+  const { metrics, isLoading: unifiedLoading, refetch: refetchUnified, tenant } = useUnifiedMetrics();
+  const tenantId = tenant?.id;
   const { data: riskDelta } = useTodayRiskDelta();
 
-  const { data: summaryData, isLoading, refetch } = useQuery({
-    queryKey: ['executive-summary-v3', tenantId],
+  // Executive-specific data: jobs and compliance (not shared)
+  const { data: execData, isLoading: execLoading, refetch: refetchExec } = useQuery({
+    queryKey: ['executive-extra', tenantId],
     queryFn: async () => {
       if (!tenantId) return null;
       const now = new Date();
       const today = new Date(now); today.setHours(0,0,0,0);
       const todayISO = today.toISOString();
-      const sevenDaysAgo = subDays(now, 7).toISOString();
       const thirtyDaysAgo = subDays(now, 30).toISOString();
-
       const sb = supabase as any;
 
-      const [alertsRes, jobsTodayRes, jobs30dRes, blockedRes, evidence7dRes, evidence30dRes, complianceRes] = await Promise.all([
-        sb.from('system_alerts').select('severity, status', { count: 'exact' }).eq('tenant_id', tenantId),
+      const [jobsTodayRes, jobs30dRes, complianceRes] = await Promise.all([
         sb.from('jobs').select('status, type').eq('tenant_id', tenantId).gte('created_at', todayISO),
         sb.from('jobs').select('status, type').eq('tenant_id', tenantId).gte('created_at', thirtyDaysAgo),
-        sb.from('blocked_access_attempts').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).gte('attempted_at', sevenDaysAgo),
-        sb.from('agent_evidence_logs').select('event_type, severity').eq('tenant_id', tenantId).gte('created_at', sevenDaysAgo),
-        sb.from('agent_evidence_logs').select('event_type, severity').eq('tenant_id', tenantId).gte('created_at', thirtyDaysAgo),
         sb.from('compliance_snapshots').select('overall_score, grade, category_scores, calculated_at').eq('tenant_id', tenantId).order('calculated_at', { ascending: false }).limit(1),
       ]);
 
-      const alerts: Array<{ severity: string; status: string }> = alertsRes.data || [];
-      const unresolvedStatuses = ['active', 'open', 'pending'];
-      const activeAlerts = alerts.filter(a => unresolvedStatuses.includes(a.status)).length;
-      const criticalAlerts = alerts.filter(a => a.severity === 'critical' && unresolvedStatuses.includes(a.status)).length;
-
       const jobsToday: Array<{ status: string; type: string }> = jobsTodayRes.data || [];
       const jobs30d: Array<{ status: string; type: string }> = jobs30dRes.data || [];
-      const blockedThreats: number = blockedRes.count || 0;
-
-      const evidence7d: Array<{ event_type: string; severity: string }> = evidence7dRes.data || [];
-      const evidence30d: Array<{ event_type: string; severity: string }> = evidence30dRes.data || [];
       const compliance = complianceRes.data?.[0] || null;
 
-      // NOTA: NÃO usar agentCounts aqui dentro do queryFn!
-      // agentCounts vem de useAgentSnapshots (closure stale durante troca de tenant)
-      // Os valores de totalAgents/onlineAgents são calculados no render usando agentCounts fresco.
-
-      // === O que o sistema FEZ pela empresa (30 dias) ===
-      // IMPORTANTE: Filtra apenas ações REAIS (severity >= warning).
-      // Eventos com severity 'info'/'debug' são detecções de rotina repetidas
-      // (ex: mesmo software não-autorizado detectado a cada hora) e NÃO representam
-      // ações concretas que evitariam um chamado técnico.
-      const actions30d = {
-        auto_repairs: evidence30d.filter(e => e.event_type === 'auto_repair' && e.severity !== 'info' && e.severity !== 'debug').length,
-        auto_detections: evidence30d.filter(e => e.event_type === 'auto_repair' && (e.severity === 'info' || e.severity === 'debug')).length,
-        auto_recoveries: evidence30d.filter(e => e.event_type === 'auto_recovery' && e.severity !== 'info' && e.severity !== 'debug').length,
-        critical_prevented: evidence30d.filter(e => e.event_type === 'security_event' && e.severity === 'critical').length,
-        high_prevented: evidence30d.filter(e => e.event_type === 'security_event' && (e.severity === 'error' || e.severity === 'high')).length,
-        medium_prevented: evidence30d.filter(e => e.event_type === 'security_event' && e.severity === 'warning').length,
-        policy_corrections: evidence30d.filter(e => e.event_type === 'policy_drift').length,
-        blocked_access: blockedThreats,
-        total_events: evidence30d.filter(e => e.severity !== 'info' && e.severity !== 'debug').length,
-      };
-
-      // Ações automáticas que evitaram trabalho manual (apenas ações reais)
-      const automatedActions = actions30d.auto_repairs + actions30d.auto_recoveries + actions30d.policy_corrections;
-      // Incidentes que foram contidos sem intervenção humana
-      const incidentsContained = actions30d.critical_prevented + actions30d.high_prevented + actions30d.medium_prevented;
-      
-      // Horas de TI economizadas (estimativa conservadora)
-      // auto_repair real (warning+): 0.5h, recovery: 1h, policy: 0.25h, critical: 2h
-      const hoursOfITSaved = 
-        (actions30d.auto_repairs * 0.5) + 
-        (actions30d.auto_recoveries * 1) + 
-        (actions30d.policy_corrections * 0.25) +
-        (actions30d.critical_prevented * 2);
-
-      // Jobs completados automaticamente pelo sistema (não pelo humano)
       const automatedJobsCompleted = jobs30d.filter(j => j.status === 'completed').length;
       const totalJobs30d = jobs30d.length;
-
-      // === Impacto financeiro ===
-      const financialImpact = {
-        autoRepairs: actions30d.auto_repairs * COST_MODEL.auto_repair,
-        autoRecoveries: actions30d.auto_recoveries * COST_MODEL.auto_recovery,
-        criticalPrevented: actions30d.critical_prevented * COST_MODEL.security_event_critical,
-        highPrevented: actions30d.high_prevented * COST_MODEL.security_event_high,
-        policyCorrections: actions30d.policy_corrections * COST_MODEL.policy_drift,
-        blockedAccess: blockedThreats * COST_MODEL.blocked_access,
-      };
-      const totalCostAvoided = Object.values(financialImpact).reduce((a, b) => a + b, 0);
-
-      // 7-day activity for sparkline
-      const events7d = {
-        critical: evidence7d.filter(e => e.severity === 'critical').length,
-        high: evidence7d.filter(e => e.severity === 'error' || e.severity === 'high').length,
-        warning: evidence7d.filter(e => e.severity === 'warning').length,
-        info: evidence7d.filter(e => e.severity === 'info' || e.severity === 'debug').length,
-      };
-
-      // Protection coverage e overall score são calculados no render (fora do queryFn)
-
-      // Jobs today
       const successRateToday = jobsToday.length > 0 ? Math.round((jobsToday.filter(j => j.status === 'completed').length / jobsToday.length) * 100) : 100;
 
       return {
-        activeAlerts, criticalAlerts, blockedThreats,
-        actions30d, automatedActions, incidentsContained, hoursOfITSaved,
-        automatedJobsCompleted, totalJobs30d,
-        financialImpact, totalCostAvoided,
-        events7d, compliance,
+        compliance,
+        automatedJobsCompleted,
+        totalJobs30d,
         successRateToday,
         totalJobsToday: jobsToday.length,
         completedJobsToday: jobsToday.filter(j => j.status === 'completed').length,
         failedJobsToday: jobsToday.filter(j => j.status === 'failed').length,
-        lastUpdate: new Date()
+        lastUpdate: new Date(),
       };
     },
-    enabled: !tenantLoading && !!tenantId && !snapshotsLoading,
+    enabled: !!tenantId,
     refetchInterval: 60000,
     staleTime: 15000,
   });
 
-  // Compute agent-dependent values at RENDER TIME using fresh agentCounts
-  // (not inside queryFn where agentCounts would be a stale closure)
-  const totalAgents = agentCounts.total;
-  const onlineAgents = agentCounts.online;
-  const offlineAgents = agentCounts.offline + agentCounts.warning + agentCounts.never_connected;
-  const protectionCoverage = totalAgents > 0 ? Math.round((onlineAgents / totalAgents) * 100) : 0;
+  const isLoading = unifiedLoading || execLoading;
+  const refetch = () => { refetchUnified(); refetchExec(); };
+
+  // Derive from unified metrics
+  const totalAgents = metrics?.agents.total || 0;
+  const onlineAgents = metrics?.agents.online || 0;
+  const offlineAgents = (metrics?.agents.offline || 0) + (metrics?.agents.warning || 0) + (metrics?.agents.neverConnected || 0);
+  const protectionCoverage = metrics?.agents.protectionPercent || 0;
   const agentHealthScore = totalAgents > 0 ? (onlineAgents / totalAgents) * 100 : 100;
-  const alertPenalty = Math.min((summaryData?.activeAlerts || 0) * 5, 30);
+  const alertPenalty = Math.min((metrics?.alerts.active || 0) * 5, 30);
   const overallScore = Math.max(0, Math.round(agentHealthScore - alertPenalty));
+
+  // Build summaryData-compatible object from unified + exec data
+  const summaryData = metrics && execData ? {
+    activeAlerts: metrics.alerts.active,
+    criticalAlerts: metrics.alerts.critical,
+    blockedThreats: metrics.blocked.last7d,
+    actions30d: {
+      auto_repairs: metrics.evidence.autoRepairs,
+      auto_detections: 0,
+      auto_recoveries: metrics.evidence.autoRecoveries,
+      critical_prevented: metrics.evidence.last30d.filter(e => e.event_type === 'security_event' && e.severity === 'critical').length,
+      high_prevented: metrics.evidence.last30d.filter(e => e.event_type === 'security_event' && (e.severity === 'high' || e.severity === 'error')).length,
+      medium_prevented: metrics.evidence.last30d.filter(e => e.event_type === 'security_event' && e.severity === 'warning').length,
+      policy_corrections: metrics.evidence.policyDrifts,
+      blocked_access: metrics.blocked.last7d,
+      total_events: metrics.evidence.last30d.filter(e => e.severity !== 'info' && e.severity !== 'debug').length,
+    },
+    automatedActions: metrics.evidence.autoRepairs + metrics.evidence.autoRecoveries + metrics.evidence.policyDrifts,
+    incidentsContained: metrics.evidence.incidentsContained,
+    hoursOfITSaved: metrics.financial.hoursOfITSaved,
+    automatedJobsCompleted: execData.automatedJobsCompleted,
+    totalJobs30d: execData.totalJobs30d,
+    financialImpact: metrics.financial.breakdown,
+    totalCostAvoided: metrics.financial.totalCostAvoided,
+    events7d: {
+      critical: metrics.evidence.last7d.filter(e => e.severity === 'critical').length,
+      high: metrics.evidence.last7d.filter(e => e.severity === 'error' || e.severity === 'high').length,
+      warning: metrics.evidence.last7d.filter(e => e.severity === 'warning').length,
+      info: metrics.evidence.last7d.filter(e => e.severity === 'info' || e.severity === 'debug').length,
+    },
+    compliance: execData.compliance,
+    successRateToday: execData.successRateToday,
+    totalJobsToday: execData.totalJobsToday,
+    completedJobsToday: execData.completedJobsToday,
+    failedJobsToday: execData.failedJobsToday,
+    lastUpdate: execData.lastUpdate,
+  } : null;
 
   const getHealthStatus = (score: number) => {
     if (score >= 90) return { status: 'excellent' as const, message: 'Sua empresa está protegida', color: 'text-green-500', bgClass: 'border-green-500/20 bg-green-500/5' };
@@ -195,7 +141,7 @@ export default function ExecutiveDashboard() {
     return list;
   })();
 
-  if (isLoading || snapshotsLoading) {
+  if (isLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-64" />
@@ -251,7 +197,7 @@ export default function ExecutiveDashboard() {
                     <Badge variant="outline" className="text-[10px] font-medium">
                       {overallScore}%
                     </Badge>
-                    {agentCounts.online > 0 && (
+                    {onlineAgents > 0 && (
                       <Badge variant="outline" className="gap-1 text-[10px] border-green-500/30 text-green-500">
                         <span className="relative flex h-1.5 w-1.5">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
@@ -267,7 +213,7 @@ export default function ExecutiveDashboard() {
 
               {/* Key metrics - focused on BUSINESS impact */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                <MetricTile icon={<Laptop className="h-3.5 w-3.5" />} label="Computadores" value={`${agentCounts.online}/${agentCounts.total}`} sub="protegidos" color="green" pulse={agentCounts.online > 0} />
+                <MetricTile icon={<Laptop className="h-3.5 w-3.5" />} label="Computadores" value={`${onlineAgents}/${totalAgents}`} sub="protegidos" color="green" pulse={onlineAgents > 0} />
                 <MetricTile icon={<ShieldBan className="h-3.5 w-3.5" />} label="Ameaças Bloqueadas" value={`${summaryData?.blockedThreats || 0}`} sub="últimos 7 dias" color={summaryData?.blockedThreats ? 'green' : 'muted'} />
                 <MetricTile icon={<DeltaIcon className="h-3.5 w-3.5" />} label="Nível de Risco" value={deltaInfo.label} sub={deltaInfo.description} color={deltaInfo.color === 'green' ? 'green' : deltaInfo.color === 'red' ? 'red' : 'muted'} />
                 <MetricTile icon={<Hammer className="h-3.5 w-3.5" />} label="Correções Automáticas" value={`${summaryData?.automatedActions || 0}`} sub="últimos 30 dias" color={summaryData?.automatedActions ? 'emerald' : 'muted'} />
