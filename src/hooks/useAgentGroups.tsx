@@ -38,13 +38,15 @@ export function useAgentGroups() {
   });
 
   // Fetch group members count
+  // V-1021 FIX: Add tenant_id filter to prevent cross-tenant data leakage
   const { data: memberCounts = {} } = useQuery({
     queryKey: ['agent-group-members-count', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return {};
       const { data, error } = await supabase
         .from('agents_groups')
-        .select('group_id');
+        .select('group_id')
+        .eq('tenant_id', tenant.id);
       if (error) throw error;
       
       const counts: Record<string, number> = {};
