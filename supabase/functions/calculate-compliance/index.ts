@@ -57,6 +57,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // V-1015 FIX: Validate caller has access to requested tenant
+    const validation = await validateCallerTenant(req, supabase, tenant_id);
+    if (!validation.authorized) {
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: validation.statusCode || 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`[${requestId}] [calc-compliance] Starting for tenant ${tenant_id}`);
 
     // ─── Gather Metrics ──────────────────────────────────
