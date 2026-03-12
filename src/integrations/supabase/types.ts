@@ -5002,7 +5002,7 @@ export type Database = {
           last_used_at: string | null
           rotation_policy_days: number | null
           rotation_required_at: string | null
-          tenant_id: string | null
+          tenant_id: string
           token_hash: string
           token_prefix: string
         }
@@ -5016,7 +5016,7 @@ export type Database = {
           last_used_at?: string | null
           rotation_policy_days?: number | null
           rotation_required_at?: string | null
-          tenant_id?: string | null
+          tenant_id: string
           token_hash: string
           token_prefix: string
         }
@@ -5030,7 +5030,7 @@ export type Database = {
           last_used_at?: string | null
           rotation_policy_days?: number | null
           rotation_required_at?: string | null
-          tenant_id?: string | null
+          tenant_id?: string
           token_hash?: string
           token_prefix?: string
         }
