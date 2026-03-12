@@ -517,20 +517,20 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
 
               <div className="sidebar-divider-neon my-2 mx-2" />
 
-              {renderCollapsibleSection('🛡️ Segurança', 'protection', securityItems)}
+              {renderCollapsibleSection('🛡️ Proteção', 'protection', securityItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection('⚙️ Gestão', 'management', managementItems)}
+              {renderCollapsibleSection('⚙️ Organização', 'management', managementItems)}
 
               <div className="sidebar-divider-neon my-2 mx-2" />
               <div className="px-3 py-1">
-                <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-[hsl(var(--neon-cyan)_/_0.3)]">Admin</span>
+                <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-[hsl(var(--neon-cyan)_/_0.3)]">Administração</span>
               </div>
 
-              {renderCollapsibleSection('📋 Conformidade', 'compliance', complianceItems)}
+              {renderCollapsibleSection('📋 Normas e Regras', 'compliance', complianceItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection('🧠 Inteligência & IA', 'aiAnalysis', intelligenceItems)}
+              {renderCollapsibleSection('🧠 Automação Inteligente', 'aiAnalysis', intelligenceItems)}
               <div className="my-1.5" />
-              {renderCollapsibleSection('🔧 Avançado', 'advanced', advancedItems)}
+              {renderCollapsibleSection('🔧 Ferramentas', 'advanced', advancedItems)}
             </motion.div>
           ) : (
             <motion.div className="space-y-0.5" variants={containerVariants} initial="hidden" animate="show">
