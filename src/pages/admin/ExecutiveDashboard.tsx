@@ -213,7 +213,7 @@ export default function ExecutiveDashboard() {
 
               {/* Key metrics - focused on BUSINESS impact */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                <MetricTile icon={<Laptop className="h-3.5 w-3.5" />} label="Computadores" value={`${agentCounts.online}/${agentCounts.total}`} sub="protegidos" color="green" pulse={agentCounts.online > 0} />
+                <MetricTile icon={<Laptop className="h-3.5 w-3.5" />} label="Computadores" value={`${onlineAgents}/${totalAgents}`} sub="protegidos" color="green" pulse={onlineAgents > 0} />
                 <MetricTile icon={<ShieldBan className="h-3.5 w-3.5" />} label="Ameaças Bloqueadas" value={`${summaryData?.blockedThreats || 0}`} sub="últimos 7 dias" color={summaryData?.blockedThreats ? 'green' : 'muted'} />
                 <MetricTile icon={<DeltaIcon className="h-3.5 w-3.5" />} label="Nível de Risco" value={deltaInfo.label} sub={deltaInfo.description} color={deltaInfo.color === 'green' ? 'green' : deltaInfo.color === 'red' ? 'red' : 'muted'} />
                 <MetricTile icon={<Hammer className="h-3.5 w-3.5" />} label="Correções Automáticas" value={`${summaryData?.automatedActions || 0}`} sub="últimos 30 dias" color={summaryData?.automatedActions ? 'emerald' : 'muted'} />
