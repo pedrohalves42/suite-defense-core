@@ -116,10 +116,12 @@ export default function NotificationChannels() {
   // Delete channel mutation
   const deleteChannelMutation = useMutation({
     mutationFn: async (channelId: string) => {
+      // V-1068 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('notification_channels')
         .delete()
-        .eq('id', channelId);
+        .eq('id', channelId)
+        .eq('tenant_id', tenant!.id);
       if (error) throw error;
     },
     onSuccess: () => {
