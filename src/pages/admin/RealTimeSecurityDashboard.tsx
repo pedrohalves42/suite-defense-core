@@ -29,7 +29,7 @@ import { SecurityImpactFeed } from '@/components/admin/SecurityImpactFeed';
 
 // ─── Friendly labels for raw event types ───
 const EVENT_LABELS: Record<string, { title: string; explanation: string; icon: string }> = {
-  unauthorized:        { title: 'Tentativa de acesso negada', explanation: 'Alguém tentou acessar sem permissão e foi bloqueado', icon: '🚫' },
+  unauthorized:        { title: 'Site bloqueado no computador', explanation: 'Um computador tentou acessar um site proibido pela política de bloqueio e foi impedido', icon: '🚫' },
   AUTH_INVALID_SIG:    { title: 'Credencial inválida', explanation: 'Uma tentativa de login com dados incorretos foi barrada', icon: '🔑' },
   AUTH_INVALID_SIGNATURE: { title: 'Credencial inválida', explanation: 'Uma tentativa de login com dados incorretos foi barrada', icon: '🔑' },
   AUTH_EXPIRED_TOKEN:  { title: 'Sessão expirada', explanation: 'Uma sessão antiga tentou ser usada e foi bloqueada', icon: '⏰' },
