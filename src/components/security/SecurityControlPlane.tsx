@@ -64,8 +64,9 @@ export function SecurityControlPlane() {
 
   // Fetch security dashboard data
   const { data: dashboardData, isLoading, refetch } = useQuery({
-    queryKey: ['security-control-plane'],
+    queryKey: ['security-control-plane', tenant?.id],
     queryFn: async (): Promise<SecurityDashboardData> => {
+      if (!tenant?.id) throw new Error('No tenant');
       const now = new Date();
       const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const last1h = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
@@ -79,13 +80,13 @@ export function SecurityControlPlane() {
         systemModeResult
       ] = await Promise.all([
         supabase.from('security_logs').select('*', { count: 'exact', head: true })
-          .eq('severity', 'critical').gte('created_at', last24h),
+          .eq('tenant_id', tenant.id).eq('severity', 'critical').gte('created_at', last24h),
         supabase.from('security_logs').select('*', { count: 'exact', head: true })
-          .eq('blocked', true).gte('created_at', last24h),
+          .eq('tenant_id', tenant.id).eq('blocked', true).gte('created_at', last24h),
         supabase.from('system_alerts').select('*', { count: 'exact', head: true })
-          .eq('resolved', false).eq('severity', 'critical'),
+          .eq('tenant_id', tenant.id).eq('resolved', false).eq('severity', 'critical'),
         supabase.from('jobs').select('*', { count: 'exact', head: true })
-          .eq('status', 'failed').gte('created_at', last1h),
+          .eq('tenant_id', tenant.id).eq('status', 'failed').gte('created_at', last1h),
         supabase.from('rls_test_results').select('*', { count: 'exact', head: true })
           .eq('passed', false).gte('tested_at', last24h),
         supabase.from('system_global_state').select('mode')
