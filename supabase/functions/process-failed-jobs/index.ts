@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,10 +8,8 @@ const corsHeaders = {
 
 const MAX_RETRIES = 3;
 
-// Classes de falha que podem ser retentadas
 const RETRYABLE_CLASSES = ['TRANSIENT'];
 
-// Classes que vão direto para DLQ (sem retry)
 const DLQ_CLASSES = [
   'AGENT_OFFLINE',
   'AGENT_STALLED',
@@ -23,6 +22,14 @@ const DLQ_CLASSES = [
 
 Deno.serve(async (req) => {
   const startedAt = Date.now();
+
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  // V-1142: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });

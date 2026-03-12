@@ -17,6 +17,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.47.10';
 import { logger } from '../_shared/logger.ts';
 import { shouldProcessAlertsForTenant } from '../_shared/business-hours.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

@@ -18,6 +18,7 @@ import {
   updateJobHeartbeat,
   EDGE_VERSION 
 } from '../_shared/health-probe.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

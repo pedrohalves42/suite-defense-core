@@ -229,6 +229,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // V-1135: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
+
   const startedAt = Date.now();
 
   try {
