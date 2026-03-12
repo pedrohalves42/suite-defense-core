@@ -90,8 +90,8 @@ export default function SecurityMonitoring() {
       // From blocked_access_attempts
       blockedAttempts.forEach(e => {
         unifiedEvents.push({
-          id: e.id, type: 'blocked_access', label: 'Tentativa de acesso negada',
-          detail: `${e.domain} — ${e.agent_name}`, severity: 'warning',
+          id: e.id, type: 'blocked_access', label: 'Site bloqueado no computador',
+          detail: `O computador "${e.agent_name}" tentou acessar "${e.domain}" e foi impedido pela política de bloqueio`, severity: 'warning',
           created_at: e.attempted_at, source: 'blocked_attempts',
         });
       });
