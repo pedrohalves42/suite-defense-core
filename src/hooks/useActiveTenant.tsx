@@ -128,13 +128,29 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   const hasMultipleTenants = tenants.length > 1;
 
   // Determine active tenant
+  // V-1014: localStorage is used as a hint for UX preference only,
+  // but the actual selection is validated against server-fetched tenants
   const activeTenant = (() => {
     if (tenants.length === 0) return null;
     
-    // If we have a stored active tenant ID, find it
+    // If we have a programmatically set active tenant ID, find it
     if (activeTenantId) {
       const found = tenants.find(t => t.id === activeTenantId);
       if (found) return found;
+    }
+    
+    // V-1014 FIX: Check localStorage hint ONLY after server validation
+    // This is safe because we verify the ID exists in the user's fetched tenants
+    if (typeof window !== 'undefined') {
+      const savedId = localStorage.getItem(ACTIVE_TENANT_KEY);
+      if (savedId) {
+        const found = tenants.find(t => t.id === savedId);
+        if (found) {
+          // Set state so subsequent renders don't re-read localStorage
+          setActiveTenantId(savedId);
+          return found;
+        }
+      }
     }
     
     // Default to first tenant
