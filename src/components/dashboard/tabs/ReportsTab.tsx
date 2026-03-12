@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatBrazilDateTime } from "@/lib/date-utils";
+import { CSVExportButton } from "@/components/dashboard/CSVExportButton";
 import type { DashboardReport } from "@/hooks/useDashboardData";
 
 interface ReportsTabProps {
