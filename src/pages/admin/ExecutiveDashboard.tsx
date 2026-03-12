@@ -292,32 +292,64 @@ export default function ExecutiveDashboard() {
               <CardContent className="space-y-3">
                 {/* Big numbers - business impact */}
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="text-center p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                    <p className="text-2xl font-bold text-blue-500">{summaryData?.automatedActions || 0}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Problemas corrigidos<br/>automaticamente</p>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <p className="text-2xl font-bold text-red-500">{summaryData?.incidentsContained || 0}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Incidentes de segurança<br/>contidos</p>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                    <p className="text-2xl font-bold text-amber-500">{summaryData?.hoursOfITSaved ? Math.round(summaryData.hoursOfITSaved) : 0}h</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Horas de TI<br/>economizadas</p>
-                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-center p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 cursor-help">
+                        <p className="text-2xl font-bold text-blue-500">{summaryData?.automatedActions || 0}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Problemas corrigidos<br/>automaticamente</p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-xs">
+                      <p className="font-semibold mb-1">Como é calculado:</p>
+                      <p>Soma de reparos automáticos ({summaryData?.actions30d.auto_repairs || 0}), restaurações de serviço ({summaryData?.actions30d.auto_recoveries || 0}) e correções de conformidade ({summaryData?.actions30d.policy_corrections || 0}) registrados nos últimos 30 dias.</p>
+                      <p className="mt-1 text-muted-foreground">Fonte: registros de evidência dos agentes (severity ≥ warning)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-center p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-help">
+                        <p className="text-2xl font-bold text-red-500">{summaryData?.incidentsContained || 0}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Incidentes de segurança<br/>contidos</p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-xs">
+                      <p className="font-semibold mb-1">Como é calculado:</p>
+                      <p>Eventos de segurança detectados e neutralizados: críticos ({summaryData?.actions30d.critical_prevented || 0}), altos ({summaryData?.actions30d.high_prevented || 0}) e médios ({summaryData?.actions30d.medium_prevented || 0}).</p>
+                      <p className="mt-1 text-muted-foreground">Fonte: logs de evidência com event_type = 'security_event'</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-center p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 cursor-help">
+                        <p className="text-2xl font-bold text-amber-500">{summaryData?.hoursOfITSaved ? Math.round(summaryData.hoursOfITSaved) : 0}h</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Horas de TI<br/>economizadas</p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-xs">
+                      <p className="font-semibold mb-1">Como é calculado:</p>
+                      <ul className="space-y-0.5">
+                        <li>• Reparo automático: 0,5h × {summaryData?.actions30d.auto_repairs || 0}</li>
+                        <li>• Restauração de serviço: 1h × {summaryData?.actions30d.auto_recoveries || 0}</li>
+                        <li>• Correção de conformidade: 0,25h × {summaryData?.actions30d.policy_corrections || 0}</li>
+                        <li>• Incidente crítico: 2h × {summaryData?.actions30d.critical_prevented || 0}</li>
+                      </ul>
+                      <p className="mt-1 text-muted-foreground">Estimativa conservadora baseada em tempo médio de resolução manual</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
 
                 {/* Detailed breakdown - friendly language */}
                 <div className="space-y-1">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1.5">Detalhamento</p>
-                  <ActionRow icon={<Wrench className="h-3 w-3 text-blue-400" />} label="Problemas corrigidos automaticamente" count={summaryData?.actions30d.auto_repairs || 0} description="Falhas detectadas e resolvidas sem intervenção" />
-                  <ActionRow icon={<RefreshCw className="h-3 w-3 text-emerald-400" />} label="Serviços restaurados" count={summaryData?.actions30d.auto_recoveries || 0} description="Recuperação automática sem downtime" />
-                  <ActionRow icon={<Flame className="h-3 w-3 text-red-400" />} label="Ameaças críticas neutralizadas" count={summaryData?.actions30d.critical_prevented || 0} description="Incidentes graves bloqueados pelo sistema" />
-                  <ActionRow icon={<Bug className="h-3 w-3 text-orange-400" />} label="Riscos de segurança contidos" count={summaryData?.actions30d.high_prevented || 0} description="Vulnerabilidades identificadas e tratadas" />
-                  <ActionRow icon={<Lock className="h-3 w-3 text-amber-400" />} label="Políticas de segurança realinhadas" count={summaryData?.actions30d.policy_corrections || 0} description="Desvios de conformidade corrigidos" />
-                  <ActionRow icon={<ShieldBan className="h-3 w-3 text-purple-400" />} label="Acessos não autorizados bloqueados" count={summaryData?.blockedThreats || 0} description="Tentativas barradas nos últimos 7 dias" />
+                  <ActionRow icon={<Wrench className="h-3 w-3 text-blue-400" />} label="Problemas corrigidos automaticamente" count={summaryData?.actions30d.auto_repairs || 0} description="Falhas detectadas e resolvidas sem intervenção" tooltip="Eventos do tipo 'auto_repair' com severity ≥ warning nos últimos 30 dias" />
+                  <ActionRow icon={<RefreshCw className="h-3 w-3 text-emerald-400" />} label="Serviços restaurados" count={summaryData?.actions30d.auto_recoveries || 0} description="Recuperação automática sem downtime" tooltip="Eventos 'auto_recovery' com severity ≥ warning nos últimos 30 dias" />
+                  <ActionRow icon={<Flame className="h-3 w-3 text-red-400" />} label="Ameaças críticas neutralizadas" count={summaryData?.actions30d.critical_prevented || 0} description="Incidentes graves bloqueados pelo sistema" tooltip="Eventos 'security_event' com severity 'critical' nos últimos 30 dias" />
+                  <ActionRow icon={<Bug className="h-3 w-3 text-orange-400" />} label="Riscos de segurança contidos" count={summaryData?.actions30d.high_prevented || 0} description="Vulnerabilidades identificadas e tratadas" tooltip="Eventos 'security_event' com severity 'high' nos últimos 30 dias" />
+                  <ActionRow icon={<Lock className="h-3 w-3 text-amber-400" />} label="Políticas de segurança realinhadas" count={summaryData?.actions30d.policy_corrections || 0} description="Desvios de conformidade corrigidos" tooltip="Eventos 'policy_drift' registrados nos últimos 30 dias" />
+                  <ActionRow icon={<ShieldBan className="h-3 w-3 text-purple-400" />} label="Acessos não autorizados bloqueados" count={summaryData?.blockedThreats || 0} description="Tentativas barradas nos últimos 7 dias" tooltip="Total de registros na tabela 'blocked_access_attempts' dos últimos 7 dias" />
                   {(summaryData?.actions30d.auto_detections || 0) > 0 && (
                     <div className="pt-1.5 mt-1.5 border-t border-border/30">
-                      <ActionRow icon={<Eye className="h-3 w-3 text-muted-foreground" />} label="Verificações de rotina realizadas" count={summaryData?.actions30d.auto_detections || 0} description="Monitoramento contínuo (não contabilizado como ação)" />
+                      <ActionRow icon={<Eye className="h-3 w-3 text-muted-foreground" />} label="Verificações de rotina realizadas" count={summaryData?.actions30d.auto_detections || 0} description="Monitoramento contínuo (não contabilizado como ação)" tooltip="Detecções com severity 'info'/'debug' — são checagens periódicas, não ações corretivas" />
                     </div>
                   )}
                 </div>
