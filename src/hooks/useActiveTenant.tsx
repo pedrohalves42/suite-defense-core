@@ -80,12 +80,10 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
 export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTenantId, setActiveTenantId] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(ACTIVE_TENANT_KEY);
-    }
-    return null;
-  });
+  // V-1014 FIX: Never use localStorage as initial state source
+  // localStorage is only used for UX persistence AFTER JWT validation
+  // The actual tenant_id source of truth is always the JWT/backend
+  const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
   
   // PATCH #2: Add isSyncing state to block queries until JWT is updated
   const [isSyncing, setIsSyncing] = useState(true);
