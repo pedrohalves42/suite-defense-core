@@ -43,6 +43,7 @@ export function useApproveAiAction() {
 
       // 3. Set approval fields (this is the FORMAL approval)
       const now = new Date().toISOString();
+      // V-1080 FIX: Add tenant_id filter
       const { error: approvalError } = await supabase
         .from('ai_actions')
         .update({
@@ -51,7 +52,8 @@ export function useApproveAiAction() {
           human_reviewed: true,
           reviewed_at: now,
         })
-        .eq('id', actionId);
+        .eq('id', actionId)
+        .eq('tenant_id', tenant!.id);
 
       if (approvalError) throw approvalError;
 
