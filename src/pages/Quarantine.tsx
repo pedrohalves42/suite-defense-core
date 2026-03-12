@@ -57,6 +57,7 @@ export default function Quarantine() {
 
   const restoreMutation = useMutation({
     mutationFn: async (fileId: string) => {
+      // V-1070 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('quarantined_files')
         .update({
@@ -64,7 +65,8 @@ export default function Quarantine() {
           restored_at: new Date().toISOString(),
           restored_by: (await supabase.auth.getUser()).data.user?.id
         })
-        .eq('id', fileId);
+        .eq('id', fileId)
+        .eq('tenant_id', tenant!.id);
 
       if (error) throw error;
     },
