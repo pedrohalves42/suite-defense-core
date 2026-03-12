@@ -60,14 +60,43 @@
 - ✅ Keyboard navigation (Enter/Space) nos cards de métricas
 - ✅ 10 testes unitários passando
 
+## ✅ Concluído (Sprint 6 — 12/03/2026)
+
+### Performance Avançada & React Query
+- ✅ `useDashboardQueries` — migração completa de useState+setInterval para React Query
+  - Cache automático, deduplicação, stale-while-revalidate
+  - `refetchInterval: 10s` para dados críticos, `30s` para dados secundários
+  - Realtime channels invalidam cache ao invés de refetch completo
+- ✅ `VirtualizedList` — componente genérico com react-window para listas 50+ itens
+- ✅ `useWebVitals` hook — APM frontend monitorando LCP, FID, CLS, TTFB, FCP
+- ✅ `WebVitalsCard` — card visual com score de performance no dashboard admin
+
+## ✅ Concluído (Sprint 7 — 12/03/2026)
+
+### Notificações & PWA
+- ✅ `useNotifications` hook — notificações in-app com suporte a Web Push
+  - Monitora jobs falhos e malware detectado via realtime
+  - Browser notifications para alertas críticos
+- ✅ `NotificationBell` — sino de notificações no header do dashboard
+- ✅ PWA completa com manifest, service worker e icons (configurada anteriormente)
+
+## ✅ Concluído (Sprint 8 — 12/03/2026)
+
+### Qualidade & Testes E2E
+- ✅ `playwright.config.ts` — configuração Playwright com projetos Desktop + Mobile
+- ✅ `e2e/dashboard.spec.ts` — 10 cenários E2E cobrindo:
+  - Landing page, login, signup, pricing, 404
+  - Navegação entre páginas de auth
+  - Tema dark por padrão
+  - PWA manifest acessível
+  - Viewport mobile responsivo
+  - CTA buttons visíveis
+
 ## ⏳ Pendente (Próximos Sprints)
 
 | # | Área | Prioridade | Status |
 |---|------|-----------|--------|
-| 1 | Dashboard customizável (drag widgets) | MÉDIO | TODO |
-| 2 | Notificações push PWA | MÉDIO | TODO |
-| 3 | APM frontend (Web Vitals) | BAIXO | TODO |
-| 4 | Particionamento de tabelas grandes | BAIXO | TODO |
-| 5 | Virtualização com react-window (listas 500+) | BAIXO | TODO |
-| 6 | Testes E2E com Playwright | MÉDIO | TODO |
-| 7 | Cobertura de testes >80% | MÉDIO | TODO |
+| 1 | Dashboard customizável (drag widgets com react-grid-layout) | MÉDIO | TODO |
+| 2 | Particionamento de tabelas grandes (jobs, audit_logs) | BAIXO | TODO |
+| 3 | Cobertura de testes >80% | MÉDIO | TODO |
+| 4 | Testes E2E autenticados (dashboard, CSV, PDF) | MÉDIO | TODO |

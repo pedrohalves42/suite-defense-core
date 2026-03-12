@@ -4,7 +4,7 @@ import { OnboardingTour } from "@/components/OnboardingTour";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useDashboardQueries } from "@/hooks/useDashboardQueries";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { SystemStatusBanner } from "@/components/dashboard/SystemStatusBanner";
@@ -18,6 +18,8 @@ import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState"
 import { DashboardPDFReport } from "@/components/dashboard/DashboardPDFReport";
 import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
 import { SystemBannerSkeleton, MetricCardsSkeleton } from "@/components/dashboard/DashboardSkeletons";
+import { WebVitalsCard } from "@/components/dashboard/WebVitalsCard";
+import { NotificationBell } from "@/components/dashboard/NotificationBell";
 
 const ServerDashboard = () => {
   useSessionGuard();
@@ -28,7 +30,7 @@ const ServerDashboard = () => {
   const {
     agents, jobs, reports, agentTokens, rateLimits, virusScans, auditLogs,
     loading, tenant, tenantLoading, tenantNames,
-  } = useDashboardData();
+  } = useDashboardQueries();
 
   const {
     offlineCount, failedJobs, alerts, agentsByTenant,
@@ -70,19 +72,22 @@ const ServerDashboard = () => {
               </p>
             </div>
           </div>
-          {isAdmin && (
-            <DashboardPDFReport
-              agents={agents}
-              jobs={jobs}
-              tenantName={tenant.name}
-              onlinePercentage={onlinePercentage}
-              successRate={successRate}
-              offlineCount={offlineCount}
-              failedJobs={failedJobs}
-              alerts={alerts}
-              systemState={systemState}
-            />
-          )}
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            {isAdmin && (
+              <DashboardPDFReport
+                agents={agents}
+                jobs={jobs}
+                tenantName={tenant.name}
+                onlinePercentage={onlinePercentage}
+                successRate={successRate}
+                offlineCount={offlineCount}
+                failedJobs={failedJobs}
+                alerts={alerts}
+                systemState={systemState}
+              />
+            )}
+          </div>
         </div>
 
         {/* Layer 1: Global Status */}
@@ -134,6 +139,13 @@ const ServerDashboard = () => {
               tenants={sortedTenantsByGravity}
               agentsByTenant={agentsByTenant}
             />
+          </DashboardErrorBoundary>
+        )}
+
+        {/* Web Vitals APM */}
+        {isAdmin && (
+          <DashboardErrorBoundary section="Web Vitals">
+            <WebVitalsCard />
           </DashboardErrorBoundary>
         )}
 
