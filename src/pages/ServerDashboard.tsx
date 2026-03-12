@@ -731,7 +731,10 @@ const ServerDashboard = () => {
               </div>
               
               {/* Contador de monitoramento */}
-              <div className="text-center md:text-right bg-secondary/30 rounded-xl p-6 border border-border">
+              <div 
+                className="text-center md:text-right bg-secondary/30 rounded-xl p-6 border border-border cursor-pointer hover:border-primary/40 hover:bg-secondary/50 transition-all"
+                onClick={() => navigate('/admin/agent-health')}
+              >
                 <p className="text-4xl font-bold text-foreground">{agents.length}</p>
                 <p className="text-sm text-muted-foreground">
                   computadores monitorados
