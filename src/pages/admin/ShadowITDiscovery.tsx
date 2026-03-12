@@ -54,7 +54,10 @@ export default function ShadowITDiscovery() {
       return data;
     },
     onSuccess: (data: any) => {
-      toast.success(`Shadow IT classificado: ${data?.classified ?? 0} apps analisados`);
+      const msg = data?.ai_classified > 0 
+        ? `${data.classified} apps classificados (${data.local_classified} por regras, ${data.ai_classified} por IA)`
+        : `${data?.classified ?? 0} apps classificados`;
+      toast.success(msg);
       queryClient.invalidateQueries({ queryKey: ["shadow-it-catalog"] });
     },
     onError: () => toast.error("Erro ao classificar Shadow IT"),
