@@ -267,12 +267,18 @@ export default function SecurityMonitoring() {
         </motion.div>
 
         {/* === KEY METRICS (only show if there's data) === */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <MetricCard
             label="Alertas Importantes"
-            value={m?.criticalEvents || 0}
+            value={(m?.criticalEvents || 0) + (m?.activeAlerts || 0)}
             icon={<AlertTriangle className="h-4 w-4" />}
-            color={m?.criticalEvents ? 'red' : 'muted'}
+            color={(m?.criticalEvents || m?.activeAlerts) ? 'red' : 'muted'}
+          />
+          <MetricCard
+            label="Acessos Bloqueados"
+            value={m?.blockedAttempts || 0}
+            icon={<Ban className="h-4 w-4" />}
+            color={m?.blockedAttempts ? 'amber' : 'muted'}
           />
           <MetricCard
             label="Tentativas de Login"
