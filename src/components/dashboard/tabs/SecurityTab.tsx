@@ -98,7 +98,7 @@ export default function SecurityTab({ agents, agentTokens, rateLimits, loading, 
           <CardDescription>Atividade recente dos agentes</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? <p className="text-center text-muted-foreground py-4">Carregando...</p> :
+          {loading ? <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => (<div key={i} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg"><div className="flex items-center gap-3"><Skeleton className="h-2 w-2 rounded-full" /><div><Skeleton className="h-4 w-32 mb-1" /><Skeleton className="h-3 w-24" /></div></div><Skeleton className="h-3 w-16" /></div>))}</div> :
            agents.filter(a => a.last_heartbeat).length === 0 ? <p className="text-center text-muted-foreground py-4">Nenhum heartbeat registrado</p> : (
             <div className="space-y-2">
               {agents.filter(a => a.last_heartbeat)
