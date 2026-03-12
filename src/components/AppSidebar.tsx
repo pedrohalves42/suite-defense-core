@@ -336,10 +336,12 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     title: string, 
     sectionKey: string,
     items: MenuItem[], 
-    variant: 'default' | 'super' = 'default'
+    variant: 'default' | 'super' = 'default',
+    icon?: any
   ) => {
     const isOpen = sectionStates[sectionKey];
     const hasActiveItem = isRouteInSection(items);
+    const isSuper = variant === 'super';
     
     if (isCollapsed) {
       return (
@@ -350,21 +352,45 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     }
 
     return (
-      <div>
+      <div className="mb-0.5">
         <button 
           onClick={() => toggleSection(sectionKey)} 
-          className="w-full flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors hover:bg-[hsl(var(--neon-cyan)_/_0.04)] group/section"
+          className={cn(
+            "w-full flex items-center justify-between px-3 py-1.5 rounded-md cursor-pointer transition-all duration-200 group/section",
+            isSuper 
+              ? "hover:bg-[hsl(var(--neon-purple)_/_0.05)]" 
+              : "hover:bg-[hsl(var(--neon-cyan)_/_0.04)]",
+            hasActiveItem && !isSuper && "bg-[hsl(var(--neon-cyan)_/_0.03)]",
+            hasActiveItem && isSuper && "bg-[hsl(var(--neon-purple)_/_0.03)]"
+          )}
         >
           <span className={cn(
-            "sidebar-section-label transition-colors flex items-center gap-2",
-            hasActiveItem && "!text-[hsl(var(--neon-cyan)_/_0.8)]"
+            "flex items-center gap-1.5 text-[10px] uppercase tracking-[0.12em] font-bold transition-colors",
+            isSuper 
+              ? "text-[hsl(var(--neon-purple)_/_0.5)] group-hover/section:text-[hsl(var(--neon-purple)_/_0.7)]"
+              : "text-[hsl(var(--neon-cyan)_/_0.45)] group-hover/section:text-[hsl(var(--neon-cyan)_/_0.7)]",
+            hasActiveItem && !isSuper && "!text-[hsl(var(--neon-cyan)_/_0.8)]",
+            hasActiveItem && isSuper && "!text-[hsl(var(--neon-purple)_/_0.8)]"
           )}>
             {title}
           </span>
-          <ChevronDown className={cn(
-            "h-3 w-3 text-[hsl(var(--neon-cyan)_/_0.3)] transition-all duration-300 group-hover/section:text-[hsl(var(--neon-cyan)_/_0.6)]",
-            isOpen && "rotate-180"
-          )} />
+          <div className={cn(
+            "flex items-center gap-1.5"
+          )}>
+            {!isOpen && hasActiveItem && (
+              <div className={cn(
+                "w-1.5 h-1.5 rounded-full",
+                isSuper ? "bg-[hsl(var(--neon-purple))]" : "bg-[hsl(var(--neon-cyan))]"
+              )} />
+            )}
+            <ChevronDown className={cn(
+              "h-3 w-3 transition-all duration-300",
+              isSuper 
+                ? "text-[hsl(var(--neon-purple)_/_0.3)] group-hover/section:text-[hsl(var(--neon-purple)_/_0.6)]"
+                : "text-[hsl(var(--neon-cyan)_/_0.3)] group-hover/section:text-[hsl(var(--neon-cyan)_/_0.6)]",
+              isOpen && "rotate-180"
+            )} />
+          </div>
         </button>
         <AnimatePresence>
           {isOpen && (
@@ -372,11 +398,11 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
               className="overflow-hidden"
             >
               <motion.div 
-                className="space-y-0.5 mt-1"
+                className="space-y-0.5 mt-0.5 ml-1 border-l border-[hsl(var(--neon-cyan)_/_0.06)] pl-1"
                 variants={containerVariants}
                 initial="hidden"
                 animate="show"
@@ -505,9 +531,9 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
         {/* ─── Navigation ───────────────────── */}
         <nav className="relative z-20 flex-1 overflow-y-auto py-2 px-2 scrollbar-thin">
           {isAdmin ? (
-            <motion.div variants={containerVariants} initial="show" animate="show">
-              {/* OVERVIEW - always visible */}
-              <div className="space-y-0.5 mb-2">
+            <motion.div variants={containerVariants} initial="show" animate="show" className="space-y-1">
+              {/* OVERVIEW - always visible, no section header */}
+              <div className="space-y-0.5">
                 {overviewItems.map((item, idx) => (
                   <div key={item.to}>
                     {renderNavItem(item, idx)}
@@ -515,21 +541,21 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                 ))}
               </div>
 
-              <div className="sidebar-divider-neon my-2 mx-2" />
+              <div className="sidebar-divider-neon my-2.5 mx-2" />
 
+              {/* Main protection & management sections */}
               {renderCollapsibleSection('🛡️ Proteção', 'protection', securityItems)}
-              <div className="my-1.5" />
               {renderCollapsibleSection('⚙️ Organização', 'management', managementItems)}
 
-              <div className="sidebar-divider-neon my-2 mx-2" />
-              <div className="px-3 py-1">
-                <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-[hsl(var(--neon-cyan)_/_0.3)]">Administração</span>
+              <div className="sidebar-divider-neon my-2.5 mx-2" />
+              
+              {/* Admin sections - more compact */}
+              <div className="px-3 py-0.5">
+                <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--neon-cyan)_/_0.2)]">Administração</span>
               </div>
 
               {renderCollapsibleSection('📋 Normas e Regras', 'compliance', complianceItems)}
-              <div className="my-1.5" />
               {renderCollapsibleSection('🧠 Automação Inteligente', 'aiAnalysis', intelligenceItems)}
-              <div className="my-1.5" />
               {renderCollapsibleSection('🔧 Ferramentas', 'advanced', advancedItems)}
             </motion.div>
           ) : (
@@ -556,19 +582,19 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
           {/* Super Admin */}
           {isSuperAdmin && (
             <>
-              <div className="sidebar-divider-neon my-3 mx-2" />
+              <div className="sidebar-divider-neon my-2.5 mx-2" />
               {!isCollapsed ? (
                 <div>
                   <button 
                     onClick={() => toggleSection('superAdmin')}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[hsl(var(--neon-purple)_/_0.06)] cursor-pointer group/super"
+                    className="w-full flex items-center justify-between px-3 py-1.5 rounded-md hover:bg-[hsl(var(--neon-purple)_/_0.05)] cursor-pointer group/super"
                   >
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[hsl(var(--neon-purple)_/_0.6)] flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[hsl(var(--neon-purple)_/_0.5)] flex items-center gap-1.5 group-hover/super:text-[hsl(var(--neon-purple)_/_0.7)]">
                       <Crown className="h-3 w-3" />
-                      <span className="text-shadow-[0_0_8px_hsl(var(--neon-purple)_/_0.3)]">Super Admin</span>
+                      Super Admin
                     </span>
                     <ChevronDown className={cn(
-                      "h-3 w-3 text-[hsl(var(--neon-purple)_/_0.4)] transition-transform duration-300",
+                      "h-3 w-3 text-[hsl(var(--neon-purple)_/_0.3)] transition-transform duration-300",
                       sectionStates.superAdmin && "rotate-180"
                     )} />
                   </button>
@@ -578,18 +604,14 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                         className="overflow-hidden"
                       >
-                        <div className="space-y-1 mt-1">
+                        <div className="space-y-0.5 mt-0.5 ml-1 border-l border-[hsl(var(--neon-purple)_/_0.08)] pl-1">
                           {renderCollapsibleSection('Operacional', 'superOps', superOpsItems, 'super')}
-                          <div className="my-1" />
                           {renderCollapsibleSection('Financeiro', 'superFinance', superFinanceItems, 'super')}
-                          <div className="my-1" />
                           {renderCollapsibleSection('Sistema', 'superSystem', superSystemItems, 'super')}
-                          <div className="my-1" />
                           {renderCollapsibleSection('IA', 'superAI', superAIItems, 'super')}
-                          <div className="my-1" />
                           {renderCollapsibleSection('Integrações', 'superIntegrations', superIntegrationsItems, 'super')}
                         </div>
                       </motion.div>

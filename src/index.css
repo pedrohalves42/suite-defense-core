@@ -291,9 +291,10 @@
 
   /* Sidebar section header */
   .sidebar-section-label {
-    @apply text-[10px] uppercase tracking-[0.15em] font-semibold;
-    color: hsl(var(--neon-cyan) / 0.5);
-    text-shadow: 0 0 8px hsl(var(--neon-cyan) / 0.15);
+    @apply text-[10px] uppercase tracking-[0.12em] font-bold;
+    color: hsl(var(--neon-cyan) / 0.45);
+    text-shadow: 0 0 6px hsl(var(--neon-cyan) / 0.1);
+    transition: color 0.2s ease;
   }
 
   /* Neon badge */
