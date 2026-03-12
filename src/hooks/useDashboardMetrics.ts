@@ -34,6 +34,33 @@ export function useDashboardMetrics(
     return acc;
   }, {} as Record<string, number>), [agents]);
 
+  // Temporal comparison: last 24h vs previous 24h
+  const trends = useMemo(() => {
+    const now = new Date().getTime();
+    const h24 = 24 * 60 * 60 * 1000;
+    const recentJobs = jobs.filter(j => now - new Date(j.created_at).getTime() < h24);
+    const prevJobs = jobs.filter(j => {
+      const age = now - new Date(j.created_at).getTime();
+      return age >= h24 && age < h24 * 2;
+    });
+
+    const recentFailed = recentJobs.filter(j => j.status === "failed").length;
+    const prevFailed = prevJobs.filter(j => j.status === "failed").length;
+    const recentCompleted = recentJobs.filter(j => j.status === "completed").length;
+    const prevCompleted = prevJobs.filter(j => j.status === "completed").length;
+
+    const recentSuccessRate = recentCompleted + recentFailed > 0
+      ? (recentCompleted / (recentCompleted + recentFailed)) * 100 : 100;
+    const prevSuccessRate = prevCompleted + prevFailed > 0
+      ? (prevCompleted / (prevCompleted + prevFailed)) * 100 : 100;
+
+    return {
+      failedTrend: recentFailed - prevFailed, // positive = worse
+      successRateTrend: Math.round(recentSuccessRate - prevSuccessRate), // positive = better
+      totalJobsTrend: recentJobs.length - prevJobs.length,
+    };
+  }, [jobs]);
+
   const tenantStats = useMemo(() => {
     const stats: Record<string, { 
       name: string; agentCount: number; offlineCount: number; failedJobsCount: number;
@@ -94,6 +121,6 @@ export function useDashboardMetrics(
   return {
     activeAgents, offlineCount, pendingJobs, completedJobs, failedJobs,
     successRate, alerts, agentsByTenant, sortedTenantsByGravity,
-    tenantsWithIssues, onlinePercentage, systemState,
+    tenantsWithIssues, onlinePercentage, systemState, trends,
   };
 }
