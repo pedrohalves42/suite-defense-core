@@ -72,10 +72,12 @@ export function InsightActionPanel() {
 
   const acknowledgeMutation = useMutation({
     mutationFn: async (insightId: string) => {
+      // V-1059 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('ai_insights')
         .update({ acknowledged: true, acknowledged_at: new Date().toISOString() })
-        .eq('id', insightId);
+        .eq('id', insightId)
+        .eq('tenant_id', tenantId);
 
       if (error) throw error;
     },
