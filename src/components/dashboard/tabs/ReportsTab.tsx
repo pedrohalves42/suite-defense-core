@@ -18,7 +18,12 @@ export default function ReportsTab({ reports, loading }: ReportsTabProps) {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="text-center text-muted-foreground py-8">Carregando...</p>
+          <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg">
+              <div className="space-y-2"><div className="flex gap-2"><Skeleton className="h-4 w-20 rounded-full" /><Skeleton className="h-4 w-28" /></div><Skeleton className="h-3 w-48" /></div>
+              <Skeleton className="h-3 w-24" />
+            </div>
+          ))}</div>
         ) : reports.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">Nenhum relatório encontrado</p>
         ) : (

@@ -175,7 +175,7 @@ export default function SecurityTab({ agents, agentTokens, rateLimits, loading, 
           <CardDescription>Proteção contra abuso de recursos</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? <p className="text-center text-muted-foreground py-4">Carregando...</p> :
+          {loading ? <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => (<div key={i} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg"><Skeleton className="h-4 w-40" /><Skeleton className="h-5 w-20 rounded-full" /></div>))}</div> :
            rateLimits.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-success/50" />
