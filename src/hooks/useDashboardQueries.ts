@@ -7,7 +7,7 @@ import { logger } from "@/lib/logger";
 import type {
   DashboardAgent, DashboardJob, DashboardReport,
   DashboardAgentToken, DashboardRateLimit, DashboardVirusScan, DashboardAuditLog,
-} from "@/hooks/useDashboardData";
+} from "@/types/dashboard";
 
 const REFETCH_INTERVAL = 10_000;
 const STALE_TIME = 5_000;
