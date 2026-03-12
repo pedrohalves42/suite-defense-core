@@ -124,10 +124,12 @@ export function useRejectAiAction() {
       if (actionError || !action) throw new Error('Action not found');
 
       // 3. Update status to rejected
+      // V-1080 FIX: Add tenant_id filter
       const { error: rejectError } = await supabase
         .from('ai_actions')
         .update({ status: 'rejected' })
-        .eq('id', actionId);
+        .eq('id', actionId)
+        .eq('tenant_id', tenant!.id);
 
       if (rejectError) throw rejectError;
 
