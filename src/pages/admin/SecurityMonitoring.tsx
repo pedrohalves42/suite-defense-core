@@ -325,27 +325,33 @@ export default function SecurityMonitoring() {
               <CardDescription className="text-xs">Últimas detecções de segurança</CardDescription>
             </CardHeader>
             <CardContent>
-              {data?.events && data.events.length > 0 ? (
+              {data?.unifiedEvents && data.unifiedEvents.length > 0 ? (
                 <div className="max-h-[350px] overflow-y-auto space-y-2">
-                  {data.events.slice(0, 10).map((event) => {
-                    const info = getSeverityInfo(event.severity);
+                  {data.unifiedEvents.slice(0, 15).map((event) => {
+                    const severityColor = {
+                      critical: 'bg-red-500',
+                      high: 'bg-amber-500',
+                      error: 'bg-amber-500',
+                      warning: 'bg-yellow-500',
+                      medium: 'bg-yellow-500',
+                    }[event.severity] || 'bg-muted-foreground/30';
+                    const sourceIcon = {
+                      blocked_attempts: <Ban className="h-3 w-3 text-red-400" />,
+                      evidence_logs: <Activity className="h-3 w-3 text-blue-400" />,
+                      security_logs: <Shield className="h-3 w-3 text-amber-400" />,
+                    }[event.source] || <Shield className="h-3 w-3" />;
                     return (
                       <div key={event.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-muted/20">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className={cn(
-                            "w-2 h-2 rounded-full shrink-0",
-                            event.severity === 'critical' && "bg-red-500",
-                            event.severity === 'high' && "bg-amber-500",
-                            event.severity === 'medium' && "bg-yellow-500",
-                            (!event.severity || event.severity === 'low') && "bg-muted-foreground/30"
-                          )} />
+                          <span className={cn("w-2 h-2 rounded-full shrink-0", severityColor)} />
+                          {sourceIcon}
                           <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{getAttackTypeLabel(event.attack_type)}</p>
-                            <p className="text-[11px] text-muted-foreground font-mono">{event.ip_address?.slice(0, 18)}</p>
+                            <p className="text-sm font-medium truncate">{event.label}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">{event.detail}</p>
                           </div>
                         </div>
                         <span className="text-[11px] text-muted-foreground shrink-0 ml-2">
-                          {formatBrazilDateTime(event.created_at, 'time')}
+                          {formatBrazilDateTime(event.created_at, 'relative')}
                         </span>
                       </div>
                     );
