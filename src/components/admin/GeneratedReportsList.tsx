@@ -114,10 +114,12 @@ export function GeneratedReportsList() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ reportId, updates }: { reportId: string; updates: Partial<GeneratedReport> }) => {
+      // V-1061 FIX: Add tenant_id filter
       const { error } = await supabase
         .from("generated_reports")
         .update(updates)
-        .eq("id", reportId);
+        .eq("id", reportId)
+        .eq("tenant_id", activeTenant?.id);
       if (error) throw error;
     },
     onSuccess: () => {
