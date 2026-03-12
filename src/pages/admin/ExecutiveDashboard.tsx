@@ -197,7 +197,7 @@ export default function ExecutiveDashboard() {
                     <Badge variant="outline" className="text-[10px] font-medium">
                       {overallScore}%
                     </Badge>
-                    {agentCounts.online > 0 && (
+                    {onlineAgents > 0 && (
                       <Badge variant="outline" className="gap-1 text-[10px] border-green-500/30 text-green-500">
                         <span className="relative flex h-1.5 w-1.5">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
