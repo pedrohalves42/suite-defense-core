@@ -115,14 +115,18 @@ export const useUpdateTag = () => {
 };
 
 export const useDeleteTag = () => {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (tagId: string) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1046 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('agent_tags')
         .delete()
-        .eq('id', tagId);
+        .eq('id', tagId)
+        .eq('tenant_id', tenant.id);
       if (error) throw error;
     },
     onSuccess: () => {

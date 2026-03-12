@@ -76,14 +76,17 @@ export function useDataExposure() {
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
       const updates: Record<string, unknown> = { status };
       if (status === 'remediated') {
         updates.remediated_at = new Date().toISOString();
       }
+      // V-1047 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('data_exposure_findings')
         .update(updates)
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenant.id);
       if (error) throw error;
     },
     onSuccess: () => {
