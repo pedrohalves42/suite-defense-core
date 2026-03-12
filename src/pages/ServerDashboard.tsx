@@ -6,6 +6,7 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
+import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { SystemStatusBanner } from "@/components/dashboard/SystemStatusBanner";
 import { MetricCards } from "@/components/dashboard/MetricCards";
 import { AdminMetricCards } from "@/components/dashboard/AdminMetricCards";
@@ -15,9 +16,11 @@ import { SecurityTimeline } from "@/components/dashboard/SecurityTimeline";
 import { DashboardTabs } from "@/components/dashboard/DashboardTabs";
 import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState";
 import { DashboardPDFReport } from "@/components/dashboard/DashboardPDFReport";
-import { SystemBannerSkeleton, MetricCardsSkeleton, ChartsSkeleton, TimelineSkeleton } from "@/components/dashboard/DashboardSkeletons";
+import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
+import { SystemBannerSkeleton, MetricCardsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 const ServerDashboard = () => {
+  useSessionGuard();
   const { showOnboarding, completeOnboarding, dismissFor7Days } = useOnboarding();
   const { isAdmin } = useIsAdmin();
   const { isSuperAdmin } = useSuperAdmin();
@@ -83,64 +86,78 @@ const ServerDashboard = () => {
         </div>
 
         {/* Layer 1: Global Status */}
-        {loading ? <SystemBannerSkeleton /> : (
-          <SystemStatusBanner
-            systemState={systemState}
-            onlinePercentage={onlinePercentage}
-            offlineCount={offlineCount}
-            failedJobs={failedJobs}
-            tenantsWithIssues={tenantsWithIssues}
-            totalAgents={agents.length}
-            totalTenants={Object.keys(agentsByTenant).length}
-          />
-        )}
+        <DashboardErrorBoundary section="Status Global">
+          {loading ? <SystemBannerSkeleton /> : (
+            <SystemStatusBanner
+              systemState={systemState}
+              onlinePercentage={onlinePercentage}
+              offlineCount={offlineCount}
+              failedJobs={failedJobs}
+              tenantsWithIssues={tenantsWithIssues}
+              totalAgents={agents.length}
+              totalTenants={Object.keys(agentsByTenant).length}
+            />
+          )}
+        </DashboardErrorBoundary>
 
         {/* Layer 2: Metric Cards */}
-        {loading ? <MetricCardsSkeleton /> : (
-          <MetricCards
-            totalAgents={agents.length}
-            onlinePercentage={onlinePercentage}
-            offlineCount={offlineCount}
-            alerts={alerts}
-            successRate={successRate}
-            failedJobs={failedJobs}
-          />
-        )}
+        <DashboardErrorBoundary section="Métricas">
+          {loading ? <MetricCardsSkeleton /> : (
+            <MetricCards
+              totalAgents={agents.length}
+              onlinePercentage={onlinePercentage}
+              offlineCount={offlineCount}
+              alerts={alerts}
+              successRate={successRate}
+              failedJobs={failedJobs}
+            />
+          )}
+        </DashboardErrorBoundary>
 
         {/* Layer 2.5: Admin Metrics */}
         {isAdmin && (
-          <AdminMetricCards
-            agents={agents}
-            jobs={jobs}
-            agentTokens={agentTokens}
-            rateLimits={rateLimits}
-          />
+          <DashboardErrorBoundary section="Métricas Admin">
+            <AdminMetricCards
+              agents={agents}
+              jobs={jobs}
+              agentTokens={agentTokens}
+              rateLimits={rateLimits}
+            />
+          </DashboardErrorBoundary>
         )}
 
         {/* Layer 3: Multi-Tenant Overview */}
         {isSuperAdmin && Object.keys(agentsByTenant).length > 1 && (
-          <MultiTenantOverview
-            tenants={sortedTenantsByGravity}
-            agentsByTenant={agentsByTenant}
-          />
+          <DashboardErrorBoundary section="Multi-Empresa">
+            <MultiTenantOverview
+              tenants={sortedTenantsByGravity}
+              agentsByTenant={agentsByTenant}
+            />
+          </DashboardErrorBoundary>
         )}
 
         {/* Charts */}
-        <DashboardCharts jobs={jobs} virusScans={virusScans} loading={loading} />
+        <DashboardErrorBoundary section="Gráficos">
+          <DashboardCharts jobs={jobs} virusScans={virusScans} loading={loading} />
+        </DashboardErrorBoundary>
 
         {/* Security Timeline */}
-        <SecurityTimeline auditLogs={auditLogs} loading={loading} />
+        <DashboardErrorBoundary section="Timeline de Segurança">
+          <SecurityTimeline auditLogs={auditLogs} loading={loading} />
+        </DashboardErrorBoundary>
 
         {/* Detail Tabs */}
-        <DashboardTabs
-          agents={agents}
-          jobs={jobs}
-          reports={reports}
-          agentTokens={agentTokens}
-          rateLimits={rateLimits}
-          loading={loading}
-          tenantNames={tenantNames}
-        />
+        <DashboardErrorBoundary section="Detalhes">
+          <DashboardTabs
+            agents={agents}
+            jobs={jobs}
+            reports={reports}
+            agentTokens={agentTokens}
+            rateLimits={rateLimits}
+            loading={loading}
+            tenantNames={tenantNames}
+          />
+        </DashboardErrorBoundary>
 
         {/* Footer */}
         <Card className="bg-muted/20 border-dashed border-muted-foreground/20">

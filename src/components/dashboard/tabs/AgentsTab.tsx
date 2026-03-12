@@ -1,7 +1,9 @@
-import { Users, Download } from "lucide-react";
+import { useState, useMemo, memo } from "react";
+import { Users, Search, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { getJobTypeLabel } from "@/lib/job-labels";
@@ -16,14 +18,63 @@ interface AgentsTabProps {
   tenantNames: Record<string, string>;
 }
 
-export default function AgentsTab({ agents, jobs, reports, loading, tenantNames }: AgentsTabProps) {
+function AgentsTabComponent({ agents, jobs, reports, loading, tenantNames }: AgentsTabProps) {
   const navigate = useNavigate();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all");
+
+  const filteredAgents = useMemo(() => {
+    return agents.filter(agent => {
+      const matchesSearch = !search || 
+        agent.agent_name.toLowerCase().includes(search.toLowerCase()) ||
+        (tenantNames[agent.tenant_id] || "").toLowerCase().includes(search.toLowerCase());
+      
+      if (!matchesSearch) return false;
+
+      if (statusFilter === "all") return true;
+      const isOnline = agent.last_heartbeat && 
+        (new Date().getTime() - new Date(agent.last_heartbeat).getTime()) < 5 * 60 * 1000;
+      return statusFilter === "online" ? isOnline : !isOnline;
+    });
+  }, [agents, search, statusFilter, tenantNames]);
 
   return (
     <Card className="bg-gradient-card border-primary/20">
       <CardHeader>
         <CardTitle>Computadores Registrados</CardTitle>
         <CardDescription>Lista completa com status em tempo real</CardDescription>
+        {agents.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-2 pt-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome ou empresa..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 h-9 text-sm"
+              />
+              {search && (
+                <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                </button>
+              )}
+            </div>
+            <div className="flex gap-1">
+              {(["all", "online", "offline"] as const).map(f => (
+                <Button
+                  key={f}
+                  variant={statusFilter === f ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStatusFilter(f)}
+                  className="text-xs h-9"
+                >
+                  {f === "all" ? `Todos (${agents.length})` :
+                   f === "online" ? `Online` : `Offline`}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -43,15 +94,17 @@ export default function AgentsTab({ agents, jobs, reports, loading, tenantNames 
               </div>
             ))}
           </div>
-        ) : agents.length === 0 ? (
+        ) : filteredAgents.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>Nenhum computador registrado</p>
-            <Button onClick={() => navigate("/installer")} variant="outline" className="mt-4">Criar Instalador</Button>
+            <p>{search || statusFilter !== "all" ? "Nenhum resultado encontrado" : "Nenhum computador registrado"}</p>
+            {!search && statusFilter === "all" && (
+              <Button onClick={() => navigate("/installer")} variant="outline" className="mt-4">Criar Instalador</Button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
-            {agents.map((agent) => {
+            {filteredAgents.map((agent) => {
               const isActive = agent.last_heartbeat && 
                 (new Date().getTime() - new Date(agent.last_heartbeat).getTime()) < 5 * 60 * 1000;
               const agentJobs = jobs.filter(j => j.agent_name === agent.agent_name);
@@ -100,7 +153,7 @@ export default function AgentsTab({ agents, jobs, reports, loading, tenantNames 
                         {lastJob && (
                           <div className="pt-2 border-t border-border">
                             <p className="text-xs text-muted-foreground mb-1">Última verificação:</p>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <Badge variant="outline" className="text-xs">{getJobTypeLabel(lastJob.type)}</Badge>
                               <Badge variant={lastJob.status === "completed" ? "default" : lastJob.status === "queued" ? "secondary" : "destructive"} className="text-xs">
                                 {lastJob.status === "completed" ? "Concluída" : lastJob.status === "queued" ? "Aguardando" : "Com erro"}
@@ -121,3 +174,5 @@ export default function AgentsTab({ agents, jobs, reports, loading, tenantNames 
     </Card>
   );
 }
+
+export default memo(AgentsTabComponent);
