@@ -144,6 +144,7 @@ export function useResolveDlqBatch() {
       resolutionNotes: string;
       resolutionSource?: 'human' | 'system' | 'auto_cleanup';
     }) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
       // 1. Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not authenticated');
@@ -153,7 +154,7 @@ export function useResolveDlqBatch() {
         throw new Error('Notas de resolução são obrigatórias (mínimo 5 caracteres)');
       }
 
-      // 3. Update all items
+      // 3. Update all items - V-1031 FIX: tenant isolation
       const { error: updateError } = await supabase
         .from('failed_jobs_dlq')
         .update({
@@ -163,7 +164,8 @@ export function useResolveDlqBatch() {
           resolution_notes: resolutionNotes,
           resolution_source: resolutionSource,
         })
-        .in('id', dlqItemIds);
+        .in('id', dlqItemIds)
+        .eq('tenant_id', tenant.id);
 
       if (updateError) throw updateError;
 
