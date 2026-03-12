@@ -92,14 +92,18 @@ export const useCreateTag = () => {
 };
 
 export const useUpdateTag = () => {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; name?: string; color?: string; description?: string }) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1046 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('agent_tags')
         .update(updates)
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenant.id);
       if (error) throw error;
     },
     onSuccess: () => {
