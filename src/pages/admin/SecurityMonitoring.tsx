@@ -247,6 +247,7 @@ export default function SecurityMonitoring() {
                   <div>
                     <p className="text-sm font-medium text-amber-500">Atividade detectada no período</p>
                     <p className="text-xs text-muted-foreground">
+                      {m.blockedAttempts > 0 && `${m.blockedAttempts} acesso${m.blockedAttempts > 1 ? 's' : ''} bloqueado${m.blockedAttempts > 1 ? 's' : ''}. `}
                       {m.failedLogins > 0 && `${m.failedLogins} tentativa${m.failedLogins > 1 ? 's' : ''} de login. `}
                       {m.blockedIps > 0 && `${m.blockedIps} IP${m.blockedIps > 1 ? 's' : ''} bloqueado${m.blockedIps > 1 ? 's' : ''}. `}
                       {m.rateLimitBreaches > 0 && `${m.rateLimitBreaches} limite${m.rateLimitBreaches > 1 ? 's' : ''} excedido${m.rateLimitBreaches > 1 ? 's' : ''}.`}
