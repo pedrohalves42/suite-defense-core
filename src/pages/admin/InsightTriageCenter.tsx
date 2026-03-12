@@ -75,10 +75,12 @@ export default function InsightTriageCenter() {
 
   const acknowledgeMutation = useMutation({
     mutationFn: async (insightIds: string[]) => {
+      // V-1075 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('ai_insights')
         .update({ acknowledged: true })
-        .in('id', insightIds);
+        .in('id', insightIds)
+        .eq('tenant_id', tenant!.id);
       
       if (error) throw error;
     },
