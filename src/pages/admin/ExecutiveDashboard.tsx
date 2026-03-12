@@ -141,7 +141,7 @@ export default function ExecutiveDashboard() {
     return list;
   })();
 
-  if (isLoading || snapshotsLoading) {
+  if (isLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-64" />
