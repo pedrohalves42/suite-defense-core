@@ -114,7 +114,8 @@ export function useResolveDlqItem() {
           resolution_notes: resolutionNotes,
           resolution_source: resolutionSource,
         })
-        .eq('id', dlqItemId);
+        .eq('id', dlqItemId)
+        .eq('tenant_id', tenant.id); // V-1031 FIX: tenant isolation
 
       if (updateError) throw updateError;
 
