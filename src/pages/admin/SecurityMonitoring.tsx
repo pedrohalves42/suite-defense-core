@@ -40,10 +40,10 @@ export default function SecurityMonitoring() {
       const sb = supabase as any;
 
       const [rateLimitsRes, failedLoginsRes, blockedIpsRes, securityEventsRes, agentsRes] = await Promise.all([
-        sb.from('rate_limits').select('*', { count: 'exact', head: true }).gte('window_start', since).not('blocked_until', 'is', null),
-        sb.from('failed_login_attempts').select('ip_address, created_at').gte('created_at', since),
-        sb.from('ip_blocklist').select('*').gte('blocked_until', new Date().toISOString()).order('created_at', { ascending: false }).limit(20),
-        sb.from('security_logs').select('*').gte('created_at', since).order('created_at', { ascending: false }).limit(50),
+        sb.from('rate_limits').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('window_start', since).not('blocked_until', 'is', null),
+        sb.from('failed_login_attempts').select('ip_address, created_at').eq('tenant_id', tenant.id).gte('created_at', since),
+        sb.from('ip_blocklist').select('*').eq('tenant_id', tenant.id).gte('blocked_until', new Date().toISOString()).order('created_at', { ascending: false }).limit(20),
+        sb.from('security_logs').select('*').eq('tenant_id', tenant.id).gte('created_at', since).order('created_at', { ascending: false }).limit(50),
         supabase.rpc('get_agents_list', { p_tenant_id: tenant.id, p_include_archived: false }),
       ]);
 
