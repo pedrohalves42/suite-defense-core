@@ -188,12 +188,27 @@ export function DynamicValidationSystem() {
       if (!user) throw new Error("Usuário não autenticado");
       if (!tenant) throw new Error("Tenant não selecionado");
 
+      // Cancel existing active jobs for these agent+type combos to avoid dedup constraint
+      const dedupeKeys = validationJobs.map(vJob => ({
+        agent_id: vJob.agentId,
+        type: vJob.jobType,
+      }));
+
+      for (const dk of dedupeKeys) {
+        await supabase
+          .from('jobs')
+          .update({ status: 'cancelled' })
+          .eq('tenant_id', tenant.id)
+          .eq('agent_id', dk.agent_id)
+          .eq('type', dk.type)
+          .in('status', ['pending', 'queued', 'assigned']);
+      }
+
       // Create all jobs
       const jobsToCreate = validationJobs.map(vJob => {
         const agent = agents.find(a => a.id === vJob.agentId);
         if (!agent) return null;
 
-        // Special payload for update_agent job
         const payload = vJob.jobType === 'update_agent' 
           ? { 
               current_version: agent.agent_version || 'unknown',
