@@ -27,6 +27,33 @@ import { useSimpleModeContext } from '@/hooks/useSimpleMode';
 import { useTranslation } from 'react-i18next';
 import { useUnifiedMetrics } from '@/hooks/useUnifiedMetrics';
 
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 12 },
+  visible: (i: number) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.06, duration: 0.35, ease: 'easeOut' as const }
+  })
+};
+
+export default function Dashboard() {
+  const { t } = useTranslation();
+  const { metrics, isLoading: metricsLoading, tenant } = useUnifiedMetrics();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const { isSimple } = useSimpleModeContext();
+
+  useEffect(() => {
+    const onboardingParam = searchParams.get('onboarding');
+    if (onboardingParam === 'true') {
+      setShowOnboarding(true);
+      searchParams.delete('onboarding');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   // Acknowledge alerts mutation
   const acknowledgeAllMutation = useMutation({
     mutationFn: async () => {
@@ -39,45 +66,22 @@ import { useUnifiedMetrics } from '@/hooks/useUnifiedMetrics';
     },
     onSuccess: () => {
       toast.success('Alertas reconhecidos');
-      queryClient.invalidateQueries({ queryKey: ['dashboard-alerts'] });
+      queryClient.invalidateQueries({ queryKey: ['unified-metrics'] });
     },
   });
 
-  // Calculate stats
-  const hasAgentData = agentsFetched && agents && agents.length > 0;
-  const totalAgents = hasAgentData ? agents.length : 0;
-  const onlineAgents = hasAgentData 
-    ? agents.filter((a: any) => a.health_status === 'healthy' || a.health_status === 'warning' || a.health_status === 'critical').length 
-    : 0;
-  const offlineAgents = hasAgentData 
-    ? agents.filter((a: any) => a.health_status === 'offline' || a.health_status === 'never_connected').length 
-    : 0;
-  const criticalAlerts = alerts?.filter(a => a.severity === 'critical' || a.severity === 'high').length || 0;
-
-  // Security score
-  const calculateSecurityScore = () => {
-    let score = 100;
-    score -= Math.min(offlineAgents * 5, 25);
-    score -= Math.min(criticalAlerts * 10, 30);
-    score -= Math.min((vulnStats?.critical || 0) * 5, 25);
-    return Math.max(0, score);
-  };
-  const securityScore = calculateSecurityScore();
-
-  // Global status
-  const getGlobalStatus = () => {
-    if (securityScore >= 80 && criticalAlerts === 0) {
-      return { emoji: '🟢', title: t('adminPages.dashboard.allUnderControl'), description: t('adminPages.dashboard.allProtected'), variant: 'success' as const };
-    }
-    if (securityScore >= 60 || criticalAlerts <= 2) {
-      return { emoji: '🟡', title: t('adminPages.dashboard.attentionNeeded'), description: t('adminPages.dashboard.someItemsNeedCheck'), variant: 'warning' as const };
-    }
-    return { emoji: '🔴', title: t('adminPages.dashboard.urgentAction'), description: t('adminPages.dashboard.riskImpact'), variant: 'danger' as const };
-  };
-  const globalStatus = getGlobalStatus();
+  // Derive values from unified metrics
+  const totalAgents = metrics?.agents.total || 0;
+  const onlineAgents = metrics?.agents.online || 0;
+  const offlineAgents = metrics?.agents.offline || 0;
+  const criticalAlerts = metrics?.alerts.critical || 0;
+  const securityScore = metrics?.securityScore || 100;
+  const globalStatus = metrics?.globalStatus || { emoji: '🟢', title: t('adminPages.dashboard.allUnderControl'), description: t('adminPages.dashboard.allProtected'), variant: 'success' as const };
+  const insightsCount = metrics?.insights.pending || 0;
+  const vulnStats = metrics?.vulnerabilities || { total: 0, critical: 0 };
 
   // Loading state
-  if (!tenant?.id || agentsLoading) {
+  if (metricsLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-64" />
@@ -107,7 +111,7 @@ import { useUnifiedMetrics } from '@/hooks/useUnifiedMetrics';
         <SimpleDashboard 
           globalStatus={globalStatus}
           stats={{ totalAgents, onlineAgents, offlineAgents, criticalAlerts }}
-          isLoading={agentsLoading}
+          isLoading={metricsLoading}
           tenantId={tenant?.id}
         />
       </div>
@@ -117,7 +121,7 @@ import { useUnifiedMetrics } from '@/hooks/useUnifiedMetrics';
   // Quick nav items
   const quickNav = [
     { icon: Activity, label: t('adminPages.dashboard.realTime'), to: '/admin/monitoring-advanced', color: 'text-info' },
-    { icon: Brain, label: t('adminPages.dashboard.insightsAI'), to: '/admin/ai-insights', color: 'text-accent', badge: insightsCount || 0 },
+    { icon: Brain, label: t('adminPages.dashboard.insightsAI'), to: '/admin/ai-insights', color: 'text-accent', badge: insightsCount },
     { icon: BarChart3, label: t('adminPages.dashboard.reports'), to: '/admin/reports', color: 'text-success' },
     { icon: Wrench, label: t('adminPages.dashboard.actionCenter'), to: '/admin/action-center', color: 'text-warning' },
   ];
