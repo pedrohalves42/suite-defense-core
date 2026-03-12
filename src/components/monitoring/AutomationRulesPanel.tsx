@@ -151,10 +151,12 @@ export function AutomationRulesPanel() {
 
   const toggleRule = async (ruleId: string, isActive: boolean) => {
     try {
+      // V-1056 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('automation_rules')
         .update({ is_active: isActive })
-        .eq('id', ruleId);
+        .eq('id', ruleId)
+        .eq('tenant_id', tenant?.id);
 
       if (error) throw error;
       setRules(prev => prev.map(r => r.id === ruleId ? { ...r, is_active: isActive } : r));
@@ -165,10 +167,12 @@ export function AutomationRulesPanel() {
 
   const deleteRule = async (ruleId: string) => {
     try {
+      // V-1056 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('automation_rules')
         .delete()
-        .eq('id', ruleId);
+        .eq('id', ruleId)
+        .eq('tenant_id', tenant?.id);
 
       if (error) throw error;
       setRules(prev => prev.filter(r => r.id !== ruleId));

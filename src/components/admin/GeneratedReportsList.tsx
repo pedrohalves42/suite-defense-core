@@ -95,6 +95,7 @@ const nextActionLabels: Record<string, string> = {
 
 export function GeneratedReportsList() {
   const queryClient = useQueryClient();
+  const { activeTenant } = useActiveTenant();
   const [selectedReport, setSelectedReport] = useState<GeneratedReport | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -114,10 +115,12 @@ export function GeneratedReportsList() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ reportId, updates }: { reportId: string; updates: Partial<GeneratedReport> }) => {
+      // V-1061 FIX: Add tenant_id filter
       const { error } = await supabase
         .from("generated_reports")
         .update(updates)
-        .eq("id", reportId);
+        .eq("id", reportId)
+        .eq("tenant_id", activeTenant?.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -234,10 +237,12 @@ export function GeneratedReportsList() {
 
   const handleDelete = async (reportId: string) => {
     try {
+      // V-1061 FIX: Add tenant_id filter
       const { error } = await supabase
         .from("generated_reports")
         .delete()
-        .eq("id", reportId);
+        .eq("id", reportId)
+        .eq("tenant_id", activeTenant?.id);
 
       if (error) throw error;
       toast.success("Laudo excluído com sucesso!");

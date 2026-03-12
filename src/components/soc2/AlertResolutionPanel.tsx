@@ -102,10 +102,12 @@ export function AlertResolutionPanel() {
         updates.resolution_notes = 'Dismissed as false positive';
       }
 
+      // V-1055 FIX: Add tenant_id filter to prevent cross-tenant alert modification
       const { error } = await supabase
         .from('security_events')
         .update(updates)
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenant!.id);
       
       if (error) throw error;
     },

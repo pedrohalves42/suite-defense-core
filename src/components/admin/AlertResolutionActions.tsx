@@ -47,8 +47,9 @@ export function AlertResolutionActions({
     mutationFn: async ({ type, notes }: { type: ResolutionType; notes?: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
+      if (!tenant?.id) throw new Error('No tenant selected');
 
-      // For system_alerts table
+      // V-1050 FIX: Add tenant_id filter to prevent cross-tenant alert resolution
       const { error } = await supabase
         .from('system_alerts')
         .update({
@@ -57,7 +58,8 @@ export function AlertResolutionActions({
           resolved_by: user.id,
           resolution_notes: notes || `Resolvido como: ${type}`,
         })
-        .eq('id', alertId);
+        .eq('id', alertId)
+        .eq('tenant_id', tenant.id);
 
       if (error) throw error;
 

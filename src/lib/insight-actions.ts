@@ -120,21 +120,23 @@ export async function executeInsightAction(
       }
 
       case 'isolate_agent': {
+        // V-1052 FIX: Add tenant_id filter to prevent cross-tenant agent manipulation
         const { error } = await supabase.from('agents').update({
           is_isolated: true,
           isolation_reason: `Isolated via insight ${insightId}`,
           isolated_at: new Date().toISOString(),
-        }).eq('id', agentId);
+        }).eq('id', agentId).eq('tenant_id', tenantId);
         if (error) throw error;
         return { success: true, message: 'Agente isolado com sucesso' };
       }
 
       case 'remove_isolation': {
+        // V-1052 FIX: Add tenant_id filter to prevent cross-tenant agent manipulation
         const { error } = await supabase.from('agents').update({
           is_isolated: false,
           isolation_reason: null,
           isolated_at: null,
-        }).eq('id', agentId);
+        }).eq('id', agentId).eq('tenant_id', tenantId);
         if (error) throw error;
         return { success: true, message: 'Isolamento removido' };
       }

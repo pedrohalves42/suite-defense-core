@@ -88,11 +88,12 @@ export function DynamicValidationSystem() {
       const agentsWithStatus = await Promise.all(
         agentsData.map(async (agent: any) => {
           const agentId = agent.id as string;
+          // V-1051 FIX: Add tenant_id filter to prevent cross-tenant data leakage
           const [softwareInventory, antivirusStatus, webActivity, vulnerabilities] = await Promise.all([
-            supabase.from('software_inventory').select('id').eq('agent_id', agentId).limit(1),
-            supabase.from('antivirus_status').select('id').eq('agent_id', agentId).limit(1),
-            supabase.from('agent_web_activity').select('id').eq('agent_id', agentId).limit(1),
-            supabase.from('vuln_findings').select('id').eq('agent_id', agentId).limit(1),
+            supabase.from('software_inventory').select('id').eq('agent_id', agentId).eq('tenant_id', tenant.id).limit(1),
+            supabase.from('antivirus_status').select('id').eq('agent_id', agentId).eq('tenant_id', tenant.id).limit(1),
+            supabase.from('agent_web_activity').select('id').eq('agent_id', agentId).eq('tenant_id', tenant.id).limit(1),
+            supabase.from('vuln_findings').select('id').eq('agent_id', agentId).eq('tenant_id', tenant.id).limit(1),
           ]);
 
           return {

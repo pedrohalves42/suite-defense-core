@@ -9,6 +9,7 @@ import { Shield, AlertTriangle, Activity, Ban, Unlock, Clock, User, LayoutDashbo
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { toast } from 'sonner';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
+import { useTenant } from '@/hooks/useTenant';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion } from 'framer-motion';
@@ -46,32 +47,38 @@ interface FailedAttempt {
 export default function SecurityDashboard() {
   const queryClient = useQueryClient();
   const { isSuperAdmin } = useSuperAdmin();
+  const { tenant } = useTenant();
 
   const { data: logs, isLoading } = useQuery({
-    queryKey: ['security-logs'],
+    queryKey: ['security-logs', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('security_logs')
         .select('*')
+        .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
         .limit(100);
       
       if (error) throw error;
       return data as SecurityLog[];
     },
+    enabled: !!tenant?.id,
     refetchInterval: 120000, // COST-OPT: 10s → 2min
   });
 
   const { data: stats } = useQuery({
-    queryKey: ['security-stats'],
+    queryKey: ['security-stats', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return { total: 0, critical: 0, blocked: 0, uniqueIps: 0 };
       const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       
+      // V-1053 FIX: Add tenant_id filter to all security_logs queries
       const [totalResult, criticalResult, blockedResult, uniqueIpsResult] = await Promise.all([
-        supabase.from('security_logs').select('*', { count: 'exact', head: true }).gte('created_at', last24h),
-        supabase.from('security_logs').select('*', { count: 'exact', head: true }).eq('severity', 'critical').gte('created_at', last24h),
-        supabase.from('security_logs').select('*', { count: 'exact', head: true }).eq('blocked', true).gte('created_at', last24h),
-        supabase.from('security_logs').select('ip_address').gte('created_at', last24h),
+        supabase.from('security_logs').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('created_at', last24h),
+        supabase.from('security_logs').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).eq('severity', 'critical').gte('created_at', last24h),
+        supabase.from('security_logs').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).eq('blocked', true).gte('created_at', last24h),
+        supabase.from('security_logs').select('ip_address').eq('tenant_id', tenant.id).gte('created_at', last24h),
       ]);
 
       const uniqueIps = new Set((uniqueIpsResult.data || []).map(l => l.ip_address)).size;

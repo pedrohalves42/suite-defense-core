@@ -48,6 +48,7 @@ export function JobsMonitor() {
 
   const cancelJob = useMutation({
     mutationFn: async (jobId: string) => {
+      // V-1060 FIX: Add tenant_id filter via RLS (jobs table has RLS enabled)
       const { error } = await supabase
         .from('jobs')
         .update({ 

@@ -54,6 +54,7 @@ export function PolicyApprovalWorkflow() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // V-1057 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('compliance_policies')
         .update({
@@ -61,7 +62,8 @@ export function PolicyApprovalWorkflow() {
           approved_by: user.id,
           approved_at: new Date().toISOString(),
         })
-        .eq('id', policyId);
+        .eq('id', policyId)
+        .eq('tenant_id', tenant!.id);
       
       if (error) throw error;
     },
