@@ -42,6 +42,7 @@ interface Statistics {
 
 export default function AIInsights() {
   const queryClient = useQueryClient();
+  const { tenant } = useTenant();
   const [dismissDialogOpen, setDismissDialogOpen] = useState(false);
   const [selectedInsightForDismiss, setSelectedInsightForDismiss] = useState<{ id: string; title: string } | null>(null);
   const { data, isLoading } = useQuery({

@@ -3,10 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { prepareJobForInsert } from '@/lib/job-utils';
 import { tenantQuery } from '@/lib/tenantQuery';
+import { useTenant } from '@/hooks/useTenant';
 
 export function useAgentActions() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { tenant } = useTenant();
+  const tenantId = tenant?.id;
 
   const removeThrottle = useMutation({
     mutationFn: async (agentId: string) => {
