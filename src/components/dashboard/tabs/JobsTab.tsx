@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getJobTypeLabel } from "@/lib/job-labels";
 import { formatBrazilDateTime } from "@/lib/date-utils";
+import { CSVExportButton } from "@/components/dashboard/CSVExportButton";
 import type { DashboardJob } from "@/hooks/useDashboardData";
 
 interface JobsTabProps {
