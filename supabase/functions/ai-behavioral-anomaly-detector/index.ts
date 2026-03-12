@@ -24,9 +24,24 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // V-1099: Require internal auth for cron/internal function
+    const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');
+    const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+    const authHeader = req.headers.get('Authorization');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    const isInternal = (internalSecret && expectedSecret && internalSecret === expectedSecret) ||
+                       (authHeader && authHeader === `Bearer ${serviceRoleKey}`);
+    
+    if (!isInternal) {
+      return new Response(JSON.stringify({ error: 'Unauthorized: internal access only' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      serviceRoleKey
     );
 
     // KILL SWITCH CHECK
