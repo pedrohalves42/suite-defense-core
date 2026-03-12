@@ -104,15 +104,25 @@ export default function SecurityGraph() {
           </h1>
           <p className="text-muted-foreground">Visualize relacionamentos entre entidades de segurança</p>
         </div>
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os tipos</SelectItem>
-            {Object.entries(nodeTypeLabels).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => buildGraph.mutate()}
+            disabled={buildGraph.isPending || !tenant?.id}
+            variant="default"
+          >
+            {buildGraph.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            {buildGraph.isPending ? "Construindo..." : "Construir Grafo"}
+          </Button>
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              {Object.entries(nodeTypeLabels).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Stats */}
