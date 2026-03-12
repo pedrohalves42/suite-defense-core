@@ -122,6 +122,7 @@ export function useCreateReport() {
 
 export function useApproveReport() {
   const queryClient = useQueryClient();
+  const { tenant } = useTenant();
 
   return useMutation({
     mutationFn: async (reportId: string) => {
