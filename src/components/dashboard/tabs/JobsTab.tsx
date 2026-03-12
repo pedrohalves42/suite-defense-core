@@ -30,7 +30,7 @@ export default function JobsTab({ jobs, loading }: JobsTabProps) {
         ) : (
           <div className="space-y-2 max-h-[600px] overflow-y-auto">
             {jobs.map((job) => (
-              <div key={job.id} className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg border border-border">
+              <div key={job.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-secondary/30 rounded-lg border border-border gap-2">
                 <div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-xs">{getJobTypeLabel(job.type)}</Badge>

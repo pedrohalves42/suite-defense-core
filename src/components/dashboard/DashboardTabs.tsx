@@ -30,14 +30,14 @@ export function DashboardTabs({
 }: DashboardTabsProps) {
   return (
     <Tabs defaultValue="agents" className="w-full">
-      <TabsList className="grid w-full grid-cols-5 bg-secondary">
-        <TabsTrigger value="agents">Computadores</TabsTrigger>
-        <TabsTrigger value="jobs">Verificações</TabsTrigger>
-        <TabsTrigger value="reports">Relatórios</TabsTrigger>
-        <TabsTrigger value="evidence" className="gap-1">
+      <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 bg-secondary h-auto">
+        <TabsTrigger value="agents" className="text-xs sm:text-sm">Computadores</TabsTrigger>
+        <TabsTrigger value="jobs" className="text-xs sm:text-sm">Verificações</TabsTrigger>
+        <TabsTrigger value="reports" className="text-xs sm:text-sm">Relatórios</TabsTrigger>
+        <TabsTrigger value="evidence" className="gap-1 text-xs sm:text-sm">
           <Package className="h-3 w-3" />Evidências
         </TabsTrigger>
-        <TabsTrigger value="security">Segurança</TabsTrigger>
+        <TabsTrigger value="security" className="text-xs sm:text-sm">Segurança</TabsTrigger>
       </TabsList>
 
       <Suspense fallback={<TabLoader />}>
