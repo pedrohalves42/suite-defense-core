@@ -277,6 +277,76 @@ export default function WebActivity() {
     }
   };
 
+  const handleExportSitePDF = async (domain: string) => {
+    const siteData = filteredActivity.find(item => item.domain === domain);
+    if (!siteData) {
+      toast.error('Dados do site não encontrados');
+      return;
+    }
+    try {
+      const jsPDFModule = await import('jspdf');
+      const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF;
+      const doc = new jsPDF('portrait', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const logoDataUrl = await loadLogoForPDF();
+
+      // Header
+      addLogoToPDF(doc, logoDataUrl, pageWidth / 2, 8, 16);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Relatório de Site Individual', pageWidth / 2, 32, { align: 'center' });
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Gerado em: ${formatBrazilDateTime(new Date().toISOString())}`, pageWidth / 2, 39, { align: 'center' });
+
+      // Domain info
+      let yPos = 52;
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text(domain, 14, yPos);
+      yPos += 10;
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+
+      const details = [
+        ['Categoria', siteData.category?.name || 'Desconhecido'],
+        ['Total de Acessos', String(siteData.hits)],
+        ['Primeiro Acesso', formatBrazilDateTime(siteData.first_seen_at)],
+        ['Último Acesso', formatBrazilDateTime(siteData.last_seen_at)],
+        ['Status', siteData.isBlocked ? '🔴 Bloqueado' : '🟢 Permitido'],
+      ];
+
+      for (const [label, value] of details) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text(`${label}:`, 14, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(71, 85, 105);
+        doc.text(value, 60, yPos);
+        yPos += 8;
+      }
+
+      // Footer
+      yPos += 10;
+      doc.setDrawColor(226, 232, 240);
+      doc.line(14, yPos, pageWidth - 14, yPos);
+      yPos += 8;
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text('CyberShield — Relatório gerado automaticamente', pageWidth / 2, yPos, { align: 'center' });
+
+      doc.save(`relatorio-site-${domain.replace(/[^a-zA-Z0-9.-]/g, '_')}-${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success(`PDF do site ${domain} exportado`);
+    } catch (err) {
+      console.error('Site PDF export error:', err);
+      toast.error('Erro ao exportar PDF do site');
+    }
+  };
+
   return (
     <AdminPageLayout
       title="Atividade Web"
