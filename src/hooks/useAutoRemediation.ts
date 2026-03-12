@@ -74,11 +74,14 @@ export const useAutoRemediation = () => {
 
   const approveAction = useMutation({
     mutationFn: async (actionId: string) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
       // 1. Fetch the original action details to re-dispatch
+      // V-1043 FIX: Add tenant_id filter to prevent cross-tenant approval
       const { data: action, error: fetchErr } = await supabase
         .from('auto_remediation_actions')
         .select('*')
         .eq('id', actionId)
+        .eq('tenant_id', tenant.id)
         .single();
       if (fetchErr || !action) throw new Error('Ação não encontrada');
 
@@ -90,7 +93,8 @@ export const useAutoRemediation = () => {
           approved_at: new Date().toISOString(),
           executed_at: new Date().toISOString(),
         })
-        .eq('id', actionId);
+        .eq('id', actionId)
+        .eq('tenant_id', tenant.id);
       if (updateErr) throw updateErr;
 
       // 3. Actually dispatch the remediation job via edge function
