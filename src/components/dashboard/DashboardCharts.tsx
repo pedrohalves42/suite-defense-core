@@ -126,7 +126,7 @@ export function DashboardCharts({ jobs, virusScans, loading }: DashboardChartsPr
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? <p className="text-center text-muted-foreground py-8">Carregando...</p> :
+          {loading ? <ChartItemSkeleton /> :
            scansTrendData.every(d => d.total === 0) ? <EmptyChart icon={Shield} text="Nenhuma verificação nos últimos 7 dias" /> : (
             <ResponsiveContainer width="100%" height={250}>
               <RechartsLineChart data={scansTrendData}>
