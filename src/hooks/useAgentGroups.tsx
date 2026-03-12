@@ -82,10 +82,13 @@ export function useAgentGroups() {
   // Update group
   const updateGroup = useMutation({
     mutationFn: async ({ id, name, description }: { id: string; name?: string; description?: string }) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1021 FIX: Add tenant_id filter to prevent cross-tenant modification
       const { error } = await supabase
         .from('agent_groups')
         .update({ name, description, updated_at: new Date().toISOString() })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenant.id);
       if (error) throw error;
     },
     onSuccess: () => {
