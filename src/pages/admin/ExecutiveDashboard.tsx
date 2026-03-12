@@ -612,8 +612,8 @@ function MetricTile({ icon, label, value, sub, color, pulse }: {
   );
 }
 
-function ActionRow({ icon, label, count, description }: { icon: React.ReactNode; label: string; count: number; description: string }) {
-  return (
+function ActionRow({ icon, label, count, description, tooltip }: { icon: React.ReactNode; label: string; count: number; description: string; tooltip?: string }) {
+  const content = (
     <div className="flex items-start gap-2 py-1.5 border-b border-border/30 last:border-0">
       <span className="mt-0.5 shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">
@@ -625,6 +625,21 @@ function ActionRow({ icon, label, count, description }: { icon: React.ReactNode;
       </div>
     </div>
   );
+
+  if (tooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="cursor-help">{content}</div>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs text-xs">
+          <p>{tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return content;
 }
 
 function ImpactRow({ label, count, value, icon }: { label: string; count: number; value: number; icon: React.ReactNode }) {
