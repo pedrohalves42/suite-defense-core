@@ -78,15 +78,15 @@ serveTenant(async (_req, ctx) => {
   let detected = 0;
   const resultPromises = agents.map(async (agent) => {
     const { data: avStatus } = await supabase
-      .from('agent_antivirus_status')
-      .select('antivirus_name, realtime_protection')
+      .from('antivirus_status')
+      .select('engine_name, status')
       .eq('agent_id', agent.id)
       .order('collected_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     const wouldDetect = simulation_type === 'eicar_test' 
-      ? !!avStatus?.realtime_protection
+      ? (avStatus?.status === 'active')
       : simulation_type === 'firewall_test'
       ? true
       : Math.random() > 0.3;
