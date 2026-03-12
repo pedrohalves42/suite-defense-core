@@ -42,7 +42,26 @@ function AgentsTabComponent({ agents, jobs, reports, loading, tenantNames }: Age
   return (
     <Card className="bg-gradient-card border-primary/20">
       <CardHeader>
-        <CardTitle>Computadores Registrados</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Computadores Registrados</CardTitle>
+          <CSVExportButton
+            data={filteredAgents.map(a => ({
+              nome: a.agent_name,
+              empresa: tenantNames[a.tenant_id] || a.tenant_id,
+              status: a.last_heartbeat && (Date.now() - new Date(a.last_heartbeat).getTime()) < 300000 ? "Online" : "Offline",
+              registrado: new Date(a.enrolled_at).toLocaleDateString(),
+              ultimo_sinal: a.last_heartbeat ? new Date(a.last_heartbeat).toLocaleString() : "Nunca",
+            }))}
+            filename="computadores"
+            columns={[
+              { key: "nome", label: "Nome" },
+              { key: "empresa", label: "Empresa" },
+              { key: "status", label: "Status" },
+              { key: "registrado", label: "Registrado em" },
+              { key: "ultimo_sinal", label: "Último Sinal" },
+            ]}
+          />
+        </div>
         <CardDescription>Lista completa com status em tempo real</CardDescription>
         {agents.length > 0 && (
           <div className="flex flex-col sm:flex-row gap-2 pt-2">

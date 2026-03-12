@@ -84,6 +84,7 @@ export const AppLayout = () => {
             )}>
               <div className="max-w-7xl mx-auto">
                 {isMobile && <PushNotificationBanner />}
+                <Breadcrumbs />
                 <Outlet />
               </div>
             </main>

@@ -29,7 +29,24 @@ function ReportsTabComponent({ reports, loading }: ReportsTabProps) {
   return (
     <Card className="bg-gradient-card border-primary/20">
       <CardHeader>
-        <CardTitle>Relatórios Recebidos</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Relatórios Recebidos</CardTitle>
+          <CSVExportButton
+            data={filteredReports.map(r => ({
+              agente: r.agent_name,
+              tipo: r.kind,
+              caminho: r.file_path,
+              data: formatBrazilDateTime(r.created_at, 'short'),
+            }))}
+            filename="relatorios"
+            columns={[
+              { key: "agente", label: "Agente" },
+              { key: "tipo", label: "Tipo" },
+              { key: "caminho", label: "Caminho" },
+              { key: "data", label: "Data" },
+            ]}
+          />
+        </div>
         <CardDescription>Relatórios de segurança enviados pelos computadores</CardDescription>
         {reports.length > 0 && (
           <div className="relative pt-2">

@@ -39,7 +39,26 @@ function JobsTabComponent({ jobs, loading }: JobsTabProps) {
   return (
     <Card className="bg-gradient-card border-primary/20">
       <CardHeader>
-        <CardTitle>Verificações do Sistema</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Verificações do Sistema</CardTitle>
+          <CSVExportButton
+            data={filteredJobs.map(j => ({
+              agente: j.agent_name,
+              tipo: getJobTypeLabel(j.type),
+              status: j.status,
+              criado: formatBrazilDateTime(j.created_at, 'short'),
+              finalizado: j.completed_at ? formatBrazilDateTime(j.completed_at, 'short') : "",
+            }))}
+            filename="verificacoes"
+            columns={[
+              { key: "agente", label: "Agente" },
+              { key: "tipo", label: "Tipo" },
+              { key: "status", label: "Status" },
+              { key: "criado", label: "Criado em" },
+              { key: "finalizado", label: "Finalizado em" },
+            ]}
+          />
+        </div>
         <CardDescription>Histórico e status das verificações executadas</CardDescription>
         {jobs.length > 0 && (
           <div className="flex flex-col sm:flex-row gap-2 pt-2">
