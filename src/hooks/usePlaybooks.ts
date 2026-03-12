@@ -296,6 +296,7 @@ export function useTriggerManualPlaybook() {
 }
 
 export function useTogglePlaybook() {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -306,6 +307,8 @@ export function useTogglePlaybook() {
       playbookId: string; 
       enabled: boolean;
     }) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1033 FIX: Add tenant_id filter (supports NULL tenant for global playbooks)
       const { error } = await supabase
         .from('playbooks')
         .update({ is_enabled: enabled })

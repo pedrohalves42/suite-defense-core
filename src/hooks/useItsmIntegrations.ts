@@ -93,10 +93,13 @@ export const useItsmIntegrations = () => {
 
   const toggleIntegration = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1035 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('itsm_integrations')
         .update({ is_active })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenant.id);
       if (error) throw error;
     },
     onSuccess: () => {

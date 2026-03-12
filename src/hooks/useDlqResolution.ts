@@ -75,9 +75,12 @@ export function useDlqPendingAttention() {
   return useQuery({
     queryKey: ['dlq-pending-attention', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return [];
+      // V-1036 FIX: Add tenant filter to view query
       const { data, error } = await supabase
         .from('v_dlq_pending_attention')
         .select('*')
+        .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: true });
 
       if (error) throw error;

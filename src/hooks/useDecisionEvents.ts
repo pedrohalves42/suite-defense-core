@@ -60,21 +60,24 @@ export function useDecisionEvents(options: UseDecisionEventsOptions = {}) {
 }
 
 export function useDecisionEventDetail(eventId: string | null) {
+  const { tenant } = useTenant();
   return useQuery({
-    queryKey: ['decision-event-detail', eventId],
+    queryKey: ['decision-event-detail', eventId, tenant?.id],
     queryFn: async () => {
-      if (!eventId) return null;
+      if (!eventId || !tenant?.id) return null;
 
+      // V-1037 FIX: Add tenant_id filter
       const { data, error } = await supabase
         .from('decision_events')
         .select('*')
         .eq('id', eventId)
+        .eq('tenant_id', tenant.id)
         .single();
 
       if (error) throw error;
       return data as DecisionEvent;
     },
-    enabled: !!eventId,
+    enabled: !!eventId && !!tenant?.id,
   });
 }
 

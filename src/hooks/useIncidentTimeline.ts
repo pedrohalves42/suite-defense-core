@@ -158,10 +158,13 @@ export function useUpdateIncidentStatus() {
         updates.resolution = resolution;
       }
 
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1034 FIX: Add tenant_id filter
       const { data, error } = await supabase
         .from('incident_timelines')
         .update(updates)
         .eq('id', incidentId)
+        .eq('tenant_id', tenant.id)
         .select()
         .single();
 
