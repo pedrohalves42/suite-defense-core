@@ -1,12 +1,13 @@
-import { useState, useMemo, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Network, Filter, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { Network, RefreshCw, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const nodeTypeColors: Record<string, string> = {
   agent: "#3b82f6",
