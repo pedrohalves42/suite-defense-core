@@ -29,6 +29,23 @@ export default function SecurityGraph() {
   const { tenant } = useTenant();
   const [filterType, setFilterType] = useState("all");
   const [selectedNode, setSelectedNode] = useState<any>(null);
+  const queryClient = useQueryClient();
+
+  const buildGraph = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("populate-security-graph", {
+        body: { tenant_id: tenant!.id },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["security-graph-nodes"] });
+      queryClient.invalidateQueries({ queryKey: ["security-graph-edges"] });
+      toast.success(`Grafo construído: ${data.nodes_created} nós e ${data.edges_created} conexões`);
+    },
+    onError: (err: any) => toast.error("Erro ao construir grafo: " + err.message),
+  });
 
   const { data: nodes = [], isLoading: nodesLoading } = useQuery({
     queryKey: ["security-graph-nodes", tenant?.id, filterType],
