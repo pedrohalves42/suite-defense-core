@@ -30,7 +30,7 @@ const ServerDashboard = () => {
   const {
     agents, jobs, reports, agentTokens, rateLimits, virusScans, auditLogs,
     loading, tenant, tenantLoading, tenantNames,
-  } = useDashboardData();
+  } = useDashboardQueries();
 
   const {
     offlineCount, failedJobs, alerts, agentsByTenant,
