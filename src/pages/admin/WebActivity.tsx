@@ -59,6 +59,11 @@ import { toast } from 'sonner';
 import { exportToCSV } from '@/lib/csv-export';
 import { loadLogoForPDF, addLogoToPDF } from '@/lib/pdfLogoHelper';
 
+type SortField = 'domain' | 'category' | 'hits' | 'last_seen_at';
+type SortDir = 'asc' | 'desc';
+
+const ITEMS_PER_PAGE = 30;
+
 export default function WebActivity() {
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,6 +75,9 @@ export default function WebActivity() {
   const [threatTarget, setThreatTarget] = useState('');
   const threatSectionRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<string>('activity');
+  const [sortField, setSortField] = useState<SortField>('hits');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Manual block form states
   const [manualDomain, setManualDomain] = useState('');
