@@ -92,7 +92,7 @@ export function DashboardCharts({ jobs, virusScans, loading }: DashboardChartsPr
   );
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" role="region" aria-label="Gráficos de análise do sistema">
       {/* Jobs Trend */}
       <Card className="bg-gradient-card border-primary/20">
         <CardHeader>

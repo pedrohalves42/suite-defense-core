@@ -102,6 +102,10 @@ function MetricCardsComponent({
             key={card.title}
             className={cn("bg-gradient-card cursor-pointer hover:border-primary/40 transition-all group", card.borderClass)}
             onClick={() => navigate(card.route)}
+            role="button"
+            tabIndex={0}
+            aria-label={`${card.title}: ${card.value}. ${card.subtitle}`}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(card.route); } }}
           >
             <CardHeader className="pb-1 sm:pb-2">
               <CardTitle className="text-xs font-medium flex items-center justify-between text-muted-foreground">
