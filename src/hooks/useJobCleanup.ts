@@ -33,6 +33,7 @@ export interface CleanupResult {
 }
 
 export function useJobCleanup() {
+  const { tenant } = useTenant();
   const [filters, setFilters] = useState<CleanupFilters>({
     status: ['failed'],
     older_than_days: 1,
@@ -42,14 +43,17 @@ export function useJobCleanup() {
 
   // Query para preview de quantos jobs serão afetados
   const previewQuery = useQuery({
-    queryKey: ['job-cleanup-preview', filters],
+    queryKey: ['job-cleanup-preview', tenant?.id, filters],
     queryFn: async (): Promise<CleanupPreview> => {
+      if (!tenant?.id) return { total: 0, removable: 0, byStatus: {}, byType: {}, oldestDate: null, newestDate: null, blockedByExecutions: 0 };
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - filters.older_than_days);
 
+      // V-1044 FIX: Add tenant_id filter
       let query = supabase
         .from('jobs')
-        .select('id, status, type, created_at, delivered_at');
+        .select('id, status, type, created_at, delivered_at')
+        .eq('tenant_id', tenant.id);
 
       if (filters.status.length > 0) {
         query = query.in('status', filters.status);
