@@ -175,8 +175,53 @@ export default function WebActivity() {
     return filtered;
   }, [enrichedActivity, searchTerm, categoryFilter]);
 
-  // Category stats for chart
-  const categoryStats = useMemo(() => {
+  // Sorted activity
+  const sortedActivity = useMemo(() => {
+    const sorted = [...filteredActivity];
+    sorted.sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'domain':
+          cmp = a.domain.localeCompare(b.domain);
+          break;
+        case 'category':
+          cmp = (a.category.name || '').localeCompare(b.category.name || '');
+          break;
+        case 'hits':
+          cmp = a.hits - b.hits;
+          break;
+        case 'last_seen_at':
+          cmp = new Date(a.last_seen_at).getTime() - new Date(b.last_seen_at).getTime();
+          break;
+      }
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+    return sorted;
+  }, [filteredActivity, sortField, sortDir]);
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(sortedActivity.length / ITEMS_PER_PAGE));
+  const paginatedActivity = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return sortedActivity.slice(start, start + ITEMS_PER_PAGE);
+  }, [sortedActivity, currentPage]);
+
+  // Reset page when filters change
+  useMemo(() => { setCurrentPage(1); }, [searchTerm, categoryFilter, sortField, sortDir, selectedAgent]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('desc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <span className="text-muted-foreground/30 ml-1">↕</span>;
+    return <span className="ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>;
+  };
     const stats = new Map<string, { name: string; value: number; color: string }>();
     
     for (const item of enrichedActivity) {
