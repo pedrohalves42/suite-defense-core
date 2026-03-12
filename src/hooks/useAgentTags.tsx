@@ -164,15 +164,19 @@ export const useAssignTag = () => {
 };
 
 export const useRemoveTagAssignment = () => {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ agentId, tagId }: { agentId: string; tagId: string }) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1046 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('agent_tag_assignments')
         .delete()
         .eq('agent_id', agentId)
-        .eq('tag_id', tagId);
+        .eq('tag_id', tagId)
+        .eq('tenant_id', tenant.id);
       if (error) throw error;
     },
     onSuccess: () => {
