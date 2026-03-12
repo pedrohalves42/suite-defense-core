@@ -336,10 +336,12 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     title: string, 
     sectionKey: string,
     items: MenuItem[], 
-    variant: 'default' | 'super' = 'default'
+    variant: 'default' | 'super' = 'default',
+    icon?: any
   ) => {
     const isOpen = sectionStates[sectionKey];
     const hasActiveItem = isRouteInSection(items);
+    const isSuper = variant === 'super';
     
     if (isCollapsed) {
       return (
@@ -350,21 +352,45 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     }
 
     return (
-      <div>
+      <div className="mb-0.5">
         <button 
           onClick={() => toggleSection(sectionKey)} 
-          className="w-full flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors hover:bg-[hsl(var(--neon-cyan)_/_0.04)] group/section"
+          className={cn(
+            "w-full flex items-center justify-between px-3 py-1.5 rounded-md cursor-pointer transition-all duration-200 group/section",
+            isSuper 
+              ? "hover:bg-[hsl(var(--neon-purple)_/_0.05)]" 
+              : "hover:bg-[hsl(var(--neon-cyan)_/_0.04)]",
+            hasActiveItem && !isSuper && "bg-[hsl(var(--neon-cyan)_/_0.03)]",
+            hasActiveItem && isSuper && "bg-[hsl(var(--neon-purple)_/_0.03)]"
+          )}
         >
           <span className={cn(
-            "sidebar-section-label transition-colors flex items-center gap-2",
-            hasActiveItem && "!text-[hsl(var(--neon-cyan)_/_0.8)]"
+            "flex items-center gap-1.5 text-[10px] uppercase tracking-[0.12em] font-bold transition-colors",
+            isSuper 
+              ? "text-[hsl(var(--neon-purple)_/_0.5)] group-hover/section:text-[hsl(var(--neon-purple)_/_0.7)]"
+              : "text-[hsl(var(--neon-cyan)_/_0.45)] group-hover/section:text-[hsl(var(--neon-cyan)_/_0.7)]",
+            hasActiveItem && !isSuper && "!text-[hsl(var(--neon-cyan)_/_0.8)]",
+            hasActiveItem && isSuper && "!text-[hsl(var(--neon-purple)_/_0.8)]"
           )}>
             {title}
           </span>
-          <ChevronDown className={cn(
-            "h-3 w-3 text-[hsl(var(--neon-cyan)_/_0.3)] transition-all duration-300 group-hover/section:text-[hsl(var(--neon-cyan)_/_0.6)]",
-            isOpen && "rotate-180"
-          )} />
+          <div className={cn(
+            "flex items-center gap-1.5"
+          )}>
+            {!isOpen && hasActiveItem && (
+              <div className={cn(
+                "w-1.5 h-1.5 rounded-full",
+                isSuper ? "bg-[hsl(var(--neon-purple))]" : "bg-[hsl(var(--neon-cyan))]"
+              )} />
+            )}
+            <ChevronDown className={cn(
+              "h-3 w-3 transition-all duration-300",
+              isSuper 
+                ? "text-[hsl(var(--neon-purple)_/_0.3)] group-hover/section:text-[hsl(var(--neon-purple)_/_0.6)]"
+                : "text-[hsl(var(--neon-cyan)_/_0.3)] group-hover/section:text-[hsl(var(--neon-cyan)_/_0.6)]",
+              isOpen && "rotate-180"
+            )} />
+          </div>
         </button>
         <AnimatePresence>
           {isOpen && (
@@ -372,11 +398,11 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
               className="overflow-hidden"
             >
               <motion.div 
-                className="space-y-0.5 mt-1"
+                className="space-y-0.5 mt-0.5 ml-1 border-l border-[hsl(var(--neon-cyan)_/_0.06)] pl-1"
                 variants={containerVariants}
                 initial="hidden"
                 animate="show"
