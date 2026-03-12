@@ -15,7 +15,7 @@ export class AgentMapper {
       status: AgentMapper.mapAgentStatus(row.status, row.last_seen),
       version: row.agent_version ?? null,
       lastSeen: row.last_seen ?? null,
-      hmacSecret: row.hmac_secret ?? '',
+      hmacSecret: '', // V-1005: Never expose hmac_secret to domain/UI layer
       lightModeConfig: row.light_mode_config ?? undefined,
     };
 
