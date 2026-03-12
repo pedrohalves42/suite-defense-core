@@ -1,6 +1,5 @@
-
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
-import NotificationChannels from "@/pages/admin/NotificationChannels";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,164 +11,182 @@ import { AppLayout } from "./components/AppLayout";
 import { ClientLayout } from "./components/client/ClientLayout";
 import { CookieConsent } from "./components/CookieConsent";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import Landing from "./pages/Landing";
-import Pricing from "./pages/Pricing";
-import ServerDashboard from "./pages/ServerDashboard";
-import VirusScans from './pages/VirusScans';
-import Quarantine from './pages/Quarantine';
-import AgentInstaller from "./pages/AgentInstaller";
-import JobCreator from "./pages/JobCreator";
-import AgentTest from "./pages/AgentTest";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import ForgotPassword from "./pages/ForgotPassword";
-import UpdatePassword from "./pages/UpdatePassword";
-import ForcePasswordChange from "./pages/ForcePasswordChange";
-import NotFound from "./pages/NotFound";
-import EnrollmentKeys from "./pages/admin/EnrollmentKeys";
-import Users from "./pages/admin/Users";
-import Settings from "./pages/admin/Settings";
-import AuditLogs from "./pages/admin/AuditLogs";
-import Invites from "./pages/admin/Invites";
-
-import TenantFeatures from "./pages/admin/TenantFeatures";
-import Dashboard from "./pages/admin/Dashboard";
-import ApiKeys from "./pages/admin/ApiKeys";
-import Members from "./pages/admin/Members";
-import PlanUpgrade from "./pages/admin/PlanUpgradeNew";
-import Subscriptions from "./pages/admin/Subscriptions";
-import SuperAdminTenants from "./pages/admin/super/Tenants";
-import SuperAdminMetrics from "./pages/admin/super/Metrics";
-import AgentMonitoring from "./pages/AgentMonitoring";
-import AgentManagement from "./pages/AgentManagement";
-import DataExport from "./pages/DataExport";
-import AcceptInvite from "./pages/AcceptInvite";
-import CheckoutSuccess from "./pages/CheckoutSuccess";
-import CheckoutCancel from "./pages/CheckoutCancel";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-
-import Privacidade from "./pages/Privacidade";
-import AuthDebug from "./pages/debug/AuthDebug";
-import SecurityDashboard from "./pages/admin/SecurityDashboard";
-import AgentMonitoringAdvanced from "./pages/AgentMonitoringAdvanced";
-import ExeBuild from "./pages/docs/ExeBuild";
-import ClientOnboarding from "./pages/docs/ClientOnboarding";
-import SubscriptionAnalytics from "./pages/admin/SubscriptionAnalytics";
-import UnitEconomics from "./pages/admin/super/UnitEconomics";
-import CohortAnalysis from "./pages/admin/super/CohortAnalysis";
-import RevenueProjections from "./pages/admin/super/RevenueProjections";
-import SalesPipeline from "./pages/admin/super/SalesPipeline";
-import PitchDeck from "./pages/admin/super/PitchDeck";
-import RiskAnalysis from "./pages/admin/super/RiskAnalysis";
-import RolloutPolicies from "./pages/super-admin/RolloutPolicies";
-import TenantSuspensionManager from "./pages/admin/TenantSuspensionManager";
-import StripeSetup from "./pages/admin/StripeSetup";
-import DiagnosticsCenter from "./pages/admin/DiagnosticsCenter";
-import BuildHealthDashboard from "./pages/admin/BuildHealthDashboard";
-import CronHealthDashboard from "./pages/admin/CronHealthDashboard";
-import SystemLogs from "./pages/admin/SystemLogs";
-import AgentHealthMonitor from "./pages/admin/AgentHealthMonitor";
-import AIInsights from "./pages/admin/AIInsights";
-import AIActionApproval from "./pages/admin/AIActionApproval";
-import Installations from "./pages/admin/Installations";
-import Tenant from "./pages/admin/Tenant";
-import JobsV3Migration from "./pages/admin/JobsV3Migration";
-import InstallationHealth from "./pages/admin/InstallationHealth";
-import PerformanceMetrics from "./pages/admin/PerformanceMetrics";
-import SystemHealth from "./pages/admin/SystemHealth";
-import SoftwareInventory from "./pages/admin/SoftwareInventory";
-import VulnerabilityFindings from "./pages/admin/VulnerabilityFindings";
-import WebActivity from "./pages/admin/WebActivity";
-import DNSFilter from "./pages/admin/DNSFilter";
-import AgentTimeline from "./pages/admin/AgentTimeline";
-import AgentReleases from "./pages/admin/AgentReleases";
-import AgentVersionMonitor from "./pages/admin/AgentVersionMonitor";
-import Reports from "./pages/admin/Reports";
-import CustomTrials from "./pages/admin/CustomTrials";
-import RateLimitingStats from "./pages/admin/RateLimitingStats";
-import DeadLetterQueue from "./pages/admin/DeadLetterQueue";
-import SecurityPolicies from "./pages/admin/SecurityPolicies";
-import SecurityPoliciesAutoActions from "./pages/admin/SecurityPoliciesAutoActions";
-import AgentGroups from "./pages/admin/AgentGroups";
-import AgentTags from "./pages/admin/AgentTags";
-import NotificationSettings from "./pages/admin/NotificationSettings";
-import SecurityMonitoring from "./pages/admin/SecurityMonitoring";
-import MassReinstall from "./pages/admin/MassReinstall";
-import AIMetrics from "./pages/admin/AIMetrics";
-import AIGovernance from "./pages/admin/AIGovernance";
-import ApiDocumentation from "./pages/admin/ApiDocumentation";
-import MyAccount from "./pages/admin/MyAccount";
-import SLODashboard from "./pages/admin/SLODashboard";
-import SystemOperations from "./pages/admin/SystemOperations";
-import ComplianceTimeline from "./pages/admin/ComplianceTimeline";
-import VerificarLaudo from "./pages/VerificarLaudo";
-import ApprovePage from "./pages/ApprovePage";
-import TestComplianceGenerator from "./pages/TestComplianceGenerator";
-import NoTenant from "./pages/NoTenant";
-import RiskScore from "./pages/admin/RiskScore";
-import Playbooks from "./pages/admin/Playbooks";
-import DecisionAudit from "./pages/admin/DecisionAudit";
-import RulesManagement from "./pages/admin/RulesManagement";
-import RealTimeSecurityDashboard from "./pages/admin/RealTimeSecurityDashboard";
-import AutonomyDashboard from "./pages/admin/AutonomyDashboard";
-import SystemAudit from "./pages/admin/SystemAudit";
-import AIAnomalies from "./pages/admin/AIAnomalies";
-import SOC2Dashboard from "./pages/admin/SOC2Dashboard";
-import JobsHealthDashboard from "./pages/admin/JobsHealthDashboard";
-import SoftwareRiskDashboard from "./pages/admin/SoftwareRiskDashboard";
-import SoftwareKnowledgeBase from "./pages/admin/SoftwareKnowledgeBase";
-import ActionCenterDashboard from "./pages/admin/ActionCenterDashboard";
-import Automations from "./pages/admin/Automations";
-import ArchivedAgents from "./pages/admin/ArchivedAgents";
-import {
-  ClientDashboard, 
-  ClientComputers, 
-  ClientSecurityStatus, 
-  ClientReports, 
-  ClientActivity,
-  MyProtection 
-} from "./pages/client";
-import MFASetupRequired from "./pages/admin/MFASetupRequired";
-import ExecutiveDashboard from "./pages/admin/ExecutiveDashboard";
-import AlertResolutionCenter from "./pages/admin/AlertResolutionCenter";
-import InsightTriageCenter from "./pages/admin/InsightTriageCenter";
-import ConfidenceGapDashboardPage from "./pages/admin/ConfidenceGapDashboard";
-import Tasks from "./pages/admin/Tasks";
-import Governance from "./pages/admin/Governance";
-import GovernanceReports from "./pages/admin/GovernanceReports";
-import EvidenceBundlePage from "./pages/admin/EvidenceBundlePage";
-import AutoRemediation from "./pages/admin/AutoRemediation";
-import SiemExport from "./pages/admin/SiemExport";
-import WhiteLabelSettings from "./pages/admin/WhiteLabelSettings";
-import ItsmSettings from "./pages/admin/ItsmSettings";
-import PlatformManagement from "./pages/admin/PlatformManagement";
-import ComplianceAutomation from "./pages/admin/ComplianceAutomation";
-import ThreatIntelligence from "./pages/admin/ThreatIntelligence";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
-import AIFeedbackDashboard from "./pages/admin/AIFeedbackDashboard";
-import DocsExport from "./pages/docs/DocsExport";
-import DataExposure from "./pages/admin/DataExposure";
-import ShadowITDiscovery from "./pages/admin/ShadowITDiscovery";
-import AttackSimulation from "./pages/admin/AttackSimulation";
-import IdentitySecurity from "./pages/admin/IdentitySecurity";
-import SecurityGraph from "./pages/admin/SecurityGraph";
-import RansomwareIncident from "./pages/admin/RansomwareIncident";
-import SecurityBenchmark from "./pages/admin/SecurityBenchmark";
+import { Server } from "lucide-react";
+
+// Lazy route-level loading fallback
+const RouteFallback = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <Server className="h-10 w-10 text-primary animate-pulse" />
+  </div>
+);
+
+// ─── Public pages ───
+const Landing = lazy(() => import("./pages/Landing"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const UpdatePassword = lazy(() => import("./pages/UpdatePassword"));
+const ForcePasswordChange = lazy(() => import("./pages/ForcePasswordChange"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
+const CheckoutSuccess = lazy(() => import("./pages/CheckoutSuccess"));
+const CheckoutCancel = lazy(() => import("./pages/CheckoutCancel"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Privacidade = lazy(() => import("./pages/Privacidade"));
+const VerificarLaudo = lazy(() => import("./pages/VerificarLaudo"));
+const ApprovePage = lazy(() => import("./pages/ApprovePage"));
+const TestComplianceGenerator = lazy(() => import("./pages/TestComplianceGenerator"));
+const NoTenant = lazy(() => import("./pages/NoTenant"));
+
+// ─── Docs ───
+const ExeBuild = lazy(() => import("./pages/docs/ExeBuild"));
+const ClientOnboarding = lazy(() => import("./pages/docs/ClientOnboarding"));
+const DocsExport = lazy(() => import("./pages/docs/DocsExport"));
+
+// ─── Debug ───
+const AuthDebug = lazy(() => import("./pages/debug/AuthDebug"));
+
+// ─── App-level protected pages ───
+const ServerDashboard = lazy(() => import("./pages/ServerDashboard"));
+const VirusScans = lazy(() => import("./pages/VirusScans"));
+const Quarantine = lazy(() => import("./pages/Quarantine"));
+const AgentInstaller = lazy(() => import("./pages/AgentInstaller"));
+const JobCreator = lazy(() => import("./pages/JobCreator"));
+const AgentTest = lazy(() => import("./pages/AgentTest"));
+const AgentMonitoring = lazy(() => import("./pages/AgentMonitoring"));
+const AgentManagement = lazy(() => import("./pages/AgentManagement"));
+const DataExport = lazy(() => import("./pages/DataExport"));
+
+// ─── Admin pages ───
+const NotificationChannels = lazy(() => import("./pages/admin/NotificationChannels"));
+const EnrollmentKeys = lazy(() => import("./pages/admin/EnrollmentKeys"));
+const Users = lazy(() => import("./pages/admin/Users"));
+const Settings = lazy(() => import("./pages/admin/Settings"));
+const AuditLogs = lazy(() => import("./pages/admin/AuditLogs"));
+const Invites = lazy(() => import("./pages/admin/Invites"));
+const TenantFeatures = lazy(() => import("./pages/admin/TenantFeatures"));
+const Dashboard = lazy(() => import("./pages/admin/Dashboard"));
+const ApiKeys = lazy(() => import("./pages/admin/ApiKeys"));
+const Members = lazy(() => import("./pages/admin/Members"));
+const PlanUpgrade = lazy(() => import("./pages/admin/PlanUpgradeNew"));
+const Subscriptions = lazy(() => import("./pages/admin/Subscriptions"));
+const SuperAdminTenants = lazy(() => import("./pages/admin/super/Tenants"));
+const SuperAdminMetrics = lazy(() => import("./pages/admin/super/Metrics"));
+const AgentMonitoringAdvanced = lazy(() => import("./pages/AgentMonitoringAdvanced"));
+const SecurityDashboard = lazy(() => import("./pages/admin/SecurityDashboard"));
+const SubscriptionAnalytics = lazy(() => import("./pages/admin/SubscriptionAnalytics"));
+const UnitEconomics = lazy(() => import("./pages/admin/super/UnitEconomics"));
+const CohortAnalysis = lazy(() => import("./pages/admin/super/CohortAnalysis"));
+const RevenueProjections = lazy(() => import("./pages/admin/super/RevenueProjections"));
+const SalesPipeline = lazy(() => import("./pages/admin/super/SalesPipeline"));
+const PitchDeck = lazy(() => import("./pages/admin/super/PitchDeck"));
+const RiskAnalysis = lazy(() => import("./pages/admin/super/RiskAnalysis"));
+const RolloutPolicies = lazy(() => import("./pages/super-admin/RolloutPolicies"));
+const TenantSuspensionManager = lazy(() => import("./pages/admin/TenantSuspensionManager"));
+const StripeSetup = lazy(() => import("./pages/admin/StripeSetup"));
+const DiagnosticsCenter = lazy(() => import("./pages/admin/DiagnosticsCenter"));
+const BuildHealthDashboard = lazy(() => import("./pages/admin/BuildHealthDashboard"));
+const CronHealthDashboard = lazy(() => import("./pages/admin/CronHealthDashboard"));
+const SystemLogs = lazy(() => import("./pages/admin/SystemLogs"));
+const AgentHealthMonitor = lazy(() => import("./pages/admin/AgentHealthMonitor"));
+const AIInsights = lazy(() => import("./pages/admin/AIInsights"));
+const AIActionApproval = lazy(() => import("./pages/admin/AIActionApproval"));
+const Installations = lazy(() => import("./pages/admin/Installations"));
+const Tenant = lazy(() => import("./pages/admin/Tenant"));
+const JobsV3Migration = lazy(() => import("./pages/admin/JobsV3Migration"));
+const InstallationHealth = lazy(() => import("./pages/admin/InstallationHealth"));
+const PerformanceMetrics = lazy(() => import("./pages/admin/PerformanceMetrics"));
+const SystemHealth = lazy(() => import("./pages/admin/SystemHealth"));
+const SoftwareInventory = lazy(() => import("./pages/admin/SoftwareInventory"));
+const VulnerabilityFindings = lazy(() => import("./pages/admin/VulnerabilityFindings"));
+const WebActivity = lazy(() => import("./pages/admin/WebActivity"));
+const DNSFilter = lazy(() => import("./pages/admin/DNSFilter"));
+const AgentTimeline = lazy(() => import("./pages/admin/AgentTimeline"));
+const AgentReleases = lazy(() => import("./pages/admin/AgentReleases"));
+const AgentVersionMonitor = lazy(() => import("./pages/admin/AgentVersionMonitor"));
+const Reports = lazy(() => import("./pages/admin/Reports"));
+const CustomTrials = lazy(() => import("./pages/admin/CustomTrials"));
+const RateLimitingStats = lazy(() => import("./pages/admin/RateLimitingStats"));
+const DeadLetterQueue = lazy(() => import("./pages/admin/DeadLetterQueue"));
+const SecurityPolicies = lazy(() => import("./pages/admin/SecurityPolicies"));
+const SecurityPoliciesAutoActions = lazy(() => import("./pages/admin/SecurityPoliciesAutoActions"));
+const AgentGroups = lazy(() => import("./pages/admin/AgentGroups"));
+const AgentTags = lazy(() => import("./pages/admin/AgentTags"));
+const NotificationSettings = lazy(() => import("./pages/admin/NotificationSettings"));
+const SecurityMonitoring = lazy(() => import("./pages/admin/SecurityMonitoring"));
+const MassReinstall = lazy(() => import("./pages/admin/MassReinstall"));
+const AIMetrics = lazy(() => import("./pages/admin/AIMetrics"));
+const AIGovernance = lazy(() => import("./pages/admin/AIGovernance"));
+const ApiDocumentation = lazy(() => import("./pages/admin/ApiDocumentation"));
+const MyAccount = lazy(() => import("./pages/admin/MyAccount"));
+const SLODashboard = lazy(() => import("./pages/admin/SLODashboard"));
+const SystemOperations = lazy(() => import("./pages/admin/SystemOperations"));
+const ComplianceTimeline = lazy(() => import("./pages/admin/ComplianceTimeline"));
+const RiskScore = lazy(() => import("./pages/admin/RiskScore"));
+const Playbooks = lazy(() => import("./pages/admin/Playbooks"));
+const DecisionAudit = lazy(() => import("./pages/admin/DecisionAudit"));
+const RulesManagement = lazy(() => import("./pages/admin/RulesManagement"));
+const RealTimeSecurityDashboard = lazy(() => import("./pages/admin/RealTimeSecurityDashboard"));
+const AutonomyDashboard = lazy(() => import("./pages/admin/AutonomyDashboard"));
+const SystemAudit = lazy(() => import("./pages/admin/SystemAudit"));
+const AIAnomalies = lazy(() => import("./pages/admin/AIAnomalies"));
+const SOC2Dashboard = lazy(() => import("./pages/admin/SOC2Dashboard"));
+const JobsHealthDashboard = lazy(() => import("./pages/admin/JobsHealthDashboard"));
+const SoftwareRiskDashboard = lazy(() => import("./pages/admin/SoftwareRiskDashboard"));
+const SoftwareKnowledgeBase = lazy(() => import("./pages/admin/SoftwareKnowledgeBase"));
+const ActionCenterDashboard = lazy(() => import("./pages/admin/ActionCenterDashboard"));
+const Automations = lazy(() => import("./pages/admin/Automations"));
+const ArchivedAgents = lazy(() => import("./pages/admin/ArchivedAgents"));
+const MFASetupRequired = lazy(() => import("./pages/admin/MFASetupRequired"));
+const ExecutiveDashboard = lazy(() => import("./pages/admin/ExecutiveDashboard"));
+const AlertResolutionCenter = lazy(() => import("./pages/admin/AlertResolutionCenter"));
+const InsightTriageCenter = lazy(() => import("./pages/admin/InsightTriageCenter"));
+const ConfidenceGapDashboardPage = lazy(() => import("./pages/admin/ConfidenceGapDashboard"));
+const Tasks = lazy(() => import("./pages/admin/Tasks"));
+const Governance = lazy(() => import("./pages/admin/Governance"));
+const GovernanceReports = lazy(() => import("./pages/admin/GovernanceReports"));
+const EvidenceBundlePage = lazy(() => import("./pages/admin/EvidenceBundlePage"));
+const AutoRemediation = lazy(() => import("./pages/admin/AutoRemediation"));
+const SiemExport = lazy(() => import("./pages/admin/SiemExport"));
+const WhiteLabelSettings = lazy(() => import("./pages/admin/WhiteLabelSettings"));
+const ItsmSettings = lazy(() => import("./pages/admin/ItsmSettings"));
+const PlatformManagement = lazy(() => import("./pages/admin/PlatformManagement"));
+const ComplianceAutomation = lazy(() => import("./pages/admin/ComplianceAutomation"));
+const ThreatIntelligence = lazy(() => import("./pages/admin/ThreatIntelligence"));
+const AIFeedbackDashboard = lazy(() => import("./pages/admin/AIFeedbackDashboard"));
+const DataExposure = lazy(() => import("./pages/admin/DataExposure"));
+const ShadowITDiscovery = lazy(() => import("./pages/admin/ShadowITDiscovery"));
+const AttackSimulation = lazy(() => import("./pages/admin/AttackSimulation"));
+const IdentitySecurity = lazy(() => import("./pages/admin/IdentitySecurity"));
+const SecurityGraph = lazy(() => import("./pages/admin/SecurityGraph"));
+const RansomwareIncident = lazy(() => import("./pages/admin/RansomwareIncident"));
+const SecurityBenchmark = lazy(() => import("./pages/admin/SecurityBenchmark"));
+
+// ─── Client pages ───
+const ClientDashboard = lazy(() => import("./pages/client").then(m => ({ default: m.ClientDashboard })));
+const ClientComputers = lazy(() => import("./pages/client").then(m => ({ default: m.ClientComputers })));
+const ClientSecurityStatus = lazy(() => import("./pages/client").then(m => ({ default: m.ClientSecurityStatus })));
+const ClientReports = lazy(() => import("./pages/client").then(m => ({ default: m.ClientReports })));
+const ClientActivity = lazy(() => import("./pages/client").then(m => ({ default: m.ClientActivity })));
+const MyProtection = lazy(() => import("./pages/client").then(m => ({ default: m.MyProtection })));
 
 const App = () => (
   <ErrorBoundary>
-      <TooltipProvider>
+    <TooltipProvider>
       <Toaster />
       <Sonner />
       <PWAInstallPrompt />
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <CookieConsent />
+        <Suspense fallback={<RouteFallback />}>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
@@ -190,7 +207,6 @@ const App = () => (
             <Route path="/verificar-laudo" element={<VerificarLaudo />} />
             <Route path="/approve" element={<ApprovePage />} />
             <Route path="/test-compliance" element={<TestComplianceGenerator />} />
-            
             
             {/* Documentation Routes */}
             <Route path="/docs/exe-build" element={<ExeBuild />} />
@@ -347,6 +363,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+        </Suspense>
       </BrowserRouter>
     </TooltipProvider>
   </ErrorBoundary>
