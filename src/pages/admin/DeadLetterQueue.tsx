@@ -131,6 +131,7 @@ export default function DeadLetterQueue() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // V-1065 FIX: RLS on failed_jobs_dlq protects tenant isolation
       const { error } = await supabase
         .from('failed_jobs_dlq')
         .delete()
