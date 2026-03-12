@@ -140,7 +140,8 @@ export function useAgentGroupMembers(groupId: string | null) {
   const { data: members = [], isLoading } = useQuery({
     queryKey: ['agent-group-members', groupId],
     queryFn: async () => {
-      if (!groupId) return [];
+      if (!groupId || !tenant?.id) return [];
+      // V-1024 FIX: Add tenant_id filter to prevent cross-tenant member leakage
       const { data, error } = await supabase
         .from('agents_groups')
         .select(`
@@ -155,11 +156,12 @@ export function useAgentGroupMembers(groupId: string | null) {
             last_heartbeat
           )
         `)
-        .eq('group_id', groupId);
+        .eq('group_id', groupId)
+        .eq('tenant_id', tenant.id);
       if (error) throw error;
       return data;
     },
-    enabled: !!groupId,
+    enabled: !!groupId && !!tenant?.id,
   });
 
   // Add agents to group

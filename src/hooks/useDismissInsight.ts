@@ -63,8 +63,9 @@ export function useDismissInsight() {
         user_email: user.email,
       };
 
+      // V-1022 FIX: Always use validated tenant.id
       await supabase.from('decision_events').insert({
-        tenant_id: tenant?.id || insight.tenant_id,
+        tenant_id: tenant.id,
         rule_code: 'AI_INSIGHT_DISMISSAL',
         action: 'dismiss_ai_insight',
         evidence,
