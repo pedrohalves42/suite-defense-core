@@ -397,12 +397,12 @@ export default function ExecutiveDashboard() {
                 <div className="space-y-1.5">
                   {summaryData?.financialImpact && (
                     <>
-                      <ImpactRow label="Chamados técnicos evitados" count={summaryData.actions30d.auto_repairs} value={summaryData.financialImpact.autoRepairs} icon={<Wrench className="h-3 w-3" />} />
-                      <ImpactRow label="Downtime evitado" count={summaryData.actions30d.auto_recoveries} value={summaryData.financialImpact.autoRecoveries} icon={<RefreshCw className="h-3 w-3" />} />
-                      <ImpactRow label="Crises de segurança evitadas" count={summaryData.actions30d.critical_prevented} value={summaryData.financialImpact.criticalPrevented} icon={<Siren className="h-3 w-3" />} />
-                      <ImpactRow label="Investigações evitadas" count={summaryData.actions30d.high_prevented} value={summaryData.financialImpact.highPrevented} icon={<Bug className="h-3 w-3" />} />
-                      <ImpactRow label="Retrabalho de compliance evitado" count={summaryData.actions30d.policy_corrections} value={summaryData.financialImpact.policyCorrections} icon={<Lock className="h-3 w-3" />} />
-                      <ImpactRow label="Prejuízo de acessos indevidos" count={summaryData.blockedThreats} value={summaryData.financialImpact.blockedAccess} icon={<ShieldBan className="h-3 w-3" />} />
+                      <ImpactRow label="Chamados técnicos evitados" count={summaryData.actions30d.auto_repairs} value={summaryData.financialImpact.autoRepairs} icon={<Wrench className="h-3 w-3" />} unitCost="R$ 45/chamado" />
+                      <ImpactRow label="Downtime evitado" count={summaryData.actions30d.auto_recoveries} value={summaryData.financialImpact.autoRecoveries} icon={<RefreshCw className="h-3 w-3" />} unitCost="R$ 150/restauração" />
+                      <ImpactRow label="Crises de segurança evitadas" count={summaryData.actions30d.critical_prevented} value={summaryData.financialImpact.criticalPrevented} icon={<Siren className="h-3 w-3" />} unitCost="R$ 500/incidente crítico" />
+                      <ImpactRow label="Investigações evitadas" count={summaryData.actions30d.high_prevented} value={summaryData.financialImpact.highPrevented} icon={<Bug className="h-3 w-3" />} unitCost="R$ 200/ameaça alta" />
+                      <ImpactRow label="Retrabalho de compliance evitado" count={summaryData.actions30d.policy_corrections} value={summaryData.financialImpact.policyCorrections} icon={<Lock className="h-3 w-3" />} unitCost="R$ 60/correção" />
+                      <ImpactRow label="Prejuízo de acessos indevidos" count={summaryData.blockedThreats} value={summaryData.financialImpact.blockedAccess} icon={<ShieldBan className="h-3 w-3" />} unitCost="R$ 120/tentativa bloqueada" />
                     </>
                   )}
                 </div>
