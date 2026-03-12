@@ -103,7 +103,10 @@ export default function WebActivity() {
 
   const onlineAgents = useMemo(() => {
     if (!allSnapshots) return [];
-    return allSnapshots.filter(s => s.agent_state === 'online' || s.agent_state === 'warning');
+    return allSnapshots.filter(s => {
+      const state = s.agent_state;
+      return state === 'online' || state === 'warning' || state === 'healthy' || state === 'enforcing' || state === 'degraded' || state === 'recovery' || s.online === true;
+    });
   }, [allSnapshots]);
 
   const handleCollectAllWebActivity = useCallback(async () => {
