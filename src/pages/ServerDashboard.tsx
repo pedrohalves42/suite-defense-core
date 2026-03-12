@@ -14,6 +14,8 @@ import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { SecurityTimeline } from "@/components/dashboard/SecurityTimeline";
 import { DashboardTabs } from "@/components/dashboard/DashboardTabs";
 import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState";
+import { DashboardPDFReport } from "@/components/dashboard/DashboardPDFReport";
+import { SystemBannerSkeleton, MetricCardsSkeleton, ChartsSkeleton, TimelineSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 const ServerDashboard = () => {
   const { showOnboarding, completeOnboarding, dismissFor7Days } = useOnboarding();
