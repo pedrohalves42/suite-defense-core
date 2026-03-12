@@ -244,10 +244,12 @@ export function useAvailableAgents(groupId: string | null) {
       if (!groupId) return mappedAgents;
 
       // Get agents already in this group
+      // V-1021 FIX: Add tenant_id filter
       const { data: groupMembers, error: membersError } = await supabase
         .from('agents_groups')
         .select('agent_id')
-        .eq('group_id', groupId);
+        .eq('group_id', groupId)
+        .eq('tenant_id', tenant.id);
       if (membersError) throw membersError;
 
       const memberIds = new Set(groupMembers?.map(m => m.agent_id) || []);
