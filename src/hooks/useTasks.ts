@@ -62,7 +62,7 @@ export interface TaskStats {
 
 // Hook para listar tasks
 export function useTasks(filters?: TaskFilters) {
-  const { tenant, loading } = useTenant(); // ADR-030 CRIT-01
+  const { tenant, loading } = useTenant();
 
   return useQuery({
     queryKey: ['tasks', tenant?.id, filters],
@@ -101,19 +101,18 @@ export function useTasks(filters?: TaskFilters) {
       if (error) throw error;
       return data as Task[];
     },
-    enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
-    refetchInterval: 120000, // COST-OPT: 30s → 2min
+    enabled: !loading && !!tenant?.id,
+    refetchInterval: 120000,
   });
 }
 
 // Hook para estatísticas de tasks
 export function useTaskStats() {
-  const { tenant, loading } = useTenant(); // ADR-030 CRIT-01
+  const { tenant, loading } = useTenant();
 
   return useQuery({
     queryKey: ['task-stats', tenant?.id],
     queryFn: async () => {
-      // v_task_stats is a view - use supabase.from() directly with tenant filter
       const { data, error } = await supabase
         .from('v_task_stats')
         .select('*')
@@ -121,7 +120,6 @@ export function useTaskStats() {
         .single();
 
       if (error) {
-        // Se não houver tasks, retorna zeros
         if (error.code === 'PGRST116') {
           return {
             tenant_id: tenant!.id,
@@ -130,7 +128,6 @@ export function useTaskStats() {
             in_progress: 0,
             completed: 0,
             failed: 0,
-            // Backward compatibility
             open_count: 0,
             in_progress_count: 0,
             blocked_count: 0,
@@ -144,49 +141,52 @@ export function useTaskStats() {
         }
         throw error;
       }
-      // Map view columns to expected interface for backward compatibility
       const stats = data as TaskStats;
       return {
         ...stats,
         open_count: stats.pending || 0,
         in_progress_count: stats.in_progress || 0,
-        blocked_count: 0, // Not in current view
+        blocked_count: 0,
         resolved_count: stats.completed || 0,
-        ignored_count: 0, // Not in current view  
-        critical_open: 0, // Not in current view
-        high_open: 0, // Not in current view
-        sla_breached: 0, // Not in current view
-        avg_resolution_hours: null, // Not in current view
+        ignored_count: 0,
+        critical_open: 0,
+        high_open: 0,
+        sla_breached: 0,
+        avg_resolution_hours: null,
       } as TaskStats;
     },
-    enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
-    refetchInterval: 120000, // COST-OPT: 30s → 2min
+    enabled: !loading && !!tenant?.id,
+    refetchInterval: 120000,
   });
 }
 
-// Hook para detalhes de uma task específica
+// V-1029 FIX: Add tenant_id filter to prevent cross-tenant task access
 export function useTaskDetail(taskId: string | null) {
+  const { tenant, loading } = useTenant();
+
   return useQuery({
-    queryKey: ['task-detail', taskId],
+    queryKey: ['task-detail', tenant?.id, taskId],
     queryFn: async () => {
-      if (!taskId) return null;
+      if (!taskId || !tenant?.id) return null;
 
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
         .eq('id', taskId)
+        .eq('tenant_id', tenant.id)
         .single();
 
       if (error) throw error;
       return data as Task;
     },
-    enabled: !!taskId,
+    enabled: !!taskId && !loading && !!tenant?.id,
   });
 }
 
-// Hook para atualizar status de task
+// V-1030 FIX: Add tenant_id filter to prevent cross-tenant task mutation
 export function useUpdateTaskStatus() {
   const queryClient = useQueryClient();
+  const { tenant } = useTenant();
 
   return useMutation({
     mutationFn: async ({ 
@@ -200,6 +200,7 @@ export function useUpdateTaskStatus() {
       closureReason?: string;
       closureEvidence?: Json;
     }) => {
+      if (!tenant?.id) throw new Error('Tenant not selected');
       const { data: { user } } = await supabase.auth.getUser();
       
       const updateData: Partial<Task> = {
@@ -207,7 +208,6 @@ export function useUpdateTaskStatus() {
         updated_at: new Date().toISOString(),
       };
 
-      // Se for resolução ou ignorar, adiciona dados de fechamento
       if (status === 'resolved' || status === 'ignored') {
         updateData.closed_at = new Date().toISOString();
         updateData.closed_by = user?.id;
@@ -219,6 +219,7 @@ export function useUpdateTaskStatus() {
         .from('tasks')
         .update(updateData)
         .eq('id', taskId)
+        .eq('tenant_id', tenant.id)
         .select()
         .single();
 
@@ -237,12 +238,14 @@ export function useUpdateTaskStatus() {
   });
 }
 
-// Hook para atribuir task
+// V-1030 FIX: Add tenant_id filter to prevent cross-tenant task assignment
 export function useAssignTask() {
   const queryClient = useQueryClient();
+  const { tenant } = useTenant();
 
   return useMutation({
     mutationFn: async ({ taskId, userId }: { taskId: string; userId: string | null }) => {
+      if (!tenant?.id) throw new Error('Tenant not selected');
       const { data, error } = await supabase
         .from('tasks')
         .update({ 
@@ -250,6 +253,7 @@ export function useAssignTask() {
           updated_at: new Date().toISOString(),
         })
         .eq('id', taskId)
+        .eq('tenant_id', tenant.id)
         .select()
         .single();
 
@@ -269,7 +273,7 @@ export function useAssignTask() {
 
 // Hook para contagem de tasks abertas (para badge no menu)
 export function useOpenTasksCount() {
-  const { tenant, loading } = useTenant(); // ADR-030 CRIT-01
+  const { tenant, loading } = useTenant();
 
   return useQuery({
     queryKey: ['open-tasks-count', tenant?.id],
@@ -281,8 +285,8 @@ export function useOpenTasksCount() {
       if (error) throw error;
       return count || 0;
     },
-    enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    enabled: !loading && !!tenant?.id,
+    refetchInterval: 300000,
     staleTime: 30000,
   });
 }

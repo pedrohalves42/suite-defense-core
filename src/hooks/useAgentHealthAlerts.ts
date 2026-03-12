@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useTenant } from '@/hooks/useTenant';
 
 export interface AgentExecutionHealth {
   agent_id: string;
@@ -45,47 +46,64 @@ export interface NonExecutionAlert {
   } | null;
 }
 
+// V-1026 FIX: Add tenant_id filter to prevent cross-tenant data leakage
 export function useAgentExecutionHealth() {
+  const { tenant, loading } = useTenant();
+
   return useQuery({
-    queryKey: ['agent-execution-health'],
+    queryKey: ['agent-execution-health', tenant?.id],
     queryFn: async (): Promise<AgentExecutionHealth[]> => {
+      if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('v_agent_execution_health')
         .select('*')
+        .eq('tenant_id', tenant.id)
         .order('severity', { ascending: false });
 
       if (error) throw error;
       return (data || []) as unknown as AgentExecutionHealth[];
     },
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    enabled: !loading && !!tenant?.id,
+    refetchInterval: 300000,
   });
 }
 
+// V-1026 FIX: Add tenant_id filter
 export function useUnhealthyAgents() {
+  const { tenant, loading } = useTenant();
+
   return useQuery<AgentExecutionHealth[]>({
-    queryKey: ['unhealthy-agents'],
+    queryKey: ['unhealthy-agents', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return [];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from('v_agent_execution_health')
         .select('*')
+        .eq('tenant_id', tenant.id)
         .neq('health_status', 'healthy')
         .order('severity', { ascending: false });
 
       if (error) throw error;
       return (data || []) as AgentExecutionHealth[];
     },
-    refetchInterval: 300000, // COST-OPT: 30s → 5min
+    enabled: !loading && !!tenant?.id,
+    refetchInterval: 300000,
   });
 }
 
+// V-1026 FIX: Add tenant_id filter
 export function useNonExecutionAlerts() {
+  const { tenant, loading } = useTenant();
+
   return useQuery({
-    queryKey: ['non-execution-alerts'],
+    queryKey: ['non-execution-alerts', tenant?.id],
     queryFn: async (): Promise<NonExecutionAlert[]> => {
+      if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('system_alerts')
         .select('*')
+        .eq('tenant_id', tenant.id)
         .eq('alert_type', 'non_execution_detected')
         .eq('resolved', false)
         .order('created_at', { ascending: false })
@@ -94,7 +112,8 @@ export function useNonExecutionAlerts() {
       if (error) throw error;
       return (data || []) as NonExecutionAlert[];
     },
-    refetchInterval: 300000, // COST-OPT: 30s → 5min
+    enabled: !loading && !!tenant?.id,
+    refetchInterval: 300000,
   });
 }
 
@@ -110,6 +129,7 @@ export function useNonExecutionAlerts() {
 export function useResolveAlert() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { tenant } = useTenant();
 
   return useMutation({
     mutationFn: async ({ 
@@ -122,12 +142,14 @@ export function useResolveAlert() {
       // 1. Get current user (required for critical alerts)
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not authenticated');
+      if (!tenant?.id) throw new Error('Tenant not selected');
 
-      // 2. Get alert details to check severity
+      // 2. Get alert details to check severity — V-1027 FIX: Add tenant_id filter
       const { data: alert, error: alertError } = await supabase
         .from('system_alerts')
         .select('severity, tenant_id')
         .eq('id', alertId)
+        .eq('tenant_id', tenant.id)
         .single();
 
       if (alertError) throw alertError;
@@ -138,6 +160,7 @@ export function useResolveAlert() {
       }
 
       // 4. Update the alert with resolved_by (required by trigger for critical)
+      // V-1027 FIX: Add tenant_id filter to prevent cross-tenant resolution
       const { error: updateError } = await supabase
         .from('system_alerts')
         .update({
@@ -145,14 +168,16 @@ export function useResolveAlert() {
           resolved_at: new Date().toISOString(),
           resolved_by: user.id,
         })
-        .eq('id', alertId);
+        .eq('id', alertId)
+        .eq('tenant_id', tenant.id);
 
       if (updateError) throw updateError;
 
       // 5. Create decision_event for critical alerts
+      // V-1027 FIX: Use validated tenant.id instead of alert.tenant_id
       if (alert.severity === 'critical') {
         await supabase.from('decision_events').insert({
-          tenant_id: alert.tenant_id,
+          tenant_id: tenant.id,
           rule_code: 'CRITICAL_ALERT_RESOLUTION',
           action: 'resolve_critical_alert',
           evidence: {
@@ -170,6 +195,7 @@ export function useResolveAlert() {
         const { data: decisionEvent } = await supabase
           .from('decision_events')
           .select('id')
+          .eq('tenant_id', tenant.id)
           .eq('rule_code', 'CRITICAL_ALERT_RESOLUTION')
           .order('created_at', { ascending: false })
           .limit(1)
@@ -179,7 +205,8 @@ export function useResolveAlert() {
           await supabase
             .from('system_alerts')
             .update({ decision_event_id: decisionEvent.id })
-            .eq('id', alertId);
+            .eq('id', alertId)
+            .eq('tenant_id', tenant.id);
         }
       }
 
@@ -210,6 +237,7 @@ export function useResolveAlert() {
 export function useResolveAllAlerts() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { tenant } = useTenant();
 
   return useMutation({
     mutationFn: async ({ 
@@ -222,19 +250,22 @@ export function useResolveAllAlerts() {
       // 1. Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not authenticated');
+      if (!tenant?.id) throw new Error('Tenant not selected');
 
       // 2. Check if any alerts are critical (they require individual resolution)
+      // V-1028 FIX: Add tenant_id filter
       const { data: criticalAlerts } = await supabase
         .from('system_alerts')
         .select('id')
         .in('id', alertIds)
+        .eq('tenant_id', tenant.id)
         .eq('severity', 'critical');
 
       if (criticalAlerts && criticalAlerts.length > 0) {
         throw new Error(`${criticalAlerts.length} alerta(s) crítico(s) devem ser resolvidos individualmente`);
       }
 
-      // 3. Update all non-critical alerts
+      // 3. Update all non-critical alerts — V-1028 FIX: Add tenant_id filter
       const { error: updateError } = await supabase
         .from('system_alerts')
         .update({
@@ -242,7 +273,8 @@ export function useResolveAllAlerts() {
           resolved_at: new Date().toISOString(),
           resolved_by: user.id,
         })
-        .in('id', alertIds);
+        .in('id', alertIds)
+        .eq('tenant_id', tenant.id);
 
       if (updateError) throw updateError;
 
