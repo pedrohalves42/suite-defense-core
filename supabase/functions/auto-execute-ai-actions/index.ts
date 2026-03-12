@@ -14,6 +14,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
 
 interface ExecutionResult {
   actions_processed: number
@@ -33,6 +34,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
+
+  // V-1103: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req)
+  if (authError) return authError
 
   const requestId = crypto.randomUUID()
   const startTime = Date.now()
