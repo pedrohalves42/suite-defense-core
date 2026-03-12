@@ -142,21 +142,28 @@ Deno.serve(async (req) => {
     console.log(`[generate-compliance-report] Looking up tenant for user: ${user.id}`);
 
     const body = await req.json();
-    
-    // Accept explicit tenant_id from frontend (for multi-tenant support)
-    let tenantId = body.tenant_id;
     let tenantName = "Empresa";
 
-    // If no tenant_id provided, try to get from user_roles
-    if (!tenantId) {
-      const { data: userRole } = await supabase
-        .from("user_roles")
-        .select("tenant_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
+    // V-1048 FIX: Always resolve tenant from user_roles first, then validate requested tenant
+    let tenantId: string | null = null;
+    
+    const { data: userRoles } = await supabase
+      .from("user_roles")
+      .select("tenant_id")
+      .eq("user_id", user.id);
 
-      tenantId = userRole?.tenant_id;
+    const userTenantIds = (userRoles || []).map(r => r.tenant_id);
+
+    if (body.tenant_id) {
+      // Validate user has access to requested tenant
+      if (!userTenantIds.includes(body.tenant_id)) {
+        console.warn(`[SECURITY] User ${user.id} attempted access to unauthorized tenant ${body.tenant_id}`);
+        return new Response(JSON.stringify({ error: "Access denied: You do not have access to this tenant" }), 
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      tenantId = body.tenant_id;
+    } else {
+      tenantId = userTenantIds[0] || null;
     }
 
     // Fallback to profile
