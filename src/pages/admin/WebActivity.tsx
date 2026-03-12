@@ -1003,34 +1003,50 @@ export default function WebActivity() {
             ) : (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Eye className="h-5 w-5" />
-                    Todos os Domínios
-                  </CardTitle>
-                  <CardDescription>
-                    Atividade completa das últimas 24 horas • {filteredActivity.length} domínios
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Eye className="h-5 w-5" />
+                        Todos os Domínios
+                      </CardTitle>
+                      <CardDescription>
+                        {filteredActivity.length} domínios encontrados • Página {currentPage} de {totalPages}
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="secondary" size="sm" onClick={handleExportCSV} disabled={!filteredActivity.length} className="gap-1">
+                        <FileSpreadsheet className="h-4 w-4" />
+                        CSV
+                      </Button>
+                      <Button variant="default" size="sm" onClick={handleExportPDF} disabled={!filteredActivity.length} className="gap-1">
+                        <FileText className="h-4 w-4" />
+                        PDF
+                      </Button>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                 <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Domínio</TableHead>
-                        <TableHead>Categoria</TableHead>
-                        <TableHead className="text-center">Acessos</TableHead>
-                        <TableHead>
-                          <Clock className="h-4 w-4 inline mr-1" />
-                          Primeira Visita (UTC-3)
+                        <TableHead className="cursor-pointer select-none hover:text-foreground" onClick={() => handleSort('domain')}>
+                          Domínio <SortIcon field="domain" />
                         </TableHead>
-                        <TableHead>
+                        <TableHead className="cursor-pointer select-none hover:text-foreground" onClick={() => handleSort('category')}>
+                          Categoria <SortIcon field="category" />
+                        </TableHead>
+                        <TableHead className="text-center cursor-pointer select-none hover:text-foreground" onClick={() => handleSort('hits')}>
+                          Acessos <SortIcon field="hits" />
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none hover:text-foreground" onClick={() => handleSort('last_seen_at')}>
                           <Clock className="h-4 w-4 inline mr-1" />
-                          Última Visita (UTC-3)
+                          Última Visita <SortIcon field="last_seen_at" />
                         </TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredActivity.map((item) => (
+                      {paginatedActivity.map((item) => (
                         <TableRow key={item.domain} className={item.isBlocked ? 'bg-destructive/5' : ''}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
@@ -1052,9 +1068,6 @@ export default function WebActivity() {
                             <Badge variant="secondary" className="font-mono">
                               {item.hits.toLocaleString('pt-BR')}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {formatBrazilDateTime(item.first_seen_at, 'datetime')}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             {formatBrazilDateTime(item.last_seen_at, 'datetime')}
@@ -1099,6 +1112,29 @@ export default function WebActivity() {
                       ))}
                     </TableBody>
                   </Table>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-2">
+                      <p className="text-sm text-muted-foreground">
+                        Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, sortedActivity.length)} de {sortedActivity.length}
+                      </p>
+                      <div className="flex gap-1">
+                        <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage(1)}>
+                          ««
+                        </Button>
+                        <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>
+                          ‹ Anterior
+                        </Button>
+                        <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                          Próxima ›
+                        </Button>
+                        <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(totalPages)}>
+                          »»
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
