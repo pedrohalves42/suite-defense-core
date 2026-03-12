@@ -582,19 +582,19 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
           {/* Super Admin */}
           {isSuperAdmin && (
             <>
-              <div className="sidebar-divider-neon my-3 mx-2" />
+              <div className="sidebar-divider-neon my-2.5 mx-2" />
               {!isCollapsed ? (
                 <div>
                   <button 
                     onClick={() => toggleSection('superAdmin')}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[hsl(var(--neon-purple)_/_0.06)] cursor-pointer group/super"
+                    className="w-full flex items-center justify-between px-3 py-1.5 rounded-md hover:bg-[hsl(var(--neon-purple)_/_0.05)] cursor-pointer group/super"
                   >
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[hsl(var(--neon-purple)_/_0.6)] flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[hsl(var(--neon-purple)_/_0.5)] flex items-center gap-1.5 group-hover/super:text-[hsl(var(--neon-purple)_/_0.7)]">
                       <Crown className="h-3 w-3" />
-                      <span className="text-shadow-[0_0_8px_hsl(var(--neon-purple)_/_0.3)]">Super Admin</span>
+                      Super Admin
                     </span>
                     <ChevronDown className={cn(
-                      "h-3 w-3 text-[hsl(var(--neon-purple)_/_0.4)] transition-transform duration-300",
+                      "h-3 w-3 text-[hsl(var(--neon-purple)_/_0.3)] transition-transform duration-300",
                       sectionStates.superAdmin && "rotate-180"
                     )} />
                   </button>
@@ -604,18 +604,14 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                         className="overflow-hidden"
                       >
-                        <div className="space-y-1 mt-1">
+                        <div className="space-y-0.5 mt-0.5 ml-1 border-l border-[hsl(var(--neon-purple)_/_0.08)] pl-1">
                           {renderCollapsibleSection('Operacional', 'superOps', superOpsItems, 'super')}
-                          <div className="my-1" />
                           {renderCollapsibleSection('Financeiro', 'superFinance', superFinanceItems, 'super')}
-                          <div className="my-1" />
                           {renderCollapsibleSection('Sistema', 'superSystem', superSystemItems, 'super')}
-                          <div className="my-1" />
                           {renderCollapsibleSection('IA', 'superAI', superAIItems, 'super')}
-                          <div className="my-1" />
                           {renderCollapsibleSection('Integrações', 'superIntegrations', superIntegrationsItems, 'super')}
                         </div>
                       </motion.div>
