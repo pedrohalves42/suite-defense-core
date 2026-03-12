@@ -32,7 +32,7 @@ const ServerDashboard = () => {
 
   const {
     offlineCount, failedJobs, alerts, agentsByTenant,
-    sortedTenantsByGravity, tenantsWithIssues, onlinePercentage, systemState, successRate,
+    sortedTenantsByGravity, tenantsWithIssues, onlinePercentage, systemState, successRate, trends,
   } = useDashboardMetrics(agents, jobs, tenantNames);
 
   // Loading state
