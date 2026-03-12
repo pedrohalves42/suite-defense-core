@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { validateCallerTenant } from '../_shared/validate-caller-tenant.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -169,6 +170,17 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { agent_id, tenant_id, mode } = body;
+
+    // V-1015 FIX: Validate caller has access to requested tenant
+    if (tenant_id) {
+      const validation = await validateCallerTenant(req, supabase, tenant_id);
+      if (!validation.authorized) {
+        return new Response(
+          JSON.stringify({ error: validation.error }),
+          { status: validation.statusCode || 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // ✅ BATCH MODE: Scan all agents for a tenant
     if (mode === 'batch_all_agents') {

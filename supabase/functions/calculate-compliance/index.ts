@@ -8,6 +8,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { validateCallerTenant } from '../_shared/validate-caller-tenant.ts';
 
 interface CategoryScore {
   category: string;
@@ -53,6 +54,15 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'tenant_id required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // V-1015 FIX: Validate caller has access to requested tenant
+    const validation = await validateCallerTenant(req, supabase, tenant_id);
+    if (!validation.authorized) {
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: validation.statusCode || 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

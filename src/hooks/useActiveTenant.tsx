@@ -80,12 +80,10 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
 export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTenantId, setActiveTenantId] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(ACTIVE_TENANT_KEY);
-    }
-    return null;
-  });
+  // V-1014 FIX: Never use localStorage as initial state source
+  // localStorage is only used for UX persistence AFTER JWT validation
+  // The actual tenant_id source of truth is always the JWT/backend
+  const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
   
   // PATCH #2: Add isSyncing state to block queries until JWT is updated
   const [isSyncing, setIsSyncing] = useState(true);
@@ -130,13 +128,29 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   const hasMultipleTenants = tenants.length > 1;
 
   // Determine active tenant
+  // V-1014: localStorage is used as a hint for UX preference only,
+  // but the actual selection is validated against server-fetched tenants
   const activeTenant = (() => {
     if (tenants.length === 0) return null;
     
-    // If we have a stored active tenant ID, find it
+    // If we have a programmatically set active tenant ID, find it
     if (activeTenantId) {
       const found = tenants.find(t => t.id === activeTenantId);
       if (found) return found;
+    }
+    
+    // V-1014 FIX: Check localStorage hint ONLY after server validation
+    // This is safe because we verify the ID exists in the user's fetched tenants
+    if (typeof window !== 'undefined') {
+      const savedId = localStorage.getItem(ACTIVE_TENANT_KEY);
+      if (savedId) {
+        const found = tenants.find(t => t.id === savedId);
+        if (found) {
+          // Set state so subsequent renders don't re-read localStorage
+          setActiveTenantId(savedId);
+          return found;
+        }
+      }
     }
     
     // Default to first tenant
