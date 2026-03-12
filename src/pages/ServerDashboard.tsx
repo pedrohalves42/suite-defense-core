@@ -4,7 +4,7 @@ import { OnboardingTour } from "@/components/OnboardingTour";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useDashboardQueries } from "@/hooks/useDashboardQueries";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { SystemStatusBanner } from "@/components/dashboard/SystemStatusBanner";
@@ -18,6 +18,8 @@ import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState"
 import { DashboardPDFReport } from "@/components/dashboard/DashboardPDFReport";
 import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
 import { SystemBannerSkeleton, MetricCardsSkeleton } from "@/components/dashboard/DashboardSkeletons";
+import { WebVitalsCard } from "@/components/dashboard/WebVitalsCard";
+import { NotificationBell } from "@/components/dashboard/NotificationBell";
 
 const ServerDashboard = () => {
   useSessionGuard();
