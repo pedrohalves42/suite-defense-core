@@ -27,13 +27,9 @@ export function DashboardPDFReport({
     try {
       const jsPDFModule = await import("jspdf");
       const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF;
-      const autoTableModule = await import("jspdf-autotable");
-      const autoTable = autoTableModule.default || autoTableModule.applyPlugin;
+      await import("jspdf-autotable");
 
-      const doc = new jsPDF();
-      if (typeof autoTable === 'function' && !doc.autoTable) {
-        autoTable(doc);
-      }
+      const doc = new jsPDF() as any;
 
       const now = new Date();
       const dateStr = now.toLocaleDateString('pt-BR');
