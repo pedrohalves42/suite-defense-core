@@ -2,11 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
 import { useTodayRiskDelta, getDeltaInfo, formatCurrency } from '@/hooks/useRiskDelta';
+import { useUnifiedMetrics, COST_MODEL } from '@/hooks/useUnifiedMetrics';
 import { 
   ShieldCheck, ShieldAlert, ShieldX, Shield,
   Monitor, MonitorOff, AlertTriangle, CheckCircle2,
@@ -24,21 +23,6 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-
-// === Modelo de custo conservador para PMEs brasileiras (2025-2026) ===
-// Fontes: CERT.br, mercado local de suporte TI para pequenas empresas
-// Valores calibrados para operações de 1-50 máquinas
-const COST_MODEL = {
-  security_event_critical: 500,   // Incidente crítico contido (ex: ransomware bloqueado)
-  security_event_high: 200,       // Ameaça alta neutralizada
-  security_event_medium: 60,      // Alerta médio tratado automaticamente
-  auto_repair: 45,                // Chamado técnico remoto evitado
-  auto_recovery: 150,             // Restauração de serviço sem visita
-  policy_drift: 60,               // Correção de conformidade automática
-  blocked_access: 120,            // Tentativa de acesso indevido bloqueada
-  firewall_enforcement: 40,       // Regra de firewall aplicada
-  agent_offline_per_hour: 25,     // Custo por hora de máquina desprotegida
-};
 
 export default function ExecutiveDashboard() {
   const { activeTenant, loading: tenantLoading } = useActiveTenant();
