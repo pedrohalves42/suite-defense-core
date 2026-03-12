@@ -222,6 +222,9 @@ export default function WebActivity() {
     if (sortField !== field) return <span className="text-muted-foreground/30 ml-1">↕</span>;
     return <span className="ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>;
   };
+
+  // Category stats for chart
+  const categoryStats = useMemo(() => {
     const stats = new Map<string, { name: string; value: number; color: string }>();
     
     for (const item of enrichedActivity) {
