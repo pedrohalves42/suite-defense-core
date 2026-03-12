@@ -302,10 +302,12 @@ export default function NotificationSettings() {
     if (!confirm('Tem certeza que deseja remover este canal?')) return;
 
     try {
+      // V-1067 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('notification_channels')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenantId);
 
       if (error) throw error;
 
