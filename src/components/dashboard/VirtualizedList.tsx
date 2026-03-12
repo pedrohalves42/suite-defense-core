@@ -1,4 +1,5 @@
 import { useRef, useCallback } from "react";
+// @ts-ignore - react-window types mismatch
 import { FixedSizeList as List } from "react-window";
 
 interface VirtualizedListProps<T> {
