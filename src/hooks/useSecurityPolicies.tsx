@@ -47,10 +47,13 @@ export const useSecurityPolicies = () => {
 
   const updatePolicy = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<SecurityPolicy> & { id: string }) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1032 FIX: Add tenant_id filter
       const { data, error } = await supabase
         .from('security_policies')
         .update(updates)
         .eq('id', id)
+        .eq('tenant_id', tenant.id)
         .select()
         .single();
       
