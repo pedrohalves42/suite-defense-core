@@ -749,12 +749,15 @@ const ServerDashboard = () => {
             Cada card mostra um fato claro e acionável
         ═══════════════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Card 1: Computadores Protegidos - AFIRMAÇÃO */}
-          <Card className="bg-gradient-card border-primary/20">
+          {/* Card 1: Computadores Protegidos */}
+          <Card className="bg-gradient-card border-primary/20 cursor-pointer hover:border-primary/40 transition-all group" onClick={() => navigate('/admin/agent-health')}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
-                <Users className="h-4 w-4 text-primary" />
-                Proteção Ativa
+              <CardTitle className="text-xs font-medium flex items-center justify-between text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-primary" />
+                  Proteção Ativa
+                </span>
+                <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -767,15 +770,18 @@ const ServerDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Card 2: Conectividade - AFIRMAÇÃO */}
+          {/* Card 2: Conectividade */}
           <Card className={cn(
-            "bg-gradient-card",
+            "bg-gradient-card cursor-pointer hover:border-primary/40 transition-all group",
             offlineCount > 0 ? "border-warning/30" : "border-success/20"
-          )}>
+          )} onClick={() => navigate('/admin/agent-health')}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
-                <Network className="h-4 w-4" />
-                Conexão
+              <CardTitle className="text-xs font-medium flex items-center justify-between text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <Network className="h-4 w-4" />
+                  Conexão
+                </span>
+                <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -791,15 +797,18 @@ const ServerDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Card 3: Alertas - AFIRMAÇÃO */}
+          {/* Card 3: Alertas */}
           <Card className={cn(
-            "bg-gradient-card",
+            "bg-gradient-card cursor-pointer hover:border-primary/40 transition-all group",
             alerts > 0 ? "border-destructive/30" : "border-success/20"
-          )}>
+          )} onClick={() => navigate('/admin/security-monitoring')}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
-                <AlertCircle className="h-4 w-4" />
-                Alertas
+              <CardTitle className="text-xs font-medium flex items-center justify-between text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Alertas
+                </span>
+                <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -815,15 +824,18 @@ const ServerDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Card 4: Taxa de Sucesso - AFIRMAÇÃO */}
+          {/* Card 4: Taxa de Sucesso */}
           <Card className={cn(
-            "bg-gradient-card",
+            "bg-gradient-card cursor-pointer hover:border-primary/40 transition-all group",
             failedJobs > 0 ? "border-warning/30" : "border-success/20"
-          )}>
+          )} onClick={() => navigate('/admin/job-health')}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
-                <TrendingUp className="h-4 w-4" />
-                Verificações
+              <CardTitle className="text-xs font-medium flex items-center justify-between text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Verificações
+                </span>
+                <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
               </CardTitle>
             </CardHeader>
             <CardContent>
