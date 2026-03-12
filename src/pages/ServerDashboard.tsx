@@ -83,25 +83,29 @@ const ServerDashboard = () => {
         </div>
 
         {/* Layer 1: Global Status */}
-        <SystemStatusBanner
-          systemState={systemState}
-          onlinePercentage={onlinePercentage}
-          offlineCount={offlineCount}
-          failedJobs={failedJobs}
-          tenantsWithIssues={tenantsWithIssues}
-          totalAgents={agents.length}
-          totalTenants={Object.keys(agentsByTenant).length}
-        />
+        {loading ? <SystemBannerSkeleton /> : (
+          <SystemStatusBanner
+            systemState={systemState}
+            onlinePercentage={onlinePercentage}
+            offlineCount={offlineCount}
+            failedJobs={failedJobs}
+            tenantsWithIssues={tenantsWithIssues}
+            totalAgents={agents.length}
+            totalTenants={Object.keys(agentsByTenant).length}
+          />
+        )}
 
         {/* Layer 2: Metric Cards */}
-        <MetricCards
-          totalAgents={agents.length}
-          onlinePercentage={onlinePercentage}
-          offlineCount={offlineCount}
-          alerts={alerts}
-          successRate={successRate}
-          failedJobs={failedJobs}
-        />
+        {loading ? <MetricCardsSkeleton /> : (
+          <MetricCards
+            totalAgents={agents.length}
+            onlinePercentage={onlinePercentage}
+            offlineCount={offlineCount}
+            alerts={alerts}
+            successRate={successRate}
+            failedJobs={failedJobs}
+          />
+        )}
 
         {/* Layer 2.5: Admin Metrics */}
         {isAdmin && (
