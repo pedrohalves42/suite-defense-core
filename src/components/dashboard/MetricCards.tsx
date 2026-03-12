@@ -94,7 +94,7 @@ function MetricCardsComponent({
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4" role="region" aria-label="Métricas principais do sistema">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
