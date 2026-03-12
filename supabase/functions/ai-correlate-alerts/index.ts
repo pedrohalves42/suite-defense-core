@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { callAIJson } from '../_shared/ai-provider-helper.ts';
+import { validateCallerTenant } from '../_shared/validate-caller-tenant.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,6 +40,17 @@ Deno.serve(async (req) => {
     const tenantId = body.tenant_id;
     const timeRangeHours = body.time_range_hours || 24;
     const cutoff = new Date(Date.now() - timeRangeHours * 60 * 60 * 1000).toISOString();
+
+    // V-1025 FIX: Validate caller has access to requested tenant (if specified)
+    if (tenantId) {
+      const validation = await validateCallerTenant(req, supabase, tenantId);
+      if (!validation.authorized) {
+        return new Response(
+          JSON.stringify({ error: validation.error }),
+          { status: validation.statusCode || 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // Get tenants
     let tenantsQuery = supabase.from('tenants').select('id, name');
