@@ -1,22 +1,19 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 /**
  * compute-compliance-benchmarks
- * 
- * Calcula benchmarks de compliance cross-tenant agregados e anônimos.
- * Roda periodicamente (cron diário) ou sob demanda.
- * 
- * Popula a tabela compliance_benchmarks com:
- * - avg_score, median_score, min_score, max_score
- * - tenant_count
- * - category_averages (por categoria de compliance)
  */
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // V-1137: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,

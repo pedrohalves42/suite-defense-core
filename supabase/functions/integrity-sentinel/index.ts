@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,16 +8,15 @@ const corsHeaders = {
 
 /**
  * INTEGRITY SENTINEL - CAMADA 3 do Zero Trust
- * 
- * Função scheduled que roda a cada 5 minutos para:
- * 1. Verificar violações de integridade na view job_integrity_violations
- * 2. Criar alertas P0 se houver violações
- * 3. Validar supply chain de agent_releases
  */
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
+
+  // V-1141: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req)
+  if (authError) return authError
 
   // Parse request body
   let body: { source?: string } = {};
