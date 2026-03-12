@@ -63,13 +63,15 @@ export default function AlertResolutionCenter() {
 
   const resolveMutation = useMutation({
     mutationFn: async (alertIds: string[]) => {
+      // V-1071 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('system_alerts')
         .update({ 
           resolved_at: new Date().toISOString(),
           acknowledged: true 
         })
-        .in('id', alertIds);
+        .in('id', alertIds)
+        .eq('tenant_id', tenant!.id);
       
       if (error) throw error;
     },

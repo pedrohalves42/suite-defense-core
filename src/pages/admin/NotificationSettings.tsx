@@ -474,10 +474,12 @@ export default function NotificationSettings() {
 
   const handleToggleReport = async (id: string, isActive: boolean) => {
     try {
+      // V-1067 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('scheduled_reports')
         .update({ is_active: isActive })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenantId);
 
       if (error) throw error;
 

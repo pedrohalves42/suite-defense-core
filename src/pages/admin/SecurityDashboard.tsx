@@ -129,10 +129,12 @@ export default function SecurityDashboard() {
 
   const unblockIPMutation = useMutation({
     mutationFn: async (ipAddress: string) => {
+      // V-1072 FIX: Add tenant_id filter (ip_blocklist supports hybrid global/tenant scoping)
       const { error } = await supabase
         .from('ip_blocklist')
         .delete()
-        .eq('ip_address', ipAddress);
+        .eq('ip_address', ipAddress)
+        .eq('tenant_id', tenant!.id);
       
       if (error) throw error;
     },

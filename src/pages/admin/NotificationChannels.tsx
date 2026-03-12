@@ -198,13 +198,15 @@ export default function NotificationChannels() {
         throw new Error(data.error || 'Falha no envio');
       }
       
+      // V-1068 FIX: Add tenant_id filter
       await supabase
         .from('notification_channels')
         .update({ 
           is_verified: true, 
           verified_at: new Date().toISOString() 
         })
-        .eq('id', channel.id);
+        .eq('id', channel.id)
+        .eq('tenant_id', tenant!.id);
       
       toast.success('Teste enviado com sucesso! Canal verificado.');
       refetch();

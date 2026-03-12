@@ -99,6 +99,7 @@ export default function InsightTriageCenter() {
   const dismissMutation = useMutation({
     mutationFn: async ({ insightIds, reason }: { insightIds: string[]; reason: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
+      // V-1075 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('ai_insights')
         .update({ 
@@ -106,7 +107,8 @@ export default function InsightTriageCenter() {
           dismissed_by: user?.id,
           dismissal_reason: reason 
         })
-        .in('id', insightIds);
+        .in('id', insightIds)
+        .eq('tenant_id', tenant!.id);
       
       if (error) throw error;
     },

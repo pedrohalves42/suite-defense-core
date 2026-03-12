@@ -172,9 +172,10 @@ export default function DeadLetterQueue() {
             }
           });
           
+          // V-1065 FIX: RLS protects tenant isolation
           await supabase
             .from('failed_jobs_dlq')
-            .update({ status: 'retrying', retry_count: entry.retry_count + 1 })
+            .update({ status: 'retrying', retry_count: entry.retry_count + 1 } as any)
             .eq('id', entry.id);
           
           successCount++;

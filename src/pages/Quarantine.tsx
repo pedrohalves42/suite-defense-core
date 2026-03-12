@@ -82,10 +82,12 @@ export default function Quarantine() {
 
   const deleteMutation = useMutation({
     mutationFn: async (fileId: string) => {
+      // V-1070 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('quarantined_files')
         .update({ status: 'deleted' })
-        .eq('id', fileId);
+        .eq('id', fileId)
+        .eq('tenant_id', tenant!.id);
 
       if (error) throw error;
     },
