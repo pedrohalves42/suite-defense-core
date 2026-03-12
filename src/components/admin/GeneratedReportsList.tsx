@@ -95,6 +95,7 @@ const nextActionLabels: Record<string, string> = {
 
 export function GeneratedReportsList() {
   const queryClient = useQueryClient();
+  const { activeTenant } = useActiveTenant();
   const [selectedReport, setSelectedReport] = useState<GeneratedReport | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
