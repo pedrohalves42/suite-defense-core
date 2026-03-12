@@ -135,10 +135,11 @@ export function useResolveDlqItem() {
 }
 
 export function useResolveDlqBatch() {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ dlqItemIds, resolutionNotes, resolutionSource = 'human' }: { 
+    mutationFn: async ({ dlqItemIds, resolutionNotes, resolutionSource = 'human' }: {
       dlqItemIds: string[]; 
       resolutionNotes: string;
       resolutionSource?: 'human' | 'system' | 'auto_cleanup';
