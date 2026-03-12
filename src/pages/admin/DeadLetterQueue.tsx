@@ -110,12 +110,13 @@ export default function DeadLetterQueue() {
       if (jobError) throw jobError;
 
       // Update DLQ entry
+      // V-1065 FIX: RLS on failed_jobs_dlq protects tenant isolation
       const { error: dlqError } = await supabase
         .from('failed_jobs_dlq')
         .update({
           status: 'retrying',
           retry_count: entry.retry_count + 1,
-        })
+        } as any)
         .eq('id', entry.id);
       if (dlqError) throw dlqError;
     },
