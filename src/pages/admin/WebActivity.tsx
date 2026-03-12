@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { AgentSelector } from '@/components/AgentSelector';
 import { useWebActivity } from '@/hooks/useWebActivity';
@@ -6,6 +6,8 @@ import { useBlockedWebsites } from '@/hooks/useBlockedWebsites';
 import { useBlockedAttempts } from '@/hooks/useBlockedAttempts';
 import { useBlockedAttemptsRealtime } from '@/hooks/useBlockedAttemptsRealtime';
 import { useAgentGroups } from '@/hooks/useAgentGroups';
+import { useAgentSnapshots } from '@/hooks/useAgentSnapshots';
+import { prepareJobForInsert } from '@/lib/job-utils';
 import ThreatIntelligenceLookup from '@/components/admin/ThreatIntelligenceLookup';
 import { BlockedSitesStats } from '@/components/admin/BlockedSitesStats';
 import { AgentSyncStatusCard } from '@/components/admin/AgentSyncStatusCard';
@@ -74,10 +76,12 @@ export default function WebActivity() {
   const [manualGroupId, setManualGroupId] = useState<string | null>(null);
   const [manualReason, setManualReason] = useState('');
   const [isManualBlocking, setIsManualBlocking] = useState(false);
+  const [isCollectingAll, setIsCollectingAll] = useState(false);
   
   const { data: activity, isLoading, error } = useWebActivity(selectedAgent, !!selectedAgent);
   const { blockedWebsites, blockWebsite, unblockWebsite, isBlocked } = useBlockedWebsites();
   const { groups } = useAgentGroups();
+  const { data: allSnapshots } = useAgentSnapshots();
   const { attempts: blockedAttempts, todayStats: blockedStats, stats: fullStats, isLoading: attemptsLoading } = useBlockedAttempts({ 
     agentId: selectedAgent || undefined,
     limit: 500
@@ -88,6 +92,53 @@ export default function WebActivity() {
   
   // Enable realtime notifications for blocked attempts
   useBlockedAttemptsRealtime(true);
+
+  const onlineAgents = useMemo(() => {
+    if (!allSnapshots) return [];
+    return allSnapshots.filter(s => s.agent_state === 'online' || s.agent_state === 'warning');
+  }, [allSnapshots]);
+
+  const handleCollectAllWebActivity = useCallback(async () => {
+    if (onlineAgents.length === 0) {
+      toast.error('Nenhum computador online para coletar');
+      return;
+    }
+    setIsCollectingAll(true);
+    try {
+      const tenantId = onlineAgents[0]?.tenant_id;
+      if (!tenantId) throw new Error('Tenant não identificado');
+
+      const jobs = await Promise.all(
+        onlineAgents.map(agent =>
+          prepareJobForInsert({
+            tenant_id: tenantId,
+            agent_id: agent.agent_id,
+            agent_name: agent.hostname || 'unknown',
+            type: 'collect_web_activity',
+            status: 'queued',
+            priority: 8,
+            payload: { max_domains: 500, browsers: ['chrome', 'firefox', 'edge', 'brave', 'opera', 'vivaldi'], days_back: 7, source: 'manual-bulk' },
+            approved: true,
+          })
+        )
+      );
+
+      const { error: insertError } = await (supabase as any)
+        .from('jobs')
+        .insert(jobs);
+
+      if (insertError) throw insertError;
+
+      toast.success(`Coleta disparada para ${onlineAgents.length} computador${onlineAgents.length > 1 ? 'es' : ''}`, {
+        description: 'Os dados serão atualizados em alguns minutos',
+      });
+    } catch (err: any) {
+      console.error('Bulk collect error:', err);
+      toast.error('Erro ao disparar coleta', { description: err.message });
+    } finally {
+      setIsCollectingAll(false);
+    }
+  }, [onlineAgents]);
 
   // Enrich activity with categories
   const enrichedActivity = useMemo(() => {
@@ -354,11 +405,24 @@ export default function WebActivity() {
     >
       <div className="space-y-6">
         {/* Observation Label */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <Badge variant="outline" className="gap-1 text-xs border-amber-500/50 text-amber-600 dark:text-amber-400">
             <Eye className="h-3 w-3" />
             Modo Registro — Acessos são registrados, bloqueio requer configuração manual
           </Badge>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleCollectAllWebActivity}
+            disabled={isCollectingAll || onlineAgents.length === 0}
+          >
+            {isCollectingAll ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Atualizar Todos ({onlineAgents.length} online)
+          </Button>
         </div>
 
         {/* Tabs for Activity vs Stats */}
