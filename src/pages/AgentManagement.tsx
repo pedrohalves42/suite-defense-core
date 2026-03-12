@@ -268,7 +268,8 @@ export default function AgentManagement() {
         .eq('id', agentId)
         .eq('tenant_id', tenant.id);
       if (agentError) throw agentError;
-      await supabase.from('agent_tokens').update({ is_active: !disable }).eq('agent_id', agentId);
+      // V-1092 FIX: Add tenant_id filter on agent_tokens update
+      await supabase.from('agent_tokens').update({ is_active: !disable }).eq('agent_id', agentId).eq('tenant_id', tenant.id);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
