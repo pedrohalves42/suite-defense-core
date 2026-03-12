@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/error-handler.ts';
 import { logger } from '../_shared/logger.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 /**
  * HMAC Cleanup Scheduled Function
@@ -14,6 +15,10 @@ Deno.serve(async (req: Request) => {
       headers: corsHeaders 
     });
   }
+
+  // V-1116: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   const requestId = crypto.randomUUID();
   const startTime = Date.now();

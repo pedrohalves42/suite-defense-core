@@ -10,6 +10,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsSecurityHeaders, secureJsonResponse, secureCorsPreflightResponse, secureErrorResponse } from '../_shared/security-headers.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -27,6 +28,10 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return secureCorsPreflightResponse();
   }
+
+  // V-1115: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   const requestId = crypto.randomUUID();
   const startTime = Date.now();

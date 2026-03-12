@@ -1,18 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { loggerWithContext } from '../_shared/logger.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 /**
  * Auto-Renew Enrollment Keys
  * 
  * Scheduled function that runs every 30 minutes to check for tenants
  * without active enrollment keys and automatically generates new ones.
- * 
- * Security:
- * - Only stores SHA-256 hash of the key (SEC-001 compliance)
- * - Keys are auto-generated with 30-day validity
- * - All operations are logged in audit_logs
- * - Admins are notified via security_logs
  */
 
 Deno.serve(async (req) => {
@@ -22,6 +17,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // V-1119: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   try {
     log.info('Starting auto-renew enrollment keys check');

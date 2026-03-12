@@ -1,8 +1,22 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 console.log("[CHECK-TRIAL-EXPIRATION] Cron job started");
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  // V-1114: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
+
   const startedAt = Date.now();
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",

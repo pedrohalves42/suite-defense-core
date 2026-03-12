@@ -2,11 +2,16 @@
 // Executa a cada hora para garantir que jobs não fiquem órfãos
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
+
+  // V-1107: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req)
+  if (authError) return authError
 
   const requestId = crypto.randomUUID()
   console.log(`[${requestId}] cleanup-offline-agents-jobs: Starting scheduled cleanup`)

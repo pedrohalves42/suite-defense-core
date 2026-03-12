@@ -1,15 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { recordMetric } from '../_shared/apm.ts';
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from '../_shared/cors.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // V-1108: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   try {
     console.log("[RESET-DAILY-QUOTAS] Starting daily quota reset");
