@@ -16,6 +16,7 @@ import { AIApprovalMetrics } from "@/components/admin/AIApprovalMetrics";
 import { DismissInsightDialog } from "@/components/insights/DismissInsightDialog";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useTenant } from "@/hooks/useTenant";
 interface AIInsight {
   id: string;
   tenant_id: string;
