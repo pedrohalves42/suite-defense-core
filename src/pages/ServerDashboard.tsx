@@ -861,11 +861,14 @@ const ServerDashboard = () => {
             <IntegrityScoreCard />
             <JobWasteCard jobs={jobs} agents={agents} />
             {/* Card de credenciais de acesso - só para admin */}
-            <Card className="bg-gradient-card border-primary/20">
+            <Card className="bg-gradient-card border-primary/20 cursor-pointer hover:border-primary/40 transition-all group" onClick={() => navigate('/admin/members')}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
-                  <Key className="h-4 w-4 text-primary" />
-                  Credenciais
+                <CardTitle className="text-xs font-medium flex items-center justify-between text-muted-foreground">
+                  <span className="flex items-center gap-2">
+                    <Key className="h-4 w-4 text-primary" />
+                    Credenciais
+                  </span>
+                  <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -879,11 +882,14 @@ const ServerDashboard = () => {
             </Card>
 
             {/* Card de Rate Limits - só para admin */}
-            <Card className="bg-gradient-card border-primary/20">
+            <Card className="bg-gradient-card border-primary/20 cursor-pointer hover:border-primary/40 transition-all group" onClick={() => navigate('/admin/rate-limiting')}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
-                  <ShieldAlert className="h-4 w-4 text-primary" />
-                  Proteção
+                <CardTitle className="text-xs font-medium flex items-center justify-between text-muted-foreground">
+                  <span className="flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4 text-primary" />
+                    Proteção
+                  </span>
+                  <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
                 </CardTitle>
               </CardHeader>
               <CardContent>
