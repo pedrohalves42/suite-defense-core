@@ -94,7 +94,7 @@ function MetricCardsComponent({
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4" role="region" aria-label="Métricas principais do sistema">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
@@ -102,6 +102,10 @@ function MetricCardsComponent({
             key={card.title}
             className={cn("bg-gradient-card cursor-pointer hover:border-primary/40 transition-all group", card.borderClass)}
             onClick={() => navigate(card.route)}
+            role="button"
+            tabIndex={0}
+            aria-label={`${card.title}: ${card.value}. ${card.subtitle}`}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(card.route); } }}
           >
             <CardHeader className="pb-1 sm:pb-2">
               <CardTitle className="text-xs font-medium flex items-center justify-between text-muted-foreground">

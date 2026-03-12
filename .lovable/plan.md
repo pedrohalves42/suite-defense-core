@@ -26,36 +26,48 @@
 
 ## ✅ Concluído (Sprint 2 — 12/03/2026)
 
-### Skeleton Loaders
-- ✅ `DashboardSkeletons.tsx` — componentes reutilizáveis (MetricCards, Banner, Charts, Timeline, Tabs)
-- ✅ Substituído "Carregando..." por skeletons animados em TODOS os componentes do dashboard
-- ✅ Skeletons aplicados em: DashboardCharts, SecurityTimeline, AgentsTab, JobsTab, ReportsTab, SecurityTab
+### Skeleton Loaders, Mobile, PDF, Testes
+- ✅ Skeleton Loaders animados em todos os componentes do dashboard
+- ✅ Dashboard responsivo mobile (grids, fontes, padding adaptativos)
+- ✅ Relatório PDF Executivo com KPIs, agentes, recomendações automáticas
+- ✅ 10 testes unitários `useDashboardMetrics.test.ts`
 
-### Mobile Responsivo
-- ✅ Dashboard padding adaptativo (p-3 mobile → p-6 desktop)
-- ✅ MetricCards: grid 2 colunas em mobile, 4 em desktop
-- ✅ DashboardTabs: 3 colunas em mobile, 5 em desktop com texto menor
-- ✅ Header com layout flex-col em mobile
-- ✅ JobsTab: cards empilhados em mobile
-- ✅ Tamanhos de fonte responsivos no header
+## ✅ Concluído (Sprint 3 — 12/03/2026)
 
-### Relatório PDF Executivo
-- ✅ `DashboardPDFReport.tsx` — botão "Relatório PDF" no header (apenas admin)
-- ✅ Gera PDF com: KPIs, distribuição de verificações, top 10 agentes, recomendações
-- ✅ Import dinâmico de jsPDF + jspdf-autotable
-- ✅ Header estilizado com badge de estado do sistema
-- ✅ Recomendações automáticas baseadas nos dados atuais
+### Performance & Segurança
+- ✅ `useRateLimiter` hook — rate limiting frontend para mutations (sliding window)
+- ✅ `DashboardErrorBoundary` — isolamento de falhas por seção
+- ✅ `React.memo` em AgentsTab, JobsTab, ReportsTab
+- ✅ `useSessionGuard` — detecção de sessão expirada + redirect graceful
+- ✅ Comparação temporal 24h nos KPIs (TrendIndicator ↑↓)
 
-### Testes Unitários
-- ✅ `useDashboardMetrics.test.ts` — 10 testes passando
-- ✅ Cobertura: agentes online/offline, jobs, success rate, system state, tenant grouping, alerts
+## ✅ Concluído (Sprint 4 — 12/03/2026)
+
+### Usabilidade & Funcionalidades
+- ✅ `CSVExportButton` — botão de exportação CSV reutilizável
+- ✅ CSV export em AgentsTab, JobsTab, ReportsTab
+- ✅ `Breadcrumbs` — navegação contextual em todas as páginas admin
+- ✅ Busca e filtros em todas as tabs do dashboard
+
+## ✅ Concluído (Sprint 5 — 12/03/2026)
+
+### Qualidade, i18n & Acessibilidade
+- ✅ i18n EN completo — adicionadas 50+ chaves `dashboardPanel.*` em en.json e pt-BR.json
+- ✅ ARIA labels em MetricCards (`role="button"`, `aria-label`, `tabIndex`, `onKeyDown`)
+- ✅ ARIA `role="region"` + `aria-label` em gráficos e métricas
+- ✅ `aria-label` na navegação Breadcrumbs
+- ✅ `aria-current="page"` no breadcrumb ativo
+- ✅ Keyboard navigation (Enter/Space) nos cards de métricas
+- ✅ 10 testes unitários passando
 
 ## ⏳ Pendente (Próximos Sprints)
 
 | # | Área | Prioridade | Status |
 |---|------|-----------|--------|
-| 1 | i18n cobertura EN | MÉDIO | TODO |
+| 1 | Dashboard customizável (drag widgets) | MÉDIO | TODO |
 | 2 | Notificações push PWA | MÉDIO | TODO |
 | 3 | APM frontend (Web Vitals) | BAIXO | TODO |
 | 4 | Particionamento de tabelas grandes | BAIXO | TODO |
-| 5 | ErrorBoundary nos componentes | BAIXO | TODO |
+| 5 | Virtualização com react-window (listas 500+) | BAIXO | TODO |
+| 6 | Testes E2E com Playwright | MÉDIO | TODO |
+| 7 | Cobertura de testes >80% | MÉDIO | TODO |

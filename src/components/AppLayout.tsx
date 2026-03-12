@@ -13,6 +13,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Breadcrumbs } from '@/components/navigation/Breadcrumbs';
 
 export const AppLayout = () => {
   const isMobile = useIsMobile();
@@ -83,6 +84,7 @@ export const AppLayout = () => {
             )}>
               <div className="max-w-7xl mx-auto">
                 {isMobile && <PushNotificationBanner />}
+                <Breadcrumbs />
                 <Outlet />
               </div>
             </main>
