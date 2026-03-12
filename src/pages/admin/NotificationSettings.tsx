@@ -343,10 +343,12 @@ export default function NotificationSettings() {
       const existing = preferences.find(p => p.channel_id === channelId);
       
       if (existing) {
+        // V-1067 FIX: Add tenant_id filter
         const { error } = await supabase
           .from('notification_preferences')
-          .update(updates)
-          .eq('id', existing.id);
+          .update(updates as any)
+          .eq('id', existing.id)
+          .eq('tenant_id', tenantId);
 
         if (error) throw error;
       } else {
