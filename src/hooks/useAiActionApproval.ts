@@ -110,11 +110,13 @@ export function useRejectAiAction() {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not authenticated');
 
-      // 2. Get the action details
+      // 2. Get the action details - V-1022 FIX: Add tenant_id filter
+      if (!tenant?.id) throw new Error('Tenant not selected');
       const { data: action, error: actionError } = await supabase
         .from('ai_actions')
         .select('*')
         .eq('id', actionId)
+        .eq('tenant_id', tenant.id)
         .single();
 
       if (actionError || !action) throw new Error('Action not found');
