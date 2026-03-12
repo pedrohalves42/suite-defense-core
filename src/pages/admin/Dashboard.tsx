@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useTenant } from '@/hooks/useTenant';
 import { 
   Shield, Server, AlertTriangle, WifiOff, 
   Brain, Bug, ShieldAlert, ChevronRight,
@@ -26,98 +25,7 @@ import { OnboardingRequiredBanner } from '@/components/admin/OnboardingRequiredB
 import { SimpleDashboard } from '@/components/dashboard/SimpleDashboard';
 import { useSimpleModeContext } from '@/hooks/useSimpleMode';
 import { useTranslation } from 'react-i18next';
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1, y: 0,
-    transition: { delay: i * 0.06, duration: 0.35, ease: 'easeOut' as const }
-  })
-};
-
-export default function Dashboard() {
-  const { t } = useTranslation();
-  const { tenant, loading: tenantLoading } = useTenant();
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const { isSimple } = useSimpleModeContext();
-
-  useEffect(() => {
-    const onboardingParam = searchParams.get('onboarding');
-    if (onboardingParam === 'true') {
-      setShowOnboarding(true);
-      searchParams.delete('onboarding');
-      setSearchParams(searchParams, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
-
-  // Fetch agents
-  const { data: agents, isLoading: agentsLoading, isFetched: agentsFetched } = useQuery({
-    queryKey: ['agent-health', tenant?.id],
-    queryFn: async () => {
-      if (!tenant?.id) return [];
-      const { data, error } = await supabase.rpc('get_agent_health_metrics', {
-        p_tenant_id: tenant.id
-      });
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 60000,
-  });
-
-  // Fetch alerts
-  const { data: alerts } = useQuery({
-    queryKey: ['dashboard-alerts', tenant?.id],
-    queryFn: async () => {
-      if (!tenant?.id) return [];
-      const { data, error } = await supabase
-        .from('system_alerts')
-        .select('id, severity, message, alert_type')
-        .eq('tenant_id', tenant.id)
-        .eq('resolved', false)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 60000,
-  });
-
-  // Fetch vulnerabilities
-  const { data: vulnStats } = useQuery({
-    queryKey: ['dashboard-vulns', tenant?.id],
-    queryFn: async () => {
-      if (!tenant?.id) return { total: 0, critical: 0 };
-      const { data, error } = await supabase
-        .from('vuln_findings')
-        .select('severity')
-        .eq('tenant_id', tenant.id);
-      if (error) throw error;
-      const total = data?.length || 0;
-      const critical = data?.filter(v => v.severity === 'critical' || v.severity === 'high').length || 0;
-      return { total, critical };
-    },
-    enabled: !tenantLoading && !!tenant?.id,
-  });
-
-  // Fetch AI insights count
-  const { data: insightsCount } = useQuery({
-    queryKey: ['dashboard-insights', tenant?.id],
-    queryFn: async () => {
-      if (!tenant?.id) return 0;
-      const { count, error } = await supabase
-        .from('ai_insights')
-        .select('id', { count: 'exact', head: true })
-        .eq('tenant_id', tenant.id)
-        .eq('acknowledged', false);
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !tenantLoading && !!tenant?.id,
-  });
+import { useUnifiedMetrics } from '@/hooks/useUnifiedMetrics';
 
   // Acknowledge alerts mutation
   const acknowledgeAllMutation = useMutation({
