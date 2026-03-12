@@ -71,10 +71,13 @@ export const useSecurityPolicies = () => {
 
   const deletePolicy = useMutation({
     mutationFn: async (id: string) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
+      // V-1032 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('security_policies')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenant.id);
       
       if (error) throw error;
     },
