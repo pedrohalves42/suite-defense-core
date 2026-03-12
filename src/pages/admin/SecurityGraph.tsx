@@ -1,12 +1,13 @@
-import { useState, useMemo, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Network, Filter, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { Network, RefreshCw, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const nodeTypeColors: Record<string, string> = {
   agent: "#3b82f6",
@@ -28,6 +29,23 @@ export default function SecurityGraph() {
   const { tenant } = useTenant();
   const [filterType, setFilterType] = useState("all");
   const [selectedNode, setSelectedNode] = useState<any>(null);
+  const queryClient = useQueryClient();
+
+  const buildGraph = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("populate-security-graph", {
+        body: { tenant_id: tenant!.id },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["security-graph-nodes"] });
+      queryClient.invalidateQueries({ queryKey: ["security-graph-edges"] });
+      toast.success(`Grafo construído: ${data.nodes_created} nós e ${data.edges_created} conexões`);
+    },
+    onError: (err: any) => toast.error("Erro ao construir grafo: " + err.message),
+  });
 
   const { data: nodes = [], isLoading: nodesLoading } = useQuery({
     queryKey: ["security-graph-nodes", tenant?.id, filterType],
@@ -86,15 +104,25 @@ export default function SecurityGraph() {
           </h1>
           <p className="text-muted-foreground">Visualize relacionamentos entre entidades de segurança</p>
         </div>
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os tipos</SelectItem>
-            {Object.entries(nodeTypeLabels).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => buildGraph.mutate()}
+            disabled={buildGraph.isPending || !tenant?.id}
+            variant="default"
+          >
+            {buildGraph.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            {buildGraph.isPending ? "Construindo..." : "Construir Grafo"}
+          </Button>
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              {Object.entries(nodeTypeLabels).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Stats */}
