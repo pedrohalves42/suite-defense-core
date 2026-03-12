@@ -18,6 +18,7 @@ import {
   updateJobHeartbeat,
   EDGE_VERSION 
 } from '../_shared/health-probe.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -41,6 +42,10 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return secureCorsPreflightResponse();
   }
+
+  // V-1143: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   const requestId = crypto.randomUUID();
   console.log(`[${requestId}] Security alert dispatcher started - Edge v${EDGE_VERSION}`);

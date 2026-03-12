@@ -3,12 +3,13 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { createRequestContext, mergeHeaders } from '../_shared/request-context.ts';
 import { getDLQEntriesForRetry, calculateNextRetry } from '../_shared/dlq.ts';
 import { logger, loggerWithContext } from '../_shared/logger.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 // ZERO-GAP: Failure classes that should NEVER be retried
 const UNRECOVERABLE_FAILURE_CLASSES = new Set([
-  'BUG',           // Unknown job type, code bugs
-  'EXPIRED',       // TTL exceeded — retrying creates same outcome
-  'UNKNOWN',       // Unclassified failures 
+  'BUG',
+  'EXPIRED',
+  'UNKNOWN',
 ]);
 
 // ZERO-GAP: Error message patterns that indicate permanent failures
@@ -37,19 +38,15 @@ interface DLQEntryRow {
 }
 
 function isUnrecoverable(entry: DLQEntryRow): string | null {
-  // Check failure class
   if (entry.failure_class && UNRECOVERABLE_FAILURE_CLASSES.has(entry.failure_class)) {
     return `Unrecoverable failure_class: ${entry.failure_class}`
   }
-
-  // Check error message patterns
   const errorMsg = entry.error_message || ''
   for (const pattern of UNRECOVERABLE_ERROR_PATTERNS) {
     if (errorMsg.includes(pattern)) {
       return `Unrecoverable error pattern: ${pattern}`
     }
   }
-
   return null
 }
 
@@ -61,6 +58,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: mergeHeaders(corsHeaders, ctx) });
   }
+
+  // V-1125: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',

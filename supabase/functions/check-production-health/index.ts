@@ -1,20 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 /**
  * Check Production Health
- * 
- * Monitora a saude do sistema e cria alertas automaticos para:
- * - Falta de heartbeats recentes (ultima hora)
- * - Alta taxa de falha de instalacao (>30% em 24h)
- * - Jobs em fila acumulando (>100 ha mais de 30min)
- * 
- * Executado via cron job a cada hora
  */
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // V-1131: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   const startedAt = Date.now();
   const supabase = createClient(

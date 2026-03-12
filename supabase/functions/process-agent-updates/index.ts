@@ -8,23 +8,19 @@ import {
   PersistingEventDispatcherAdapter,
   ProcessAgentUpdatesUseCase,
 } from '../_shared/hexagonal/index.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-/**
- * FASE 4: Edge Function para push de updates automatico
- * 
- * Refatorada com Arquitetura Hexagonal:
- * - Use Case: ProcessAgentUpdatesUseCase (orquestra lógica de negócio)
- * - Adapters: Supabase implementations dos output ports
- * - Edge Function: Thin HTTP handler (Presentation Layer)
- */
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // V-1146: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   const requestId = crypto.randomUUID();
 

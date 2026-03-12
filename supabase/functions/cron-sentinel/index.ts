@@ -12,6 +12,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { recordMetric } from '../_shared/apm.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,22 +35,16 @@ interface SilentJob {
 
 /**
  * Derive health status from actual view data.
- * A job is unhealthy if:
- * - It has never run (last_run_at is null)
- * - It is enabled but status is not 'active'/'ok'
- * - Its next_run_at is in the past (overdue)
  */
 function deriveHealthStatus(job: SilentJob): 'OK' | 'NEVER_RAN' | 'STALE' {
   if (!job.last_run_at) return 'NEVER_RAN';
   
-  // If next_run_at is in the past by more than 10 minutes, it's stale
   if (job.next_run_at) {
     const nextRun = new Date(job.next_run_at).getTime();
     const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
     if (nextRun < tenMinutesAgo) return 'STALE';
   }
   
-  // If status indicates failure
   if (job.status && ['failed', 'error', 'stuck'].includes(job.status.toLowerCase())) {
     return 'STALE';
   }
@@ -61,6 +56,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // V-1123: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
