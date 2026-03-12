@@ -185,7 +185,7 @@ export default function SecurityMonitoring() {
   };
 
   const m = data?.metrics;
-  const hasActivity = m && (m.rateLimitBreaches > 0 || m.failedLogins > 0 || m.criticalEvents > 0 || m.blockedIps > 0);
+  const hasActivity = m && (m.rateLimitBreaches > 0 || m.failedLogins > 0 || m.criticalEvents > 0 || m.blockedIps > 0 || m.blockedAttempts > 0 || m.activeAlerts > 0);
   const hasCritical = m && m.criticalEvents > 0;
 
   if (isLoading) {
