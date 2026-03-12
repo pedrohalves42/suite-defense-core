@@ -142,6 +142,13 @@ const ServerDashboard = () => {
           </DashboardErrorBoundary>
         )}
 
+        {/* Web Vitals APM */}
+        {isAdmin && (
+          <DashboardErrorBoundary section="Web Vitals">
+            <WebVitalsCard />
+          </DashboardErrorBoundary>
+        )}
+
         {/* Charts */}
         <DashboardErrorBoundary section="Gráficos">
           <DashboardCharts jobs={jobs} virusScans={virusScans} loading={loading} />
