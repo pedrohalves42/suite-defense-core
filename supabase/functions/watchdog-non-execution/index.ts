@@ -50,6 +50,10 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // V-1148: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
+
   try {
     logger.info(`[${requestId}] Starting watchdog non-execution detection`);
     const startedAt = Date.now();
