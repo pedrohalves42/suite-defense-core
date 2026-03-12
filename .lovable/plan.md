@@ -92,11 +92,30 @@
   - Viewport mobile responsivo
   - CTA buttons visíveis
 
+## ✅ Concluído (Sprint 9 — 12/03/2026)
+
+### Código Limpo, Code-Splitting & Dashboard Customizável
+- ✅ **Tipos extraídos** — `src/types/dashboard.ts` centraliza todas as interfaces
+- ✅ **`useDashboardData.ts` removido** — agora apenas re-exporta tipos para backward compat
+- ✅ **React.lazy em todas as rotas** — 130+ páginas com code-splitting via `React.lazy` + `Suspense`
+  - Bundle inicial reduzido drasticamente (só carrega a rota atual)
+  - `RouteFallback` animado para transições entre páginas
+- ✅ **`CustomizableDashboard`** — componente drag-and-drop com `react-grid-layout` v2
+  - Layout persistido em localStorage
+  - Modo locked/unlocked com indicadores visuais
+  - Reset para layout padrão
+- ✅ **`useURLFilters`** hook — filtros persistidos em URL query params
+  - Suporte a tab, search, status via `?tab=agents&q=server&status=online`
+  - Estado compartilhável via URL
+- ✅ **Rate Limiting Server-Side** — Edge Function `rate-limit-check`
+  - Sliding window por endpoint category (auth: 10/min, mutation: 30/min, export: 5/5min)
+  - Fail-open design (não bloqueia se rate limiter falhar)
+  - Complementa o rate limiting frontend existente
+
 ## ⏳ Pendente (Próximos Sprints)
 
 | # | Área | Prioridade | Status |
 |---|------|-----------|--------|
-| 1 | Dashboard customizável (drag widgets com react-grid-layout) | MÉDIO | TODO |
-| 2 | Particionamento de tabelas grandes (jobs, audit_logs) | BAIXO | TODO |
-| 3 | Cobertura de testes >80% | MÉDIO | TODO |
-| 4 | Testes E2E autenticados (dashboard, CSV, PDF) | MÉDIO | TODO |
+| 1 | Particionamento de tabelas grandes (jobs, audit_logs) | BAIXO | TODO |
+| 2 | Cobertura de testes >80% | MÉDIO | TODO |
+| 3 | Testes E2E autenticados (dashboard, CSV, PDF) | MÉDIO | TODO |
