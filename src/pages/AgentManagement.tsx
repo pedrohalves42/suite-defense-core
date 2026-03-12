@@ -293,8 +293,9 @@ export default function AgentManagement() {
       if (!agentsToDelete || agentsToDelete.length === 0) return { count: 0 };
       
       const agentIds = agentsToDelete.map(a => a.id);
-      await supabase.from('agent_tokens').delete().in('agent_id', agentIds);
-      const { error: deleteError } = await supabase.from('agents').delete().in('id', agentIds);
+      // V-1093 FIX: Add tenant_id filter on bulk delete to prevent cross-tenant deletion
+      await supabase.from('agent_tokens').delete().in('agent_id', agentIds).eq('tenant_id', tenant!.id);
+      const { error: deleteError } = await supabase.from('agents').delete().in('id', agentIds).eq('tenant_id', tenant!.id);
       if (deleteError) throw deleteError;
       return { count: agentsToDelete.length };
     },
