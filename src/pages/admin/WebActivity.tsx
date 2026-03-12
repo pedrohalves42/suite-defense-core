@@ -609,6 +609,15 @@ export default function WebActivity() {
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium">{item.domain}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  title={`Exportar PDF de ${item.domain}`}
+                                  onClick={() => handleExportSitePDF(item.domain)}
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                </Button>
                                 <Badge className={item.category.color} variant="outline">
                                   {item.category.icon}
                                 </Badge>
