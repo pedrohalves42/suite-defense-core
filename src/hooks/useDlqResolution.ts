@@ -89,10 +89,12 @@ export function useDlqPendingAttention() {
 }
 
 export function useResolveDlqItem() {
+  const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ dlqItemId, resolutionNotes, resolutionSource = 'human' }: ResolveDlqParams) => {
+      if (!tenant?.id) throw new Error('Tenant not found');
       // 1. Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not authenticated');
