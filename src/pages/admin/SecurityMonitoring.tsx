@@ -39,21 +39,83 @@ export default function SecurityMonitoring() {
       const since = getTimeRangeDate().toISOString();
       const sb = supabase as any;
 
-      const [rateLimitsRes, failedLoginsRes, blockedIpsRes, securityEventsRes, agentsRes] = await Promise.all([
+      const [rateLimitsRes, failedLoginsRes, blockedIpsRes, securityEventsRes, agentsRes, blockedAttemptsRes, evidenceRes, alertsRes] = await Promise.all([
         sb.from('rate_limits').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('window_start', since).not('blocked_until', 'is', null),
         sb.from('failed_login_attempts').select('ip_address, created_at').eq('tenant_id', tenant.id).gte('created_at', since),
         sb.from('ip_blocklist').select('*').eq('tenant_id', tenant.id).gte('blocked_until', new Date().toISOString()).order('created_at', { ascending: false }).limit(20),
         sb.from('security_logs').select('*').eq('tenant_id', tenant.id).gte('created_at', since).order('created_at', { ascending: false }).limit(50),
         supabase.rpc('get_agents_list', { p_tenant_id: tenant.id, p_include_archived: false }),
+        // Additional sources that SimpleDashboard uses
+        sb.from('blocked_access_attempts').select('id, agent_name, domain, attempted_at, blocked_by').eq('tenant_id', tenant.id).gte('attempted_at', since).order('attempted_at', { ascending: false }).limit(50),
+        sb.from('agent_evidence_logs').select('id, event_type, severity, agent_name, created_at, event_data').eq('tenant_id', tenant.id).gte('created_at', since).order('created_at', { ascending: false }).limit(50),
+        sb.from('system_alerts').select('id, title, severity, status, alert_type, created_at').eq('tenant_id', tenant.id).eq('resolved', false).order('created_at', { ascending: false }).limit(20),
       ]);
 
-      // Process security events
-      const events = (securityEventsRes.data || []) as Array<{
+      // Process security events from security_logs
+      const secLogEvents = (securityEventsRes.data || []) as Array<{
         id: string; attack_type: string; severity: string; ip_address: string;
         endpoint: string; details: Record<string, unknown>; created_at: string; blocked: boolean;
       }>;
-      
-      const criticalCount = events.filter(e => e.severity === 'high' || e.severity === 'critical').length;
+
+      // Process blocked access attempts  
+      const blockedAttempts = (blockedAttemptsRes.data || []) as Array<{
+        id: string; agent_name: string; domain: string; attempted_at: string; blocked_by: string;
+      }>;
+
+      // Process evidence logs (security events from agents)
+      const evidenceLogs = (evidenceRes.data || []) as Array<{
+        id: string; event_type: string; severity: string; agent_name: string; created_at: string; event_data: Record<string, unknown>;
+      }>;
+
+      // Process system alerts
+      const activeAlerts = (alertsRes.data || []) as Array<{
+        id: string; title: string; severity: string; status: string; alert_type: string; created_at: string;
+      }>;
+
+      // Merge all events into a unified timeline
+      const unifiedEvents: Array<{
+        id: string; type: string; label: string; detail: string; severity: string;
+        created_at: string; source: string;
+      }> = [];
+
+      // From security_logs
+      secLogEvents.forEach(e => {
+        unifiedEvents.push({
+          id: e.id, type: e.attack_type, label: getAttackTypeLabel(e.attack_type),
+          detail: e.ip_address || '', severity: e.severity, created_at: e.created_at,
+          source: 'security_logs',
+        });
+      });
+
+      // From blocked_access_attempts
+      blockedAttempts.forEach(e => {
+        unifiedEvents.push({
+          id: e.id, type: 'blocked_access', label: 'Tentativa de acesso negada',
+          detail: `${e.domain} — ${e.agent_name}`, severity: 'warning',
+          created_at: e.attempted_at, source: 'blocked_attempts',
+        });
+      });
+
+      // From agent_evidence_logs (only actionable ones)
+      evidenceLogs.filter(e => e.severity !== 'info' && e.severity !== 'debug').forEach(e => {
+        const labelMap: Record<string, string> = {
+          security_event: 'Evento de segurança',
+          auto_repair: 'Reparo automático',
+          auto_recovery: 'Restauração de serviço',
+          policy_drift: 'Desvio de conformidade',
+        };
+        unifiedEvents.push({
+          id: e.id, type: e.event_type, label: labelMap[e.event_type] || e.event_type,
+          detail: e.agent_name, severity: e.severity, created_at: e.created_at,
+          source: 'evidence_logs',
+        });
+      });
+
+      // Sort by date desc
+      unifiedEvents.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      // Compute combined metrics
+      const criticalCount = unifiedEvents.filter(e => e.severity === 'high' || e.severity === 'critical').length;
 
       // Process agents offline
       const offlineThreshold = subHours(new Date(), AGENT_STATUS_THRESHOLDS.OFFLINE_ALERT_HOURS).toISOString();
@@ -73,13 +135,13 @@ export default function SecurityMonitoring() {
         .sort((a, b) => b.count - a.count)
         .slice(0, 10);
 
-      // Chart data
+      // Chart data from unified events
       const chartMap: Record<string, { hour: string; eventos: number; bloqueados: number }> = {};
-      events.forEach(event => {
+      unifiedEvents.forEach(event => {
         const h = `${String(new Date(event.created_at).getHours()).padStart(2, '0')}:00`;
         if (!chartMap[h]) chartMap[h] = { hour: h, eventos: 0, bloqueados: 0 };
         chartMap[h].eventos++;
-        if (event.blocked) chartMap[h].bloqueados++;
+        if (event.source === 'blocked_attempts') chartMap[h].bloqueados++;
       });
 
       return {
@@ -89,11 +151,14 @@ export default function SecurityMonitoring() {
           blockedIps: (blockedIpsRes.data || []).length,
           criticalEvents: criticalCount,
           agentsOffline: offlineAgents,
+          blockedAttempts: blockedAttempts.length,
+          activeAlerts: activeAlerts.length,
         },
-        events,
+        unifiedEvents,
         blockedIPs: (blockedIpsRes.data || []) as Array<{ id: string; ip_address: string; reason: string; blocked_until: string }>,
         failedLoginStats,
-        chartData: Object.values(chartMap).slice(-12),
+        activeAlerts,
+        chartData: Object.values(chartMap).sort((a, b) => a.hour.localeCompare(b.hour)).slice(-12),
       };
     },
     enabled: !!tenant?.id,
