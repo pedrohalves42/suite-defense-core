@@ -110,6 +110,7 @@ const ServerDashboard = () => {
               alerts={alerts}
               successRate={successRate}
               failedJobs={failedJobs}
+              trends={trends}
             />
           )}
         </DashboardErrorBoundary>
