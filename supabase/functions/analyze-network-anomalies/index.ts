@@ -5,6 +5,7 @@ import { callAISimple, type AICallResult } from "../_shared/ai-provider-helper.t
 import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from "../_shared/ai-metrics.ts";
 import { persistAIMetrics } from "../_shared/ai-metrics-persistence.ts";
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from "../_shared/ai-evidence-types.ts";
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,6 +21,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // V-1133: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   try {
     // Use SERVICE_ROLE_KEY for admin queries (required for cron execution without auth header)
