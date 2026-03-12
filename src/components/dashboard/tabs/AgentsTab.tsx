@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { getJobTypeLabel } from "@/lib/job-labels";
 import { formatBrazilDateTime } from "@/lib/date-utils";
+import { CSVExportButton } from "@/components/dashboard/CSVExportButton";
 import type { DashboardAgent, DashboardJob, DashboardReport } from "@/hooks/useDashboardData";
 
 interface AgentsTabProps {
