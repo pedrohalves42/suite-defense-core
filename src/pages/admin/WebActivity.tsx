@@ -112,8 +112,8 @@ export default function WebActivity() {
         onlineAgents.map(agent =>
           prepareJobForInsert({
             tenant_id: tenantId,
-            agent_id: agent.agent_id || agent.id,
-            agent_name: agent.agent_name || agent.hostname || 'unknown',
+            agent_id: agent.agent_id,
+            agent_name: agent.hostname || 'unknown',
             type: 'collect_web_activity',
             status: 'queued',
             priority: 8,
