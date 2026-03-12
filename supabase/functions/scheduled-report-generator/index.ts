@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,25 +8,29 @@ const corsHeaders = {
 };
 
 interface PlanFrequency {
-  [key: string]: number | null; // days between reports, null = single report only
+  [key: string]: number | null;
 }
 
 const PLAN_FREQUENCIES: PlanFrequency = {
-  free: null, // Trial: single report 48h after installation
-  starter: 30, // Monthly
-  basico: 30, // Residential basic - Monthly
-  completo: 30, // Residential complete - Monthly
-  avancado: 30, // Residential advanced - Monthly
-  pro: 14, // Bi-weekly
-  business: 14, // Bi-weekly
-  scale: 7, // Weekly
-  enterprise: 7, // Weekly
+  free: null,
+  starter: 30,
+  basico: 30,
+  completo: 30,
+  avancado: 30,
+  pro: 14,
+  business: 14,
+  scale: 7,
+  enterprise: 7,
 };
 
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // V-1121: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
