@@ -82,10 +82,13 @@ export default function IdentitySecurity() {
 
   const resolveMutation = useMutation({
     mutationFn: async (id: string) => {
+      if (!tenant?.id) throw new Error('No tenant');
+      // V-1066 FIX: Add tenant_id filter
       const { error } = await supabase
         .from("credential_leaks")
-        .update({ status: "resolved", resolved_at: new Date().toISOString() })
-        .eq("id", id);
+        .update({ status: "resolved", resolved_at: new Date().toISOString() } as any)
+        .eq("id", id)
+        .eq("tenant_id", tenant.id);
       if (error) throw error;
     },
     onSuccess: () => {

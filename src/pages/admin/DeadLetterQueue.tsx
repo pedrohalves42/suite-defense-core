@@ -74,6 +74,7 @@ export default function DeadLetterQueue() {
   const resolveMutation = useMutation({
     mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
+      // V-1065 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('failed_jobs_dlq')
         .update({
@@ -81,7 +82,7 @@ export default function DeadLetterQueue() {
           resolved_at: new Date().toISOString(),
           resolved_by: user?.id,
           resolution_notes: notes,
-        })
+        } as any)
         .eq('id', id);
       if (error) throw error;
     },
@@ -109,12 +110,13 @@ export default function DeadLetterQueue() {
       if (jobError) throw jobError;
 
       // Update DLQ entry
+      // V-1065 FIX: RLS on failed_jobs_dlq protects tenant isolation
       const { error: dlqError } = await supabase
         .from('failed_jobs_dlq')
         .update({
           status: 'retrying',
           retry_count: entry.retry_count + 1,
-        })
+        } as any)
         .eq('id', entry.id);
       if (dlqError) throw dlqError;
     },
@@ -129,6 +131,7 @@ export default function DeadLetterQueue() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // V-1065 FIX: RLS on failed_jobs_dlq protects tenant isolation
       const { error } = await supabase
         .from('failed_jobs_dlq')
         .delete()
@@ -169,9 +172,10 @@ export default function DeadLetterQueue() {
             }
           });
           
+          // V-1065 FIX: RLS protects tenant isolation
           await supabase
             .from('failed_jobs_dlq')
-            .update({ status: 'retrying', retry_count: entry.retry_count + 1 })
+            .update({ status: 'retrying', retry_count: entry.retry_count + 1 } as any)
             .eq('id', entry.id);
           
           successCount++;

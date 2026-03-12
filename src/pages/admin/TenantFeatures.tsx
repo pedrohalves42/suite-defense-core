@@ -119,10 +119,12 @@ export default function TenantFeatures() {
 
   const updateFeature = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<TenantFeature> }) => {
+      // V-1074 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('tenant_features')
-        .update(updates)
-        .eq('id', id);
+        .update(updates as any)
+        .eq('id', id)
+        .eq('tenant_id', tenant!.id);
 
       if (error) throw error;
     },

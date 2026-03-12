@@ -145,10 +145,12 @@ export default function Automations() {
   };
 
   const toggleJobEnabled = async (job: ScheduledJob) => {
+    // V-1064 FIX: Add tenant_id filter
     const { error } = await supabase
       .from('scheduled_jobs')
       .update({ enabled: !job.enabled })
-      .eq('id', job.id);
+      .eq('id', job.id)
+      .eq('tenant_id', tenant!.id);
     
     if (error) {
       toast.error('Erro ao atualizar job');

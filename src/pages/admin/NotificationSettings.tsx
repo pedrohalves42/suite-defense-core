@@ -302,10 +302,12 @@ export default function NotificationSettings() {
     if (!confirm('Tem certeza que deseja remover este canal?')) return;
 
     try {
+      // V-1067 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('notification_channels')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenantId);
 
       if (error) throw error;
 
@@ -319,10 +321,12 @@ export default function NotificationSettings() {
 
   const handleToggleChannel = async (id: string, isActive: boolean) => {
     try {
+      // V-1067 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('notification_channels')
         .update({ is_active: isActive })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenantId);
 
       if (error) throw error;
 
@@ -339,10 +343,12 @@ export default function NotificationSettings() {
       const existing = preferences.find(p => p.channel_id === channelId);
       
       if (existing) {
+        // V-1067 FIX: Add tenant_id filter
         const { error } = await supabase
           .from('notification_preferences')
-          .update(updates)
-          .eq('id', existing.id);
+          .update(updates as any)
+          .eq('id', existing.id)
+          .eq('tenant_id', tenantId);
 
         if (error) throw error;
       } else {
@@ -449,10 +455,12 @@ export default function NotificationSettings() {
     if (!confirm('Tem certeza que deseja remover este relatório?')) return;
 
     try {
+      // V-1067 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('scheduled_reports')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenantId);
 
       if (error) throw error;
 
@@ -466,10 +474,12 @@ export default function NotificationSettings() {
 
   const handleToggleReport = async (id: string, isActive: boolean) => {
     try {
+      // V-1067 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('scheduled_reports')
         .update({ is_active: isActive })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenantId);
 
       if (error) throw error;
 

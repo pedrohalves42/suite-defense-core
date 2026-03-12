@@ -116,10 +116,12 @@ export default function NotificationChannels() {
   // Delete channel mutation
   const deleteChannelMutation = useMutation({
     mutationFn: async (channelId: string) => {
+      // V-1068 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('notification_channels')
         .delete()
-        .eq('id', channelId);
+        .eq('id', channelId)
+        .eq('tenant_id', tenant!.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -134,10 +136,12 @@ export default function NotificationChannels() {
   // Toggle channel active status
   const toggleChannelMutation = useMutation({
     mutationFn: async ({ channelId, isActive }: { channelId: string; isActive: boolean }) => {
+      // V-1068 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('notification_channels')
         .update({ is_active: isActive })
-        .eq('id', channelId);
+        .eq('id', channelId)
+        .eq('tenant_id', tenant!.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -194,13 +198,15 @@ export default function NotificationChannels() {
         throw new Error(data.error || 'Falha no envio');
       }
       
+      // V-1068 FIX: Add tenant_id filter
       await supabase
         .from('notification_channels')
         .update({ 
           is_verified: true, 
           verified_at: new Date().toISOString() 
         })
-        .eq('id', channel.id);
+        .eq('id', channel.id)
+        .eq('tenant_id', tenant!.id);
       
       toast.success('Teste enviado com sucesso! Canal verificado.');
       refetch();
