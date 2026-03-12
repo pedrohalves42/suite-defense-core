@@ -68,8 +68,9 @@ export function useApproveAiAction() {
         user_email: user.email,
       };
 
+      // V-1022 FIX: Always use validated tenant.id, never fallback to action.tenant_id
       await supabase.from('decision_events').insert({
-        tenant_id: tenant?.id || action.tenant_id,
+        tenant_id: tenant.id,
         rule_code: 'AI_ACTION_APPROVAL',
         action: 'approve_ai_action',
         evidence,
