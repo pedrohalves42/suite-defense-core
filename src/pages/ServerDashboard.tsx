@@ -73,19 +73,21 @@ const ServerDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-          {isAdmin && (
-            <DashboardPDFReport
-              agents={agents}
-              jobs={jobs}
-              tenantName={tenant.name}
-              onlinePercentage={onlinePercentage}
-              successRate={successRate}
-              offlineCount={offlineCount}
-              failedJobs={failedJobs}
-              alerts={alerts}
-              systemState={systemState}
-            />
-          )}
+            <NotificationBell />
+            {isAdmin && (
+              <DashboardPDFReport
+                agents={agents}
+                jobs={jobs}
+                tenantName={tenant.name}
+                onlinePercentage={onlinePercentage}
+                successRate={successRate}
+                offlineCount={offlineCount}
+                failedJobs={failedJobs}
+                alerts={alerts}
+                systemState={systemState}
+              />
+            )}
+          </div>
         </div>
 
         {/* Layer 1: Global Status */}
