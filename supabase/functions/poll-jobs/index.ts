@@ -95,9 +95,12 @@ Deno.serve(async (req) => {
     const isModernAgent = !!(currentNormV && hmacMinNormV && currentNormV >= hmacMinNormV)
 
     if (hasAnyHmacHeader) {
+      // V-1023 FIX: Resolve tenant_id from agent data instead of passing undefined
+      const agentTenantLookup = await supabase.from('agents').select('tenant_id').eq('id', token.agent_id).single();
+      const resolvedTenantId = agentTenantLookup.data?.tenant_id || undefined;
       const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret, {
         agentId: token.agent_id,
-        tenantId: undefined,
+        tenantId: resolvedTenantId,
         endpoint: 'poll-jobs',
         ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined
       })

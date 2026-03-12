@@ -27,11 +27,13 @@ export function useDismissInsight() {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not authenticated');
 
-      // 2. Get the insight details
+      // 2. Get the insight details - V-1022 FIX: Add tenant_id filter
+      if (!tenant?.id) throw new Error('Tenant not selected');
       const { data: insight, error: insightError } = await supabase
         .from('ai_insights')
         .select('*')
         .eq('id', insightId)
+        .eq('tenant_id', tenant.id)
         .single();
 
       if (insightError || !insight) throw new Error('Insight not found');
@@ -61,8 +63,9 @@ export function useDismissInsight() {
         user_email: user.email,
       };
 
+      // V-1022 FIX: Always use validated tenant.id
       await supabase.from('decision_events').insert({
-        tenant_id: tenant?.id || insight.tenant_id,
+        tenant_id: tenant.id,
         rule_code: 'AI_INSIGHT_DISMISSAL',
         action: 'dismiss_ai_insight',
         evidence,

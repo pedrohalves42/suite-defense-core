@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { validateCallerTenant } from '../_shared/validate-caller-tenant.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -15,6 +16,15 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: 'tenant_id and simulation_type required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // V-1025 FIX: Validate caller has access to requested tenant
+    const validation = await validateCallerTenant(req, supabase, tenant_id);
+    if (!validation.authorized) {
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: validation.statusCode || 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Get online agents

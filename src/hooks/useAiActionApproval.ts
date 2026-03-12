@@ -30,11 +30,13 @@ export function useApproveAiAction() {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not authenticated');
 
-      // 2. Get the action details
+      // 2. Get the action details - V-1022 FIX: Add tenant_id filter
+      if (!tenant?.id) throw new Error('Tenant not selected');
       const { data: action, error: actionError } = await supabase
         .from('ai_actions')
         .select('*, ai_insights(*)')
         .eq('id', actionId)
+        .eq('tenant_id', tenant.id)
         .single();
 
       if (actionError || !action) throw new Error('Action not found');
@@ -66,8 +68,9 @@ export function useApproveAiAction() {
         user_email: user.email,
       };
 
+      // V-1022 FIX: Always use validated tenant.id, never fallback to action.tenant_id
       await supabase.from('decision_events').insert({
-        tenant_id: tenant?.id || action.tenant_id,
+        tenant_id: tenant.id,
         rule_code: 'AI_ACTION_APPROVAL',
         action: 'approve_ai_action',
         evidence,
@@ -107,11 +110,13 @@ export function useRejectAiAction() {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not authenticated');
 
-      // 2. Get the action details
+      // 2. Get the action details - V-1022 FIX: Add tenant_id filter
+      if (!tenant?.id) throw new Error('Tenant not selected');
       const { data: action, error: actionError } = await supabase
         .from('ai_actions')
         .select('*')
         .eq('id', actionId)
+        .eq('tenant_id', tenant.id)
         .single();
 
       if (actionError || !action) throw new Error('Action not found');
@@ -134,8 +139,9 @@ export function useRejectAiAction() {
         user_email: user.email,
       };
 
+      // V-1022 FIX: Always use validated tenant.id
       await supabase.from('decision_events').insert({
-        tenant_id: tenant?.id || action.tenant_id,
+        tenant_id: tenant.id,
         rule_code: 'AI_ACTION_REJECTION',
         action: 'reject_ai_action',
         evidence,
