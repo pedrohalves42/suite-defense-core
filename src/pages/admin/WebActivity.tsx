@@ -654,13 +654,13 @@ export default function WebActivity() {
                     </Select>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={!filteredActivity.length}>
-                      <FileSpreadsheet className="h-4 w-4 mr-1" />
-                      CSV
+                    <Button variant="secondary" size="default" onClick={handleExportCSV} disabled={!filteredActivity.length} className="gap-2">
+                      <FileSpreadsheet className="h-4 w-4" />
+                      Exportar CSV
                     </Button>
-                    <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={!filteredActivity.length}>
-                      <FileText className="h-4 w-4 mr-1" />
-                      PDF
+                    <Button variant="default" size="default" onClick={handleExportPDF} disabled={!filteredActivity.length} className="gap-2">
+                      <FileText className="h-4 w-4" />
+                      Exportar PDF
                     </Button>
                   </div>
                 </div>
