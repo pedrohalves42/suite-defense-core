@@ -116,10 +116,12 @@ export default function ApiKeys() {
 
   const deleteApiKey = useMutation({
     mutationFn: async (id: string) => {
+      // V-1089 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('api_keys')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', tenant!.id);
 
       if (error) throw error;
     },

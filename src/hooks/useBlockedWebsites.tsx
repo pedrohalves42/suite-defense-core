@@ -176,10 +176,12 @@ export function useBlockedWebsites() {
 
   const unblockWebsite = useMutation({
     mutationFn: async (id: string) => {
+      // V-1079 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('blocked_websites')
         .update({ is_active: false })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', activeTenant!.id);
 
       if (error) throw error;
     },

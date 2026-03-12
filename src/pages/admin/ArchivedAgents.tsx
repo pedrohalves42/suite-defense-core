@@ -51,6 +51,7 @@ export default function ArchivedAgents() {
 
   const handleRestore = async (agentId: string, agentName: string) => {
     try {
+      // V-1084 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('agents')
         .update({ 
@@ -58,7 +59,8 @@ export default function ArchivedAgents() {
           archived_reason: null,
           status: 'inactive'
         })
-        .eq('id', agentId);
+        .eq('id', agentId)
+        .eq('tenant_id', tenant!.id);
 
       if (error) throw error;
 

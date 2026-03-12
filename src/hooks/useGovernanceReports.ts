@@ -122,11 +122,13 @@ export function useCreateReport() {
 
 export function useApproveReport() {
   const queryClient = useQueryClient();
+  const { tenant } = useTenant();
 
   return useMutation({
     mutationFn: async (reportId: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       
+      // V-1081 FIX: Add tenant_id filter
       const { data, error } = await supabase
         .from('governance_reports')
         .update({
@@ -134,6 +136,7 @@ export function useApproveReport() {
           approved_at: new Date().toISOString(),
         })
         .eq('id', reportId)
+        .eq('tenant_id', tenant!.id)
         .select()
         .single();
 

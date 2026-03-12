@@ -3,10 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { prepareJobForInsert } from '@/lib/job-utils';
 import { tenantQuery } from '@/lib/tenantQuery';
+import { useTenant } from '@/hooks/useTenant';
 
 export function useAgentActions() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { tenant } = useTenant();
+  const tenantId = tenant?.id;
 
   const removeThrottle = useMutation({
     mutationFn: async (agentId: string) => {
@@ -189,7 +192,8 @@ export function useAgentActions() {
           force_update_override_safe_mode: true,
           force_update_override_safe_mode_expires_at: expiresAt
         })
-        .eq('id', agentId);
+        .eq('id', agentId)
+        .eq('tenant_id', tenantId);
       if (error) throw error;
     },
     onSuccess: () => {

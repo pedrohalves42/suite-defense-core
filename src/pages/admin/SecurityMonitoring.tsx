@@ -102,7 +102,8 @@ export default function SecurityMonitoring() {
 
   const handleUnblockIP = async (id: string, ip: string) => {
     try {
-      const { error } = await supabase.from('ip_blocklist').delete().eq('id', id);
+      // V-1087 FIX: Add tenant_id filter
+      const { error } = await supabase.from('ip_blocklist').delete().eq('id', id).eq('tenant_id', tenant!.id);
       if (error) throw error;
       toast.success(`IP ${ip} desbloqueado`);
       refetch();

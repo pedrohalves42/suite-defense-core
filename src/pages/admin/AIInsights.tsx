@@ -16,6 +16,7 @@ import { AIApprovalMetrics } from "@/components/admin/AIApprovalMetrics";
 import { DismissInsightDialog } from "@/components/insights/DismissInsightDialog";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useTenant } from "@/hooks/useTenant";
 interface AIInsight {
   id: string;
   tenant_id: string;
@@ -42,6 +43,7 @@ interface Statistics {
 
 export default function AIInsights() {
   const queryClient = useQueryClient();
+  const { tenant } = useTenant();
   const [dismissDialogOpen, setDismissDialogOpen] = useState(false);
   const [selectedInsightForDismiss, setSelectedInsightForDismiss] = useState<{ id: string; title: string } | null>(null);
   const { data, isLoading } = useQuery({
@@ -68,6 +70,7 @@ export default function AIInsights() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // V-1088 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('ai_insights')
         .update({
@@ -75,7 +78,8 @@ export default function AIInsights() {
           acknowledged_by: user.id,
           acknowledged_at: new Date().toISOString(),
         })
-        .eq('id', insightId);
+        .eq('id', insightId)
+        .eq('tenant_id', tenant!.id);
 
       if (error) throw error;
     },
