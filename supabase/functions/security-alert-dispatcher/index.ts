@@ -43,6 +43,10 @@ Deno.serve(async (req: Request) => {
     return secureCorsPreflightResponse();
   }
 
+  // V-1143: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
+
   const requestId = crypto.randomUUID();
   console.log(`[${requestId}] Security alert dispatcher started - Edge v${EDGE_VERSION}`);
 

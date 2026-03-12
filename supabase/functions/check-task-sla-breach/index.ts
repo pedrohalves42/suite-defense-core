@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,16 +9,15 @@ const corsHeaders = {
 
 /**
  * CHECK-TASK-SLA-BREACH - Scheduled Edge Function
- * 
- * Runs every 5 minutes to:
- * 1. Check for tasks that have exceeded their SLA due date
- * 2. Flag them as breached via check_task_sla_breach() function
- * 3. Log observability data via log_scheduled_job_run()
  */
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // V-1145: Defense-in-depth auth guard for cron function
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   const startedAt = Date.now();
 
