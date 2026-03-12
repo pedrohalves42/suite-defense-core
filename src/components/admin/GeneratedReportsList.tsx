@@ -236,10 +236,12 @@ export function GeneratedReportsList() {
 
   const handleDelete = async (reportId: string) => {
     try {
+      // V-1061 FIX: Add tenant_id filter
       const { error } = await supabase
         .from("generated_reports")
         .delete()
-        .eq("id", reportId);
+        .eq("id", reportId)
+        .eq("tenant_id", activeTenant?.id);
 
       if (error) throw error;
       toast.success("Laudo excluído com sucesso!");

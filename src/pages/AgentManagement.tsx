@@ -260,12 +260,14 @@ export default function AgentManagement() {
 
   const disableAgentMutation = useMutation({
     mutationFn: async ({ agentId, disable }: { agentId: string; disable: boolean }) => {
+      if (!tenant?.id) throw new Error('No tenant selected');
+      // V-1054 FIX: Add tenant_id filter
       const { error: agentError } = await supabase
         .from('agents')
         .update({ status: disable ? 'disabled' : 'active' })
-        .eq('id', agentId);
+        .eq('id', agentId)
+        .eq('tenant_id', tenant.id);
       if (agentError) throw agentError;
-      // Disable or re-enable tokens accordingly
       await supabase.from('agent_tokens').update({ is_active: !disable }).eq('agent_id', agentId);
     },
     onSuccess: (_, variables) => {

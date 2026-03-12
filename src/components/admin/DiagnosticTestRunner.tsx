@@ -103,6 +103,7 @@ export function DiagnosticTestRunner({
       if (!tenant?.id || !agentId) throw new Error('Dados incompletos');
       
       // Cancel any stale active jobs of the same type for this agent to avoid dedup constraint
+      // V-1058 FIX: Add tenant_id filter to prevent cross-tenant job cancellation
       await supabase
         .from('jobs')
         .update({ 
@@ -110,6 +111,7 @@ export function DiagnosticTestRunner({
           result_data: { cancelled_reason: 'superseded_by_diagnostic_test' } 
         })
         .eq('agent_id', agentId)
+        .eq('tenant_id', tenant.id)
         .eq('type', jobType)
         .in('status', ['pending', 'queued', 'delivered']);
       

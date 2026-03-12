@@ -91,6 +91,7 @@ export function AgentVersionStatus({ agents, tenantId, onRefresh }: AgentVersion
 
       // Cancel stale update_agent jobs to avoid dedup index conflict
       // Use 'cancelled' (not 'completed') to avoid false positives in metrics
+      // V-1063 FIX: Add tenant_id filter to prevent cross-tenant job cancellation
       const agentIds = onlineOutdated.map(a => a.id);
       await supabase
         .from('jobs')
@@ -99,6 +100,7 @@ export function AgentVersionStatus({ agents, tenantId, onRefresh }: AgentVersion
           completed_at: new Date().toISOString(),
           result: { reason: 'superseded_by_mass_update', new_target: latestVersion },
         })
+        .eq('tenant_id', tenantId)
         .in('agent_id', agentIds)
         .eq('type', 'update_agent')
         .in('status', ['pending', 'queued', 'delivered']);

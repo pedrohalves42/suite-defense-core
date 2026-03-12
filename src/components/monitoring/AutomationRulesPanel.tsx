@@ -167,10 +167,12 @@ export function AutomationRulesPanel() {
 
   const deleteRule = async (ruleId: string) => {
     try {
+      // V-1056 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('automation_rules')
         .delete()
-        .eq('id', ruleId);
+        .eq('id', ruleId)
+        .eq('tenant_id', tenant?.id);
 
       if (error) throw error;
       setRules(prev => prev.filter(r => r.id !== ruleId));

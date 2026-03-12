@@ -9,6 +9,7 @@ import { Shield, AlertTriangle, Activity, Ban, Unlock, Clock, User, LayoutDashbo
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { toast } from 'sonner';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
+import { useTenant } from '@/hooks/useTenant';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion } from 'framer-motion';

@@ -112,10 +112,12 @@ export function InsightActionPanel() {
       if (error) throw error;
 
       // Mark insight as acknowledged
+      // V-1059 FIX: Add tenant_id filter
       await supabase
         .from('ai_insights')
         .update({ acknowledged: true, acknowledged_at: new Date().toISOString() })
-        .eq('id', insight.id);
+        .eq('id', insight.id)
+        .eq('tenant_id', tenantId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-insights'] });
