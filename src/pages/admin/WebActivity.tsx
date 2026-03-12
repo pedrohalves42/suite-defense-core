@@ -6,6 +6,8 @@ import { useBlockedWebsites } from '@/hooks/useBlockedWebsites';
 import { useBlockedAttempts } from '@/hooks/useBlockedAttempts';
 import { useBlockedAttemptsRealtime } from '@/hooks/useBlockedAttemptsRealtime';
 import { useAgentGroups } from '@/hooks/useAgentGroups';
+import { useAgentSnapshots } from '@/hooks/useAgentSnapshots';
+import { prepareJobForInsert } from '@/lib/job-utils';
 import ThreatIntelligenceLookup from '@/components/admin/ThreatIntelligenceLookup';
 import { BlockedSitesStats } from '@/components/admin/BlockedSitesStats';
 import { AgentSyncStatusCard } from '@/components/admin/AgentSyncStatusCard';
