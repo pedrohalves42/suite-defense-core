@@ -2,9 +2,18 @@ import { useMemo } from "react";
 import { Activity, Shield, LineChart, PieChart, BarChart3, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Line, LineChart as RechartsLineChart, Bar, BarChart as RechartsBarChart, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Tooltip } from "recharts";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getJobTypeLabelNoEmoji } from "@/lib/job-labels";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import type { DashboardJob, DashboardVirusScan } from "@/hooks/useDashboardData";
+
+const ChartItemSkeleton = () => (
+  <div className="h-[250px] flex items-end gap-2 px-4 py-4">
+    {Array.from({ length: 7 }).map((_, j) => (
+      <Skeleton key={j} className="flex-1 rounded-t" style={{ height: `${30 + Math.random() * 60}%` }} />
+    ))}
+  </div>
+);
 
 const COLORS = [
   'hsl(217 91% 60%)', 'hsl(142 71% 45%)', 'hsl(38 92% 50%)', 'hsl(262 83% 58%)',
