@@ -189,7 +189,8 @@ export function useAgentActions() {
           force_update_override_safe_mode: true,
           force_update_override_safe_mode_expires_at: expiresAt
         })
-        .eq('id', agentId);
+        .eq('id', agentId)
+        .eq('tenant_id', tenantId);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -68,6 +68,7 @@ export default function AIInsights() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // V-1088 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('ai_insights')
         .update({
@@ -75,7 +76,8 @@ export default function AIInsights() {
           acknowledged_by: user.id,
           acknowledged_at: new Date().toISOString(),
         })
-        .eq('id', insightId);
+        .eq('id', insightId)
+        .eq('tenant_id', tenant!.id);
 
       if (error) throw error;
     },

@@ -106,6 +106,7 @@ export default function AgentVersionMonitor() {
       return;
     }
 
+    // V-1083 FIX: Add tenant_id filter
     const { error } = await supabase
       .from('agents')
       .update({
@@ -113,7 +114,8 @@ export default function AgentVersionMonitor() {
         force_update_reason: 'Forced via Version Monitor Dashboard',
         force_update_at: new Date().toISOString(),
       })
-      .eq('id', agentId);
+      .eq('id', agentId)
+      .eq('tenant_id', tenant!.id);
 
     if (error) {
       toast({

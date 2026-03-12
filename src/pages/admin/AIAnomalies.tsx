@@ -112,13 +112,15 @@ export default function AIAnomalies() {
 
     setReviewing(true);
     try {
+      // V-1090 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('ai_anomalies')
         .update({
           reviewed_at: new Date().toISOString(),
           resolution,
         })
-        .eq('id', selectedAnomaly.id);
+        .eq('id', selectedAnomaly.id)
+        .eq('tenant_id', tenant!.id);
 
       if (error) throw error;
 

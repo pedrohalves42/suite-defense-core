@@ -40,6 +40,7 @@ export function useDismissInsight() {
 
       // 3. Update insight with dismissal fields
       const now = new Date().toISOString();
+      // V-1085 FIX: Add tenant_id filter
       const { error: updateError } = await supabase
         .from('ai_insights')
         .update({
@@ -47,7 +48,8 @@ export function useDismissInsight() {
           dismissed_by: user.id,
           dismissal_reason: dismissalReason,
         })
-        .eq('id', insightId);
+        .eq('id', insightId)
+        .eq('tenant_id', tenant!.id);
 
       if (updateError) throw updateError;
 
