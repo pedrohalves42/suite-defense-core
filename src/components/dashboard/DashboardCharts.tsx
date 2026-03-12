@@ -196,7 +196,7 @@ export function DashboardCharts({ jobs, virusScans, loading }: DashboardChartsPr
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? <p className="text-center text-muted-foreground py-8">Carregando...</p> :
+          {loading ? <ChartItemSkeleton /> :
            jobsByAgentData.length === 0 ? <EmptyChart icon={BarChart3} text="Sem dados para exibir" /> : (
             <ResponsiveContainer width="100%" height={250}>
               <RechartsBarChart data={jobsByAgentData} layout="vertical">
