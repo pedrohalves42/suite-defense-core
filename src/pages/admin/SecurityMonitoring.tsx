@@ -351,7 +351,7 @@ export default function SecurityMonitoring() {
                           </div>
                         </div>
                         <span className="text-[11px] text-muted-foreground shrink-0 ml-2">
-                          {formatBrazilDateTime(event.created_at, 'relative')}
+                          {formatBrazilDateTime(event.created_at, 'short')}
                         </span>
                       </div>
                     );
