@@ -531,9 +531,9 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
         {/* ─── Navigation ───────────────────── */}
         <nav className="relative z-20 flex-1 overflow-y-auto py-2 px-2 scrollbar-thin">
           {isAdmin ? (
-            <motion.div variants={containerVariants} initial="show" animate="show">
-              {/* OVERVIEW - always visible */}
-              <div className="space-y-0.5 mb-2">
+            <motion.div variants={containerVariants} initial="show" animate="show" className="space-y-1">
+              {/* OVERVIEW - always visible, no section header */}
+              <div className="space-y-0.5">
                 {overviewItems.map((item, idx) => (
                   <div key={item.to}>
                     {renderNavItem(item, idx)}
@@ -541,21 +541,21 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                 ))}
               </div>
 
-              <div className="sidebar-divider-neon my-2 mx-2" />
+              <div className="sidebar-divider-neon my-2.5 mx-2" />
 
+              {/* Main protection & management sections */}
               {renderCollapsibleSection('🛡️ Proteção', 'protection', securityItems)}
-              <div className="my-1.5" />
               {renderCollapsibleSection('⚙️ Organização', 'management', managementItems)}
 
-              <div className="sidebar-divider-neon my-2 mx-2" />
-              <div className="px-3 py-1">
-                <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-[hsl(var(--neon-cyan)_/_0.3)]">Administração</span>
+              <div className="sidebar-divider-neon my-2.5 mx-2" />
+              
+              {/* Admin sections - more compact */}
+              <div className="px-3 py-0.5">
+                <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--neon-cyan)_/_0.2)]">Administração</span>
               </div>
 
               {renderCollapsibleSection('📋 Normas e Regras', 'compliance', complianceItems)}
-              <div className="my-1.5" />
               {renderCollapsibleSection('🧠 Automação Inteligente', 'aiAnalysis', intelligenceItems)}
-              <div className="my-1.5" />
               {renderCollapsibleSection('🔧 Ferramentas', 'advanced', advancedItems)}
             </motion.div>
           ) : (
