@@ -301,8 +301,8 @@ const App = () => (
                 <Route path="ai-autonomy" element={<AutonomyDashboard />} />
                 <Route path="system-audit" element={<SystemAudit />} />
                 <Route path="soc2-compliance" element={<SOC2Dashboard />} />
-                <Route path="software-risk" element={<SoftwareRiskDashboard />} />
-                <Route path="data-exposure" element={<DataExposure />} />
+                <Route path="software-risk" element={<Navigate to="/admin/vulnerability-center?tab=software-risk" replace />} />
+                <Route path="data-exposure" element={<Navigate to="/admin/asset-security?tab=data-exposure" replace />} />
                 <Route path="software-knowledge-base" element={<SoftwareKnowledgeBase />} />
                 <Route path="automations" element={<Automations />} />
                 <Route path="archived-agents" element={<Navigate to="/admin/agent-center?tab=archived" replace />} />
