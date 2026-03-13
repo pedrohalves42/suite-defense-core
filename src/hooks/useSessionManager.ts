@@ -78,11 +78,15 @@ export const useSessionManager = () => {
     
     if (sessionId) {
       try {
-        // Delete session from active_sessions
-        await supabase
-          .from('active_sessions')
-          .delete()
-          .eq('id', sessionId);
+        // V-4003 FIX: Use RPC or add user_id filter to prevent cross-user session deletion
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          await supabase
+            .from('active_sessions')
+            .delete()
+            .eq('id', sessionId)
+            .eq('user_id', currentUser.id); // V-4003: Only delete own sessions
+        }
           
         logger.info('[SessionManager] Session ended', { sessionId });
       } catch (err) {

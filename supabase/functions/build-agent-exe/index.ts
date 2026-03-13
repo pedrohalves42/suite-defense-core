@@ -123,6 +123,19 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.BAD_REQUEST, 'Invalid or expired enrollment key', 400, requestId);
     }
 
+    // V-4006 FIX: Validate user belongs to the enrollment key's tenant
+    const { data: userTenantRole } = await serviceRoleClient
+      .from('user_roles')
+      .select('tenant_id')
+      .eq('user_id', user.id)
+      .eq('tenant_id', enrollmentData.tenant_id)
+      .maybeSingle();
+    
+    if (!userTenantRole) {
+      logger.warn(`[SECURITY] User ${user.id} tried to build agent for unauthorized tenant ${enrollmentData.tenant_id}`);
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Access denied: enrollment key belongs to different tenant', 403, requestId);
+    }
+
     // Get token from enrollment_keys (stored during auto-generate-enrollment)
     if (!enrollmentData.agent_token) {
       return createErrorResponse(ErrorCode.BAD_REQUEST, 'Agent token not available. Please generate a new enrollment key.', 400, requestId);

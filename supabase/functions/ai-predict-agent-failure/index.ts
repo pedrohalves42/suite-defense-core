@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { callAIJson } from '../_shared/ai-provider-helper.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,20 +23,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // V-1100: Require internal auth for cron/internal function
-    const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');
-    const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-    const authHeader = req.headers.get('Authorization');
+    // V-4004 FIX: Use standardized assertInternalCaller
+    const authError = assertInternalCaller(req);
+    if (authError) return authError;
+
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    const isInternal = (internalSecret && expectedSecret && internalSecret === expectedSecret) ||
-                       (authHeader && authHeader === `Bearer ${serviceRoleKey}`);
-    
-    if (!isInternal) {
-      return new Response(JSON.stringify({ error: 'Unauthorized: internal access only' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,

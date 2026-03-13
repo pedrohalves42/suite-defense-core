@@ -56,9 +56,10 @@ export function useSOC2Readiness() {
         const criteriaControls = controls?.filter(c => c.criteria_id === dbCriteria?.id) || [];
         
         const totalControls = criteriaControls.length || criteriaDef.controls.length;
+        // V-4005 FIX: Don't inflate scores with fake 85% when no DB data exists
         const implementedControls = criteriaControls.filter(c => 
           c.status === 'implemented' || c.status === 'verified'
-        ).length || Math.floor(criteriaDef.controls.length * 0.85);
+        ).length;
 
         // Apply bonuses based on actual compliance state
         let bonus = 0;
