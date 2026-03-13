@@ -9,28 +9,14 @@ import {
   Search, BookOpen, Shield, Monitor, Users, Settings, FileText,
   Zap, HelpCircle, PlayCircle, ChevronRight, Clock, Star,
   AlertTriangle, Terminal, Download, Lock, BarChart3, Bell,
-  Server, RefreshCw, ArrowRight, Lightbulb, CheckCircle2, Bug
+  Server, RefreshCw, ArrowRight, Lightbulb, CheckCircle2, Bug,
+  Upload, Film
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   tutorials, faqs, categories, difficultyConfig, quickStartCards,
-  tutorialVideos, type Tutorial, type TroubleshootingItem
+  tutorialVideoUrls, type Tutorial, type TroubleshootingItem
 } from "@/data/tutorials-data";
-
-// Video imports
-import videoDashboard from "@/assets/videos/tutorial-dashboard.mp4";
-import videoAgentInstall from "@/assets/videos/tutorial-agent-install.mp4";
-import videoVirusScan from "@/assets/videos/tutorial-virus-scan.mp4";
-import videoAiThreats from "@/assets/videos/tutorial-ai-threats.mp4";
-import videoPolicies from "@/assets/videos/tutorial-policies.mp4";
-
-const videoAssets: Record<string, string> = {
-  "tutorial-dashboard": videoDashboard,
-  "tutorial-agent-install": videoAgentInstall,
-  "tutorial-virus-scan": videoVirusScan,
-  "tutorial-ai-threats": videoAiThreats,
-  "tutorial-policies": videoPolicies,
-};
 
 const categoryIcons: Record<string, any> = {
   all: BookOpen, inicio: Zap, dashboard: Monitor, agentes: Server,
@@ -38,6 +24,43 @@ const categoryIcons: Record<string, any> = {
 };
 
 const quickStartIcons = [Download, Shield, Users, BarChart3, Bell, Settings];
+
+const VideoSection = ({ tutorialId }: { tutorialId: string }) => {
+  const videoUrl = tutorialVideoUrls[tutorialId];
+
+  if (!videoUrl) {
+    return (
+      <div className="mx-5 mt-5 rounded-lg border-2 border-dashed border-border bg-muted/20 flex flex-col items-center justify-center py-10 gap-3">
+        <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center">
+          <Film className="h-7 w-7 text-muted-foreground/50" />
+        </div>
+        <p className="text-sm font-medium text-muted-foreground">Nenhum vídeo configurado</p>
+        <p className="text-xs text-muted-foreground/70 max-w-xs text-center">
+          Adicione uma URL de vídeo em <code className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">tutorials-data.ts</code> → <code className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">tutorialVideoUrls["{tutorialId}"]</code>
+        </p>
+      </div>
+    );
+  }
+
+  // YouTube embed
+  if (videoUrl.includes("youtube.com/embed") || videoUrl.includes("youtu.be")) {
+    const embedUrl = videoUrl.includes("youtu.be")
+      ? videoUrl.replace("youtu.be/", "youtube.com/embed/")
+      : videoUrl;
+    return (
+      <div className="mx-5 mt-5 rounded-lg overflow-hidden border border-border aspect-video">
+        <iframe src={embedUrl} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full" />
+      </div>
+    );
+  }
+
+  // Direct video file (mp4, webm, etc.)
+  return (
+    <div className="mx-5 mt-5 rounded-lg overflow-hidden border border-border">
+      <video src={videoUrl} controls playsInline className="w-full h-auto max-h-80 object-cover bg-black" />
+    </div>
+  );
+};
 
 const Tutorials = () => {
   const [searchQuery, setSearchQuery] = useState("");
