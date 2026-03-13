@@ -5885,6 +5885,12 @@ while ($true) {
     } catch { }
     Start-Sleep -Seconds $baseSleep
     
+    # v5.0.14: Flush aggregation buffer periodically
+    $aggAge = ($now - $Global:AggregationLastFlush).TotalSeconds
+    if ($aggAge -ge ($Global:AggregationWindowSeconds * 2 + 1)) {
+        Invoke-FlushAggregationBuffer
+    }
+
     # v5.0.13-perf: Flush log buffer on each cycle boundary
     Flush-LogBuffer
 }
