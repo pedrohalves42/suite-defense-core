@@ -128,7 +128,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Target, label: 'Pendências', to: '/admin/action-center', end: true, badge: urgentCount > 0 ? urgentCount : undefined },
     { icon: Home, label: 'Início', to: '/admin/dashboard' },
     { icon: Presentation, label: 'Resumo Executivo', to: '/admin/executive' },
-    { icon: Cpu, label: 'Meus Computadores', to: '/admin/agent-health' },
+    { icon: Cpu, label: 'Meus Computadores', to: '/admin/agent-center' },
     { icon: Activity, label: 'Tempo Real', to: '/admin/monitoring-advanced' },
   ], [urgentCount]);
 
