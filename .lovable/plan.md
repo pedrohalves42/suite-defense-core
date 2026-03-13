@@ -22,29 +22,23 @@
 
 ---
 
-## 🔴 Fase 1 — Remediação Ativa nos Endpoints (CRÍTICO)
+## ✅ Fase 1 — Remediação Ativa nos Endpoints (CONCLUÍDA)
 
 **Objetivo:** Transformar o sistema de passivo (só observa) para ativo (detecta E age).
 
-### Sprint 12 — Jobs de Remediação Automática
-| # | Tarefa | Prioridade |
-|---|--------|-----------|
-| 1 | Edge Function `remediate-endpoint` — orquestrador de remediação que cria jobs específicos | ALTA |
-| 2 | Job type `enable_firewall` — PowerShell `Set-NetFirewallProfile -All -Enabled True` | ALTA |
-| 3 | Job type `enable_defender` — PowerShell `Set-MpPreference -DisableRealtimeMonitoring $false` | ALTA |
-| 4 | Job type `force_windows_update` — Agendar scan+install via `UsoClient StartScan` | ALTA |
-| 5 | Job type `kill_suspicious_process` — Matar processo por PID com auditoria | MÉDIA |
-| 6 | Job type `block_usb_device` — Desabilitar USB storage via registry | MÉDIA |
-| 7 | Approval workflow — jobs críticos requerem aprovação admin antes de executar | ALTA |
+### Sprint 12 — Jobs de Remediação Automática ✅
+### Sprint 13 — Remediação Inteligente (SOAR Ativo) ✅
 
-### Sprint 13 — Remediação Inteligente (SOAR Ativo)
-| # | Tarefa | Prioridade |
-|---|--------|-----------|
-| 1 | Playbook action `auto_remediate` — executa remediação baseada em regras SOAR | ALTA |
-| 2 | Blast radius check antes de cada remediação (max 10% frota simultânea) | ALTA |
-| 3 | Rollback automático — se job de remediação falhar, reverter mudança | ALTA |
-| 4 | Dashboard de remediações — histórico, taxa de sucesso, tempo médio | MÉDIA |
-| 5 | Notificação pós-remediação — confirmar ao admin que a ação foi aplicada | MÉDIA |
+---
+
+## 🟠 Fase 2 — Simplificação da UI (ALTO)
+
+**Objetivo:** Reduzir ~110 páginas para ~40 páginas consolidadas sem perder funcionalidade.
+
+### Sprint 14 — Consolidação de Páginas de Agentes ✅
+- Criado `AgentCenter.tsx` — página unificada com 6 abas: Computadores, Grupos, Etiquetas, Histórico, Versões, Inativos
+- Rotas antigas (agent-health, agent-groups, agent-tags, agent-timeline, agent-versions, archived-agents) redirecionam para agent-center
+- Sidebar e mobile nav atualizados para nova rota consolidada
 
 ---
 

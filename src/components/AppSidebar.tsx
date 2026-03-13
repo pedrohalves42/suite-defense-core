@@ -128,7 +128,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Target, label: 'Pendências', to: '/admin/action-center', end: true, badge: urgentCount > 0 ? urgentCount : undefined },
     { icon: Home, label: 'Início', to: '/admin/dashboard' },
     { icon: Presentation, label: 'Resumo Executivo', to: '/admin/executive' },
-    { icon: Cpu, label: 'Meus Computadores', to: '/admin/agent-health' },
+    { icon: Cpu, label: 'Meus Computadores', to: '/admin/agent-center' },
     { icon: Activity, label: 'Tempo Real', to: '/admin/monitoring-advanced' },
   ], [urgentCount]);
 
@@ -139,7 +139,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Globe, label: 'Sites Acessados', to: '/admin/web-activity' },
     { icon: Network, label: 'Filtro de Sites', to: '/admin/dns-filter' },
     { icon: ShieldAlert, label: 'Programas Arriscados', to: '/admin/software-risk' },
-    { icon: FileSearch, label: 'Histórico', to: '/admin/agent-timeline' },
+    { icon: FileSearch, label: 'Histórico', to: '/admin/agent-center?tab=timeline' },
     { icon: AlertCircle, label: 'Resolver Alertas', to: '/admin/alert-resolution' },
     { icon: Crosshair, label: 'Teste de Resistência', to: '/admin/attack-simulation' },
     { icon: Eye, label: 'Programas Ocultos', to: '/admin/shadow-it' },
@@ -148,8 +148,8 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   ], []);
 
   const managementItems = useMemo<MenuItem[]>(() => [
-    { icon: Users, label: 'Grupos', to: '/admin/agent-groups' },
-    { icon: Tag, label: 'Etiquetas', to: '/admin/agent-tags' },
+    { icon: Users, label: 'Grupos', to: '/admin/agent-center?tab=groups' },
+    { icon: Tag, label: 'Etiquetas', to: '/admin/agent-center?tab=tags' },
     { icon: Shield, label: 'Regras', to: '/admin/security-policies' },
     { icon: AppWindow, label: 'Programas', to: '/admin/software-inventory' },
     { icon: Crown, label: 'Equipe', to: '/admin/members' },
@@ -194,7 +194,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Zap, label: 'Correção Automática', to: '/admin/auto-remediation' },
     { icon: ShieldAlert, label: 'Proteção ao Vivo', to: '/admin/realtime-security' },
     { icon: UserPlus, label: 'Convites', to: '/admin/invites' },
-    { icon: Archive, label: 'Inativos', to: '/admin/archived-agents' },
+    { icon: Archive, label: 'Inativos', to: '/admin/agent-center?tab=archived' },
     { icon: ListTodo, label: 'Tarefas', to: '/admin/tasks' },
     { icon: Fingerprint, label: 'Minha Conta', to: '/admin/my-account' },
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
@@ -232,7 +232,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: HardDrive, label: 'Metas de Serviço', to: '/admin/slo-dashboard' },
     { icon: Database, label: 'Fila de Erros', to: '/admin/dead-letter-queue' },
     { icon: Percent, label: 'Limite de Uso', to: '/admin/rate-limiting' },
-    { icon: GitBranch, label: 'Versões dos Agentes', to: '/admin/agent-versions' },
+    { icon: GitBranch, label: 'Versões dos Agentes', to: '/admin/agent-center?tab=versions' },
     { icon: BarChart, label: 'Performance', to: '/admin/performance-metrics' },
     { icon: Heart, label: 'Saúde Instalação', to: '/admin/installation-health' },
     { icon: Activity, label: 'Operações', to: '/admin/system-operations' },

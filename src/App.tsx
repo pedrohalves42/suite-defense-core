@@ -158,6 +158,7 @@ const PlatformManagement = lazy(() => import("./pages/admin/PlatformManagement")
 const ComplianceAutomation = lazy(() => import("./pages/admin/ComplianceAutomation"));
 const ThreatIntelligence = lazy(() => import("./pages/admin/ThreatIntelligence"));
 const AIFeedbackDashboard = lazy(() => import("./pages/admin/AIFeedbackDashboard"));
+const AgentCenter = lazy(() => import("./pages/admin/AgentCenter"));
 const DataExposure = lazy(() => import("./pages/admin/DataExposure"));
 const ShadowITDiscovery = lazy(() => import("./pages/admin/ShadowITDiscovery"));
 const AttackSimulation = lazy(() => import("./pages/admin/AttackSimulation"));
@@ -245,7 +246,8 @@ const App = () => (
                 <Route path="plan-upgrade" element={<PlanUpgrade />} />
                 <Route path="subscriptions" element={<Subscriptions />} />
                 <Route path="installations" element={<Installations />} />
-                <Route path="agent-health" element={<AgentHealthMonitor />} />
+                <Route path="agent-center" element={<AgentCenter />} />
+                <Route path="agent-health" element={<Navigate to="/admin/agent-center?tab=health" replace />} />
                 <Route path="diagnostics" element={<DiagnosticsCenter />} />
                 <Route path="ai-insights" element={<AIInsights />} />
                 <Route path="ai-actions" element={<AIActionApproval />} />
@@ -262,16 +264,16 @@ const App = () => (
                 <Route path="vulnerabilities" element={<VulnerabilityFindings />} />
                 <Route path="web-activity" element={<WebActivity />} />
                 <Route path="dns-filter" element={<DNSFilter />} />
-                <Route path="agent-timeline" element={<AgentTimeline />} />
+                <Route path="agent-timeline" element={<Navigate to="/admin/agent-center?tab=timeline" replace />} />
                 <Route path="agent-releases" element={<AgentReleases />} />
-                <Route path="agent-versions" element={<AgentVersionMonitor />} />
+                <Route path="agent-versions" element={<Navigate to="/admin/agent-center?tab=versions" replace />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="rate-limiting" element={<RateLimitingStats />} />
                 <Route path="dead-letter-queue" element={<DeadLetterQueue />} />
                 <Route path="security-policies" element={<SecurityPolicies />} />
                 <Route path="security-policies/auto-actions" element={<SecurityPoliciesAutoActions />} />
-                <Route path="agent-groups" element={<AgentGroups />} />
-                <Route path="agent-tags" element={<AgentTags />} />
+                <Route path="agent-groups" element={<Navigate to="/admin/agent-center?tab=groups" replace />} />
+                <Route path="agent-tags" element={<Navigate to="/admin/agent-center?tab=tags" replace />} />
                 <Route path="notification-settings" element={<NotificationSettings />} />
                 <Route path="security-monitoring" element={<SecurityMonitoring />} />
                 <Route path="mass-reinstall" element={<MassReinstall />} />
@@ -295,7 +297,7 @@ const App = () => (
                 <Route path="data-exposure" element={<DataExposure />} />
                 <Route path="software-knowledge-base" element={<SoftwareKnowledgeBase />} />
                 <Route path="automations" element={<Automations />} />
-                <Route path="archived-agents" element={<ArchivedAgents />} />
+                <Route path="archived-agents" element={<Navigate to="/admin/agent-center?tab=archived" replace />} />
                 <Route path="alert-resolution" element={<AlertResolutionCenter />} />
                 <Route path="insight-triage" element={<InsightTriageCenter />} />
                 <Route path="confidence-gap" element={<ConfidenceGapDashboardPage />} />
