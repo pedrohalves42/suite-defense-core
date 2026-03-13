@@ -51,7 +51,9 @@ function renderWithProviders(ui: React.ReactElement) {
   const queryClient = createTestQueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>{ui}</BrowserRouter>
+      <TooltipProvider>
+        <BrowserRouter>{ui}</BrowserRouter>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }
