@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { SidebarTenantSelector } from '@/components/SidebarTenantSelector';
 import { AppModeBadge } from '@/components/layout/AppModeBadge';
+import { useFavorites } from '@/hooks/useFavorites';
 import logoImage from '@/assets/logo-cybshield-new.png';
 
 interface MenuItem {
