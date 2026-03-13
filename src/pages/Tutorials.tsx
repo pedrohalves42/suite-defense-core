@@ -95,10 +95,6 @@ const Tutorials = () => {
     return Math.round(((completedSteps[tutorialId] || []).length / totalSteps) * 100);
   };
 
-  const getVideoSrc = (tutorial: Tutorial) => {
-    const videoKey = tutorialVideos[tutorial.id];
-    return videoKey ? videoAssets[videoKey] : null;
-  };
 
   return (
     <>
