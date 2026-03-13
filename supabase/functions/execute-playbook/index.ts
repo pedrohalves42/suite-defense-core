@@ -26,11 +26,20 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { playbook_id, trigger_data } = await req.json();
 
-    // Get playbook
+    // V-10003 FIX: Validate tenant_id is present in trigger_data
+    if (!trigger_data?.tenant_id) {
+      return new Response(
+        JSON.stringify({ error: 'trigger_data.tenant_id is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get playbook — V-10003 FIX: Also filter by tenant_id to prevent cross-tenant execution
     const { data: playbook, error: pbError } = await supabase
       .from('playbooks')
       .select('*')
       .eq('id', playbook_id)
+      .eq('tenant_id', trigger_data.tenant_id)
       .eq('is_enabled', true)
       .single();
 
