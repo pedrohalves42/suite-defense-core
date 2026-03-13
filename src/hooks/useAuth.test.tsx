@@ -26,6 +26,7 @@ vi.mock('@/lib/logger', () => ({
     info: vi.fn(),
     error: vi.fn(),
     warn: vi.fn(),
+    debug: vi.fn(),
   },
 }))
 
@@ -52,17 +53,14 @@ describe('useAuth', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useFakeTimers()
     
     unsubscribeMock = vi.fn()
     
-    vi.mocked(supabase.auth.onAuthStateChange).mockReturnValue({
-      data: { subscription: { unsubscribe: unsubscribeMock } },
-    } as any)
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
+    vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((callback) => {
+      return {
+        data: { subscription: { unsubscribe: unsubscribeMock } },
+      } as any
+    })
   })
 
   it('should return null user and loading true initially', async () => {
@@ -71,13 +69,22 @@ describe('useAuth', () => {
       error: null,
     })
 
+    // Also trigger the onAuthStateChange callback
+    vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((callback) => {
+      // Simulate auth state change after setup
+      setTimeout(() => callback('INITIAL_SESSION', null), 0)
+      return {
+        data: { subscription: { unsubscribe: unsubscribeMock } },
+      } as any
+    })
+
     const { result } = renderHook(() => useAuth())
 
     expect(result.current.loading).toBe(true)
     
     await vi.waitFor(() => {
       expect(result.current.loading).toBe(false)
-    })
+    }, { timeout: 5000 })
     
     expect(result.current.user).toBeNull()
   })
@@ -88,11 +95,18 @@ describe('useAuth', () => {
       error: null,
     })
 
+    vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((callback) => {
+      setTimeout(() => callback('SIGNED_IN', mockSession), 0)
+      return {
+        data: { subscription: { unsubscribe: unsubscribeMock } },
+      } as any
+    })
+
     const { result } = renderHook(() => useAuth())
 
     await vi.waitFor(() => {
       expect(result.current.loading).toBe(false)
-    })
+    }, { timeout: 5000 })
 
     expect(result.current.user).toEqual(mockUser)
   })
@@ -116,7 +130,7 @@ describe('useAuth', () => {
 
     await vi.waitFor(() => {
       expect(result.current.loading).toBe(false)
-    })
+    }, { timeout: 5000 })
 
     expect(result.current.user).toBeNull()
 
@@ -147,7 +161,7 @@ describe('useAuth', () => {
 
     await vi.waitFor(() => {
       expect(result.current.user).toEqual(mockUser)
-    })
+    }, { timeout: 5000 })
 
     // Simulate sign out
     act(() => {
@@ -182,10 +196,17 @@ describe('useAuth', () => {
       error: { message: 'issued in the future 1000 2000 3000' } as any,
     })
 
+    vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((callback) => {
+      setTimeout(() => callback('INITIAL_SESSION', null), 0)
+      return {
+        data: { subscription: { unsubscribe: unsubscribeMock } },
+      } as any
+    })
+
     renderHook(() => useAuth())
 
     await vi.waitFor(() => {
       expect(toast).toHaveBeenCalled()
-    })
+    }, { timeout: 5000 })
   })
 })

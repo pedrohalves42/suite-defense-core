@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { ActionCard } from '@/components/action-center/ActionCard';
 import { ActionItem } from '@/hooks/useActionCenter';
 
@@ -50,7 +51,9 @@ function renderWithProviders(ui: React.ReactElement) {
   const queryClient = createTestQueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>{ui}</BrowserRouter>
+      <TooltipProvider>
+        <BrowserRouter>{ui}</BrowserRouter>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }

@@ -35,7 +35,7 @@ describe('AgentMapper', () => {
   });
 
   it('toDomain maps offline status for old last_seen', () => {
-    const oldDate = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const oldDate = new Date(Date.now() - 60 * 60 * 1000).toISOString(); // 60 min > 30 min threshold
     const agent = AgentMapper.toDomain(makeRow({ last_seen: oldDate }));
     expect(agent.status).toBe(AgentStatus.OFFLINE);
   });

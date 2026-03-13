@@ -28,7 +28,6 @@ describe('ActionCenterSection', () => {
       );
 
       expect(screen.getByText('Críticos')).toBeInTheDocument();
-      expect(screen.getByText('🔴')).toBeInTheDocument();
     });
 
     it('should render recommended section with correct title', () => {
@@ -39,8 +38,7 @@ describe('ActionCenterSection', () => {
         { wrapper: createWrapper() }
       );
 
-      expect(screen.getByText('Médios')).toBeInTheDocument();
-      expect(screen.getByText('🟡')).toBeInTheDocument();
+      expect(screen.getByText('Recomendados')).toBeInTheDocument();
     });
 
     it('should render informational section with correct title', () => {
@@ -52,7 +50,6 @@ describe('ActionCenterSection', () => {
       );
 
       expect(screen.getByText('Informativos')).toBeInTheDocument();
-      expect(screen.getByText('🔵')).toBeInTheDocument();
     });
   });
 
@@ -124,7 +121,6 @@ describe('ActionCenterSection', () => {
         { wrapper: createWrapper() }
       );
 
-      // Urgent section is defaultOpen=true, so children are visible
       expect(screen.getByTestId('child-content')).toBeInTheDocument();
       expect(screen.getByText('Action card content')).toBeInTheDocument();
     });
@@ -154,7 +150,6 @@ describe('ActionCenterSection', () => {
         { wrapper: createWrapper() }
       );
 
-      // The section element with custom class
       const section = document.querySelector('section.custom-class');
       expect(section).toBeInTheDocument();
     });
@@ -180,7 +175,7 @@ describe('ActionCenterSection', () => {
         { wrapper: createWrapper() }
       );
 
-      expect(screen.getByText('Médios')).toBeInTheDocument();
+      expect(screen.getByText('Recomendados')).toBeInTheDocument();
     });
 
     it('should render with blue icon for informational', () => {

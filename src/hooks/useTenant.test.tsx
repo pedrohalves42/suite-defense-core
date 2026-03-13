@@ -1,122 +1,61 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import React from 'react'
 import { useTenant } from './useTenant'
-import { supabase } from '@/integrations/supabase/client'
 
-vi.mock('./useAuth', () => ({
-  useAuth: () => ({
-    user: { id: 'test-user-id', email: 'test@example.com' },
-    loading: false,
-  }),
+// Mock useActiveTenant since useTenant is just a wrapper
+vi.mock('./useActiveTenant', () => ({
+  useActiveTenant: vi.fn(),
 }))
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-      },
-    },
-  })
-
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  )
-}
+import { useActiveTenant } from './useActiveTenant'
 
 describe('useTenant', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('should return null when no user', async () => {
-    vi.mocked(supabase.from).mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-        }),
-      }),
+  it('should return null when no user', () => {
+    vi.mocked(useActiveTenant).mockReturnValue({
+      activeTenant: null,
+      activeRole: null,
+      loading: false,
+      tenants: [],
+      setActiveTenantById: vi.fn(),
+      isSyncing: false,
     } as any)
 
-    const { result } = renderHook(() => useTenant(), {
-      wrapper: createWrapper(),
-    })
-
-    // Wait for hook to update
-    await vi.waitFor(() => {
-      expect(result.current.tenant).toBeNull()
-    })
+    const { result } = renderHook(() => useTenant())
+    expect(result.current.tenant).toBeNull()
   })
 
-  it('should return tenant when user has tenant', async () => {
-    const mockTenant = {
-      id: 'tenant-123',
-      name: 'Test Tenant',
-      slug: 'test-tenant',
-      owner_user_id: 'test-user-id',
-      created_at: '2025-01-01',
-      updated_at: '2025-01-01',
-    }
-
-    vi.mocked(supabase.from).mockReturnValueOnce({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          limit: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({
-              data: { tenant_id: 'tenant-123' },
-              error: null,
-            }),
-          }),
-        }),
-      }),
+  it('should return tenant when user has tenant', () => {
+    const mockTenant = { id: 'tenant-123', name: 'Test Tenant', slug: 'test-tenant' }
+    vi.mocked(useActiveTenant).mockReturnValue({
+      activeTenant: mockTenant,
+      activeRole: 'admin',
+      loading: false,
+      tenants: [mockTenant],
+      setActiveTenantById: vi.fn(),
+      isSyncing: false,
     } as any)
 
-    vi.mocked(supabase.from).mockReturnValueOnce({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({
-            data: mockTenant,
-            error: null,
-          }),
-        }),
-      }),
-    } as any)
-
-    const { result } = renderHook(() => useTenant(), {
-      wrapper: createWrapper(),
-    })
-
-    // Wait for hook to update
-    await vi.waitFor(() => {
-      expect(result.current.tenant).toEqual(mockTenant)
-    })
+    const { result } = renderHook(() => useTenant())
+    expect(result.current.tenant).toEqual(mockTenant)
   })
 
-  it('should handle multiple roles gracefully', async () => {
-    vi.mocked(supabase.from).mockReturnValueOnce({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          limit: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({
-              data: { tenant_id: 'tenant-123' },
-              error: null,
-            }),
-          }),
-        }),
-      }),
+  it('should handle multiple roles gracefully', () => {
+    const mockTenant = { id: 'tenant-123', name: 'Test Tenant' }
+    vi.mocked(useActiveTenant).mockReturnValue({
+      activeTenant: mockTenant,
+      activeRole: 'super_admin',
+      loading: false,
+      tenants: [mockTenant],
+      setActiveTenantById: vi.fn(),
+      isSyncing: false,
     } as any)
 
-    const { result } = renderHook(() => useTenant(), {
-      wrapper: createWrapper(),
-    })
-
-    // Wait for hook to update
-    await vi.waitFor(() => {
-      expect(result.current.tenant).toBeDefined()
-    })
+    const { result } = renderHook(() => useTenant())
+    expect(result.current.tenant).toBeDefined()
+    expect(result.current.role).toBe('super_admin')
   })
 })
