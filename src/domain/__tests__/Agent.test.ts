@@ -80,7 +80,7 @@ describe('Agent Entity', () => {
       agent.transitionTo(AgentState.ACTIVE);
       const events = agent.domainEvents;
       expect(events.length).toBeGreaterThanOrEqual(1);
-      expect(events[0].eventType).toBe('AgentStateChanged');
+      expect(events[0].eventType).toBe('agent.state_changed');
     });
   });
 

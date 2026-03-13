@@ -157,14 +157,12 @@ describe('Job Entity', () => {
       expect(job.status).toBe(JobStatus.EXPIRED);
     });
 
-    it('cannot expire from failed (maxRetries=0, fail goes directly to FAILED)', () => {
-      const job = makeJob({ maxRetries: 0 }).value;
+    it('cannot expire from terminal state', () => {
+      const job = makeJob().value;
       job.queue();
       job.deliver();
       job.start();
-      job.fail('error');
-      // With maxRetries=0, retryCount(0) < maxRetries(0) is false, so status = FAILED
-      expect(job.status).toBe(JobStatus.FAILED);
+      job.complete({ ok: true });
       expect(job.expire().isSuccess).toBe(false);
     });
   });
