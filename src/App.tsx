@@ -179,6 +179,8 @@ const ClientSecurityStatus = lazy(() => import("./pages/client").then(m => ({ de
 const ClientReports = lazy(() => import("./pages/client").then(m => ({ default: m.ClientReports })));
 const ClientActivity = lazy(() => import("./pages/client").then(m => ({ default: m.ClientActivity })));
 const MyProtection = lazy(() => import("./pages/client").then(m => ({ default: m.MyProtection })));
+const ClientInstallWizard = lazy(() => import("./pages/client/ClientInstallWizard"));
+const StatusPage = lazy(() => import("./pages/client/StatusPage"));
 
 const App = () => (
   <ErrorBoundary>
