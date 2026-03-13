@@ -133,18 +133,13 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   ], [urgentCount]);
 
   const securityItems = useMemo<MenuItem[]>(() => [
-    { icon: AlertTriangle, label: 'Alertas', to: '/admin/security-monitoring' },
-    { icon: ShieldCheck, label: 'Pontos Fracos', to: '/admin/vulnerabilities' },
+    { icon: AlertTriangle, label: 'Central de Ameaças', to: '/admin/threat-center' },
+    { icon: ShieldCheck, label: 'Vulnerabilidades', to: '/admin/vulnerability-center' },
+    { icon: Globe, label: 'Segurança de Rede', to: '/admin/network-security' },
+    { icon: AppWindow, label: 'Segurança de Ativos', to: '/admin/asset-security' },
     { icon: AlertCircle, label: 'Itens Suspeitos', to: '/quarantine' },
-    { icon: Globe, label: 'Sites Acessados', to: '/admin/web-activity' },
-    { icon: Network, label: 'Filtro de Sites', to: '/admin/dns-filter' },
-    { icon: ShieldAlert, label: 'Programas Arriscados', to: '/admin/software-risk' },
     { icon: FileSearch, label: 'Histórico', to: '/admin/agent-center?tab=timeline' },
     { icon: AlertCircle, label: 'Resolver Alertas', to: '/admin/alert-resolution' },
-    { icon: Crosshair, label: 'Teste de Resistência', to: '/admin/attack-simulation' },
-    { icon: Eye, label: 'Programas Ocultos', to: '/admin/shadow-it' },
-    { icon: Key, label: 'Acessos e Senhas', to: '/admin/identity-security' },
-    { icon: Network, label: 'Mapa de Segurança', to: '/admin/security-graph' },
   ], []);
 
   const managementItems = useMemo<MenuItem[]>(() => [
