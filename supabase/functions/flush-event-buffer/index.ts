@@ -33,24 +33,32 @@ Deno.serve(async (req) => {
 
   try {
     // ── Step 1: Claim a batch of unprocessed rows atomically ──
-    // Mark rows with our batch_id to prevent double-processing
-    const { error: claimError } = await supabase.rpc('claim_event_buffer_batch', {
+    // Uses FOR UPDATE SKIP LOCKED to prevent double-processing across concurrent workers
+    const { data: claimedCount, error: claimError } = await supabase.rpc('claim_event_buffer_batch', {
       p_batch_id: batchId,
       p_limit: BATCH_SIZE,
     });
 
     if (claimError) {
-      // If the RPC doesn't exist yet, fall back to direct query
-      console.warn('[flush-event-buffer] RPC not available, using direct query');
+      console.error('[flush-event-buffer] claim error:', claimError.message);
+      return new Response(JSON.stringify({ error: claimError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // ── Step 2: Fetch claimed rows (or oldest unprocessed if no RPC) ──
+    if (!claimedCount || claimedCount === 0) {
+      return new Response(JSON.stringify({ flushed: 0, message: 'Buffer empty' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ── Step 2: Fetch claimed rows by batch_id ──
     const { data: rows, error: fetchError } = await supabase
       .from('endpoint_event_buffer')
       .select('id, tenant_id, agent_id, event_category, payload')
-      .is('processed_at', null)
-      .order('received_at', { ascending: true })
-      .limit(BATCH_SIZE);
+      .eq('batch_id', batchId)
+      .is('processed_at', null);
 
     if (fetchError) {
       console.error('[flush-event-buffer] fetch error:', fetchError.message);
