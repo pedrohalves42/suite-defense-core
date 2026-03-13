@@ -208,6 +208,7 @@ const App = () => (
             <Route path="/verificar-laudo" element={<VerificarLaudo />} />
             <Route path="/approve" element={<ApprovePage />} />
             <Route path="/test-compliance" element={<TestComplianceGenerator />} />
+            <Route path="/tutorials" element={<Tutorials />} />
             
             {/* Documentation Routes */}
             <Route path="/docs/exe-build" element={<ExeBuild />} />
