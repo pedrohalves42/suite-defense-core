@@ -46,21 +46,15 @@
 
 **Objetivo:** Reduzir ~110 páginas para ~40 páginas consolidadas sem perder funcionalidade.
 
-### Sprint 14 — Consolidação de Páginas de Agentes
-| # | Tarefa | Prioridade |
-|---|--------|-----------|
-| 1 | Merge: Agent Tags + Agent Groups + Agent Timeline → aba dentro de Agent Detail | ALTA |
-| 2 | Merge: Agent Health Monitor + Version Monitor → painel lateral em Agent List | ALTA |
-| 3 | Merge: Agent Builds + Agent Updates → seção "Deployment" na página do agente | MÉDIA |
-| 4 | Eliminar páginas redundantes de lifecycle/archive (mover para modais) | MÉDIA |
+### Sprint 14 — Consolidação de Páginas de Agentes ✅
 
-### Sprint 15 — Consolidação de Páginas de Segurança
-| # | Tarefa | Prioridade |
-|---|--------|-----------|
-| 1 | Merge: Vulnerabilities + CVE Details + Patch Management → "Vulnerability Center" | ALTA |
-| 2 | Merge: Network Analysis + Firewall + Port Scan + DNS → "Network Security" | ALTA |
-| 3 | Merge: USB Devices + Software Inventory + Certificates → "Asset Security" | MÉDIA |
-| 4 | Merge: Threat Intel + IoC Management + Blocklists → "Threat Intelligence" | MÉDIA |
+### Sprint 15 — Consolidação de Páginas de Segurança ✅
+- Criado `VulnerabilityCenter.tsx` — 3 abas: Vulnerabilidades, Software Arriscado, Acessos e Senhas
+- Criado `NetworkSecurityCenter.tsx` — 3 abas: Sites Acessados, Filtro DNS, Mapa de Segurança
+- Criado `AssetSecurityCenter.tsx` — 3 abas: Programas, Programas Ocultos, Exposição de Dados
+- Criado `ThreatCenter.tsx` — 3 abas: Alertas, Ameaças Conhecidas, Teste de Resistência
+- ~12 rotas antigas redirecionam para as 4 novas páginas consolidadas
+- Sidebar reduzido de 12 itens de segurança para 7
 
 ### Sprint 16 — Navegação & Menu
 | # | Tarefa | Prioridade |
