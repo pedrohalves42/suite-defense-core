@@ -1,140 +1,167 @@
 
-# Plano de Melhorias — CyberShield (Atualizado 12/03/2026)
+# Plano de Melhorias — CyberShield (Atualizado 13/03/2026)
 
-## ✅ Concluído (Sprint 1 — 12/03/2026)
+## ✅ Concluído (Sprints 1-11 — 12-13/03/2026)
 
-### Refatoração do ServerDashboard (1787 → ~130 linhas)
-| Componente | Arquivo | Responsabilidade |
-|---|---|---|
-| `useDashboardData` | `src/hooks/useDashboardData.ts` | Hook de dados: fetch, realtime, polling |
-| `useDashboardMetrics` | `src/hooks/useDashboardMetrics.ts` | Hook de métricas derivadas |
-| `SystemStatusBanner` | `src/components/dashboard/SystemStatusBanner.tsx` | Banner de estado global |
-| `MetricCards` | `src/components/dashboard/MetricCards.tsx` | 4 cards de KPIs principais |
-| `AdminMetricCards` | `src/components/dashboard/AdminMetricCards.tsx` | Cards admin (integridade, waste, credenciais) |
-| `MultiTenantOverview` | `src/components/dashboard/MultiTenantOverview.tsx` | Visão multi-empresa (super_admin) |
-| `DashboardCharts` | `src/components/dashboard/DashboardCharts.tsx` | 4 gráficos (tendência, vírus, tipos, agentes) |
-| `SecurityTimeline` | `src/components/dashboard/SecurityTimeline.tsx` | Timeline humanizada de eventos |
-| `DashboardTabs` | `src/components/dashboard/DashboardTabs.tsx` | Tabs com lazy loading |
-| `DashboardEmptyState` | `src/components/dashboard/DashboardEmptyState.tsx` | Empty state com onboarding |
-| Tabs: `AgentsTab`, `JobsTab`, `ReportsTab`, `EvidenceTab`, `SecurityTab` | `src/components/dashboard/tabs/` | Conteúdo de cada tab |
+<details>
+<summary>Ver sprints anteriores concluídas</summary>
 
-### Otimizações aplicadas
-- ✅ Lazy loading (React.lazy) nas 5 tabs do dashboard
-- ✅ useMemo em todas as métricas derivadas
-- ✅ Empty states consistentes em todos os componentes
-- ✅ Landing page: removidos 7 imports não utilizados
+### Sprint 1 — Refatoração do ServerDashboard (1787 → ~130 linhas)
+### Sprint 2 — Skeleton Loaders, Mobile, PDF, Testes
+### Sprint 3 — Performance & Segurança (Rate Limiter, ErrorBoundary, SessionGuard)
+### Sprint 4 — Usabilidade (CSV Export, Breadcrumbs, Filtros)
+### Sprint 5 — i18n EN, ARIA/Acessibilidade, Keyboard Navigation
+### Sprint 6 — React Query, VirtualizedList, Web Vitals APM
+### Sprint 7 — Notificações In-App, Web Push, PWA
+### Sprint 8 — Playwright E2E (10 cenários)
+### Sprint 9 — Code-Splitting, Dashboard Customizável, Rate Limiting Server-Side
+### Sprint 10 — Dashboard drag-and-drop, useURLFilters
+### Sprint 11 — Edge Function rate-limit-check
 
-## ✅ Concluído (Sprint 2 — 12/03/2026)
+</details>
 
-### Skeleton Loaders, Mobile, PDF, Testes
-- ✅ Skeleton Loaders animados em todos os componentes do dashboard
-- ✅ Dashboard responsivo mobile (grids, fontes, padding adaptativos)
-- ✅ Relatório PDF Executivo com KPIs, agentes, recomendações automáticas
-- ✅ 10 testes unitários `useDashboardMetrics.test.ts`
+---
 
-## ✅ Concluído (Sprint 3 — 12/03/2026)
+## 🔴 Fase 1 — Remediação Ativa nos Endpoints (CRÍTICO)
 
-### Performance & Segurança
-- ✅ `useRateLimiter` hook — rate limiting frontend para mutations (sliding window)
-- ✅ `DashboardErrorBoundary` — isolamento de falhas por seção
-- ✅ `React.memo` em AgentsTab, JobsTab, ReportsTab
-- ✅ `useSessionGuard` — detecção de sessão expirada + redirect graceful
-- ✅ Comparação temporal 24h nos KPIs (TrendIndicator ↑↓)
+**Objetivo:** Transformar o sistema de passivo (só observa) para ativo (detecta E age).
 
-## ✅ Concluído (Sprint 4 — 12/03/2026)
+### Sprint 12 — Jobs de Remediação Automática
+| # | Tarefa | Prioridade |
+|---|--------|-----------|
+| 1 | Edge Function `remediate-endpoint` — orquestrador de remediação que cria jobs específicos | ALTA |
+| 2 | Job type `enable_firewall` — PowerShell `Set-NetFirewallProfile -All -Enabled True` | ALTA |
+| 3 | Job type `enable_defender` — PowerShell `Set-MpPreference -DisableRealtimeMonitoring $false` | ALTA |
+| 4 | Job type `force_windows_update` — Agendar scan+install via `UsoClient StartScan` | ALTA |
+| 5 | Job type `kill_suspicious_process` — Matar processo por PID com auditoria | MÉDIA |
+| 6 | Job type `block_usb_device` — Desabilitar USB storage via registry | MÉDIA |
+| 7 | Approval workflow — jobs críticos requerem aprovação admin antes de executar | ALTA |
 
-### Usabilidade & Funcionalidades
-- ✅ `CSVExportButton` — botão de exportação CSV reutilizável
-- ✅ CSV export em AgentsTab, JobsTab, ReportsTab
-- ✅ `Breadcrumbs` — navegação contextual em todas as páginas admin
-- ✅ Busca e filtros em todas as tabs do dashboard
+### Sprint 13 — Remediação Inteligente (SOAR Ativo)
+| # | Tarefa | Prioridade |
+|---|--------|-----------|
+| 1 | Playbook action `auto_remediate` — executa remediação baseada em regras SOAR | ALTA |
+| 2 | Blast radius check antes de cada remediação (max 10% frota simultânea) | ALTA |
+| 3 | Rollback automático — se job de remediação falhar, reverter mudança | ALTA |
+| 4 | Dashboard de remediações — histórico, taxa de sucesso, tempo médio | MÉDIA |
+| 5 | Notificação pós-remediação — confirmar ao admin que a ação foi aplicada | MÉDIA |
 
-## ✅ Concluído (Sprint 5 — 12/03/2026)
+---
 
-### Qualidade, i18n & Acessibilidade
-- ✅ i18n EN completo — adicionadas 50+ chaves `dashboardPanel.*` em en.json e pt-BR.json
-- ✅ ARIA labels em MetricCards (`role="button"`, `aria-label`, `tabIndex`, `onKeyDown`)
-- ✅ ARIA `role="region"` + `aria-label` em gráficos e métricas
-- ✅ `aria-label` na navegação Breadcrumbs
-- ✅ `aria-current="page"` no breadcrumb ativo
-- ✅ Keyboard navigation (Enter/Space) nos cards de métricas
-- ✅ 10 testes unitários passando
+## 🟠 Fase 2 — Simplificação da UI (ALTO)
 
-## ✅ Concluído (Sprint 6 — 12/03/2026)
+**Objetivo:** Reduzir ~110 páginas para ~40 páginas consolidadas sem perder funcionalidade.
 
-### Performance Avançada & React Query
-- ✅ `useDashboardQueries` — migração completa de useState+setInterval para React Query
-  - Cache automático, deduplicação, stale-while-revalidate
-  - `refetchInterval: 10s` para dados críticos, `30s` para dados secundários
-  - Realtime channels invalidam cache ao invés de refetch completo
-- ✅ `VirtualizedList` — componente genérico com react-window para listas 50+ itens
-- ✅ `useWebVitals` hook — APM frontend monitorando LCP, FID, CLS, TTFB, FCP
-- ✅ `WebVitalsCard` — card visual com score de performance no dashboard admin
+### Sprint 14 — Consolidação de Páginas de Agentes
+| # | Tarefa | Prioridade |
+|---|--------|-----------|
+| 1 | Merge: Agent Tags + Agent Groups + Agent Timeline → aba dentro de Agent Detail | ALTA |
+| 2 | Merge: Agent Health Monitor + Version Monitor → painel lateral em Agent List | ALTA |
+| 3 | Merge: Agent Builds + Agent Updates → seção "Deployment" na página do agente | MÉDIA |
+| 4 | Eliminar páginas redundantes de lifecycle/archive (mover para modais) | MÉDIA |
 
-## ✅ Concluído (Sprint 7 — 12/03/2026)
+### Sprint 15 — Consolidação de Páginas de Segurança
+| # | Tarefa | Prioridade |
+|---|--------|-----------|
+| 1 | Merge: Vulnerabilities + CVE Details + Patch Management → "Vulnerability Center" | ALTA |
+| 2 | Merge: Network Analysis + Firewall + Port Scan + DNS → "Network Security" | ALTA |
+| 3 | Merge: USB Devices + Software Inventory + Certificates → "Asset Security" | MÉDIA |
+| 4 | Merge: Threat Intel + IoC Management + Blocklists → "Threat Intelligence" | MÉDIA |
 
-### Notificações & PWA
-- ✅ `useNotifications` hook — notificações in-app com suporte a Web Push
-  - Monitora jobs falhos e malware detectado via realtime
-  - Browser notifications para alertas críticos
-- ✅ `NotificationBell` — sino de notificações no header do dashboard
-- ✅ PWA completa com manifest, service worker e icons (configurada anteriormente)
+### Sprint 16 — Navegação & Menu
+| # | Tarefa | Prioridade |
+|---|--------|-----------|
+| 1 | Redesign do sidebar — agrupar em 5 seções: Overview, Agents, Security, Compliance, Settings | ALTA |
+| 2 | Command palette (Cmd+K) — busca global por qualquer recurso/página | MÉDIA |
+| 3 | Favoritos — permitir fixar páginas mais usadas | BAIXA |
+| 4 | Dashboard widgets configuráveis — substituir navegação por widgets diretos | MÉDIA |
 
-## ✅ Concluído (Sprint 8 — 12/03/2026)
+---
 
-### Qualidade & Testes E2E
-- ✅ `playwright.config.ts` — configuração Playwright com projetos Desktop + Mobile
-- ✅ `e2e/dashboard.spec.ts` — 10 cenários E2E cobrindo:
-  - Landing page, login, signup, pricing, 404
-  - Navegação entre páginas de auth
-  - Tema dark por padrão
-  - PWA manifest acessível
-  - Viewport mobile responsivo
-  - CTA buttons visíveis
+## 🟡 Fase 3 — Onboarding MSP Simplificado (MÉDIO)
 
-## ✅ Concluído (Sprint 9 — 12/03/2026)
+**Objetivo:** Reduzir tempo de setup de novo cliente de ~30min para ~5min.
 
-### Código Limpo, Code-Splitting & Dashboard Customizável
-- ✅ **Tipos extraídos** — `src/types/dashboard.ts` centraliza todas as interfaces
-- ✅ **`useDashboardData.ts` removido** — agora apenas re-exporta tipos para backward compat
-- ✅ **React.lazy em todas as rotas** — 130+ páginas com code-splitting via `React.lazy` + `Suspense`
-  - Bundle inicial reduzido drasticamente (só carrega a rota atual)
-  - `RouteFallback` animado para transições entre páginas
-- ✅ **`CustomizableDashboard`** — componente drag-and-drop com `react-grid-layout` v2
-  - Layout persistido em localStorage
-  - Modo locked/unlocked com indicadores visuais
-  - Reset para layout padrão
-- ✅ **`useURLFilters`** hook — filtros persistidos em URL query params
-  - Suporte a tab, search, status via `?tab=agents&q=server&status=online`
-  - Estado compartilhável via URL
-- ✅ **Rate Limiting Server-Side** — Edge Function `rate-limit-check`
-  - Sliding window por endpoint category (auth: 10/min, mutation: 30/min, export: 5/5min)
-  - Fail-open design (não bloqueia se rate limiter falhar)
-  - Complementa o rate limiting frontend existente
+### Sprint 17 — Wizard de Onboarding
+| # | Tarefa | Prioridade |
+|---|--------|-----------|
+| 1 | Wizard 4 passos: Empresa → Plano → Primeiro Agente → Verificação | ALTA |
+| 2 | Auto-geração de enrollment key no wizard | ALTA |
+| 3 | Script de instalação one-liner copiável (PowerShell/Bash) | ALTA |
+| 4 | Detecção automática de primeiro heartbeat com confetti/feedback visual | MÉDIA |
+| 5 | Template de políticas padrão por tipo de empresa (escritório, clínica, escola) | MÉDIA |
 
-## ✅ Concluído (Sprint 10 — 13/03/2026)
+### Sprint 18 — Self-Service & Portal
+| # | Tarefa | Prioridade |
+|---|--------|-----------|
+| 1 | Convite por email — admin envia link de signup pré-configurado ao cliente | ALTA |
+| 2 | Portal do cliente com wizard próprio de instalação | MÉDIA |
+| 3 | Status page pública por tenant (uptime dos agentes) | BAIXA |
+| 4 | Relatório automático semanal enviado por email ao cliente | MÉDIA |
 
-### Dashboard Customizável & Filtros Avançados
-- ✅ **`CustomizableDashboard`** — componente drag-and-drop com `react-grid-layout`
-  - Layout persistido em localStorage
-  - Modo locked/unlocked com indicadores visuais
-  - Reset para layout padrão
-- ✅ **`useURLFilters`** hook — filtros persistidos em URL query params
-  - Suporte a tab, search, status via `?tab=agents&q=server&status=online`
-  - Estado compartilhável via URL
+---
 
-## ✅ Concluído (Sprint 11 — 13/03/2026)
+## 🟢 Fase 4 — Cobertura de Testes (MÉDIO)
 
-### Segurança Server-Side & Rate Limiting
-- ✅ **Rate Limiting Server-Side** — Edge Function `rate-limit-check`
-  - Sliding window por endpoint category (auth: 10/min, mutation: 30/min, export: 5/5min)
-  - Fail-open design (não bloqueia se rate limiter falhar)
-  - Complementa o rate limiting frontend existente
+**Objetivo:** Atingir >80% de cobertura com testes significativos.
 
-## ⏳ Pendente (Próximos Sprints)
+### Sprint 19 — Testes Unitários Core
+| # | Tarefa | Prioridade |
+|---|--------|-----------|
+| 1 | Testes para todas as entidades de domínio (Job, Agent, VulnerabilityScan, etc.) | ALTA |
+| 2 | Testes para todos os use cases (AutoRemediate, OrchestratePatch, BlockUSB, etc.) | ALTA |
+| 3 | Testes para value objects (AgentId, TenantId, etc.) | MÉDIA |
+| 4 | Testes para hooks críticos (useUnifiedMetrics, useDashboardQueries) | ALTA |
+| 5 | Mock de SupabaseJobRepository e adapters | MÉDIA |
 
-| # | Área | Prioridade | Status |
-|---|------|-----------|--------|
-| 1 | Particionamento de tabelas grandes (jobs, audit_logs) | BAIXO | TODO |
-| 2 | Cobertura de testes >80% | MÉDIO | TODO |
-| 3 | Testes E2E autenticados (dashboard, CSV, PDF) | MÉDIO | TODO |
+### Sprint 20 — Testes E2E Autenticados
+| # | Tarefa | Prioridade |
+|---|--------|-----------|
+| 1 | Setup de auth fixtures (usuário de teste com tenant) | ALTA |
+| 2 | E2E: Login → Dashboard → Verificar métricas carregam | ALTA |
+| 3 | E2E: Exportar CSV e verificar download | MÉDIA |
+| 4 | E2E: Gerar PDF executivo e verificar conteúdo | MÉDIA |
+| 5 | E2E: Criar job, verificar na lista, cancelar | ALTA |
+| 6 | E2E: Fluxo completo de onboarding (wizard → enrollment → verificação) | ALTA |
+
+---
+
+## 🔵 Fase 5 — Melhorias Complementares (BAIXO)
+
+### Sprint 21 — Otimização de Edge Functions
+| # | Tarefa | Prioridade |
+|---|--------|-----------|
+| 1 | Consolidar 7 funções de cleanup em 1 `system-maintenance` | MÉDIA |
+| 2 | Consolidar 10 funções de notificação em 1 `notification-dispatcher` | MÉDIA |
+| 3 | Consolidar 5 funções de sync em 1 `release-sync` | MÉDIA |
+| 4 | Documentar todas as funções restantes em `docs/EDGE_FUNCTIONS.md` | BAIXA |
+
+### Sprint 22 — Performance & Escalabilidade
+| # | Tarefa | Prioridade |
+|---|--------|-----------|
+| 1 | Particionamento de `jobs` por mês (range partition) | BAIXA |
+| 2 | Particionamento de `audit_logs` por mês | BAIXA |
+| 3 | Índices compostos para queries mais frequentes | MÉDIA |
+| 4 | Cache de compliance score (evitar recálculo a cada request) | MÉDIA |
+
+---
+
+## 📊 Metas por Fase
+
+| Fase | Meta | Métrica de Sucesso |
+|------|------|-------------------|
+| **Fase 1** | Sistema age nos endpoints | ≥5 tipos de remediação automática funcionando |
+| **Fase 2** | UI intuitiva | ≤45 páginas, <3 cliques para qualquer ação |
+| **Fase 3** | Onboarding rápido | Primeiro agente online em <5 min |
+| **Fase 4** | Código confiável | >80% cobertura, 0 falsos positivos em CI |
+| **Fase 5** | Manutenção sustentável | <100 edge functions, queries <200ms p95 |
+
+---
+
+## 📋 Ordem de Execução Recomendada
+
+```
+Sprint 12-13 (Remediação) → Sprint 14-16 (UI) → Sprint 17-18 (Onboarding) → Sprint 19-20 (Testes) → Sprint 21-22 (Otimização)
+```
+
+Cada sprint é independente e pode ser reordenada conforme prioridade do negócio.
