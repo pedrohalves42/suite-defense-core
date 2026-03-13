@@ -66,12 +66,31 @@ Deno.serve(async (req: Request) => {
 
   let incidentsCreated = 0;
 
-  for (const [key, agentDets] of agentGroups) {
-    const [tenantId, agentId] = key.split('::');
-    if (agentDets.length < 2) continue;
+  // V-5003 FIX: Iterate per tenant to enforce strict isolation
+  for (const tenantId of allTenantIds) {
+    const { data: detections } = await supabase
+      .from('endpoint_detection_events')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .gte('event_time', since)
+      .eq('status', 'open')
+      .order('event_time', { ascending: true })
+      .limit(1000);
 
-    for (const rule of rules) {
-      if (rule.tenant_id && rule.tenant_id !== tenantId) continue;
+    if (!detections?.length) continue;
+
+    // Group by agent within this tenant
+    const agentGroups = new Map<string, typeof detections>();
+    for (const det of detections) {
+      if (!agentGroups.has(det.agent_id)) agentGroups.set(det.agent_id, []);
+      agentGroups.get(det.agent_id)!.push(det);
+    }
+
+    for (const [agentId, agentDets] of agentGroups) {
+      if (agentDets.length < 2) continue;
+
+      const tenantRules = rules.filter(r => !r.tenant_id || r.tenant_id === tenantId);
+      for (const rule of tenantRules) {
 
       const windowMs = rule.time_window_minutes * 60 * 1000;
       const patterns = rule.event_patterns as any[];
