@@ -102,10 +102,13 @@ export const useAutoRemediation = () => {
         .single();
       if (fetchErr || !action) throw new Error('Ação não encontrada');
 
+      // V-3009 FIX: Set approved_by to track who approved
+      const { data: { user } } = await supabase.auth.getUser();
       const { error: updateErr } = await supabase
         .from('auto_remediation_actions')
         .update({
           status: 'executing',
+          approved_by: user?.id || null,
           approved_at: new Date().toISOString(),
           executed_at: new Date().toISOString(),
         })

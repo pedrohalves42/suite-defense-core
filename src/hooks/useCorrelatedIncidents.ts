@@ -82,19 +82,23 @@ export function useIncidentEvents(incidentId: string) {
 }
 
 export function useUpdateIncidentStatus() {
+  const { activeTenant } = useActiveTenant();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ incidentId, status, notes }: { incidentId: string; status: string; notes?: string }) => {
+      if (!activeTenant?.id) throw new Error('Tenant not found');
       const update: any = { status, updated_at: new Date().toISOString() };
       if (status === 'resolved') {
         update.resolved_at = new Date().toISOString();
         update.resolution_notes = notes || '';
       }
+      // V-3012 FIX: Add tenant_id filter to prevent cross-tenant updates
       const { error } = await supabase
         .from('correlated_incidents')
         .update(update)
-        .eq('id', incidentId);
+        .eq('id', incidentId)
+        .eq('tenant_id', activeTenant.id);
       if (error) throw error;
     },
     onSuccess: () => {

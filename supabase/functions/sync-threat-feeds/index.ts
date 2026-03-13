@@ -270,14 +270,9 @@ serve(async (req: Request) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Auth check - accept JWT or service role
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    // V-3006 FIX: Use assertInternalCaller (already imported but not used!)
+    const authError = assertInternalCaller(req);
+    if (authError) return authError;
 
     // Parse tenant_id from body
     let tenantIds: string[] = [];

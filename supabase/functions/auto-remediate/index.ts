@@ -72,17 +72,31 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Get agent info
-    const { data: agent, error: agentErr } = await supabase
+    // Get agent info — V-3001 FIX: Always filter by tenant to prevent cross-tenant access
+    let agentQuery = supabase
       .from('agents').select('id, agent_name, tenant_id, status')
-      .eq('id', agent_id).single();
+      .eq('id', agent_id);
+    
+    // If we know the tenant (JWT user), enforce it
+    if (tenantId) {
+      agentQuery = agentQuery.eq('tenant_id', tenantId);
+    }
+    
+    const { data: agent, error: agentErr } = await agentQuery.single();
 
     if (agentErr || !agent) {
-      return new Response(JSON.stringify({ error: 'Agent not found' }), {
+      return new Response(JSON.stringify({ error: 'Agent not found or access denied' }), {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    // V-3001 FIX: For internal calls, use agent's tenant_id; for user calls, verify match
+    if (tenantId && tenantId !== agent.tenant_id) {
+      console.warn(`[SECURITY] Tenant mismatch: user tenant ${tenantId} vs agent tenant ${agent.tenant_id}`);
+      return new Response(JSON.stringify({ error: 'Access denied: agent belongs to different tenant' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     tenantId = tenantId || agent.tenant_id;
 
     // ═══════════════════════════════════════════════════════

@@ -308,11 +308,13 @@ export function useTogglePlaybook() {
       enabled: boolean;
     }) => {
       if (!tenant?.id) throw new Error('Tenant not found');
-      // V-1033 FIX: Add tenant_id filter (supports NULL tenant for global playbooks)
+      // V-3010 FIX: Add tenant_id filter to prevent cross-tenant toggle
+      // For system playbooks (tenant_id IS NULL), only allow if user is admin
       const { error } = await supabase
         .from('playbooks')
         .update({ is_enabled: enabled })
-        .eq('id', playbookId);
+        .eq('id', playbookId)
+        .or(`tenant_id.eq.${tenant.id},is_system.eq.true`);
 
       if (error) throw error;
     },
