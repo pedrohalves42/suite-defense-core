@@ -95,7 +95,7 @@ describe('useAuth', () => {
   });
 
   it('should refresh token when expiring soon', async () => {
-    const session = { user: { id: 'u1' }, expires_at: Math.floor(Date.now() / 1000) + 200 };
+    const session = { user: { id: 'u1' }, expires_at: Math.floor(Date.now() / 1000) + 200, access_token: 'x', refresh_token: 'x', expires_in: 200, token_type: 'bearer' as const };
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
       data: { session: session as any }, error: null,
     });
