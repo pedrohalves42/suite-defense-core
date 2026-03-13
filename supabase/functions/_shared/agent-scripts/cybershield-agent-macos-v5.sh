@@ -1739,7 +1739,16 @@ EOF
                   log "INFO" "[HEARTBEAT] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_job_interval}s"
                   JOB_POLL_INTERVAL=$new_job_interval
               fi
-          fi
+               # ============================================
+               # v5.0.14: AGGREGATION CONFIG FROM SERVER
+               # ============================================
+               local agg_config
+               agg_config=$(python3 -c "import json; r=json.loads('''$result'''); a=r.get('aggregation',{}); print(json.dumps(a) if a else '')" 2>/dev/null)
+               if [[ -n "$agg_config" && "$agg_config" != "{}" ]]; then
+                   update_aggregation_config "$agg_config"
+               fi
+
+           fi
           
           return 0
      else
