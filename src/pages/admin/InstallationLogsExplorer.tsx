@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useInstallationLogs } from "@/hooks/useAgentLifecycle";
+import { useTenant } from "@/hooks/useTenant";
 import { Search, FileText, CheckCircle, XCircle, AlertTriangle, Download } from "lucide-react";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import {
