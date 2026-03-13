@@ -53,8 +53,11 @@ export interface RedTeamAssessment {
 }
 
 export function useRedTeamHistory() {
+  const { activeTenant } = useActiveTenant();
+  
+  // V-9001 FIX: Add tenantId to queryKey to prevent cross-tenant cache pollution
   return useQuery({
-    queryKey: ['red-team-history'],
+    queryKey: ['red-team-history', activeTenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('red_team_assessments')
@@ -65,6 +68,7 @@ export function useRedTeamHistory() {
       if (error) throw error;
       return (data || []) as unknown as RedTeamAssessment[];
     },
+    enabled: !!activeTenant?.id,
   });
 }
 
