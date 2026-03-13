@@ -92,15 +92,13 @@
 - Testes para useFavorites hook (5 testes): toggle, persist, localStorage
 - Total: 53 novos testes, todos passando
 
-### Sprint 20 — Testes E2E Autenticados
-| # | Tarefa | Prioridade |
-|---|--------|-----------|
-| 1 | Setup de auth fixtures (usuário de teste com tenant) | ALTA |
-| 2 | E2E: Login → Dashboard → Verificar métricas carregam | ALTA |
-| 3 | E2E: Exportar CSV e verificar download | MÉDIA |
-| 4 | E2E: Gerar PDF executivo e verificar conteúdo | MÉDIA |
-| 5 | E2E: Criar job, verificar na lista, cancelar | ALTA |
-| 6 | E2E: Fluxo completo de onboarding (wizard → enrollment → verificação) | ALTA |
+### Sprint 20 — Testes E2E Autenticados ✅
+- Auth fixtures com Playwright extended test (`e2e/fixtures/auth-fixtures.ts`)
+- E2E: Login → Dashboard → Verificar métricas carregam (4 testes)
+- E2E: Exportar CSV e verificar download + PDF (3 testes)
+- E2E: Criar job, verificar na lista, cancelar (3 testes)
+- E2E: Fluxo completo de onboarding wizard (3 testes)
+- Total: 13 testes E2E autenticados, todos com skip condicional quando credenciais ausentes
 
 ---
 
