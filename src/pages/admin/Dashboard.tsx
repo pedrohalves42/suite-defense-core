@@ -129,7 +129,7 @@ export default function Dashboard() {
   // Stat cards data
   const statCards = [
     {
-      to: '/admin/agent-health',
+      to: '/admin/agent-center',
       icon: Server,
       label: t('adminPages.dashboard.computers'),
       value: onlineAgents,
