@@ -2364,12 +2364,121 @@ function Invoke-CollectAntivirusStatus {
 
 function Invoke-CollectNetworkInfo {
     try {
-        $adapters = Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | Select-Object Name, MacAddress, LinkSpeed
-        $ipConfig = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -ne "127.0.0.1" }
-        
+        # ---- Adapters ----
+        $adapters = @()
+        try {
+            $rawAdapters = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq "Up" }
+            foreach ($a in $rawAdapters) {
+                $ipAddr = ""
+                try {
+                    $ipObj = Get-NetIPAddress -InterfaceIndex $a.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -First 1
+                    if ($ipObj) { $ipAddr = $ipObj.IPAddress }
+                } catch {}
+                $adapters += @{
+                    name = $a.Name
+                    ip_address = $ipAddr
+                    mac_address = $a.MacAddress
+                    status = "Up"
+                    speed = if ($a.LinkSpeed) { $a.LinkSpeed } else { "" }
+                }
+            }
+        } catch {}
+
+        # ---- IP addresses (legacy compat) ----
+        $ipConfig = @()
+        try {
+            $ipConfig = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -ne "127.0.0.1" } | ForEach-Object { @{ ip = $_.IPAddress; prefix = $_.PrefixLength } })
+        } catch {}
+
+        # ---- Firewall profiles ----
+        $fwDomain = $null; $fwPrivate = $null; $fwPublic = $null
+        try {
+            $fwProfiles = Get-NetFirewallProfile -ErrorAction SilentlyContinue
+            foreach ($p in $fwProfiles) {
+                switch ($p.Name) {
+                    "Domain"  { $fwDomain  = [bool]$p.Enabled }
+                    "Private" { $fwPrivate = [bool]$p.Enabled }
+                    "Public"  { $fwPublic  = [bool]$p.Enabled }
+                }
+            }
+        } catch {}
+
+        # ---- Open ports (listening) ----
+        $openPorts = @()
+        try {
+            $listeners = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Select-Object -First 50
+            foreach ($l in $listeners) {
+                $procName = ""
+                try { $procName = (Get-Process -Id $l.OwningProcess -ErrorAction SilentlyContinue).ProcessName } catch {}
+                $openPorts += @{
+                    port = $l.LocalPort
+                    process = $procName
+                    protocol = "TCP"
+                }
+            }
+        } catch {}
+
+        # ---- Active connections (established, limit 100) ----
+        $activeConns = @()
+        try {
+            $established = Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue | Select-Object -First 100
+            foreach ($c in $established) {
+                $activeConns += @{
+                    remote_address = $c.RemoteAddress
+                    remote_port = $c.RemotePort
+                    state = "Established"
+                }
+            }
+        } catch {}
+
+        # ---- DNS servers ----
+        $dnsServers = @()
+        try {
+            $dnsRaw = Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.ServerAddresses.Count -gt 0 }
+            $dnsServers = @($dnsRaw.ServerAddresses | Select-Object -Unique | Where-Object { $_ -and $_ -ne "" })
+        } catch {}
+
+        # ---- Gateway IP ----
+        $gatewayIp = $null
+        try {
+            $route = Get-NetRoute -DestinationPrefix "0.0.0.0/0" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($route) { $gatewayIp = $route.NextHop }
+        } catch {}
+
+        # ---- Public IP (fast, 3s timeout) ----
+        $publicIp = $null
+        try {
+            $publicIp = (Invoke-RestMethod -Uri "https://api.ipify.org?format=text" -TimeoutSec 3 -ErrorAction SilentlyContinue).Trim()
+        } catch {}
+
+        # ---- DNS test ----
+        $dnsTestSuccess = $null
+        try {
+            $dnsResult = Resolve-DnsName -Name "google.com" -Type A -DnsOnly -ErrorAction SilentlyContinue
+            $dnsTestSuccess = ($null -ne $dnsResult -and $dnsResult.Count -gt 0)
+        } catch { $dnsTestSuccess = $false }
+
+        # ---- HTTPS test ----
+        $httpsTestSuccess = $null
+        try {
+            $httpResp = Invoke-WebRequest -Uri "https://www.google.com" -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue
+            $httpsTestSuccess = ($httpResp.StatusCode -eq 200)
+        } catch { $httpsTestSuccess = $false }
+
         return @{
-            adapters = @($adapters)
-            ip_addresses = @($ipConfig | ForEach-Object { @{ ip = $_.IPAddress; prefix = $_.PrefixLength } })
+            adapters = @($rawAdapters | ForEach-Object { @{ Name = $_.Name; MacAddress = $_.MacAddress; LinkSpeed = $_.LinkSpeed } })
+            ip_addresses = $ipConfig
+            network_adapters = $adapters
+            firewall_domain = $fwDomain
+            firewall_private = $fwPrivate
+            firewall_public = $fwPublic
+            open_ports = $openPorts
+            active_connections = $activeConns
+            dns_servers = $dnsServers
+            gateway_ip = $gatewayIp
+            public_ip = $publicIp
+            dns_test_success = $dnsTestSuccess
+            https_test_success = $httpsTestSuccess
             collected_at = (Get-Date).ToString("o")
         }
         
