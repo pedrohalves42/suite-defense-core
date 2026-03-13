@@ -151,6 +151,24 @@
 
 ---
 
+## ✅ Fase 7 — Escalabilidade e Normalização (CONCLUÍDA)
+
+### Sprint 29 — Data Retention + Summarization ✅
+- Tabela `telemetry_retention_config` — retenção configurável por tenant/categoria
+- Tabela `telemetry_event_summaries` — agregações horárias/diárias por agente
+- Função `cleanup_expired_telemetry()` — limpeza automática por política
+- Função `summarize_telemetry_hourly()` — sumarização de eventos em agregados
+- Edge Function `cleanup-telemetry` — cron de manutenção
+
+### Sprint 30 — Event Normalization ✅
+- View `v_normalized_events` — UNION ALL de todas as 5 tabelas de telemetria
+- Formato unificado: event_category, process_name, command_line, file_hash, remote_address, domain, key_path, mitre_technique_id
+- Hook `useNormalizedEvents` — query unificada com filtros
+- Hook `useRetentionConfig` e `useEventSummaries` — gestão de retenção
+- ThreatHunting refatorado para usar a view normalizada (1 query vs 5)
+
+---
+
 ## 📊 Metas por Fase
 
 | Fase | Meta | Métrica de Sucesso |
@@ -161,13 +179,14 @@
 | **Fase 4** | Código confiável | >80% cobertura, 0 falsos positivos ✅ |
 | **Fase 5** | Manutenção sustentável | Queries <200ms p95 ✅ |
 | **Fase 6** | EDR Profissional | Detecção + MITRE + Correlação + Hunting ✅ |
+| **Fase 7** | Escalabilidade MSP | Retenção + Normalização + Sumarização ✅ |
 
 ---
 
 ## 📋 Ordem de Execução
 
 ```
-Sprint 12-13 (Remediação) → 14-16 (UI) → 17-18 (Onboarding) → 19-20 (Testes) → 21-22 (Otimização) → 23-28 (EDR Avançado)
+Sprint 12-13 (Remediação) → 14-16 (UI) → 17-18 (Onboarding) → 19-20 (Testes) → 21-22 (Otimização) → 23-28 (EDR Avançado) → 29-30 (Escalabilidade)
 ```
 
-Todos os 28 sprints concluídos.
+Todos os 30 sprints concluídos.

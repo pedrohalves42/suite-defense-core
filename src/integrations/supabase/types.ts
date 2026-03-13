@@ -26264,6 +26264,151 @@ export type Database = {
           },
         ]
       }
+      telemetry_event_summaries: {
+        Row: {
+          agent_id: string
+          created_at: string
+          event_category: string
+          event_types: Json
+          id: string
+          metadata: Json | null
+          mitre_techniques: string[] | null
+          period_end: string
+          period_start: string
+          summary_period: string
+          suspicious_events: number
+          tenant_id: string
+          top_destinations: string[] | null
+          top_processes: string[] | null
+          total_events: number
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          event_category: string
+          event_types?: Json
+          id?: string
+          metadata?: Json | null
+          mitre_techniques?: string[] | null
+          period_end: string
+          period_start: string
+          summary_period?: string
+          suspicious_events?: number
+          tenant_id: string
+          top_destinations?: string[] | null
+          top_processes?: string[] | null
+          total_events?: number
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          event_category?: string
+          event_types?: Json
+          id?: string
+          metadata?: Json | null
+          mitre_techniques?: string[] | null
+          period_end?: string
+          period_start?: string
+          summary_period?: string
+          suspicious_events?: number
+          tenant_id?: string
+          top_destinations?: string[] | null
+          top_processes?: string[] | null
+          total_events?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telemetry_event_summaries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telemetry_event_summaries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "telemetry_event_summaries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "telemetry_event_summaries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      telemetry_retention_config: {
+        Row: {
+          created_at: string
+          event_category: string
+          id: string
+          is_enabled: boolean
+          retention_days: number
+          summarize_after_days: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_category: string
+          id?: string
+          is_enabled?: boolean
+          retention_days?: number
+          summarize_after_days?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_category?: string
+          id?: string
+          is_enabled?: boolean
+          retention_days?: number
+          summarize_after_days?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telemetry_retention_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telemetry_retention_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "telemetry_retention_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "telemetry_retention_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenant_action_policies: {
         Row: {
           created_at: string | null
@@ -33716,6 +33861,36 @@ export type Database = {
           },
         ]
       }
+      v_normalized_events: {
+        Row: {
+          agent_id: string | null
+          command_line: string | null
+          created_at: string | null
+          detection_name: string | null
+          detection_tags: string[] | null
+          domain: string | null
+          event_category: string | null
+          event_time: string | null
+          event_type: string | null
+          file_hash: string | null
+          file_path: string | null
+          id: string | null
+          is_suspicious: boolean | null
+          key_path: string | null
+          mitre_tactic: string | null
+          mitre_technique_id: string | null
+          parent_process_name: string | null
+          parent_process_pid: number | null
+          process_name: string | null
+          process_pid: number | null
+          remote_address: string | null
+          remote_port: number | null
+          severity: string | null
+          tenant_id: string | null
+          user_name: string | null
+        }
+        Relationships: []
+      }
       v_pending_critical_approvals: {
         Row: {
           action_payload: Json | null
@@ -35666,6 +35841,7 @@ export type Database = {
       }
       cleanup_expired_keys: { Args: never; Returns: number }
       cleanup_expired_sessions: { Args: never; Returns: number }
+      cleanup_expired_telemetry: { Args: never; Returns: Json }
       cleanup_jobs_for_offline_agents: { Args: never; Returns: Json }
       cleanup_offline_agents_jobs: {
         Args: never
@@ -36688,6 +36864,10 @@ export type Database = {
       }
       submit_approval: {
         Args: { p_decision: string; p_reason?: string; p_request_id: string }
+        Returns: Json
+      }
+      summarize_telemetry_hourly: {
+        Args: { p_hours_ago?: number; p_tenant_id: string }
         Returns: Json
       }
       switch_tenant_atomic: {

@@ -11,9 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Filter, AlertTriangle, Crosshair, Terminal, FileText, Globe, Database } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useActiveTenant } from '@/hooks/useActiveTenant';
+import { useNormalizedEvents, type NormalizedEvent } from '@/hooks/useNormalizedEvents';
 import { format } from 'date-fns';
 
 type EventSource = 'all' | 'process' | 'file' | 'network' | 'registry' | 'detection';
@@ -34,7 +32,6 @@ const SOURCE_ICONS: Record<string, typeof Terminal> = {
 };
 
 export default function ThreatHunting() {
-  const { activeTenant, loading: tenantLoading } = useActiveTenant();
   const [searchQuery, setSearchQuery] = useState('');
   const [eventSource, setEventSource] = useState<EventSource>('all');
   const [suspiciousOnly, setSuspiciousOnly] = useState(false);
@@ -46,64 +43,24 @@ export default function ThreatHunting() {
     setIsSearching(true);
   };
 
-  const { data: results, isLoading } = useQuery({
-    queryKey: ['threat-hunt', activeTenant?.id, searchTerm, eventSource, suspiciousOnly],
-    queryFn: async () => {
-      const tenantId = activeTenant!.id;
-      const allResults: any[] = [];
-      const term = searchTerm.toLowerCase();
-
-      async function searchTable(tableName: string, source: string, orFilter?: string) {
-        let query = (supabase as any)
-          .from(tableName)
-          .select('*')
-          .eq('tenant_id', tenantId)
-          .order('event_time', { ascending: false })
-          .limit(100);
-
-        if (suspiciousOnly && source !== 'detection') {
-          query = query.eq('is_suspicious', true);
-        }
-        if (term && orFilter) {
-          query = query.or(orFilter);
-        }
-        const { data } = await query;
-        if (data) {
-          allResults.push(...(data as any[]).map((row: any) => ({ ...row, _source: source })));
-        }
-      }
-
-      if (eventSource === 'all' || eventSource === 'process') {
-        await searchTable('endpoint_process_events', 'process', term ? `process_name.ilike.%${term}%,command_line.ilike.%${term}%,user_name.ilike.%${term}%` : undefined);
-      }
-      if (eventSource === 'all' || eventSource === 'file') {
-        await searchTable('endpoint_file_events', 'file', term ? `file_path.ilike.%${term}%,file_name.ilike.%${term}%,sha256_hash.ilike.%${term}%` : undefined);
-      }
-      if (eventSource === 'all' || eventSource === 'network') {
-        await searchTable('endpoint_network_events', 'network', term ? `remote_address.ilike.%${term}%,domain.ilike.%${term}%,process_name.ilike.%${term}%` : undefined);
-      }
-      if (eventSource === 'all' || eventSource === 'registry') {
-        await searchTable('endpoint_registry_events', 'registry', term ? `key_path.ilike.%${term}%,value_name.ilike.%${term}%,value_data.ilike.%${term}%` : undefined);
-      }
-      if (eventSource === 'all' || eventSource === 'detection') {
-        await searchTable('endpoint_detection_events', 'detection', term ? `detection_name.ilike.%${term}%,command_line.ilike.%${term}%,mitre_technique_id.ilike.%${term}%` : undefined);
-      }
-
-      // Sort by event_time desc
-      return allResults.sort((a, b) =>
-        new Date(b.event_time).getTime() - new Date(a.event_time).getTime()
-      );
+  // Uses the unified v_normalized_events view (Sprint 30)
+  const { data: results, isLoading } = useNormalizedEvents(
+    {
+      searchTerm: searchTerm || undefined,
+      eventCategory: eventSource,
+      suspiciousOnly,
+      limit: 500,
     },
-    enabled: isSearching && !tenantLoading && !!activeTenant?.id,
-  });
+    isSearching,
+  );
 
   const stats = useMemo(() => {
     if (!results) return { total: 0, suspicious: 0, bySource: {} as Record<string, number> };
     const bySource: Record<string, number> = {};
     let suspicious = 0;
     for (const r of results) {
-      bySource[r._source] = (bySource[r._source] || 0) + 1;
-      if (r.is_suspicious || r._source === 'detection') suspicious++;
+      bySource[r.event_category] = (bySource[r.event_category] || 0) + 1;
+      if (r.is_suspicious || r.event_category === 'detection') suspicious++;
     }
     return { total: results.length, suspicious, bySource };
   }, [results]);
@@ -195,20 +152,20 @@ export default function ThreatHunting() {
             <ScrollArea className="h-[600px]">
               <div className="space-y-2">
                 {(results || []).map((event, idx) => {
-                  const Icon = SOURCE_ICONS[event._source] || AlertTriangle;
+                  const Icon = SOURCE_ICONS[event.event_category] || AlertTriangle;
                   const severity = event.severity || (event.is_suspicious ? 'medium' : 'low');
 
                   return (
                     <div
-                      key={`${event._source}-${event.id}-${idx}`}
-                      className={`p-3 rounded-lg border ${event.is_suspicious || event._source === 'detection' ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-card'}`}
+                      key={`${event.event_category}-${event.id}-${idx}`}
+                      className={`p-3 rounded-lg border ${event.is_suspicious || event.event_category === 'detection' ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-card'}`}
                     >
                       <div className="flex items-start gap-3">
                         <Icon className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
                         <div className="flex-1 min-w-0 space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className="text-[10px] uppercase">
-                              {event._source}
+                              {event.event_category}
                             </Badge>
                             {severity && (
                               <Badge className={`text-[10px] ${SEVERITY_COLORS[severity] || ''}`}>
@@ -231,7 +188,7 @@ export default function ThreatHunting() {
                           {/* Event details */}
                           <div className="text-xs text-muted-foreground space-y-0.5">
                             {event.process_name && (
-                              <p><span className="text-foreground font-medium">Processo:</span> {event.process_name} (PID: {event.pid || event.process_pid})</p>
+                              <p><span className="text-foreground font-medium">Processo:</span> {event.process_name} (PID: {event.process_pid})</p>
                             )}
                             {event.command_line && (
                               <p className="font-mono text-[11px] truncate max-w-full">
