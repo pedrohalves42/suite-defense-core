@@ -327,8 +327,9 @@ export default function ExecutiveDashboard() {
                         <li>• Restauração de serviço sem visita: R$ 150</li>
                         <li>• Incidente crítico contido: R$ 500</li>
                         <li>• Correção de conformidade automática: R$ 60</li>
-                        <li>• Acesso indevido bloqueado: R$ 120</li>
+                        <li>• Site perigoso bloqueado: R$ 5</li>
                       </ul>
+                      <p className="mt-1 text-muted-foreground">Incidentes são deduplicados: conta-se 1x por agente/tipo</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -348,7 +349,7 @@ export default function ExecutiveDashboard() {
                       <ImpactRow label="Crises de segurança evitadas" count={summaryData.actions30d.critical_prevented} value={summaryData.financialImpact.criticalPrevented} icon={<Siren className="h-3 w-3" />} unitCost="R$ 500/incidente crítico" />
                       <ImpactRow label="Investigações evitadas" count={summaryData.actions30d.high_prevented} value={summaryData.financialImpact.highPrevented} icon={<Bug className="h-3 w-3" />} unitCost="R$ 200/ameaça alta" />
                       <ImpactRow label="Retrabalho de compliance evitado" count={summaryData.actions30d.policy_corrections} value={summaryData.financialImpact.policyCorrections} icon={<Lock className="h-3 w-3" />} unitCost="R$ 60/correção" />
-                      <ImpactRow label="Prejuízo de acessos indevidos" count={summaryData.blockedThreats} value={summaryData.financialImpact.blockedAccess} icon={<ShieldBan className="h-3 w-3" />} unitCost="R$ 120/tentativa bloqueada" />
+                      <ImpactRow label="Sites perigosos bloqueados" count={summaryData.blockedThreats} value={summaryData.financialImpact.blockedAccess} icon={<ShieldBan className="h-3 w-3" />} unitCost="R$ 5/bloqueio" />
                     </>
                   )}
                 </div>
