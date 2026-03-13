@@ -8,6 +8,9 @@
  */
 import { serveAgent } from '../_shared/serve-tenant.ts';
 
+// V-2006: Batch size limit to prevent DoS
+const MAX_EVENTS_PER_BATCH = 1000;
+
 // ── MITRE ATT&CK Detection Rules (Local Engine) ──
 
 interface DetectionRule {
@@ -22,111 +25,124 @@ interface DetectionRule {
   match: (event: any) => boolean;
 }
 
+// V-2007: Pre-compiled regex patterns to avoid 15K+ compilations per batch
+const RE_POWERSHELL = /powershell/i;
+const RE_ENCODED_CMD = /(-enc|-encodedcommand|frombase64)/i;
+const RE_CMD_EXE = /cmd\.exe/i;
+const RE_OFFICE = /(winword|excel|powerpnt|outlook)/i;
+const RE_LSASS = /lsass/i;
+const RE_LSASS_PARENTS = /csrss|wininit|services/i;
+const RE_MIMIKATZ = /(mimikatz|sekurlsa|logonpasswords|kerberos::)/i;
+const RE_RUN_KEYS = /(CurrentVersion\\Run|CurrentVersion\\RunOnce)/i;
+const RE_STARTUP = /(Startup|Start Menu\\Programs\\Startup)/i;
+const RE_LOLBINS = /(mshta|regsvr32|rundll32|certutil|bitsadmin|wmic|msiexec)/i;
+const RE_LOLBIN_ARGS = /(http|ftp|\\\\|base64|decode|download)/i;
+const RE_TOKEN = /(runas|impersonate|token|privilege)/i;
+const RE_SHELL = /(powershell|cmd)/i;
+const RE_PSEXEC = /(psexec|paexec|smbexec|wmiexec)/i;
+const RE_WMIC = /wmic/i;
+const RE_NODE = /\/node:/i;
+const RE_RANSOMWARE_EXT = /(encrypted|locked|crypt|ransom)/i;
+const RE_C2_PROC = /(powershell|cmd|wscript|cscript|mshta)/i;
+const RE_SCRIPT_EXT = /(\.vbs|\.js|\.wsf|\.hta|\.ps1)$/i;
+const RE_TEMP_PATH = /(temp|appdata|downloads)/i;
+const RE_WEVTUTIL = /(wevtutil|clear-eventlog)/i;
+const RE_CLEAR = /(cl |clear)/i;
+const RE_SCHTASKS = /schtasks/i;
+const RE_CREATE = /\/create/i;
+
 const DETECTION_RULES: DetectionRule[] = [
-  // T1059 - Command and Scripting Interpreter
   {
     id: 'DET-001', name: 'PowerShell Encoded Command', mitreId: 'T1059.001',
     mitreTactic: 'Execution', mitreName: 'PowerShell', severity: 'high', confidence: 85,
     type: 'process',
-    match: (e) => /powershell/i.test(e.process_name || '') && /(-enc|-encodedcommand|frombase64)/i.test(e.command_line || ''),
+    match: (e) => RE_POWERSHELL.test(e.process_name || '') && RE_ENCODED_CMD.test(e.command_line || ''),
   },
   {
     id: 'DET-002', name: 'CMD Spawned by Office', mitreId: 'T1059.001',
     mitreTactic: 'Execution', mitreName: 'Command-Line Interface', severity: 'high', confidence: 80,
     type: 'process',
-    match: (e) => /cmd\.exe/i.test(e.process_name || '') && /(winword|excel|powerpnt|outlook)/i.test(e.parent_process_name || ''),
+    match: (e) => RE_CMD_EXE.test(e.process_name || '') && RE_OFFICE.test(e.parent_process_name || ''),
   },
-  // T1003 - Credential Dumping
   {
     id: 'DET-003', name: 'LSASS Access Detected', mitreId: 'T1003.001',
     mitreTactic: 'Credential Access', mitreName: 'LSASS Memory', severity: 'critical', confidence: 90,
     type: 'process',
-    match: (e) => /lsass/i.test(e.command_line || '') && !/csrss|wininit|services/i.test(e.parent_process_name || ''),
+    match: (e) => RE_LSASS.test(e.command_line || '') && !RE_LSASS_PARENTS.test(e.parent_process_name || ''),
   },
   {
     id: 'DET-004', name: 'Mimikatz Indicators', mitreId: 'T1003',
     mitreTactic: 'Credential Access', mitreName: 'OS Credential Dumping', severity: 'critical', confidence: 95,
     type: 'process',
-    match: (e) => /(mimikatz|sekurlsa|logonpasswords|kerberos::)/i.test(e.command_line || ''),
+    match: (e) => RE_MIMIKATZ.test(e.command_line || ''),
   },
-  // T1547 - Persistence: Boot or Logon Autostart
   {
     id: 'DET-005', name: 'Run Key Modification', mitreId: 'T1547.001',
     mitreTactic: 'Persistence', mitreName: 'Registry Run Keys', severity: 'high', confidence: 75,
     type: 'registry',
-    match: (e) => /(CurrentVersion\\Run|CurrentVersion\\RunOnce)/i.test(e.key_path || ''),
+    match: (e) => RE_RUN_KEYS.test(e.key_path || ''),
   },
   {
     id: 'DET-006', name: 'Startup Folder Drop', mitreId: 'T1547.001',
     mitreTactic: 'Persistence', mitreName: 'Startup Folder', severity: 'medium', confidence: 70,
     type: 'file',
-    match: (e) => /(Startup|Start Menu\\Programs\\Startup)/i.test(e.file_path || '') && e.event_type === 'file_create',
+    match: (e) => RE_STARTUP.test(e.file_path || '') && e.event_type === 'file_create',
   },
-  // T1218 - Living Off the Land (LOLBins)
   {
     id: 'DET-007', name: 'LOLBin Execution', mitreId: 'T1218',
     mitreTactic: 'Defense Evasion', mitreName: 'System Binary Proxy Execution', severity: 'high', confidence: 70,
     type: 'process',
-    match: (e) => /(mshta|regsvr32|rundll32|certutil|bitsadmin|wmic|msiexec)/i.test(e.process_name || '') &&
-      /(http|ftp|\\\\|base64|decode|download)/i.test(e.command_line || ''),
+    match: (e) => RE_LOLBINS.test(e.process_name || '') && RE_LOLBIN_ARGS.test(e.command_line || ''),
   },
-  // T1134 - Privilege Escalation: Token Manipulation
   {
     id: 'DET-008', name: 'Token Manipulation', mitreId: 'T1134',
     mitreTactic: 'Privilege Escalation', mitreName: 'Access Token Manipulation', severity: 'high', confidence: 80,
     type: 'process',
-    match: (e) => /(runas|impersonate|token|privilege)/i.test(e.command_line || '') &&
-      /(powershell|cmd)/i.test(e.process_name || ''),
+    match: (e) => RE_TOKEN.test(e.command_line || '') && RE_SHELL.test(e.process_name || ''),
   },
-  // T1021 - Lateral Movement
   {
     id: 'DET-009', name: 'PsExec/SMB Lateral Movement', mitreId: 'T1021.002',
     mitreTactic: 'Lateral Movement', mitreName: 'SMB/Windows Admin Shares', severity: 'high', confidence: 85,
     type: 'process',
-    match: (e) => /(psexec|paexec|smbexec|wmiexec)/i.test(e.process_name || e.command_line || ''),
+    match: (e) => RE_PSEXEC.test(e.process_name || e.command_line || ''),
   },
   {
     id: 'DET-010', name: 'WMI Remote Execution', mitreId: 'T1047',
     mitreTactic: 'Execution', mitreName: 'WMI', severity: 'medium', confidence: 70,
     type: 'process',
-    match: (e) => /wmic/i.test(e.process_name || '') && /\/node:/i.test(e.command_line || ''),
+    match: (e) => RE_WMIC.test(e.process_name || '') && RE_NODE.test(e.command_line || ''),
   },
-  // T1486 - Ransomware: Mass File Rename
   {
     id: 'DET-011', name: 'Mass File Rename (Ransomware)', mitreId: 'T1486',
     mitreTactic: 'Impact', mitreName: 'Data Encrypted for Impact', severity: 'critical', confidence: 60,
     type: 'file',
-    match: (e) => e.event_type === 'file_rename' && /(encrypted|locked|crypt|ransom)/i.test(e.file_extension || ''),
+    match: (e) => e.event_type === 'file_rename' && RE_RANSOMWARE_EXT.test(e.file_extension || ''),
   },
-  // T1071 - C2 Communication
   {
     id: 'DET-012', name: 'Suspicious External Connection', mitreId: 'T1071',
     mitreTactic: 'Command and Control', mitreName: 'Application Layer Protocol', severity: 'medium', confidence: 50,
     type: 'network',
     match: (e) => e.direction === 'outbound' && e.remote_port && ![80, 443, 53, 8080].includes(e.remote_port) &&
-      /(powershell|cmd|wscript|cscript|mshta)/i.test(e.process_name || ''),
+      RE_C2_PROC.test(e.process_name || ''),
   },
-  // T1027 - Obfuscated Files
   {
     id: 'DET-013', name: 'Obfuscated Script Drop', mitreId: 'T1027',
     mitreTactic: 'Defense Evasion', mitreName: 'Obfuscated Files or Information', severity: 'medium', confidence: 65,
     type: 'file',
-    match: (e) => e.event_type === 'file_create' && /(\.vbs|\.js|\.wsf|\.hta|\.ps1)$/i.test(e.file_path || '') &&
-      /(temp|appdata|downloads)/i.test(e.file_path || ''),
+    match: (e) => e.event_type === 'file_create' && RE_SCRIPT_EXT.test(e.file_path || '') &&
+      RE_TEMP_PATH.test(e.file_path || ''),
   },
-  // T1070 - Indicator Removal
   {
     id: 'DET-014', name: 'Event Log Clearing', mitreId: 'T1070.001',
     mitreTactic: 'Defense Evasion', mitreName: 'Clear Windows Event Logs', severity: 'critical', confidence: 90,
     type: 'process',
-    match: (e) => /(wevtutil|clear-eventlog)/i.test(e.command_line || '') && /(cl |clear)/i.test(e.command_line || ''),
+    match: (e) => RE_WEVTUTIL.test(e.command_line || '') && RE_CLEAR.test(e.command_line || ''),
   },
-  // T1053 - Scheduled Task
   {
     id: 'DET-015', name: 'Scheduled Task Creation', mitreId: 'T1053.005',
     mitreTactic: 'Persistence', mitreName: 'Scheduled Task', severity: 'medium', confidence: 65,
     type: 'process',
-    match: (e) => /schtasks/i.test(e.process_name || '') && /\/create/i.test(e.command_line || ''),
+    match: (e) => RE_SCHTASKS.test(e.process_name || '') && RE_CREATE.test(e.command_line || ''),
   },
 ];
 
@@ -153,7 +169,12 @@ function runDetections(events: any[], type: string): any[] {
             mitre_technique_name: rule.mitreName,
             description: `${rule.name} detected: ${event.process_name || event.file_path || event.remote_address || event.key_path}`,
             source_event_type: type,
-            source_event_data: event,
+            // V-2008: Store minimal reference instead of full event to reduce data bloat
+            source_event_data: {
+              event_id: event.id,
+              process_name: event.process_name,
+              command_line: (event.command_line || '').substring(0, 500),
+            },
             process_name: event.process_name,
             process_pid: event.pid || event.process_pid,
             command_line: event.command_line,
@@ -174,69 +195,71 @@ serveAgent(async (_req, ctx) => {
   const stats = { process: 0, file: 0, network: 0, registry: 0, detections: 0 };
   const allDetections: any[] = [];
 
-  // ── Process Events ──
-  if (body.process_events?.length) {
-    const events = body.process_events.map((e: any) => ({
-      ...e,
-      tenant_id: tenantId,
-      agent_id: agentId,
-      event_time: e.event_time || new Date().toISOString(),
-    }));
-    const dets = runDetections(events, 'process');
-    allDetections.push(...dets);
-    
-    const { error } = await supabase.from('endpoint_process_events').insert(events);
-    if (error) console.error('[submit-endpoint-events] process insert error:', error.message);
-    else stats.process = events.length;
+  // V-2006: Apply batch limits to prevent DoS from compromised agents
+  const processEvents = (body.process_events || []).slice(0, MAX_EVENTS_PER_BATCH);
+  const fileEvents = (body.file_events || []).slice(0, MAX_EVENTS_PER_BATCH);
+  const networkEvents = (body.network_events || []).slice(0, MAX_EVENTS_PER_BATCH);
+  const registryEvents = (body.registry_events || []).slice(0, MAX_EVENTS_PER_BATCH);
+
+  // Prepare events for all categories
+  const prepareEvents = (events: any[]) => events.map((e: any) => ({
+    ...e,
+    tenant_id: tenantId,
+    agent_id: agentId,
+    event_time: e.event_time || new Date().toISOString(),
+  }));
+
+  const preparedProcess = processEvents.length ? prepareEvents(processEvents) : [];
+  const preparedFile = fileEvents.length ? prepareEvents(fileEvents) : [];
+  const preparedNetwork = networkEvents.length ? prepareEvents(networkEvents) : [];
+  const preparedRegistry = registryEvents.length ? prepareEvents(registryEvents) : [];
+
+  // Run detections on all categories
+  if (preparedProcess.length) allDetections.push(...runDetections(preparedProcess, 'process'));
+  if (preparedFile.length) allDetections.push(...runDetections(preparedFile, 'file'));
+  if (preparedNetwork.length) allDetections.push(...runDetections(preparedNetwork, 'network'));
+  if (preparedRegistry.length) allDetections.push(...runDetections(preparedRegistry, 'registry'));
+
+  // V-2005: Parallelize all inserts with Promise.all instead of sequential awaits
+  const insertPromises: Promise<void>[] = [];
+
+  if (preparedProcess.length) {
+    insertPromises.push(
+      supabase.from('endpoint_process_events').insert(preparedProcess).then(({ error }: any) => {
+        if (error) console.error('[submit-endpoint-events] process insert error:', error.message);
+        else stats.process = preparedProcess.length;
+      })
+    );
   }
 
-  // ── File Events ──
-  if (body.file_events?.length) {
-    const events = body.file_events.map((e: any) => ({
-      ...e,
-      tenant_id: tenantId,
-      agent_id: agentId,
-      event_time: e.event_time || new Date().toISOString(),
-    }));
-    const dets = runDetections(events, 'file');
-    allDetections.push(...dets);
-    
-    const { error } = await supabase.from('endpoint_file_events').insert(events);
-    if (error) console.error('[submit-endpoint-events] file insert error:', error.message);
-    else stats.file = events.length;
+  if (preparedFile.length) {
+    insertPromises.push(
+      supabase.from('endpoint_file_events').insert(preparedFile).then(({ error }: any) => {
+        if (error) console.error('[submit-endpoint-events] file insert error:', error.message);
+        else stats.file = preparedFile.length;
+      })
+    );
   }
 
-  // ── Network Events ──
-  if (body.network_events?.length) {
-    const events = body.network_events.map((e: any) => ({
-      ...e,
-      tenant_id: tenantId,
-      agent_id: agentId,
-      event_time: e.event_time || new Date().toISOString(),
-    }));
-    const dets = runDetections(events, 'network');
-    allDetections.push(...dets);
-    
-    const { error } = await supabase.from('endpoint_network_events').insert(events);
-    if (error) console.error('[submit-endpoint-events] network insert error:', error.message);
-    else stats.network = events.length;
+  if (preparedNetwork.length) {
+    insertPromises.push(
+      supabase.from('endpoint_network_events').insert(preparedNetwork).then(({ error }: any) => {
+        if (error) console.error('[submit-endpoint-events] network insert error:', error.message);
+        else stats.network = preparedNetwork.length;
+      })
+    );
   }
 
-  // ── Registry Events ──
-  if (body.registry_events?.length) {
-    const events = body.registry_events.map((e: any) => ({
-      ...e,
-      tenant_id: tenantId,
-      agent_id: agentId,
-      event_time: e.event_time || new Date().toISOString(),
-    }));
-    const dets = runDetections(events, 'registry');
-    allDetections.push(...dets);
-    
-    const { error } = await supabase.from('endpoint_registry_events').insert(events);
-    if (error) console.error('[submit-endpoint-events] registry insert error:', error.message);
-    else stats.registry = events.length;
+  if (preparedRegistry.length) {
+    insertPromises.push(
+      supabase.from('endpoint_registry_events').insert(preparedRegistry).then(({ error }: any) => {
+        if (error) console.error('[submit-endpoint-events] registry insert error:', error.message);
+        else stats.registry = preparedRegistry.length;
+      })
+    );
   }
+
+  await Promise.all(insertPromises);
 
   // ── Insert Detection Events ──
   if (allDetections.length > 0) {

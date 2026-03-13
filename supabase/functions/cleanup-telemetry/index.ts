@@ -1,31 +1,25 @@
+/**
+ * cleanup-telemetry — Scheduled cleanup & summarization of telemetry data.
+ * 
+ * Auth: Internal only (cron/service_role) via assertInternalCaller
+ */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from '../_shared/cors.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // V-2011: Replace substring auth with standardized assertInternalCaller
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Validate internal caller
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.includes(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.slice(0, 20) || '___')) {
-      const internalSecret = req.headers.get('x-internal-secret');
-      if (internalSecret !== Deno.env.get('INTERNAL_SECRET')) {
-        return new Response(
-          JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
 
     // 1. Run cleanup
     const { data: cleanupResult, error: cleanupError } = await supabase.rpc('cleanup_expired_telemetry');

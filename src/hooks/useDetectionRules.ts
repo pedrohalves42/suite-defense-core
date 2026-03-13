@@ -43,12 +43,17 @@ export function useMitreAttackTechniques() {
 export function useToggleDetectionRule() {
   const queryClient = useQueryClient();
 
+  const { activeTenant } = useActiveTenant();
+
   return useMutation({
     mutationFn: async ({ ruleId, enabled }: { ruleId: string; enabled: boolean }) => {
+      if (!activeTenant?.id) throw new Error('No active tenant');
+      // V-2015: Add tenant_id filter to prevent cross-tenant rule modification
       const { error } = await supabase
         .from('detection_rules')
         .update({ is_enabled: enabled, updated_at: new Date().toISOString() })
-        .eq('id', ruleId);
+        .eq('id', ruleId)
+        .or(`tenant_id.eq.${activeTenant.id},tenant_id.is.null`);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -4,30 +4,22 @@
  * Groups related detection events into correlated incidents
  * based on configurable correlation rules (time window, tactics, agents).
  * 
- * Auth: Internal only (cron/service_role)
+ * Auth: Internal only (cron/service_role) via assertInternalCaller
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const authHeader = req.headers.get('Authorization');
+  // V-2001: Use standardized assertInternalCaller
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
+
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');
-  const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-
-  const isInternal = (authHeader === `Bearer ${serviceRoleKey}`) ||
-    (internalSecret && expectedSecret && internalSecret === expectedSecret);
-
-  if (!isInternal) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceRoleKey);
 
   let body: any = {};
@@ -86,22 +78,34 @@ Deno.serve(async (req: Request) => {
       // Check "distinct_tactics" pattern
       const distinctTacticsRule = patterns.find((p: any) => p.distinct_tactics);
       if (distinctTacticsRule) {
-        const tacticsInWindow = new Set<string>();
-        const matchedDets: typeof agentDets = [];
-        const windowStart = new Date(agentDets[0].event_time).getTime();
+        // V-2003 FIX: True sliding window with two pointers
+        let bestMatch: { tactics: Set<string>; dets: typeof agentDets } | null = null;
+        
+        for (let i = 0; i < agentDets.length; i++) {
+          const windowStartTime = new Date(agentDets[i].event_time).getTime();
+          const tacticsInWindow = new Set<string>();
+          const matchedDets: typeof agentDets = [];
 
-        for (const det of agentDets) {
-          const t = new Date(det.event_time).getTime();
-          if (t - windowStart <= windowMs) {
-            if (det.mitre_tactic) {
-              tacticsInWindow.add(det.mitre_tactic);
-              matchedDets.push(det);
+          for (let j = i; j < agentDets.length; j++) {
+            const t = new Date(agentDets[j].event_time).getTime();
+            if (t - windowStartTime > windowMs) break;
+            
+            if (agentDets[j].mitre_tactic) {
+              tacticsInWindow.add(agentDets[j].mitre_tactic);
+              matchedDets.push(agentDets[j]);
+            }
+          }
+
+          if (tacticsInWindow.size >= distinctTacticsRule.distinct_tactics && 
+              matchedDets.length >= rule.min_events) {
+            if (!bestMatch || tacticsInWindow.size > bestMatch.tactics.size) {
+              bestMatch = { tactics: tacticsInWindow, dets: matchedDets };
             }
           }
         }
 
-        if (tacticsInWindow.size >= distinctTacticsRule.distinct_tactics && matchedDets.length >= rule.min_events) {
-          await createIncident(supabase, tenantId, agentId, rule, matchedDets, Array.from(tacticsInWindow));
+        if (bestMatch) {
+          await createIncident(supabase, tenantId, agentId, rule, bestMatch.dets, Array.from(bestMatch.tactics));
           incidentsCreated++;
           continue;
         }
@@ -157,6 +161,21 @@ async function createIncident(
   const firstTime = matchedDets[0].event_time;
   const lastTime = matchedDets[matchedDets.length - 1].event_time;
 
+  // V-2004: Deduplication check — skip if an incident already exists for this rule + agent in the same time window
+  const { data: existingIncident } = await supabase
+    .from('correlated_incidents')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('correlation_rule', rule.rule_name)
+    .contains('affected_agents', [agentId])
+    .gte('last_event_time', firstTime)
+    .maybeSingle();
+
+  if (existingIncident) {
+    console.log(`[correlate-edr] Skipping duplicate incident for rule "${rule.rule_name}" on agent ${agentId}`);
+    return;
+  }
+
   const { data: incident, error } = await supabase
     .from('correlated_incidents')
     .insert({
@@ -196,14 +215,13 @@ async function createIncident(
 
   await supabase.from('correlated_incident_events').insert(eventLinks);
 
-  // Update detection events status
-  for (const det of matchedDets) {
-    await supabase
-      .from('endpoint_detection_events')
-      .update({ status: 'investigating' })
-      .eq('id', det.id)
-      .eq('status', 'open');
-  }
+  // V-2002 FIX: Batch UPDATE instead of N+1
+  const detIds = matchedDets.map(d => d.id);
+  await supabase
+    .from('endpoint_detection_events')
+    .update({ status: 'investigating' })
+    .in('id', detIds)
+    .eq('status', 'open');
 
   // Create system alert for critical incidents
   if (rule.severity === 'critical') {

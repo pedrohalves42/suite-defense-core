@@ -4,10 +4,11 @@
  * Evaluates configurable detection rules from DB against recent telemetry.
  * Called via cron or on-demand to catch patterns the inline engine might miss.
  * 
- * Auth: Internal only (cron/service_role)
+ * Auth: Internal only (cron/service_role) via assertInternalCaller
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const BATCH_SIZE = 500;
 
@@ -29,6 +30,17 @@ interface DetectionRule {
   };
 }
 
+// V-2007: Pre-compile regex cache to avoid repeated compilation
+const regexCache = new Map<string, RegExp>();
+function getCachedRegex(pattern: string): RegExp {
+  let re = regexCache.get(pattern);
+  if (!re) {
+    re = new RegExp(pattern, 'i');
+    regexCache.set(pattern, re);
+  }
+  return re;
+}
+
 function matchesCondition(event: any, condition: { field: string; operator: string; value: string }): boolean {
   const fieldValue = String(event[condition.field] || '').toLowerCase();
   const matchValue = condition.value.toLowerCase();
@@ -39,7 +51,7 @@ function matchesCondition(event: any, condition: { field: string; operator: stri
     case 'not_contains': return !fieldValue.includes(matchValue);
     case 'starts_with': return fieldValue.startsWith(matchValue);
     case 'regex':
-      try { return new RegExp(condition.value, 'i').test(fieldValue); }
+      try { return getCachedRegex(condition.value).test(fieldValue); }
       catch { return false; }
     default: return false;
   }
@@ -65,21 +77,11 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Verify internal caller
-  const authHeader = req.headers.get('Authorization');
+  // V-2001: Use standardized assertInternalCaller
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
+
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');
-  const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-
-  const isInternal = (authHeader === `Bearer ${serviceRoleKey}`) ||
-    (internalSecret && expectedSecret && internalSecret === expectedSecret);
-
-  if (!isInternal) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceRoleKey);
 
   let body: any = {};
@@ -103,61 +105,116 @@ Deno.serve(async (req: Request) => {
   const stats = { evaluated: 0, detections: 0 };
   const eventTypes = [...new Set(rules.map(r => r.event_type))];
 
-  for (const eventType of eventTypes) {
-    const table = `endpoint_${eventType}_events`;
-    const typeRules = rules.filter(r => r.event_type === eventType);
+  // V-2009: Get distinct tenant_ids from rules to enforce tenant isolation
+  const ruleTenantIds = [...new Set(rules.map(r => r.tenant_id).filter(Boolean))] as string[];
+  // Also get tenants that have events (for global rules with tenant_id = null)
+  // We iterate per tenant to ensure isolation
+  const allTenantIds = new Set(ruleTenantIds);
 
-    const { data: events } = await supabase
-      .from(table)
-      .select('*')
-      .gte('event_time', since)
-      .eq('is_suspicious', false) // Only check events not already flagged
-      .limit(BATCH_SIZE);
-
-    if (!events?.length) continue;
-    stats.evaluated += events.length;
-
-    const newDetections: any[] = [];
-
-    for (const event of events) {
-      for (const rule of typeRules) {
-        // Check tenant scope
-        if (rule.tenant_id && rule.tenant_id !== event.tenant_id) continue;
-
-        if (evaluateRule(event, rule)) {
-          newDetections.push({
-            tenant_id: event.tenant_id,
-            agent_id: event.agent_id,
-            detection_name: rule.rule_name,
-            severity: rule.severity,
-            confidence_score: rule.confidence_base,
-            mitre_technique_id: rule.mitre_technique_id,
-            mitre_tactic: rule.mitre_tactic,
-            mitre_technique_name: rule.mitre_technique_name,
-            description: `Rule "${rule.rule_name}" matched on ${eventType} event`,
-            source_event_type: eventType,
-            source_event_data: event,
-            process_name: event.process_name,
-            process_pid: event.pid || event.process_pid,
-            command_line: event.command_line,
-            file_path: event.file_path,
-            remote_address: event.remote_address,
-            event_time: event.event_time,
-          });
-
-          // Mark source event as suspicious
-          await supabase
-            .from(table)
-            .update({ is_suspicious: true, detection_tags: [rule.id] })
-            .eq('id', event.id);
+  // If there are global rules (tenant_id = null), we need to find which tenants have data
+  const hasGlobalRules = rules.some(r => !r.tenant_id);
+  if (hasGlobalRules) {
+    // Get distinct tenants from recent events across all relevant tables
+    for (const eventType of eventTypes) {
+      const table = `endpoint_${eventType}_events`;
+      const { data: tenantRows } = await supabase
+        .from(table)
+        .select('tenant_id')
+        .gte('event_time', since)
+        .eq('is_suspicious', false)
+        .limit(100);
+      if (tenantRows) {
+        for (const row of tenantRows) {
+          allTenantIds.add(row.tenant_id);
         }
       }
     }
+  }
 
-    if (newDetections.length > 0) {
-      const { error } = await supabase.from('endpoint_detection_events').insert(newDetections);
-      if (error) console.error(`[evaluate-edr] Insert error:`, error.message);
-      else stats.detections += newDetections.length;
+  // V-2009 FIX: Iterate per tenant to enforce strict isolation
+  for (const tenantId of allTenantIds) {
+    const tenantRules = rules.filter(r => !r.tenant_id || r.tenant_id === tenantId);
+
+    for (const eventType of eventTypes) {
+      const table = `endpoint_${eventType}_events`;
+      const typeRules = tenantRules.filter(r => r.event_type === eventType);
+      if (!typeRules.length) continue;
+
+      const { data: events } = await supabase
+        .from(table)
+        .select('*')
+        .eq('tenant_id', tenantId) // V-2009: Enforce tenant isolation
+        .gte('event_time', since)
+        .eq('is_suspicious', false)
+        .limit(BATCH_SIZE);
+
+      if (!events?.length) continue;
+      stats.evaluated += events.length;
+
+      const newDetections: any[] = [];
+      const matchedEventIds: string[] = [];
+      // V-2010: Track tags per event for merge instead of overwrite
+      const eventTagsMap = new Map<string, string[]>();
+
+      for (const event of events) {
+        for (const rule of typeRules) {
+          if (evaluateRule(event, rule)) {
+            newDetections.push({
+              tenant_id: tenantId,
+              agent_id: event.agent_id,
+              detection_name: rule.rule_name,
+              severity: rule.severity,
+              confidence_score: rule.confidence_base,
+              mitre_technique_id: rule.mitre_technique_id,
+              mitre_tactic: rule.mitre_tactic,
+              mitre_technique_name: rule.mitre_technique_name,
+              description: `Rule "${rule.rule_name}" matched on ${eventType} event`,
+              source_event_type: eventType,
+              // V-2008: Store minimal reference instead of full event
+              source_event_data: {
+                event_id: event.id,
+                process_name: event.process_name,
+                command_line: (event.command_line || '').substring(0, 500),
+              },
+              process_name: event.process_name,
+              process_pid: event.pid || event.process_pid,
+              command_line: event.command_line,
+              file_path: event.file_path,
+              remote_address: event.remote_address,
+              event_time: event.event_time,
+            });
+
+            matchedEventIds.push(event.id);
+            // V-2010: Accumulate tags for merge
+            const existing = eventTagsMap.get(event.id) || (event.detection_tags || []);
+            existing.push(rule.id);
+            eventTagsMap.set(event.id, existing);
+          }
+        }
+      }
+
+      // V-2002: Batch UPDATE instead of N+1
+      if (matchedEventIds.length > 0) {
+        const uniqueIds = [...new Set(matchedEventIds)];
+        await supabase
+          .from(table)
+          .update({ is_suspicious: true })
+          .in('id', uniqueIds);
+
+        // V-2010: Update tags per event (batch by unique tag sets)
+        for (const [eventId, tags] of eventTagsMap) {
+          await supabase
+            .from(table)
+            .update({ detection_tags: [...new Set(tags)] })
+            .eq('id', eventId);
+        }
+      }
+
+      if (newDetections.length > 0) {
+        const { error } = await supabase.from('endpoint_detection_events').insert(newDetections);
+        if (error) console.error(`[evaluate-edr] Insert error:`, error.message);
+        else stats.detections += newDetections.length;
+      }
     }
   }
 
