@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const navLinks = [
   { label: "Recursos", href: "#recursos" },
   { label: "Preços", href: "#precos" },
-  { label: "Depoimentos", href: "#depoimentos" },
+  { label: "Tutoriais", href: "/tutorials", isRoute: true },
   { label: "FAQ", href: "#faq" },
   { label: "Contato", href: "#contato" },
 ];
@@ -24,10 +24,14 @@ export const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const scrollTo = (href: string) => {
+  const handleNavClick = (link: typeof navLinks[0]) => {
     setMobileOpen(false);
-    const el = document.querySelector(href);
-    el?.scrollIntoView({ behavior: "smooth" });
+    if ((link as any).isRoute) {
+      navigate(link.href);
+    } else {
+      const el = document.querySelector(link.href);
+      el?.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   return (
@@ -51,7 +55,7 @@ export const Navbar = () => {
           {navLinks.map((link) => (
             <button
               key={link.href}
-              onClick={() => scrollTo(link.href)}
+              onClick={() => handleNavClick(link)}
               className={cn(
                 "text-sm font-medium transition-colors",
                 scrolled 
@@ -95,7 +99,7 @@ export const Navbar = () => {
           {navLinks.map((link) => (
             <button
               key={link.href}
-              onClick={() => scrollTo(link.href)}
+              onClick={() => handleNavClick(link)}
               className="block w-full text-left text-sm py-2.5 text-muted-foreground hover:text-foreground font-medium"
             >
               {link.label}
