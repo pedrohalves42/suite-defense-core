@@ -97,11 +97,11 @@ export function useAgentActions() {
     mutationFn: async ({ ruleId, isEnabled }: { ruleId: string; isEnabled: boolean }) => {
       if (!tenantId) throw new Error('Tenant not found');
       // V-5002 FIX: Add tenant_id filter to prevent cross-tenant rule toggle
-      const { error } = await (supabase
+      const query = supabase
         .from('decision_rules')
-        .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() } as any)
-        .eq('id', ruleId)
-        .eq('tenant_id', tenantId) as any);
+        .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() })
+        .eq('id', ruleId);
+      const { error } = await (query as any).eq('tenant_id', tenantId);
       if (error) throw error;
     },
     onSuccess: (_, { isEnabled }) => {
