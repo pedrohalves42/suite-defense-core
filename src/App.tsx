@@ -179,6 +179,8 @@ const ClientSecurityStatus = lazy(() => import("./pages/client").then(m => ({ de
 const ClientReports = lazy(() => import("./pages/client").then(m => ({ default: m.ClientReports })));
 const ClientActivity = lazy(() => import("./pages/client").then(m => ({ default: m.ClientActivity })));
 const MyProtection = lazy(() => import("./pages/client").then(m => ({ default: m.MyProtection })));
+const ClientInstallWizard = lazy(() => import("./pages/client/ClientInstallWizard"));
+const StatusPage = lazy(() => import("./pages/client/StatusPage"));
 
 const App = () => (
   <ErrorBoundary>
@@ -371,6 +373,8 @@ const App = () => (
                 <Route path="security" element={<ClientSecurityStatus />} />
                 <Route path="reports" element={<ClientReports />} />
                 <Route path="activity" element={<ClientActivity />} />
+                <Route path="install" element={<ClientInstallWizard />} />
+                <Route path="status" element={<StatusPage />} />
               </Route>
             </Route>
             

@@ -8,7 +8,9 @@ import {
   Globe,
   LogOut,
   Menu,
-  ShieldCheck
+  ShieldCheck,
+  Download,
+  Activity
 } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { cn } from '@/lib/utils';
@@ -26,6 +28,8 @@ const menuItems = [
   { icon: Shield, labelKey: 'client.securityStatus', path: '/client/security' },
   { icon: FileText, labelKey: 'client.reports', path: '/client/reports' },
   { icon: Globe, labelKey: 'client.webActivity', path: '/client/activity' },
+  { icon: Download, label: 'Instalar Agente', path: '/client/install' },
+  { icon: Activity, label: 'Status', path: '/client/status' },
 ];
 
 const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
@@ -67,7 +71,7 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
               )}
             >
               <item.icon className="h-5 w-5" />
-              <span>{t(item.labelKey)}</span>
+              <span>{(item as any).label || t(item.labelKey)}</span>
             </Link>
           );
         })}
