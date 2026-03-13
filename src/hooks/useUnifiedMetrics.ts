@@ -116,11 +116,11 @@ export function useUnifiedMetrics() {
           .eq('tenant_id', tenant.id)
           .gte('attempted_at', sevenDaysAgo),
         sb.from('agent_evidence_logs')
-          .select('event_type, severity')
+          .select('event_type, severity, agent_name, event_data')
           .eq('tenant_id', tenant.id)
           .gte('created_at', sevenDaysAgo),
         sb.from('agent_evidence_logs')
-          .select('event_type, severity')
+          .select('event_type, severity, agent_name, event_data')
           .eq('tenant_id', tenant.id)
           .gte('created_at', thirtyDaysAgo),
         sb.from('vuln_findings')
@@ -143,23 +143,59 @@ export function useUnifiedMetrics() {
       const activeAlerts = allAlerts.filter(a => unresolvedStatuses.includes(a.status));
       const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical' || a.severity === 'high');
 
-      const evidence7d: Array<{ event_type: string; severity: string }> = evidence7dRes.data || [];
-      const evidence30d: Array<{ event_type: string; severity: string }> = evidence30dRes.data || [];
+      type EvidenceRow = { event_type: string; severity: string; agent_name?: string; event_data?: any };
+      const evidence7d: EvidenceRow[] = evidence7dRes.data || [];
+      const evidence30d: EvidenceRow[] = evidence30dRes.data || [];
       const vulns: Array<{ severity: string }> = vulnRes.data || [];
 
-      // Filter real actions (not info/debug noise)
-      const realEvents30d = evidence30d.filter(e => e.severity !== 'info' && e.severity !== 'debug');
+      // =============================================
+      // DEDUPLICATION: Count unique incidents, not repeated log entries
+      // An event with empty event_data is noise/duplicate
+      // Same alert_type + agent = 1 incident (not N log entries)
+      // =============================================
+      const realEvents30d = evidence30d.filter(e => {
+        if (e.severity === 'info' || e.severity === 'debug') return false;
+        // Filter out events with empty event_data (noise)
+        if (e.event_data && typeof e.event_data === 'object') {
+          const keys = Object.keys(e.event_data);
+          if (keys.length === 0) return false;
+        }
+        return true;
+      });
+
+      // Deduplicate security events: count unique (agent_name + alert_type) combos
+      const deduplicateSecurityEvents = (events: EvidenceRow[], severityFilter: string[]): number => {
+        const seen = new Set<string>();
+        let count = 0;
+        for (const e of events) {
+          if (e.event_type !== 'security_event') continue;
+          if (!severityFilter.includes(e.severity)) continue;
+          const alertType = e.event_data?.alert_type || e.event_data?.type || 'unknown';
+          const key = `${e.agent_name || 'unknown'}::${alertType}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            count++;
+          }
+        }
+        return count;
+      };
+
       const autoRepairs = realEvents30d.filter(e => e.event_type === 'auto_repair').length;
       const autoRecoveries = realEvents30d.filter(e => e.event_type === 'auto_recovery').length;
       const policyDrifts = realEvents30d.filter(e => e.event_type === 'policy_drift').length;
-      const criticalPrevented = realEvents30d.filter(e => e.event_type === 'security_event' && e.severity === 'critical').length;
-      const highPrevented = realEvents30d.filter(e => e.event_type === 'security_event' && (e.severity === 'high' || e.severity === 'error')).length;
-      const mediumPrevented = realEvents30d.filter(e => e.event_type === 'security_event' && e.severity === 'warning').length;
+      
+      // Deduplicated counts — 1 incident per agent per alert type
+      const criticalPrevented = deduplicateSecurityEvents(realEvents30d, ['critical']);
+      const highPrevented = deduplicateSecurityEvents(realEvents30d, ['high', 'error']);
+      const mediumPrevented = deduplicateSecurityEvents(realEvents30d, ['warning']);
       const incidentsContained = criticalPrevented + highPrevented + mediumPrevented;
 
+      // Blocked access: count unique domains blocked (not individual attempts)
       const blockedCount = blockedRes.count || 0;
+      const blockedItems: Array<{ domain: string }> = blockedItemsRes.data || [];
+      const uniqueBlockedDomains = new Set(blockedItems.map(b => b.domain)).size;
 
-      // Financial impact
+      // Financial impact — use deduplicated numbers
       const breakdown: Record<string, number> = {
         autoRepairs: autoRepairs * COST_MODEL.auto_repair,
         autoRecoveries: autoRecoveries * COST_MODEL.auto_recovery,
