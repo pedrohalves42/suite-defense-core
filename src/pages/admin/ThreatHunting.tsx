@@ -53,8 +53,8 @@ export default function ThreatHunting() {
       const allResults: any[] = [];
       const term = searchTerm.toLowerCase();
 
-      async function searchTable(tableName: 'endpoint_process_events' | 'endpoint_file_events' | 'endpoint_network_events' | 'endpoint_registry_events' | 'endpoint_detection_events', source: string, orFilter?: string) {
-        let query = supabase
+      async function searchTable(tableName: string, source: string, orFilter?: string) {
+        let query = (supabase as any)
           .from(tableName)
           .select('*')
           .eq('tenant_id', tenantId)
@@ -62,7 +62,7 @@ export default function ThreatHunting() {
           .limit(100);
 
         if (suspiciousOnly && source !== 'detection') {
-          query = query.eq('is_suspicious' as any, true);
+          query = query.eq('is_suspicious', true);
         }
         if (term && orFilter) {
           query = query.or(orFilter);
