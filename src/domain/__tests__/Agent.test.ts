@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { Agent, AgentState, AgentStatus } from '../entities/Agent';
 import { TenantId } from '../value-objects/TenantId';
 
+const makeTenantId = () => TenantId.create(crypto.randomUUID()).value;
+
 const makeAgent = (name = 'Test Agent') => {
   return Agent.create({
-    tenantId: TenantId.generate(),
+    tenantId: makeTenantId(),
     name,
     osType: 'windows',
   });

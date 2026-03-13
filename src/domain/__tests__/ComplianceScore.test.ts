@@ -3,7 +3,7 @@ import { ComplianceScore } from '../entities/ComplianceScore';
 import { TenantId } from '../value-objects/TenantId';
 
 describe('ComplianceScore', () => {
-  const tenantId = TenantId.generate();
+  const tenantId = TenantId.create(crypto.randomUUID()).value;
 
   describe('fromCalculation', () => {
     it('creates score without drift when no previous score', () => {
