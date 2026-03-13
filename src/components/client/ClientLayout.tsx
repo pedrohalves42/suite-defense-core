@@ -8,7 +8,9 @@ import {
   Globe,
   LogOut,
   Menu,
-  ShieldCheck
+  ShieldCheck,
+  Download,
+  Activity
 } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { cn } from '@/lib/utils';
