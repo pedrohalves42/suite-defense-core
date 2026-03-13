@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+
 import { Navbar } from "@/components/Navbar";
 import { SEOHead } from "@/components/SEOHead";
 import { Input } from "@/components/ui/input";
