@@ -9,7 +9,7 @@ import {
   FileBarChart, Settings, Users, Bell, Target, Activity,
   Brain, Terminal, Clock, Download, Zap, Crown, Scale,
   ClipboardCheck, Eye, Workflow, BarChart3, Crosshair,
-  Search, Star, Cpu, Presentation, Tag, ShieldCheck,
+  Search, Star, Cpu, Presentation, Tag, ShieldCheck, Sparkles,
   AlertCircle, FileSearch, Key, Lightbulb, BookOpen,
   Plug, Code, CreditCard, Archive, Fingerprint,
 } from 'lucide-react';
