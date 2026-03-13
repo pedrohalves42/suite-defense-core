@@ -13825,6 +13825,39 @@ export type Database = {
           },
         ]
       }
+      endpoint_event_buffer: {
+        Row: {
+          agent_id: string
+          batch_id: string | null
+          event_category: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          received_at: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          batch_id?: string | null
+          event_category: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          batch_id?: string | null
+          event_category?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
       endpoint_file_events: {
         Row: {
           agent_id: string
@@ -35866,6 +35899,10 @@ export type Database = {
       check_tenant_automation_quota: {
         Args: { p_tenant_id: string }
         Returns: Json
+      }
+      claim_event_buffer_batch: {
+        Args: { p_batch_id: string; p_limit?: number }
+        Returns: number
       }
       claim_jobs_for_agent: {
         Args: { p_agent_id: string; p_limit?: number }
