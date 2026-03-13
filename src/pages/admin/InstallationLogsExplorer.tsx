@@ -24,6 +24,7 @@ import { exportToCSV } from "@/lib/csv-export";
 import { toast } from "sonner";
 
 export default function InstallationLogsExplorer() {
+  const { tenant } = useTenant();
   const [filters, setFilters] = useState({
     agentName: '',
     eventType: 'all',
@@ -34,7 +35,9 @@ export default function InstallationLogsExplorer() {
     dateTo: '',
   });
 
+  // V-4001 FIX: Pass tenant_id to filter installation logs
   const { data: logs, isLoading, isError, error: errorData, refetch } = useInstallationLogs({
+    tenantId: tenant?.id,
     agentName: filters.agentName || undefined,
     eventType: filters.eventType !== 'all' ? filters.eventType : undefined,
     success: filters.success !== 'all' ? filters.success === 'true' : undefined,
