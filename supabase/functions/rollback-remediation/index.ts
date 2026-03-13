@@ -39,8 +39,9 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { data: userRole } = await supabase
-      .from('user_roles').select('tenant_id, role').eq('user_id', user.id).limit(1).maybeSingle();
+    // V-3013 FIX: Get ALL tenant roles, then validate against action's tenant
+    const { data: userRoles } = await supabase
+      .from('user_roles').select('tenant_id, role').eq('user_id', user.id);
 
     if (!userRole || !['admin', 'super_admin'].includes(userRole.role)) {
       return new Response(JSON.stringify({ error: 'Admin role required for rollback' }), {
