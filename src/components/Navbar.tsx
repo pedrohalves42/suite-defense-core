@@ -55,7 +55,7 @@ export const Navbar = () => {
           {navLinks.map((link) => (
             <button
               key={link.href}
-              onClick={() => scrollTo(link.href)}
+              onClick={() => handleNavClick(link)}
               className={cn(
                 "text-sm font-medium transition-colors",
                 scrolled 
