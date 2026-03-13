@@ -97,13 +97,21 @@ describe('Job Entity', () => {
       expect(job.status).toBe(JobStatus.PENDING);
       expect(job.retryCount).toBe(1);
 
-      // Retry 2
+      // Retry 2 — still under maxRetries
       job.queue();
       job.deliver();
       job.start();
       job.fail('error 2');
-      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.status).toBe(JobStatus.PENDING);
       expect(job.retryCount).toBe(2);
+
+      // Retry 3 — now at maxRetries, should fail permanently
+      job.queue();
+      job.deliver();
+      job.start();
+      job.fail('error 3');
+      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.retryCount).toBe(2); // didn't increment past max
       expect(job.isTerminal()).toBe(true);
     });
   });
