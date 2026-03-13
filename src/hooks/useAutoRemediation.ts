@@ -34,6 +34,14 @@ export interface RemediationAction {
   created_at: string;
 }
 
+export const ROLLBACK_SUPPORTED: RemediationActionType[] = [
+  'enable_firewall',
+  'enable_antivirus',
+  'kill_process',
+  'block_usb_device',
+  'firewall_block',
+];
+
 export const useAutoRemediation = () => {
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
@@ -67,6 +75,7 @@ export const useAutoRemediation = () => {
         body: params,
       });
       if (error) throw error;
+      if (data?.error) throw new Error(data.message || data.error);
       return data;
     },
     onSuccess: (data) => {
@@ -129,10 +138,29 @@ export const useAutoRemediation = () => {
     },
   });
 
+  const rollbackAction = useMutation({
+    mutationFn: async (actionId: string) => {
+      const { data, error } = await supabase.functions.invoke('rollback-remediation', {
+        body: { action_id: actionId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.message || data.error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['remediation-actions'] });
+      toast.success('Rollback iniciado com sucesso');
+    },
+    onError: (err: Error) => {
+      toast.error('Erro no rollback', { description: err.message });
+    },
+  });
+
   return {
     actions: actions.data || [],
     isLoading: actions.isLoading,
     executeRemediation,
     approveAction,
+    rollbackAction,
   };
 };
