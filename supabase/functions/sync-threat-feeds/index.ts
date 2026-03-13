@@ -270,14 +270,9 @@ serve(async (req: Request) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Auth check - accept JWT or service role
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    // V-3006 FIX: Use assertInternalCaller (already imported but not used!)
+    const authError = assertInternalCaller(req);
+    if (authError) return authError;
 
     // Parse tenant_id from body
     let tenantIds: string[] = [];
@@ -304,116 +299,130 @@ serve(async (req: Request) => {
 
     const results: Record<string, unknown>[] = [];
 
-    for (const tenantId of tenantIds) {
-      for (const feed of feedConfigs) {
-        // Create sync log entry
-        const { data: syncLog } = await supabase
-          .from('threat_feed_sync_log')
-          .insert({
-            tenant_id: tenantId,
-            feed_source: feed.name,
-            status: 'running',
-          })
-          .select('id')
-          .single();
-
-        const syncId = syncLog?.id;
-
+    // V-3008 FIX: Fetch each feed ONCE, then upsert per tenant (was: fetch N×M times)
+    const feedResults = await Promise.all(
+      feedConfigs.map(async (feed) => {
         try {
-          const rawIndicators = await feed.fetcher();
+          const indicators = await feed.fetcher();
+          return { name: feed.name, indicators, error: null };
+        } catch (err) {
+          return { name: feed.name, indicators: [] as RawIndicator[], error: err instanceof Error ? err.message : String(err) };
+        }
+      })
+    );
 
-          let newCount = 0;
-          let updatedCount = 0;
-
-          // Upsert indicators in batches of 50
-          const batchSize = 50;
-          for (let i = 0; i < rawIndicators.length; i += batchSize) {
-            const batch = rawIndicators.slice(i, i + batchSize);
-            const rows = batch.map(ind => ({
+    // V-3007 FIX: Process tenants in parallel (batches of 5 to avoid overwhelming DB)
+    const CONCURRENCY = 5;
+    for (let t = 0; t < tenantIds.length; t += CONCURRENCY) {
+      const tenantBatch = tenantIds.slice(t, t + CONCURRENCY);
+      
+      await Promise.all(tenantBatch.map(async (tenantId) => {
+        for (const feed of feedResults) {
+          // Create sync log entry
+          const { data: syncLog } = await supabase
+            .from('threat_feed_sync_log')
+            .insert({
               tenant_id: tenantId,
-              indicator_type: ind.type,
-              indicator_value: ind.value,
-              severity: ind.severity,
-              source: feed.name,
-              source_reference: ind.reference,
-              tags: ind.tags,
-              confidence_score: ind.confidence,
-              last_seen_at: new Date().toISOString(),
-              is_active: true,
-              metadata: ind.metadata || {},
-            }));
+              feed_source: feed.name,
+              status: feed.error ? 'failed' : 'running',
+              error_message: feed.error || null,
+            })
+            .select('id')
+            .single();
 
-            const { data: upserted, error: upsertErr } = await supabase
-              .from('threat_indicators')
-              .upsert(rows, {
-                onConflict: 'tenant_id,indicator_type,indicator_value,source',
-                ignoreDuplicates: false,
-              })
-              .select('id, created_at, updated_at');
+          const syncId = syncLog?.id;
 
-            if (upsertErr) {
-              console.error(`Upsert error for ${feed.name}:`, upsertErr.message);
-              continue;
+          if (feed.error || feed.indicators.length === 0) {
+            if (syncId) {
+              await supabase.from('threat_feed_sync_log').update({
+                sync_completed_at: new Date().toISOString(),
+                status: feed.error ? 'failed' : 'completed',
+                indicators_fetched: 0,
+                error_message: feed.error,
+              }).eq('id', syncId);
             }
+            results.push({ tenant_id: tenantId, feed: feed.name, status: feed.error ? 'failed' : 'completed', error: feed.error, fetched: 0 });
+            continue;
+          }
 
-            if (upserted) {
-              for (const row of upserted) {
-                const created = new Date(row.created_at).getTime();
-                const updated = new Date(row.updated_at).getTime();
-                if (Math.abs(created - updated) < 2000) {
-                  newCount++;
-                } else {
-                  updatedCount++;
+          try {
+            let newCount = 0;
+            let updatedCount = 0;
+
+            const batchSize = 50;
+            for (let i = 0; i < feed.indicators.length; i += batchSize) {
+              const batch = feed.indicators.slice(i, i + batchSize);
+              const rows = batch.map(ind => ({
+                tenant_id: tenantId,
+                indicator_type: ind.type,
+                indicator_value: ind.value,
+                severity: ind.severity,
+                source: feed.name,
+                source_reference: ind.reference,
+                tags: ind.tags,
+                confidence_score: ind.confidence,
+                last_seen_at: new Date().toISOString(),
+                is_active: true,
+                metadata: ind.metadata || {},
+              }));
+
+              const { data: upserted, error: upsertErr } = await supabase
+                .from('threat_indicators')
+                .upsert(rows, {
+                  onConflict: 'tenant_id,indicator_type,indicator_value,source',
+                  ignoreDuplicates: false,
+                })
+                .select('id, created_at, updated_at');
+
+              if (upsertErr) {
+                console.error(`Upsert error for ${feed.name}:`, upsertErr.message);
+                continue;
+              }
+
+              if (upserted) {
+                for (const row of upserted) {
+                  const created = new Date(row.created_at).getTime();
+                  const updated = new Date(row.updated_at).getTime();
+                  if (Math.abs(created - updated) < 2000) {
+                    newCount++;
+                  } else {
+                    updatedCount++;
+                  }
                 }
               }
             }
-          }
 
-          // Update sync log
-          if (syncId) {
-            await supabase
-              .from('threat_feed_sync_log')
-              .update({
+            if (syncId) {
+              await supabase.from('threat_feed_sync_log').update({
                 sync_completed_at: new Date().toISOString(),
-                indicators_fetched: rawIndicators.length,
+                indicators_fetched: feed.indicators.length,
                 indicators_new: newCount,
                 indicators_updated: updatedCount,
                 status: 'completed',
-              })
-              .eq('id', syncId);
-          }
+              }).eq('id', syncId);
+            }
 
-          results.push({
-            tenant_id: tenantId,
-            feed: feed.name,
-            fetched: rawIndicators.length,
-            new: newCount,
-            updated: updatedCount,
-            status: 'completed',
-          });
-        } catch (feedErr) {
-          const errMsg = feedErr instanceof Error ? feedErr.message : String(feedErr);
-          console.error(`Feed ${feed.name} error:`, errMsg);
-
-          if (syncId) {
-            await supabase
-              .from('threat_feed_sync_log')
-              .update({
+            results.push({
+              tenant_id: tenantId,
+              feed: feed.name,
+              fetched: feed.indicators.length,
+              new: newCount,
+              updated: updatedCount,
+              status: 'completed',
+            });
+          } catch (feedErr) {
+            const errMsg = feedErr instanceof Error ? feedErr.message : String(feedErr);
+            if (syncId) {
+              await supabase.from('threat_feed_sync_log').update({
                 sync_completed_at: new Date().toISOString(),
                 status: 'failed',
                 error_message: errMsg,
-              })
-              .eq('id', syncId);
+              }).eq('id', syncId);
+            }
+            results.push({ tenant_id: tenantId, feed: feed.name, status: 'failed', error: errMsg });
           }
-
-          results.push({
-            tenant_id: tenantId,
-            feed: feed.name,
-            status: 'failed',
-            error: errMsg,
-          });
         }
-      }
+      }));
     }
 
     return new Response(JSON.stringify({ success: true, results }), {
