@@ -264,7 +264,7 @@ const Tutorials = () => {
                                   {hasTroubleshooting && (
                                     <div className="mx-5 mb-5">
                                       <button onClick={() => setShowTroubleshooting(p => ({ ...p, [tutorial.id]: !p[tutorial.id] }))}
-                                        className="w-full flex items-center gap-2 p-3 rounded-lg bg-orange-500/5 border border-orange-500/20 text-orange-400 text-sm font-medium hover:bg-orange-500/10 transition-colors">
+                                        className="w-full flex items-center gap-2 p-3 rounded-lg bg-destructive/5 border border-destructive/20 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors">
                                         <Bug className="h-4 w-4" />Troubleshooting ({tutorial.troubleshooting!.length} problemas comuns)
                                         <ChevronRight className={`h-4 w-4 ml-auto transition-transform ${showTS ? "rotate-90" : ""}`} />
                                       </button>
