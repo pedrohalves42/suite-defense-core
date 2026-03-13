@@ -40,27 +40,28 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // Fetch recent uncorrelated detection events
-  const { data: detections } = await supabase
-    .from('endpoint_detection_events')
-    .select('*')
-    .gte('event_time', since)
-    .eq('status', 'open')
-    .order('event_time', { ascending: true })
-    .limit(1000);
-
-  if (!detections?.length) {
-    return new Response(JSON.stringify({ message: 'No recent detections to correlate' }), {
-      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+  // V-5003 FIX: Get distinct tenants from rules to iterate per-tenant
+  // instead of fetching ALL detections across ALL tenants in a single query
+  const ruleTenantIds = [...new Set(rules.map(r => r.tenant_id).filter(Boolean))] as string[];
+  const hasGlobalRules = rules.some(r => !r.tenant_id);
+  
+  let allTenantIds: string[] = ruleTenantIds;
+  if (hasGlobalRules) {
+    // Get all tenants that have recent detections
+    const { data: tenantRows } = await supabase
+      .from('endpoint_detection_events')
+      .select('tenant_id')
+      .gte('event_time', since)
+      .eq('status', 'open')
+      .limit(200);
+    const fromEvents = [...new Set((tenantRows || []).map(r => r.tenant_id))];
+    allTenantIds = [...new Set([...ruleTenantIds, ...fromEvents])];
   }
 
-  // Group by agent + tenant
-  const agentGroups = new Map<string, typeof detections>();
-  for (const det of detections) {
-    const key = `${det.tenant_id}::${det.agent_id}`;
-    if (!agentGroups.has(key)) agentGroups.set(key, []);
-    agentGroups.get(key)!.push(det);
+  if (!allTenantIds.length) {
+    return new Response(JSON.stringify({ message: 'No tenants with active rules/detections' }), {
+      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   let incidentsCreated = 0;
