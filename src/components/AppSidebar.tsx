@@ -69,6 +69,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const { isSuperAdmin } = useSuperAdmin();
   const { data: criticalInsightsCount = 0 } = useCriticalInsights();
   const { urgentCount } = useActionCenterCount();
+  const { favorites, isFavorite } = useFavorites();
   const location = useLocation();
   const { t } = useTranslation();
   
