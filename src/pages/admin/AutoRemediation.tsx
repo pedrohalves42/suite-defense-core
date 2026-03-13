@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useAutoRemediation, type RemediationActionType } from '@/hooks/useAutoRemediation';
+import { useAutoRemediation, type RemediationActionType, ROLLBACK_SUPPORTED } from '@/hooks/useAutoRemediation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { Shield, Zap, CheckCircle2, Loader2, Search, TrendingUp, AlertTriangle, XCircle, Clock } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Shield, Zap, CheckCircle2, Loader2, Search, TrendingUp, AlertTriangle, Undo2, ShieldCheck } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import TriggerRemediationDialog from '@/components/admin/TriggerRemediationDialog';
@@ -32,7 +33,7 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
 };
 
 export default function AutoRemediationPage() {
-  const { actions, isLoading, approveAction } = useAutoRemediation();
+  const { actions, isLoading, approveAction, rollbackAction } = useAutoRemediation();
   const [search, setSearch] = useState('');
 
   const filteredActions = actions.filter(a => {
@@ -45,13 +46,15 @@ export default function AutoRemediationPage() {
     );
   });
 
+  const terminalActions = actions.filter(a => ['success', 'failed'].includes(a.status));
   const stats = {
     total: actions.length,
     success: actions.filter(a => a.status === 'success').length,
     pending: actions.filter(a => a.status === 'pending').length,
     failed: actions.filter(a => a.status === 'failed').length,
-    successRate: actions.length > 0
-      ? Math.round((actions.filter(a => a.status === 'success').length / actions.filter(a => ['success', 'failed'].includes(a.status)).length) * 100) || 0
+    rolledBack: actions.filter(a => a.status === 'rolled_back').length,
+    successRate: terminalActions.length > 0
+      ? Math.round((actions.filter(a => a.status === 'success').length / terminalActions.length) * 100)
       : 0,
   };
 
@@ -64,14 +67,14 @@ export default function AutoRemediationPage() {
             Auto-Remediação
           </h1>
           <p className="text-muted-foreground mt-1">
-            Motor closed-loop de remediação automática de ameaças
+            Motor closed-loop com blast radius, circuit breaker e rollback automático
           </p>
         </div>
         <TriggerRemediationDialog />
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card>
           <CardContent className="pt-4 text-center">
             <div className="text-2xl font-bold text-foreground">{stats.total}</div>
@@ -98,6 +101,12 @@ export default function AutoRemediationPage() {
         </Card>
         <Card>
           <CardContent className="pt-4 text-center">
+            <div className="text-2xl font-bold text-orange-500">{stats.rolledBack}</div>
+            <p className="text-xs text-muted-foreground">Revertidos</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 text-center">
             <div className="text-2xl font-bold text-primary flex items-center justify-center gap-1">
               <TrendingUp className="h-4 w-4" />
               {stats.successRate}%
@@ -106,6 +115,21 @@ export default function AutoRemediationPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Blast Radius Info */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="pt-4">
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Proteções Ativas</p>
+              <p className="text-xs text-muted-foreground">
+                Blast Radius (max 10% da frota) • Circuit Breaker Global (30% em 10min) • Rollback disponível para ações reversíveis
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Actions Table */}
       <Card>
@@ -116,7 +140,7 @@ export default function AutoRemediationPage() {
                 <Shield className="h-5 w-5" />
                 Histórico de Remediações
               </CardTitle>
-              <CardDescription>Ações automáticas, manuais e aprovações pendentes</CardDescription>
+              <CardDescription>Ações automáticas, manuais, aprovações e rollbacks</CardDescription>
             </div>
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -142,66 +166,95 @@ export default function AutoRemediationPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Ação</TableHead>
-                    <TableHead>Agente</TableHead>
-                    <TableHead>Origem</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Quando</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredActions.map(action => {
-                    const actionMeta = ACTION_LABELS[action.action_type as RemediationActionType] || { label: action.action_type, icon: '⚙️' };
-                    const statusMeta = STATUS_MAP[action.status] || { label: action.status, variant: 'outline' as const };
+              <TooltipProvider>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Ação</TableHead>
+                      <TableHead>Agente</TableHead>
+                      <TableHead>Origem</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Quando</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredActions.map(action => {
+                      const actionMeta = ACTION_LABELS[action.action_type as RemediationActionType] || { label: action.action_type, icon: '⚙️' };
+                      const statusMeta = STATUS_MAP[action.status] || { label: action.status, variant: 'outline' as const };
+                      const canRollback = (action.status === 'success' || action.status === 'executing') &&
+                        ROLLBACK_SUPPORTED.includes(action.action_type as RemediationActionType);
 
-                    return (
-                      <TableRow key={action.id}>
-                        <TableCell>
-                          <span className="flex items-center gap-2">
-                            <span>{actionMeta.icon}</span>
-                            <span className="font-medium">{actionMeta.label}</span>
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{action.agent_name || '—'}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {action.trigger_source === 'manual_dashboard' ? '👤 Manual' : action.trigger_source}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={statusMeta.variant}>{statusMeta.label}</Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(action.created_at), { addSuffix: true, locale: ptBR })}
-                        </TableCell>
-                        <TableCell>
-                          {action.status === 'pending' && action.requires_approval && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => approveAction.mutate(action.id)}
-                              disabled={approveAction.isPending}
-                              className="gap-1"
-                            >
-                              <CheckCircle2 className="h-3 w-3" />
-                              Aprovar
-                            </Button>
-                          )}
-                          {action.error_message && (
-                            <span className="text-xs text-destructive" title={action.error_message}>
-                              <AlertTriangle className="h-3 w-3 inline" />
+                      return (
+                        <TableRow key={action.id}>
+                          <TableCell>
+                            <span className="flex items-center gap-2">
+                              <span>{actionMeta.icon}</span>
+                              <span className="font-medium">{actionMeta.label}</span>
                             </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{action.agent_name || '—'}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {action.trigger_source.startsWith('rollback:') ? '↩️ Rollback' :
+                               action.trigger_source === 'manual_dashboard' ? '👤 Manual' :
+                               action.trigger_source.startsWith('approved:') ? '✅ Aprovado' :
+                               action.trigger_source}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={statusMeta.variant}>{statusMeta.label}</Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(action.created_at), { addSuffix: true, locale: ptBR })}
+                          </TableCell>
+                          <TableCell className="text-right space-x-1">
+                            {action.status === 'pending' && action.requires_approval && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => approveAction.mutate(action.id)}
+                                disabled={approveAction.isPending}
+                                className="gap-1"
+                              >
+                                <CheckCircle2 className="h-3 w-3" />
+                                Aprovar
+                              </Button>
+                            )}
+                            {canRollback && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => rollbackAction.mutate(action.id)}
+                                    disabled={rollbackAction.isPending}
+                                    className="gap-1 text-orange-500 hover:text-orange-600"
+                                  >
+                                    <Undo2 className="h-3 w-3" />
+                                    Reverter
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Reverter esta ação de remediação</TooltipContent>
+                              </Tooltip>
+                            )}
+                            {action.error_message && (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <AlertTriangle className="h-4 w-4 text-destructive inline" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  {action.error_message}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TooltipProvider>
             </div>
           )}
         </CardContent>
