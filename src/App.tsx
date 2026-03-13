@@ -330,6 +330,7 @@ const App = () => (
                 <Route path="security-graph" element={<SecurityGraph />} />
                 <Route path="ransomware-incident" element={<RansomwareIncident />} />
                 <Route path="security-benchmark" element={<SecurityBenchmark />} />
+                <Route path="onboarding" element={<OnboardingWizard />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) - Protected by MFA Guard */}
