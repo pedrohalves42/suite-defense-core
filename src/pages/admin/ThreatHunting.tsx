@@ -53,10 +53,6 @@ export default function ThreatHunting() {
       const allResults: any[] = [];
       const term = searchTerm.toLowerCase();
 
-      const sources = eventSource === 'all'
-        ? ['process', 'file', 'network', 'registry', 'detection'] as const
-        : [eventSource] as const;
-
       async function searchTable(tableName: 'endpoint_process_events' | 'endpoint_file_events' | 'endpoint_network_events' | 'endpoint_registry_events' | 'endpoint_detection_events', source: string, orFilter?: string) {
         let query = supabase
           .from(tableName)
@@ -68,40 +64,29 @@ export default function ThreatHunting() {
         if (suspiciousOnly && source !== 'detection') {
           query = query.eq('is_suspicious' as any, true);
         }
-
         if (term && orFilter) {
           query = query.or(orFilter);
         }
-
         const { data } = await query;
         if (data) {
           allResults.push(...(data as any[]).map((row: any) => ({ ...row, _source: source })));
         }
       }
 
-      for (const source of sources) {
-        if (source === 'process' || source === 'all') {
-          if (source === 'process' || eventSource === 'all')
-            await searchTable('endpoint_process_events', 'process', term ? `process_name.ilike.%${term}%,command_line.ilike.%${term}%,user_name.ilike.%${term}%` : undefined);
-        }
-        if (source === 'file' || (source !== 'process' && eventSource === 'all')) {
-          if (source === 'file' || eventSource === 'all')
-            await searchTable('endpoint_file_events', 'file', term ? `file_path.ilike.%${term}%,file_name.ilike.%${term}%,sha256_hash.ilike.%${term}%` : undefined);
-        }
-        if (source === 'network' || (source !== 'process' && source !== 'file' && eventSource === 'all')) {
-          if (source === 'network' || eventSource === 'all')
-            await searchTable('endpoint_network_events', 'network', term ? `remote_address.ilike.%${term}%,domain.ilike.%${term}%,process_name.ilike.%${term}%` : undefined);
-        }
-        if (source === 'registry' || eventSource === 'all') {
-          if (source === 'registry' || eventSource === 'all')
-            await searchTable('endpoint_registry_events', 'registry', term ? `key_path.ilike.%${term}%,value_name.ilike.%${term}%,value_data.ilike.%${term}%` : undefined);
-        }
-        if (source === 'detection' || eventSource === 'all') {
-          if (source === 'detection' || eventSource === 'all')
-            await searchTable('endpoint_detection_events', 'detection', term ? `detection_name.ilike.%${term}%,command_line.ilike.%${term}%,mitre_technique_id.ilike.%${term}%` : undefined);
-        }
-        // Break after first iteration for non-'all' source
-        if (eventSource !== 'all') break;
+      if (eventSource === 'all' || eventSource === 'process') {
+        await searchTable('endpoint_process_events', 'process', term ? `process_name.ilike.%${term}%,command_line.ilike.%${term}%,user_name.ilike.%${term}%` : undefined);
+      }
+      if (eventSource === 'all' || eventSource === 'file') {
+        await searchTable('endpoint_file_events', 'file', term ? `file_path.ilike.%${term}%,file_name.ilike.%${term}%,sha256_hash.ilike.%${term}%` : undefined);
+      }
+      if (eventSource === 'all' || eventSource === 'network') {
+        await searchTable('endpoint_network_events', 'network', term ? `remote_address.ilike.%${term}%,domain.ilike.%${term}%,process_name.ilike.%${term}%` : undefined);
+      }
+      if (eventSource === 'all' || eventSource === 'registry') {
+        await searchTable('endpoint_registry_events', 'registry', term ? `key_path.ilike.%${term}%,value_name.ilike.%${term}%,value_data.ilike.%${term}%` : undefined);
+      }
+      if (eventSource === 'all' || eventSource === 'detection') {
+        await searchTable('endpoint_detection_events', 'detection', term ? `detection_name.ilike.%${term}%,command_line.ilike.%${term}%,mitre_technique_id.ilike.%${term}%` : undefined);
       }
 
       // Sort by event_time desc
