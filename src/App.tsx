@@ -283,7 +283,7 @@ const App = () => (
                 <Route path="agent-groups" element={<Navigate to="/admin/agent-center?tab=groups" replace />} />
                 <Route path="agent-tags" element={<Navigate to="/admin/agent-center?tab=tags" replace />} />
                 <Route path="notification-settings" element={<NotificationSettings />} />
-                <Route path="security-monitoring" element={<SecurityMonitoring />} />
+                <Route path="security-monitoring" element={<Navigate to="/admin/threat-center?tab=alerts" replace />} />
                 <Route path="mass-reinstall" element={<MassReinstall />} />
                 <Route path="invites" element={<Invites />} />
                 <Route path="api-docs" element={<ApiDocumentation />} />
