@@ -4939,6 +4939,24 @@ function Send-Heartbeat {
                     }
                     
                     # ============================================
+                    # v5.0.14: AGGREGATION CONFIG FROM SERVER
+                    # ============================================
+                    if ($response.aggregation) {
+                        try {
+                            $aggConfig = $response.aggregation
+                            if ($aggConfig -is [PSCustomObject]) {
+                                $aggHash = @{}
+                                $aggConfig.PSObject.Properties | ForEach-Object { $aggHash[$_.Name] = $_.Value }
+                                Update-AggregationConfig -Config $aggHash
+                            } elseif ($aggConfig -is [hashtable]) {
+                                Update-AggregationConfig -Config $aggConfig
+                            }
+                        } catch {
+                            Write-Log "[HEARTBEAT] Failed to parse aggregation config: $($_.Exception.Message)" "WARN"
+                        }
+                    }
+
+                    # ============================================
                     # FORCE UPDATE VIA HEARTBEAT RESPONSE
                     # Ported from v4 - bypasses job system completely
                     # ============================================
