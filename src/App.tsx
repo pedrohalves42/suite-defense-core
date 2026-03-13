@@ -246,7 +246,8 @@ const App = () => (
                 <Route path="plan-upgrade" element={<PlanUpgrade />} />
                 <Route path="subscriptions" element={<Subscriptions />} />
                 <Route path="installations" element={<Installations />} />
-                <Route path="agent-health" element={<AgentHealthMonitor />} />
+                <Route path="agent-center" element={<AgentCenter />} />
+                <Route path="agent-health" element={<Navigate to="/admin/agent-center?tab=health" replace />} />
                 <Route path="diagnostics" element={<DiagnosticsCenter />} />
                 <Route path="ai-insights" element={<AIInsights />} />
                 <Route path="ai-actions" element={<AIActionApproval />} />
