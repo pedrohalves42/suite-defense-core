@@ -146,6 +146,7 @@ export function useFailureRate(tenantId: string | undefined, hoursBack: number =
 }
 
 export function useInstallationLogs(filters?: {
+  tenantId?: string; // V-4001: Add tenant filter
   agentId?: string;
   agentName?: string;
   eventType?: string;
@@ -164,6 +165,10 @@ export function useInstallationLogs(filters?: {
         .select('*')
         .order('created_at', { ascending: false });
 
+      // V-4001 FIX: Always filter by tenant to prevent cross-tenant data access
+      if (filters?.tenantId) {
+        query = query.eq('tenant_id', filters.tenantId);
+      }
       if (filters?.agentId) {
         query = query.eq('agent_id', filters.agentId);
       }
@@ -196,5 +201,6 @@ export function useInstallationLogs(filters?: {
       if (error) throw error;
       return data;
     },
+    enabled: !!filters?.tenantId, // V-4001: Only query when tenant is known
   });
 }

@@ -41,15 +41,21 @@ Deno.serve(async (req) => {
     const timeRangeHours = body.time_range_hours || 24;
     const cutoff = new Date(Date.now() - timeRangeHours * 60 * 60 * 1000).toISOString();
 
-    // V-1025 FIX: Validate caller has access to requested tenant (if specified)
-    if (tenantId) {
-      const validation = await validateCallerTenant(req, supabase, tenantId);
-      if (!validation.authorized) {
-        return new Response(
-          JSON.stringify({ error: validation.error }),
-          { status: validation.statusCode || 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    // V-4002 FIX: Always require tenant_id — processing all tenants without auth is dangerous
+    if (!tenantId) {
+      return new Response(
+        JSON.stringify({ error: 'tenant_id is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // V-1025 FIX: Validate caller has access to requested tenant
+    const validation = await validateCallerTenant(req, supabase, tenantId);
+    if (!validation.authorized) {
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: validation.statusCode || 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Get tenants
