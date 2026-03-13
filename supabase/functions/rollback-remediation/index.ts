@@ -43,7 +43,9 @@ Deno.serve(async (req: Request) => {
     const { data: userRoles } = await supabase
       .from('user_roles').select('tenant_id, role').eq('user_id', user.id);
 
-    if (!userRole || !['admin', 'super_admin'].includes(userRole.role)) {
+    // V-3013 FIX: Check if user has admin role in ANY tenant first
+    const adminRoles = (userRoles || []).filter(r => ['admin', 'super_admin'].includes(r.role));
+    if (adminRoles.length === 0) {
       return new Response(JSON.stringify({ error: 'Admin role required for rollback' }), {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -56,12 +58,15 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Fetch original action
+    // V-3013 FIX: Get the action first, then verify user has admin access to THAT tenant
+    const userTenantIds = adminRoles.map(r => r.tenant_id);
+    
+    // Fetch original action — filter by user's accessible tenants
     const { data: action, error: fetchErr } = await supabase
       .from('auto_remediation_actions')
       .select('*')
       .eq('id', action_id)
-      .eq('tenant_id', userRole.tenant_id)
+      .in('tenant_id', userTenantIds)
       .single();
 
     if (fetchErr || !action) {
