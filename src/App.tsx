@@ -264,10 +264,14 @@ const App = () => (
                 <Route path="installation-health" element={<InstallationHealth />} />
                 <Route path="performance-metrics" element={<PerformanceMetrics />} />
                 <Route path="system-health" element={<SystemHealth />} />
-                <Route path="software-inventory" element={<SoftwareInventory />} />
-                <Route path="vulnerabilities" element={<VulnerabilityFindings />} />
-                <Route path="web-activity" element={<WebActivity />} />
-                <Route path="dns-filter" element={<DNSFilter />} />
+                <Route path="software-inventory" element={<Navigate to="/admin/asset-security?tab=inventory" replace />} />
+                <Route path="vulnerabilities" element={<Navigate to="/admin/vulnerability-center?tab=vulnerabilities" replace />} />
+                <Route path="web-activity" element={<Navigate to="/admin/network-security?tab=web-activity" replace />} />
+                <Route path="dns-filter" element={<Navigate to="/admin/network-security?tab=dns-filter" replace />} />
+                <Route path="vulnerability-center" element={<VulnerabilityCenter />} />
+                <Route path="network-security" element={<NetworkSecurityCenter />} />
+                <Route path="asset-security" element={<AssetSecurityCenter />} />
+                <Route path="threat-center" element={<ThreatCenter />} />
                 <Route path="agent-timeline" element={<Navigate to="/admin/agent-center?tab=timeline" replace />} />
                 <Route path="agent-releases" element={<AgentReleases />} />
                 <Route path="agent-versions" element={<Navigate to="/admin/agent-center?tab=versions" replace />} />
