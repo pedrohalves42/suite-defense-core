@@ -139,7 +139,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Globe, label: 'Sites Acessados', to: '/admin/web-activity' },
     { icon: Network, label: 'Filtro de Sites', to: '/admin/dns-filter' },
     { icon: ShieldAlert, label: 'Programas Arriscados', to: '/admin/software-risk' },
-    { icon: FileSearch, label: 'Histórico', to: '/admin/agent-timeline' },
+    { icon: FileSearch, label: 'Histórico', to: '/admin/agent-center?tab=timeline' },
     { icon: AlertCircle, label: 'Resolver Alertas', to: '/admin/alert-resolution' },
     { icon: Crosshair, label: 'Teste de Resistência', to: '/admin/attack-simulation' },
     { icon: Eye, label: 'Programas Ocultos', to: '/admin/shadow-it' },
