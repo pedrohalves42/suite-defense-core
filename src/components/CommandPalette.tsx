@@ -164,7 +164,7 @@ export const CommandPalette = () => {
                   onClick={(e) => { e.stopPropagation(); toggleFavorite(item.path); }}
                   className={cn(
                     "opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity",
-                    isFavorite(item.path) ? "text-yellow-500 opacity-100" : "text-muted-foreground"
+                    isFavorite(item.path) ? "text-primary opacity-100" : "text-muted-foreground"
                   )}
                 >
                   <Star className={cn("h-3.5 w-3.5", isFavorite(item.path) && "fill-current")} />
