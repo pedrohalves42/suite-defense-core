@@ -186,20 +186,28 @@ Deno.serve(async (req) => {
       logger.info(`[${requestId}] Skipped ${skippedDueToBusinessHours.length} agents due to business hours`);
     }
 
-    // Log de segurança para auditoria
-    if (alertsCreated.length > 0) {
-      await supabase.from('security_logs').insert({
+    // V-8005 FIX: Log security events per-tenant (each tenant gets their own audit trail)
+    const alertsByTenant = new Map<string, typeof alertsCreated>();
+    for (const alert of alertsCreated) {
+      const tid = (unhealthyAgents as AgentExecutionHealth[]).find(a => a.agent_name === alert.agent_name)?.tenant_id;
+      if (tid) {
+        if (!alertsByTenant.has(tid)) alertsByTenant.set(tid, []);
+        alertsByTenant.get(tid)!.push(alert);
+      }
+    }
+
+    if (alertsByTenant.size > 0) {
+      const secLogs = [...alertsByTenant.entries()].map(([tid, alerts]) => ({
+        tenant_id: tid,
         event_type: 'watchdog_non_execution',
         severity: 'info',
         details: {
           request_id: requestId,
-          total_problems: unhealthyAgents.length,
-          alerts_created: alertsCreated.length,
-          alerts_skipped: alertsSkipped.length,
-          problems_by_type: problemsByType,
-          agents_alerted: alertsCreated.map(a => a.agent_name),
+          alerts_created: alerts.length,
+          agents_alerted: alerts.map(a => a.agent_name),
         },
-      });
+      }));
+      await supabase.from('security_logs').insert(secLogs);
     }
 
     logger.info(`[${requestId}] Watchdog completed: ${alertsCreated.length} alerts created, ${alertsSkipped.length} skipped, ${skippedDueToBusinessHours.length} outside business hours`);
