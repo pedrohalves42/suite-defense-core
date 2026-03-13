@@ -23,6 +23,7 @@ export default defineConfig({
       'build/**',
       'e2e/**',
       'contracts/**',
+      'supabase/**',
       '**/*.spec.ts',
       '**/*.spec.tsx',
     ],
