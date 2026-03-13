@@ -52,6 +52,14 @@ Deno.serve(async (req) => {
         skip_process_collection: false,
         skip_network_collection: false,
         compress_payloads: false,
+        aggregation: {
+          enabled: true,
+          window_seconds: 3,
+          file_threshold: 50,
+          process_threshold: 20,
+          network_threshold: 100,
+          max_buffer_size: 500,
+        },
       });
     }
 
