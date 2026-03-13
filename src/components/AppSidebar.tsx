@@ -132,6 +132,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Presentation, label: 'Resumo Executivo', to: '/admin/executive' },
     { icon: Cpu, label: 'Meus Computadores', to: '/admin/agent-center' },
     { icon: Activity, label: 'Tempo Real', to: '/admin/monitoring-advanced' },
+    { icon: Sparkles, label: 'Novo Cliente', to: '/admin/onboarding' },
   ], [urgentCount]);
 
   const securityItems = useMemo<MenuItem[]>(() => [
