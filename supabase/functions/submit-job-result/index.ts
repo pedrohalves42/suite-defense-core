@@ -856,9 +856,10 @@ Deno.serve(async (req) => {
       }
 
       // PROCESS NETWORK INFO (ANTES do update)
-      if (job.type === 'collect_network_info' && (outputData.adapters || outputData.ip_addresses)) {
+      if (job.type === 'collect_network_info' && (outputData.adapters || outputData.ip_addresses || outputData.network_adapters)) {
         try {
           console.log('[submit-job-result] [ZERO_TRUST] Processing network info BEFORE marking completed...')
+          console.log('[submit-job-result] [NET-DEBUG] Output keys:', Object.keys(outputData))
           
           const adapters = (outputData.adapters || []) as Array<Record<string, unknown>>
           const ipAddresses = (outputData.ip_addresses || []) as Array<Record<string, unknown>>
@@ -866,37 +867,59 @@ Deno.serve(async (req) => {
             ? new Date(String(outputData.collected_at)).toISOString()
             : new Date().toISOString()
 
-          // Build network adapters array
-          const networkAdapters = adapters.map(a => ({
-            name: a.Name || a.name || '',
-            mac_address: a.MacAddress || a.mac_address || '',
-            speed: a.LinkSpeed || a.link_speed || '',
-            status: 'up',
-            ip_address: '',
-          }))
+          // Classify IPs: private vs public
+          const classifyIp = (addr: string): 'private' | 'public' | 'link_local' => {
+            if (addr.startsWith('192.168.') || addr.startsWith('10.') || addr.startsWith('172.16.') || addr.startsWith('172.17.') || addr.startsWith('172.18.') || addr.startsWith('172.19.') || addr.startsWith('172.2') || addr.startsWith('172.30.') || addr.startsWith('172.31.')) return 'private'
+            if (addr.startsWith('169.254.') || addr.startsWith('127.')) return 'link_local'
+            return 'public'
+          }
 
-          // Extract gateway and DNS from IP data
-          const privateIps = ipAddresses.filter((ip: any) => {
-            const addr = String(ip.ip || '')
-            return addr.startsWith('192.168.') || addr.startsWith('10.') || addr.startsWith('172.')
-          })
+          const privateIps = ipAddresses.filter((ip: any) => classifyIp(String(ip.ip || '')) === 'private')
+          const publicIps = ipAddresses.filter((ip: any) => classifyIp(String(ip.ip || '')) === 'public')
+
+          // Build network adapters - enrich with IP addresses from ip_addresses array
+          const networkAdapters = adapters.length > 0
+            ? adapters.map((a, idx) => ({
+                name: String(a.Name || a.name || ''),
+                mac_address: String(a.MacAddress || a.mac_address || ''),
+                speed: String(a.LinkSpeed || a.link_speed || ''),
+                status: String(a.Status || a.status || 'up').toLowerCase(),
+                ip_address: idx < privateIps.length ? String((privateIps[idx] as any).ip) : '',
+              }))
+            : (outputData.network_adapters || []) as Array<Record<string, unknown>>
+
+          // Derive public IP from ip_addresses if not provided directly
+          const derivedPublicIp = outputData.public_ip 
+            || (publicIps.length > 0 ? String((publicIps[0] as any).ip) : null)
+
+          // Derive gateway from first private IP if not provided
+          const derivedGateway = outputData.gateway_ip 
+            || (privateIps.length > 0 ? String((privateIps[0] as any).ip) : null)
 
           const networkRecord = {
             agent_id: job.agent_id,
             tenant_id: agent.tenant_id,
-            firewall_domain: outputData.firewall_domain ?? null,
-            firewall_private: outputData.firewall_private ?? null,
-            firewall_public: outputData.firewall_public ?? null,
-            open_ports: outputData.open_ports || [],
-            active_connections: outputData.active_connections || [],
+            firewall_domain: outputData.firewall_domain ?? outputData.FirewallDomain ?? null,
+            firewall_private: outputData.firewall_private ?? outputData.FirewallPrivate ?? null,
+            firewall_public: outputData.firewall_public ?? outputData.FirewallPublic ?? null,
+            open_ports: outputData.open_ports || outputData.OpenPorts || [],
+            active_connections: (outputData.active_connections || outputData.ActiveConnections || []).slice(0, 100),
             network_adapters: networkAdapters,
-            dns_servers: outputData.dns_servers || [],
-            gateway_ip: outputData.gateway_ip || (privateIps.length > 0 ? String((privateIps[0] as any).ip) : null),
-            public_ip: outputData.public_ip || null,
-            dns_test_success: outputData.dns_test_success ?? null,
-            https_test_success: outputData.https_test_success ?? null,
+            dns_servers: outputData.dns_servers || outputData.DnsServers || [],
+            gateway_ip: derivedGateway,
+            public_ip: derivedPublicIp,
+            dns_test_success: outputData.dns_test_success ?? outputData.DnsTestSuccess ?? null,
+            https_test_success: outputData.https_test_success ?? outputData.HttpsTestSuccess ?? null,
             collected_at: collectedAt,
           }
+
+          console.log('[submit-job-result] [NET-DEBUG] Network record summary:', {
+            adapters_count: networkAdapters.length,
+            ips_count: ipAddresses.length,
+            public_ip: derivedPublicIp,
+            gateway: derivedGateway,
+            has_firewall: networkRecord.firewall_domain !== null,
+          })
 
           const { error: insertError } = await supabase
             .from('agent_network_info')
