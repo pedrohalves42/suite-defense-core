@@ -114,7 +114,8 @@ Deno.serve(async (req: Request) => {
   // If there are global rules (tenant_id = null), we need to find which tenants have data
   const hasGlobalRules = rules.some(r => !r.tenant_id);
   if (hasGlobalRules) {
-    // Get distinct tenants from recent events across all relevant tables
+    // V-9004 FIX: Get distinct tenants from recent events — use RPC or wider limit
+    // to avoid missing tenants with data beyond the previous .limit(100)
     for (const eventType of eventTypes) {
       const table = `endpoint_${eventType}_events`;
       const { data: tenantRows } = await supabase
@@ -122,10 +123,14 @@ Deno.serve(async (req: Request) => {
         .select('tenant_id')
         .gte('event_time', since)
         .eq('is_suspicious', false)
-        .limit(100);
+        .limit(1000); // V-9004: Increased from 100 to 1000 to catch more tenants
       if (tenantRows) {
+        const seen = new Set<string>();
         for (const row of tenantRows) {
-          allTenantIds.add(row.tenant_id);
+          if (!seen.has(row.tenant_id)) {
+            seen.add(row.tenant_id);
+            allTenantIds.add(row.tenant_id);
+          }
         }
       }
     }
