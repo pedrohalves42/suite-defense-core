@@ -33861,6 +33861,36 @@ export type Database = {
           },
         ]
       }
+      v_normalized_events: {
+        Row: {
+          agent_id: string | null
+          command_line: string | null
+          created_at: string | null
+          detection_name: string | null
+          detection_tags: string[] | null
+          domain: string | null
+          event_category: string | null
+          event_time: string | null
+          event_type: string | null
+          file_hash: string | null
+          file_path: string | null
+          id: string | null
+          is_suspicious: boolean | null
+          key_path: string | null
+          mitre_tactic: string | null
+          mitre_technique_id: string | null
+          parent_process_name: string | null
+          parent_process_pid: number | null
+          process_name: string | null
+          process_pid: number | null
+          remote_address: string | null
+          remote_port: number | null
+          severity: string | null
+          tenant_id: string | null
+          user_name: string | null
+        }
+        Relationships: []
+      }
       v_pending_critical_approvals: {
         Row: {
           action_payload: Json | null
