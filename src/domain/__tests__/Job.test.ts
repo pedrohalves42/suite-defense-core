@@ -3,10 +3,12 @@ import { Job, JobType, JobStatus, JobPriority } from '../entities/Job';
 import { AgentId } from '../value-objects/AgentId';
 import { TenantId } from '../value-objects/TenantId';
 
+const makeTenantId = () => TenantId.create(crypto.randomUUID()).value;
+
 const makeJob = (overrides?: Partial<Parameters<typeof Job.create>[0]>) => {
   return Job.create({
     agentId: AgentId.generate(),
-    tenantId: TenantId.generate(),
+    tenantId: makeTenantId(),
     type: JobType.HEALTH_CHECK,
     ...overrides,
   });
