@@ -112,6 +112,25 @@
   - Fail-open design (não bloqueia se rate limiter falhar)
   - Complementa o rate limiting frontend existente
 
+## ✅ Concluído (Sprint 10 — 13/03/2026)
+
+### Dashboard Customizável & Filtros Avançados
+- ✅ **`CustomizableDashboard`** — componente drag-and-drop com `react-grid-layout`
+  - Layout persistido em localStorage
+  - Modo locked/unlocked com indicadores visuais
+  - Reset para layout padrão
+- ✅ **`useURLFilters`** hook — filtros persistidos em URL query params
+  - Suporte a tab, search, status via `?tab=agents&q=server&status=online`
+  - Estado compartilhável via URL
+
+## ✅ Concluído (Sprint 11 — 13/03/2026)
+
+### Segurança Server-Side & Rate Limiting
+- ✅ **Rate Limiting Server-Side** — Edge Function `rate-limit-check`
+  - Sliding window por endpoint category (auth: 10/min, mutation: 30/min, export: 5/5min)
+  - Fail-open design (não bloqueia se rate limiter falhar)
+  - Complementa o rate limiting frontend existente
+
 ## ⏳ Pendente (Próximos Sprints)
 
 | # | Área | Prioridade | Status |
