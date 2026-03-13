@@ -85,8 +85,11 @@ serveTenant(async (_req, ctx) => {
       .limit(1)
       .maybeSingle();
 
+    // EICAR: Windows Defender é ativo por padrão em todas as máquinas Windows.
+    // Só considerar "não detectado" se houver registro EXPLÍCITO de AV inactive.
+    // Sem registro = Defender ativo por padrão = detectaria o EICAR.
     const wouldDetect = simulation_type === 'eicar_test' 
-      ? (avStatus?.status === 'active')
+      ? (avStatus?.status !== 'inactive') // null (sem registro) ou 'active' = detectado
       : simulation_type === 'firewall_test'
       ? true
       : Math.random() > 0.3;
