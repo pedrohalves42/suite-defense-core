@@ -68,9 +68,10 @@ Deno.serve(async (req: Request) => {
 
   // V-5003 FIX: Iterate per tenant to enforce strict isolation
   for (const tenantId of allTenantIds) {
+    // V-7006: Slim select — only fetch fields needed for correlation, not full event data
     const { data: detections } = await supabase
       .from('endpoint_detection_events')
-      .select('*')
+      .select('id, tenant_id, agent_id, mitre_technique_id, mitre_tactic, detection_name, severity, event_time, source_event_type, status, command_line, process_name')
       .eq('tenant_id', tenantId)
       .gte('event_time', since)
       .eq('status', 'open')
