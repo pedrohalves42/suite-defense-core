@@ -23,9 +23,10 @@ export function useDetectionEvents(options?: { agentId?: string; status?: string
   return useQuery({
     queryKey: ['edr-detections', activeTenant?.id, options?.agentId, options?.status, limit],
     queryFn: async () => {
+      // V-6004: Slim select — avoid fetching large raw_event_data blobs
       let query = supabase
         .from('endpoint_detection_events')
-        .select('*')
+        .select('id, tenant_id, agent_id, rule_name, severity, status, mitre_technique_id, mitre_tactic, mitre_technique_name, event_time, description, source_event_data, created_at')
         .eq('tenant_id', activeTenant!.id)
         .order('event_time', { ascending: false })
         .limit(limit);

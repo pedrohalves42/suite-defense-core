@@ -24,7 +24,8 @@ async function fetchAgents(tenantId: string): Promise<DashboardAgent[]> {
 }
 
 async function fetchJobs(tenantId: string): Promise<DashboardJob[]> {
-  const { data, error } = await supabase.from("jobs").select("*")
+  // V-6005: Slim select for jobs — avoid payload column
+  const { data, error } = await supabase.from("jobs").select("id, agent_id, agent_name, tenant_id, type, status, priority, created_at, started_at, completed_at, expires_at, error_message")
     .eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(100);
   if (error) throw error;
   return data || [];
