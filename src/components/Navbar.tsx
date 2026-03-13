@@ -24,10 +24,14 @@ export const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const scrollTo = (href: string) => {
+  const handleNavClick = (link: typeof navLinks[0]) => {
     setMobileOpen(false);
-    const el = document.querySelector(href);
-    el?.scrollIntoView({ behavior: "smooth" });
+    if ((link as any).isRoute) {
+      navigate(link.href);
+    } else {
+      const el = document.querySelector(link.href);
+      el?.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   return (
