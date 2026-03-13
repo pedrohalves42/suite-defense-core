@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { SidebarTenantSelector } from '@/components/SidebarTenantSelector';
 import { AppModeBadge } from '@/components/layout/AppModeBadge';
+import { useFavorites } from '@/hooks/useFavorites';
 import logoImage from '@/assets/logo-cybshield-new.png';
 
 interface MenuItem {
@@ -68,6 +69,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const { isSuperAdmin } = useSuperAdmin();
   const { data: criticalInsightsCount = 0 } = useCriticalInsights();
   const { urgentCount } = useActionCenterCount();
+  const { favorites, isFavorite } = useFavorites();
   const location = useLocation();
   const { t } = useTranslation();
   
@@ -526,6 +528,32 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
         <nav className="relative z-20 flex-1 overflow-y-auto py-2 px-2 scrollbar-thin">
           {isAdmin ? (
             <motion.div variants={containerVariants} initial="show" animate="show" className="space-y-1">
+              {/* FAVORITES - pinned pages */}
+              {(() => {
+                const allItems = [...overviewItems, ...securityItems, ...managementItems, ...complianceItems, ...intelligenceItems, ...advancedItems];
+                const favItems = allItems.filter(item => favorites.includes(item.to));
+                if (favItems.length === 0) return null;
+                return (
+                  <>
+                    {!isCollapsed && (
+                      <div className="px-3 py-0.5">
+                        <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--neon-cyan)_/_0.3)] flex items-center gap-1">
+                          ⭐ Favoritos
+                        </span>
+                      </div>
+                    )}
+                    <div className="space-y-0.5">
+                      {favItems.map((item, idx) => (
+                        <div key={`fav-${item.to}`}>
+                          {renderNavItem(item, idx)}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="sidebar-divider-neon my-2.5 mx-2" />
+                  </>
+                );
+              })()}
+
               {/* OVERVIEW - always visible, no section header */}
               <div className="space-y-0.5">
                 {overviewItems.map((item, idx) => (

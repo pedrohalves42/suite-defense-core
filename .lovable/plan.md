@@ -56,13 +56,11 @@
 - ~12 rotas antigas redirecionam para as 4 novas páginas consolidadas
 - Sidebar reduzido de 12 itens de segurança para 7
 
-### Sprint 16 — Navegação & Menu
-| # | Tarefa | Prioridade |
-|---|--------|-----------|
-| 1 | Redesign do sidebar — agrupar em 5 seções: Overview, Agents, Security, Compliance, Settings | ALTA |
-| 2 | Command palette (Cmd+K) — busca global por qualquer recurso/página | MÉDIA |
-| 3 | Favoritos — permitir fixar páginas mais usadas | BAIXA |
-| 4 | Dashboard widgets configuráveis — substituir navegação por widgets diretos | MÉDIA |
+### Sprint 16 — Navegação & Menu ✅
+- Command Palette (Cmd+K) — busca global por todas as páginas com keywords em PT-BR
+- Sistema de Favoritos — usuário pode fixar/desfixar páginas via ⭐ no Command Palette
+- Favoritos aparecem no topo do sidebar automaticamente
+- Sidebar já reorganizado em 5 seções: Overview, Proteção, Organização, Normas, Ferramentas
 
 ---
 

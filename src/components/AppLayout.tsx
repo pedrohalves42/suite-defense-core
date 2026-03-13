@@ -9,6 +9,7 @@ import { SimpleModeProvider } from '@/components/layout/SimpleModeProvider';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { PushNotificationBanner } from '@/components/mobile/PushNotificationBanner';
 import { SecurityCopilot } from '@/components/copilot/SecurityCopilot';
+import { CommandPalette } from '@/components/CommandPalette';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -94,6 +95,9 @@ export const AppLayout = () => {
           {isMobile && (
             <MobileBottomNav onMenuClick={() => setMobileMenuOpen(true)} />
           )}
+
+          {/* Command Palette */}
+          <CommandPalette />
 
           {/* AI Security Copilot - floating chat */}
           <SecurityCopilot />
