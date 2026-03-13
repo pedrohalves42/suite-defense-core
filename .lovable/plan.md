@@ -104,13 +104,11 @@
 
 ## 🔵 Fase 5 — Melhorias Complementares (BAIXO)
 
-### Sprint 21 — Otimização de Edge Functions
-| # | Tarefa | Prioridade |
-|---|--------|-----------|
-| 1 | Consolidar 7 funções de cleanup em 1 `system-maintenance` | MÉDIA |
-| 2 | Consolidar 10 funções de notificação em 1 `notification-dispatcher` | MÉDIA |
-| 3 | Consolidar 5 funções de sync em 1 `release-sync` | MÉDIA |
-| 4 | Documentar todas as funções restantes em `docs/EDGE_FUNCTIONS.md` | BAIXA |
+### Sprint 21 — Otimização de Edge Functions ✅
+- `system-maintenance`: Consolida 7 funções de cleanup (stale_updates, stale_reports, stale_playbooks, stuck_builds, stuck_jobs, offline_agents_jobs, security_cleanup)
+- `notification-dispatcher`: Consolida 10 funções de notificação com fallback in_app e suporte a email/telegram/whatsapp
+- `release-sync`: Consolida 5 funções de sync com ações sync_content, sync_from_repo, sync_all, validate
+- Documentação completa em `docs/EDGE_FUNCTIONS.md` com todas as funções categorizadas
 
 ### Sprint 22 — Performance & Escalabilidade
 | # | Tarefa | Prioridade |
