@@ -277,6 +277,8 @@ const App = () => (
                 <Route path="network-security" element={<NetworkSecurityCenter />} />
                 <Route path="asset-security" element={<AssetSecurityCenter />} />
                 <Route path="threat-center" element={<ThreatCenter />} />
+                <Route path="threat-hunting" element={<ThreatHunting />} />
+                <Route path="mitre-attack" element={<MitreAttackDashboard />} />
                 <Route path="agent-timeline" element={<Navigate to="/admin/agent-center?tab=timeline" replace />} />
                 <Route path="agent-releases" element={<AgentReleases />} />
                 <Route path="agent-versions" element={<Navigate to="/admin/agent-center?tab=versions" replace />} />
