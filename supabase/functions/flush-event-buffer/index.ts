@@ -162,9 +162,10 @@ Deno.serve(async (req) => {
         .map(r => r.id);
 
       if (successIds.length > 0) {
+        // V-10002: batch_id already set by claim_event_buffer_batch RPC, only update processed_at
         await supabase
           .from('endpoint_event_buffer')
-          .update({ processed_at: new Date().toISOString(), batch_id: batchId })
+          .update({ processed_at: new Date().toISOString() })
           .in('id', successIds);
       }
     } else {

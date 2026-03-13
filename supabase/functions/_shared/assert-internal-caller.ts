@@ -42,11 +42,10 @@ export function assertInternalCaller(req: Request): Response | null {
     return null; // Authorized (cron scheduler)
   }
 
-  // 4. No auth at all — could be Supabase scheduled invocation
-  // Supabase cron can invoke without headers in some configurations
-  if (!authHeader && !internalSecret) {
-    return null; // Allow scheduled invocations
-  }
+  // V-10001 FIX: REMOVED unsafe no-auth passthrough.
+  // Previously allowed ANY request with no auth headers, enabling external attackers
+  // to call internal functions by simply omitting Authorization.
+  // Supabase cron ALWAYS sends the anon key in Authorization (handled above in #3).
 
   // 5. If there IS an auth header but it doesn't match service_role or anon_key,
   // this is an unauthorized external caller

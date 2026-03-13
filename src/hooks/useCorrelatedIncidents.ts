@@ -66,7 +66,7 @@ export function useIncidentEvents(incidentId: string) {
   const { activeTenant, loading } = useActiveTenant();
 
   return useQuery({
-    queryKey: ['incident-events', incidentId],
+    queryKey: ['incident-events', activeTenant?.id, incidentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('correlated_incident_events')
