@@ -272,8 +272,8 @@ const App = () => (
                 <Route path="dead-letter-queue" element={<DeadLetterQueue />} />
                 <Route path="security-policies" element={<SecurityPolicies />} />
                 <Route path="security-policies/auto-actions" element={<SecurityPoliciesAutoActions />} />
-                <Route path="agent-groups" element={<AgentGroups />} />
-                <Route path="agent-tags" element={<AgentTags />} />
+                <Route path="agent-groups" element={<Navigate to="/admin/agent-center?tab=groups" replace />} />
+                <Route path="agent-tags" element={<Navigate to="/admin/agent-center?tab=tags" replace />} />
                 <Route path="notification-settings" element={<NotificationSettings />} />
                 <Route path="security-monitoring" element={<SecurityMonitoring />} />
                 <Route path="mass-reinstall" element={<MassReinstall />} />
