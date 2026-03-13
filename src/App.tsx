@@ -40,6 +40,7 @@ const VerificarLaudo = lazy(() => import("./pages/VerificarLaudo"));
 const ApprovePage = lazy(() => import("./pages/ApprovePage"));
 const TestComplianceGenerator = lazy(() => import("./pages/TestComplianceGenerator"));
 const NoTenant = lazy(() => import("./pages/NoTenant"));
+const Tutorials = lazy(() => import("./pages/Tutorials"));
 
 // ─── Docs ───
 const ExeBuild = lazy(() => import("./pages/docs/ExeBuild"));
