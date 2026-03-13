@@ -28,6 +28,8 @@ const menuItems = [
   { icon: Shield, labelKey: 'client.securityStatus', path: '/client/security' },
   { icon: FileText, labelKey: 'client.reports', path: '/client/reports' },
   { icon: Globe, labelKey: 'client.webActivity', path: '/client/activity' },
+  { icon: Download, label: 'Instalar Agente', path: '/client/install' },
+  { icon: Activity, label: 'Status', path: '/client/status' },
 ];
 
 const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
