@@ -51,7 +51,7 @@ describe('useAuth', () => {
 
   it('should return user when session exists', async () => {
     const mockUser = { id: 'user-123', email: 'test@test.com' };
-    const mockSession = { user: mockUser, expires_at: Date.now() / 1000 + 3600 };
+    const mockSession = { user: mockUser, expires_at: Date.now() / 1000 + 3600, access_token: 'x', refresh_token: 'x', expires_in: 3600, token_type: 'bearer' as const };
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
       data: { session: mockSession as any }, error: null,
     });
