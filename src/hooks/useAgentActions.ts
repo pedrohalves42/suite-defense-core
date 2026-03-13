@@ -95,10 +95,13 @@ export function useAgentActions() {
 
   const toggleRule = useMutation({
     mutationFn: async ({ ruleId, isEnabled }: { ruleId: string; isEnabled: boolean }) => {
+      if (!tenantId) throw new Error('Tenant not found');
+      // V-5002 FIX: Add tenant_id filter to prevent cross-tenant rule toggle
       const { error } = await supabase
         .from('decision_rules')
         .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() })
-        .eq('id', ruleId);
+        .eq('id', ruleId)
+        .eq('tenant_id', tenantId);
       if (error) throw error;
     },
     onSuccess: (_, { isEnabled }) => {

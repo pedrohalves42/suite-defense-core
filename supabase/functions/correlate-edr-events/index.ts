@@ -159,10 +159,11 @@ Deno.serve(async (req: Request) => {
           incidentsCreated++;
         }
       }
+      }
     }
-  }
+  } // end tenant loop
 
-  console.log(`[correlate-edr-events] Created ${incidentsCreated} incidents from ${detections.length} detections`);
+  console.log(`[correlate-edr-events] Created ${incidentsCreated} incidents`);
 
   return new Response(JSON.stringify({ success: true, incidents_created: incidentsCreated }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
