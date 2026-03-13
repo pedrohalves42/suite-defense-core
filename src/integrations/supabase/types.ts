@@ -13825,6 +13825,39 @@ export type Database = {
           },
         ]
       }
+      endpoint_event_buffer: {
+        Row: {
+          agent_id: string
+          batch_id: string | null
+          event_category: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          received_at: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          batch_id?: string | null
+          event_category: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          batch_id?: string | null
+          event_category?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
       endpoint_file_events: {
         Row: {
           agent_id: string
