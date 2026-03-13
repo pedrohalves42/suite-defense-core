@@ -54,42 +54,54 @@ export default function ThreatHunting() {
       const term = searchTerm.toLowerCase();
 
       const sources = eventSource === 'all'
-        ? ['process', 'file', 'network', 'registry', 'detection']
-        : [eventSource];
+        ? ['process', 'file', 'network', 'registry', 'detection'] as const
+        : [eventSource] as const;
 
-      for (const source of sources) {
-        const table = source === 'detection' ? 'endpoint_detection_events' : `endpoint_${source}_events`;
-
+      async function searchTable(tableName: 'endpoint_process_events' | 'endpoint_file_events' | 'endpoint_network_events' | 'endpoint_registry_events' | 'endpoint_detection_events', source: string, orFilter?: string) {
         let query = supabase
-          .from(table)
+          .from(tableName)
           .select('*')
           .eq('tenant_id', tenantId)
           .order('event_time', { ascending: false })
           .limit(100);
 
         if (suspiciousOnly && source !== 'detection') {
-          query = query.eq('is_suspicious', true);
+          query = query.eq('is_suspicious' as any, true);
         }
 
-        // Text search across relevant fields
-        if (term) {
-          if (source === 'process') {
-            query = query.or(`process_name.ilike.%${term}%,command_line.ilike.%${term}%,user_name.ilike.%${term}%`);
-          } else if (source === 'file') {
-            query = query.or(`file_path.ilike.%${term}%,file_name.ilike.%${term}%,sha256_hash.ilike.%${term}%`);
-          } else if (source === 'network') {
-            query = query.or(`remote_address.ilike.%${term}%,domain.ilike.%${term}%,process_name.ilike.%${term}%`);
-          } else if (source === 'registry') {
-            query = query.or(`key_path.ilike.%${term}%,value_name.ilike.%${term}%,value_data.ilike.%${term}%`);
-          } else if (source === 'detection') {
-            query = query.or(`detection_name.ilike.%${term}%,command_line.ilike.%${term}%,mitre_technique_id.ilike.%${term}%`);
-          }
+        if (term && orFilter) {
+          query = query.or(orFilter);
         }
 
         const { data } = await query;
         if (data) {
-          allResults.push(...data.map((row: any) => ({ ...row, _source: source })));
+          allResults.push(...(data as any[]).map((row: any) => ({ ...row, _source: source })));
         }
+      }
+
+      for (const source of sources) {
+        if (source === 'process' || source === 'all') {
+          if (source === 'process' || eventSource === 'all')
+            await searchTable('endpoint_process_events', 'process', term ? `process_name.ilike.%${term}%,command_line.ilike.%${term}%,user_name.ilike.%${term}%` : undefined);
+        }
+        if (source === 'file' || (source !== 'process' && eventSource === 'all')) {
+          if (source === 'file' || eventSource === 'all')
+            await searchTable('endpoint_file_events', 'file', term ? `file_path.ilike.%${term}%,file_name.ilike.%${term}%,sha256_hash.ilike.%${term}%` : undefined);
+        }
+        if (source === 'network' || (source !== 'process' && source !== 'file' && eventSource === 'all')) {
+          if (source === 'network' || eventSource === 'all')
+            await searchTable('endpoint_network_events', 'network', term ? `remote_address.ilike.%${term}%,domain.ilike.%${term}%,process_name.ilike.%${term}%` : undefined);
+        }
+        if (source === 'registry' || eventSource === 'all') {
+          if (source === 'registry' || eventSource === 'all')
+            await searchTable('endpoint_registry_events', 'registry', term ? `key_path.ilike.%${term}%,value_name.ilike.%${term}%,value_data.ilike.%${term}%` : undefined);
+        }
+        if (source === 'detection' || eventSource === 'all') {
+          if (source === 'detection' || eventSource === 'all')
+            await searchTable('endpoint_detection_events', 'detection', term ? `detection_name.ilike.%${term}%,command_line.ilike.%${term}%,mitre_technique_id.ilike.%${term}%` : undefined);
+        }
+        // Break after first iteration for non-'all' source
+        if (eventSource !== 'all') break;
       }
 
       // Sort by event_time desc
