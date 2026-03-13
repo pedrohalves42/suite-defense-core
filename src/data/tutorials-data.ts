@@ -37,17 +37,19 @@ export interface FAQ {
 }
 
 // ─── Video mapping ───────────────────────────────────────
-export const tutorialVideos: Record<string, string> = {
-  "getting-started": "tutorial-dashboard",
-  "agent-installation-mass": "tutorial-agent-install",
-  "virus-scans": "tutorial-virus-scan",
-  "threat-intelligence": "tutorial-ai-threats",
-  "security-policies": "tutorial-policies",
-  "dashboard-overview": "tutorial-dashboard",
-  "admin-panel": "tutorial-dashboard",
-  "incident-response": "tutorial-ai-threats",
-  "siem-integration": "tutorial-policies",
-  "api-integration": "tutorial-agent-install",
+// Configure video URLs here. Set a URL (YouTube embed, mp4, etc.) for each tutorial.
+// Tutorials without a URL will show a placeholder with upload prompt.
+export const tutorialVideoUrls: Record<string, string> = {
+  // "getting-started": "https://www.youtube.com/embed/YOUR_VIDEO_ID",
+  // "agent-installation-mass": "/videos/agent-install.mp4",
+  // "virus-scans": "https://www.youtube.com/embed/YOUR_VIDEO_ID",
+  // "threat-intelligence": "/videos/ai-threats.mp4",
+  // "security-policies": "/videos/policies.mp4",
+  // "dashboard-overview": "",
+  // "admin-panel": "",
+  // "incident-response": "",
+  // "siem-integration": "",
+  // "api-integration": "",
 };
 
 // ─── Tutorial Data ───────────────────────────────────────

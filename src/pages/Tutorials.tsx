@@ -9,28 +9,14 @@ import {
   Search, BookOpen, Shield, Monitor, Users, Settings, FileText,
   Zap, HelpCircle, PlayCircle, ChevronRight, Clock, Star,
   AlertTriangle, Terminal, Download, Lock, BarChart3, Bell,
-  Server, RefreshCw, ArrowRight, Lightbulb, CheckCircle2, Bug
+  Server, RefreshCw, ArrowRight, Lightbulb, CheckCircle2, Bug,
+  Upload, Film
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   tutorials, faqs, categories, difficultyConfig, quickStartCards,
-  tutorialVideos, type Tutorial, type TroubleshootingItem
+  tutorialVideoUrls, type Tutorial, type TroubleshootingItem
 } from "@/data/tutorials-data";
-
-// Video imports
-import videoDashboard from "@/assets/videos/tutorial-dashboard.mp4";
-import videoAgentInstall from "@/assets/videos/tutorial-agent-install.mp4";
-import videoVirusScan from "@/assets/videos/tutorial-virus-scan.mp4";
-import videoAiThreats from "@/assets/videos/tutorial-ai-threats.mp4";
-import videoPolicies from "@/assets/videos/tutorial-policies.mp4";
-
-const videoAssets: Record<string, string> = {
-  "tutorial-dashboard": videoDashboard,
-  "tutorial-agent-install": videoAgentInstall,
-  "tutorial-virus-scan": videoVirusScan,
-  "tutorial-ai-threats": videoAiThreats,
-  "tutorial-policies": videoPolicies,
-};
 
 const categoryIcons: Record<string, any> = {
   all: BookOpen, inicio: Zap, dashboard: Monitor, agentes: Server,
@@ -38,6 +24,43 @@ const categoryIcons: Record<string, any> = {
 };
 
 const quickStartIcons = [Download, Shield, Users, BarChart3, Bell, Settings];
+
+const VideoSection = ({ tutorialId }: { tutorialId: string }) => {
+  const videoUrl = tutorialVideoUrls[tutorialId];
+
+  if (!videoUrl) {
+    return (
+      <div className="mx-5 mt-5 rounded-lg border-2 border-dashed border-border bg-muted/20 flex flex-col items-center justify-center py-10 gap-3">
+        <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center">
+          <Film className="h-7 w-7 text-muted-foreground/50" />
+        </div>
+        <p className="text-sm font-medium text-muted-foreground">Nenhum vídeo configurado</p>
+        <p className="text-xs text-muted-foreground/70 max-w-xs text-center">
+          Adicione uma URL de vídeo em <code className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">tutorials-data.ts</code> → <code className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">tutorialVideoUrls["{tutorialId}"]</code>
+        </p>
+      </div>
+    );
+  }
+
+  // YouTube embed
+  if (videoUrl.includes("youtube.com/embed") || videoUrl.includes("youtu.be")) {
+    const embedUrl = videoUrl.includes("youtu.be")
+      ? videoUrl.replace("youtu.be/", "youtube.com/embed/")
+      : videoUrl;
+    return (
+      <div className="mx-5 mt-5 rounded-lg overflow-hidden border border-border aspect-video">
+        <iframe src={embedUrl} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full" />
+      </div>
+    );
+  }
+
+  // Direct video file (mp4, webm, etc.)
+  return (
+    <div className="mx-5 mt-5 rounded-lg overflow-hidden border border-border">
+      <video src={videoUrl} controls playsInline className="w-full h-auto max-h-80 object-cover bg-black" />
+    </div>
+  );
+};
 
 const Tutorials = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,10 +95,6 @@ const Tutorials = () => {
     return Math.round(((completedSteps[tutorialId] || []).length / totalSteps) * 100);
   };
 
-  const getVideoSrc = (tutorial: Tutorial) => {
-    const videoKey = tutorialVideos[tutorial.id];
-    return videoKey ? videoAssets[videoKey] : null;
-  };
 
   return (
     <>
@@ -152,7 +171,7 @@ const Tutorials = () => {
                     {filteredTutorials.map((tutorial, index) => {
                       const isExpanded = expandedTutorial === tutorial.id;
                       const progress = getProgress(tutorial.id, tutorial.steps.length);
-                      const videoSrc = getVideoSrc(tutorial);
+                      const hasVideo = !!tutorialVideoUrls[tutorial.id];
                       const hasTroubleshooting = tutorial.troubleshooting && tutorial.troubleshooting.length > 0;
                       const showTS = showTroubleshooting[tutorial.id];
 
@@ -166,8 +185,8 @@ const Tutorials = () => {
                                 <div className="flex items-center gap-2 flex-wrap mb-1">
                                   <h3 className="text-base font-semibold text-foreground">{tutorial.title}</h3>
                                   <Badge variant="outline" className={`text-xs ${difficultyConfig[tutorial.difficulty].color}`}>{difficultyConfig[tutorial.difficulty].label}</Badge>
-                                  {videoSrc && <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-400 border-purple-500/20"><PlayCircle className="h-3 w-3 mr-1" />Vídeo</Badge>}
-                                  {hasTroubleshooting && <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-400 border-orange-500/20"><Bug className="h-3 w-3 mr-1" />Troubleshoot</Badge>}
+                                  {hasVideo && <Badge variant="outline" className="text-xs bg-accent/10 text-accent border-accent/20"><PlayCircle className="h-3 w-3 mr-1" />Vídeo</Badge>}
+                                  {hasTroubleshooting && <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/20"><Bug className="h-3 w-3 mr-1" />Troubleshoot</Badge>}
                                 </div>
                                 <p className="text-sm text-muted-foreground line-clamp-2">{tutorial.description}</p>
                                 <div className="flex items-center gap-4 mt-2 flex-wrap">
@@ -186,12 +205,8 @@ const Tutorials = () => {
                             <AnimatePresence>
                               {isExpanded && (
                                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }} className="border-t border-border overflow-hidden">
-                                  {/* Video */}
-                                  {videoSrc && (
-                                    <div className="mx-5 mt-5 rounded-lg overflow-hidden border border-border">
-                                      <video src={videoSrc} autoPlay loop muted playsInline className="w-full h-auto max-h-64 object-cover bg-black" />
-                                    </div>
-                                  )}
+                                  {/* Video Section */}
+                                  <VideoSection tutorialId={tutorial.id} />
 
                                   {/* Real-world scenarios */}
                                   {tutorial.realWorldScenarios && tutorial.realWorldScenarios.length > 0 && (
@@ -249,7 +264,7 @@ const Tutorials = () => {
                                   {hasTroubleshooting && (
                                     <div className="mx-5 mb-5">
                                       <button onClick={() => setShowTroubleshooting(p => ({ ...p, [tutorial.id]: !p[tutorial.id] }))}
-                                        className="w-full flex items-center gap-2 p-3 rounded-lg bg-orange-500/5 border border-orange-500/20 text-orange-400 text-sm font-medium hover:bg-orange-500/10 transition-colors">
+                                        className="w-full flex items-center gap-2 p-3 rounded-lg bg-destructive/5 border border-destructive/20 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors">
                                         <Bug className="h-4 w-4" />Troubleshooting ({tutorial.troubleshooting!.length} problemas comuns)
                                         <ChevronRight className={`h-4 w-4 ml-auto transition-transform ${showTS ? "rotate-90" : ""}`} />
                                       </button>
