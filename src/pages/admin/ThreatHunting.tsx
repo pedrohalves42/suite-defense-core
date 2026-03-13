@@ -11,9 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Filter, AlertTriangle, Crosshair, Terminal, FileText, Globe, Database } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useActiveTenant } from '@/hooks/useActiveTenant';
+import { useNormalizedEvents, type NormalizedEvent } from '@/hooks/useNormalizedEvents';
 import { format } from 'date-fns';
 
 type EventSource = 'all' | 'process' | 'file' | 'network' | 'registry' | 'detection';
@@ -34,7 +32,6 @@ const SOURCE_ICONS: Record<string, typeof Terminal> = {
 };
 
 export default function ThreatHunting() {
-  const { activeTenant, loading: tenantLoading } = useActiveTenant();
   const [searchQuery, setSearchQuery] = useState('');
   const [eventSource, setEventSource] = useState<EventSource>('all');
   const [suspiciousOnly, setSuspiciousOnly] = useState(false);
@@ -46,56 +43,16 @@ export default function ThreatHunting() {
     setIsSearching(true);
   };
 
-  const { data: results, isLoading } = useQuery({
-    queryKey: ['threat-hunt', activeTenant?.id, searchTerm, eventSource, suspiciousOnly],
-    queryFn: async () => {
-      const tenantId = activeTenant!.id;
-      const allResults: any[] = [];
-      const term = searchTerm.toLowerCase();
-
-      async function searchTable(tableName: string, source: string, orFilter?: string) {
-        let query = (supabase as any)
-          .from(tableName)
-          .select('*')
-          .eq('tenant_id', tenantId)
-          .order('event_time', { ascending: false })
-          .limit(100);
-
-        if (suspiciousOnly && source !== 'detection') {
-          query = query.eq('is_suspicious', true);
-        }
-        if (term && orFilter) {
-          query = query.or(orFilter);
-        }
-        const { data } = await query;
-        if (data) {
-          allResults.push(...(data as any[]).map((row: any) => ({ ...row, _source: source })));
-        }
-      }
-
-      if (eventSource === 'all' || eventSource === 'process') {
-        await searchTable('endpoint_process_events', 'process', term ? `process_name.ilike.%${term}%,command_line.ilike.%${term}%,user_name.ilike.%${term}%` : undefined);
-      }
-      if (eventSource === 'all' || eventSource === 'file') {
-        await searchTable('endpoint_file_events', 'file', term ? `file_path.ilike.%${term}%,file_name.ilike.%${term}%,sha256_hash.ilike.%${term}%` : undefined);
-      }
-      if (eventSource === 'all' || eventSource === 'network') {
-        await searchTable('endpoint_network_events', 'network', term ? `remote_address.ilike.%${term}%,domain.ilike.%${term}%,process_name.ilike.%${term}%` : undefined);
-      }
-      if (eventSource === 'all' || eventSource === 'registry') {
-        await searchTable('endpoint_registry_events', 'registry', term ? `key_path.ilike.%${term}%,value_name.ilike.%${term}%,value_data.ilike.%${term}%` : undefined);
-      }
-      if (eventSource === 'all' || eventSource === 'detection') {
-        await searchTable('endpoint_detection_events', 'detection', term ? `detection_name.ilike.%${term}%,command_line.ilike.%${term}%,mitre_technique_id.ilike.%${term}%` : undefined);
-      }
-
-      // Sort by event_time desc
-      return allResults.sort((a, b) =>
-        new Date(b.event_time).getTime() - new Date(a.event_time).getTime()
-      );
+  // Uses the unified v_normalized_events view (Sprint 30)
+  const { data: results, isLoading } = useNormalizedEvents(
+    {
+      searchTerm: searchTerm || undefined,
+      eventCategory: eventSource,
+      suspiciousOnly,
+      limit: 500,
     },
-    enabled: isSearching && !tenantLoading && !!activeTenant?.id,
-  });
+    isSearching,
+  );
 
   const stats = useMemo(() => {
     if (!results) return { total: 0, suspicious: 0, bySource: {} as Record<string, number> };
