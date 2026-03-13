@@ -12953,6 +12953,89 @@ export type Database = {
         }
         Relationships: []
       }
+      detection_rules: {
+        Row: {
+          confidence_base: number
+          created_at: string
+          description: string | null
+          event_type: string
+          id: string
+          is_enabled: boolean
+          mitre_tactic: string
+          mitre_technique_id: string
+          mitre_technique_name: string
+          rule_logic: Json
+          rule_name: string
+          severity: string
+          tags: string[] | null
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          confidence_base?: number
+          created_at?: string
+          description?: string | null
+          event_type: string
+          id?: string
+          is_enabled?: boolean
+          mitre_tactic: string
+          mitre_technique_id: string
+          mitre_technique_name: string
+          rule_logic?: Json
+          rule_name: string
+          severity?: string
+          tags?: string[] | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          confidence_base?: number
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          is_enabled?: boolean
+          mitre_tactic?: string
+          mitre_technique_id?: string
+          mitre_technique_name?: string
+          rule_logic?: Json
+          rule_name?: string
+          severity?: string
+          tags?: string[] | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "detection_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "detection_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "detection_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "detection_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       dlq_exhaustion_alerts: {
         Row: {
           acknowledged: boolean
@@ -17612,6 +17695,111 @@ export type Database = {
           },
           {
             foreignKeyName: "marketing_costs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      mitre_attack_techniques: {
+        Row: {
+          created_at: string
+          data_sources: string[] | null
+          description: string | null
+          platforms: string[] | null
+          sub_technique_of: string | null
+          tactic: string
+          technique_id: string
+          technique_name: string
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          data_sources?: string[] | null
+          description?: string | null
+          platforms?: string[] | null
+          sub_technique_of?: string | null
+          tactic: string
+          technique_id: string
+          technique_name: string
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          data_sources?: string[] | null
+          description?: string | null
+          platforms?: string[] | null
+          sub_technique_of?: string | null
+          tactic?: string
+          technique_id?: string
+          technique_name?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
+      mitre_coverage_snapshot: {
+        Row: {
+          coverage_status: string
+          created_at: string
+          detection_count: number
+          id: string
+          last_detected_at: string | null
+          snapshot_date: string
+          technique_id: string
+          tenant_id: string
+        }
+        Insert: {
+          coverage_status?: string
+          created_at?: string
+          detection_count?: number
+          id?: string
+          last_detected_at?: string | null
+          snapshot_date?: string
+          technique_id: string
+          tenant_id: string
+        }
+        Update: {
+          coverage_status?: string
+          created_at?: string
+          detection_count?: number
+          id?: string
+          last_detected_at?: string | null
+          snapshot_date?: string
+          technique_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mitre_coverage_snapshot_technique_id_fkey"
+            columns: ["technique_id"]
+            isOneToOne: false
+            referencedRelation: "mitre_attack_techniques"
+            referencedColumns: ["technique_id"]
+          },
+          {
+            foreignKeyName: "mitre_coverage_snapshot_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mitre_coverage_snapshot_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "mitre_coverage_snapshot_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "mitre_coverage_snapshot_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
