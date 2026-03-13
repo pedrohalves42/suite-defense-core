@@ -59,8 +59,8 @@ export default function ThreatHunting() {
     const bySource: Record<string, number> = {};
     let suspicious = 0;
     for (const r of results) {
-      bySource[r._source] = (bySource[r._source] || 0) + 1;
-      if (r.is_suspicious || r._source === 'detection') suspicious++;
+      bySource[r.event_category] = (bySource[r.event_category] || 0) + 1;
+      if (r.is_suspicious || r.event_category === 'detection') suspicious++;
     }
     return { total: results.length, suspicious, bySource };
   }, [results]);
