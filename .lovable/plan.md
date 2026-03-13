@@ -110,13 +110,12 @@
 - `release-sync`: Consolida 5 funções de sync com ações sync_content, sync_from_repo, sync_all, validate
 - Documentação completa em `docs/EDGE_FUNCTIONS.md` com todas as funções categorizadas
 
-### Sprint 22 — Performance & Escalabilidade
-| # | Tarefa | Prioridade |
-|---|--------|-----------|
-| 1 | Particionamento de `jobs` por mês (range partition) | BAIXA |
-| 2 | Particionamento de `audit_logs` por mês | BAIXA |
-| 3 | Índices compostos para queries mais frequentes | MÉDIA |
-| 4 | Cache de compliance score (evitar recálculo a cada request) | MÉDIA |
+### Sprint 22 — Performance & Escalabilidade ✅
+- Índices compostos para `jobs` (tenant+status+created, agent+status ativo, status+created ativo)
+- Índices compostos para `audit_logs` (tenant+created, tenant+action)
+- Índice para `agents` (tenant+status+last_heartbeat, tenant WHERE not archived)
+- Índices auxiliares para `notification_channels`, `playbook_executions`, `agent_builds`
+- Tabela `compliance_score_cache` com TTL de 1h, RLS por tenant, e funções `get_cached_compliance_score` / `upsert_compliance_cache`
 
 ---
 
