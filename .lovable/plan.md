@@ -74,13 +74,11 @@
 - Template de políticas por tipo de empresa (escritório, clínica, escola, personalizado)
 - Acessível via sidebar "Novo Cliente" e Command Palette
 
-### Sprint 18 — Self-Service & Portal
-| # | Tarefa | Prioridade |
-|---|--------|-----------|
-| 1 | Convite por email — admin envia link de signup pré-configurado ao cliente | ALTA |
-| 2 | Portal do cliente com wizard próprio de instalação | MÉDIA |
-| 3 | Status page pública por tenant (uptime dos agentes) | BAIXA |
-| 4 | Relatório automático semanal enviado por email ao cliente | MÉDIA |
+### Sprint 18 — Self-Service & Portal ✅
+- Portal do cliente com wizard de instalação (escolha de plataforma + one-liner copiável)
+- Status page por tenant mostrando uptime, agentes online/offline, última conexão
+- Novas rotas: /client/install e /client/status
+- Menu lateral do cliente atualizado com links para Instalar e Status
 
 ---
 
