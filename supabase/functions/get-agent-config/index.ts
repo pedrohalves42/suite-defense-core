@@ -98,6 +98,15 @@ Deno.serve(async (req) => {
       remaining_minutes: config.expires_at
         ? Math.max(0, Math.ceil((new Date(config.expires_at).getTime() - Date.now()) / 60000))
         : 0,
+      // v5.0.14: Edge Event Aggregation parameters
+      aggregation: {
+        enabled: config.aggregation_enabled ?? true,
+        window_seconds: config.aggregation_window_seconds ?? 3,
+        file_threshold: config.aggregation_file_threshold ?? 50,
+        process_threshold: config.aggregation_process_threshold ?? 20,
+        network_threshold: config.aggregation_network_threshold ?? 100,
+        max_buffer_size: config.aggregation_max_buffer_size ?? 500,
+      },
     });
 
   } catch (error) {
