@@ -27,7 +27,7 @@ describe('Job Entity', () => {
     it('fails without agentId', () => {
       const result = Job.create({
         agentId: null as any,
-        tenantId: TenantId.generate(),
+        tenantId: makeTenantId(),
         type: JobType.HEALTH_CHECK,
       });
       expect(result.isSuccess).toBe(false);
