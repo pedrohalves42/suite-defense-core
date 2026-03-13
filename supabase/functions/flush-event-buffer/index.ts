@@ -174,9 +174,10 @@ Deno.serve(async (req) => {
       const CHUNK = 500;
       for (let i = 0; i < processedIds.length; i += CHUNK) {
         const chunk = processedIds.slice(i, i + CHUNK);
+        // V-10002: batch_id already set by claim RPC, only update processed_at
         await supabase
           .from('endpoint_event_buffer')
-          .update({ processed_at: new Date().toISOString(), batch_id: batchId })
+          .update({ processed_at: new Date().toISOString() })
           .in('id', chunk);
       }
     }
