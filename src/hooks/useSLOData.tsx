@@ -38,9 +38,9 @@ export interface SLOAlert {
 export const useSLOData = () => {
   const { tenant } = useTenant();
 
-  // Fetch SLO definitions
+  // V-9001 FIX: Add tenantId to queryKey to prevent cross-tenant cache pollution
   const { data: definitions, isLoading: loadingDefinitions } = useQuery({
-    queryKey: ['slo-definitions'],
+    queryKey: ['slo-definitions', tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('slo_definitions')

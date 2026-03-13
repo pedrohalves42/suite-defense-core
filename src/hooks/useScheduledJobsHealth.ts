@@ -43,10 +43,12 @@ export interface ScheduledJobsHealthSummary {
 
 export function useScheduledJobsHealth() {
   const queryClient = useQueryClient();
+  const { tenant } = useTenant();
 
+  // V-9001 FIX: Add tenantId to all queryKeys to prevent cross-tenant cache pollution
   // Fetch job health from view
   const healthQuery = useQuery({
-    queryKey: ['scheduled-jobs-health'],
+    queryKey: ['scheduled-jobs-health', tenant?.id],
     queryFn: async (): Promise<JobHealthStatus[]> => {
       const { data, error } = await supabase
         .from('v_job_health')
@@ -56,13 +58,14 @@ export function useScheduledJobsHealth() {
       if (error) throw error;
       return (data || []) as unknown as JobHealthStatus[];
     },
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    enabled: !!tenant?.id,
+    refetchInterval: 300000,
     staleTime: 30000,
   });
 
   // Fetch recent job runs
   const recentRunsQuery = useQuery({
-    queryKey: ['scheduled-job-runs'],
+    queryKey: ['scheduled-job-runs', tenant?.id],
     queryFn: async (): Promise<ScheduledJobRun[]> => {
       const { data, error } = await supabase
         .from('scheduled_job_runs')
@@ -73,19 +76,19 @@ export function useScheduledJobsHealth() {
       if (error) throw error;
       return (data || []) as unknown as ScheduledJobRun[];
     },
-    refetchInterval: 120000, // COST-OPT: 30s → 2min
+    enabled: !!tenant?.id,
+    refetchInterval: 120000,
     staleTime: 10000,
   });
 
   // Fetch health summary
   const summaryQuery = useQuery({
-    queryKey: ['scheduled-jobs-health-summary'],
+    queryKey: ['scheduled-jobs-health-summary', tenant?.id],
     queryFn: async (): Promise<ScheduledJobsHealthSummary> => {
       const { data, error } = await supabase.rpc('get_job_health_summary');
 
       if (error) throw error;
       
-      // The function returns a JSON object directly
       const result = data as unknown as ScheduledJobsHealthSummary;
       return result || {
         total_jobs: 0,
@@ -96,7 +99,8 @@ export function useScheduledJobsHealth() {
         never_ran_jobs: 0,
       };
     },
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    enabled: !!tenant?.id,
+    refetchInterval: 300000,
     staleTime: 30000,
   });
 
