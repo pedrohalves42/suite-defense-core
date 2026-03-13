@@ -2362,6 +2362,12 @@ export type Database = {
           activated_at: string | null
           active_media_processes: Json
           agent_id: string
+          aggregation_enabled: boolean
+          aggregation_file_threshold: number
+          aggregation_max_buffer_size: number
+          aggregation_network_threshold: number
+          aggregation_process_threshold: number
+          aggregation_window_seconds: number
           collection_interval_seconds: number
           compress_payloads: boolean
           cpu_threshold_percent: number
@@ -2383,6 +2389,12 @@ export type Database = {
           activated_at?: string | null
           active_media_processes?: Json
           agent_id: string
+          aggregation_enabled?: boolean
+          aggregation_file_threshold?: number
+          aggregation_max_buffer_size?: number
+          aggregation_network_threshold?: number
+          aggregation_process_threshold?: number
+          aggregation_window_seconds?: number
           collection_interval_seconds?: number
           compress_payloads?: boolean
           cpu_threshold_percent?: number
@@ -2404,6 +2416,12 @@ export type Database = {
           activated_at?: string | null
           active_media_processes?: Json
           agent_id?: string
+          aggregation_enabled?: boolean
+          aggregation_file_threshold?: number
+          aggregation_max_buffer_size?: number
+          aggregation_network_threshold?: number
+          aggregation_process_threshold?: number
+          aggregation_window_seconds?: number
           collection_interval_seconds?: number
           compress_payloads?: boolean
           cpu_threshold_percent?: number
