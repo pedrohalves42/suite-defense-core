@@ -133,25 +133,19 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   ], [urgentCount]);
 
   const securityItems = useMemo<MenuItem[]>(() => [
-    { icon: AlertTriangle, label: 'Alertas', to: '/admin/security-monitoring' },
-    { icon: ShieldCheck, label: 'Pontos Fracos', to: '/admin/vulnerabilities' },
+    { icon: AlertTriangle, label: 'Central de Ameaças', to: '/admin/threat-center' },
+    { icon: ShieldCheck, label: 'Vulnerabilidades', to: '/admin/vulnerability-center' },
+    { icon: Globe, label: 'Segurança de Rede', to: '/admin/network-security' },
+    { icon: AppWindow, label: 'Segurança de Ativos', to: '/admin/asset-security' },
     { icon: AlertCircle, label: 'Itens Suspeitos', to: '/quarantine' },
-    { icon: Globe, label: 'Sites Acessados', to: '/admin/web-activity' },
-    { icon: Network, label: 'Filtro de Sites', to: '/admin/dns-filter' },
-    { icon: ShieldAlert, label: 'Programas Arriscados', to: '/admin/software-risk' },
     { icon: FileSearch, label: 'Histórico', to: '/admin/agent-center?tab=timeline' },
     { icon: AlertCircle, label: 'Resolver Alertas', to: '/admin/alert-resolution' },
-    { icon: Crosshair, label: 'Teste de Resistência', to: '/admin/attack-simulation' },
-    { icon: Eye, label: 'Programas Ocultos', to: '/admin/shadow-it' },
-    { icon: Key, label: 'Acessos e Senhas', to: '/admin/identity-security' },
-    { icon: Network, label: 'Mapa de Segurança', to: '/admin/security-graph' },
   ], []);
 
   const managementItems = useMemo<MenuItem[]>(() => [
     { icon: Users, label: 'Grupos', to: '/admin/agent-center?tab=groups' },
     { icon: Tag, label: 'Etiquetas', to: '/admin/agent-center?tab=tags' },
     { icon: Shield, label: 'Regras', to: '/admin/security-policies' },
-    { icon: AppWindow, label: 'Programas', to: '/admin/software-inventory' },
     { icon: Crown, label: 'Equipe', to: '/admin/members' },
     { icon: FileBarChart, label: 'Relatórios', to: '/admin/reports' },
     { icon: Bell, label: 'Avisos', to: '/admin/notification-channels' },
@@ -175,7 +169,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
 
   const intelligenceItems = useMemo<MenuItem[]>(() => [
     { icon: Brain, label: 'Regras Automáticas', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
-    { icon: Crosshair, label: 'Ameaças Conhecidas', to: '/admin/threat-intelligence' },
+    { icon: Crosshair, label: 'Ameaças Conhecidas', to: '/admin/threat-center?tab=threat-intel' },
     { icon: BrainCircuit, label: 'Sugestões', to: '/admin/ai-insights' },
     { icon: Sparkles, label: 'Ações Automáticas', to: '/admin/ai-actions' },
     { icon: AlertTriangle, label: 'Comportamento Incomum', to: '/admin/ai-anomalies' },

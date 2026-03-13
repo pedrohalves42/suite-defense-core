@@ -159,6 +159,10 @@ const ComplianceAutomation = lazy(() => import("./pages/admin/ComplianceAutomati
 const ThreatIntelligence = lazy(() => import("./pages/admin/ThreatIntelligence"));
 const AIFeedbackDashboard = lazy(() => import("./pages/admin/AIFeedbackDashboard"));
 const AgentCenter = lazy(() => import("./pages/admin/AgentCenter"));
+const VulnerabilityCenter = lazy(() => import("./pages/admin/VulnerabilityCenter"));
+const NetworkSecurityCenter = lazy(() => import("./pages/admin/NetworkSecurityCenter"));
+const AssetSecurityCenter = lazy(() => import("./pages/admin/AssetSecurityCenter"));
+const ThreatCenter = lazy(() => import("./pages/admin/ThreatCenter"));
 const DataExposure = lazy(() => import("./pages/admin/DataExposure"));
 const ShadowITDiscovery = lazy(() => import("./pages/admin/ShadowITDiscovery"));
 const AttackSimulation = lazy(() => import("./pages/admin/AttackSimulation"));
@@ -260,10 +264,14 @@ const App = () => (
                 <Route path="installation-health" element={<InstallationHealth />} />
                 <Route path="performance-metrics" element={<PerformanceMetrics />} />
                 <Route path="system-health" element={<SystemHealth />} />
-                <Route path="software-inventory" element={<SoftwareInventory />} />
-                <Route path="vulnerabilities" element={<VulnerabilityFindings />} />
-                <Route path="web-activity" element={<WebActivity />} />
-                <Route path="dns-filter" element={<DNSFilter />} />
+                <Route path="software-inventory" element={<Navigate to="/admin/asset-security?tab=inventory" replace />} />
+                <Route path="vulnerabilities" element={<Navigate to="/admin/vulnerability-center?tab=vulnerabilities" replace />} />
+                <Route path="web-activity" element={<Navigate to="/admin/network-security?tab=web-activity" replace />} />
+                <Route path="dns-filter" element={<Navigate to="/admin/network-security?tab=dns-filter" replace />} />
+                <Route path="vulnerability-center" element={<VulnerabilityCenter />} />
+                <Route path="network-security" element={<NetworkSecurityCenter />} />
+                <Route path="asset-security" element={<AssetSecurityCenter />} />
+                <Route path="threat-center" element={<ThreatCenter />} />
                 <Route path="agent-timeline" element={<Navigate to="/admin/agent-center?tab=timeline" replace />} />
                 <Route path="agent-releases" element={<AgentReleases />} />
                 <Route path="agent-versions" element={<Navigate to="/admin/agent-center?tab=versions" replace />} />
@@ -275,7 +283,7 @@ const App = () => (
                 <Route path="agent-groups" element={<Navigate to="/admin/agent-center?tab=groups" replace />} />
                 <Route path="agent-tags" element={<Navigate to="/admin/agent-center?tab=tags" replace />} />
                 <Route path="notification-settings" element={<NotificationSettings />} />
-                <Route path="security-monitoring" element={<SecurityMonitoring />} />
+                <Route path="security-monitoring" element={<Navigate to="/admin/threat-center?tab=alerts" replace />} />
                 <Route path="mass-reinstall" element={<MassReinstall />} />
                 <Route path="invites" element={<Invites />} />
                 <Route path="api-docs" element={<ApiDocumentation />} />
@@ -293,8 +301,8 @@ const App = () => (
                 <Route path="ai-autonomy" element={<AutonomyDashboard />} />
                 <Route path="system-audit" element={<SystemAudit />} />
                 <Route path="soc2-compliance" element={<SOC2Dashboard />} />
-                <Route path="software-risk" element={<SoftwareRiskDashboard />} />
-                <Route path="data-exposure" element={<DataExposure />} />
+                <Route path="software-risk" element={<Navigate to="/admin/vulnerability-center?tab=software-risk" replace />} />
+                <Route path="data-exposure" element={<Navigate to="/admin/asset-security?tab=data-exposure" replace />} />
                 <Route path="software-knowledge-base" element={<SoftwareKnowledgeBase />} />
                 <Route path="automations" element={<Automations />} />
                 <Route path="archived-agents" element={<Navigate to="/admin/agent-center?tab=archived" replace />} />
