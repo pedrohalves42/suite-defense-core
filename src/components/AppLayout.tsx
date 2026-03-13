@@ -96,6 +96,9 @@ export const AppLayout = () => {
             <MobileBottomNav onMenuClick={() => setMobileMenuOpen(true)} />
           )}
 
+          {/* Command Palette */}
+          <CommandPalette />
+
           {/* AI Security Copilot - floating chat */}
           <SecurityCopilot />
         </div>
