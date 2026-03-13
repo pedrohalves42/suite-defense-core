@@ -194,7 +194,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Zap, label: 'Correção Automática', to: '/admin/auto-remediation' },
     { icon: ShieldAlert, label: 'Proteção ao Vivo', to: '/admin/realtime-security' },
     { icon: UserPlus, label: 'Convites', to: '/admin/invites' },
-    { icon: Archive, label: 'Inativos', to: '/admin/archived-agents' },
+    { icon: Archive, label: 'Inativos', to: '/admin/agent-center?tab=archived' },
     { icon: ListTodo, label: 'Tarefas', to: '/admin/tasks' },
     { icon: Fingerprint, label: 'Minha Conta', to: '/admin/my-account' },
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
