@@ -275,5 +275,16 @@ function buildJobPayload(actionType: ActionType, details: Record<string, unknown
           reason: 'vulnerable_software_auto_patch',
         },
       };
+    case 'force_windows_update':
+      return {
+        jobType: 'service_health_check',
+        payload: {
+          action: 'force_windows_update',
+          scan_only: details.scan_only || false,
+          install_optional: details.install_optional || false,
+          reboot_if_needed: details.reboot_if_needed || false,
+          reason: details.reason || 'forced_windows_update_remediation',
+        },
+      };
   }
 }
