@@ -111,8 +111,20 @@ Deno.serve(async (req) => {
     // Cache de verificação de horário por tenant
     const tenantBusinessHoursCache: Record<string, { shouldProcess: boolean; reason: string }> = {};
 
+    // V-8003 FIX: Batch dedup check — fetch all recent alerts at once instead of N+1
+    const agentIds = (unhealthyAgents as AgentExecutionHealth[]).map(a => a.agent_id).filter(Boolean);
+    const { data: recentAlerts } = await supabase
+      .from('system_alerts')
+      .select('agent_id')
+      .in('agent_id', agentIds)
+      .eq('alert_type', 'non_execution_detected')
+      .eq('resolved', false)
+      .gte('created_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString());
+    
+    const agentsWithRecentAlerts = new Set((recentAlerts || []).map(a => a.agent_id));
+
     for (const agent of unhealthyAgents as AgentExecutionHealth[]) {
-      // Verificar horário de expediente do tenant
+      // Business hours check (cached per tenant)
       if (!tenantBusinessHoursCache[agent.tenant_id]) {
         tenantBusinessHoursCache[agent.tenant_id] = await shouldProcessAlertsForTenant(supabase, agent.tenant_id);
       }
@@ -125,17 +137,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Verificar se já existe alerta recente (últimas 2 horas) para evitar spam
-      const { data: existingAlert } = await supabase
-        .from('system_alerts')
-        .select('id')
-        .eq('agent_id', agent.agent_id)
-        .eq('alert_type', 'non_execution_detected')
-        .eq('resolved', false)
-        .gte('created_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
-        .maybeSingle();
-
-      if (existingAlert) {
+      // V-8003 FIX: Use pre-fetched set instead of per-agent query
+      if (agentsWithRecentAlerts.has(agent.agent_id)) {
         alertsSkipped.push(agent.agent_name);
         logger.debug(`[${requestId}] Skipping duplicate alert for ${agent.agent_name}`);
         continue;
