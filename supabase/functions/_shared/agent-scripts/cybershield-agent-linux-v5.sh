@@ -326,10 +326,179 @@ declare -A AGG_BUFFER_METADATA=()
      fi
  }
  
- # ============================================
- #  v5.0.1: FSM ENTERPRISE - STATE MACHINE
- # ============================================
- set_agent_state() {
+# ============================================
+#  v5.0.14: EDGE EVENT AGGREGATION ENGINE
+# ============================================
+
+# Add event to aggregation buffer. Groups similar events within time window.
+# Detects bursts (ransomware file rename storms, port scans, process floods).
+# Usage: add_aggregated_event "file_rename" "*.docx" '{"process":"unknown.exe"}'
+add_aggregated_event() {
+    local event_type="$1"
+    local pattern="$2"
+    local metadata="${3:-{}}"
+
+    if [[ "$AGGREGATION_ENABLED" != "true" ]]; then
+        # Pass through directly
+        log "DEBUG" "[AGGREGATION] Disabled - raw event: $event_type $pattern"
+        return 0
+    fi
+
+    AGG_EVENTS_RECEIVED=$((AGG_EVENTS_RECEIVED + 1))
+    local now_epoch
+    now_epoch=$(date +%s)
+    local key="${event_type}:${pattern}"
+
+    if [[ -n "${AGG_BUFFER_COUNT[$key]+x}" ]]; then
+        local first_seen="${AGG_BUFFER_FIRST_SEEN[$key]}"
+        local window_age=$((now_epoch - first_seen))
+
+        if [[ $window_age -le $AGGREGATION_WINDOW_SECONDS ]]; then
+            # Within window - aggregate
+            AGG_BUFFER_COUNT[$key]=$((AGG_BUFFER_COUNT[$key] + 1))
+            AGG_BUFFER_LAST_SEEN[$key]=$now_epoch
+            AGG_EVENTS_AGGREGATED=$((AGG_EVENTS_AGGREGATED + 1))
+
+            # Burst detection
+            local threshold=$AGGREGATION_FILE_THRESHOLD
+            case "$event_type" in
+                file_*)    threshold=$AGGREGATION_FILE_THRESHOLD ;;
+                process_*) threshold=$AGGREGATION_PROCESS_THRESHOLD ;;
+                network_*) threshold=$AGGREGATION_NETWORK_THRESHOLD ;;
+            esac
+
+            if [[ ${AGG_BUFFER_COUNT[$key]} -eq $threshold && "${AGG_BUFFER_BURST_ALERTED[$key]}" != "true" ]]; then
+                AGG_BUFFER_BURST_ALERTED[$key]="true"
+                AGG_BURSTS_DETECTED=$((AGG_BURSTS_DETECTED + 1))
+
+                local burst_type="event_burst"
+                case "$event_type" in
+                    file_rename)     burst_type="possible_ransomware_burst" ;;
+                    file_delete)     burst_type="mass_file_deletion" ;;
+                    network_connect) burst_type="possible_port_scan" ;;
+                    process_spawn)   burst_type="process_spawn_flood" ;;
+                esac
+
+                log "ERROR" "[AGGREGATION] BURST DETECTED: $burst_type - ${AGG_BUFFER_COUNT[$key]} events of '$event_type' pattern '$pattern' in ${window_age}s"
+
+                # Push burst alert immediately
+                local burst_body
+                burst_body=$(jq -n --arg t "$burst_type" --arg et "$event_type" --arg p "$pattern" \
+                    --argjson c "${AGG_BUFFER_COUNT[$key]}" --argjson w "$window_age" \
+                    '{agent_name:$ENV.AGENT_NAME,event_type:("burst_"+$t),severity:"critical",event_data:{burst_type:$t,event_type:$et,pattern:$p,count:$c,window_seconds:$w}}' 2>/dev/null)
+                if [[ -n "$burst_body" ]]; then
+                    make_authenticated_request "POST" "/functions/v1/submit-agent-evidence" "$burst_body" &>/dev/null || true
+                fi
+            fi
+            return 0
+        else
+            # Window expired - flush old entry
+            flush_aggregated_entry "$key"
+        fi
+    fi
+
+    # New entry
+    AGG_BUFFER_COUNT[$key]=1
+    AGG_BUFFER_FIRST_SEEN[$key]=$now_epoch
+    AGG_BUFFER_LAST_SEEN[$key]=$now_epoch
+    AGG_BUFFER_BURST_ALERTED[$key]="false"
+    AGG_BUFFER_METADATA[$key]="$metadata"
+
+    # Check buffer size limit
+    local buffer_size=${#AGG_BUFFER_COUNT[@]}
+    if [[ $buffer_size -ge $AGGREGATION_MAX_BUFFER_SIZE ]]; then
+        log "WARN" "[AGGREGATION] Buffer full ($buffer_size) - forcing flush"
+        flush_aggregation_buffer
+    fi
+}
+
+# Flush a single aggregated entry
+flush_aggregated_entry() {
+    local key="$1"
+    local count="${AGG_BUFFER_COUNT[$key]:-0}"
+    [[ $count -eq 0 ]] && return 0
+
+    local event_type="${key%%:*}"
+    local pattern="${key#*:}"
+    local first_seen="${AGG_BUFFER_FIRST_SEEN[$key]}"
+    local last_seen="${AGG_BUFFER_LAST_SEEN[$key]}"
+    local duration=$((last_seen - first_seen))
+    local burst="${AGG_BUFFER_BURST_ALERTED[$key]:-false}"
+    local severity="info"
+    [[ "$burst" == "true" ]] && severity="critical"
+    [[ $count -gt 10 && "$severity" == "info" ]] && severity="warning"
+
+    local body
+    body=$(jq -n --arg et "$event_type" --arg p "$pattern" --argjson c "$count" \
+        --argjson d "$duration" --arg b "$burst" --arg sev "$severity" \
+        --arg fs "$(date -u -d @"$first_seen" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+        --arg ls "$(date -u -d @"$last_seen" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+        '{agent_name:$ENV.AGENT_NAME,event_type:"aggregated_event",severity:$sev,event_data:{event_type:$et,pattern:$p,count:$c,duration_seconds:$d,burst_detected:($b=="true"),first_seen:$fs,last_seen:$ls}}' 2>/dev/null)
+
+    if [[ -n "$body" ]]; then
+        make_authenticated_request "POST" "/functions/v1/submit-agent-evidence" "$body" &>/dev/null || true
+        AGG_EVENTS_SENT=$((AGG_EVENTS_SENT + 1))
+    fi
+
+    # Clear entry
+    unset "AGG_BUFFER_COUNT[$key]"
+    unset "AGG_BUFFER_FIRST_SEEN[$key]"
+    unset "AGG_BUFFER_LAST_SEEN[$key]"
+    unset "AGG_BUFFER_BURST_ALERTED[$key]"
+    unset "AGG_BUFFER_METADATA[$key]"
+}
+
+# Flush all entries in the aggregation buffer
+flush_aggregation_buffer() {
+    local flushed=0
+    local keys=("${!AGG_BUFFER_COUNT[@]}")
+
+    for key in "${keys[@]}"; do
+        flush_aggregated_entry "$key"
+        flushed=$((flushed + 1))
+    done
+
+    AGGREGATION_LAST_FLUSH=$(date +%s)
+
+    if [[ $flushed -gt 0 ]]; then
+        local reduction=0
+        if [[ $AGG_EVENTS_RECEIVED -gt 0 ]]; then
+            reduction=$(( (AGG_EVENTS_RECEIVED - AGG_EVENTS_SENT) * 100 / AGG_EVENTS_RECEIVED ))
+        fi
+        log "INFO" "[AGGREGATION] Flushed $flushed entries (reduction: ${reduction}%)"
+    fi
+}
+
+# Update aggregation config from server response
+update_aggregation_config() {
+    local config="$1"
+    local val
+
+    val=$(echo "$config" | jq -r '.enabled // empty' 2>/dev/null)
+    [[ "$val" == "true" || "$val" == "false" ]] && AGGREGATION_ENABLED="$val"
+
+    val=$(echo "$config" | jq -r '.window_seconds // empty' 2>/dev/null)
+    [[ -n "$val" && "$val" -ge 1 && "$val" -le 30 ]] 2>/dev/null && AGGREGATION_WINDOW_SECONDS="$val"
+
+    val=$(echo "$config" | jq -r '.file_threshold // empty' 2>/dev/null)
+    [[ -n "$val" && "$val" -ge 5 && "$val" -le 10000 ]] 2>/dev/null && AGGREGATION_FILE_THRESHOLD="$val"
+
+    val=$(echo "$config" | jq -r '.process_threshold // empty' 2>/dev/null)
+    [[ -n "$val" && "$val" -ge 5 && "$val" -le 5000 ]] 2>/dev/null && AGGREGATION_PROCESS_THRESHOLD="$val"
+
+    val=$(echo "$config" | jq -r '.network_threshold // empty' 2>/dev/null)
+    [[ -n "$val" && "$val" -ge 5 && "$val" -le 50000 ]] 2>/dev/null && AGGREGATION_NETWORK_THRESHOLD="$val"
+
+    val=$(echo "$config" | jq -r '.max_buffer_size // empty' 2>/dev/null)
+    [[ -n "$val" && "$val" -ge 50 && "$val" -le 5000 ]] 2>/dev/null && AGGREGATION_MAX_BUFFER_SIZE="$val"
+
+    log "INFO" "[AGGREGATION] Config updated: enabled=$AGGREGATION_ENABLED window=${AGGREGATION_WINDOW_SECONDS}s file_thr=$AGGREGATION_FILE_THRESHOLD proc_thr=$AGGREGATION_PROCESS_THRESHOLD net_thr=$AGGREGATION_NETWORK_THRESHOLD"
+}
+
+# ============================================
+#  v5.0.1: FSM ENTERPRISE - STATE MACHINE
+# ============================================
+set_agent_state() {
      local new_state="$1"
      local reason="${2:-}"
      local old_state="$CURRENT_STATE"
