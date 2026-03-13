@@ -188,7 +188,7 @@ export default function ThreatHunting() {
                           {/* Event details */}
                           <div className="text-xs text-muted-foreground space-y-0.5">
                             {event.process_name && (
-                              <p><span className="text-foreground font-medium">Processo:</span> {event.process_name} (PID: {event.pid || event.process_pid})</p>
+                              <p><span className="text-foreground font-medium">Processo:</span> {event.process_name} (PID: {event.process_pid})</p>
                             )}
                             {event.command_line && (
                               <p className="font-mono text-[11px] truncate max-w-full">
