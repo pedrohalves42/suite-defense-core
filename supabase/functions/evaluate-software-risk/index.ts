@@ -290,25 +290,24 @@ Deno.serve(async (req) => {
         .single();
       
       if (agent?.tenant_id) {
-        // Store findings
-        for (const risk of vulnerableRisks) {
+        // V-6003: Batch upsert findings instead of 1-by-1 loop
+        const findingRows = vulnerableRisks.map(risk => {
           const checkKey = `baseline-${risk.software_name.toLowerCase().replace(/\s+/g, '-')}-${risk.min_safe_version}`;
-          
-          await supabase
-            .from('vuln_findings')
-            .upsert({
-              tenant_id: agent.tenant_id,
-              agent_id: agent_id,
-              severity: risk.severity,
-              check_key: checkKey,
-              title: `${risk.software_name} desatualizado (${risk.installed_version} < ${risk.min_safe_version})`,
-              description: risk.impact,
-              remediation: risk.remediation,
-              last_seen_at: new Date().toISOString()
-            }, {
-              onConflict: 'agent_id,check_key'
-            });
-        }
+          return {
+            tenant_id: agent.tenant_id,
+            agent_id: agent_id,
+            severity: risk.severity,
+            check_key: checkKey,
+            title: `${risk.software_name} desatualizado (${risk.installed_version} < ${risk.min_safe_version})`,
+            description: risk.impact,
+            remediation: risk.remediation,
+            last_seen_at: new Date().toISOString(),
+          };
+        });
+
+        await supabase
+          .from('vuln_findings')
+          .upsert(findingRows, { onConflict: 'agent_id,check_key' });
         
         logger.info(`Stored ${vulnerableRisks.length} findings in vuln_findings table`);
       }
