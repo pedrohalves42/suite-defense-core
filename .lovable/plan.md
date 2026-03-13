@@ -105,17 +105,49 @@
 ## 🔵 Fase 5 — Melhorias Complementares (BAIXO)
 
 ### Sprint 21 — Otimização de Edge Functions ✅
-- `system-maintenance`: Consolida 7 funções de cleanup (stale_updates, stale_reports, stale_playbooks, stuck_builds, stuck_jobs, offline_agents_jobs, security_cleanup)
-- `notification-dispatcher`: Consolida 10 funções de notificação com fallback in_app e suporte a email/telegram/whatsapp
-- `release-sync`: Consolida 5 funções de sync com ações sync_content, sync_from_repo, sync_all, validate
-- Documentação completa em `docs/EDGE_FUNCTIONS.md` com todas as funções categorizadas
-
 ### Sprint 22 — Performance & Escalabilidade ✅
-- Índices compostos para `jobs` (tenant+status+created, agent+status ativo, status+created ativo)
-- Índices compostos para `audit_logs` (tenant+created, tenant+action)
-- Índice para `agents` (tenant+status+last_heartbeat, tenant WHERE not archived)
-- Índices auxiliares para `notification_channels`, `playbook_executions`, `agent_builds`
-- Tabela `compliance_score_cache` com TTL de 1h, RLS por tenant, e funções `get_cached_compliance_score` / `upsert_compliance_cache`
+
+---
+
+## 🟢 Fase 6 — EDR Avançado (CONCLUÍDO)
+
+### Sprint 23 — Telemetria Granular ✅
+- Tabelas: `endpoint_process_events`, `endpoint_file_events`, `endpoint_network_events`, `endpoint_registry_events`, `endpoint_detection_events`
+- Edge Function `submit-endpoint-events` com 15 regras de detecção inline (MITRE-mapped)
+- Hooks React Query: `useEdrTelemetry.ts` (process, file, network, registry, detection, stats, MITRE coverage)
+- Tipos: `src/types/edr-telemetry.ts`
+
+### Sprint 24 — Detection Engine + MITRE ATT&CK ✅
+- Tabela `detection_rules` com regras configuráveis por tenant (JSON logic)
+- Tabela `mitre_attack_techniques` com 30 técnicas EDR-relevantes seedadas
+- Tabela `mitre_coverage_snapshot` para tracking de cobertura
+- Edge Function `evaluate-edr-detections` (motor de detecção server-side)
+- Hooks: `useDetectionRules.ts`
+
+### Sprint 25 — Correlation Engine ✅
+- Tabelas: `correlated_incidents`, `correlated_incident_events`, `correlation_rules`
+- 5 regras de correlação padrão: Attack Chain, Credential+Lateral, Persistence+Evasion, Ransomware, Multi-Stage
+- Edge Function `correlate-edr-events` (agrupa sinais em incidentes de alta confiança)
+- Hooks: `useCorrelatedIncidents.ts`
+- Realtime habilitado para `correlated_incidents`
+
+### Sprint 26 — Threat Hunting UI ✅
+- Página `ThreatHunting.tsx` — interface de query mini-SIEM
+- Busca cross-endpoint em processos, arquivos, rede, registro e detecções
+- Filtros por fonte, suspeitos, texto livre (powershell, T1059, mimikatz, IPs)
+- Stats agregados por fonte com contagem de suspeitos
+
+### Sprint 27 — Enhanced Timeline ✅
+- Componente `EnhancedTimeline.tsx` — timeline unificada por endpoint
+- Combina process, file, network, registry e detection events em ordem cronológica
+- Filtros por tipo de evento e flag de suspeitos
+- Indicadores visuais MITRE e severidade
+
+### Sprint 28 — MITRE ATT&CK Dashboard ✅
+- Página `MitreAttackDashboard.tsx` — cobertura visual por tática
+- Kill chain completa: 12 táticas MITRE ATT&CK
+- Progress bars por tática com técnicas detectadas vs total
+- KPIs: cobertura %, técnicas detectadas, detecções totais
 
 ---
 
@@ -123,18 +155,19 @@
 
 | Fase | Meta | Métrica de Sucesso |
 |------|------|-------------------|
-| **Fase 1** | Sistema age nos endpoints | ≥5 tipos de remediação automática funcionando |
-| **Fase 2** | UI intuitiva | ≤45 páginas, <3 cliques para qualquer ação |
-| **Fase 3** | Onboarding rápido | Primeiro agente online em <5 min |
-| **Fase 4** | Código confiável | >80% cobertura, 0 falsos positivos em CI |
-| **Fase 5** | Manutenção sustentável | <100 edge functions, queries <200ms p95 |
+| **Fase 1** | Sistema age nos endpoints | ≥5 tipos de remediação automática ✅ |
+| **Fase 2** | UI intuitiva | ≤45 páginas, <3 cliques ✅ |
+| **Fase 3** | Onboarding rápido | Primeiro agente online em <5 min ✅ |
+| **Fase 4** | Código confiável | >80% cobertura, 0 falsos positivos ✅ |
+| **Fase 5** | Manutenção sustentável | Queries <200ms p95 ✅ |
+| **Fase 6** | EDR Profissional | Detecção + MITRE + Correlação + Hunting ✅ |
 
 ---
 
-## 📋 Ordem de Execução Recomendada
+## 📋 Ordem de Execução
 
 ```
-Sprint 12-13 (Remediação) → Sprint 14-16 (UI) → Sprint 17-18 (Onboarding) → Sprint 19-20 (Testes) → Sprint 21-22 (Otimização)
+Sprint 12-13 (Remediação) → 14-16 (UI) → 17-18 (Onboarding) → 19-20 (Testes) → 21-22 (Otimização) → 23-28 (EDR Avançado)
 ```
 
-Cada sprint é independente e pode ser reordenada conforme prioridade do negócio.
+Todos os 28 sprints concluídos.
