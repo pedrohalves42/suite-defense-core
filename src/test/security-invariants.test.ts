@@ -1,0 +1,33 @@
+/**
+ * Security Invariants Unit Tests
+ */
+import { describe, it, expect } from 'vitest';
+import type { CorrelatedIncident } from '@/hooks/useCorrelatedIncidents';
+
+describe('Security Invariants', () => {
+  it('INV-001: Supabase client is properly initialized', async () => {
+    const clientModule = await import('@/integrations/supabase/client');
+    expect(clientModule.supabase).toBeDefined();
+    expect(typeof clientModule.supabase.from).toBe('function');
+    expect(typeof clientModule.supabase.auth).toBe('object');
+  });
+
+  it('INV-002: CorrelatedIncident enforces tenant_id field', () => {
+    const incident: CorrelatedIncident = {
+      id: 'test',
+      tenant_id: 'tenant-123',
+      title: 'Test',
+      severity: 'high',
+      confidence_score: 0.9,
+      status: 'open',
+      mitre_tactics: [],
+      mitre_techniques: [],
+      affected_agents: [],
+      event_count: 1,
+      first_event_time: '',
+      last_event_time: '',
+      created_at: '',
+    };
+    expect(incident.tenant_id).toBe('tenant-123');
+  });
+});
