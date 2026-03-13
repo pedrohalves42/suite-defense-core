@@ -19,15 +19,16 @@ import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapsho
 import { subDays, subHours } from 'date-fns';
 import { AGENT_STATUS_THRESHOLDS } from '@/lib/agent-status-constants';
 
-// === Modelo de custo para PMEs brasileiras ===
+// === Modelo de custo REALISTA para PMEs brasileiras ===
+// Valores conservadores baseados em custo médio de suporte técnico local
 export const COST_MODEL = {
-  security_event_critical: 500,
-  security_event_high: 200,
-  security_event_medium: 60,
-  auto_repair: 45,
-  auto_recovery: 150,
-  policy_drift: 60,
-  blocked_access: 120,
+  security_event_critical: 500,   // Incidente crítico real (ransomware, breach)
+  security_event_high: 200,       // Ameaça alta real
+  security_event_medium: 60,      // Ameaça média
+  auto_repair: 45,                // Chamado técnico evitado
+  auto_recovery: 150,             // Restauração de serviço
+  policy_drift: 60,               // Correção de conformidade
+  blocked_access: 5,              // Bloqueio DNS/domínio (baixo custo unitário, alto volume)
   firewall_enforcement: 40,
   agent_offline_per_hour: 25,
 };
