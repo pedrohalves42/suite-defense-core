@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { Agent, AgentState, AgentStatus } from '../Agent';
-import { TenantId } from '../../value-objects/TenantId';
+import { Agent, AgentState, AgentStatus } from '../entities/Agent';
+import { TenantId } from '../value-objects/TenantId';
 
 const makeAgent = (name = 'Test Agent') => {
   return Agent.create({

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { ComplianceScore } from '../ComplianceScore';
-import { TenantId } from '../../value-objects/TenantId';
+import { ComplianceScore } from '../entities/ComplianceScore';
+import { TenantId } from '../value-objects/TenantId';
 
 describe('ComplianceScore', () => {
   const tenantId = TenantId.generate();

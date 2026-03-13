@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { Job, JobType, JobStatus, JobPriority } from '../Job';
-import { AgentId } from '../../value-objects/AgentId';
-import { TenantId } from '../../value-objects/TenantId';
+import { Job, JobType, JobStatus, JobPriority } from '../entities/Job';
+import { AgentId } from '../value-objects/AgentId';
+import { TenantId } from '../value-objects/TenantId';
 
 const makeJob = (overrides?: Partial<Parameters<typeof Job.create>[0]>) => {
   return Job.create({
