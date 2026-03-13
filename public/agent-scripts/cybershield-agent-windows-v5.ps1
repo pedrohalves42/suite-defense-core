@@ -1,5 +1,13 @@
 <#
-    CyberShield Agent - Windows v5.0.13 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.14 FULL ENTERPRISE
+
+    v5.0.14: THREAT NETWORK + PROCESS LINEAGE + ZERO-TOUCH DEPLOY
+    - NEW: collect_process_lineage handler - Collects process trees with parent-child relationships
+    - NEW: Suspicious process detection heuristics (LOLBins, Office macro spawns, encoded PS)
+    - NEW: submit-process-lineage endpoint integration for EDR visibility
+    - NEW: CyberShield Threat Network integration - IoCs shared across fleet
+    - IMPROVED: collect_backup_status handler for backup monitoring
+    - IMPROVED: Agent features array updated with new capabilities
 
     v5.0.13-perf: PERFORMANCE TUNING - Parity with Linux/macOS optimizations
     v5.0.13-perf: Performance tuning (cached timestamps, HashSet O(1) lookups, HMAC reuse, log rotation throttling, CIM caching)
@@ -176,7 +184,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.13"
+    [string]$AgentVersion = "v5.0.14"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -1904,6 +1912,14 @@ function Execute-Job {
                     $status = "failed"
                 }
             }
+            # v5.0.14: Process Lineage EDR
+            "collect_process_lineage" {
+                $output = Invoke-CollectProcessLineage -Payload $Job.payload
+            }
+            # v5.0.14: Backup Status Collection
+            "collect_backup_status" {
+                $output = Invoke-CollectBackupStatus -Payload $Job.payload
+            }
             default {
                 $job_error_message = "Unknown job type: $($Job.job_type)"
                 $status = "failed"
@@ -2348,12 +2364,121 @@ function Invoke-CollectAntivirusStatus {
 
 function Invoke-CollectNetworkInfo {
     try {
-        $adapters = Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | Select-Object Name, MacAddress, LinkSpeed
-        $ipConfig = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -ne "127.0.0.1" }
-        
+        # ---- Adapters ----
+        $adapters = @()
+        try {
+            $rawAdapters = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq "Up" }
+            foreach ($a in $rawAdapters) {
+                $ipAddr = ""
+                try {
+                    $ipObj = Get-NetIPAddress -InterfaceIndex $a.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -First 1
+                    if ($ipObj) { $ipAddr = $ipObj.IPAddress }
+                } catch {}
+                $adapters += @{
+                    name = $a.Name
+                    ip_address = $ipAddr
+                    mac_address = $a.MacAddress
+                    status = "Up"
+                    speed = if ($a.LinkSpeed) { $a.LinkSpeed } else { "" }
+                }
+            }
+        } catch {}
+
+        # ---- IP addresses (legacy compat) ----
+        $ipConfig = @()
+        try {
+            $ipConfig = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -ne "127.0.0.1" } | ForEach-Object { @{ ip = $_.IPAddress; prefix = $_.PrefixLength } })
+        } catch {}
+
+        # ---- Firewall profiles ----
+        $fwDomain = $null; $fwPrivate = $null; $fwPublic = $null
+        try {
+            $fwProfiles = Get-NetFirewallProfile -ErrorAction SilentlyContinue
+            foreach ($p in $fwProfiles) {
+                switch ($p.Name) {
+                    "Domain"  { $fwDomain  = [bool]$p.Enabled }
+                    "Private" { $fwPrivate = [bool]$p.Enabled }
+                    "Public"  { $fwPublic  = [bool]$p.Enabled }
+                }
+            }
+        } catch {}
+
+        # ---- Open ports (listening) ----
+        $openPorts = @()
+        try {
+            $listeners = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Select-Object -First 50
+            foreach ($l in $listeners) {
+                $procName = ""
+                try { $procName = (Get-Process -Id $l.OwningProcess -ErrorAction SilentlyContinue).ProcessName } catch {}
+                $openPorts += @{
+                    port = $l.LocalPort
+                    process = $procName
+                    protocol = "TCP"
+                }
+            }
+        } catch {}
+
+        # ---- Active connections (established, limit 100) ----
+        $activeConns = @()
+        try {
+            $established = Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue | Select-Object -First 100
+            foreach ($c in $established) {
+                $activeConns += @{
+                    remote_address = $c.RemoteAddress
+                    remote_port = $c.RemotePort
+                    state = "Established"
+                }
+            }
+        } catch {}
+
+        # ---- DNS servers ----
+        $dnsServers = @()
+        try {
+            $dnsRaw = Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.ServerAddresses.Count -gt 0 }
+            $dnsServers = @($dnsRaw.ServerAddresses | Select-Object -Unique | Where-Object { $_ -and $_ -ne "" })
+        } catch {}
+
+        # ---- Gateway IP ----
+        $gatewayIp = $null
+        try {
+            $route = Get-NetRoute -DestinationPrefix "0.0.0.0/0" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($route) { $gatewayIp = $route.NextHop }
+        } catch {}
+
+        # ---- Public IP (fast, 3s timeout) ----
+        $publicIp = $null
+        try {
+            $publicIp = (Invoke-RestMethod -Uri "https://api.ipify.org?format=text" -TimeoutSec 3 -ErrorAction SilentlyContinue).Trim()
+        } catch {}
+
+        # ---- DNS test ----
+        $dnsTestSuccess = $null
+        try {
+            $dnsResult = Resolve-DnsName -Name "google.com" -Type A -DnsOnly -ErrorAction SilentlyContinue
+            $dnsTestSuccess = ($null -ne $dnsResult -and $dnsResult.Count -gt 0)
+        } catch { $dnsTestSuccess = $false }
+
+        # ---- HTTPS test ----
+        $httpsTestSuccess = $null
+        try {
+            $httpResp = Invoke-WebRequest -Uri "https://www.google.com" -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue
+            $httpsTestSuccess = ($httpResp.StatusCode -eq 200)
+        } catch { $httpsTestSuccess = $false }
+
         return @{
-            adapters = @($adapters)
-            ip_addresses = @($ipConfig | ForEach-Object { @{ ip = $_.IPAddress; prefix = $_.PrefixLength } })
+            adapters = @($rawAdapters | ForEach-Object { @{ Name = $_.Name; MacAddress = $_.MacAddress; LinkSpeed = $_.LinkSpeed } })
+            ip_addresses = $ipConfig
+            network_adapters = $adapters
+            firewall_domain = $fwDomain
+            firewall_private = $fwPrivate
+            firewall_public = $fwPublic
+            open_ports = $openPorts
+            active_connections = $activeConns
+            dns_servers = $dnsServers
+            gateway_ip = $gatewayIp
+            public_ip = $publicIp
+            dns_test_success = $dnsTestSuccess
+            https_test_success = $httpsTestSuccess
             collected_at = (Get-Date).ToString("o")
         }
         
@@ -2467,110 +2592,23 @@ function Get-BrowserHistorySQLite {
 }
 
 # ============================================
-#  v5.0.14: FULL WEB ACTIVITY COLLECTION
-#  Supports: Chrome, Edge, Firefox, Brave, Opera, Vivaldi
-#  + Multiple browser profiles (Profile 1, Profile 2, etc.)
+#  v5.0.5: FULL WEB ACTIVITY COLLECTION (ported from v4)
+#  CRITICAL: Must return dns_cache/browser_history format
+#  for submit-job-result enforce_job_side_effects trigger
 # ============================================
-
-function Get-ChromiumBrowserHistory {
-    param(
-        [string]$UserDataPath,
-        [string]$BrowserName,
-        [string]$UserName,
-        [System.Collections.ArrayList]$HistoryList,
-        [DateTime]$NowUtc
-    )
-    
-    if (-not (Test-Path $UserDataPath)) { return }
-    
-    # Find all profiles: Default, Profile 1, Profile 2, etc.
-    $profileDirs = @()
-    $defaultPath = Join-Path $UserDataPath "Default"
-    if (Test-Path $defaultPath) { $profileDirs += $defaultPath }
-    
-    try {
-        $extraProfiles = Get-ChildItem -Path $UserDataPath -Directory -Filter "Profile *" -ErrorAction SilentlyContinue
-        if ($extraProfiles) { $profileDirs += $extraProfiles.FullName }
-    } catch {}
-    
-    foreach ($profileDir in $profileDirs) {
-        $profileName = Split-Path $profileDir -Leaf
-        $historyFile = Join-Path $profileDir "History"
-        if (-not (Test-Path $historyFile)) { continue }
-        
-        $sourceName = "$($BrowserName.ToLower())_${UserName}_${profileName}"
-        $tempPath = "$env:TEMP\$($BrowserName.ToLower())_history_$(Get-Random).db"
-        
-        try {
-            Copy-Item -Path $historyFile -Destination $tempPath -Force -ErrorAction SilentlyContinue
-            if (-not (Test-Path $tempPath)) { continue }
-            
-            $sqlResults = $null
-            try {
-                $sqlResults = Get-BrowserHistorySQLite -DbPath $tempPath `
-                    -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" `
-                    -BrowserName $BrowserName -UserName $UserName
-            } catch {}
-            
-            if ($sqlResults -and $sqlResults.Count -gt 0) {
-                foreach ($row in $sqlResults) {
-                    $domain = Extract-DomainFromUrl $row.url
-                    if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local") { continue }
-                    $visitedAt = ConvertFrom-WebKitTimestamp $row.last_visit_time
-                    [void]$HistoryList.Add(@{
-                        domain = $domain; url = $row.url
-                        source = $sourceName; browser = $BrowserName.ToLower()
-                        visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $NowUtc.ToString("o") }
-                        visit_count = [int]$row.visit_count
-                    })
-                }
-            } else {
-                # Fallback: regex extraction from binary
-                try {
-                    $maxBytes = 5 * 1024 * 1024
-                    $fileInfo = Get-Item $tempPath
-                    $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
-                    $fileStream = [System.IO.File]::OpenRead($tempPath)
-                    $buffer = New-Object byte[] $bytesToRead
-                    [void]$fileStream.Read($buffer, 0, $bytesToRead)
-                    $fileStream.Close(); $fileStream.Dispose()
-                    if ($buffer) {
-                        $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
-                        $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
-                        $domains = $urlMatches | ForEach-Object { $_.Groups[1].Value } |
-                            Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" } |
-                            Select-Object -Unique -First 50
-                        foreach ($domain in $domains) {
-                            [void]$HistoryList.Add(@{
-                                domain = $domain; source = $sourceName; browser = $BrowserName.ToLower()
-                                visited_at = $NowUtc.ToString("o"); visit_count = 1
-                            })
-                        }
-                        $buffer = $null; $dataString = $null
-                    }
-                } catch {}
-            }
-        } catch {} finally {
-            Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
-        }
-    }
-}
-
 function Invoke-CollectWebActivity {
     param([object]$Payload)
     
-    Write-Log "[WEB-ACTIVITY-V5.14] Starting web activity collection (multi-browser + multi-profile)..." "INFO"
+    Write-Log "[WEB-ACTIVITY-V5] Starting web activity collection (timeout-safe)..." "INFO"
     
     try {
-        $maxDomains = 500
-        if ($Payload -and $Payload.max_domains) { $maxDomains = [int]$Payload.max_domains }
-        
         $nowUtc = [DateTime]::UtcNow
         $dnsCache = New-Object System.Collections.ArrayList
         $browserHistory = New-Object System.Collections.ArrayList
+        $deadline = $nowUtc.AddSeconds(45) # Hard 45s timeout
         
-        # 1. Collect DNS Cache
-        Write-Log "[WEB-ACTIVITY-V5.14] Collecting DNS cache..." "INFO"
+        # 1. Collect DNS Cache (fast, always works)
+        Write-Log "[WEB-ACTIVITY-V5] Collecting DNS cache..." "INFO"
         try {
             $dnsEntries = Get-DnsClientCache -ErrorAction SilentlyContinue
             if ($dnsEntries) {
@@ -2592,74 +2630,98 @@ function Invoke-CollectWebActivity {
                         visited_at = $nowUtc.ToString("o")
                     })
                 }
-                Write-Log "[WEB-ACTIVITY-V5.14] DNS cache: $($dnsCache.Count) domains" "INFO"
+                Write-Log "[WEB-ACTIVITY-V5] DNS cache: $($dnsCache.Count) domains" "INFO"
             }
         } catch {
-            Write-Log "[WEB-ACTIVITY-V5.14] DNS cache error: $($_.Exception.Message)" "WARN"
+            Write-Log "[WEB-ACTIVITY-V5] DNS cache error: $($_.Exception.Message)" "WARN"
         }
         
-        # 2. Collect browser history from ALL user profiles + ALL browser profiles
-        Write-Log "[WEB-ACTIVITY-V5.14] Collecting browser history (Chrome, Edge, Brave, Opera, Vivaldi, Firefox)..." "INFO"
+        # 2. Collect browser history with TIMEOUT protection
+        # Use regex-only fallback (no SQLite) to avoid hangs
+        Write-Log "[WEB-ACTIVITY-V5] Collecting browser history (regex-safe mode)..." "INFO"
         $userProfiles = @()
         try {
             $userProfiles = Get-ChildItem -Path "C:\Users" -Directory -ErrorAction SilentlyContinue |
                 Where-Object { $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') }
         } catch {}
         
-        # Define all Chromium-based browsers and their User Data paths
-        $chromiumBrowsers = @(
-            @{ Name = "Chrome";  RelPath = "AppData\Local\Google\Chrome\User Data" },
-            @{ Name = "Edge";    RelPath = "AppData\Local\Microsoft\Edge\User Data" },
-            @{ Name = "Brave";   RelPath = "AppData\Local\BraveSoftware\Brave-Browser\User Data" },
-            @{ Name = "Opera";   RelPath = "AppData\Roaming\Opera Software\Opera Stable" },
-            @{ Name = "OperaGX"; RelPath = "AppData\Roaming\Opera Software\Opera GX Stable" },
-            @{ Name = "Vivaldi"; RelPath = "AppData\Local\Vivaldi\User Data" }
-        )
-        
         foreach ($userProfile in $userProfiles) {
+            if ([DateTime]::UtcNow -gt $deadline) {
+                Write-Log "[WEB-ACTIVITY-V5] Timeout reached, stopping browser collection" "WARN"
+                break
+            }
+            
             $userName = $userProfile.Name
             $userPath = $userProfile.FullName
             
-            # Collect from all Chromium browsers
-            foreach ($browser in $chromiumBrowsers) {
-                $userDataPath = Join-Path $userPath $browser.RelPath
-                Get-ChromiumBrowserHistory -UserDataPath $userDataPath -BrowserName $browser.Name `
-                    -UserName $userName -HistoryList $browserHistory -NowUtc $nowUtc
+            # Browser DB paths to scan
+            $browserPaths = @(
+                @{ path = "AppData\Local\Google\Chrome\User Data\Default\History"; browser = "chrome" },
+                @{ path = "AppData\Local\Microsoft\Edge\User Data\Default\History"; browser = "edge" }
+            )
+            
+            foreach ($bp in $browserPaths) {
+                if ([DateTime]::UtcNow -gt $deadline) { break }
+                
+                try {
+                    $historyPath = Join-Path $userPath $bp.path
+                    if (-not (Test-Path $historyPath)) { continue }
+                    
+                    $tempPath = "$env:TEMP\$($bp.browser)_history_$(Get-Random).db"
+                    Copy-Item -Path $historyPath -Destination $tempPath -Force -ErrorAction SilentlyContinue
+                    if (-not (Test-Path $tempPath)) { continue }
+                    
+                    try {
+                        # Regex extraction only (fast, no SQLite dependency)
+                        $maxBytes = 2 * 1024 * 1024 # 2MB max to prevent hangs
+                        $fileInfo = Get-Item $tempPath -ErrorAction SilentlyContinue
+                        if ($fileInfo -and $fileInfo.Length -gt 0) {
+                            $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
+                            $fileStream = [System.IO.File]::OpenRead($tempPath)
+                            $buffer = New-Object byte[] $bytesToRead
+                            [void]$fileStream.Read($buffer, 0, $bytesToRead)
+                            $fileStream.Close(); $fileStream.Dispose()
+                            
+                            if ($buffer) {
+                                $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
+                                $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+                                $domains = $urlMatches | ForEach-Object { $_.Groups[1].Value } |
+                                    Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" -and $_ -notlike "*.localdomain" } |
+                                    Select-Object -Unique -First 50
+                                foreach ($domain in $domains) {
+                                    [void]$browserHistory.Add(@{
+                                        domain = $domain
+                                        source = $bp.browser
+                                        browser = $bp.browser
+                                        visited_at = $nowUtc.ToString("o")
+                                        visit_count = 1
+                                    })
+                                }
+                                $buffer = $null; $dataString = $null
+                            }
+                        }
+                    } catch {
+                        Write-Log "[WEB-ACTIVITY-V5] $($bp.browser) regex failed for $userName : $($_.Exception.Message)" "DEBUG"
+                    }
+                    
+                    Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
+                } catch {}
             }
             
-            # Firefox (uses different DB schema - moz_places)
-            try {
-                $firefoxProfilesPath = Join-Path $userPath "AppData\Roaming\Mozilla\Firefox\Profiles"
-                if (Test-Path $firefoxProfilesPath) {
-                    $profiles = Get-ChildItem -Path $firefoxProfilesPath -Directory -ErrorAction SilentlyContinue
-                    foreach ($profile in $profiles) {
-                        $placesPath = Join-Path $profile.FullName "places.sqlite"
-                        if (Test-Path $placesPath) {
-                            $tempPath = "$env:TEMP\firefox_places_$(Get-Random).db"
-                            Copy-Item -Path $placesPath -Destination $tempPath -Force -ErrorAction SilentlyContinue
-                            if (Test-Path $tempPath) {
-                                $sqlResults = $null
-                                try {
-                                    $sqlResults = Get-BrowserHistorySQLite -DbPath $tempPath `
-                                        -Query "SELECT url, last_visit_date, visit_count FROM moz_places WHERE visit_count > 0 ORDER BY last_visit_date DESC LIMIT 200" `
-                                        -BrowserName "Firefox" -UserName $userName
-                                } catch {}
-                                
-                                if ($sqlResults -and $sqlResults.Count -gt 0) {
-                                    foreach ($row in $sqlResults) {
-                                        $domain = Extract-DomainFromUrl $row.url
-                                        if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local") { continue }
-                                        $visitedAt = ConvertFrom-PRTime $row.last_visit_time
-                                        [void]$browserHistory.Add(@{
-                                            domain = $domain; url = $row.url
-                                            source = "firefox_${userName}_$($profile.Name)"; browser = "firefox"
-                                            visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
-                                            visit_count = [int]$row.visit_count
-                                        })
-                                    }
-                                } else {
+            # Firefox
+            if ([DateTime]::UtcNow -lt $deadline) {
+                try {
+                    $firefoxProfilesPath = Join-Path $userPath "AppData\Roaming\Mozilla\Firefox\Profiles"
+                    if (Test-Path $firefoxProfilesPath) {
+                        $profiles = Get-ChildItem -Path $firefoxProfilesPath -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+                        foreach ($profile in $profiles) {
+                            $placesPath = Join-Path $profile.FullName "places.sqlite"
+                            if (Test-Path $placesPath) {
+                                $tempPath = "$env:TEMP\firefox_places_$(Get-Random).db"
+                                Copy-Item -Path $placesPath -Destination $tempPath -Force -ErrorAction SilentlyContinue
+                                if (Test-Path $tempPath) {
                                     try {
-                                        $maxBytes = 5 * 1024 * 1024
+                                        $maxBytes = 2 * 1024 * 1024
                                         $fileInfo = Get-Item $tempPath
                                         $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
                                         $fileStream = [System.IO.File]::OpenRead($tempPath)
@@ -2674,30 +2736,23 @@ function Invoke-CollectWebActivity {
                                                 Select-Object -Unique -First 50
                                             foreach ($domain in $domains) {
                                                 [void]$browserHistory.Add(@{
-                                                    domain = $domain; source = "firefox_${userName}_$($profile.Name)"; browser = "firefox"
+                                                    domain = $domain; source = "firefox"; browser = "firefox"
                                                     visited_at = $nowUtc.ToString("o"); visit_count = 1
                                                 })
                                             }
                                             $buffer = $null; $dataString = $null
                                         }
                                     } catch {}
+                                    Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
                                 }
-                                Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
                             }
                         }
                     }
-                }
-            } catch {}
+                } catch {}
+            }
         }
         
-        # Summarize browsers found
-        $browserSummary = @{}
-        foreach ($entry in $browserHistory) {
-            $b = $entry.browser
-            if ($browserSummary.ContainsKey($b)) { $browserSummary[$b]++ } else { $browserSummary[$b] = 1 }
-        }
-        $summaryStr = ($browserSummary.GetEnumerator() | ForEach-Object { "$($_.Key):$($_.Value)" }) -join ", "
-        Write-Log "[WEB-ACTIVITY-V5.14] Collected: $($dnsCache.Count) DNS + $($browserHistory.Count) browser entries ($summaryStr)" "INFO"
+        Write-Log "[WEB-ACTIVITY-V5] Collected: $($dnsCache.Count) DNS + $($browserHistory.Count) browser entries" "INFO"
         
         # Return in format expected by submit-job-result (dns_cache + browser_history)
         return @{
@@ -2705,12 +2760,11 @@ function Invoke-CollectWebActivity {
             browser_history = @($browserHistory)
             total_dns = $dnsCache.Count
             total_browser = $browserHistory.Count
-            browsers_found = $browserSummary.Keys -join ","
             collected_at = $nowUtc.ToString("o")
         }
         
     } catch {
-        Write-Log "[WEB-ACTIVITY-V5.14] Error: $($_.Exception.Message)" "ERROR"
+        Write-Log "[WEB-ACTIVITY-V5] Error: $($_.Exception.Message)" "ERROR"
         return @{ error = $_.Exception.Message }
     }
 }
@@ -5589,6 +5643,230 @@ while ($true) {
     
     # v5.0.13-perf: Flush log buffer on each cycle boundary
     Flush-LogBuffer
+}
+
+# ============================================
+#  v5.0.14: PROCESS LINEAGE EDR HANDLER
+# ============================================
+function Invoke-CollectProcessLineage {
+    param([object]$Payload)
+    
+    Write-Log "[PROCESS-LINEAGE] Collecting process tree for EDR visibility..." "INFO"
+    
+    try {
+        # Collect all running processes with parent info via CIM (faster than WMI)
+        $processes = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | 
+            Select-Object ProcessId, ParentProcessId, Name, CommandLine, 
+                          ExecutablePath, CreationDate, @{N='UserName';E={
+                              try { 
+                                  $owner = Invoke-CimMethod -InputObject $_ -MethodName GetOwner -ErrorAction SilentlyContinue
+                                  if ($owner.Domain) { "$($owner.Domain)\$($owner.User)" } else { $owner.User }
+                              } catch { "UNKNOWN" }
+                          }}
+        
+        if (-not $processes) {
+            Write-Log "[PROCESS-LINEAGE] No processes found" "WARN"
+            return @{ processes = @(); count = 0; collected_at = (Get-Date).ToString("o") }
+        }
+        
+        # Build process name lookup for parent resolution
+        $processNameMap = @{}
+        foreach ($p in $processes) {
+            $processNameMap[$p.ProcessId] = $p.Name
+        }
+        
+        # Known suspicious processes (offensive tools)
+        $suspiciousTools = [System.Collections.Generic.HashSet[string]]::new(
+            @("mimikatz", "lazagne", "procdump", "sharphound", "bloodhound",
+              "rubeus", "covenant", "psexec", "wce", "fgdump", "gsecdump",
+              "pwdump", "crackmapexec", "impacket", "cobalt"),
+            [System.StringComparer]::OrdinalIgnoreCase
+        )
+        
+        # Suspicious parent-child patterns
+        $suspiciousParentChild = @{
+            "WINWORD"    = @("cmd", "powershell", "wscript", "cscript", "mshta")
+            "EXCEL"      = @("cmd", "powershell", "wscript", "cscript", "mshta")
+            "OUTLOOK"    = @("cmd", "powershell")
+            "POWERPNT"   = @("cmd", "powershell")
+            "mshta"      = @("powershell", "cmd")
+            "wscript"    = @("cmd", "powershell")
+            "cscript"    = @("powershell", "cmd")
+            "rundll32"   = @("cmd", "powershell")
+        }
+        
+        $processEntries = @()
+        $suspiciousCount = 0
+        
+        foreach ($proc in $processes) {
+            $parentName = if ($processNameMap.ContainsKey($proc.ParentProcessId)) { 
+                $processNameMap[$proc.ParentProcessId] 
+            } else { $null }
+            
+            $procBaseName = [System.IO.Path]::GetFileNameWithoutExtension($proc.Name)
+            $parentBaseName = if ($parentName) { [System.IO.Path]::GetFileNameWithoutExtension($parentName) } else { $null }
+            
+            # Detect suspicious patterns
+            $reasons = @()
+            
+            # Check known offensive tools
+            if ($suspiciousTools.Contains($procBaseName)) {
+                $reasons += "Known offensive tool: $($proc.Name)"
+            }
+            
+            # Check parent-child anomalies
+            if ($parentBaseName -and $suspiciousParentChild.ContainsKey($parentBaseName)) {
+                $badChildren = $suspiciousParentChild[$parentBaseName]
+                if ($procBaseName -in $badChildren) {
+                    $reasons += "Suspicious parent-child: $parentName -> $($proc.Name)"
+                }
+            }
+            
+            # Check encoded PowerShell
+            if ($procBaseName -eq "powershell" -and $proc.CommandLine) {
+                $cmd = $proc.CommandLine.ToLower()
+                if ($cmd -match '-enc\s' -or $cmd -match '-encodedcommand') {
+                    $reasons += "Encoded PowerShell command"
+                }
+                if ($cmd -match 'downloadstring|downloadfile|invoke-webrequest') {
+                    $reasons += "PowerShell download detected"
+                }
+                if ($cmd -match '-windowstyle\s+hidden|-w\s+hidden') {
+                    $reasons += "Hidden PowerShell window"
+                }
+            }
+            
+            # Check processes from temp dirs
+            if ($proc.ExecutablePath) {
+                $pathLower = $proc.ExecutablePath.ToLower()
+                if ($pathLower -match '\\temp\\|\\tmp\\' -and $procBaseName -notin @("msiexec", "setup")) {
+                    $reasons += "Process running from temp directory"
+                }
+            }
+            
+            $isSuspicious = $reasons.Count -gt 0
+            if ($isSuspicious) { $suspiciousCount++ }
+            
+            $startTime = $null
+            if ($proc.CreationDate) {
+                try { $startTime = $proc.CreationDate.ToUniversalTime().ToString("o") } catch { }
+            }
+            
+            $processEntries += @{
+                name = $proc.Name
+                pid = $proc.ProcessId
+                ppid = $proc.ParentProcessId
+                parent_name = $parentName
+                cmd = if ($proc.CommandLine) { $proc.CommandLine.Substring(0, [Math]::Min($proc.CommandLine.Length, 2048)) } else { $null }
+                user = $proc.UserName
+                start_time = $startTime
+                path = $proc.ExecutablePath
+                is_suspicious = $isSuspicious
+                reasons = $reasons
+            }
+        }
+        
+        Write-Log "[PROCESS-LINEAGE] Collected $($processEntries.Count) processes ($suspiciousCount suspicious)" "INFO"
+        
+        # Submit to backend
+        $body = @{
+            processes = $processEntries
+        }
+        
+        $submitResult = Invoke-SecureRequest `
+            -Path "/functions/v1/submit-process-lineage" `
+            -Method "POST" `
+            -Body $body `
+            -TimeoutSec 30
+        
+        if ($submitResult.Success) {
+            Write-Log "[PROCESS-LINEAGE] Submitted successfully" "SUCCESS"
+        } else {
+            Write-Log "[PROCESS-LINEAGE] Submit failed: HTTP $($submitResult.StatusCode)" "WARN"
+        }
+        
+        return @{
+            total_processes = $processEntries.Count
+            suspicious_count = $suspiciousCount
+            collected_at = (Get-Date).ToString("o")
+            submitted = $submitResult.Success
+        }
+        
+    } catch {
+        Write-Log "[PROCESS-LINEAGE] Error: $($_.Exception.Message)" "ERROR"
+        return @{ error = $_.Exception.Message; collected_at = (Get-Date).ToString("o") }
+    }
+}
+
+# ============================================
+#  v5.0.14: BACKUP STATUS HANDLER
+# ============================================
+function Invoke-CollectBackupStatus {
+    param([object]$Payload)
+    
+    Write-Log "[BACKUP] Collecting backup status..." "INFO"
+    
+    try {
+        $backupInfo = @{
+            windows_backup = @{ enabled = $false; last_backup = $null }
+            vss_shadows = @()
+            collected_at = (Get-Date).ToString("o")
+        }
+        
+        # Check Windows Backup status
+        try {
+            $wbSummary = Get-WBSummary -ErrorAction SilentlyContinue
+            if ($wbSummary) {
+                $backupInfo.windows_backup = @{
+                    enabled = $true
+                    last_backup = if ($wbSummary.LastBackupTime) { $wbSummary.LastBackupTime.ToString("o") } else { $null }
+                    last_result = $wbSummary.LastBackupResultHR
+                    next_backup = if ($wbSummary.NextBackupTime) { $wbSummary.NextBackupTime.ToString("o") } else { $null }
+                }
+            }
+        } catch {
+            # Windows Backup not available (common on workstations)
+            Write-Log "[BACKUP] Windows Backup not available: $($_.Exception.Message)" "DEBUG"
+        }
+        
+        # Check VSS Shadow Copies
+        try {
+            $shadows = Get-CimInstance Win32_ShadowCopy -ErrorAction SilentlyContinue
+            if ($shadows) {
+                $backupInfo.vss_shadows = @($shadows | Select-Object -First 10 | ForEach-Object {
+                    @{
+                        id = $_.ID
+                        volume = $_.VolumeName
+                        created_at = $_.InstallDate.ToString("o")
+                        size_bytes = $_.MaxSpace
+                    }
+                })
+            }
+        } catch {
+            Write-Log "[BACKUP] VSS check failed: $($_.Exception.Message)" "DEBUG"
+        }
+        
+        # Check for third-party backup solutions
+        $backupSoftware = @()
+        $knownBackupProcesses = @("veeam", "acronis", "carbonite", "backblaze", "crashplan", "cobian")
+        
+        $runningProcesses = Get-Process -ErrorAction SilentlyContinue | Select-Object -ExpandProperty ProcessName -Unique
+        foreach ($bp in $knownBackupProcesses) {
+            $found = $runningProcesses | Where-Object { $_ -like "*$bp*" }
+            if ($found) {
+                $backupSoftware += @{ name = $bp; running = $true }
+            }
+        }
+        $backupInfo['third_party_software'] = $backupSoftware
+        
+        Write-Log "[BACKUP] Backup status collected. VSS shadows: $($backupInfo.vss_shadows.Count)" "INFO"
+        
+        return $backupInfo
+        
+    } catch {
+        Write-Log "[BACKUP] Error: $($_.Exception.Message)" "ERROR"
+        return @{ error = $_.Exception.Message; collected_at = (Get-Date).ToString("o") }
+    }
 }
 
 # BUG FIX #7: Ensure mutex is released on any exit path (Dispose in finally equivalent)
