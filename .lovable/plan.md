@@ -64,18 +64,15 @@
 
 ---
 
-## 🟡 Fase 3 — Onboarding MSP Simplificado (MÉDIO)
+## ✅ Fase 3 — Onboarding MSP Simplificado (CONCLUÍDO)
 
-**Objetivo:** Reduzir tempo de setup de novo cliente de ~30min para ~5min.
-
-### Sprint 17 — Wizard de Onboarding
-| # | Tarefa | Prioridade |
-|---|--------|-----------|
-| 1 | Wizard 4 passos: Empresa → Plano → Primeiro Agente → Verificação | ALTA |
-| 2 | Auto-geração de enrollment key no wizard | ALTA |
-| 3 | Script de instalação one-liner copiável (PowerShell/Bash) | ALTA |
-| 4 | Detecção automática de primeiro heartbeat com confetti/feedback visual | MÉDIA |
-| 5 | Template de políticas padrão por tipo de empresa (escritório, clínica, escola) | MÉDIA |
+### Sprint 17 — Wizard de Onboarding ✅
+- Wizard 4 passos: Empresa → Plano → Primeiro Agente → Verificação
+- Auto-geração de enrollment key no wizard
+- Script de instalação one-liner copiável (PowerShell/Bash)
+- Detecção automática de primeiro heartbeat com feedback visual 🎉
+- Template de políticas por tipo de empresa (escritório, clínica, escola, personalizado)
+- Acessível via sidebar "Novo Cliente" e Command Palette
 
 ### Sprint 18 — Self-Service & Portal
 | # | Tarefa | Prioridade |

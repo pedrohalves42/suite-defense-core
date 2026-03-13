@@ -31,6 +31,7 @@ const allPages: SearchableItem[] = [
   { label: 'Resumo Executivo', path: '/admin/executive', icon: Presentation, keywords: ['executivo', 'resumo', 'ceo'], section: 'Visão Geral' },
   { label: 'Meus Computadores', path: '/admin/agent-center', icon: Cpu, keywords: ['agentes', 'computadores', 'endpoints', 'máquinas'], section: 'Visão Geral' },
   { label: 'Tempo Real', path: '/admin/monitoring-advanced', icon: Activity, keywords: ['monitoramento', 'realtime', 'tempo real'], section: 'Visão Geral' },
+  { label: 'Novo Cliente (Onboarding)', path: '/admin/onboarding', icon: Sparkles, keywords: ['onboarding', 'wizard', 'novo cliente', 'setup'], section: 'Visão Geral' },
 
   // Proteção
   { label: 'Central de Ameaças', path: '/admin/threat-center', icon: AlertTriangle, keywords: ['ameaças', 'threats', 'alertas'], section: 'Proteção' },
