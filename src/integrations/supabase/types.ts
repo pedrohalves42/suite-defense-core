@@ -12791,6 +12791,56 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboard_stats_cache: {
+        Row: {
+          stat_key: string
+          stat_value: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          stat_key: string
+          stat_value?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          stat_key?: string
+          stat_value?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_stats_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_stats_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "dashboard_stats_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "dashboard_stats_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       data_exposure_findings: {
         Row: {
           agent_id: string

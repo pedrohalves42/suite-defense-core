@@ -264,21 +264,20 @@ Deno.serve(async (req) => {
       logger.success('[PROXY] Agent heartbeat updated successfully', { agentName: agent.agent_name })
     }
 
-    // Update token last_used_at
-    await supabase
-      .from('agent_tokens')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('token_hash', tokenHash)
-
-    // ========================================================
-    // VIKTOR RECOVERY: Check for force_update and include in response
-    // ========================================================
-    // Calcular se override está válido (não expirado) - buscar expires_at
-    const { data: overrideCheck } = await supabase
-      .from('agents')
-      .select('force_update_override_safe_mode_expires_at')
-      .eq('id', agent.id)
-      .single()
+    // V-7007: Merge token update + override check into the existing agent update
+    // instead of 3 sequential queries (update agent → update token → select override)
+    // Token last_used_at update runs in parallel
+    const [, overrideCheck] = await Promise.all([
+      supabase
+        .from('agent_tokens')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('token_hash', tokenHash),
+      supabase
+        .from('agents')
+        .select('force_update_override_safe_mode_expires_at')
+        .eq('id', agent.id)
+        .single()
+    ]);
     
     const overrideValid = agent.force_update_override_safe_mode && 
       (!overrideCheck?.force_update_override_safe_mode_expires_at || 
