@@ -12116,6 +12116,260 @@ export type Database = {
           },
         ]
       }
+      correlated_incident_events: {
+        Row: {
+          agent_id: string
+          created_at: string
+          detection_event_id: string | null
+          event_data: Json | null
+          event_summary: string
+          event_time: string
+          event_type: string
+          id: string
+          incident_id: string
+          severity: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          detection_event_id?: string | null
+          event_data?: Json | null
+          event_summary: string
+          event_time: string
+          event_type: string
+          id?: string
+          incident_id: string
+          severity?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          detection_event_id?: string | null
+          event_data?: Json | null
+          event_summary?: string
+          event_time?: string
+          event_type?: string
+          id?: string
+          incident_id?: string
+          severity?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "correlated_incident_events_detection_event_id_fkey"
+            columns: ["detection_event_id"]
+            isOneToOne: false
+            referencedRelation: "endpoint_detection_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correlated_incident_events_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "correlated_incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correlated_incident_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correlated_incident_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "correlated_incident_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "correlated_incident_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      correlated_incidents: {
+        Row: {
+          affected_agents: string[] | null
+          assigned_to: string | null
+          confidence_score: number
+          correlation_rule: string | null
+          created_at: string
+          description: string | null
+          event_count: number
+          first_event_time: string
+          id: string
+          last_event_time: string
+          mitre_tactics: string[] | null
+          mitre_techniques: string[] | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          status: string
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          affected_agents?: string[] | null
+          assigned_to?: string | null
+          confidence_score?: number
+          correlation_rule?: string | null
+          created_at?: string
+          description?: string | null
+          event_count?: number
+          first_event_time: string
+          id?: string
+          last_event_time: string
+          mitre_tactics?: string[] | null
+          mitre_techniques?: string[] | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          affected_agents?: string[] | null
+          assigned_to?: string | null
+          confidence_score?: number
+          correlation_rule?: string | null
+          created_at?: string
+          description?: string | null
+          event_count?: number
+          first_event_time?: string
+          id?: string
+          last_event_time?: string
+          mitre_tactics?: string[] | null
+          mitre_techniques?: string[] | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "correlated_incidents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correlated_incidents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "correlated_incidents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "correlated_incidents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      correlation_rules: {
+        Row: {
+          created_at: string
+          description: string | null
+          event_patterns: Json
+          id: string
+          is_enabled: boolean
+          min_events: number
+          rule_name: string
+          severity: string
+          tenant_id: string | null
+          time_window_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          event_patterns?: Json
+          id?: string
+          is_enabled?: boolean
+          min_events?: number
+          rule_name: string
+          severity?: string
+          tenant_id?: string | null
+          time_window_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          event_patterns?: Json
+          id?: string
+          is_enabled?: boolean
+          min_events?: number
+          rule_name?: string
+          severity?: string
+          tenant_id?: string | null
+          time_window_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "correlation_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correlation_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "correlation_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "correlation_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       credential_leaks: {
         Row: {
           breach_date: string | null
