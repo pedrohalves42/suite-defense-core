@@ -159,6 +159,10 @@ const ComplianceAutomation = lazy(() => import("./pages/admin/ComplianceAutomati
 const ThreatIntelligence = lazy(() => import("./pages/admin/ThreatIntelligence"));
 const AIFeedbackDashboard = lazy(() => import("./pages/admin/AIFeedbackDashboard"));
 const AgentCenter = lazy(() => import("./pages/admin/AgentCenter"));
+const VulnerabilityCenter = lazy(() => import("./pages/admin/VulnerabilityCenter"));
+const NetworkSecurityCenter = lazy(() => import("./pages/admin/NetworkSecurityCenter"));
+const AssetSecurityCenter = lazy(() => import("./pages/admin/AssetSecurityCenter"));
+const ThreatCenter = lazy(() => import("./pages/admin/ThreatCenter"));
 const DataExposure = lazy(() => import("./pages/admin/DataExposure"));
 const ShadowITDiscovery = lazy(() => import("./pages/admin/ShadowITDiscovery"));
 const AttackSimulation = lazy(() => import("./pages/admin/AttackSimulation"));
