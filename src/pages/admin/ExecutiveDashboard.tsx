@@ -327,8 +327,9 @@ export default function ExecutiveDashboard() {
                         <li>• Restauração de serviço sem visita: R$ 150</li>
                         <li>• Incidente crítico contido: R$ 500</li>
                         <li>• Correção de conformidade automática: R$ 60</li>
-                        <li>• Acesso indevido bloqueado: R$ 120</li>
+                        <li>• Site perigoso bloqueado: R$ 5</li>
                       </ul>
+                      <p className="mt-1 text-muted-foreground">Incidentes são deduplicados: conta-se 1x por agente/tipo</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
