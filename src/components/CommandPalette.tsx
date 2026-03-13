@@ -138,7 +138,7 @@ export const CommandPalette = () => {
                   <span className="flex-1">{item.label}</span>
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleFavorite(item.path); }}
-                    className="text-yellow-500 hover:text-yellow-400"
+                    className="text-primary hover:text-primary/80"
                   >
                     <Star className="h-3.5 w-3.5 fill-current" />
                   </button>
