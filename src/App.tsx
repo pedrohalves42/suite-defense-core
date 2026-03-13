@@ -373,6 +373,8 @@ const App = () => (
                 <Route path="security" element={<ClientSecurityStatus />} />
                 <Route path="reports" element={<ClientReports />} />
                 <Route path="activity" element={<ClientActivity />} />
+                <Route path="install" element={<ClientInstallWizard />} />
+                <Route path="status" element={<StatusPage />} />
               </Route>
             </Route>
             
