@@ -280,8 +280,8 @@ Deno.serve(async (req) => {
     ]);
     
     const overrideValid = agent.force_update_override_safe_mode && 
-      (!overrideCheck?.force_update_override_safe_mode_expires_at || 
-       new Date(overrideCheck.force_update_override_safe_mode_expires_at) > new Date())
+      (!overrideCheck?.data?.force_update_override_safe_mode_expires_at || 
+       new Date(overrideCheck.data.force_update_override_safe_mode_expires_at) > new Date())
 
     // FIXED: Use force_update_at as trigger instead of version comparison
     // This allows same-version pushes (e.g., v5.0.13 hotfix re-download)
