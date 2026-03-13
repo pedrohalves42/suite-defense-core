@@ -1737,7 +1737,16 @@ EOF
               if [[ "$new_hb_interval" -ge 10 && "$new_hb_interval" != "$POLL_INTERVAL" ]]; then
                   log "INFO" "[HEARTBEAT] Server adjusted heartbeat interval: ${POLL_INTERVAL}s -> ${new_hb_interval}s"
                   POLL_INTERVAL=$new_hb_interval
-              fi
+               # ============================================
+               # v5.0.14: AGGREGATION CONFIG FROM SERVER
+               # ============================================
+               local agg_config
+               agg_config=$(echo "$result" | jq -r '.aggregation // empty' 2>/dev/null)
+               if [[ -n "$agg_config" && "$agg_config" != "null" ]]; then
+                   update_aggregation_config "$agg_config"
+               fi
+
+           fi
               
               local new_job_interval
               new_job_interval=$(echo "$result" | jq -r '.poll_interval_seconds // 0' 2>/dev/null)
