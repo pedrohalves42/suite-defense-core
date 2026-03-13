@@ -99,7 +99,7 @@ export const Navbar = () => {
           {navLinks.map((link) => (
             <button
               key={link.href}
-              onClick={() => scrollTo(link.href)}
+              onClick={() => handleNavClick(link)}
               className="block w-full text-left text-sm py-2.5 text-muted-foreground hover:text-foreground font-medium"
             >
               {link.label}
