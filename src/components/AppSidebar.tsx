@@ -169,7 +169,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
 
   const intelligenceItems = useMemo<MenuItem[]>(() => [
     { icon: Brain, label: 'Regras Automáticas', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
-    { icon: Crosshair, label: 'Ameaças Conhecidas', to: '/admin/threat-intelligence' },
+    { icon: Crosshair, label: 'Ameaças Conhecidas', to: '/admin/threat-center?tab=threat-intel' },
     { icon: BrainCircuit, label: 'Sugestões', to: '/admin/ai-insights' },
     { icon: Sparkles, label: 'Ações Automáticas', to: '/admin/ai-actions' },
     { icon: AlertTriangle, label: 'Comportamento Incomum', to: '/admin/ai-anomalies' },
