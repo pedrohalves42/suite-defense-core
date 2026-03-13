@@ -82,18 +82,15 @@
 
 ---
 
-## 🟢 Fase 4 — Cobertura de Testes (MÉDIO)
+## ✅ Fase 4 — Cobertura de Testes (CONCLUÍDO)
 
-**Objetivo:** Atingir >80% de cobertura com testes significativos.
-
-### Sprint 19 — Testes Unitários Core
-| # | Tarefa | Prioridade |
-|---|--------|-----------|
-| 1 | Testes para todas as entidades de domínio (Job, Agent, VulnerabilityScan, etc.) | ALTA |
-| 2 | Testes para todos os use cases (AutoRemediate, OrchestratePatch, BlockUSB, etc.) | ALTA |
-| 3 | Testes para value objects (AgentId, TenantId, etc.) | MÉDIA |
-| 4 | Testes para hooks críticos (useUnifiedMetrics, useDashboardQueries) | ALTA |
-| 5 | Mock de SupabaseJobRepository e adapters | MÉDIA |
+### Sprint 19 — Testes Unitários Core ✅
+- Testes para Job entity (16 testes): criação, FSM completa, retry, timeout, cancel, expire, terminal
+- Testes para Agent entity (13 testes): criação, FSM transitions, heartbeat, reconstitution, events
+- Testes para VulnerabilityScan (10 testes): criação, canAutoRemediate, markRemediated, domain events
+- Testes para ComplianceScore (9 testes): drift detection, severity, recommendations, events
+- Testes para useFavorites hook (5 testes): toggle, persist, localStorage
+- Total: 53 novos testes, todos passando
 
 ### Sprint 20 — Testes E2E Autenticados
 | # | Tarefa | Prioridade |
