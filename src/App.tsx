@@ -297,7 +297,7 @@ const App = () => (
                 <Route path="data-exposure" element={<DataExposure />} />
                 <Route path="software-knowledge-base" element={<SoftwareKnowledgeBase />} />
                 <Route path="automations" element={<Automations />} />
-                <Route path="archived-agents" element={<ArchivedAgents />} />
+                <Route path="archived-agents" element={<Navigate to="/admin/agent-center?tab=archived" replace />} />
                 <Route path="alert-resolution" element={<AlertResolutionCenter />} />
                 <Route path="insight-triage" element={<InsightTriageCenter />} />
                 <Route path="confidence-gap" element={<ConfidenceGapDashboardPage />} />

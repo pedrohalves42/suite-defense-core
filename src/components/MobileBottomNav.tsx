@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 
 const navItems = [
   { icon: Home, label: 'Painel', path: '/admin/dashboard' },
-  { icon: Monitor, label: 'Agentes', path: '/admin/agent-health' },
+  { icon: Monitor, label: 'Agentes', path: '/admin/agent-center' },
   { icon: AlertTriangle, label: 'Alertas', path: '/admin/security-monitoring' },
   { icon: Shield, label: 'Políticas', path: '/admin/security-policies' },
   { icon: Menu, label: 'Menu', path: '__menu__' },
