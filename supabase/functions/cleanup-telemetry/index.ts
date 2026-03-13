@@ -34,17 +34,26 @@ Deno.serve(async (req) => {
       .eq('is_enabled', true);
 
     const uniqueTenants = [...new Set((tenants || []).map(t => t.tenant_id))];
-    const summaryResults = [];
 
-    for (const tenantId of uniqueTenants) {
-      const { data: summaryResult, error: summaryError } = await supabase.rpc('summarize_telemetry_hourly', {
-        p_tenant_id: tenantId,
-        p_hours_ago: 2,
-      });
-      if (summaryError) {
-        console.error(`[cleanup-telemetry] Summary error for ${tenantId}:`, summaryError.message);
-      }
-      summaryResults.push({ tenant_id: tenantId, result: summaryResult });
+    // Problem 4 FIX: Parallelize tenant summarization with concurrency control
+    const CONCURRENCY = 5;
+    const summaryResults: { tenant_id: string; result: any }[] = [];
+
+    for (let i = 0; i < uniqueTenants.length; i += CONCURRENCY) {
+      const batch = uniqueTenants.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.all(
+        batch.map(async (tenantId) => {
+          const { data: summaryResult, error: summaryError } = await supabase.rpc('summarize_telemetry_hourly', {
+            p_tenant_id: tenantId,
+            p_hours_ago: 2,
+          });
+          if (summaryError) {
+            console.error(`[cleanup-telemetry] Summary error for ${tenantId}:`, summaryError.message);
+          }
+          return { tenant_id: tenantId, result: summaryResult };
+        })
+      );
+      summaryResults.push(...batchResults);
     }
 
     return new Response(
