@@ -135,10 +135,12 @@ export function useExecuteActionItem() {
       action: 'execute' | 'ignore' | 'acknowledge';
       reason?: string;
     }) => {
+      // V-5007 FIX: Guard against empty tenant_id
+      if (!tenant?.id) throw new Error('Tenant not found');
       const { data, error } = await supabase.functions.invoke('action-center-feed', {
         method: 'POST',
         headers: {
-          'x-tenant-id': tenant?.id || '',
+          'x-tenant-id': tenant.id,
         },
         body: {
           item_id: itemId,

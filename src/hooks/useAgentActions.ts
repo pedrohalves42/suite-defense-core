@@ -63,7 +63,9 @@ export function useAgentActions() {
 
   const unblockVersion = useMutation({
     mutationFn: async ({ versionId }: { versionId: string }) => {
-      const { error } = await supabase
+      if (!tenantId) throw new Error('Tenant not found');
+      // V-5001 FIX: Add tenant_id filter to prevent cross-tenant version unblock
+      const query = supabase
         .from('agent_versions')
         .update({
           is_blocked: false,
@@ -72,6 +74,7 @@ export function useAgentActions() {
           blocked_reason: null,
         })
         .eq('id', versionId);
+      const { error } = await (query as any).eq('tenant_id', tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -92,10 +95,13 @@ export function useAgentActions() {
 
   const toggleRule = useMutation({
     mutationFn: async ({ ruleId, isEnabled }: { ruleId: string; isEnabled: boolean }) => {
-      const { error } = await supabase
+      if (!tenantId) throw new Error('Tenant not found');
+      // V-5002 FIX: Add tenant_id filter to prevent cross-tenant rule toggle
+      const query = supabase
         .from('decision_rules')
         .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() })
         .eq('id', ruleId);
+      const { error } = await (query as any).eq('tenant_id', tenantId);
       if (error) throw error;
     },
     onSuccess: (_, { isEnabled }) => {

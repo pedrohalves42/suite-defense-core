@@ -201,12 +201,20 @@ Deno.serve(async (req: Request) => {
           .update({ is_suspicious: true })
           .in('id', uniqueIds);
 
-        // V-2010: Update tags per event (batch by unique tag sets)
+        // V-5004 FIX: Batch tags update - group events by identical tag sets
+        const tagSetGroups = new Map<string, string[]>();
         for (const [eventId, tags] of eventTagsMap) {
+          const uniqueTags = [...new Set(tags)].sort();
+          const key = uniqueTags.join(',');
+          if (!tagSetGroups.has(key)) tagSetGroups.set(key, []);
+          tagSetGroups.get(key)!.push(eventId);
+        }
+        // One update per unique tag combination instead of per event
+        for (const [tagKey, eventIds] of tagSetGroups) {
           await supabase
             .from(table)
-            .update({ detection_tags: [...new Set(tags)] })
-            .eq('id', eventId);
+            .update({ detection_tags: tagKey.split(',') })
+            .in('id', eventIds);
         }
       }
 
