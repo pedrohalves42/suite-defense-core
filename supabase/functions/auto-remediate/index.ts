@@ -6,7 +6,7 @@ import { createAuditLog } from '../_shared/audit.ts';
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-type ActionType = 'kill_process' | 'firewall_block' | 'patch_apply' | 'quarantine_file' | 'restart_service' | 'enable_antivirus' | 'enable_firewall' | 'block_usb_device' | 'suggest_patch';
+type ActionType = 'kill_process' | 'firewall_block' | 'patch_apply' | 'quarantine_file' | 'restart_service' | 'enable_antivirus' | 'enable_firewall' | 'block_usb_device' | 'suggest_patch' | 'force_windows_update';
 
 interface RemediationRequest {
   agent_id: string;
@@ -273,6 +273,17 @@ function buildJobPayload(actionType: ActionType, details: Record<string, unknown
           vuln_ids: details.vuln_ids,
           auto_apply: details.auto_apply || false,
           reason: 'vulnerable_software_auto_patch',
+        },
+      };
+    case 'force_windows_update':
+      return {
+        jobType: 'service_health_check',
+        payload: {
+          action: 'force_windows_update',
+          scan_only: details.scan_only || false,
+          install_optional: details.install_optional || false,
+          reboot_if_needed: details.reboot_if_needed || false,
+          reason: details.reason || 'forced_windows_update_remediation',
         },
       };
   }

@@ -3,7 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 
-export type RemediationActionType = 'kill_process' | 'firewall_block' | 'patch_apply' | 'quarantine_file' | 'restart_service';
+export type RemediationActionType =
+  | 'kill_process'
+  | 'firewall_block'
+  | 'patch_apply'
+  | 'quarantine_file'
+  | 'restart_service'
+  | 'enable_antivirus'
+  | 'enable_firewall'
+  | 'block_usb_device'
+  | 'suggest_patch'
+  | 'force_windows_update';
 
 export interface RemediationAction {
   id: string;
@@ -42,7 +52,7 @@ export const useAutoRemediation = () => {
       return data as RemediationAction[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 120000, // COST-OPT: 15s → 2min
+    refetchInterval: 120000,
   });
 
   const executeRemediation = useMutation({
@@ -75,8 +85,6 @@ export const useAutoRemediation = () => {
   const approveAction = useMutation({
     mutationFn: async (actionId: string) => {
       if (!tenant?.id) throw new Error('Tenant not found');
-      // 1. Fetch the original action details to re-dispatch
-      // V-1043 FIX: Add tenant_id filter to prevent cross-tenant approval
       const { data: action, error: fetchErr } = await supabase
         .from('auto_remediation_actions')
         .select('*')
@@ -85,7 +93,6 @@ export const useAutoRemediation = () => {
         .single();
       if (fetchErr || !action) throw new Error('Ação não encontrada');
 
-      // 2. Mark as approved
       const { error: updateErr } = await supabase
         .from('auto_remediation_actions')
         .update({
@@ -97,7 +104,6 @@ export const useAutoRemediation = () => {
         .eq('tenant_id', tenant.id);
       if (updateErr) throw updateErr;
 
-      // 3. Actually dispatch the remediation job via edge function
       const { data, error: invokeErr } = await supabase.functions.invoke('auto-remediate', {
         body: {
           agent_id: action.agent_id,
@@ -108,7 +114,7 @@ export const useAutoRemediation = () => {
             original_action_id: actionId,
             approved: true,
           },
-          requires_approval: false, // Already approved, execute immediately
+          requires_approval: false,
         },
       });
       if (invokeErr) throw invokeErr;

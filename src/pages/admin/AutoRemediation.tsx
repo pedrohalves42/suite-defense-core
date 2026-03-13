@@ -4,16 +4,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Shield, Zap, AlertTriangle, CheckCircle2, Clock, XCircle, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Shield, Zap, CheckCircle2, Loader2, Search, TrendingUp, AlertTriangle, XCircle, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import TriggerRemediationDialog from '@/components/admin/TriggerRemediationDialog';
 
 const ACTION_LABELS: Record<RemediationActionType, { label: string; icon: string }> = {
   kill_process: { label: 'Encerrar Processo', icon: '🔪' },
-  firewall_block: { label: 'Bloquear Firewall', icon: '🧱' },
+  firewall_block: { label: 'Bloquear IP', icon: '🧱' },
   patch_apply: { label: 'Aplicar Patch', icon: '🩹' },
   quarantine_file: { label: 'Quarentena', icon: '🔒' },
   restart_service: { label: 'Reiniciar Serviço', icon: '🔄' },
+  enable_antivirus: { label: 'Ativar Antivírus', icon: '🛡️' },
+  enable_firewall: { label: 'Ativar Firewall', icon: '🔥' },
+  block_usb_device: { label: 'Bloquear USB', icon: '🔌' },
+  suggest_patch: { label: 'Sugerir Patch', icon: '💡' },
+  force_windows_update: { label: 'Windows Update', icon: '⬆️' },
 };
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -26,32 +33,49 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
 
 export default function AutoRemediationPage() {
   const { actions, isLoading, approveAction } = useAutoRemediation();
+  const [search, setSearch] = useState('');
+
+  const filteredActions = actions.filter(a => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      a.agent_name?.toLowerCase().includes(q) ||
+      a.action_type.toLowerCase().includes(q) ||
+      a.trigger_source.toLowerCase().includes(q)
+    );
+  });
 
   const stats = {
     total: actions.length,
     success: actions.filter(a => a.status === 'success').length,
     pending: actions.filter(a => a.status === 'pending').length,
     failed: actions.filter(a => a.status === 'failed').length,
+    successRate: actions.length > 0
+      ? Math.round((actions.filter(a => a.status === 'success').length / actions.filter(a => ['success', 'failed'].includes(a.status)).length) * 100) || 0
+      : 0,
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Zap className="h-6 w-6 text-primary" />
-          Auto-Remediação
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Motor closed-loop de remediação automática de ameaças
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Zap className="h-6 w-6 text-primary" />
+            Auto-Remediação
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Motor closed-loop de remediação automática de ameaças
+          </p>
+        </div>
+        <TriggerRemediationDialog />
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-4 text-center">
             <div className="text-2xl font-bold text-foreground">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">Total de Ações</p>
+            <p className="text-xs text-muted-foreground">Total</p>
           </CardContent>
         </Card>
         <Card>
@@ -72,24 +96,49 @@ export default function AutoRemediationPage() {
             <p className="text-xs text-muted-foreground">Falhas</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="pt-4 text-center">
+            <div className="text-2xl font-bold text-primary flex items-center justify-center gap-1">
+              <TrendingUp className="h-4 w-4" />
+              {stats.successRate}%
+            </div>
+            <p className="text-xs text-muted-foreground">Taxa de Sucesso</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Actions Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Histórico de Remediações
-          </CardTitle>
-          <CardDescription>Ações automáticas e aprovações pendentes</CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Histórico de Remediações
+              </CardTitle>
+              <CardDescription>Ações automáticas, manuais e aprovações pendentes</CardDescription>
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por agente, ação..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-          ) : actions.length === 0 ? (
+          ) : filteredActions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Shield className="h-10 w-10 mx-auto mb-2 opacity-30" />
-              <p>Nenhuma ação de remediação registrada</p>
+              <p>{search ? 'Nenhum resultado para a busca' : 'Nenhuma ação de remediação registrada'}</p>
+              {!search && (
+                <p className="text-xs mt-1">Use o botão "Nova Remediação" para disparar a primeira ação</p>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -105,7 +154,7 @@ export default function AutoRemediationPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {actions.map(action => {
+                  {filteredActions.map(action => {
                     const actionMeta = ACTION_LABELS[action.action_type as RemediationActionType] || { label: action.action_type, icon: '⚙️' };
                     const statusMeta = STATUS_MAP[action.status] || { label: action.status, variant: 'outline' as const };
 
@@ -118,7 +167,11 @@ export default function AutoRemediationPage() {
                           </span>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{action.agent_name || '—'}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{action.trigger_source}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {action.trigger_source === 'manual_dashboard' ? '👤 Manual' : action.trigger_source}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           <Badge variant={statusMeta.variant}>{statusMeta.label}</Badge>
                         </TableCell>
@@ -132,10 +185,16 @@ export default function AutoRemediationPage() {
                               variant="outline"
                               onClick={() => approveAction.mutate(action.id)}
                               disabled={approveAction.isPending}
+                              className="gap-1"
                             >
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              <CheckCircle2 className="h-3 w-3" />
                               Aprovar
                             </Button>
+                          )}
+                          {action.error_message && (
+                            <span className="text-xs text-destructive" title={action.error_message}>
+                              <AlertTriangle className="h-3 w-3 inline" />
+                            </span>
                           )}
                         </TableCell>
                       </TableRow>
