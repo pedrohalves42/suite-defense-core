@@ -264,9 +264,9 @@ const App = () => (
                 <Route path="vulnerabilities" element={<VulnerabilityFindings />} />
                 <Route path="web-activity" element={<WebActivity />} />
                 <Route path="dns-filter" element={<DNSFilter />} />
-                <Route path="agent-timeline" element={<AgentTimeline />} />
+                <Route path="agent-timeline" element={<Navigate to="/admin/agent-center?tab=timeline" replace />} />
                 <Route path="agent-releases" element={<AgentReleases />} />
-                <Route path="agent-versions" element={<AgentVersionMonitor />} />
+                <Route path="agent-versions" element={<Navigate to="/admin/agent-center?tab=versions" replace />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="rate-limiting" element={<RateLimitingStats />} />
                 <Route path="dead-letter-queue" element={<DeadLetterQueue />} />
