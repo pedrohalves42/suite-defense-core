@@ -13247,6 +13247,904 @@ export type Database = {
           },
         ]
       }
+      endpoint_detection_events: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          agent_id: string
+          command_line: string | null
+          confidence_score: number | null
+          created_at: string
+          description: string | null
+          detection_name: string
+          event_time: string
+          file_path: string | null
+          id: string
+          mitre_tactic: string | null
+          mitre_technique_id: string | null
+          mitre_technique_name: string | null
+          process_name: string | null
+          process_pid: number | null
+          remote_address: string | null
+          resolved_at: string | null
+          severity: string
+          source_event_data: Json | null
+          source_event_type: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          agent_id: string
+          command_line?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          description?: string | null
+          detection_name: string
+          event_time?: string
+          file_path?: string | null
+          id?: string
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          mitre_technique_name?: string | null
+          process_name?: string | null
+          process_pid?: number | null
+          remote_address?: string | null
+          resolved_at?: string | null
+          severity?: string
+          source_event_data?: Json | null
+          source_event_type?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          agent_id?: string
+          command_line?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          description?: string | null
+          detection_name?: string
+          event_time?: string
+          file_path?: string | null
+          id?: string
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          mitre_technique_name?: string | null
+          process_name?: string | null
+          process_pid?: number | null
+          remote_address?: string | null
+          resolved_at?: string | null
+          severity?: string
+          source_event_data?: Json | null
+          source_event_type?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "endpoint_detection_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "endpoint_detection_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      endpoint_file_events: {
+        Row: {
+          agent_id: string
+          created_at: string
+          detection_tags: string[] | null
+          event_time: string
+          event_type: string
+          file_extension: string | null
+          file_name: string | null
+          file_path: string
+          file_size: number | null
+          id: string
+          is_suspicious: boolean | null
+          old_path: string | null
+          process_name: string | null
+          process_pid: number | null
+          sha256_hash: string | null
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          file_extension?: string | null
+          file_name?: string | null
+          file_path: string
+          file_size?: number | null
+          id?: string
+          is_suspicious?: boolean | null
+          old_path?: string | null
+          process_name?: string | null
+          process_pid?: number | null
+          sha256_hash?: string | null
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          file_extension?: string | null
+          file_name?: string | null
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          is_suspicious?: boolean | null
+          old_path?: string | null
+          process_name?: string | null
+          process_pid?: number | null
+          sha256_hash?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "endpoint_file_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "endpoint_file_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      endpoint_network_events: {
+        Row: {
+          agent_id: string
+          bytes_received: number | null
+          bytes_sent: number | null
+          created_at: string
+          detection_tags: string[] | null
+          direction: string | null
+          dns_query_type: string | null
+          dns_response: string | null
+          domain: string | null
+          event_time: string
+          event_type: string
+          geo_country: string | null
+          id: string
+          is_suspicious: boolean | null
+          local_address: string | null
+          local_port: number | null
+          process_name: string | null
+          process_pid: number | null
+          protocol: string | null
+          remote_address: string | null
+          remote_port: number | null
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string
+          event_type?: string
+          geo_country?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string
+          event_type?: string
+          geo_country?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "endpoint_network_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "endpoint_network_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      endpoint_process_events: {
+        Row: {
+          agent_id: string
+          command_line: string | null
+          created_at: string
+          detection_tags: string[] | null
+          event_time: string
+          event_type: string
+          executable_path: string | null
+          id: string
+          is_suspicious: boolean | null
+          mitre_tactic: string | null
+          mitre_technique_id: string | null
+          parent_command_line: string | null
+          parent_pid: number | null
+          parent_process_name: string | null
+          pid: number
+          process_name: string
+          sha256_hash: string | null
+          tenant_id: string
+          user_name: string | null
+        }
+        Insert: {
+          agent_id: string
+          command_line?: string | null
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          executable_path?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid: number
+          process_name: string
+          sha256_hash?: string | null
+          tenant_id: string
+          user_name?: string | null
+        }
+        Update: {
+          agent_id?: string
+          command_line?: string | null
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          executable_path?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid?: number
+          process_name?: string
+          sha256_hash?: string | null
+          tenant_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "endpoint_process_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "endpoint_process_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      endpoint_registry_events: {
+        Row: {
+          agent_id: string
+          created_at: string
+          detection_tags: string[] | null
+          event_time: string
+          event_type: string
+          id: string
+          is_suspicious: boolean | null
+          key_path: string
+          mitre_technique_id: string | null
+          old_value_data: string | null
+          process_name: string | null
+          process_pid: number | null
+          tenant_id: string
+          value_data: string | null
+          value_name: string | null
+          value_type: string | null
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          id?: string
+          is_suspicious?: boolean | null
+          key_path: string
+          mitre_technique_id?: string | null
+          old_value_data?: string | null
+          process_name?: string | null
+          process_pid?: number | null
+          tenant_id: string
+          value_data?: string | null
+          value_name?: string | null
+          value_type?: string | null
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          id?: string
+          is_suspicious?: boolean | null
+          key_path?: string
+          mitre_technique_id?: string | null
+          old_value_data?: string | null
+          process_name?: string | null
+          process_pid?: number | null
+          tenant_id?: string
+          value_data?: string | null
+          value_name?: string | null
+          value_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "endpoint_registry_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "endpoint_registry_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       enrollment_keys: {
         Row: {
           agent_id: string | null
