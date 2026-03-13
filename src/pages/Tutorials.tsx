@@ -171,7 +171,7 @@ const Tutorials = () => {
                     {filteredTutorials.map((tutorial, index) => {
                       const isExpanded = expandedTutorial === tutorial.id;
                       const progress = getProgress(tutorial.id, tutorial.steps.length);
-                      const videoSrc = getVideoSrc(tutorial);
+                      const hasVideo = !!tutorialVideoUrls[tutorial.id];
                       const hasTroubleshooting = tutorial.troubleshooting && tutorial.troubleshooting.length > 0;
                       const showTS = showTroubleshooting[tutorial.id];
 
@@ -185,8 +185,8 @@ const Tutorials = () => {
                                 <div className="flex items-center gap-2 flex-wrap mb-1">
                                   <h3 className="text-base font-semibold text-foreground">{tutorial.title}</h3>
                                   <Badge variant="outline" className={`text-xs ${difficultyConfig[tutorial.difficulty].color}`}>{difficultyConfig[tutorial.difficulty].label}</Badge>
-                                  {videoSrc && <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-400 border-purple-500/20"><PlayCircle className="h-3 w-3 mr-1" />Vídeo</Badge>}
-                                  {hasTroubleshooting && <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-400 border-orange-500/20"><Bug className="h-3 w-3 mr-1" />Troubleshoot</Badge>}
+                                  {hasVideo && <Badge variant="outline" className="text-xs bg-accent/10 text-accent border-accent/20"><PlayCircle className="h-3 w-3 mr-1" />Vídeo</Badge>}
+                                  {hasTroubleshooting && <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/20"><Bug className="h-3 w-3 mr-1" />Troubleshoot</Badge>}
                                 </div>
                                 <p className="text-sm text-muted-foreground line-clamp-2">{tutorial.description}</p>
                                 <div className="flex items-center gap-4 mt-2 flex-wrap">
@@ -205,12 +205,8 @@ const Tutorials = () => {
                             <AnimatePresence>
                               {isExpanded && (
                                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }} className="border-t border-border overflow-hidden">
-                                  {/* Video */}
-                                  {videoSrc && (
-                                    <div className="mx-5 mt-5 rounded-lg overflow-hidden border border-border">
-                                      <video src={videoSrc} autoPlay loop muted playsInline className="w-full h-auto max-h-64 object-cover bg-black" />
-                                    </div>
-                                  )}
+                                  {/* Video Section */}
+                                  <VideoSection tutorialId={tutorial.id} />
 
                                   {/* Real-world scenarios */}
                                   {tutorial.realWorldScenarios && tutorial.realWorldScenarios.length > 0 && (
