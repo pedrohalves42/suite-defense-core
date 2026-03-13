@@ -6,17 +6,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    auth: {
-      getSession: vi.fn(),
-      onAuthStateChange: vi.fn(() => ({
-        data: { subscription: { unsubscribe: vi.fn() } },
-      })),
-    },
-    from: vi.fn(),
-  },
+// Mock useActiveTenant (used by useTenant which useTenantFeatures depends on)
+vi.mock('../useActiveTenant', () => ({
+  useActiveTenant: vi.fn(),
 }));
+
+import { useActiveTenant } from '../useActiveTenant';
 
 const mockFeatures = [
   { id: '1', tenant_id: 'tenant-123', feature_key: 'ai_analysis', enabled: true, quota_limit: 100, quota_used: 50, metadata: {} },
@@ -26,35 +21,23 @@ const mockFeatures = [
   { id: '5', tenant_id: 'tenant-123', feature_key: 'over_quota', enabled: true, quota_limit: 100, quota_used: 100, metadata: {} },
 ];
 
-const setupMocks = (withTenant = true) => {
-  vi.mocked(supabase.auth.getSession).mockResolvedValue({
-    data: { session: withTenant ? { user: { id: 'user-123' } } as any : null },
-    error: null,
-  });
+const setupMocks = () => {
+  const mockTenant = { id: 'tenant-123', name: 'Test' };
+  vi.mocked(useActiveTenant).mockReturnValue({
+    activeTenant: mockTenant,
+    activeRole: 'admin',
+    loading: false,
+    tenants: [mockTenant],
+    setActiveTenantById: vi.fn(),
+    isSyncing: false,
+  } as any);
 
   vi.mocked(supabase.from).mockImplementation((table: string) => {
-    if (table === 'user_roles') {
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: { tenant_id: 'tenant-123' }, error: null }),
-      } as any;
-    }
-    if (table === 'tenants') {
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ 
-          data: withTenant ? { id: 'tenant-123', name: 'Test' } : null, 
-          error: null 
-        }),
-      } as any;
-    }
     if (table === 'tenant_features') {
       return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: mockFeatures, error: null }),
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ data: mockFeatures, error: null }),
+        }),
       } as any;
     }
     return {} as any;
@@ -108,6 +91,7 @@ describe('useTenantFeatures', () => {
 
     await waitFor(() => {
       expect(result.current.features).toBeDefined();
+      expect(result.current.features.length).toBeGreaterThan(0);
     });
 
     expect(result.current.hasFeature('non_existent')).toBe(false);
@@ -118,7 +102,7 @@ describe('useTenantFeatures', () => {
     const { result } = renderHook(() => useTenantFeatures(), { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(result.current.features).toBeDefined();
+      expect(result.current.features.length).toBeGreaterThan(0);
     });
 
     const quota = result.current.getFeatureQuota('ai_analysis');
@@ -130,7 +114,7 @@ describe('useTenantFeatures', () => {
     const { result } = renderHook(() => useTenantFeatures(), { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(result.current.features).toBeDefined();
+      expect(result.current.features.length).toBeGreaterThan(0);
     });
 
     const quota = result.current.getFeatureQuota('advanced_scans');
@@ -142,7 +126,7 @@ describe('useTenantFeatures', () => {
     const { result } = renderHook(() => useTenantFeatures(), { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(result.current.features).toBeDefined();
+      expect(result.current.features.length).toBeGreaterThan(0);
     });
 
     const quota = result.current.getFeatureQuota('non_existent');
@@ -172,7 +156,7 @@ describe('useTenantFeatures', () => {
     const { result } = renderHook(() => useTenantFeatures(), { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(result.current.features).toBeDefined();
+      expect(result.current.features.length).toBeGreaterThan(0);
     });
 
     expect(result.current.canUseFeature('disabled_feature')).toBe(false);
@@ -183,7 +167,7 @@ describe('useTenantFeatures', () => {
     const { result } = renderHook(() => useTenantFeatures(), { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(result.current.features).toBeDefined();
+      expect(result.current.features.length).toBeGreaterThan(0);
     });
 
     expect(result.current.canUseFeature('over_quota')).toBe(false);
@@ -194,7 +178,7 @@ describe('useTenantFeatures', () => {
     const { result } = renderHook(() => useTenantFeatures(), { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(result.current.features).toBeDefined();
+      expect(result.current.features.length).toBeGreaterThan(0);
     });
 
     expect(result.current.isNearQuota('near_quota')).toBe(true);
@@ -205,7 +189,7 @@ describe('useTenantFeatures', () => {
     const { result } = renderHook(() => useTenantFeatures(), { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(result.current.features).toBeDefined();
+      expect(result.current.features.length).toBeGreaterThan(0);
     });
 
     expect(result.current.isNearQuota('ai_analysis')).toBe(false);
@@ -216,7 +200,7 @@ describe('useTenantFeatures', () => {
     const { result } = renderHook(() => useTenantFeatures(), { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(result.current.features).toBeDefined();
+      expect(result.current.features.length).toBeGreaterThan(0);
     });
 
     expect(result.current.isNearQuota('advanced_scans')).toBe(false);
@@ -227,7 +211,7 @@ describe('useTenantFeatures', () => {
     const { result } = renderHook(() => useTenantFeatures(), { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(result.current.features).toBeDefined();
+      expect(result.current.features.length).toBeGreaterThan(0);
     });
 
     // 50% used should be near at 40% threshold
