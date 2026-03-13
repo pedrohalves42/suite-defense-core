@@ -2460,6 +2460,12 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
          log "DEBUG" "[PERF] CPU at ${LAST_CPU_PERCENT}% - adaptive sleep ${sleep_time}s"
      fi
      
+     # v5.0.14: Flush aggregation buffer periodically
+     local agg_age=$((now - AGGREGATION_LAST_FLUSH))
+     if [[ $agg_age -ge $((AGGREGATION_WINDOW_SECONDS * 2 + 1)) ]]; then
+         flush_aggregation_buffer
+     fi
+
      # Flush log buffer at end of iteration
      flush_log_buffer
      
