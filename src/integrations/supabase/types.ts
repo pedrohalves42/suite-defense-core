@@ -35900,6 +35900,10 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: Json
       }
+      claim_event_buffer_batch: {
+        Args: { p_batch_id: string; p_limit?: number }
+        Returns: number
+      }
       claim_jobs_for_agent: {
         Args: { p_agent_id: string; p_limit?: number }
         Returns: {
