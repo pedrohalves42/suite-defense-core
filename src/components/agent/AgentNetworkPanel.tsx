@@ -53,6 +53,9 @@ export function AgentNetworkPanel({ agentId }: AgentNetworkPanelProps) {
     );
   }
 
+  const hasFirewallData = data.firewall_domain !== null || data.firewall_private !== null || data.firewall_public !== null;
+  const hasConnectivityData = data.dns_test_success !== null || data.https_test_success !== null;
+
   return (
     <div className="space-y-4">
       {/* Header with timestamp */}
@@ -77,26 +80,30 @@ export function AgentNetworkPanel({ agentId }: AgentNetworkPanelProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {[
-            { label: 'Domínio', value: data.firewall_domain },
-            { label: 'Privado', value: data.firewall_private },
-            { label: 'Público', value: data.firewall_public },
-          ].map((fw) => (
-            <div key={fw.label} className="flex items-center justify-between text-sm">
-              <span>{fw.label}</span>
-              {fw.value === true ? (
-                <Badge variant="default" className="text-xs bg-green-600">
-                  <ShieldCheck className="h-3 w-3 mr-1" /> Ativo
-                </Badge>
-              ) : fw.value === false ? (
-                <Badge variant="destructive" className="text-xs">
-                  <ShieldX className="h-3 w-3 mr-1" /> Inativo
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="text-xs">N/A</Badge>
-              )}
-            </div>
-          ))}
+          {hasFirewallData ? (
+            [{label: 'Domínio', value: data.firewall_domain},
+             {label: 'Privado', value: data.firewall_private},
+             {label: 'Público', value: data.firewall_public}].map((fw) => (
+              <div key={fw.label} className="flex items-center justify-between text-sm">
+                <span>{fw.label}</span>
+                {fw.value === true ? (
+                  <Badge variant="default" className="text-xs bg-green-600">
+                    <ShieldCheck className="h-3 w-3 mr-1" /> Ativo
+                  </Badge>
+                ) : fw.value === false ? (
+                  <Badge variant="destructive" className="text-xs">
+                    <ShieldX className="h-3 w-3 mr-1" /> Inativo
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-xs">N/A</Badge>
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="text-xs text-muted-foreground italic">
+              Agente não enviou dados de firewall. Atualize o agente para a versão mais recente.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -136,8 +143,8 @@ export function AgentNetworkPanel({ agentId }: AgentNetworkPanelProps) {
               <div key={idx} className="p-2 rounded bg-muted/30 border">
                 <p className="text-xs font-medium truncate">{adapter.name}</p>
                 <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
-                  <span>{adapter.ip_address}</span>
-                  <Badge variant={adapter.status === 'Up' ? 'default' : 'secondary'} className="text-[10px]">
+                  <span>{adapter.ip_address || adapter.mac_address || ''}</span>
+                  <Badge variant={adapter.status?.toLowerCase() === 'up' ? 'default' : 'secondary'} className="text-[10px]">
                     {adapter.status}
                   </Badge>
                 </div>
@@ -156,26 +163,34 @@ export function AgentNetworkPanel({ agentId }: AgentNetworkPanelProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span>DNS</span>
-            {data.dns_test_success === true ? (
-              <Badge variant="default" className="text-xs bg-green-600">OK</Badge>
-            ) : data.dns_test_success === false ? (
-              <Badge variant="destructive" className="text-xs">Falha</Badge>
-            ) : (
-              <Badge variant="secondary" className="text-xs">N/A</Badge>
-            )}
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span>HTTPS</span>
-            {data.https_test_success === true ? (
-              <Badge variant="default" className="text-xs bg-green-600">OK</Badge>
-            ) : data.https_test_success === false ? (
-              <Badge variant="destructive" className="text-xs">Falha</Badge>
-            ) : (
-              <Badge variant="secondary" className="text-xs">N/A</Badge>
-            )}
-          </div>
+          {hasConnectivityData ? (
+            <>
+              <div className="flex items-center justify-between text-sm">
+                <span>DNS</span>
+                {data.dns_test_success === true ? (
+                  <Badge variant="default" className="text-xs bg-green-600">OK</Badge>
+                ) : data.dns_test_success === false ? (
+                  <Badge variant="destructive" className="text-xs">Falha</Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-xs">N/A</Badge>
+                )}
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span>HTTPS</span>
+                {data.https_test_success === true ? (
+                  <Badge variant="default" className="text-xs bg-green-600">OK</Badge>
+                ) : data.https_test_success === false ? (
+                  <Badge variant="destructive" className="text-xs">Falha</Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-xs">N/A</Badge>
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground italic mb-2">
+              Testes de conectividade requerem atualização do agente.
+            </p>
+          )}
           {data.gateway_ip && (
             <div className="flex items-center justify-between text-sm">
               <span>Gateway</span>
