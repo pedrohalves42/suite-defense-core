@@ -152,20 +152,20 @@ export default function ThreatHunting() {
             <ScrollArea className="h-[600px]">
               <div className="space-y-2">
                 {(results || []).map((event, idx) => {
-                  const Icon = SOURCE_ICONS[event._source] || AlertTriangle;
+                  const Icon = SOURCE_ICONS[event.event_category] || AlertTriangle;
                   const severity = event.severity || (event.is_suspicious ? 'medium' : 'low');
 
                   return (
                     <div
-                      key={`${event._source}-${event.id}-${idx}`}
-                      className={`p-3 rounded-lg border ${event.is_suspicious || event._source === 'detection' ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-card'}`}
+                      key={`${event.event_category}-${event.id}-${idx}`}
+                      className={`p-3 rounded-lg border ${event.is_suspicious || event.event_category === 'detection' ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-card'}`}
                     >
                       <div className="flex items-start gap-3">
                         <Icon className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
                         <div className="flex-1 min-w-0 space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className="text-[10px] uppercase">
-                              {event._source}
+                              {event.event_category}
                             </Badge>
                             {severity && (
                               <Badge className={`text-[10px] ${SEVERITY_COLORS[severity] || ''}`}>
