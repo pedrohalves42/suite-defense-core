@@ -542,6 +542,23 @@ $Global:CachedCpuLoadTime = [datetime]::MinValue
 $Global:LoopTimestamp = Get-Date
 $Global:LoopTimestampStr = $Global:LoopTimestamp.ToString("yyyy-MM-dd HH:mm:ss")
 
+# v5.0.14: Edge Event Aggregation Engine
+$Global:AggregationEnabled = $true
+$Global:AggregationWindowSeconds = 3
+$Global:AggregationFileThreshold = 50
+$Global:AggregationProcessThreshold = 20
+$Global:AggregationNetworkThreshold = 100
+$Global:AggregationMaxBufferSize = 500
+$Global:EventAggregationBuffer = @{}  # Key: "type:pattern" -> Value: { count, first_seen, last_seen, samples, metadata }
+$Global:AggregationLastFlush = Get-Date
+$Global:AggregationStats = @{
+    events_received = 0
+    events_aggregated = 0
+    events_sent = 0
+    bursts_detected = 0
+    reduction_percent = 0
+}
+
 # v5.0.1: Hash Chain for execution
 $Global:ExecutionChain = @{
     last_hash = "genesis"
