@@ -146,7 +146,6 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Users, label: 'Grupos', to: '/admin/agent-center?tab=groups' },
     { icon: Tag, label: 'Etiquetas', to: '/admin/agent-center?tab=tags' },
     { icon: Shield, label: 'Regras', to: '/admin/security-policies' },
-    { icon: AppWindow, label: 'Programas', to: '/admin/software-inventory' },
     { icon: Crown, label: 'Equipe', to: '/admin/members' },
     { icon: FileBarChart, label: 'Relatórios', to: '/admin/reports' },
     { icon: Bell, label: 'Avisos', to: '/admin/notification-channels' },
