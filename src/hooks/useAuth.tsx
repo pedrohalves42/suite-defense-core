@@ -20,8 +20,8 @@ export const useAuth = () => {
     const now = Math.floor(Date.now() / 1000);
     const timeUntilExpiry = expiresAt - now;
 
-    // Refresh token if less than 5 minutes until expiration
-    if (timeUntilExpiry < 300) {
+    // Refresh token if less than 10 minutes until expiration
+    if (timeUntilExpiry < 600) {
       logger.info('Token expiring soon, refreshing proactively', {
         time_until_expiry: timeUntilExpiry,
       });
