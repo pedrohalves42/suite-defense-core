@@ -612,7 +612,7 @@ assert_launchd_health() {
      result=$(invoke_secure_request "POST" "/functions/v1/register-agent-key" "$body" 30)
      
      if [[ $? -eq 0 ]]; then
-         KEY_VERSION=$(python3 -c "import json; print(json.loads('$result').get('version', 1))" 2>/dev/null || echo 1)
+         KEY_VERSION=$(echo "$result" | jq -r '.version // 1' 2>/dev/null || echo 1)
          log "SUCCESS" "[KEYS] Public key registered successfully (version: $KEY_VERSION)"
          return 0
      else
