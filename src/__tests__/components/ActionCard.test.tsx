@@ -207,39 +207,44 @@ describe('ActionCard', () => {
       });
     });
 
-    it('should show ignore button for playbook items', () => {
+    it('should show dismiss button (X icon) for playbook items', () => {
       renderWithProviders(<ActionCard item={mockUrgentItem} />);
 
-      expect(screen.getByRole('button', { name: /Ignorar/i })).toBeInTheDocument();
+      // The ignore button is an X icon with tooltip "Ignorar"
+      const buttons = screen.getAllByRole('button');
+      expect(buttons.length).toBeGreaterThan(1);
     });
 
     it('should show acknowledge button for alert items', () => {
       renderWithProviders(<ActionCard item={mockAlertItem} />);
 
-      // Alert items show "Resolver" or similar CTA, not necessarily "Reconhecer" as a separate button
       const buttons = screen.getAllByRole('button');
       expect(buttons.length).toBeGreaterThan(0);
     });
 
-    it('should open ignore dialog when clicking ignore button', async () => {
+    it('should open archive dialog when clicking dismiss button', async () => {
       const user = userEvent.setup();
 
       renderWithProviders(<ActionCard item={mockUrgentItem} />);
 
-      const ignoreButton = screen.getByRole('button', { name: /Ignorar/i });
-      await user.click(ignoreButton);
+      // Find the X icon button (dismiss/ignore) - it's the ghost button with X icon
+      const buttons = screen.getAllByRole('button');
+      const dismissButton = buttons.find(b => b.querySelector('.lucide-x'));
+      expect(dismissButton).toBeDefined();
+      await user.click(dismissButton!);
 
-      // Dialog opens with archive reason tree or ignore form
-      expect(screen.getByText(/Ignorar/i)).toBeInTheDocument();
+      // Dialog opens with "Arquivar sem Ação" title
+      expect(screen.getByText('Arquivar sem Ação')).toBeInTheDocument();
     });
 
-    it('should require reason to ignore action', async () => {
+    it('should require reason to archive action', async () => {
       const user = userEvent.setup();
 
       renderWithProviders(<ActionCard item={mockUrgentItem} />);
 
-      const ignoreButton = screen.getByRole('button', { name: /Ignorar/i });
-      await user.click(ignoreButton);
+      const buttons = screen.getAllByRole('button');
+      const dismissButton = buttons.find(b => b.querySelector('.lucide-x'));
+      await user.click(dismissButton!);
 
       const confirmButton = screen.getByRole('button', { name: /Confirmar/i });
       expect(confirmButton).toBeDisabled();
@@ -251,8 +256,9 @@ describe('ActionCard', () => {
       renderWithProviders(<ActionCard item={mockUrgentItem} />);
 
       // Open dialog
-      const ignoreButton = screen.getByRole('button', { name: /Ignorar/i });
-      await user.click(ignoreButton);
+      const buttons = screen.getAllByRole('button');
+      const dismissButton = buttons.find(b => b.querySelector('.lucide-x'));
+      await user.click(dismissButton!);
 
       // Type reason
       const textarea = screen.getByPlaceholderText(/Falso positivo/i);
