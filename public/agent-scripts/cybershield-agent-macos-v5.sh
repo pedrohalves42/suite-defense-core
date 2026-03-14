@@ -902,33 +902,33 @@ disable_service_handler() {
 #  v5.0.1: RESTART SERVICE HANDLER (launchctl)
 # ============================================
 restart_service_handler() {
-    local job="\$1"
+    local job="$1"
     local service_name
-    service_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
+    service_name=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
     
-    if [[ -z "\$service_name" ]]; then
+    if [[ -z "$service_name" ]]; then
         echo '{"success":false,"error":"Missing service_name in payload"}'
         return
     fi
     
     # Allow restart of protected services (but log warning)
-    if echo "\$PROTECTED_SERVICES" | grep -qw "\$service_name"; then
-        log "WARN" "[RESTART-SERVICE] WARNING: Restarting protected service \$service_name"
+    if echo "$PROTECTED_SERVICES" | grep -qw "$service_name"; then
+        log "WARN" "[RESTART-SERVICE] WARNING: Restarting protected service $service_name"
     fi
     
     # macOS: kickstart restarts a service
-    if launchctl kickstart -k "system/\$service_name" 2>/dev/null; then
-        log "SUCCESS" "[RESTART-SERVICE] Restarted: \$service_name"
-        echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"running\",\"restarted_at\":\"\$(date -Iseconds)\"}"
+    if launchctl kickstart -k "system/$service_name" 2>/dev/null; then
+        log "SUCCESS" "[RESTART-SERVICE] Restarted: $service_name"
+        echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"running\",\"restarted_at\":\"$(date -Iseconds)\"}"
     else
         # Fallback: stop + start
-        launchctl stop "\$service_name" 2>/dev/null
+        launchctl stop "$service_name" 2>/dev/null
         sleep 1
-        if launchctl start "\$service_name" 2>/dev/null; then
-            log "SUCCESS" "[RESTART-SERVICE] Restarted (stop+start): \$service_name"
-            echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"running\",\"restarted_at\":\"\$(date -Iseconds)\"}"
+        if launchctl start "$service_name" 2>/dev/null; then
+            log "SUCCESS" "[RESTART-SERVICE] Restarted (stop+start): $service_name"
+            echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"running\",\"restarted_at\":\"$(date -Iseconds)\"}"
         else
-            echo "{\"success\":false,\"error\":\"Failed to restart service: \$service_name\"}"
+            echo "{\"success\":false,\"error\":\"Failed to restart service: $service_name\"}"
         fi
     fi
 }
