@@ -945,7 +945,7 @@ restart_service_handler() {
      
      # Backend returns array directly, not { jobs: [...] }
      local count
-     count=$(python3 -c "import json; print(len(json.loads('''$result''')))" 2>/dev/null || echo 0)
+     count=$(echo "$result" | jq 'length' 2>/dev/null || echo 0)
      
      if [[ "$count" -gt 0 ]]; then
          log "INFO" "[POLL-JOBS] Received $count job(s)"
