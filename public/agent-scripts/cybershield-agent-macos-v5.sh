@@ -1865,7 +1865,7 @@ collect_web_activity_handler() {
         cp "$safari_db" "$tmp_db" 2>/dev/null
         if command -v sqlite3 &>/dev/null; then
             browser_history=$(sqlite3 "$tmp_db" "SELECT url, title FROM history_items ORDER BY visit_count DESC LIMIT 50;" 2>/dev/null | \
-                python3 -c "import sys,json; lines=[l.strip().split('|',1) for l in sys.stdin if l.strip()]; print(json.dumps([{'url':l[0],'title':l[1] if len(l)>1 else ''} for l in lines]))" 2>/dev/null || echo '[]')
+                awk -F'|' '{printf "{\"url\":\"%s\",\"title\":\"%s\"},", $1, $2}' | sed 's/,$//' | sed 's/^/[/' | sed 's/$/]/' 2>/dev/null || echo '[]')
         fi
         rm -f "$tmp_db" 2>/dev/null
     fi
