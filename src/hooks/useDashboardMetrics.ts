@@ -17,10 +17,16 @@ export function useDashboardMetrics(
     } catch { return false; }
   }), [agents, OFFLINE_MS]);
 
-  const offlineCount = agents.length - activeAgents.length;
-  const pendingJobs = jobs.filter(j => j.status === "queued").length;
-  const completedJobs = jobs.filter(j => j.status === "completed").length;
-  const failedJobs = jobs.filter(j => j.status === "failed").length;
+  // P-13001 FIX: Single pass over jobs array instead of 3 separate .filter() passes
+  const { pendingJobs, completedJobs, failedJobs } = useMemo(() => {
+    let pending = 0, completed = 0, failed = 0;
+    for (const j of jobs) {
+      if (j.status === 'queued') pending++;
+      else if (j.status === 'completed') completed++;
+      else if (j.status === 'failed') failed++;
+    }
+    return { pendingJobs: pending, completedJobs: completed, failedJobs: failed };
+  }, [jobs]);
   const successRate = completedJobs + failedJobs > 0 
     ? ((completedJobs / (completedJobs + failedJobs)) * 100).toFixed(0) : '100';
 
