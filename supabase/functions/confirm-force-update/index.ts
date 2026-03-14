@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     const agent = (tokenData as any).agents as { 
       id: string; 
       agent_name: string; 
-      hmac_secret: string;
+      hmac_secret: string | null;
       agent_version: string | null;
       force_update_version: string | null;
       force_update_delivery_count: number | null;
