@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - Linux v5.0.13
+# CyberShield Agent - Linux v5.0.14
+#
+# v5.0.14: EDGE EVENT AGGREGATION + THREAT NETWORK PARITY
+# - Aligned with Windows v5.0.14 feature set
+# - All v5.0.13 performance tuning retained
 #
 # v5.0.13-perf: PERFORMANCE TUNING
 # - OPT: Log buffering (flush every 20 entries or 10s) with trap-based persistence

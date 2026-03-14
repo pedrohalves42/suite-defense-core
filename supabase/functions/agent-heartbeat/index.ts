@@ -403,6 +403,11 @@ Deno.serve(async (req) => {
       proxy: true,
       script_sha256: null, // FIXED: Include so old agents don't crash accessing this property
       skip_firewall_remediation: (agent as any).skip_firewall_remediation || false,
+      // v5.0.14: Aggregation config (safe default so agents don't crash on missing property)
+      aggregation: null,
+      // COST-OPT: Send intervals to control agent polling cadence
+      heartbeat_interval_seconds: 600,
+      poll_interval_seconds: 300,
       message: 'Heartbeat received via legacy endpoint - please update agent to v4.0.7+'
     };
     

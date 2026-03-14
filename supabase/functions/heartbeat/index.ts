@@ -687,6 +687,8 @@ Deno.serve(async (req) => {
         poll_interval_seconds: 300,        // Poll jobs every 5min (was 2min)
         // Agent config flags
         skip_firewall_remediation: agent.skip_firewall_remediation || false,
+        // v5.0.14: Aggregation config (safe default so agents don't crash on missing property)
+        aggregation: null,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

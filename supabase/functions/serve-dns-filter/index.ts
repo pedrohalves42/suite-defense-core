@@ -93,67 +93,57 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get DNS filter binary info from storage or configuration
-    const dnsFilterVersion = '1.0.0';
-    const dnsFilterBucket = 'agent-installers';
-    const dnsFilterPath = 'dns-filter/cybershield-dns.exe';
+    // ============================================
+    // v5.0.14: BLOCKLIST MODE (agent-compatible)
+    // The v5 agent calls this endpoint expecting a { domains: [...] } response
+    // for DNS blocklist sync (Sync-DnsBlocklist / Invoke-SyncBlockedWebsites).
+    // We fetch blocked domains from the tenant's DNS filter policies.
+    // ============================================
 
-    // Try to get signed URL from storage
-    let downloadUrl = '';
-    let sha256 = '';
-
+    // Fetch blocked domains from dns_filter_policies for this tenant
+    let blockedDomains: string[] = [];
     try {
-      // Check if file exists and get signed URL
-      const { data: signedUrlData, error: signedUrlError } = await supabase
-        .storage
-        .from(dnsFilterBucket)
-        .createSignedUrl(dnsFilterPath, 3600); // 1 hour expiry
+      const { data: policies } = await supabase
+        .from('dns_filter_policies')
+        .select('domain, is_blocked')
+        .eq('tenant_id', agentInfo.tenant_id)
+        .eq('is_blocked', true);
 
-      if (signedUrlError || !signedUrlData?.signedUrl) {
-        console.warn(`[${requestId}] DNS filter binary not found in storage`);
-        return new Response(
-          JSON.stringify({ 
-            error: 'DNS filter binary not available',
-            message: 'O binário do DNS filter ainda não foi carregado. Entre em contato com o suporte.'
-          }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (policies && policies.length > 0) {
+        blockedDomains = policies.map((p: { domain: string }) => p.domain).filter(Boolean);
       }
-
-      downloadUrl = signedUrlData.signedUrl;
-
-      // Get SHA256 from metadata or separate file
-      const { data: hashData } = await supabase
-        .storage
-        .from(dnsFilterBucket)
-        .download(`${dnsFilterPath}.sha256`);
-
-      if (hashData) {
-        sha256 = (await hashData.text()).trim().toLowerCase();
-      } else {
-        // Fallback: use stored hash in database or compute
-        console.warn(`[${requestId}] SHA256 file not found, using placeholder`);
-        sha256 = 'placeholder-sha256-compute-on-upload';
-      }
-
-    } catch (storageError) {
-      console.error(`[${requestId}] Storage error:`, storageError);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to access DNS filter storage',
-          message: 'Erro ao acessar storage do DNS filter'
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    } catch (policyErr) {
+      console.warn(`[${requestId}] Failed to fetch DNS policies: ${(policyErr as Error).message}`);
     }
 
-    console.log(`[${requestId}] Serving DNS filter v${dnsFilterVersion} to ${agentInfo.agent_name}`);
+    // Also check blocked_websites table if it exists
+    try {
+      const { data: blockedSites } = await supabase
+        .from('blocked_websites')
+        .select('url, domain')
+        .eq('tenant_id', agentInfo.tenant_id)
+        .eq('is_active', true);
 
+      if (blockedSites && blockedSites.length > 0) {
+        for (const site of blockedSites) {
+          const domain = (site as { url?: string; domain?: string }).domain || 
+            (site as { url?: string }).url?.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+          if (domain && !blockedDomains.includes(domain)) {
+            blockedDomains.push(domain);
+          }
+        }
+      }
+    } catch {
+      // blocked_websites table may not exist - that's OK
+    }
+
+    console.log(`[${requestId}] Serving ${blockedDomains.length} blocked domains to ${agentInfo.agent_name}`);
+
+    // Return blocklist in the format expected by the v5 agent scripts
     return new Response(
       JSON.stringify({
-        version: dnsFilterVersion,
-        download_url: downloadUrl,
-        sha256: sha256,
+        domains: blockedDomains,
+        count: blockedDomains.length,
         config: {
           listen_addr: '127.0.0.1:53',
           upstream_dns: '1.1.1.1:53',
