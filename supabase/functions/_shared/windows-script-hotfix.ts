@@ -521,13 +521,17 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
   }
 
   // HOTFIX 21: "vv" duplicated version prefix in startup log
-  // $Global:AgentVersion already contains "v5.0.13", so "v$($Global:AgentVersion)" produces "vv5.0.13"
-  if (content.includes('Agent v$($Global:AgentVersion)') && !content.includes('HOTFIX-VERSION-PREFIX')) {
-    content = content.replace(
+  // $Global:AgentVersion already contém "v5.0.14", então "v$($Global:AgentVersion)" vira "vv5.0.14"
+  // IMPORTANT: não inserir marcador dentro da string de log para não vazar no output
+  if (content.includes('Agent v$($Global:AgentVersion)')) {
+    const updated = content.replace(
       /Agent v\$\(\$Global:AgentVersion\)/g,
-      'Agent $($Global:AgentVersion) <# HOTFIX-VERSION-PREFIX #>'
+      'Agent $($Global:AgentVersion)'
     );
-    reasons.push('version_prefix_fix');
+    if (updated !== content) {
+      content = updated;
+      reasons.push('version_prefix_fix');
+    }
   }
 
   // HOTFIX 22: CNG key creation "Object already exists" — delete existing container before creating
