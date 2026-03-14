@@ -333,7 +333,7 @@ LAST_CPU_PERCENT=0
  
  get_saved_state() {
      if [[ -f "$STATE_PATH" ]]; then
-         python3 -c "import json; print(json.load(open('$STATE_PATH')).get('state', 'INITIALIZING'))" 2>/dev/null || echo "INITIALIZING"
+         jq -r '.state // "INITIALIZING"' "$STATE_PATH" 2>/dev/null || echo "INITIALIZING"
      else
          echo "INITIALIZING"
      fi
