@@ -6014,13 +6014,26 @@ function Invoke-CollectProcessLineage {
                 try { $startTime = $proc.CreationDate.ToUniversalTime().ToString("o") } catch { }
             }
             
+            # v5.0.14-perf: Only resolve owner for suspicious processes (avoids ~50ms CIM call per process)
+            $userName = "UNKNOWN"
+            if ($isSuspicious) {
+                try {
+                    $cimProc = Get-CimInstance Win32_Process -Filter "ProcessId=$($proc.ProcessId)" -ErrorAction SilentlyContinue
+                    if ($cimProc) {
+                        $owner = Invoke-CimMethod -InputObject $cimProc -MethodName GetOwner -ErrorAction SilentlyContinue
+                        if ($owner -and $owner.Domain) { $userName = "$($owner.Domain)\$($owner.User)" }
+                        elseif ($owner -and $owner.User) { $userName = $owner.User }
+                    }
+                } catch { }
+            }
+            
             $processEntries += @{
                 name = $proc.Name
                 pid = $proc.ProcessId
                 ppid = $proc.ParentProcessId
                 parent_name = $parentName
                 cmd = if ($proc.CommandLine) { $proc.CommandLine.Substring(0, [Math]::Min($proc.CommandLine.Length, 2048)) } else { $null }
-                user = $proc.UserName
+                user = $userName
                 start_time = $startTime
                 path = $proc.ExecutablePath
                 is_suspicious = $isSuspicious
