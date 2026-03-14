@@ -22,10 +22,10 @@ export interface PipelineHealth {
 
 // Per-signal thresholds (minutes) — realistic for each data source
 const SIGNAL_THRESHOLDS: Record<PipelineSignalKey, { fresh: number; critical: number }> = {
-  heartbeats: { fresh: 10, critical: 60 },      // agents heartbeat every ~2-5min
-  jobs: { fresh: 120, critical: 360 },           // jobs run every few hours
-  web_activity: { fresh: 60, critical: 480 },    // web activity depends on user browsing
-  dns_policy: { fresh: 1440, critical: 4320 },   // DNS policy changes are infrequent
+  heartbeats: { fresh: 10, critical: 60 },         // agents heartbeat every ~2-5min
+  jobs: { fresh: 240, critical: 720 },              // jobs may run infrequently — 4h fresh, 12h critical
+  web_activity: { fresh: 480, critical: 1440 },     // web activity depends on business hours — 8h fresh, 24h critical
+  dns_policy: { fresh: 43200, critical: 129600 },   // DNS policies are static config — 30 days fresh, 90 days critical
 };
 
 function computeStatus(
