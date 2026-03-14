@@ -1495,7 +1495,7 @@ restart_service_handler() {
      local anomalies
      anomalies=$(get_process_anomalies)
      local anomaly_count
-     anomaly_count=$(python3 -c "import json; print(json.loads('$anomalies').get('anomaly_count', 0))" 2>/dev/null || echo 0)
+     anomaly_count=$(echo "$anomalies" | jq -r '.anomaly_count // 0' 2>/dev/null || echo 0)
      
      local payload
      payload=$(cat <<EOF
