@@ -58,7 +58,8 @@ import {
   Settings,
   Zap,
   History,
-  Globe
+  Globe,
+  XCircle
 } from 'lucide-react';
 import { prepareJobForInsert } from '@/lib/job-utils';
 import { toast } from 'sonner';
@@ -135,6 +136,27 @@ export default function DiagnosticsCenter() {
     },
     refetchInterval: 120000, // COST-OPT: 30s → 2min
     enabled: !tenantLoading && !!tenant?.id,
+  });
+
+  // Query agents with recent failed jobs (not reflected in v_problematic_agents)
+  const { data: agentsWithFailedJobs = [] } = useQuery({
+    queryKey: ['agents-failed-jobs', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await (supabase as any)
+        .from('jobs')
+        .select('agent_name')
+        .eq('tenant_id', tenant.id)
+        .eq('status', 'failed')
+        .gte('created_at', since);
+      if (error) return [];
+      // Unique agent names with failures
+      const names = [...new Set((data || []).map((j: any) => j.agent_name))];
+      return names as string[];
+    },
+    enabled: !tenantLoading && !!tenant?.id,
+    refetchInterval: 120000,
   });
 
   // Get selected agent data
@@ -244,13 +266,20 @@ export default function DiagnosticsCenter() {
     });
   };
 
-  // Counts
-  const problemCounts = useMemo(() => ({
-    total: problematicAgents.length,
-    noHeartbeat: problematicAgents.filter(a => a.issue_type === 'no_heartbeat' || a.issue_type === 'stale_heartbeat').length,
-    noToken: problematicAgents.filter(a => a.issue_type === 'no_token').length,
-    criticalCount: problematicAgents.filter(a => a.issue_type === 'no_token' || a.issue_type === 'no_heartbeat').length,
-  }), [problematicAgents]);
+  // Counts - include agents with failed jobs that aren't already in problematic list
+  const problemCounts = useMemo(() => {
+    const problematicIds = new Set(problematicAgents.map(a => a.agent_name));
+    const extraFailedAgents = agentsWithFailedJobs.filter(name => !problematicIds.has(name));
+    const totalWithFailures = problematicAgents.length + extraFailedAgents.length;
+    
+    return {
+      total: totalWithFailures,
+      noHeartbeat: problematicAgents.filter(a => a.issue_type === 'no_heartbeat' || a.issue_type === 'stale_heartbeat').length,
+      noToken: problematicAgents.filter(a => a.issue_type === 'no_token').length,
+      failedJobs: agentsWithFailedJobs.length,
+      criticalCount: problematicAgents.filter(a => a.issue_type === 'no_token' || a.issue_type === 'no_heartbeat').length,
+    };
+  }, [problematicAgents, agentsWithFailedJobs]);
 
   // Filter agents based on SOC mode
   const filteredAgents = useMemo(() => {
@@ -325,8 +354,8 @@ export default function DiagnosticsCenter() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-5">
+        <Card className={problemCounts.total > 0 ? 'border-destructive/30' : ''}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Com Problema</CardTitle>
             <AlertCircle className="h-4 w-4 text-destructive" />
@@ -356,6 +385,17 @@ export default function DiagnosticsCenter() {
           <CardContent>
             <div className="text-2xl font-bold">{problemCounts.noToken}</div>
             <p className="text-xs text-muted-foreground">Precisam reinstalar</p>
+          </CardContent>
+        </Card>
+
+        <Card className={problemCounts.failedJobs > 0 ? 'border-amber-500/30' : ''}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Jobs Falhados</CardTitle>
+            <XCircle className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{problemCounts.failedJobs}</div>
+            <p className="text-xs text-muted-foreground">Últimas 24h</p>
           </CardContent>
         </Card>
 
