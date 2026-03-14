@@ -1854,7 +1854,7 @@ collect_web_activity_handler() {
     local dns_raw
     dns_raw=$(sudo dscacheutil -cachedump -entries 2>/dev/null | head -50 || echo "")
     if [[ -n "$dns_raw" ]]; then
-        dns_entries=$(echo "$dns_raw" | python3 -c "import sys,json; lines=[l.strip() for l in sys.stdin if l.strip()]; print(json.dumps([{'entry':l} for l in lines[:50]]))" 2>/dev/null || echo '[]')
+        dns_entries=$(echo "$dns_raw" | jq -R -s '[split("\n")[] | select(length > 0) | {entry: .}]' 2>/dev/null || echo '[]')
     fi
     
     # Collect Safari history
