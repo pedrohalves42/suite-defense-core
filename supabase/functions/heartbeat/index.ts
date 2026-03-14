@@ -651,6 +651,8 @@ Deno.serve(async (req) => {
                   // COST-OPT v4: 300s→600s heartbeat, 120s→300s poll (~75% cost reduction)
                   heartbeat_interval_seconds: 600,
                   poll_interval_seconds: 300,
+                  // v5.0.14: Aggregation config (safe default)
+                  aggregation: null,
                 }),
                 {
                   headers: { ...corsHeaders, 'Content-Type': 'application/json' },
