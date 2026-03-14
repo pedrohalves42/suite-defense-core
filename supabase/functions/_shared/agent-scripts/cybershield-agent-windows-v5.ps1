@@ -1887,8 +1887,9 @@ function Get-ExecutionHash {
         $index = $Global:ExecutionChain.execution_index + 1
         $payload = "$ExecutionId`:$JobId`:$PreviousHash`:$index"
         
-        $sha256 = [System.Security.Cryptography.SHA256]::Create()
-        $hashBytes = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($payload))
+        # v5.0.14-perf: Reuse cached SHA256 instance (avoids per-call allocation)
+        if (-not $Global:CachedSHA256) { $Global:CachedSHA256 = [System.Security.Cryptography.SHA256]::Create() }
+        $hashBytes = $Global:CachedSHA256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($payload))
         $hash = [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
         
         # Update chain
