@@ -2610,6 +2610,7 @@ function Invoke-CollectAntivirusStatus {
 
 function Invoke-CollectNetworkInfo {
     $rawAdapters = @()  # v5.0.14-fix: declare at function scope for StrictMode safety
+    try {
         # ---- Adapters ----
         $adapters = @()
         try {
