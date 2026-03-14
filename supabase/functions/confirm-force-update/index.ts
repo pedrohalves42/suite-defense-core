@@ -77,25 +77,49 @@ Deno.serve(async (req) => {
     };
 
     // HMAC verification (accept token-only for pre-hotfix agents)
-    const hasHmacHeaders = !!(signature && timestamp && nonce);
+    const hasHmacHeaders = !!(signature && hmacTimestamp && hmacNonce);
     if (hasHmacHeaders && agent.hmac_secret) {
       const hmacResult = await verifyHmacSignature(
-        supabase, req, agent.agent_name, agent.hmac_secret
+        supabase,
+        req,
+        agent.agent_name,
+        agent.hmac_secret,
+        {
+          agentId: agent.id,
+          tenantId: agent.tenant_id,
+          endpoint: 'confirm-force-update',
+        }
       );
+
       if (!hmacResult.valid) {
-        logger.warn('[confirm-force-update] HMAC failed, accepting token-only', { 
-          requestId, errorCode: hmacResult.errorCode, agentName: agent.agent_name 
+        logger.warn('[confirm-force-update] HMAC failed, accepting token-only', {
+          requestId,
+          errorCode: hmacResult.errorCode,
+          agentName: agent.agent_name,
         });
       }
     } else {
-      logger.warn('[confirm-force-update] No HMAC headers, token-only auth', { 
-        requestId, agentName: agent.agent_name 
+      logger.warn('[confirm-force-update] Missing HMAC headers, token-only auth', {
+        requestId,
+        agentName: agent.agent_name,
+        hasSignature: !!signature,
+        hasTimestamp: !!hmacTimestamp,
+        hasNonce: !!hmacNonce,
       });
     }
 
     // Parsear body
-    const body = await req.json();
-    const { new_version, old_version } = body;
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { new_version, old_version } = body as { new_version?: string; old_version?: string };
 
     if (!new_version) {
       return new Response(
