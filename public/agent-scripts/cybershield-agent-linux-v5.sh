@@ -86,7 +86,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.13"
+AGENT_VERSION="v5.0.14"
 BASE_DIR="/opt/cybershield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -1356,14 +1356,12 @@ restart_service_handler() {
              
               # v5.0.13-perf: O(1) baseline check via associative array
               if [[ -z "${PROCESS_BASELINE_MAP[$name]+_}" ]]; then
-             
-             if [[ -z "${PROCESS_BASELINE_MAP[$name]+_}" ]]; then
-                 log "WARN" "[PROCESS-CHECK] Process $name NOT in baseline - killing..."
-                 kill -9 "$pid" 2>/dev/null || true
-                 killed_count=$((killed_count + 1))
-                 log "SUCCESS" "[PROCESS-CHECK] Killed suspicious process: $name (PID: $pid)"
-             fi
-         fi
+                  log "WARN" "[PROCESS-CHECK] Process $name NOT in baseline - killing..."
+                  kill -9 "$pid" 2>/dev/null || true
+                  killed_count=$((killed_count + 1))
+                  log "SUCCESS" "[PROCESS-CHECK] Killed suspicious process: $name (PID: $pid)"
+              fi
+          fi
      done
      
      if [[ $killed_count -gt 0 ]]; then

@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - macOS v5.0.14
-#
-# v5.0.14: EDGE EVENT AGGREGATION + PROCESS LINEAGE + BACKUP STATUS
-# - NEW: Edge Event Aggregation Engine - Local event deduplication before submission
-#   * Configurable time windows (default 3s) for grouping similar events
-#   * File/Process/Network burst detection (ransomware, port scan, process flood)
-#   * 95-99% event reduction under attack conditions
-#   * Server-configurable via get-agent-config endpoint
+# CyberShield Agent - macOS v5.0.13
 #
 # v5.0.13-perf: PERFORMANCE TUNING
 # - OPT: Replace python3 with jq for JSON parsing (~60x faster: 300ms→5ms per call)
@@ -202,27 +195,6 @@ CACHED_EPOCH=0
 # v5.0.13-perf: Performance - Adaptive sleep
 ADAPTIVE_MIN_SLEEP=10
 LAST_CPU_PERCENT=0
-
-# v5.0.14: Edge Event Aggregation Engine
-AGGREGATION_ENABLED=true
-AGGREGATION_WINDOW_SECONDS=3
-AGGREGATION_FILE_THRESHOLD=50
-AGGREGATION_PROCESS_THRESHOLD=20
-AGGREGATION_NETWORK_THRESHOLD=100
-AGGREGATION_MAX_BUFFER_SIZE=500
-AGGREGATION_BUFFER_FILE="${DATA_DIR}/aggregation_buffer.json"
-AGGREGATION_LAST_FLUSH=0
-AGG_EVENTS_RECEIVED=0
-AGG_EVENTS_AGGREGATED=0
-AGG_EVENTS_SENT=0
-AGG_BURSTS_DETECTED=0
-
-# Aggregation buffer: associative array keyed by "type:pattern"
-declare -A AGG_BUFFER_COUNT=()
-declare -A AGG_BUFFER_FIRST_SEEN=()
-declare -A AGG_BUFFER_LAST_SEEN=()
-declare -A AGG_BUFFER_BURST_ALERTED=()
-declare -A AGG_BUFFER_METADATA=()
  
  # ============================================
  #  ARGUMENT PARSING
@@ -329,162 +301,10 @@ declare -A AGG_BUFFER_METADATA=()
      fi
  }
  
-# ============================================
-#  v5.0.14: EDGE EVENT AGGREGATION ENGINE
-# ============================================
-
-add_aggregated_event() {
-    local event_type="$1"
-    local pattern="$2"
-    local metadata="${3:-{}}"
-
-    if [[ "$AGGREGATION_ENABLED" != "true" ]]; then
-        log "DEBUG" "[AGGREGATION] Disabled - raw event: $event_type $pattern"
-        return 0
-    fi
-
-    AGG_EVENTS_RECEIVED=$((AGG_EVENTS_RECEIVED + 1))
-    # v5.0.14-perf: Use cached epoch to avoid date subprocess per event
-    local now_epoch=${CACHED_EPOCH:-$(date +%s)}
-    local key="${event_type}:${pattern}"
-
-    if [[ -n "${AGG_BUFFER_COUNT[$key]+x}" ]]; then
-        local first_seen="${AGG_BUFFER_FIRST_SEEN[$key]}"
-        local window_age=$((now_epoch - first_seen))
-
-        if [[ $window_age -le $AGGREGATION_WINDOW_SECONDS ]]; then
-            AGG_BUFFER_COUNT[$key]=$((AGG_BUFFER_COUNT[$key] + 1))
-            AGG_BUFFER_LAST_SEEN[$key]=$now_epoch
-            AGG_EVENTS_AGGREGATED=$((AGG_EVENTS_AGGREGATED + 1))
-
-            local threshold=$AGGREGATION_FILE_THRESHOLD
-            case "$event_type" in
-                file_*)    threshold=$AGGREGATION_FILE_THRESHOLD ;;
-                process_*) threshold=$AGGREGATION_PROCESS_THRESHOLD ;;
-                network_*) threshold=$AGGREGATION_NETWORK_THRESHOLD ;;
-            esac
-
-            if [[ ${AGG_BUFFER_COUNT[$key]} -eq $threshold && "${AGG_BUFFER_BURST_ALERTED[$key]}" != "true" ]]; then
-                AGG_BUFFER_BURST_ALERTED[$key]="true"
-                AGG_BURSTS_DETECTED=$((AGG_BURSTS_DETECTED + 1))
-
-                local burst_type="event_burst"
-                case "$event_type" in
-                    file_rename)     burst_type="possible_ransomware_burst" ;;
-                    file_delete)     burst_type="mass_file_deletion" ;;
-                    network_connect) burst_type="possible_port_scan" ;;
-                    process_spawn)   burst_type="process_spawn_flood" ;;
-                esac
-
-                log "ERROR" "[AGGREGATION] BURST DETECTED: $burst_type - ${AGG_BUFFER_COUNT[$key]} events of '$event_type' pattern '$pattern' in ${window_age}s"
-
-                local burst_body
-                burst_body=$(python3 -c "import json; print(json.dumps({'agent_name':'$AGENT_NAME','event_type':'burst_$burst_type','severity':'critical','event_data':{'burst_type':'$burst_type','event_type':'$event_type','pattern':'$pattern','count':${AGG_BUFFER_COUNT[$key]},'window_seconds':$window_age}}))" 2>/dev/null)
-                if [[ -n "$burst_body" ]]; then
-                    # v5.0.14-fix: was 'make_authenticated_request' (non-existent function) - all burst alerts were silently lost
-                    invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "$burst_body" 15 1 &>/dev/null || true
-                fi
-            fi
-            return 0
-        else
-            flush_aggregated_entry "$key"
-        fi
-    fi
-
-    AGG_BUFFER_COUNT[$key]=1
-    AGG_BUFFER_FIRST_SEEN[$key]=$now_epoch
-    AGG_BUFFER_LAST_SEEN[$key]=$now_epoch
-    AGG_BUFFER_BURST_ALERTED[$key]="false"
-    AGG_BUFFER_METADATA[$key]="$metadata"
-
-    local buffer_size=${#AGG_BUFFER_COUNT[@]}
-    if [[ $buffer_size -ge $AGGREGATION_MAX_BUFFER_SIZE ]]; then
-        log "WARN" "[AGGREGATION] Buffer full ($buffer_size) - forcing flush"
-        flush_aggregation_buffer
-    fi
-}
-
-flush_aggregated_entry() {
-    local key="$1"
-    local count="${AGG_BUFFER_COUNT[$key]:-0}"
-    [[ $count -eq 0 ]] && return 0
-
-    local event_type="${key%%:*}"
-    local pattern="${key#*:}"
-    local first_seen="${AGG_BUFFER_FIRST_SEEN[$key]}"
-    local last_seen="${AGG_BUFFER_LAST_SEEN[$key]}"
-    local duration=$((last_seen - first_seen))
-    local burst="${AGG_BUFFER_BURST_ALERTED[$key]:-false}"
-    local severity="info"
-    [[ "$burst" == "true" ]] && severity="critical"
-    [[ $count -gt 10 && "$severity" == "info" ]] && severity="warning"
-
-    local body
-    body=$(python3 -c "import json; print(json.dumps({'agent_name':'$AGENT_NAME','event_type':'aggregated_event','severity':'$severity','event_data':{'event_type':'$event_type','pattern':'$pattern','count':$count,'duration_seconds':$duration,'burst_detected':$([[ "$burst" == "true" ]] && echo "True" || echo "False"),'first_seen':'$(date -u +"%Y-%m-%dT%H:%M:%SZ")','last_seen':'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'} }))" 2>/dev/null)
-
-    if [[ -n "$body" ]]; then
-        # v5.0.14-fix: was 'make_authenticated_request' (non-existent) - all aggregated events were silently lost
-        invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "$body" 15 1 &>/dev/null || true
-        AGG_EVENTS_SENT=$((AGG_EVENTS_SENT + 1))
-    fi
-
-    unset "AGG_BUFFER_COUNT[$key]"
-    unset "AGG_BUFFER_FIRST_SEEN[$key]"
-    unset "AGG_BUFFER_LAST_SEEN[$key]"
-    unset "AGG_BUFFER_BURST_ALERTED[$key]"
-    unset "AGG_BUFFER_METADATA[$key]"
-}
-
-flush_aggregation_buffer() {
-    local flushed=0
-    local keys=("${!AGG_BUFFER_COUNT[@]}")
-
-    for key in "${keys[@]}"; do
-        flush_aggregated_entry "$key"
-        flushed=$((flushed + 1))
-    done
-
-    AGGREGATION_LAST_FLUSH=$(date +%s)
-
-    if [[ $flushed -gt 0 ]]; then
-        local reduction=0
-        if [[ $AGG_EVENTS_RECEIVED -gt 0 ]]; then
-            reduction=$(( (AGG_EVENTS_RECEIVED - AGG_EVENTS_SENT) * 100 / AGG_EVENTS_RECEIVED ))
-        fi
-        log "INFO" "[AGGREGATION] Flushed $flushed entries (reduction: ${reduction}%)"
-    fi
-}
-
-update_aggregation_config() {
-    local config="$1"
-    local val
-
-    val=$(python3 -c "import json; c=json.loads('''$config'''); print(c.get('enabled',''))" 2>/dev/null)
-    [[ "$val" == "True" ]] && AGGREGATION_ENABLED="true"
-    [[ "$val" == "False" ]] && AGGREGATION_ENABLED="false"
-
-    val=$(python3 -c "import json; c=json.loads('''$config'''); print(c.get('window_seconds',''))" 2>/dev/null)
-    [[ -n "$val" && "$val" -ge 1 && "$val" -le 30 ]] 2>/dev/null && AGGREGATION_WINDOW_SECONDS="$val"
-
-    val=$(python3 -c "import json; c=json.loads('''$config'''); print(c.get('file_threshold',''))" 2>/dev/null)
-    [[ -n "$val" && "$val" -ge 5 && "$val" -le 10000 ]] 2>/dev/null && AGGREGATION_FILE_THRESHOLD="$val"
-
-    val=$(python3 -c "import json; c=json.loads('''$config'''); print(c.get('process_threshold',''))" 2>/dev/null)
-    [[ -n "$val" && "$val" -ge 5 && "$val" -le 5000 ]] 2>/dev/null && AGGREGATION_PROCESS_THRESHOLD="$val"
-
-    val=$(python3 -c "import json; c=json.loads('''$config'''); print(c.get('network_threshold',''))" 2>/dev/null)
-    [[ -n "$val" && "$val" -ge 5 && "$val" -le 50000 ]] 2>/dev/null && AGGREGATION_NETWORK_THRESHOLD="$val"
-
-    val=$(python3 -c "import json; c=json.loads('''$config'''); print(c.get('max_buffer_size',''))" 2>/dev/null)
-    [[ -n "$val" && "$val" -ge 50 && "$val" -le 5000 ]] 2>/dev/null && AGGREGATION_MAX_BUFFER_SIZE="$val"
-
-    log "INFO" "[AGGREGATION] Config updated: enabled=$AGGREGATION_ENABLED window=${AGGREGATION_WINDOW_SECONDS}s file_thr=$AGGREGATION_FILE_THRESHOLD proc_thr=$AGGREGATION_PROCESS_THRESHOLD net_thr=$AGGREGATION_NETWORK_THRESHOLD"
-}
-
-# ============================================
-#  v5.0.1: FSM ENTERPRISE - STATE MACHINE
-# ============================================
-set_agent_state() {
+ # ============================================
+ #  v5.0.1: FSM ENTERPRISE - STATE MACHINE
+ # ============================================
+ set_agent_state() {
      local new_state="$1"
      local reason="${2:-}"
      local old_state="$CURRENT_STATE"
@@ -513,7 +333,7 @@ set_agent_state() {
  
  get_saved_state() {
      if [[ -f "$STATE_PATH" ]]; then
-         python3 -c "import json; print(json.load(open('$STATE_PATH')).get('state', 'INITIALIZING'))" 2>/dev/null || echo "INITIALIZING"
+         jq -r '.state // "INITIALIZING"' "$STATE_PATH" 2>/dev/null || echo "INITIALIZING"
      else
          echo "INITIALIZING"
      fi
@@ -792,7 +612,7 @@ assert_launchd_health() {
      result=$(invoke_secure_request "POST" "/functions/v1/register-agent-key" "$body" 30)
      
      if [[ $? -eq 0 ]]; then
-         KEY_VERSION=$(python3 -c "import json; print(json.loads('$result').get('version', 1))" 2>/dev/null || echo 1)
+         KEY_VERSION=$(echo "$result" | jq -r '.version // 1' 2>/dev/null || echo 1)
          log "SUCCESS" "[KEYS] Public key registered successfully (version: $KEY_VERSION)"
          return 0
      else
@@ -824,7 +644,7 @@ assert_launchd_health() {
      local job="$1"
      
      local signature
-     signature=$(python3 -c "import json; print(json.loads('$job').get('payload_signature', ''))" 2>/dev/null)
+     signature=$(echo "$job" | jq -r '.payload_signature // empty' 2>/dev/null)
      
      if [[ -z "$signature" ]]; then
          log "ERROR" "[VERIFY] Job has no signature - REJECTED"
@@ -876,7 +696,7 @@ test_runtime_integrity() {
     
     # Prefer signed JSON cache as authoritative source
     if [[ -f "$HASH_CACHE_JSON" ]]; then
-        expected_hash=$(python3 -c "import json; print(json.load(open('$HASH_CACHE_JSON')).get('hash',''))" 2>/dev/null)
+        expected_hash=$(jq -r '.hash // empty' "$HASH_CACHE_JSON" 2>/dev/null)
     fi
     
     # Fallback to legacy TXT
@@ -891,7 +711,7 @@ test_runtime_integrity() {
     local current_hash
     current_hash=$(shasum -a 256 "$0" 2>/dev/null | cut -d' ' -f1)
     
-    if [[ "$current_hash" != "${expected_hash,,}" ]]; then
+    if [[ "$(echo "$current_hash" | tr '[:upper:]' '[:lower:]')" != "$(echo "$expected_hash" | tr '[:upper:]' '[:lower:]')" ]]; then
         log "ERROR" "[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running! Expected: $expected_hash, Actual: $current_hash"
         return 1
     fi
@@ -932,34 +752,26 @@ validate_hash_cache_schema() {
     local cache_content
     cache_content=$(cat "$HASH_CACHE_JSON" 2>/dev/null) || return 0
     
-    # Validate JSON and check for unexpected keys using python3 (macOS native)
-    local validation
-    validation=$(python3 -c "
-import json, sys
-try:
-    data = json.loads('''$cache_content''')
-    allowed = {'hash','signature','signed_at','algorithm','verified'}
-    extra = set(data.keys()) - allowed
-    if extra:
-        print('EXTRA:' + ','.join(extra))
-        sys.exit(1)
-    h = data.get('hash','')
-    if h and len(h) != 64:
-        print('BADHASH:' + str(len(h)))
-        sys.exit(1)
-    print('OK')
-except:
-    print('INVALID_JSON')
-    sys.exit(1)
-" 2>/dev/null)
+    # Validate JSON and check for unexpected keys
+    local extra_keys
+    extra_keys=$(echo "$cache_content" | jq -r 'keys[] | select(. != "hash" and . != "signature" and . != "signed_at" and . != "algorithm" and . != "verified")' 2>/dev/null)
     
-    if [[ "$validation" == "OK" ]]; then
-        return 0
+    if [[ -n "$extra_keys" ]]; then
+        log "ERROR" "[INTEGRITY] JSON hash cache contains unexpected properties: $extra_keys. Possible injection."
+        rm -f "$HASH_CACHE_JSON" 2>/dev/null || true
+        return 1
     fi
     
-    log "ERROR" "[INTEGRITY] JSON hash cache validation failed: $validation. Removing corrupted cache."
-    rm -f "$HASH_CACHE_JSON" 2>/dev/null || true
-    return 1
+    # Validate hash format
+    local cached_hash
+    cached_hash=$(echo "$cache_content" | jq -r '.hash // empty' 2>/dev/null)
+    if [[ -n "$cached_hash" && ${#cached_hash} -ne 64 ]]; then
+        log "ERROR" "[INTEGRITY] Invalid hash length in cache: ${#cached_hash} (expected 64)"
+        rm -f "$HASH_CACHE_JSON" 2>/dev/null || true
+        return 1
+    fi
+    
+    return 0
 }
 
 # ============================================
@@ -973,78 +785,78 @@ PROTECTED_SERVICES="com.apple.sshd com.apple.windowserver com.apple.coreservices
 #  v5.0.1: KILL PROCESS HANDLER
 # ============================================
 kill_process_handler() {
-    local job="\$1"
+    local job="$1"
     local process_name
-    process_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('process_name',''))" 2>/dev/null)
+    process_name=$(echo "$job" | jq -r '.payload.process_name // empty' 2>/dev/null)
     local force
-    force=\$(echo "\$job" | python3 -c "import sys,json; print(str(json.load(sys.stdin).get('payload',{}).get('force',False)).lower())" 2>/dev/null)
+    force=$(echo "$job" | jq -r '.payload.force // false' 2>/dev/null)
     
-    if [[ -z "\$process_name" ]]; then
+    if [[ -z "$process_name" ]]; then
         echo '{"success":false,"error":"Missing process_name in payload"}'
         return
     fi
     
     # Security check: Protected process list
     local normalized_name
-    normalized_name=\$(echo "\$process_name" | tr '[:upper:]' '[:lower:]')
+    normalized_name=$(echo "$process_name" | tr '[:upper:]' '[:lower:]')
     
-    if echo "\$PROTECTED_PROCESSES" | grep -qw "\$normalized_name"; then
-        log "WARN" "[KILL-PROCESS] BLOCKED: \$process_name is a protected process"
-        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: \$process_name is a protected system process\",\"blocked\":true}"
+    if echo "$PROTECTED_PROCESSES" | grep -qw "$normalized_name"; then
+        log "WARN" "[KILL-PROCESS] BLOCKED: $process_name is a protected process"
+        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: $process_name is a protected system process\",\"blocked\":true}"
         return
     fi
     
     # Find and kill processes
     local pids
-    pids=\$(pgrep -x "\$process_name" 2>/dev/null)
+    pids=$(pgrep -x "$process_name" 2>/dev/null)
     
-    if [[ -z "\$pids" ]]; then
-        echo "{\"success\":true,\"killed\":0,\"message\":\"Process not running: \$process_name\"}"
+    if [[ -z "$pids" ]]; then
+        echo "{\"success\":true,\"killed\":0,\"message\":\"Process not running: $process_name\"}"
         return
     fi
     
     local killed=0
     local total=0
     
-    for pid in \$pids; do
-        total=\$((total + 1))
-        if [[ "\$force" == "true" ]]; then
-            kill -9 "\$pid" 2>/dev/null && killed=\$((killed + 1))
+    for pid in $pids; do
+        total=$((total + 1))
+        if [[ "$force" == "true" ]]; then
+            kill -9 "$pid" 2>/dev/null && killed=$((killed + 1))
         else
-            kill "\$pid" 2>/dev/null && killed=\$((killed + 1))
+            kill "$pid" 2>/dev/null && killed=$((killed + 1))
         fi
     done
     
-    log "SUCCESS" "[KILL-PROCESS] Terminated \$killed/\$total instances of \$process_name"
-    echo "{\"success\":true,\"process_name\":\"\$process_name\",\"killed\":\$killed,\"total_found\":\$total,\"killed_at\":\"\$(date -Iseconds)\"}"
+    log "SUCCESS" "[KILL-PROCESS] Terminated $killed/$total instances of $process_name"
+    echo "{\"success\":true,\"process_name\":\"$process_name\",\"killed\":$killed,\"total_found\":$total,\"killed_at\":\"$(date -Iseconds)\"}"
 }
 
 # ============================================
 #  v5.0.1: STOP SERVICE HANDLER (launchctl)
 # ============================================
 stop_service_handler() {
-    local job="\$1"
+    local job="$1"
     local service_name
-    service_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
+    service_name=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
     
-    if [[ -z "\$service_name" ]]; then
+    if [[ -z "$service_name" ]]; then
         echo '{"success":false,"error":"Missing service_name in payload"}'
         return
     fi
     
     # Security check: Protected service list
-    if echo "\$PROTECTED_SERVICES" | grep -qw "\$service_name"; then
-        log "WARN" "[STOP-SERVICE] BLOCKED: \$service_name is a protected service"
-        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: \$service_name is a protected system service\",\"blocked\":true}"
+    if echo "$PROTECTED_SERVICES" | grep -qw "$service_name"; then
+        log "WARN" "[STOP-SERVICE] BLOCKED: $service_name is a protected service"
+        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: $service_name is a protected system service\",\"blocked\":true}"
         return
     fi
     
     # macOS uses launchctl
-    if launchctl stop "\$service_name" 2>/dev/null; then
-        log "SUCCESS" "[STOP-SERVICE] Stopped: \$service_name"
-        echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"stopped\",\"stopped_at\":\"\$(date -Iseconds)\"}"
+    if launchctl stop "$service_name" 2>/dev/null; then
+        log "SUCCESS" "[STOP-SERVICE] Stopped: $service_name"
+        echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"stopped\",\"stopped_at\":\"$(date -Iseconds)\"}"
     else
-        echo "{\"success\":false,\"error\":\"Failed to stop service: \$service_name\"}"
+        echo "{\"success\":false,\"error\":\"Failed to stop service: $service_name\"}"
     fi
 }
 
@@ -1052,29 +864,29 @@ stop_service_handler() {
 #  v5.0.1: DISABLE SERVICE HANDLER (launchctl)
 # ============================================
 disable_service_handler() {
-    local job="\$1"
+    local job="$1"
     local service_name
-    service_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
+    service_name=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
     
-    if [[ -z "\$service_name" ]]; then
+    if [[ -z "$service_name" ]]; then
         echo '{"success":false,"error":"Missing service_name in payload"}'
         return
     fi
     
     # Security check: Protected service list
-    if echo "\$PROTECTED_SERVICES" | grep -qw "\$service_name"; then
-        log "WARN" "[DISABLE-SERVICE] BLOCKED: \$service_name is a protected service"
-        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: \$service_name is a protected system service\",\"blocked\":true}"
+    if echo "$PROTECTED_SERVICES" | grep -qw "$service_name"; then
+        log "WARN" "[DISABLE-SERVICE] BLOCKED: $service_name is a protected service"
+        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: $service_name is a protected system service\",\"blocked\":true}"
         return
     fi
     
     # macOS: stop and disable via launchctl
-    launchctl stop "\$service_name" 2>/dev/null
-    if launchctl disable "system/\$service_name" 2>/dev/null; then
-        log "SUCCESS" "[DISABLE-SERVICE] Disabled: \$service_name"
-        echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"stopped\",\"new_enabled\":\"disabled\",\"disabled_at\":\"\$(date -Iseconds)\"}"
+    launchctl stop "$service_name" 2>/dev/null
+    if launchctl disable "system/$service_name" 2>/dev/null; then
+        log "SUCCESS" "[DISABLE-SERVICE] Disabled: $service_name"
+        echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"stopped\",\"new_enabled\":\"disabled\",\"disabled_at\":\"$(date -Iseconds)\"}"
     else
-        echo "{\"success\":false,\"error\":\"Failed to disable service: \$service_name\"}"
+        echo "{\"success\":false,\"error\":\"Failed to disable service: $service_name\"}"
     fi
 }
 
@@ -1082,33 +894,33 @@ disable_service_handler() {
 #  v5.0.1: RESTART SERVICE HANDLER (launchctl)
 # ============================================
 restart_service_handler() {
-    local job="\$1"
+    local job="$1"
     local service_name
-    service_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
+    service_name=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
     
-    if [[ -z "\$service_name" ]]; then
+    if [[ -z "$service_name" ]]; then
         echo '{"success":false,"error":"Missing service_name in payload"}'
         return
     fi
     
     # Allow restart of protected services (but log warning)
-    if echo "\$PROTECTED_SERVICES" | grep -qw "\$service_name"; then
-        log "WARN" "[RESTART-SERVICE] WARNING: Restarting protected service \$service_name"
+    if echo "$PROTECTED_SERVICES" | grep -qw "$service_name"; then
+        log "WARN" "[RESTART-SERVICE] WARNING: Restarting protected service $service_name"
     fi
     
     # macOS: kickstart restarts a service
-    if launchctl kickstart -k "system/\$service_name" 2>/dev/null; then
-        log "SUCCESS" "[RESTART-SERVICE] Restarted: \$service_name"
-        echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"running\",\"restarted_at\":\"\$(date -Iseconds)\"}"
+    if launchctl kickstart -k "system/$service_name" 2>/dev/null; then
+        log "SUCCESS" "[RESTART-SERVICE] Restarted: $service_name"
+        echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"running\",\"restarted_at\":\"$(date -Iseconds)\"}"
     else
         # Fallback: stop + start
-        launchctl stop "\$service_name" 2>/dev/null
+        launchctl stop "$service_name" 2>/dev/null
         sleep 1
-        if launchctl start "\$service_name" 2>/dev/null; then
-            log "SUCCESS" "[RESTART-SERVICE] Restarted (stop+start): \$service_name"
-            echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"running\",\"restarted_at\":\"\$(date -Iseconds)\"}"
+        if launchctl start "$service_name" 2>/dev/null; then
+            log "SUCCESS" "[RESTART-SERVICE] Restarted (stop+start): $service_name"
+            echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"running\",\"restarted_at\":\"$(date -Iseconds)\"}"
         else
-            echo "{\"success\":false,\"error\":\"Failed to restart service: \$service_name\"}"
+            echo "{\"success\":false,\"error\":\"Failed to restart service: $service_name\"}"
         fi
     fi
 }
@@ -1133,7 +945,7 @@ restart_service_handler() {
      
      # Backend returns array directly, not { jobs: [...] }
      local count
-     count=$(python3 -c "import json; print(len(json.loads('''$result''')))" 2>/dev/null || echo 0)
+     count=$(echo "$result" | jq 'length' 2>/dev/null || echo 0)
      
      if [[ "$count" -gt 0 ]]; then
          log "INFO" "[POLL-JOBS] Received $count job(s)"
@@ -1148,11 +960,11 @@ restart_service_handler() {
      start_time=$(date +%s)
      
      local execution_id
-     execution_id=$(python3 -c "import json; print(json.loads('$job').get('execution_id', ''))" 2>/dev/null)
-     local job_id
-     job_id=$(python3 -c "import json; print(json.loads('$job').get('id', ''))" 2>/dev/null)
-     local job_type
-     job_type=$(python3 -c "import json; j=json.loads('$job'); print(j.get('job_type', '') or j.get('type', ''))" 2>/dev/null)
+      execution_id=$(echo "$job" | jq -r '.execution_id // empty' 2>/dev/null)
+      local job_id
+      job_id=$(echo "$job" | jq -r '.id // empty' 2>/dev/null)
+      local job_type
+      job_type=$(echo "$job" | jq -r '.job_type // .type // empty' 2>/dev/null)
      
      log "INFO" "[JOB] Starting execution: $job_type (ID: $job_id)"
      
@@ -1247,13 +1059,6 @@ restart_service_handler() {
         "integration_test_v3")
             output='{"pong":true,"agent_version":"'"$AGENT_VERSION"'","timestamp":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","hostname":"'"$(hostname)"'"}'
             ;;
-        # v5.0.14: Process Lineage EDR
-        "collect_process_lineage")
-            output=$(collect_process_lineage_handler)
-            ;;
-        "collect_backup_status")
-            output=$(collect_backup_status_handler)
-            ;;
         *)
             error_message="Unknown job type: $job_type"
             status="failed"
@@ -1272,11 +1077,11 @@ restart_service_handler() {
      log "SUCCESS" "[JOB] Completed $job_type in ${duration}s (status: $status)"
      
      local exec_hash
-     exec_hash=$(python3 -c "import json; print(json.loads('$hash_data').get('execution_hash', ''))" 2>/dev/null)
-     local prev_hash
-     prev_hash=$(python3 -c "import json; print(json.loads('$hash_data').get('previous_execution_hash', ''))" 2>/dev/null)
-     local exec_index
-     exec_index=$(python3 -c "import json; print(json.loads('$hash_data').get('execution_index', 0))" 2>/dev/null)
+      exec_hash=$(echo "$hash_data" | jq -r '.execution_hash')
+      local prev_hash
+      prev_hash=$(echo "$hash_data" | jq -r '.previous_execution_hash')
+      local exec_index
+      exec_index=$(echo "$hash_data" | jq -r '.execution_index')
      
      cat <<EOF
  {"success":true,"status":"$status","output":$output,"output_hash":"$output_hash","error_message":"$error_message","duration_seconds":$duration,"execution_hash":"$exec_hash","previous_execution_hash":"$prev_hash","execution_index":$exec_index}
@@ -1288,30 +1093,30 @@ restart_service_handler() {
      local result="$2"
      
      local execution_id
-     execution_id=$(python3 -c "import json; print(json.loads('$job').get('execution_id', ''))" 2>/dev/null)
-     local job_id
-     job_id=$(python3 -c "import json; print(json.loads('$job').get('id', ''))" 2>/dev/null)
-     local status
-     status=$(python3 -c "import json; print(json.loads('$result').get('status', ''))" 2>/dev/null)
-     local output_hash
-     output_hash=$(python3 -c "import json; print(json.loads('$result').get('output_hash', ''))" 2>/dev/null)
-     local finished_at
-     finished_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-     
-     # Sign result
-     local signature
-     signature=$(sign_execution_result "$execution_id" "$job_id" "$status" "$output_hash" "$finished_at")
-     
-     local output
-     output=$(python3 -c "import json; print(json.dumps(json.loads('$result').get('output', {})))" 2>/dev/null || echo '{}')
-     local error_message
-     error_message=$(python3 -c "import json; print(json.loads('$result').get('error_message', ''))" 2>/dev/null)
-     local exec_hash
-     exec_hash=$(python3 -c "import json; print(json.loads('$result').get('execution_hash', ''))" 2>/dev/null)
-     local prev_hash
-     prev_hash=$(python3 -c "import json; print(json.loads('$result').get('previous_execution_hash', ''))" 2>/dev/null)
-     local exec_index
-     exec_index=$(python3 -c "import json; print(json.loads('$result').get('execution_index', 0))" 2>/dev/null)
+      execution_id=$(echo "$job" | jq -r '.execution_id')
+      local job_id
+      job_id=$(echo "$job" | jq -r '.id')
+      local status
+      status=$(echo "$result" | jq -r '.status')
+      local output_hash
+      output_hash=$(echo "$result" | jq -r '.output_hash')
+      local finished_at
+      finished_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      
+      # Sign result
+      local signature
+      signature=$(sign_execution_result "$execution_id" "$job_id" "$status" "$output_hash" "$finished_at")
+      
+      local output
+      output=$(echo "$result" | jq -c '.output // {}')
+      local error_message
+      error_message=$(echo "$result" | jq -r '.error_message // ""')
+      local exec_hash
+      exec_hash=$(echo "$result" | jq -r '.execution_hash')
+      local prev_hash
+      prev_hash=$(echo "$result" | jq -r '.previous_execution_hash')
+      local exec_index
+      exec_index=$(echo "$result" | jq -r '.execution_index')
      
      local payload
      payload=$(cat <<EOF
@@ -1397,15 +1202,15 @@ restart_service_handler() {
  fix_firewall() {
      local job="$1"
      local payload
-     payload=$(python3 -c "import json; print(json.dumps(json.loads('$job').get('payload', {})))" 2>/dev/null || echo '{}')
-     
-     local results='{}'
-     
-     # macOS Application Firewall
-     local enable
-     enable=$(python3 -c "import json; print(json.loads('$payload').get('enable', False))" 2>/dev/null)
-     
-     if [[ "$enable" == "True" || "$enable" == "true" ]]; then
+      payload=$(echo "$job" | jq -c '.payload // {}' 2>/dev/null || echo '{}')
+      
+      local results='{}'
+      
+      # macOS Application Firewall
+      local enable
+      enable=$(echo "$payload" | jq -r '.enable // false' 2>/dev/null)
+      
+      if [[ "$enable" == "true" ]]; then
          /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on 2>/dev/null || true
          results='{"firewall":"enabled"}'
      fi
@@ -1430,7 +1235,7 @@ restart_service_handler() {
      fi
      
      local count
-     count=$(python3 -c "import json; print(len(json.loads('$result').get('domains', [])))" 2>/dev/null || echo 0)
+     count=$(echo "$result" | jq '.domains | length' 2>/dev/null || echo 0)
      
      if [[ "$count" -gt 0 ]]; then
          echo "$result" > "$DNS_BLOCKLIST_PATH"
@@ -1532,11 +1337,10 @@ restart_service_handler() {
              fi
          done
          
-          if [[ "$is_protected" == "false" ]]; then
-              log "WARN" "[PROCESS-CHECK] High CPU detected: $name (PID: $pid) at $cpu%"
-              
+         if [[ "$is_protected" == "false" ]]; then
+             log "WARN" "[PROCESS-CHECK] High CPU detected: $name (PID: $pid) at $cpu%"
+             
               # v5.0.13-perf: O(1) baseline check via associative array
-              # v5.0.14-fix: Removed duplicate if check (was triggering double evaluation)
               if [[ -z "${PROCESS_BASELINE_MAP[$name]+_}" ]]; then
                   log "WARN" "[PROCESS-CHECK] Process $name NOT in baseline - killing..."
                   kill -9 "$pid" 2>/dev/null || true
@@ -1691,7 +1495,7 @@ restart_service_handler() {
      local anomalies
      anomalies=$(get_process_anomalies)
      local anomaly_count
-     anomaly_count=$(python3 -c "import json; print(json.loads('$anomalies').get('anomaly_count', 0))" 2>/dev/null || echo 0)
+     anomaly_count=$(echo "$anomalies" | jq -r '.anomaly_count // 0' 2>/dev/null || echo 0)
      
      local payload
      payload=$(cat <<EOF
@@ -1712,12 +1516,12 @@ EOF
          # ============================================
          if [[ -n "$result" ]]; then
              local force_update
-             force_update=$(python3 -c "import json; print(json.loads('''$result''').get('force_update', False))" 2>/dev/null || echo "False")
-             
-             if [[ "$force_update" == "True" ]]; then
-                 log "WARN" "[FORCE UPDATE] Update forcado detectado via heartbeat!"
-                 local target_version
-                 target_version=$(python3 -c "import json; print(json.loads('''$result''').get('target_version', ''))" 2>/dev/null)
+              force_update=$(echo "$result" | jq -r '.force_update // false' 2>/dev/null)
+              
+              if [[ "$force_update" == "true" ]]; then
+                  log "WARN" "[FORCE UPDATE] Update forcado detectado via heartbeat!"
+                  local target_version
+                  target_version=$(echo "$result" | jq -r '.target_version // ""' 2>/dev/null)
                  log "INFO" "[FORCE UPDATE] Target version: $target_version"
                  
                  apply_forced_update "$result"
@@ -1728,28 +1532,19 @@ EOF
               # Server controls agent cadence via heartbeat response
               # ============================================
               local new_hb_interval
-              new_hb_interval=$(python3 -c "import json; print(json.loads('''$result''').get('heartbeat_interval_seconds', 0))" 2>/dev/null || echo 0)
+              new_hb_interval=$(echo "$result" | jq -r '.heartbeat_interval_seconds // 0' 2>/dev/null)
               if [[ "$new_hb_interval" -ge 10 && "$new_hb_interval" != "$POLL_INTERVAL" ]]; then
                   log "INFO" "[HEARTBEAT] Server adjusted heartbeat interval: ${POLL_INTERVAL}s -> ${new_hb_interval}s"
                   POLL_INTERVAL=$new_hb_interval
               fi
               
               local new_job_interval
-              new_job_interval=$(python3 -c "import json; print(json.loads('''$result''').get('poll_interval_seconds', 0))" 2>/dev/null || echo 0)
+              new_job_interval=$(echo "$result" | jq -r '.poll_interval_seconds // 0' 2>/dev/null)
               if [[ "$new_job_interval" -ge 10 && "$new_job_interval" != "$JOB_POLL_INTERVAL" ]]; then
                   log "INFO" "[HEARTBEAT] Server adjusted job poll interval: ${JOB_POLL_INTERVAL}s -> ${new_job_interval}s"
                   JOB_POLL_INTERVAL=$new_job_interval
               fi
-               # ============================================
-               # v5.0.14: AGGREGATION CONFIG FROM SERVER
-               # ============================================
-               local agg_config
-               agg_config=$(python3 -c "import json; r=json.loads('''$result'''); a=r.get('aggregation',{}); print(json.dumps(a) if a else '')" 2>/dev/null)
-               if [[ -n "$agg_config" && "$agg_config" != "{}" ]]; then
-                   update_aggregation_config "$agg_config"
-               fi
-
-           fi
+          fi
           
           return 0
      else
@@ -1765,13 +1560,13 @@ EOF
      local response="$1"
      
      local target_version
-     target_version=$(python3 -c "import json; print(json.loads('''$response''').get('target_version', ''))" 2>/dev/null)
-     local base64_content
-     base64_content=$(python3 -c "import json; print(json.loads('''$response''').get('script_content_base64', ''))" 2>/dev/null)
-     local expected_hash
-     expected_hash=$(python3 -c "import json; print(json.loads('''$response''').get('sha256', ''))" 2>/dev/null)
-     local reason
-     reason=$(python3 -c "import json; print(json.loads('''$response''').get('reason', 'heartbeat_force_update'))" 2>/dev/null)
+      target_version=$(echo "$response" | jq -r '.target_version // ""' 2>/dev/null)
+      local base64_content
+      base64_content=$(echo "$response" | jq -r '.script_content_base64 // ""' 2>/dev/null)
+      local expected_hash
+      expected_hash=$(echo "$response" | jq -r '.sha256 // ""' 2>/dev/null)
+      local reason
+      reason=$(echo "$response" | jq -r '.reason // "heartbeat_force_update"' 2>/dev/null)
      
      if [[ -z "$target_version" || -z "$base64_content" || -z "$expected_hash" ]]; then
          log "ERROR" "[FORCE UPDATE] Dados incompletos no response"
@@ -1822,7 +1617,7 @@ EOF
 
      # v5.0.13-patch: Verify Ed25519/ECDSA signature on update payload (mandatory)
      local update_signature
-     update_signature=$(python3 -c "import json; print(json.loads('''$response''').get('ecdsa_signature', '') or json.loads('''$response''').get('signature_base64', ''))" 2>/dev/null)
+     update_signature=$(echo "$response" | jq -r '.ecdsa_signature // .signature_base64 // ""' 2>/dev/null)
      if [[ -n "$update_signature" && ${#update_signature} -gt 10 ]]; then
          local ed25519_pubkey_path="${BASE_DIR:-/opt/cybershield}/keys/ed25519_server.pub"
          if [[ -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
@@ -1905,7 +1700,7 @@ EOF
  sync_blocked_websites_handler() {
      local job="$1"
      local urls
-     urls=$(echo "$job" | python3 -c "import sys,json; [print(u) for u in json.loads(sys.stdin.read()).get('payload',{}).get('urls',[])]" 2>/dev/null)
+     urls=$(echo "$job" | jq -r '.payload.urls // [] | .[]' 2>/dev/null)
      
      local blocked=0
      local marker_start="# === CyberShield Blocked Websites Start ==="
@@ -1937,7 +1732,7 @@ EOF
  service_health_check_handler() {
      local job="$1"
      local services
-     services=$(echo "$job" | python3 -c "import sys,json; [print(s) for s in json.loads(sys.stdin.read()).get('payload',{}).get('services',['com.apple.mDNSResponder','com.apple.ftp-proxy'])]" 2>/dev/null)
+     services=$(echo "$job" | jq -r '.payload.services // ["com.apple.mDNSResponder","com.apple.ftp-proxy"] | .[]' 2>/dev/null)
      
      local results="[]"
      local unhealthy=0
@@ -1954,7 +1749,7 @@ EOF
                  status="not_running"
                  unhealthy=$((unhealthy + 1))
              fi
-             results=$(echo "$results" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); d.append({'name':'$svc','status':'$status','healthy':$healthy}); print(json.dumps(d))" 2>/dev/null)
+             results=$(echo "$results" | jq --arg n "$svc" --arg s "$status" --argjson h "$healthy" '. + [{"name":$n,"status":$s,"healthy":$h}]')
              checked=$((checked + 1))
          fi
      done <<< "$services"
@@ -1967,7 +1762,7 @@ EOF
  network_diagnostics_handler() {
      local job="$1"
      local targets
-     targets=$(echo "$job" | python3 -c "import sys,json; [print(t) for t in json.loads(sys.stdin.read()).get('payload',{}).get('targets',['8.8.8.8','1.1.1.1'])]" 2>/dev/null)
+     targets=$(echo "$job" | jq -r '.payload.targets // ["8.8.8.8","1.1.1.1"] | .[]' 2>/dev/null)
      
      local diagnostics="[]"
      
@@ -1986,7 +1781,7 @@ EOF
                  dns_result='{"success":true}'
              fi
              
-             diagnostics=$(echo "$diagnostics" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); d.append({'target':'$target','ping':$ping_result,'dns':$dns_result}); print(json.dumps(d))" 2>/dev/null)
+             diagnostics=$(echo "$diagnostics" | jq --arg t "$target" --argjson p "$ping_result" --argjson d "$dns_result" '. + [{"target":$t,"ping":$p,"dns":$d}]')
          fi
      done <<< "$targets"
      
@@ -1998,7 +1793,7 @@ EOF
  quarantine_agent_handler() {
      local job="$1"
      local action
-     action=$(echo "$job" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('payload',{}).get('action','quarantine'))" 2>/dev/null)
+     action=$(echo "$job" | jq -r '.payload.action // "quarantine"' 2>/dev/null)
      local server_host
      server_host=$(echo "$SERVER_URL" | sed 's|https\?://||' | sed 's|/.*||')
      
@@ -2022,7 +1817,7 @@ EOF
  apply_security_patch_handler() {
      local job="$1"
      local cve_id
-     cve_id=$(echo "$job" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('payload',{}).get('cve_id',''))" 2>/dev/null)
+     cve_id=$(echo "$job" | jq -r '.payload.cve_id // ""' 2>/dev/null)
      
      # macOS uses softwareupdate
      sudo softwareupdate --install --recommended 2>/dev/null
@@ -2059,7 +1854,7 @@ collect_web_activity_handler() {
     local dns_raw
     dns_raw=$(sudo dscacheutil -cachedump -entries 2>/dev/null | head -50 || echo "")
     if [[ -n "$dns_raw" ]]; then
-        dns_entries=$(echo "$dns_raw" | python3 -c "import sys,json; lines=[l.strip() for l in sys.stdin if l.strip()]; print(json.dumps([{'entry':l} for l in lines[:50]]))" 2>/dev/null || echo '[]')
+        dns_entries=$(echo "$dns_raw" | jq -R -s '[split("\n")[] | select(length > 0) | {entry: .}]' 2>/dev/null || echo '[]')
     fi
     
     # Collect Safari history
@@ -2070,7 +1865,7 @@ collect_web_activity_handler() {
         cp "$safari_db" "$tmp_db" 2>/dev/null
         if command -v sqlite3 &>/dev/null; then
             browser_history=$(sqlite3 "$tmp_db" "SELECT url, title FROM history_items ORDER BY visit_count DESC LIMIT 50;" 2>/dev/null | \
-                python3 -c "import sys,json; lines=[l.strip().split('|',1) for l in sys.stdin if l.strip()]; print(json.dumps([{'url':l[0],'title':l[1] if len(l)>1 else ''} for l in lines]))" 2>/dev/null || echo '[]')
+                awk -F'|' '{printf "{\"url\":\"%s\",\"title\":\"%s\"},", $1, $2}' | sed 's/,$//' | sed 's/^/[/' | sed 's/$/]/' 2>/dev/null || echo '[]')
         fi
         rm -f "$tmp_db" 2>/dev/null
     fi
@@ -2093,16 +1888,8 @@ light_vuln_scan_handler() {
     updates=$(softwareupdate --list 2>&1 | grep -i "recommended\|restart\|security" || echo "")
     
     if [[ -n "$updates" ]]; then
-        vulns=$(echo "$updates" | head -20 | python3 -c "
-import sys, json
-lines = [l.strip() for l in sys.stdin if l.strip()]
-results = []
-for l in lines:
-    sev = 'critical' if 'security' in l.lower() else 'high' if 'restart' in l.lower() else 'medium'
-    results.append({'package': l[:80], 'severity': sev, 'source': 'softwareupdate'})
-print(json.dumps(results))
-" 2>/dev/null || echo '[]')
-        total=$(echo "$vulns" | python3 -c "import sys,json; print(len(json.loads(sys.stdin.read())))" 2>/dev/null || echo 0)
+        vulns=$(echo "$updates" | head -20 | jq -R -s '[split("\n")[] | select(length > 0) | {package: .[:80], severity: (if (. | test("security";"i")) then "critical" elif (. | test("restart";"i")) then "high" else "medium" end), source: "softwareupdate"}]' 2>/dev/null || echo '[]')
+        total=$(echo "$vulns" | jq 'length' 2>/dev/null || echo 0)
     fi
     
     local scanned_at
@@ -2119,9 +1906,9 @@ update_agent_handler() {
 scan_handler() {
     log "INFO" "[JOB] Running general security scan"
     local open_ports
-    open_ports=$(lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null | tail -n +2 | awk '{print $9}' | head -20 | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
+    open_ports=$(lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null | tail -n +2 | awk '{print $9}' | head -20 | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
     local users_logged
-    users_logged=$(who 2>/dev/null | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
+    users_logged=$(who 2>/dev/null | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
     local uptime_info
     uptime_info=$(uptime 2>/dev/null || echo "unknown")
     echo '{"open_ports":'"$open_ports"',"logged_users":'"$users_logged"',"uptime":"'"$uptime_info"'","scanned_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
@@ -2132,29 +1919,14 @@ report_handler() {
     local disk_usage
     disk_usage=$(df -g / | tail -1 | awk '{print "{\"total\":\""$2"G\",\"used\":\""$3"G\",\"free\":\""$4"G\",\"percent\":\""$5"\"}"}')
     local mem_info
-    mem_info=$(vm_stat 2>/dev/null | python3 -c "
-import sys
-lines = sys.stdin.readlines()
-pages = {}
-for l in lines:
-    parts = l.strip().split(':')
-    if len(parts)==2:
-        key = parts[0].strip().lower()
-        val = parts[1].strip().rstrip('.')
-        try: pages[key] = int(val)
-        except: pass
-page_size = 16384
-total_mb = sum(pages.values()) * page_size // (1024*1024)
-free_mb = pages.get('pages free', 0) * page_size // (1024*1024)
-print('{\"total_mb\":%d,\"free_mb\":%d}' % (total_mb, free_mb))
-" 2>/dev/null || echo '{}')
+    mem_info=$(vm_stat 2>/dev/null | awk -F: '/Pages/ {gsub(/[^0-9]/,"",$2); if($2+0>0) sum+=$2} /Pages free/ {gsub(/[^0-9]/,"",$2); free=$2+0} END {total=sum*16384/1048576; freemb=free*16384/1048576; printf "{\"total_mb\":%d,\"free_mb\":%d}", total, freemb}' 2>/dev/null || echo '{}')
     echo '{"agent_version":"'"$AGENT_VERSION"'","hostname":"'$(hostname)'",'$disk_usage',"memory":'"$mem_info"',"generated_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
 }
 
 collect_info_handler() {
     log "INFO" "[JOB] Collecting system info"
     local os_version
-    os_version=$(sw_vers 2>/dev/null | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
+    os_version=$(sw_vers 2>/dev/null | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
     local kernel
     kernel=$(uname -r 2>/dev/null || echo "unknown")
     local arch
@@ -2182,7 +1954,7 @@ collect_dns_blocks_handler() {
     log "INFO" "[JOB] Collecting DNS blocks from hosts file"
     local blocks='[]'
     if [[ -f /etc/hosts ]]; then
-        blocks=$(grep -E "^(0\.0\.0\.0|127\.0\.0\.1)" /etc/hosts 2>/dev/null | grep -v "localhost" | awk '{print $2}' | head -100 | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
+        blocks=$(grep -E "^(0\.0\.0\.0|127\.0\.0\.1)" /etc/hosts 2>/dev/null | grep -v "localhost" | awk '{print $2}' | head -100 | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
     fi
     echo '{"blocked_domains":'"$blocks"',"source":"/etc/hosts","collected_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
 }
@@ -2199,44 +1971,6 @@ remove_dns_filter_handler() {
     else
         echo '{"success":false,"message":"Hosts file not found","timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
     fi
-}
-
-# ============================================
-#  v5.0.14: PROCESS LINEAGE HANDLER (macOS)
-#  v5.0.14-fix: MOVED BEFORE main loop (was unreachable after while true)
-# ============================================
-collect_process_lineage_handler() {
-    log "INFO" "[PROCESS-LINEAGE] Collecting process tree"
-    local collected_at
-    collected_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    local processes
-    processes=$(ps -eo pid,ppid,comm,user,args 2>/dev/null | tail -n +2 | head -200 | while IFS= read -r line; do
-        local pid ppid name user cmd
-        pid=$(echo "$line" | awk '{print $1}')
-        ppid=$(echo "$line" | awk '{print $2}')
-        name=$(echo "$line" | awk '{print $3}')
-        user=$(echo "$line" | awk '{print $4}')
-        cmd=$(echo "$line" | awk '{for(i=5;i<=NF;i++) printf "%s ", $i}' | head -c 2048 | sed 's/"/\\"/g' | tr -d '\n')
-        printf '{"name":"%s","pid":%s,"ppid":%s,"user":"%s","cmd":"%s"},' "$name" "$pid" "$ppid" "$user" "$cmd"
-    done | sed 's/,$//' | sed 's/^/[/' | sed 's/$/]/')
-    local submit_body='{"processes":'"${processes:-[]}"'}'
-    invoke_secure_request "POST" "/functions/v1/submit-process-lineage" "$submit_body" 30 2 2>/dev/null || true
-    echo '{"total_processes":'"$(echo "${processes:-[]}" | jq 'length' 2>/dev/null || echo 0)"',"collected_at":"'"$collected_at"'","source":"macos"}'
-}
-
-collect_backup_status_handler() {
-    log "INFO" "[BACKUP] Collecting backup status"
-    local collected_at
-    collected_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    local tm_status='{"enabled":false}'
-    if command -v tmutil &>/dev/null; then
-        local tm_dest
-        tm_dest=$(tmutil destinationinfo 2>/dev/null | head -10 | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
-        local last_backup
-        last_backup=$(tmutil latestbackup 2>/dev/null || echo "none")
-        tm_status='{"enabled":true,"last_backup":"'"$last_backup"'","destinations":'"$tm_dest"'}'
-    fi
-    echo '{"time_machine":'"$tm_status"',"collected_at":"'"$collected_at"'","source":"macos"}'
 }
 
 # ============================================
@@ -2370,7 +2104,7 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
          jobs=$(poll_jobs)
          
          # Process each job
-         echo "$jobs" | python3 -c "import sys,json; [print(json.dumps(j)) for j in json.loads(sys.stdin.read())]" 2>/dev/null | while read -r job; do
+         echo "$jobs" | jq -c '.[]' 2>/dev/null | while read -r job; do
              if [[ -n "$job" ]]; then
                  result=$(execute_job "$job")
                  submit_job_result "$job" "$result"
@@ -2384,8 +2118,8 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
     # v5.0.3: LAUNCHD HEALTH CHECK (every 5 min)
     # ============================================
     launchd_health=$(assert_launchd_health)
-    if python3 -c "import json; exit(0 if json.loads('$launchd_health').get('repaired') else 1)" 2>/dev/null; then
-        repair_action=$(python3 -c "import json; print(json.loads('$launchd_health').get('repair_action', 'unknown'))" 2>/dev/null)
+    if echo "$launchd_health" | jq -e '.repaired == true' &>/dev/null; then
+        repair_action=$(echo "$launchd_health" | jq -r '.repair_action')
         log "INFO" "[MAIN-LOOP] LaunchDaemon repaired: $repair_action"
     fi
     
@@ -2395,14 +2129,14 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
     if [[ $((now - last_auto_repair)) -ge 300 ]]; then
         # Disk cleanup
         disk_result=$(invoke_disk_cleanup)
-        if python3 -c "import json; exit(0 if json.loads('$disk_result').get('cleaned') else 1)" 2>/dev/null; then
-            freed=$(python3 -c "import json; print(json.loads('$disk_result').get('freed_percent', 0))" 2>/dev/null)
+        if echo "$disk_result" | jq -e '.cleaned == true' &>/dev/null; then
+            freed=$(echo "$disk_result" | jq -r '.freed_percent')
             log "SUCCESS" "[AUTO-REPAIR] Disk cleanup freed ${freed}%"
         fi
         
         # High CPU process check
         cpu_result=$(invoke_high_cpu_process_check)
-        killed=$(python3 -c "import json; print(json.loads('$cpu_result').get('killed_count', 0))" 2>/dev/null)
+        killed=$(echo "$cpu_result" | jq -r '.killed_count')
         if [[ "$killed" -gt 0 ]]; then
             log "SUCCESS" "[AUTO-REPAIR] Killed $killed high-CPU processes"
         fi
@@ -2462,16 +2196,8 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
          log "DEBUG" "[PERF] CPU at ${LAST_CPU_PERCENT}% - adaptive sleep ${sleep_time}s"
      fi
      
-     # v5.0.14: Flush aggregation buffer periodically
-     agg_age=$((now - AGGREGATION_LAST_FLUSH))
-     if [[ $agg_age -ge $((AGGREGATION_WINDOW_SECONDS * 2 + 1)) ]]; then
-         flush_aggregation_buffer
-     fi
-
      # Flush log buffer at end of iteration
      flush_log_buffer
      
      sleep "$sleep_time"
  done
-
-# v5.0.14-fix: Handler functions moved BEFORE main loop (see above)

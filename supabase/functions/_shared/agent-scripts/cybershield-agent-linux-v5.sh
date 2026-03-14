@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - Linux v5.0.14
-#
-# v5.0.14: EDGE EVENT AGGREGATION + PROCESS LINEAGE + BACKUP STATUS
-# - NEW: Edge Event Aggregation Engine - Local event deduplication before submission
-#   * Configurable time windows (default 3s) for grouping similar events
-#   * File/Process/Network burst detection (ransomware, port scan, process flood)
-#   * 95-99% event reduction under attack conditions
-#   * Server-configurable via get-agent-config endpoint
+# CyberShield Agent - Linux v5.0.13
 #
 # v5.0.13-perf: PERFORMANCE TUNING
 # - OPT: Log buffering (flush every 20 entries or 10s) with trap-based persistence
@@ -200,27 +193,6 @@ CACHED_EPOCH=0
 # v5.0.13-perf: Performance - Adaptive sleep
 ADAPTIVE_MIN_SLEEP=10
 LAST_CPU_PERCENT=0
-
-# v5.0.14: Edge Event Aggregation Engine
-AGGREGATION_ENABLED=true
-AGGREGATION_WINDOW_SECONDS=3
-AGGREGATION_FILE_THRESHOLD=50
-AGGREGATION_PROCESS_THRESHOLD=20
-AGGREGATION_NETWORK_THRESHOLD=100
-AGGREGATION_MAX_BUFFER_SIZE=500
-AGGREGATION_BUFFER_FILE="${DATA_DIR}/aggregation_buffer.json"
-AGGREGATION_LAST_FLUSH=0
-AGG_EVENTS_RECEIVED=0
-AGG_EVENTS_AGGREGATED=0
-AGG_EVENTS_SENT=0
-AGG_BURSTS_DETECTED=0
-
-# Aggregation buffer: associative array keyed by "type:pattern"
-declare -A AGG_BUFFER_COUNT=()
-declare -A AGG_BUFFER_FIRST_SEEN=()
-declare -A AGG_BUFFER_LAST_SEEN=()
-declare -A AGG_BUFFER_BURST_ALERTED=()
-declare -A AGG_BUFFER_METADATA=()
  # ============================================
  #  ARGUMENT PARSING
  # ============================================
@@ -326,181 +298,10 @@ declare -A AGG_BUFFER_METADATA=()
      fi
  }
  
-# ============================================
-#  v5.0.14: EDGE EVENT AGGREGATION ENGINE
-# ============================================
-
-# Add event to aggregation buffer. Groups similar events within time window.
-# Detects bursts (ransomware file rename storms, port scans, process floods).
-# Usage: add_aggregated_event "file_rename" "*.docx" '{"process":"unknown.exe"}'
-add_aggregated_event() {
-    local event_type="$1"
-    local pattern="$2"
-    local metadata="${3:-{}}"
-
-    if [[ "$AGGREGATION_ENABLED" != "true" ]]; then
-        # Pass through directly
-        log "DEBUG" "[AGGREGATION] Disabled - raw event: $event_type $pattern"
-        return 0
-    fi
-
-    AGG_EVENTS_RECEIVED=$((AGG_EVENTS_RECEIVED + 1))
-    # v5.0.14-perf: Use cached epoch to avoid date subprocess per event
-    local now_epoch=${CACHED_EPOCH:-$(date +%s)}
-    local key="${event_type}:${pattern}"
-
-    if [[ -n "${AGG_BUFFER_COUNT[$key]+x}" ]]; then
-        local first_seen="${AGG_BUFFER_FIRST_SEEN[$key]}"
-        local window_age=$((now_epoch - first_seen))
-
-        if [[ $window_age -le $AGGREGATION_WINDOW_SECONDS ]]; then
-            # Within window - aggregate
-            AGG_BUFFER_COUNT[$key]=$((AGG_BUFFER_COUNT[$key] + 1))
-            AGG_BUFFER_LAST_SEEN[$key]=$now_epoch
-            AGG_EVENTS_AGGREGATED=$((AGG_EVENTS_AGGREGATED + 1))
-
-            # Burst detection
-            local threshold=$AGGREGATION_FILE_THRESHOLD
-            case "$event_type" in
-                file_*)    threshold=$AGGREGATION_FILE_THRESHOLD ;;
-                process_*) threshold=$AGGREGATION_PROCESS_THRESHOLD ;;
-                network_*) threshold=$AGGREGATION_NETWORK_THRESHOLD ;;
-            esac
-
-            if [[ ${AGG_BUFFER_COUNT[$key]} -eq $threshold && "${AGG_BUFFER_BURST_ALERTED[$key]}" != "true" ]]; then
-                AGG_BUFFER_BURST_ALERTED[$key]="true"
-                AGG_BURSTS_DETECTED=$((AGG_BURSTS_DETECTED + 1))
-
-                local burst_type="event_burst"
-                case "$event_type" in
-                    file_rename)     burst_type="possible_ransomware_burst" ;;
-                    file_delete)     burst_type="mass_file_deletion" ;;
-                    network_connect) burst_type="possible_port_scan" ;;
-                    process_spawn)   burst_type="process_spawn_flood" ;;
-                esac
-
-                log "ERROR" "[AGGREGATION] BURST DETECTED: $burst_type - ${AGG_BUFFER_COUNT[$key]} events of '$event_type' pattern '$pattern' in ${window_age}s"
-
-                # Push burst alert immediately
-                local burst_body
-                burst_body=$(jq -n --arg agent "$AGENT_NAME" --arg t "$burst_type" --arg et "$event_type" --arg p "$pattern" \
-                    --argjson c "${AGG_BUFFER_COUNT[$key]}" --argjson w "$window_age" \
-                    '{agent_name:$agent,event_type:("burst_"+$t),severity:"critical",event_data:{burst_type:$t,event_type:$et,pattern:$p,count:$c,window_seconds:$w}}' 2>/dev/null)
-                if [[ -n "$burst_body" ]]; then
-                    # v5.0.14-fix: was 'make_authenticated_request' (non-existent function) - all burst alerts were silently lost
-                    invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "$burst_body" 15 1 &>/dev/null || true
-                fi
-            fi
-            return 0
-        else
-            # Window expired - flush old entry
-            flush_aggregated_entry "$key"
-        fi
-    fi
-
-    # New entry
-    AGG_BUFFER_COUNT[$key]=1
-    AGG_BUFFER_FIRST_SEEN[$key]=$now_epoch
-    AGG_BUFFER_LAST_SEEN[$key]=$now_epoch
-    AGG_BUFFER_BURST_ALERTED[$key]="false"
-    AGG_BUFFER_METADATA[$key]="$metadata"
-
-    # Check buffer size limit
-    local buffer_size=${#AGG_BUFFER_COUNT[@]}
-    if [[ $buffer_size -ge $AGGREGATION_MAX_BUFFER_SIZE ]]; then
-        log "WARN" "[AGGREGATION] Buffer full ($buffer_size) - forcing flush"
-        flush_aggregation_buffer
-    fi
-}
-
-# Flush a single aggregated entry
-flush_aggregated_entry() {
-    local key="$1"
-    local count="${AGG_BUFFER_COUNT[$key]:-0}"
-    [[ $count -eq 0 ]] && return 0
-
-    local event_type="${key%%:*}"
-    local pattern="${key#*:}"
-    local first_seen="${AGG_BUFFER_FIRST_SEEN[$key]}"
-    local last_seen="${AGG_BUFFER_LAST_SEEN[$key]}"
-    local duration=$((last_seen - first_seen))
-    local burst="${AGG_BUFFER_BURST_ALERTED[$key]:-false}"
-    local severity="info"
-    [[ "$burst" == "true" ]] && severity="critical"
-    [[ $count -gt 10 && "$severity" == "info" ]] && severity="warning"
-
-    local body
-    body=$(jq -n --arg agent "$AGENT_NAME" --arg et "$event_type" --arg p "$pattern" --argjson c "$count" \
-        --argjson d "$duration" --arg b "$burst" --arg sev "$severity" \
-        --arg fs "$(date -u -d @"$first_seen" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-        --arg ls "$(date -u -d @"$last_seen" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-        '{agent_name:$agent,event_type:"aggregated_event",severity:$sev,event_data:{event_type:$et,pattern:$p,count:$c,duration_seconds:$d,burst_detected:($b=="true"),first_seen:$fs,last_seen:$ls}}' 2>/dev/null)
-
-    if [[ -n "$body" ]]; then
-        # v5.0.14-fix: was 'make_authenticated_request' (non-existent) - all aggregated events were silently lost
-        invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "$body" 15 1 &>/dev/null || true
-        AGG_EVENTS_SENT=$((AGG_EVENTS_SENT + 1))
-    fi
-
-    # Clear entry
-    unset "AGG_BUFFER_COUNT[$key]"
-    unset "AGG_BUFFER_FIRST_SEEN[$key]"
-    unset "AGG_BUFFER_LAST_SEEN[$key]"
-    unset "AGG_BUFFER_BURST_ALERTED[$key]"
-    unset "AGG_BUFFER_METADATA[$key]"
-}
-
-# Flush all entries in the aggregation buffer
-flush_aggregation_buffer() {
-    local flushed=0
-    local keys=("${!AGG_BUFFER_COUNT[@]}")
-
-    for key in "${keys[@]}"; do
-        flush_aggregated_entry "$key"
-        flushed=$((flushed + 1))
-    done
-
-    AGGREGATION_LAST_FLUSH=$(date +%s)
-
-    if [[ $flushed -gt 0 ]]; then
-        local reduction=0
-        if [[ $AGG_EVENTS_RECEIVED -gt 0 ]]; then
-            reduction=$(( (AGG_EVENTS_RECEIVED - AGG_EVENTS_SENT) * 100 / AGG_EVENTS_RECEIVED ))
-        fi
-        log "INFO" "[AGGREGATION] Flushed $flushed entries (reduction: ${reduction}%)"
-    fi
-}
-
-# Update aggregation config from server response
-update_aggregation_config() {
-    local config="$1"
-    local val
-
-    val=$(echo "$config" | jq -r '.enabled // empty' 2>/dev/null)
-    [[ "$val" == "true" || "$val" == "false" ]] && AGGREGATION_ENABLED="$val"
-
-    val=$(echo "$config" | jq -r '.window_seconds // empty' 2>/dev/null)
-    [[ -n "$val" && "$val" -ge 1 && "$val" -le 30 ]] 2>/dev/null && AGGREGATION_WINDOW_SECONDS="$val"
-
-    val=$(echo "$config" | jq -r '.file_threshold // empty' 2>/dev/null)
-    [[ -n "$val" && "$val" -ge 5 && "$val" -le 10000 ]] 2>/dev/null && AGGREGATION_FILE_THRESHOLD="$val"
-
-    val=$(echo "$config" | jq -r '.process_threshold // empty' 2>/dev/null)
-    [[ -n "$val" && "$val" -ge 5 && "$val" -le 5000 ]] 2>/dev/null && AGGREGATION_PROCESS_THRESHOLD="$val"
-
-    val=$(echo "$config" | jq -r '.network_threshold // empty' 2>/dev/null)
-    [[ -n "$val" && "$val" -ge 5 && "$val" -le 50000 ]] 2>/dev/null && AGGREGATION_NETWORK_THRESHOLD="$val"
-
-    val=$(echo "$config" | jq -r '.max_buffer_size // empty' 2>/dev/null)
-    [[ -n "$val" && "$val" -ge 50 && "$val" -le 5000 ]] 2>/dev/null && AGGREGATION_MAX_BUFFER_SIZE="$val"
-
-    log "INFO" "[AGGREGATION] Config updated: enabled=$AGGREGATION_ENABLED window=${AGGREGATION_WINDOW_SECONDS}s file_thr=$AGGREGATION_FILE_THRESHOLD proc_thr=$AGGREGATION_PROCESS_THRESHOLD net_thr=$AGGREGATION_NETWORK_THRESHOLD"
-}
-
-# ============================================
-#  v5.0.1: FSM ENTERPRISE - STATE MACHINE
-# ============================================
-set_agent_state() {
+ # ============================================
+ #  v5.0.1: FSM ENTERPRISE - STATE MACHINE
+ # ============================================
+ set_agent_state() {
      local new_state="$1"
      local reason="${2:-}"
      local old_state="$CURRENT_STATE"
@@ -1274,14 +1075,6 @@ restart_service_handler() {
         "integration_test_v3")
             output='{"pong":true,"agent_version":"'"$AGENT_VERSION"'","timestamp":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","hostname":"'"$(hostname)"'"}'
             ;;
-        # v5.0.14: Process Lineage EDR
-        "collect_process_lineage")
-            output=$(collect_process_lineage_handler)
-            ;;
-        # v5.0.14: Backup Status
-        "collect_backup_status")
-            output=$(collect_backup_status_handler)
-            ;;
         *)
             error_message="Unknown job type: $job_type"
             status="failed"
@@ -1558,11 +1351,10 @@ restart_service_handler() {
              fi
          done
          
-          if [[ "$is_protected" == "false" ]]; then
-              log "WARN" "[PROCESS-CHECK] High CPU detected: $name (PID: $pid) at $cpu%"
-              
+         if [[ "$is_protected" == "false" ]]; then
+             log "WARN" "[PROCESS-CHECK] High CPU detected: $name (PID: $pid) at $cpu%"
+             
               # v5.0.13-perf: O(1) baseline check via associative array
-              # v5.0.14-fix: Removed duplicate if check (was triggering double evaluation)
               if [[ -z "${PROCESS_BASELINE_MAP[$name]+_}" ]]; then
                   log "WARN" "[PROCESS-CHECK] Process $name NOT in baseline - killing..."
                   kill -9 "$pid" 2>/dev/null || true
@@ -1654,61 +1446,35 @@ restart_service_handler() {
  # ============================================
  #  SYSTEM METRICS
  # ============================================
-  get_system_metrics() {
-      # v5.0.14-fix: /proc/stat single-snapshot gives cumulative avg since boot (WRONG for monitoring)
-      # Use two-sample delta method (~1s) for accurate instantaneous CPU, fallback to top
-      local cpu_percent=0
-      if [[ -f /proc/stat ]]; then
-          # Sample 1
-          local line1
-          line1=$(head -1 /proc/stat)
-          local u1 n1 s1 i1 w1
-          read -r _ u1 n1 s1 i1 w1 _ <<< "$line1"
-          local total1=$((u1 + n1 + s1 + i1 + w1))
-          
-          sleep 1
-          
-          # Sample 2
-          local line2
-          line2=$(head -1 /proc/stat)
-          local u2 n2 s2 i2 w2
-          read -r _ u2 n2 s2 i2 w2 _ <<< "$line2"
-          local total2=$((u2 + n2 + s2 + i2 + w2))
-          
-          local dtotal=$((total2 - total1))
-          local didle=$((i2 - i1))
-          if [[ $dtotal -gt 0 ]]; then
-              cpu_percent=$(( (dtotal - didle) * 100 / dtotal ))
-          fi
-      else
-          cpu_percent=$(top -bn1 2>/dev/null | grep "Cpu(s)" | awk '{print $2}' | cut -d. -f1 || echo 0)
-      fi
-      
-      local mem_info
-      mem_info=$(free -b 2>/dev/null)
-      local mem_total
-      mem_total=$(echo "$mem_info" | awk '/Mem:/ {print $2}')
-      local mem_used
-      mem_used=$(echo "$mem_info" | awk '/Mem:/ {print $3}')
-      local mem_percent
-      mem_percent=$(echo "scale=2; $mem_used * 100 / $mem_total" | bc 2>/dev/null || echo 0)
-      
-      local disk_info
-      disk_info=$(df / | tail -1)
-      local disk_total
-      disk_total=$(echo "$disk_info" | awk '{print $2}')
-      local disk_used
-      disk_used=$(echo "$disk_info" | awk '{print $3}')
-      local disk_percent
-      disk_percent=$(echo "$disk_info" | awk '{print $5}' | tr -d '%')
-      
-      local uptime_seconds
-      uptime_seconds=$(awk '{print int($1)}' /proc/uptime 2>/dev/null || echo 0)
-      
-      cat <<EOF
-  {"cpu_percent":$cpu_percent,"memory_total_gb":$(echo "scale=2; $mem_total / 1073741824" | bc 2>/dev/null || echo 0),"memory_used_gb":$(echo "scale=2; $mem_used / 1073741824" | bc 2>/dev/null || echo 0),"memory_used_percent":$mem_percent,"disk_total_gb":$(echo "scale=2; $disk_total / 1048576" | bc 2>/dev/null || echo 0),"disk_used_percent":$disk_percent,"uptime_seconds":$uptime_seconds}
-  EOF
-  }
+ get_system_metrics() {
+     local cpu_percent
+     cpu_percent=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d. -f1 2>/dev/null || echo 0)
+     
+     local mem_info
+     mem_info=$(free -b 2>/dev/null)
+     local mem_total
+     mem_total=$(echo "$mem_info" | awk '/Mem:/ {print $2}')
+     local mem_used
+     mem_used=$(echo "$mem_info" | awk '/Mem:/ {print $3}')
+     local mem_percent
+     mem_percent=$(echo "scale=2; $mem_used * 100 / $mem_total" | bc 2>/dev/null || echo 0)
+     
+     local disk_info
+     disk_info=$(df / | tail -1)
+     local disk_total
+     disk_total=$(echo "$disk_info" | awk '{print $2}')
+     local disk_used
+     disk_used=$(echo "$disk_info" | awk '{print $3}')
+     local disk_percent
+     disk_percent=$(echo "$disk_info" | awk '{print $5}' | tr -d '%')
+     
+     local uptime_seconds
+     uptime_seconds=$(awk '{print int($1)}' /proc/uptime 2>/dev/null || echo 0)
+     
+     cat <<EOF
+ {"cpu_percent":$cpu_percent,"memory_total_gb":$(echo "scale=2; $mem_total / 1073741824" | bc 2>/dev/null || echo 0),"memory_used_gb":$(echo "scale=2; $mem_used / 1073741824" | bc 2>/dev/null || echo 0),"memory_used_percent":$mem_percent,"disk_total_gb":$(echo "scale=2; $disk_total / 1048576" | bc 2>/dev/null || echo 0),"disk_used_percent":$disk_percent,"uptime_seconds":$uptime_seconds}
+ EOF
+ }
  
  # ============================================
  #  HEARTBEAT
@@ -1764,16 +1530,7 @@ EOF
               if [[ "$new_hb_interval" -ge 10 && "$new_hb_interval" != "$POLL_INTERVAL" ]]; then
                   log "INFO" "[HEARTBEAT] Server adjusted heartbeat interval: ${POLL_INTERVAL}s -> ${new_hb_interval}s"
                   POLL_INTERVAL=$new_hb_interval
-               # ============================================
-               # v5.0.14: AGGREGATION CONFIG FROM SERVER
-               # ============================================
-               local agg_config
-               agg_config=$(echo "$result" | jq -r '.aggregation // empty' 2>/dev/null)
-               if [[ -n "$agg_config" && "$agg_config" != "null" ]]; then
-                   update_aggregation_config "$agg_config"
-               fi
-
-           fi
+              fi
               
               local new_job_interval
               new_job_interval=$(echo "$result" | jq -r '.poll_interval_seconds // 0' 2>/dev/null)
@@ -2264,82 +2021,6 @@ remove_dns_filter_handler() {
 }
 
 # ============================================
-#  v5.0.14: PROCESS LINEAGE HANDLER
-#  v5.0.14-fix: MOVED BEFORE main loop (was unreachable after while true)
-# ============================================
-collect_process_lineage_handler() {
-    log "INFO" "[PROCESS-LINEAGE] Collecting process tree for EDR visibility"
-    
-    local collected_at
-    collected_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    
-    local processes='[]'
-    if [[ -d /proc ]]; then
-        processes=$(ps -eo pid,ppid,comm,user,args --no-headers 2>/dev/null | head -200 | while IFS= read -r line; do
-            local pid ppid name user cmd
-            pid=$(echo "$line" | awk '{print $1}')
-            ppid=$(echo "$line" | awk '{print $2}')
-            name=$(echo "$line" | awk '{print $3}')
-            user=$(echo "$line" | awk '{print $4}')
-            cmd=$(echo "$line" | awk '{for(i=5;i<=NF;i++) printf "%s ", $i; print ""}' | head -c 2048)
-            
-            # Get parent name
-            local parent_name=""
-            if [[ -f "/proc/$ppid/comm" ]]; then
-                parent_name=$(cat "/proc/$ppid/comm" 2>/dev/null || echo "")
-            fi
-            
-            # Get executable path
-            local exe_path=""
-            if [[ -L "/proc/$pid/exe" ]]; then
-                exe_path=$(readlink -f "/proc/$pid/exe" 2>/dev/null || echo "")
-            fi
-            
-            printf '{"name":"%s","pid":%s,"ppid":%s,"parent_name":"%s","cmd":"%s","user":"%s","path":"%s"},' \
-                "$name" "$pid" "$ppid" "$parent_name" "$(echo "$cmd" | sed 's/"/\\"/g' | tr -d '\n')" "$user" "$exe_path"
-        done | sed 's/,$//' | sed 's/^/[/' | sed 's/$/]/')
-    fi
-    
-    # Submit to backend
-    local submit_body='{"processes":'"${processes:-[]}"'}'
-    local submit_result
-    submit_result=$(invoke_secure_request "POST" "/functions/v1/submit-process-lineage" "$submit_body" 30 2 2>/dev/null)
-    
-    echo '{"total_processes":'"$(echo "${processes:-[]}" | jq 'length' 2>/dev/null || echo 0)"',"collected_at":"'"$collected_at"'","source":"linux"}'
-}
-
-# ============================================
-#  v5.0.14: BACKUP STATUS HANDLER
-#  v5.0.14-fix: MOVED BEFORE main loop (was unreachable after while true)
-# ============================================
-collect_backup_status_handler() {
-    log "INFO" "[BACKUP] Collecting backup status"
-    
-    local collected_at
-    collected_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    
-    # Check for common backup tools
-    local backup_tools='[]'
-    for tool in rsnapshot borgbackup duplicity restic rdiff-backup timeshift; do
-        if command -v "$tool" &>/dev/null; then
-            backup_tools=$(echo "$backup_tools" | jq --arg t "$tool" '. + [{"name": $t, "installed": true}]' 2>/dev/null || echo "$backup_tools")
-        fi
-    done
-    
-    # Check systemd timers for backup jobs
-    local backup_timers='[]'
-    if command -v systemctl &>/dev/null; then
-        backup_timers=$(systemctl list-timers --all 2>/dev/null | grep -i "backup\|snapshot\|borg\|restic" | head -5 | jq -R -s '[split("\n")[] | select(length > 0) | {timer: .}]' 2>/dev/null || echo '[]')
-    fi
-    
-    # Check cron for backup jobs
-    local backup_crons='[]'
-    backup_crons=$(crontab -l 2>/dev/null | grep -i "backup\|rsync\|borg\|restic\|tar.*gz" | head -5 | jq -R -s '[split("\n")[] | select(length > 0) | {cron: .}]' 2>/dev/null || echo '[]')
-    
-    echo '{"backup_tools":'"$backup_tools"',"backup_timers":'"$backup_timers"',"backup_crons":'"$backup_crons"',"collected_at":"'"$collected_at"'","source":"linux"}'
-}
-
-# ============================================
 #  MAIN LOOP v5.0.1 FULL ENTERPRISE
 # ============================================
  log "============================================"
@@ -2562,16 +2243,8 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
          log "DEBUG" "[PERF] CPU at ${LAST_CPU_PERCENT}% - adaptive sleep ${sleep_time}s"
      fi
      
-     # v5.0.14: Flush aggregation buffer periodically
-     agg_age=$((now - AGGREGATION_LAST_FLUSH))
-     if [[ $agg_age -ge $((AGGREGATION_WINDOW_SECONDS * 2 + 1)) ]]; then
-         flush_aggregation_buffer
-     fi
-
      # Flush log buffer at end of iteration
      flush_log_buffer
      
      sleep "$sleep_time"
  done
-
-# v5.0.14-fix: Handler functions moved BEFORE main loop (see above)
