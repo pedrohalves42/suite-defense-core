@@ -1152,7 +1152,8 @@ function Add-AggregatedEvent {
     }
 
     $Global:AggregationStats.events_received++
-    $now = Get-Date
+    # v5.0.14-perf: Use cached loop timestamp to avoid Get-Date per event
+    $now = if ($Global:LoopTimestamp) { $Global:LoopTimestamp } else { Get-Date }
     $key = "${EventType}:${Pattern}"
 
     if ($Global:EventAggregationBuffer.ContainsKey($key)) {
