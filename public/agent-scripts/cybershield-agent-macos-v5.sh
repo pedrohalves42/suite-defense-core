@@ -696,7 +696,7 @@ test_runtime_integrity() {
     
     # Prefer signed JSON cache as authoritative source
     if [[ -f "$HASH_CACHE_JSON" ]]; then
-        expected_hash=$(python3 -c "import json; print(json.load(open('$HASH_CACHE_JSON')).get('hash',''))" 2>/dev/null)
+        expected_hash=$(jq -r '.hash // empty' "$HASH_CACHE_JSON" 2>/dev/null)
     fi
     
     # Fallback to legacy TXT
