@@ -2237,8 +2237,7 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
      fi
       
      # v5.0.13-perf: Adaptive sleep - protect CPU under load
-     local sleep_time=2
-     local current_cpu
+     sleep_time=2
      current_cpu=$(awk '{u=$2+$4; t=$2+$4+$5; if(t>0) printf "%.0f", u*100/t; else print "0"}' /proc/stat 2>/dev/null | head -1 || echo 0)
      LAST_CPU_PERCENT=${current_cpu:-0}
      if [[ $LAST_CPU_PERCENT -gt 80 ]]; then

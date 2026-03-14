@@ -383,9 +383,9 @@ add_aggregated_event() {
 
                 # Push burst alert immediately
                 local burst_body
-                burst_body=$(jq -n --arg t "$burst_type" --arg et "$event_type" --arg p "$pattern" \
+                burst_body=$(jq -n --arg agent "$AGENT_NAME" --arg t "$burst_type" --arg et "$event_type" --arg p "$pattern" \
                     --argjson c "${AGG_BUFFER_COUNT[$key]}" --argjson w "$window_age" \
-                    '{agent_name:$ENV.AGENT_NAME,event_type:("burst_"+$t),severity:"critical",event_data:{burst_type:$t,event_type:$et,pattern:$p,count:$c,window_seconds:$w}}' 2>/dev/null)
+                    '{agent_name:$agent,event_type:("burst_"+$t),severity:"critical",event_data:{burst_type:$t,event_type:$et,pattern:$p,count:$c,window_seconds:$w}}' 2>/dev/null)
                 if [[ -n "$burst_body" ]]; then
                     # v5.0.14-fix: was 'make_authenticated_request' (non-existent function) - all burst alerts were silently lost
                     invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "$burst_body" 15 1 &>/dev/null || true
@@ -430,11 +430,11 @@ flush_aggregated_entry() {
     [[ $count -gt 10 && "$severity" == "info" ]] && severity="warning"
 
     local body
-    body=$(jq -n --arg et "$event_type" --arg p "$pattern" --argjson c "$count" \
+    body=$(jq -n --arg agent "$AGENT_NAME" --arg et "$event_type" --arg p "$pattern" --argjson c "$count" \
         --argjson d "$duration" --arg b "$burst" --arg sev "$severity" \
         --arg fs "$(date -u -d @"$first_seen" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ")" \
         --arg ls "$(date -u -d @"$last_seen" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-        '{agent_name:$ENV.AGENT_NAME,event_type:"aggregated_event",severity:$sev,event_data:{event_type:$et,pattern:$p,count:$c,duration_seconds:$d,burst_detected:($b=="true"),first_seen:$fs,last_seen:$ls}}' 2>/dev/null)
+        '{agent_name:$agent,event_type:"aggregated_event",severity:$sev,event_data:{event_type:$et,pattern:$p,count:$c,duration_seconds:$d,burst_detected:($b=="true"),first_seen:$fs,last_seen:$ls}}' 2>/dev/null)
 
     if [[ -n "$body" ]]; then
         # v5.0.14-fix: was 'make_authenticated_request' (non-existent) - all aggregated events were silently lost
@@ -2554,8 +2554,7 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
      fi
       
      # v5.0.13-perf: Adaptive sleep - protect CPU under load
-     local sleep_time=2
-     local current_cpu
+     sleep_time=2
      current_cpu=$(awk '{u=$2+$4; t=$2+$4+$5; if(t>0) printf "%.0f", u*100/t; else print "0"}' /proc/stat 2>/dev/null | head -1 || echo 0)
      LAST_CPU_PERCENT=${current_cpu:-0}
      if [[ $LAST_CPU_PERCENT -gt 80 ]]; then
@@ -2564,7 +2563,7 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
      fi
      
      # v5.0.14: Flush aggregation buffer periodically
-     local agg_age=$((now - AGGREGATION_LAST_FLUSH))
+     agg_age=$((now - AGGREGATION_LAST_FLUSH))
      if [[ $agg_age -ge $((AGGREGATION_WINDOW_SECONDS * 2 + 1)) ]]; then
          flush_aggregation_buffer
      fi
