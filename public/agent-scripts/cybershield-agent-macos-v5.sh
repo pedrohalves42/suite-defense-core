@@ -1926,7 +1926,7 @@ report_handler() {
 collect_info_handler() {
     log "INFO" "[JOB] Collecting system info"
     local os_version
-    os_version=$(sw_vers 2>/dev/null | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
+    os_version=$(sw_vers 2>/dev/null | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
     local kernel
     kernel=$(uname -r 2>/dev/null || echo "unknown")
     local arch
