@@ -75,7 +75,7 @@ export default function SecurityMonitoring() {
       // Merge all events into a unified timeline
       const unifiedEvents: Array<{
         id: string; type: string; label: string; detail: string; severity: string;
-        created_at: string; source: string;
+        created_at: string; source: string; agentName?: string; alertType?: string; remediable?: boolean;
       }> = [];
 
       // From security_logs
@@ -97,17 +97,47 @@ export default function SecurityMonitoring() {
       });
 
       // From agent_evidence_logs (only actionable ones)
+      // Extract rich labels from event_data
+      const alertTypeLabels: Record<string, string> = {
+        firewall_disabled: 'Firewall desativado',
+        antivirus_inactive: 'Antivírus inativo',
+        suspicious_process: 'Processo suspeito detectado',
+        unauthorized_access: 'Acesso não autorizado',
+        malware_detected: 'Malware detectado',
+        brute_force: 'Tentativa de força bruta',
+        port_scan: 'Port scan detectado',
+        policy_violation: 'Violação de política',
+        disk_critical: 'Disco em estado crítico',
+        service_stopped: 'Serviço parado',
+      };
+      const remediableAlerts = new Set([
+        'firewall_disabled', 'antivirus_inactive', 'service_stopped', 'policy_violation',
+      ]);
+
       evidenceLogs.filter(e => e.severity !== 'info' && e.severity !== 'debug').forEach(e => {
-        const labelMap: Record<string, string> = {
-          security_event: 'Evento de segurança',
-          auto_repair: 'Reparo automático',
-          auto_recovery: 'Restauração de serviço',
-          policy_drift: 'Desvio de conformidade',
-        };
+        const eventData = e.event_data || {};
+        const alertType = (eventData as any).alert_type as string || '';
+        const alertMsg = (eventData as any).alert_message as string || '';
+        const skipRemediation = (eventData as any).details?.skip_remediation === true;
+
+        // Use alert_type for a specific label, fallback to generic
+        const label = alertType 
+          ? (alertTypeLabels[alertType] || alertType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
+          : (e.event_type === 'security_event' ? 'Evento de segurança' : 
+             e.event_type === 'auto_repair' ? 'Reparo automático' :
+             e.event_type === 'auto_recovery' ? 'Restauração de serviço' :
+             e.event_type === 'policy_drift' ? 'Desvio de conformidade' : e.event_type);
+
+        // Use alert_message for detail, fallback to agent name
+        const detail = alertMsg || e.agent_name;
+
         unifiedEvents.push({
-          id: e.id, type: e.event_type, label: labelMap[e.event_type] || e.event_type,
-          detail: e.agent_name, severity: e.severity, created_at: e.created_at,
-          source: 'evidence_logs',
+          id: e.id, type: alertType || e.event_type, label, detail,
+          severity: (eventData as any).severity || e.severity, 
+          created_at: e.created_at, source: 'evidence_logs',
+          agentName: e.agent_name,
+          alertType,
+          remediable: !skipRemediation && remediableAlerts.has(alertType),
         });
       });
 
