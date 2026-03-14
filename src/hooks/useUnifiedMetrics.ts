@@ -247,27 +247,27 @@ export function useUnifiedMetrics() {
     staleTime: 15000,
   });
 
-  // Compute agent-dependent values at render time (not in queryFn)
-  const agents = {
+  // PERF-FIX: Memoize agent-dependent computed values to prevent re-render cascade
+  const agents = useMemo(() => ({
     total: agentCounts.total,
     online: agentCounts.online,
     offline: agentCounts.offline,
     warning: agentCounts.warning,
     neverConnected: agentCounts.never_connected,
     protectionPercent: agentCounts.total > 0 ? Math.round((agentCounts.online / agentCounts.total) * 100) : 0,
-  };
+  }), [agentCounts]);
 
-  // Security score
-  const securityScore = (() => {
+  // PERF-FIX: Memoize security score
+  const securityScore = useMemo(() => {
     let score = 100;
     score -= Math.min(agents.offline * 5, 25);
     score -= Math.min((data?.alerts.critical || 0) * 10, 30);
     score -= Math.min((data?.vulnerabilities.critical || 0) * 5, 25);
     return Math.max(0, score);
-  })();
+  }, [agents.offline, data?.alerts.critical, data?.vulnerabilities.critical]);
 
-  // Global status
-  const globalStatus = (() => {
+  // PERF-FIX: Memoize global status
+  const globalStatus = useMemo(() => {
     if (securityScore >= 80 && (data?.alerts.critical || 0) === 0) {
       return { emoji: '🟢', title: 'Tudo sob controle', description: 'Todos os computadores estão protegidos.', variant: 'success' as const };
     }
@@ -275,7 +275,7 @@ export function useUnifiedMetrics() {
       return { emoji: '🟡', title: 'Atenção necessária', description: 'Alguns itens precisam de verificação.', variant: 'warning' as const };
     }
     return { emoji: '🔴', title: 'Ação urgente', description: 'Há riscos que podem afetar seu negócio.', variant: 'danger' as const };
-  })();
+  }, [securityScore, data?.alerts.critical]);
 
   const metrics: UnifiedMetrics | null = data ? {
     agents,
