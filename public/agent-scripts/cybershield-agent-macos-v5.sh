@@ -1793,7 +1793,7 @@ EOF
  quarantine_agent_handler() {
      local job="$1"
      local action
-     action=$(echo "$job" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('payload',{}).get('action','quarantine'))" 2>/dev/null)
+     action=$(echo "$job" | jq -r '.payload.action // "quarantine"' 2>/dev/null)
      local server_host
      server_host=$(echo "$SERVER_URL" | sed 's|https\?://||' | sed 's|/.*||')
      
