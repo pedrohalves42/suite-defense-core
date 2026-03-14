@@ -265,13 +265,20 @@ export default function DiagnosticsCenter() {
     });
   };
 
-  // Counts
-  const problemCounts = useMemo(() => ({
-    total: problematicAgents.length,
-    noHeartbeat: problematicAgents.filter(a => a.issue_type === 'no_heartbeat' || a.issue_type === 'stale_heartbeat').length,
-    noToken: problematicAgents.filter(a => a.issue_type === 'no_token').length,
-    criticalCount: problematicAgents.filter(a => a.issue_type === 'no_token' || a.issue_type === 'no_heartbeat').length,
-  }), [problematicAgents]);
+  // Counts - include agents with failed jobs that aren't already in problematic list
+  const problemCounts = useMemo(() => {
+    const problematicIds = new Set(problematicAgents.map(a => a.agent_name));
+    const extraFailedAgents = agentsWithFailedJobs.filter(name => !problematicIds.has(name));
+    const totalWithFailures = problematicAgents.length + extraFailedAgents.length;
+    
+    return {
+      total: totalWithFailures,
+      noHeartbeat: problematicAgents.filter(a => a.issue_type === 'no_heartbeat' || a.issue_type === 'stale_heartbeat').length,
+      noToken: problematicAgents.filter(a => a.issue_type === 'no_token').length,
+      failedJobs: agentsWithFailedJobs.length,
+      criticalCount: problematicAgents.filter(a => a.issue_type === 'no_token' || a.issue_type === 'no_heartbeat').length,
+    };
+  }, [problematicAgents, agentsWithFailedJobs]);
 
   // Filter agents based on SOC mode
   const filteredAgents = useMemo(() => {
