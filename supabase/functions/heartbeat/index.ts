@@ -254,8 +254,9 @@ Deno.serve(async (req) => {
     }
 
     // ============================================================
-    // SAVE SYSTEM METRICS from heartbeat payload
-    // v5 agents send system_metrics with CPU/RAM/Disk data
+    // PERF-FIX: Parallelize independent DB operations
+    // System metrics insert, process insert, and token update
+    // are independent of each other — run them concurrently
     // ============================================================
     const systemMetrics = (osInfo as any).system_metrics
     
@@ -272,10 +273,24 @@ Deno.serve(async (req) => {
       return cachedTenantId
     }
 
-    if (systemMetrics && typeof systemMetrics === 'object' && !systemMetrics.error) {
-      const tenantId = await getTenantId()
+    // Build all parallel promises
+    const parallelOps: Promise<void>[] = []
 
-      if (tenantId) {
+    // 1. Token last_used_at update (fire-and-forget)
+    parallelOps.push(
+      supabase
+        .from('agent_tokens')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('token_hash', tokenHash)
+        .then(() => {})
+    )
+
+    // 2. System metrics insert
+    if (systemMetrics && typeof systemMetrics === 'object' && !systemMetrics.error) {
+      parallelOps.push((async () => {
+        const tenantId = await getTenantId()
+        if (!tenantId) return
+
         const metricsRow = {
           agent_id: agent.id,
           tenant_id: tenantId,
@@ -310,19 +325,17 @@ Deno.serve(async (req) => {
             error: metricsError.message,
           })
         }
-      }
+      })())
     }
 
-    // ============================================================
-    // SAVE PROCESS DATA from heartbeat payload → agent_processes
-    // v5 agents send processes { top_by_cpu, top_by_memory, total_processes }
-    // ============================================================
+    // 3. Process data insert
     const processesPayload = (osInfo as any).processes
     const processAnomalies = (osInfo as any).process_anomalies
     if (processesPayload && typeof processesPayload === 'object' && !processesPayload.error) {
-      const tenantId = await getTenantId()
+      parallelOps.push((async () => {
+        const tenantId = await getTenantId()
+        if (!tenantId) return
 
-      if (tenantId) {
         // Flatten top_by_cpu + top_by_memory into deduplicated array
         const allProcs: any[] = []
         const seenPids = new Set<number>()
@@ -364,21 +377,19 @@ Deno.serve(async (req) => {
             error: procError.message,
           })
         } else {
-          // Cleanup old snapshots (keep last 48h)
-          await supabase
+          // Cleanup old snapshots (keep last 48h) — non-blocking
+          supabase
             .from('agent_processes')
             .delete()
             .eq('agent_id', agent.id)
             .lt('collected_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
+            .then(() => {})
         }
-      }
+      })())
     }
 
-    // Atualizar last_used_at do token (usando hash)
-    await supabase
-      .from('agent_tokens')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('token_hash', tokenHash)
+    // PERF-FIX: Execute all independent operations in parallel
+    await Promise.all(parallelOps)
 
     // ============================================================
     // FASE VIKTOR: FORCE UPDATE VIA HEARTBEAT RESPONSE
