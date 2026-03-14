@@ -402,18 +402,34 @@ export default function SecurityMonitoring() {
                       security_logs: <Shield className="h-3 w-3 text-amber-400" />,
                     }[event.source] || <Shield className="h-3 w-3" />;
                     return (
-                      <div key={event.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-muted/20">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                      <div key={event.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-muted/20 group">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <span className={cn("w-2 h-2 rounded-full shrink-0", severityColor)} />
                           {sourceIcon}
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium truncate">{event.label}</p>
                             <p className="text-[11px] text-muted-foreground truncate">{event.detail}</p>
+                            {event.agentName && event.detail !== event.agentName && (
+                              <p className="text-[10px] text-muted-foreground/70 truncate">📍 {event.agentName}</p>
+                            )}
                           </div>
                         </div>
-                        <span className="text-[11px] text-muted-foreground shrink-0 ml-2">
-                          {formatBrazilDateTime(event.created_at, 'short')}
-                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                          <span className="text-[11px] text-muted-foreground">
+                            {formatBrazilDateTime(event.created_at, 'short')}
+                          </span>
+                          {event.remediable && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Corrigir automaticamente"
+                              onClick={() => handleRemediate(event)}
+                            >
+                              <Wrench className="h-3.5 w-3.5 text-primary" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
