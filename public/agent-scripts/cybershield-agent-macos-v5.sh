@@ -1700,7 +1700,7 @@ EOF
  sync_blocked_websites_handler() {
      local job="$1"
      local urls
-     urls=$(echo "$job" | python3 -c "import sys,json; [print(u) for u in json.loads(sys.stdin.read()).get('payload',{}).get('urls',[])]" 2>/dev/null)
+     urls=$(echo "$job" | jq -r '.payload.urls // [] | .[]' 2>/dev/null)
      
      local blocked=0
      local marker_start="# === CyberShield Blocked Websites Start ==="
