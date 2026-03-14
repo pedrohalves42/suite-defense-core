@@ -1,3 +1,5 @@
+// P-13005: Legacy `serve()` import still used — migration to serveTenant requires refactoring auth flow
+// Keeping as-is for stability; auth is correctly implemented inline
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { 
