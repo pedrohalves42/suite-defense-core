@@ -1919,22 +1919,7 @@ report_handler() {
     local disk_usage
     disk_usage=$(df -g / | tail -1 | awk '{print "{\"total\":\""$2"G\",\"used\":\""$3"G\",\"free\":\""$4"G\",\"percent\":\""$5"\"}"}')
     local mem_info
-    mem_info=$(vm_stat 2>/dev/null | python3 -c "
-import sys
-lines = sys.stdin.readlines()
-pages = {}
-for l in lines:
-    parts = l.strip().split(':')
-    if len(parts)==2:
-        key = parts[0].strip().lower()
-        val = parts[1].strip().rstrip('.')
-        try: pages[key] = int(val)
-        except: pass
-page_size = 16384
-total_mb = sum(pages.values()) * page_size // (1024*1024)
-free_mb = pages.get('pages free', 0) * page_size // (1024*1024)
-print('{\"total_mb\":%d,\"free_mb\":%d}' % (total_mb, free_mb))
-" 2>/dev/null || echo '{}')
+    mem_info=$(vm_stat 2>/dev/null | awk -F: '/Pages/ {gsub(/[^0-9]/,"",$2); if($2+0>0) sum+=$2} /Pages free/ {gsub(/[^0-9]/,"",$2); free=$2+0} END {total=sum*16384/1048576; freemb=free*16384/1048576; printf "{\"total_mb\":%d,\"free_mb\":%d}", total, freemb}' 2>/dev/null || echo '{}')
     echo '{"agent_version":"'"$AGENT_VERSION"'","hostname":"'$(hostname)'",'$disk_usage',"memory":'"$mem_info"',"generated_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
 }
 
