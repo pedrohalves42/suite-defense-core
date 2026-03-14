@@ -18,9 +18,15 @@ export function useDashboardMetrics(
   }), [agents, OFFLINE_MS]);
 
   const offlineCount = agents.length - activeAgents.length;
-  const pendingJobs = jobs.filter(j => j.status === "queued").length;
-  const completedJobs = jobs.filter(j => j.status === "completed").length;
-  const failedJobs = jobs.filter(j => j.status === "failed").length;
+  const { pendingJobs, completedJobs, failedJobs } = useMemo(() => {
+    let pending = 0, completed = 0, failed = 0;
+    for (const j of jobs) {
+      if (j.status === 'queued') pending++;
+      else if (j.status === 'completed') completed++;
+      else if (j.status === 'failed') failed++;
+    }
+    return { pendingJobs: pending, completedJobs: completed, failedJobs: failed };
+  }, [jobs]);
   const successRate = completedJobs + failedJobs > 0 
     ? ((completedJobs / (completedJobs + failedJobs)) * 100).toFixed(0) : '100';
 
@@ -61,12 +67,17 @@ export function useDashboardMetrics(
     };
   }, [jobs]);
 
+  // P-13002 FIX: Single pass over agents+jobs, build agentNameToTenant map to avoid O(n²) .find()
   const tenantStats = useMemo(() => {
     const stats: Record<string, { 
       name: string; agentCount: number; offlineCount: number; failedJobsCount: number;
     }> = {};
     
-    agents.forEach(agent => {
+    // Build agent name → tenant lookup (O(n))
+    const agentTenantMap = new Map<string, string>();
+    
+    for (const agent of agents) {
+      agentTenantMap.set(agent.agent_name, agent.tenant_id);
       if (!stats[agent.tenant_id]) {
         stats[agent.tenant_id] = {
           name: tenantNames[agent.tenant_id] || agent.tenant_id.slice(0, 8) + '...',
@@ -77,20 +88,21 @@ export function useDashboardMetrics(
       const isOffline = !agent.last_heartbeat || 
         (new Date().getTime() - new Date(agent.last_heartbeat).getTime()) > OFFLINE_MS;
       if (isOffline) stats[agent.tenant_id].offlineCount++;
-    });
+    }
     
-    const now = new Date();
+    const now = new Date().getTime();
     const last24h = 24 * 60 * 60 * 1000;
-    jobs.forEach(job => {
+    for (const job of jobs) {
       if (job.status === 'failed' && job.created_at) {
-        if (now.getTime() - new Date(job.created_at).getTime() < last24h) {
-          const agent = agents.find(a => a.agent_name === job.agent_name);
-          if (agent && stats[agent.tenant_id]) {
-            stats[agent.tenant_id].failedJobsCount++;
+        if (now - new Date(job.created_at).getTime() < last24h) {
+          // P-13002: O(1) lookup instead of O(n) .find()
+          const tid = agentTenantMap.get(job.agent_name);
+          if (tid && stats[tid]) {
+            stats[tid].failedJobsCount++;
           }
         }
       }
-    });
+    }
     return stats;
   }, [agents, jobs, tenantNames, OFFLINE_MS]);
 

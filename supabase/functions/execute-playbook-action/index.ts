@@ -1,3 +1,5 @@
+// P-13005: Legacy `serve()` import still used — migration to serveTenant requires refactoring auth flow
+// Keeping as-is for stability; auth is correctly implemented inline
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { 
@@ -414,10 +416,12 @@ async function executeAction(
         throw new Error('Agent ID required for isolation');
       }
 
+      // P-13006 FIX: Add tenant_id filter to prevent cross-tenant agent lookup
       const { data: agent } = await supabase
         .from('agents')
         .select('agent_name')
         .eq('id', agentId)
+        .eq('tenant_id', tenantId)
         .single();
 
       const { data: job } = await supabase
@@ -440,11 +444,12 @@ async function executeAction(
         .select('id')
         .single();
 
-      // Atualizar status do agente
+      // P-13007 FIX: Add tenant_id filter to status update to prevent cross-tenant state mutation
       await supabase
         .from('agents')
         .update({ status: 'isolated' })
-        .eq('id', agentId);
+        .eq('id', agentId)
+        .eq('tenant_id', tenantId);
 
       return { job_id: job?.id, isolation_level: payload.isolation_level };
     }
