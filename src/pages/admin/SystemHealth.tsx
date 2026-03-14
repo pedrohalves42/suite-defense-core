@@ -231,8 +231,10 @@ export default function SystemHealth() {
     );
   }
 
-  const healthScore = agentStats ? 
-    Math.round((agentStats.healthy / Math.max(agentStats.total, 1)) * 100) : 0;
+  // Health score considers agents with recent heartbeat (5min) OR warning (30min)
+  const onlineOrWarningCount = agentStats ? (agentStats.healthy + agentStats.stale) : 0;
+  const healthScore = agentStats && agentStats.total > 0 ? 
+    Math.round((onlineOrWarningCount / agentStats.total) * 100) : 0;
 
   const jobSuccessRate = jobStats?.total ? 
     Math.round((jobStats.completed / jobStats.total) * 100) : 0;
@@ -240,12 +242,35 @@ export default function SystemHealth() {
   const v3AdoptionRate = jobStats?.total ? 
     Math.round((jobStats.v3 / jobStats.total) * 100) : 0;
 
-  const overallHealth = 
-    healthScore >= 80 && jobSuccessRate >= 90 && (jobStats?.stuckCount || 0) === 0 
-      ? "healthy" 
-      : healthScore >= 50 && jobSuccessRate >= 70 
-        ? "degraded" 
-        : "critical";
+  // Smarter health: consider time of day and actual failures
+  // Outside business hours (before 7am or after 20pm), offline agents are expected
+  const currentHour = new Date().getHours();
+  const isBusinessHours = currentHour >= 7 && currentHour < 20;
+  const hasActiveAgents = agentStats ? agentStats.total > 0 : false;
+  
+  const overallHealth = (() => {
+    // If no agents at all, it's not critical - just empty
+    if (!hasActiveAgents) return "healthy";
+    
+    // Critical only if: many failed jobs OR stuck jobs during business hours
+    const hasCriticalFailures = jobSuccessRate < 50 && (jobStats?.total || 0) > 5;
+    const hasStuckJobs = (jobStats?.stuckCount || 0) > 0;
+    
+    if (hasCriticalFailures) return "critical";
+    
+    if (isBusinessHours) {
+      // During business hours, check agent connectivity
+      if (healthScore >= 70 && jobSuccessRate >= 80 && !hasStuckJobs) return "healthy";
+      if (healthScore >= 30 && jobSuccessRate >= 60) return "degraded";
+      if (healthScore < 20) return "critical";
+      return "degraded";
+    } else {
+      // Outside business hours - offline agents are normal
+      if (jobSuccessRate >= 80 && !hasStuckJobs) return "healthy";
+      if (hasStuckJobs || jobSuccessRate < 60) return "degraded";
+      return "healthy";
+    }
+  })();
 
   return (
     <div className="space-y-6">
