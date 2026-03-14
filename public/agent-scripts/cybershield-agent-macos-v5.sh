@@ -644,7 +644,7 @@ assert_launchd_health() {
      local job="$1"
      
      local signature
-     signature=$(python3 -c "import json; print(json.loads('$job').get('payload_signature', ''))" 2>/dev/null)
+     signature=$(echo "$job" | jq -r '.payload_signature // empty' 2>/dev/null)
      
      if [[ -z "$signature" ]]; then
          log "ERROR" "[VERIFY] Job has no signature - REJECTED"
