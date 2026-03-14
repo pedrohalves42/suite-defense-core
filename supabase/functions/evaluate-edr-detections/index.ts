@@ -145,16 +145,22 @@ Deno.serve(async (req: Request) => {
       const typeRules = tenantRules.filter(r => r.event_type === eventType);
       if (!typeRules.length) continue;
 
+      // V-AUDIT: Pagination to avoid permanently missing events beyond BATCH_SIZE
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
       const { data: events } = await supabase
         .from(table)
         .select('*')
         .eq('tenant_id', tenantId) // V-2009: Enforce tenant isolation
         .gte('event_time', since)
         .eq('is_suspicious', false)
-        .limit(BATCH_SIZE);
+          .range(offset, offset + BATCH_SIZE - 1)
+          .order('event_time', { ascending: true });
 
-      if (!events?.length) continue;
-      stats.evaluated += events.length;
+      if (!events?.length) { hasMore = false; break; }
+        stats.evaluated += events.length;
+        if (events.length < BATCH_SIZE) hasMore = false;
 
       const newDetections: any[] = [];
       const matchedEventIds: string[] = [];
@@ -214,13 +220,12 @@ Deno.serve(async (req: Request) => {
           if (!tagSetGroups.has(key)) tagSetGroups.set(key, []);
           tagSetGroups.get(key)!.push(eventId);
         }
-        // One update per unique tag combination instead of per event
-        for (const [tagKey, eventIds] of tagSetGroups) {
-          await supabase
-            .from(table)
-            .update({ detection_tags: tagKey.split(',') })
-            .in('id', eventIds);
-        }
+        // V-AUDIT: Parallel tag updates instead of sequential
+        await Promise.all(
+          [...tagSetGroups.entries()].map(([tagKey, eventIds]) =>
+            supabase.from(table).update({ detection_tags: tagKey.split(',') }).in('id', eventIds)
+          )
+        );
       }
 
       if (newDetections.length > 0) {
@@ -228,6 +233,9 @@ Deno.serve(async (req: Request) => {
         if (error) console.error(`[evaluate-edr] Insert error:`, error.message);
         else stats.detections += newDetections.length;
       }
+
+      offset += BATCH_SIZE;
+      } // end while pagination
     }
   }
 
