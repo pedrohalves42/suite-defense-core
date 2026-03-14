@@ -711,7 +711,7 @@ test_runtime_integrity() {
     local current_hash
     current_hash=$(shasum -a 256 "$0" 2>/dev/null | cut -d' ' -f1)
     
-    if [[ "$current_hash" != "${expected_hash,,}" ]]; then
+    if [[ "$(echo "$current_hash" | tr '[:upper:]' '[:lower:]')" != "$(echo "$expected_hash" | tr '[:upper:]' '[:lower:]')" ]]; then
         log "ERROR" "[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running! Expected: $expected_hash, Actual: $current_hash"
         return 1
     fi
