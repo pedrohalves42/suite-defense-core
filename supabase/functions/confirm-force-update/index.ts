@@ -151,13 +151,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    logger.info('[confirm-force-update] Confirmando force update', { 
-      requestId, 
+    const deliveryCount = agent.force_update_delivered_count ?? agent.force_update_delivery_count ?? 0;
+
+    logger.info('[confirm-force-update] Confirmando force update', {
+      requestId,
       agentName: agent.agent_name,
       oldVersion: old_version || agent.agent_version,
       newVersion: new_version,
       wasForceUpdate: !!agent.force_update_version,
-      deliveryCount: agent.force_update_delivery_count
+      deliveryCount,
     });
 
     // Atualizar agente: limpar force_update e atualizar versão
@@ -169,6 +171,8 @@ Deno.serve(async (req) => {
         force_update_reason: null,
         force_update_at: null,
         force_update_delivery_count: 0,
+        force_update_delivered_count: 0,
+        force_update_first_delivered_at: null,
         last_forced_update_applied: new Date().toISOString()
       })
       .eq('id', agent.id);
