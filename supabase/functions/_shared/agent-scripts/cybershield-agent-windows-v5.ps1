@@ -606,7 +606,8 @@ function Write-Log {
         [string]$Level = "INFO"
     )
 
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    # v5.0.14-perf: Use cached loop timestamp when available (eliminates Get-Date per log call)
+    $timestamp = if ($Global:LoopTimestampStr) { $Global:LoopTimestampStr } else { Get-Date -Format "yyyy-MM-dd HH:mm:ss" }
     $logEntry = "[$timestamp] [$Level] $Message"
 
     # Console output with colors
