@@ -1749,7 +1749,7 @@ EOF
                  status="not_running"
                  unhealthy=$((unhealthy + 1))
              fi
-             results=$(echo "$results" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); d.append({'name':'$svc','status':'$status','healthy':$healthy}); print(json.dumps(d))" 2>/dev/null)
+             results=$(echo "$results" | jq --arg n "$svc" --arg s "$status" --argjson h "$healthy" '. + [{"name":$n,"status":$s,"healthy":$h}]')
              checked=$((checked + 1))
          fi
      done <<< "$services"
