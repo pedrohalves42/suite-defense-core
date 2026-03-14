@@ -33,11 +33,11 @@ Deno.serve(async (req) => {
   try {
     logger.info('[confirm-force-update] Requisição recebida', { requestId });
 
-    // Verificar HMAC headers
+    // Verificar headers de autenticação (aceita padrão novo X-HMAC-* + legado X-*)
     const agentToken = req.headers.get('X-Agent-Token');
     const signature = req.headers.get('X-HMAC-Signature');
-    const timestamp = req.headers.get('X-Timestamp');
-    const nonce = req.headers.get('X-Nonce');
+    const hmacTimestamp = req.headers.get('X-HMAC-Timestamp') || req.headers.get('X-Timestamp');
+    const hmacNonce = req.headers.get('X-HMAC-Nonce') || req.headers.get('X-Nonce');
 
     if (!agentToken) {
       logger.warn('[confirm-force-update] Missing X-Agent-Token', { requestId });
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     const tokenHash = await hashToken(agentToken);
     const { data: tokenData, error: tokenError } = await supabase
       .from('agent_tokens')
-      .select('agent_id, is_active, agents!inner(id, agent_name, hmac_secret, agent_version, force_update_version, force_update_delivery_count, tenant_id)')
+      .select('agent_id, is_active, agents!inner(id, agent_name, hmac_secret, agent_version, force_update_version, force_update_delivery_count, force_update_delivered_count, tenant_id)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .single();
@@ -69,33 +69,58 @@ Deno.serve(async (req) => {
     const agent = (tokenData as any).agents as { 
       id: string; 
       agent_name: string; 
-      hmac_secret: string;
+      hmac_secret: string | null;
       agent_version: string | null;
       force_update_version: string | null;
       force_update_delivery_count: number | null;
+      force_update_delivered_count: number | null;
       tenant_id: string;
     };
 
     // HMAC verification (accept token-only for pre-hotfix agents)
-    const hasHmacHeaders = !!(signature && timestamp && nonce);
+    const hasHmacHeaders = !!(signature && hmacTimestamp && hmacNonce);
     if (hasHmacHeaders && agent.hmac_secret) {
       const hmacResult = await verifyHmacSignature(
-        supabase, req, agent.agent_name, agent.hmac_secret
+        supabase,
+        req,
+        agent.agent_name,
+        agent.hmac_secret,
+        {
+          agentId: agent.id,
+          tenantId: agent.tenant_id,
+          endpoint: 'confirm-force-update',
+        }
       );
+
       if (!hmacResult.valid) {
-        logger.warn('[confirm-force-update] HMAC failed, accepting token-only', { 
-          requestId, errorCode: hmacResult.errorCode, agentName: agent.agent_name 
+        logger.warn('[confirm-force-update] HMAC failed, accepting token-only', {
+          requestId,
+          errorCode: hmacResult.errorCode,
+          agentName: agent.agent_name,
         });
       }
     } else {
-      logger.warn('[confirm-force-update] No HMAC headers, token-only auth', { 
-        requestId, agentName: agent.agent_name 
+      logger.warn('[confirm-force-update] Missing HMAC headers, token-only auth', {
+        requestId,
+        agentName: agent.agent_name,
+        hasSignature: !!signature,
+        hasTimestamp: !!hmacTimestamp,
+        hasNonce: !!hmacNonce,
       });
     }
 
     // Parsear body
-    const body = await req.json();
-    const { new_version, old_version } = body;
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { new_version, old_version } = body as { new_version?: string; old_version?: string };
 
     if (!new_version) {
       return new Response(
@@ -126,13 +151,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    logger.info('[confirm-force-update] Confirmando force update', { 
-      requestId, 
+    const deliveryCount = agent.force_update_delivered_count ?? agent.force_update_delivery_count ?? 0;
+
+    logger.info('[confirm-force-update] Confirmando force update', {
+      requestId,
       agentName: agent.agent_name,
       oldVersion: old_version || agent.agent_version,
       newVersion: new_version,
       wasForceUpdate: !!agent.force_update_version,
-      deliveryCount: agent.force_update_delivery_count
+      deliveryCount,
     });
 
     // Atualizar agente: limpar force_update e atualizar versão
@@ -144,6 +171,8 @@ Deno.serve(async (req) => {
         force_update_reason: null,
         force_update_at: null,
         force_update_delivery_count: 0,
+        force_update_delivered_count: 0,
+        force_update_first_delivered_at: null,
         last_forced_update_applied: new Date().toISOString()
       })
       .eq('id', agent.id);
@@ -169,7 +198,7 @@ Deno.serve(async (req) => {
           old_version: old_version || agent.agent_version,
           new_version: new_version,
           was_force_update: !!agent.force_update_version,
-          delivery_count: agent.force_update_delivery_count || 0,
+          delivery_count: deliveryCount,
           applied_at: new Date().toISOString()
         },
         evidence_hash: crypto.randomUUID(),

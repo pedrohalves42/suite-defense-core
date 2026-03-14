@@ -453,6 +453,7 @@ $Global:AutoRepairLogPath = Join-Path -Path $dataDir -ChildPath "auto_repair.log
 $Global:KeyStorePath = Join-Path -Path $dataDir -ChildPath "agent_keys.json"
 $Global:StatePath = Join-Path -Path $dataDir -ChildPath "agent_state.json"
 $Global:DnsBlocklistPath = Join-Path -Path $dataDir -ChildPath "dns_blocklist.json"
+$Global:PendingForceUpdateConfirmPath = Join-Path -Path $dataDir -ChildPath "pending_force_update_confirm.json"
 
 # Intervals
 $Global:PollIntervalSeconds = 60
@@ -4624,6 +4625,73 @@ function Get-SystemMetrics {
 }
 
 # ============================================
+#  FORCE UPDATE CONFIRMATION RECOVERY (v5.0.14)
+# ============================================
+function Save-PendingForceUpdateConfirmation {
+    param(
+        [Parameter(Mandatory = $true)][string]$TargetVersion,
+        [Parameter(Mandatory = $false)][string]$OldVersion,
+        [Parameter(Mandatory = $false)][string]$LastError = ""
+    )
+
+    try {
+        $pending = @{
+            target_version = $TargetVersion
+            old_version = $OldVersion
+            created_at = (Get-Date).ToString("o")
+            last_error = $LastError
+        }
+        $pending | ConvertTo-Json -Depth 5 | Out-File -FilePath $Global:PendingForceUpdateConfirmPath -Encoding UTF8 -Force
+        Write-Log "[FORCE UPDATE] Confirmacao pendente salva para retry: $TargetVersion" "WARN"
+    } catch {
+        Write-Log "[FORCE UPDATE] Falha ao persistir confirmacao pendente: $($_.Exception.Message)" "WARN"
+    }
+}
+
+function Invoke-PendingForceUpdateConfirmation {
+    try {
+        if (-not (Test-Path $Global:PendingForceUpdateConfirmPath)) {
+            return $true
+        }
+
+        $pendingRaw = Get-Content -Path $Global:PendingForceUpdateConfirmPath -Raw -ErrorAction SilentlyContinue
+        if (-not $pendingRaw) {
+            Remove-Item $Global:PendingForceUpdateConfirmPath -Force -ErrorAction SilentlyContinue
+            return $true
+        }
+
+        $pending = $pendingRaw | ConvertFrom-Json
+        $targetVersion = if ($pending -and $pending.PSObject.Properties.Match('target_version')) { [string]$pending.target_version } else { $null }
+        $oldVersion = if ($pending -and $pending.PSObject.Properties.Match('old_version')) { [string]$pending.old_version } else { $Global:AgentVersion }
+
+        if (-not $targetVersion) {
+            Remove-Item $Global:PendingForceUpdateConfirmPath -Force -ErrorAction SilentlyContinue
+            return $true
+        }
+
+        Write-Log "[FORCE UPDATE] Tentando reenviar confirmacao pendente da versao $targetVersion" "INFO"
+        $confirmResult = Invoke-SecureRequest `
+            -Path "/functions/v1/confirm-force-update" `
+            -Method "POST" `
+            -Body @{ new_version = $targetVersion; old_version = $oldVersion } `
+            -MaxRetries 3 `
+            -TimeoutSec 15
+
+        if ($confirmResult.Success) {
+            Remove-Item $Global:PendingForceUpdateConfirmPath -Force -ErrorAction SilentlyContinue
+            Write-Log "[FORCE UPDATE] Confirmacao pendente reenviada com sucesso" "SUCCESS"
+            return $true
+        }
+
+        Write-Log "[FORCE UPDATE] Confirmacao pendente ainda falhou: $($confirmResult.Error)" "WARN"
+        return $false
+    } catch {
+        Write-Log "[FORCE UPDATE] Erro no retry da confirmacao pendente: $($_.Exception.Message)" "WARN"
+        return $false
+    }
+}
+
+# ============================================
 #  FORCE UPDATE VIA HEARTBEAT (v5.0.7 - Ported from v4)
 # ============================================
 # Esta funcao:
@@ -4807,24 +4875,48 @@ function Apply-ForcedUpdate {
             method = "heartbeat_response"
         } -Severity "info"
         
-        # Confirmar no backend que force update foi aplicado
-        try {
-            $confirmResult = Invoke-SecureRequest `
-                -Path "/functions/v1/confirm-force-update" `
-                -Method "POST" `
-                -Body @{
-                    new_version = $targetVersion
-                    old_version = $Global:AgentVersion
-                } `
-                -TimeoutSec 10
-            
-            if ($confirmResult.Success) {
-                Write-Log "[FORCE UPDATE] Confirmacao enviada ao backend" "SUCCESS"
-            } else {
-                Write-Log "[FORCE UPDATE] Confirmacao falhou: $($confirmResult.Error)" "WARN"
+        # Confirmar no backend que force update foi aplicado (com retry resiliente)
+        $confirmSucceeded = $false
+        $confirmLastError = $null
+        $confirmMaxAttempts = 4
+
+        for ($attempt = 1; $attempt -le $confirmMaxAttempts; $attempt++) {
+            try {
+                $confirmResult = Invoke-SecureRequest `
+                    -Path "/functions/v1/confirm-force-update" `
+                    -Method "POST" `
+                    -Body @{
+                        new_version = $targetVersion
+                        old_version = $Global:AgentVersion
+                    } `
+                    -MaxRetries 2 `
+                    -TimeoutSec 15
+
+                if ($confirmResult.Success) {
+                    $confirmSucceeded = $true
+                    if (Test-Path $Global:PendingForceUpdateConfirmPath) {
+                        Remove-Item $Global:PendingForceUpdateConfirmPath -Force -ErrorAction SilentlyContinue
+                    }
+                    Write-Log "[FORCE UPDATE] Confirmacao enviada ao backend (tentativa $attempt/$confirmMaxAttempts)" "SUCCESS"
+                    break
+                }
+
+                $confirmLastError = if ($confirmResult.Error) { $confirmResult.Error } else { "unknown_error" }
+                Write-Log "[FORCE UPDATE] Confirmacao falhou (tentativa $attempt/$confirmMaxAttempts): $confirmLastError" "WARN"
+            } catch {
+                $confirmLastError = $_.Exception.Message
+                Write-Log "[FORCE UPDATE] Excecao ao confirmar (tentativa $attempt/$confirmMaxAttempts): $confirmLastError" "WARN"
             }
-        } catch {
-            Write-Log "[FORCE UPDATE] Falha ao confirmar no backend (nao critico): $($_.Exception.Message)" "WARN"
+
+            if ($attempt -lt $confirmMaxAttempts) {
+                $delaySeconds = [int][Math]::Min([Math]::Pow(2, $attempt - 1), 8)
+                Start-Sleep -Seconds $delaySeconds
+            }
+        }
+
+        if (-not $confirmSucceeded) {
+            Save-PendingForceUpdateConfirmation -TargetVersion $targetVersion -OldVersion $Global:AgentVersion -LastError $confirmLastError
+            Write-Log "[FORCE UPDATE] Confirmacao nao concluida; retry sera feito nos proximos heartbeats" "WARN"
         }
         
         Write-Log "[FORCE UPDATE] Update $targetVersion aplicado com sucesso!" "SUCCESS"
@@ -4917,6 +5009,12 @@ function Send-Heartbeat {
         
         if ($result.Success) {
             Write-Log "[HEARTBEAT] Sent successfully" "SUCCESS"
+
+            # Retry de confirmacao pendente de force update (best-effort, nao bloqueante)
+            $pendingConfirmOk = Invoke-PendingForceUpdateConfirmation
+            if (-not $pendingConfirmOk) {
+                Write-Log "[FORCE UPDATE] Confirmacao pendente ainda sem ACK; novo retry no proximo heartbeat" "WARN"
+            }
             
             # Processar resposta do servidor (force update, rotate key, intervals, etc.)
             if ($result.Content) {
