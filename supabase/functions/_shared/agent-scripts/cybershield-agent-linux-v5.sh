@@ -387,7 +387,8 @@ add_aggregated_event() {
                     --argjson c "${AGG_BUFFER_COUNT[$key]}" --argjson w "$window_age" \
                     '{agent_name:$ENV.AGENT_NAME,event_type:("burst_"+$t),severity:"critical",event_data:{burst_type:$t,event_type:$et,pattern:$p,count:$c,window_seconds:$w}}' 2>/dev/null)
                 if [[ -n "$burst_body" ]]; then
-                    make_authenticated_request "POST" "/functions/v1/submit-agent-evidence" "$burst_body" &>/dev/null || true
+                    # v5.0.14-fix: was 'make_authenticated_request' (non-existent function) - all burst alerts were silently lost
+                    invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "$burst_body" 15 1 &>/dev/null || true
                 fi
             fi
             return 0
