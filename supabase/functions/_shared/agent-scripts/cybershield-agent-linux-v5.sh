@@ -1652,35 +1652,48 @@ restart_service_handler() {
  # ============================================
  #  SYSTEM METRICS
  # ============================================
- get_system_metrics() {
-     local cpu_percent
-     cpu_percent=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d. -f1 2>/dev/null || echo 0)
-     
-     local mem_info
-     mem_info=$(free -b 2>/dev/null)
-     local mem_total
-     mem_total=$(echo "$mem_info" | awk '/Mem:/ {print $2}')
-     local mem_used
-     mem_used=$(echo "$mem_info" | awk '/Mem:/ {print $3}')
-     local mem_percent
-     mem_percent=$(echo "scale=2; $mem_used * 100 / $mem_total" | bc 2>/dev/null || echo 0)
-     
-     local disk_info
-     disk_info=$(df / | tail -1)
-     local disk_total
-     disk_total=$(echo "$disk_info" | awk '{print $2}')
-     local disk_used
-     disk_used=$(echo "$disk_info" | awk '{print $3}')
-     local disk_percent
-     disk_percent=$(echo "$disk_info" | awk '{print $5}' | tr -d '%')
-     
-     local uptime_seconds
-     uptime_seconds=$(awk '{print int($1)}' /proc/uptime 2>/dev/null || echo 0)
-     
-     cat <<EOF
- {"cpu_percent":$cpu_percent,"memory_total_gb":$(echo "scale=2; $mem_total / 1073741824" | bc 2>/dev/null || echo 0),"memory_used_gb":$(echo "scale=2; $mem_used / 1073741824" | bc 2>/dev/null || echo 0),"memory_used_percent":$mem_percent,"disk_total_gb":$(echo "scale=2; $disk_total / 1048576" | bc 2>/dev/null || echo 0),"disk_used_percent":$disk_percent,"uptime_seconds":$uptime_seconds}
- EOF
- }
+  get_system_metrics() {
+      # v5.0.14-perf: Use /proc/stat directly instead of top -bn1 (~5ms vs ~1s)
+      local cpu_percent=0
+      if [[ -f /proc/stat ]]; then
+          local cpu_line
+          cpu_line=$(head -1 /proc/stat)
+          local user nice system idle iowait
+          read -r _ user nice system idle iowait _ <<< "$cpu_line"
+          local total=$((user + nice + system + idle + iowait))
+          local active=$((user + nice + system))
+          if [[ $total -gt 0 ]]; then
+              cpu_percent=$((active * 100 / total))
+          fi
+      else
+          cpu_percent=$(top -bn1 2>/dev/null | grep "Cpu(s)" | awk '{print $2}' | cut -d. -f1 || echo 0)
+      fi
+      
+      local mem_info
+      mem_info=$(free -b 2>/dev/null)
+      local mem_total
+      mem_total=$(echo "$mem_info" | awk '/Mem:/ {print $2}')
+      local mem_used
+      mem_used=$(echo "$mem_info" | awk '/Mem:/ {print $3}')
+      local mem_percent
+      mem_percent=$(echo "scale=2; $mem_used * 100 / $mem_total" | bc 2>/dev/null || echo 0)
+      
+      local disk_info
+      disk_info=$(df / | tail -1)
+      local disk_total
+      disk_total=$(echo "$disk_info" | awk '{print $2}')
+      local disk_used
+      disk_used=$(echo "$disk_info" | awk '{print $3}')
+      local disk_percent
+      disk_percent=$(echo "$disk_info" | awk '{print $5}' | tr -d '%')
+      
+      local uptime_seconds
+      uptime_seconds=$(awk '{print int($1)}' /proc/uptime 2>/dev/null || echo 0)
+      
+      cat <<EOF
+  {"cpu_percent":$cpu_percent,"memory_total_gb":$(echo "scale=2; $mem_total / 1073741824" | bc 2>/dev/null || echo 0),"memory_used_gb":$(echo "scale=2; $mem_used / 1073741824" | bc 2>/dev/null || echo 0),"memory_used_percent":$mem_percent,"disk_total_gb":$(echo "scale=2; $disk_total / 1048576" | bc 2>/dev/null || echo 0),"disk_used_percent":$disk_percent,"uptime_seconds":$uptime_seconds}
+  EOF
+  }
  
  # ============================================
  #  HEARTBEAT
