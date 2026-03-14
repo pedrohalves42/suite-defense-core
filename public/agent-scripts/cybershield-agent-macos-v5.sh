@@ -1532,7 +1532,7 @@ EOF
               # Server controls agent cadence via heartbeat response
               # ============================================
               local new_hb_interval
-              new_hb_interval=$(python3 -c "import json; print(json.loads('''$result''').get('heartbeat_interval_seconds', 0))" 2>/dev/null || echo 0)
+              new_hb_interval=$(echo "$result" | jq -r '.heartbeat_interval_seconds // 0' 2>/dev/null)
               if [[ "$new_hb_interval" -ge 10 && "$new_hb_interval" != "$POLL_INTERVAL" ]]; then
                   log "INFO" "[HEARTBEAT] Server adjusted heartbeat interval: ${POLL_INTERVAL}s -> ${new_hb_interval}s"
                   POLL_INTERVAL=$new_hb_interval
