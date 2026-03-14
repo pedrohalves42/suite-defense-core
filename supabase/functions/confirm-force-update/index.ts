@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
           old_version: old_version || agent.agent_version,
           new_version: new_version,
           was_force_update: !!agent.force_update_version,
-          delivery_count: agent.force_update_delivery_count || 0,
+          delivery_count: deliveryCount,
           applied_at: new Date().toISOString()
         },
         evidence_hash: crypto.randomUUID(),
