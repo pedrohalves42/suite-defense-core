@@ -1560,13 +1560,13 @@ EOF
      local response="$1"
      
      local target_version
-     target_version=$(python3 -c "import json; print(json.loads('''$response''').get('target_version', ''))" 2>/dev/null)
-     local base64_content
-     base64_content=$(python3 -c "import json; print(json.loads('''$response''').get('script_content_base64', ''))" 2>/dev/null)
-     local expected_hash
-     expected_hash=$(python3 -c "import json; print(json.loads('''$response''').get('sha256', ''))" 2>/dev/null)
-     local reason
-     reason=$(python3 -c "import json; print(json.loads('''$response''').get('reason', 'heartbeat_force_update'))" 2>/dev/null)
+      target_version=$(echo "$response" | jq -r '.target_version // ""' 2>/dev/null)
+      local base64_content
+      base64_content=$(echo "$response" | jq -r '.script_content_base64 // ""' 2>/dev/null)
+      local expected_hash
+      expected_hash=$(echo "$response" | jq -r '.sha256 // ""' 2>/dev/null)
+      local reason
+      reason=$(echo "$response" | jq -r '.reason // "heartbeat_force_update"' 2>/dev/null)
      
      if [[ -z "$target_version" || -z "$base64_content" || -z "$expected_hash" ]]; then
          log "ERROR" "[FORCE UPDATE] Dados incompletos no response"
