@@ -52,9 +52,10 @@ export function useProcessEvents(agentId: string, options?: { limit?: number; su
   return useQuery({
     queryKey: ['edr-process-events', activeTenant?.id, agentId, options?.suspiciousOnly, limit],
     queryFn: async () => {
+      // PERF-FIX: Slim select — avoid fetching large payload columns
       let query = supabase
         .from('endpoint_process_events')
-        .select('*')
+        .select('id, tenant_id, agent_id, process_name, pid, parent_process_name, parent_pid, command_line, user_name, event_time, event_type, is_suspicious, mitre_technique_id, mitre_tactic, detection_tags, created_at')
         .eq('tenant_id', activeTenant!.id)
         .eq('agent_id', agentId)
         .order('event_time', { ascending: false })
@@ -79,9 +80,10 @@ export function useFileEvents(agentId: string, options?: { limit?: number; suspi
   return useQuery({
     queryKey: ['edr-file-events', activeTenant?.id, agentId, options?.suspiciousOnly, limit],
     queryFn: async () => {
+      // PERF-FIX: Slim select for file events
       let query = supabase
         .from('endpoint_file_events')
-        .select('*')
+        .select('id, tenant_id, agent_id, file_path, file_name, file_extension, event_type, event_time, is_suspicious, mitre_technique_id, mitre_tactic, detection_tags, created_at')
         .eq('tenant_id', activeTenant!.id)
         .eq('agent_id', agentId)
         .order('event_time', { ascending: false })
@@ -106,9 +108,10 @@ export function useNetworkEvents(agentId: string, options?: { limit?: number; su
   return useQuery({
     queryKey: ['edr-network-events', activeTenant?.id, agentId, options?.suspiciousOnly, limit],
     queryFn: async () => {
+      // PERF-FIX: Slim select for network events
       let query = supabase
         .from('endpoint_network_events')
-        .select('*')
+        .select('id, tenant_id, agent_id, process_name, remote_address, remote_port, local_port, direction, protocol, domain, event_time, is_suspicious, mitre_technique_id, mitre_tactic, detection_tags, created_at')
         .eq('tenant_id', activeTenant!.id)
         .eq('agent_id', agentId)
         .order('event_time', { ascending: false })
@@ -133,9 +136,10 @@ export function useRegistryEvents(agentId: string, options?: { limit?: number; s
   return useQuery({
     queryKey: ['edr-registry-events', activeTenant?.id, agentId, options?.suspiciousOnly, limit],
     queryFn: async () => {
+      // PERF-FIX: Slim select for registry events
       let query = supabase
         .from('endpoint_registry_events')
-        .select('*')
+        .select('id, tenant_id, agent_id, key_path, value_name, value_data, event_type, event_time, is_suspicious, mitre_technique_id, mitre_tactic, detection_tags, created_at')
         .eq('tenant_id', activeTenant!.id)
         .eq('agent_id', agentId)
         .order('event_time', { ascending: false })
