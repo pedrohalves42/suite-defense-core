@@ -116,20 +116,7 @@ serve(async (req) => {
       });
     }
 
-    // Verificar se usuário tem acesso ao tenant
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('role, tenant_id')
-      .eq('user_id', user.id)
-      .eq('tenant_id', execution.tenant_id)
-      .single();
-
-    if (!userRole || !['admin', 'super_admin', 'operator'].includes(userRole.role)) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    // V-11007: Tenant access already validated above (moved before execution fetch)
 
     // ✅ ENTERPRISE: Usar ações do SNAPSHOT IMUTÁVEL (não do playbook atual)
     const actionsSnapshot = execution.actions_snapshot as PlaybookAction[] || [];
