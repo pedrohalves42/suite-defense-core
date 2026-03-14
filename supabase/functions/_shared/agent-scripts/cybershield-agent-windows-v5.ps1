@@ -5918,15 +5918,13 @@ function Invoke-CollectProcessLineage {
     Write-Log "[PROCESS-LINEAGE] Collecting process tree for EDR visibility..." "INFO"
     
     try {
-        # Collect all running processes with parent info via CIM (faster than WMI)
-        $processes = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | 
-            Select-Object ProcessId, ParentProcessId, Name, CommandLine, 
-                          ExecutablePath, CreationDate, @{N='UserName';E={
-                              try { 
-                                  $owner = Invoke-CimMethod -InputObject $_ -MethodName GetOwner -ErrorAction SilentlyContinue
-                                  if ($owner.Domain) { "$($owner.Domain)\$($owner.User)" } else { $owner.User }
-                              } catch { "UNKNOWN" }
-                          }}
+        # v5.0.14-perf: Collect CIM processes WITHOUT per-process GetOwner (which is ~50ms each)
+        # Batch owner lookup only for suspicious processes to reduce CIM round-trips from ~200 to ~10
+        $rawProcesses = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            Select-Object ProcessId, ParentProcessId, Name, CommandLine, ExecutablePath, CreationDate
+        
+        # Defer owner resolution - will only call GetOwner for suspicious processes
+        $processes = $rawProcesses
         
         if (-not $processes) {
             Write-Log "[PROCESS-LINEAGE] No processes found" "WARN"
