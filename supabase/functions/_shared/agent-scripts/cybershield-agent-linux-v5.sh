@@ -383,9 +383,9 @@ add_aggregated_event() {
 
                 # Push burst alert immediately
                 local burst_body
-                burst_body=$(jq -n --arg t "$burst_type" --arg et "$event_type" --arg p "$pattern" \
+                burst_body=$(jq -n --arg agent "$AGENT_NAME" --arg t "$burst_type" --arg et "$event_type" --arg p "$pattern" \
                     --argjson c "${AGG_BUFFER_COUNT[$key]}" --argjson w "$window_age" \
-                    '{agent_name:$ENV.AGENT_NAME,event_type:("burst_"+$t),severity:"critical",event_data:{burst_type:$t,event_type:$et,pattern:$p,count:$c,window_seconds:$w}}' 2>/dev/null)
+                    '{agent_name:$agent,event_type:("burst_"+$t),severity:"critical",event_data:{burst_type:$t,event_type:$et,pattern:$p,count:$c,window_seconds:$w}}' 2>/dev/null)
                 if [[ -n "$burst_body" ]]; then
                     # v5.0.14-fix: was 'make_authenticated_request' (non-existent function) - all burst alerts were silently lost
                     invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "$burst_body" 15 1 &>/dev/null || true
