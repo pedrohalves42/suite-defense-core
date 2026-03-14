@@ -1516,12 +1516,12 @@ EOF
          # ============================================
          if [[ -n "$result" ]]; then
              local force_update
-             force_update=$(python3 -c "import json; print(json.loads('''$result''').get('force_update', False))" 2>/dev/null || echo "False")
-             
-             if [[ "$force_update" == "True" ]]; then
-                 log "WARN" "[FORCE UPDATE] Update forcado detectado via heartbeat!"
-                 local target_version
-                 target_version=$(python3 -c "import json; print(json.loads('''$result''').get('target_version', ''))" 2>/dev/null)
+              force_update=$(echo "$result" | jq -r '.force_update // false' 2>/dev/null)
+              
+              if [[ "$force_update" == "true" ]]; then
+                  log "WARN" "[FORCE UPDATE] Update forcado detectado via heartbeat!"
+                  local target_version
+                  target_version=$(echo "$result" | jq -r '.target_version // ""' 2>/dev/null)
                  log "INFO" "[FORCE UPDATE] Target version: $target_version"
                  
                  apply_forced_update "$result"
