@@ -17,7 +17,7 @@ export function useDashboardMetrics(
     } catch { return false; }
   }), [agents, OFFLINE_MS]);
 
-  // P-13001 FIX: Single pass over jobs array instead of 3 separate .filter() passes
+  const offlineCount = agents.length - activeAgents.length;
   const { pendingJobs, completedJobs, failedJobs } = useMemo(() => {
     let pending = 0, completed = 0, failed = 0;
     for (const j of jobs) {

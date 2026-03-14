@@ -31,10 +31,10 @@ async function fetchJobs(tenantId: string): Promise<DashboardJob[]> {
   return data || [];
 }
 
-// P-13003 FIX: Slim select for reports — avoid fetching full report content
+// P-13003 FIX: Slim select for reports — avoid fetching full content
 async function fetchReports(tenantId: string): Promise<DashboardReport[]> {
   const { data, error } = await supabase.from("reports")
-    .select("id, tenant_id, title, report_type, status, created_at, updated_at")
+    .select("id, agent_name, kind, file_path, created_at")
     .eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(100);
   if (error) throw error;
   return data || [];
