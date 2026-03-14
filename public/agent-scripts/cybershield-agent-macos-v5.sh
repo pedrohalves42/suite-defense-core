@@ -752,34 +752,26 @@ validate_hash_cache_schema() {
     local cache_content
     cache_content=$(cat "$HASH_CACHE_JSON" 2>/dev/null) || return 0
     
-    # Validate JSON and check for unexpected keys using python3 (macOS native)
-    local validation
-    validation=$(python3 -c "
-import json, sys
-try:
-    data = json.loads('''$cache_content''')
-    allowed = {'hash','signature','signed_at','algorithm','verified'}
-    extra = set(data.keys()) - allowed
-    if extra:
-        print('EXTRA:' + ','.join(extra))
-        sys.exit(1)
-    h = data.get('hash','')
-    if h and len(h) != 64:
-        print('BADHASH:' + str(len(h)))
-        sys.exit(1)
-    print('OK')
-except:
-    print('INVALID_JSON')
-    sys.exit(1)
-" 2>/dev/null)
+    # Validate JSON and check for unexpected keys
+    local extra_keys
+    extra_keys=$(echo "$cache_content" | jq -r 'keys[] | select(. != "hash" and . != "signature" and . != "signed_at" and . != "algorithm" and . != "verified")' 2>/dev/null)
     
-    if [[ "$validation" == "OK" ]]; then
-        return 0
+    if [[ -n "$extra_keys" ]]; then
+        log "ERROR" "[INTEGRITY] JSON hash cache contains unexpected properties: $extra_keys. Possible injection."
+        rm -f "$HASH_CACHE_JSON" 2>/dev/null || true
+        return 1
     fi
     
-    log "ERROR" "[INTEGRITY] JSON hash cache validation failed: $validation. Removing corrupted cache."
-    rm -f "$HASH_CACHE_JSON" 2>/dev/null || true
-    return 1
+    # Validate hash format
+    local cached_hash
+    cached_hash=$(echo "$cache_content" | jq -r '.hash // empty' 2>/dev/null)
+    if [[ -n "$cached_hash" && ${#cached_hash} -ne 64 ]]; then
+        log "ERROR" "[INTEGRITY] Invalid hash length in cache: ${#cached_hash} (expected 64)"
+        rm -f "$HASH_CACHE_JSON" 2>/dev/null || true
+        return 1
+    fi
+    
+    return 0
 }
 
 # ============================================
