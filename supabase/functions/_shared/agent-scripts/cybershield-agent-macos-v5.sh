@@ -2454,8 +2454,7 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
      fi
       
      # v5.0.13-perf: Adaptive sleep - protect CPU under load
-     local sleep_time=2
-     local current_cpu
+     sleep_time=2
      current_cpu=$(top -l 1 -n 0 2>/dev/null | awk '/CPU usage/ {gsub(/%/,"",$3); print int($3)}' || echo 0)
      LAST_CPU_PERCENT=${current_cpu:-0}
      if [[ $LAST_CPU_PERCENT -gt 80 ]]; then
@@ -2464,7 +2463,7 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
      fi
      
      # v5.0.14: Flush aggregation buffer periodically
-     local agg_age=$((now - AGGREGATION_LAST_FLUSH))
+     agg_age=$((now - AGGREGATION_LAST_FLUSH))
      if [[ $agg_age -ge $((AGGREGATION_WINDOW_SECONDS * 2 + 1)) ]]; then
          flush_aggregation_buffer
      fi
