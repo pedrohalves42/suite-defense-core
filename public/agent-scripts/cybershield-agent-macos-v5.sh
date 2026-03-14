@@ -1235,7 +1235,7 @@ restart_service_handler() {
      fi
      
      local count
-     count=$(python3 -c "import json; print(len(json.loads('$result').get('domains', [])))" 2>/dev/null || echo 0)
+     count=$(echo "$result" | jq '.domains | length' 2>/dev/null || echo 0)
      
      if [[ "$count" -gt 0 ]]; then
          echo "$result" > "$DNS_BLOCKLIST_PATH"
