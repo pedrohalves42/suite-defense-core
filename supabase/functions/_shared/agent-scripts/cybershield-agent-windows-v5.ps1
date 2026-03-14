@@ -2321,14 +2321,21 @@ function Test-DnsBlock {
 }
 
 # ============================================
-#  v5.0.1: NETWORK WATCHDOG
+#  v5.0.1: NETWORK WATCHDOG (v5.0.14-perf: cached with 10s TTL)
 # ============================================
+$Global:CachedNetworkOk = $false
+$Global:CachedNetworkCheckTime = [datetime]::MinValue
+
 function Test-NetworkConnectivity {
     <#
     .SYNOPSIS
-        Tests network connectivity
+        Tests network connectivity with 10s cache to avoid TCP connect spam
     #>
     try {
+        $now = if ($Global:LoopTimestamp) { $Global:LoopTimestamp } else { Get-Date }
+        if (($now - $Global:CachedNetworkCheckTime).TotalSeconds -lt 10) {
+            return $Global:CachedNetworkOk
+        }
         # Try TCP connection on server port 443
         $uri = [System.Uri]::new($Global:ServerUrl)
         $tcpClient = New-Object System.Net.Sockets.TcpClient
@@ -2337,13 +2344,19 @@ function Test-NetworkConnectivity {
         
         if ($wait -and $tcpClient.Connected) {
             $tcpClient.Close()
+            $Global:CachedNetworkOk = $true
+            $Global:CachedNetworkCheckTime = $now
             return $true
         }
         
         $tcpClient.Close()
+        $Global:CachedNetworkOk = $false
+        $Global:CachedNetworkCheckTime = $now
         return $false
         
     } catch {
+        $Global:CachedNetworkOk = $false
+        $Global:CachedNetworkCheckTime = if ($Global:LoopTimestamp) { $Global:LoopTimestamp } else { Get-Date }
         return $false
     }
 }
