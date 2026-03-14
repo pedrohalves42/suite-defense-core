@@ -125,8 +125,14 @@ export function useDashboardMetrics(
     ? ((activeAgents.length / agents.length) * 100).toFixed(0) : '0';
 
   const systemState = useMemo(() => {
-    if (alerts === 0 && failedJobs === 0) return 'healthy' as const;
-    if (alerts > 2 || failedJobs > 5) return 'critical' as const;
+    const currentHour = new Date().getHours();
+    const isBusinessHours = currentHour >= 7 && currentHour < 20;
+    
+    // Outside business hours, offline agents are expected
+    const effectiveAlerts = isBusinessHours ? alerts : 0;
+    
+    if (effectiveAlerts === 0 && failedJobs === 0) return 'healthy' as const;
+    if (effectiveAlerts > 2 || failedJobs > 5) return 'critical' as const;
     return 'warning' as const;
   }, [alerts, failedJobs]);
 
