@@ -793,50 +793,50 @@ PROTECTED_SERVICES="com.apple.sshd com.apple.windowserver com.apple.coreservices
 #  v5.0.1: KILL PROCESS HANDLER
 # ============================================
 kill_process_handler() {
-    local job="\$1"
+    local job="$1"
     local process_name
-    process_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('process_name',''))" 2>/dev/null)
+    process_name=$(echo "$job" | jq -r '.payload.process_name // empty' 2>/dev/null)
     local force
-    force=\$(echo "\$job" | python3 -c "import sys,json; print(str(json.load(sys.stdin).get('payload',{}).get('force',False)).lower())" 2>/dev/null)
+    force=$(echo "$job" | jq -r '.payload.force // false' 2>/dev/null)
     
-    if [[ -z "\$process_name" ]]; then
+    if [[ -z "$process_name" ]]; then
         echo '{"success":false,"error":"Missing process_name in payload"}'
         return
     fi
     
     # Security check: Protected process list
     local normalized_name
-    normalized_name=\$(echo "\$process_name" | tr '[:upper:]' '[:lower:]')
+    normalized_name=$(echo "$process_name" | tr '[:upper:]' '[:lower:]')
     
-    if echo "\$PROTECTED_PROCESSES" | grep -qw "\$normalized_name"; then
-        log "WARN" "[KILL-PROCESS] BLOCKED: \$process_name is a protected process"
-        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: \$process_name is a protected system process\",\"blocked\":true}"
+    if echo "$PROTECTED_PROCESSES" | grep -qw "$normalized_name"; then
+        log "WARN" "[KILL-PROCESS] BLOCKED: $process_name is a protected process"
+        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: $process_name is a protected system process\",\"blocked\":true}"
         return
     fi
     
     # Find and kill processes
     local pids
-    pids=\$(pgrep -x "\$process_name" 2>/dev/null)
+    pids=$(pgrep -x "$process_name" 2>/dev/null)
     
-    if [[ -z "\$pids" ]]; then
-        echo "{\"success\":true,\"killed\":0,\"message\":\"Process not running: \$process_name\"}"
+    if [[ -z "$pids" ]]; then
+        echo "{\"success\":true,\"killed\":0,\"message\":\"Process not running: $process_name\"}"
         return
     fi
     
     local killed=0
     local total=0
     
-    for pid in \$pids; do
-        total=\$((total + 1))
-        if [[ "\$force" == "true" ]]; then
-            kill -9 "\$pid" 2>/dev/null && killed=\$((killed + 1))
+    for pid in $pids; do
+        total=$((total + 1))
+        if [[ "$force" == "true" ]]; then
+            kill -9 "$pid" 2>/dev/null && killed=$((killed + 1))
         else
-            kill "\$pid" 2>/dev/null && killed=\$((killed + 1))
+            kill "$pid" 2>/dev/null && killed=$((killed + 1))
         fi
     done
     
-    log "SUCCESS" "[KILL-PROCESS] Terminated \$killed/\$total instances of \$process_name"
-    echo "{\"success\":true,\"process_name\":\"\$process_name\",\"killed\":\$killed,\"total_found\":\$total,\"killed_at\":\"\$(date -Iseconds)\"}"
+    log "SUCCESS" "[KILL-PROCESS] Terminated $killed/$total instances of $process_name"
+    echo "{\"success\":true,\"process_name\":\"$process_name\",\"killed\":$killed,\"total_found\":$total,\"killed_at\":\"$(date -Iseconds)\"}"
 }
 
 # ============================================
