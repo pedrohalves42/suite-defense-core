@@ -33,9 +33,9 @@ export const useSessionTimeout = () => {
     const activeTenant = tenants.find((t: { id: string }) => t.id === activeTenantId);
     const role = activeTenant?.role || 'user';
     
-    if (isSuperAdmin) return 15;
-    if (role === 'admin') return 60;
-    return 480;
+    if (isSuperAdmin) return 60;      // was 15 → now 1 hour
+    if (role === 'admin') return 480;   // was 60 → now 8 hours
+    return 720;                         // was 480 → now 12 hours
   }, [user]);
 
   const resetTimer = useCallback(() => {
@@ -96,14 +96,30 @@ export const useSessionTimeout = () => {
       return;
     }
 
-    // Warning 1 minute before expiration (only for super_admin with short timeout)
+    // Warning 5 minutes before expiration
     const remainingMs = timeoutMs - elapsed;
-    if (remainingMs <= 60000 && !warningShownRef.current && isSuperAdminRef.current) {
+    if (remainingMs <= 300000 && !warningShownRef.current) {
       warningShownRef.current = true;
-      toast.info('Sua sessão expirará em 1 minuto', {
+      toast.info('Sua sessão expirará em 5 minutos', {
         description: 'Mova o mouse ou pressione uma tecla para estender.',
-        duration: 10000
+        duration: 15000
       });
+    }
+
+    // Proactively refresh Supabase token to prevent JWT expiry
+    if (remainingMs > 0) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.expires_at) {
+          const tokenRemaining = session.expires_at - Math.floor(Date.now() / 1000);
+          if (tokenRemaining < 600) {
+            await supabase.auth.refreshSession();
+            logger.debug('[SessionTimeout] Token refreshed proactively');
+          }
+        }
+      } catch {
+        // Non-blocking
+      }
     }
   }, [user, getTimeoutMinutes]);
 
