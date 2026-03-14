@@ -4975,7 +4975,7 @@ function Send-Heartbeat {
                     # ============================================
                     # v5.0.14: AGGREGATION CONFIG FROM SERVER
                     # ============================================
-                    if ($response.aggregation) {
+                    if ($response.PSObject.Properties.Match('aggregation') -and $response.aggregation) {
                         try {
                             $aggConfig = $response.aggregation
                             if ($aggConfig -is [PSCustomObject]) {
