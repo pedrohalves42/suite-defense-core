@@ -2104,7 +2104,7 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
          jobs=$(poll_jobs)
          
          # Process each job
-         echo "$jobs" | python3 -c "import sys,json; [print(json.dumps(j)) for j in json.loads(sys.stdin.read())]" 2>/dev/null | while read -r job; do
+         echo "$jobs" | jq -c '.[]' 2>/dev/null | while read -r job; do
              if [[ -n "$job" ]]; then
                  result=$(execute_job "$job")
                  submit_job_result "$job" "$result"
