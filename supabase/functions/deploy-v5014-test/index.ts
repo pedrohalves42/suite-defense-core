@@ -43,23 +43,41 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Step 1: Read script content from _shared directory
+    // Step 1: Read script content
+    // In Deno Deploy, .ps1 files aren't bundled. Fetch from published app URL.
     let scriptContent = '';
+    
+    // Try file first (local dev)
     try {
       const scriptUrl = new URL('../_shared/agent-scripts/cybershield-agent-windows-v5.ps1', import.meta.url);
       scriptContent = await Deno.readTextFile(scriptUrl);
       console.log(`[${requestId}] Script loaded from file: ${scriptContent.length} chars`);
-    } catch (fileErr) {
-      console.log(`[${requestId}] File not available, trying fetch from public URL`);
+    } catch {
+      // Deployed environment: fetch from published app's public assets
+      const appUrls = [
+        'https://cybershield-audit.lovable.app/agent-scripts/cybershield-agent-windows-v5.ps1',
+        'https://id-preview--affc1ab5-463f-41f7-ae33-f788e864f6ee.lovable.app/agent-scripts/cybershield-agent-windows-v5.ps1'
+      ];
       
-      // Fallback: fetch from the project's public URL
-      const publicUrl = `${SUPABASE_URL.replace('.supabase.co', '.supabase.co')}/storage/v1/object/public/agent-installers/cybershield-agent-windows-v5.ps1`;
+      for (const url of appUrls) {
+        try {
+          console.log(`[${requestId}] Fetching script from: ${url}`);
+          const resp = await fetch(url);
+          if (resp.ok) {
+            scriptContent = await resp.text();
+            if (scriptContent.length > 1000 && scriptContent.includes('CyberShield')) {
+              console.log(`[${requestId}] Script fetched from ${url}: ${scriptContent.length} chars`);
+              break;
+            }
+            scriptContent = ''; // Reset if invalid
+          }
+        } catch (fetchErr) {
+          console.warn(`[${requestId}] Failed to fetch from ${url}:`, fetchErr);
+        }
+      }
       
-      // Second fallback: try reading from existing v5.0.13 and warn
-      console.error(`[${requestId}] Cannot load script file in deployed environment. Script must be provided in request body.`);
-      
-      // Accept script content from POST body as last resort
-      if (req.method === 'POST') {
+      // Last resort: accept from POST body
+      if (!scriptContent && req.method === 'POST') {
         try {
           const body = await req.json();
           if (body.script_content && body.script_content.length > 1000) {
@@ -71,8 +89,8 @@ Deno.serve(async (req) => {
       
       if (!scriptContent) {
         return new Response(JSON.stringify({ 
-          error: 'Script file not available in deployed environment',
-          hint: 'POST with { "script_content": "..." } or upload via ScriptUploader first'
+          error: 'Could not load v5.0.14 script from any source',
+          hint: 'Ensure the app is published or POST with { "script_content": "..." }'
         }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
