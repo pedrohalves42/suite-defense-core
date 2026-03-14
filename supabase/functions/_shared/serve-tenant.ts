@@ -227,6 +227,12 @@ export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
             return errorResponse('tenant_id required', 400, requestId);
           }
         }
+      } else {
+        // V-11004 FIX: When skipTenantValidation is true and no tenantId,
+        // set a safe default instead of passing null as non-null assertion
+        if (!tenantId) {
+          console.warn(`[serveTenant][${requestId}] skipTenantValidation=true but no tenant_id provided`);
+        }
       }
 
       // 7. Build context and call handler

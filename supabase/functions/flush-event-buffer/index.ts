@@ -173,15 +173,19 @@ Deno.serve(async (req) => {
     } else {
       // ── Step 5: Mark ALL rows as processed ──
       // Chunk the IDs to avoid oversized IN clause
+      // V-11006 FIX: Parallel chunk updates instead of sequential
       const CHUNK = 500;
+      const markPromises: Promise<any>[] = [];
       for (let i = 0; i < processedIds.length; i += CHUNK) {
         const chunk = processedIds.slice(i, i + CHUNK);
-        // V-10002: batch_id already set by claim RPC, only update processed_at
-        await supabase
-          .from('endpoint_event_buffer')
-          .update({ processed_at: new Date().toISOString() })
-          .in('id', chunk);
+        markPromises.push(
+          supabase
+            .from('endpoint_event_buffer')
+            .update({ processed_at: new Date().toISOString() })
+            .in('id', chunk)
+        );
       }
+      await Promise.all(markPromises);
     }
 
     const elapsed = Date.now() - startTime;

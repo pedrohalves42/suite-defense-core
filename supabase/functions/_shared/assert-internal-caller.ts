@@ -28,28 +28,27 @@ export function assertInternalCaller(req: Request): Response | null {
 
   // 1. X-Internal-Secret match
   if (internalSecret && expectedSecret && internalSecret === expectedSecret) {
+    console.log('[assert-internal-caller] Authorized via X-Internal-Secret');
     return null; // Authorized
   }
 
   // 2. service_role key in Authorization header (Supabase cron scheduler)
   if (authHeader && serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) {
+    console.log('[assert-internal-caller] Authorized via service_role key');
     return null; // Authorized
   }
 
-  // 3. Supabase cron invocation (anon key in Authorization — cron uses this)
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
-  if (authHeader && anonKey && authHeader === `Bearer ${anonKey}`) {
-    return null; // Authorized (cron scheduler)
-  }
+  // V-11001 FIX: REMOVED anon key passthrough.
+  // The anon key is PUBLIC and accepting it would allow ANY frontend client
+  // to call internal/cron functions. Supabase cron uses service_role (handled in #2).
+  // Previous code accepted anon key under the false assumption that cron uses it.
 
-  // V-10001 FIX: REMOVED unsafe no-auth passthrough.
-  // Previously allowed ANY request with no auth headers, enabling external attackers
-  // to call internal functions by simply omitting Authorization.
-  // Supabase cron ALWAYS sends the anon key in Authorization (handled above in #3).
-
-  // 5. If there IS an auth header but it doesn't match service_role or anon_key,
+  // If there IS an auth header but it doesn't match service_role,
   // this is an unauthorized external caller
-  console.warn('[SECURITY] Unauthorized access attempt to internal/cron function');
+  console.warn('[SECURITY] Unauthorized access attempt to internal/cron function', {
+    hasAuthHeader: !!authHeader,
+    hasInternalSecret: !!internalSecret,
+  });
   return new Response(
     JSON.stringify({ error: 'Unauthorized: This endpoint is internal only' }),
     { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -72,10 +72,29 @@ serve(async (req) => {
     console.log(`[execute-playbook-action] Executing ${execution_id}, action_index: ${action_index}`);
 
     // ✅ ENTERPRISE: Buscar execução COM SNAPSHOTS IMUTÁVEIS
+    // V-11007 FIX: Don't fetch yet — first resolve tenant, then filter by tenant_id
+    // Step 1: Get user's tenant access
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('role, tenant_id')
+      .eq('user_id', user.id)
+      .in('role', ['admin', 'super_admin', 'operator'])
+      .limit(1)
+      .maybeSingle();
+
+    if (!userRole) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Step 2: Fetch execution WITH tenant filter
     const { data: execution, error: execError } = await supabase
       .from('playbook_executions')
       .select('*')
       .eq('id', execution_id)
+      .eq('tenant_id', userRole.tenant_id) // V-11007: Prevent cross-tenant access
       .single();
 
     if (execError || !execution) {
