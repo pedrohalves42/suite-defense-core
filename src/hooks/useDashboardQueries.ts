@@ -58,8 +58,10 @@ async function fetchRateLimits(tenantId: string): Promise<DashboardRateLimit[]> 
   return data || [];
 }
 
+// PERF-FIX: Slim select for virus_scans — avoid fetching large scan_output blob
 async function fetchVirusScans(tenantId: string): Promise<DashboardVirusScan[]> {
-  const { data, error } = await supabase.from("virus_scans").select("*")
+  const { data, error } = await supabase.from("virus_scans")
+    .select("id, agent_id, agent_name, tenant_id, file_path, file_hash, is_malicious, detection_name, engine, scanned_at, quarantined")
     .eq("tenant_id", tenantId).order("scanned_at", { ascending: false }).limit(100);
   if (error) throw error;
   return data || [];
