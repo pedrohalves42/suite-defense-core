@@ -4570,15 +4570,23 @@ function Invoke-ApplySecurityPatch {
 # ============================================
 #  SYSTEM METRICS (Basic - inherited from v4)
 # ============================================
+# v5.0.14-perf: Cached system metrics with 30s TTL (avoids 3 CIM queries per heartbeat)
+$Global:CachedSystemMetrics = $null
+$Global:CachedSystemMetricsTime = [datetime]::MinValue
+
 function Get-SystemMetrics {
     try {
+        $now = if ($Global:LoopTimestamp) { $Global:LoopTimestamp } else { Get-Date }
+        if ($Global:CachedSystemMetrics -and ($now - $Global:CachedSystemMetricsTime).TotalSeconds -lt 30) {
+            return $Global:CachedSystemMetrics
+        }
         # v5.0.13-perf: Use CIM instead of WMI (faster, uses WSMan)
         $cpu = Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average | Select-Object -ExpandProperty Average
         $os = Get-CimInstance Win32_OperatingSystem
         $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
-        $uptime = (Get-Date) - $os.LastBootUpTime
+        $uptime = $now - $os.LastBootUpTime
         
-        return @{
+        $Global:CachedSystemMetrics = @{
             cpu_percent = [math]::Round($cpu, 2)
             memory_total_gb = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2)
             memory_used_gb = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1MB, 2)
@@ -4588,6 +4596,8 @@ function Get-SystemMetrics {
             disk_used_percent = [math]::Round((($disk.Size - $disk.FreeSpace) / $disk.Size) * 100, 2)
             uptime_seconds = [math]::Round($uptime.TotalSeconds)
         }
+        $Global:CachedSystemMetricsTime = $now
+        return $Global:CachedSystemMetrics
     } catch {
         return @{ error = $_.Exception.Message }
     }
