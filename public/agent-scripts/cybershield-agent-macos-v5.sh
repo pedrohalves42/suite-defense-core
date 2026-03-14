@@ -2118,8 +2118,8 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
     # v5.0.3: LAUNCHD HEALTH CHECK (every 5 min)
     # ============================================
     launchd_health=$(assert_launchd_health)
-    if python3 -c "import json; exit(0 if json.loads('$launchd_health').get('repaired') else 1)" 2>/dev/null; then
-        repair_action=$(python3 -c "import json; print(json.loads('$launchd_health').get('repair_action', 'unknown'))" 2>/dev/null)
+    if echo "$launchd_health" | jq -e '.repaired == true' &>/dev/null; then
+        repair_action=$(echo "$launchd_health" | jq -r '.repair_action')
         log "INFO" "[MAIN-LOOP] LaunchDaemon repaired: $repair_action"
     fi
     
