@@ -344,8 +344,8 @@ add_aggregated_event() {
     fi
 
     AGG_EVENTS_RECEIVED=$((AGG_EVENTS_RECEIVED + 1))
-    local now_epoch
-    now_epoch=$(date +%s)
+    # v5.0.14-perf: Use cached epoch to avoid date subprocess per event
+    local now_epoch=${CACHED_EPOCH:-$(date +%s)}
     local key="${event_type}:${pattern}"
 
     if [[ -n "${AGG_BUFFER_COUNT[$key]+x}" ]]; then
