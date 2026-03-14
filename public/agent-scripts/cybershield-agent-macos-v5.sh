@@ -1762,7 +1762,7 @@ EOF
  network_diagnostics_handler() {
      local job="$1"
      local targets
-     targets=$(echo "$job" | python3 -c "import sys,json; [print(t) for t in json.loads(sys.stdin.read()).get('payload',{}).get('targets',['8.8.8.8','1.1.1.1'])]" 2>/dev/null)
+     targets=$(echo "$job" | jq -r '.payload.targets // ["8.8.8.8","1.1.1.1"] | .[]' 2>/dev/null)
      
      local diagnostics="[]"
      
