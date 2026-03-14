@@ -1817,7 +1817,7 @@ EOF
  apply_security_patch_handler() {
      local job="$1"
      local cve_id
-     cve_id=$(echo "$job" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('payload',{}).get('cve_id',''))" 2>/dev/null)
+     cve_id=$(echo "$job" | jq -r '.payload.cve_id // ""' 2>/dev/null)
      
      # macOS uses softwareupdate
      sudo softwareupdate --install --recommended 2>/dev/null
