@@ -1093,30 +1093,30 @@ restart_service_handler() {
      local result="$2"
      
      local execution_id
-     execution_id=$(python3 -c "import json; print(json.loads('$job').get('execution_id', ''))" 2>/dev/null)
-     local job_id
-     job_id=$(python3 -c "import json; print(json.loads('$job').get('id', ''))" 2>/dev/null)
-     local status
-     status=$(python3 -c "import json; print(json.loads('$result').get('status', ''))" 2>/dev/null)
-     local output_hash
-     output_hash=$(python3 -c "import json; print(json.loads('$result').get('output_hash', ''))" 2>/dev/null)
-     local finished_at
-     finished_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-     
-     # Sign result
-     local signature
-     signature=$(sign_execution_result "$execution_id" "$job_id" "$status" "$output_hash" "$finished_at")
-     
-     local output
-     output=$(python3 -c "import json; print(json.dumps(json.loads('$result').get('output', {})))" 2>/dev/null || echo '{}')
-     local error_message
-     error_message=$(python3 -c "import json; print(json.loads('$result').get('error_message', ''))" 2>/dev/null)
-     local exec_hash
-     exec_hash=$(python3 -c "import json; print(json.loads('$result').get('execution_hash', ''))" 2>/dev/null)
-     local prev_hash
-     prev_hash=$(python3 -c "import json; print(json.loads('$result').get('previous_execution_hash', ''))" 2>/dev/null)
-     local exec_index
-     exec_index=$(python3 -c "import json; print(json.loads('$result').get('execution_index', 0))" 2>/dev/null)
+      execution_id=$(echo "$job" | jq -r '.execution_id')
+      local job_id
+      job_id=$(echo "$job" | jq -r '.id')
+      local status
+      status=$(echo "$result" | jq -r '.status')
+      local output_hash
+      output_hash=$(echo "$result" | jq -r '.output_hash')
+      local finished_at
+      finished_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      
+      # Sign result
+      local signature
+      signature=$(sign_execution_result "$execution_id" "$job_id" "$status" "$output_hash" "$finished_at")
+      
+      local output
+      output=$(echo "$result" | jq -c '.output // {}')
+      local error_message
+      error_message=$(echo "$result" | jq -r '.error_message // ""')
+      local exec_hash
+      exec_hash=$(echo "$result" | jq -r '.execution_hash')
+      local prev_hash
+      prev_hash=$(echo "$result" | jq -r '.previous_execution_hash')
+      local exec_index
+      exec_index=$(echo "$result" | jq -r '.execution_index')
      
      local payload
      payload=$(cat <<EOF
