@@ -52,9 +52,10 @@ export function useProcessEvents(agentId: string, options?: { limit?: number; su
   return useQuery({
     queryKey: ['edr-process-events', activeTenant?.id, agentId, options?.suspiciousOnly, limit],
     queryFn: async () => {
+      // PERF-FIX: Slim select — avoid fetching large payload columns
       let query = supabase
         .from('endpoint_process_events')
-        .select('*')
+        .select('id, tenant_id, agent_id, process_name, pid, parent_process_name, parent_pid, command_line, user_name, event_time, event_type, is_suspicious, mitre_technique_id, mitre_tactic, detection_tags, created_at')
         .eq('tenant_id', activeTenant!.id)
         .eq('agent_id', agentId)
         .order('event_time', { ascending: false })
