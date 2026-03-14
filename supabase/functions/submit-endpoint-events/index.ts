@@ -188,7 +188,7 @@ function runDetections(events: any[], type: string): any[] {
             event_time: event.event_time || new Date().toISOString(),
           });
         }
-      } catch { /* skip malformed rule matches */ }
+      } catch (err) { console.warn(`[submit-endpoint-events] Rule ${rule.id} match error:`, (err as Error).message); }
     }
   }
   return detections;
