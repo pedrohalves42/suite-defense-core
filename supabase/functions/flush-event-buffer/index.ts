@@ -25,7 +25,9 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  assertInternalCaller(req);
+  // V-11005 FIX: assertInternalCaller returns a Response if unauthorized — MUST check and return it
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   const batchId = crypto.randomUUID();
