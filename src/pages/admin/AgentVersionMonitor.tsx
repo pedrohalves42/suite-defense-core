@@ -34,14 +34,16 @@ export default function AgentVersionMonitor() {
     queryFn: async () => {
       if (!tenant?.id) return [];
       
-      const { data, error } = await supabase
-        .from('agents')
-        .select('id, agent_name, hostname, agent_version, ed25519_supported, signature_mode, status, last_heartbeat, os_type')
-        .eq('tenant_id', tenant.id)
-        .order('agent_name');
+      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync / RLS issues
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
       
       if (error) throw error;
-      return (data || []) as AgentWithCapabilities[];
+      return ((data || []) as unknown as AgentWithCapabilities[]).sort((a, b) => 
+        (a.agent_name || '').localeCompare(b.agent_name || '')
+      );
     },
     enabled: !!tenant?.id,
     refetchInterval: 300000, // COST-OPT: 30s → 5min
