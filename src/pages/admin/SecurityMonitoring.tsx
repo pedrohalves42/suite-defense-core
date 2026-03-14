@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Shield, AlertTriangle, Ban, RefreshCw, Clock, Lock, Unlock,
-  CheckCircle, ShieldCheck, Activity, MonitorOff, XCircle
+  CheckCircle, ShieldCheck, Activity, MonitorOff, XCircle, Wrench, Eye
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
