@@ -220,13 +220,12 @@ Deno.serve(async (req: Request) => {
           if (!tagSetGroups.has(key)) tagSetGroups.set(key, []);
           tagSetGroups.get(key)!.push(eventId);
         }
-        // One update per unique tag combination instead of per event
-        for (const [tagKey, eventIds] of tagSetGroups) {
-          await supabase
-            .from(table)
-            .update({ detection_tags: tagKey.split(',') })
-            .in('id', eventIds);
-        }
+        // V-AUDIT: Parallel tag updates instead of sequential
+        await Promise.all(
+          [...tagSetGroups.entries()].map(([tagKey, eventIds]) =>
+            supabase.from(table).update({ detection_tags: tagKey.split(',') }).in('id', eventIds)
+          )
+        );
       }
 
       if (newDetections.length > 0) {

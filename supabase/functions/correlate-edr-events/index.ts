@@ -53,7 +53,7 @@ Deno.serve(async (req: Request) => {
       .select('tenant_id')
       .gte('event_time', since)
       .eq('status', 'open')
-      .limit(200);
+      .limit(2000); // V-AUDIT: Increased from 200 to cover more tenants at scale
     const fromEvents = [...new Set((tenantRows || []).map(r => r.tenant_id))];
     allTenantIds = [...new Set([...ruleTenantIds, ...fromEvents])];
   }

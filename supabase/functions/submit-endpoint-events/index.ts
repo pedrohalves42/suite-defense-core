@@ -299,7 +299,8 @@ serveAgent(async (_req, ctx) => {
         },
       }));
       
-      await supabase.from('system_alerts').insert(alerts);
+      const { error: alertError } = await supabase.from('system_alerts').insert(alerts);
+      if (alertError) console.error('[submit-endpoint-events] alert insert error:', alertError.message);
     }
   }
 
