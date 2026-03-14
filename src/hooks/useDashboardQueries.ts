@@ -25,9 +25,10 @@ async function fetchAgents(tenantId: string): Promise<DashboardAgent[]> {
 }
 
 async function fetchJobs(tenantId: string): Promise<DashboardJob[]> {
-  // V-6005: Slim select for jobs — avoid payload column
+  // V-6005: Slim select for jobs — avoid payload column. Filter to 24h for consistency.
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase.from("jobs").select("id, agent_id, agent_name, tenant_id, type, status, priority, created_at, started_at, completed_at, expires_at, error_message")
-    .eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(100);
+    .eq("tenant_id", tenantId).gte("created_at", twentyFourHoursAgo).order("created_at", { ascending: false }).limit(500);
   if (error) throw error;
   return data || [];
 }
