@@ -49,8 +49,10 @@ async function fetchTokens(tenantId: string): Promise<DashboardAgentToken[]> {
   return (data || []) as unknown as DashboardAgentToken[];
 }
 
+// PERF-FIX: Slim select for rate_limits — avoid fetching metadata blobs
 async function fetchRateLimits(tenantId: string): Promise<DashboardRateLimit[]> {
-  const { data, error } = await (supabase.from("rate_limits") as any).select("*")
+  const { data, error } = await (supabase.from("rate_limits") as any)
+    .select("id, tenant_id, identifier, action, request_count, last_request_at, blocked_until")
     .eq("tenant_id", tenantId).order("last_request_at", { ascending: false }).limit(100);
   if (error) throw error;
   return data || [];
