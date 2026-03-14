@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Shield, AlertTriangle, Ban, RefreshCw, Clock, Lock, Unlock,
-  CheckCircle, ShieldCheck, Activity, MonitorOff, XCircle
+  CheckCircle, ShieldCheck, Activity, MonitorOff, XCircle, Wrench, Eye
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
@@ -75,7 +75,7 @@ export default function SecurityMonitoring() {
       // Merge all events into a unified timeline
       const unifiedEvents: Array<{
         id: string; type: string; label: string; detail: string; severity: string;
-        created_at: string; source: string;
+        created_at: string; source: string; agentName?: string; alertType?: string; remediable?: boolean;
       }> = [];
 
       // From security_logs
@@ -97,17 +97,47 @@ export default function SecurityMonitoring() {
       });
 
       // From agent_evidence_logs (only actionable ones)
+      // Extract rich labels from event_data
+      const alertTypeLabels: Record<string, string> = {
+        firewall_disabled: 'Firewall desativado',
+        antivirus_inactive: 'Antivírus inativo',
+        suspicious_process: 'Processo suspeito detectado',
+        unauthorized_access: 'Acesso não autorizado',
+        malware_detected: 'Malware detectado',
+        brute_force: 'Tentativa de força bruta',
+        port_scan: 'Port scan detectado',
+        policy_violation: 'Violação de política',
+        disk_critical: 'Disco em estado crítico',
+        service_stopped: 'Serviço parado',
+      };
+      const remediableAlerts = new Set([
+        'firewall_disabled', 'antivirus_inactive', 'service_stopped', 'policy_violation',
+      ]);
+
       evidenceLogs.filter(e => e.severity !== 'info' && e.severity !== 'debug').forEach(e => {
-        const labelMap: Record<string, string> = {
-          security_event: 'Evento de segurança',
-          auto_repair: 'Reparo automático',
-          auto_recovery: 'Restauração de serviço',
-          policy_drift: 'Desvio de conformidade',
-        };
+        const eventData = e.event_data || {};
+        const alertType = (eventData as any).alert_type as string || '';
+        const alertMsg = (eventData as any).alert_message as string || '';
+        const skipRemediation = (eventData as any).details?.skip_remediation === true;
+
+        // Use alert_type for a specific label, fallback to generic
+        const label = alertType 
+          ? (alertTypeLabels[alertType] || alertType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
+          : (e.event_type === 'security_event' ? 'Evento de segurança' : 
+             e.event_type === 'auto_repair' ? 'Reparo automático' :
+             e.event_type === 'auto_recovery' ? 'Restauração de serviço' :
+             e.event_type === 'policy_drift' ? 'Desvio de conformidade' : e.event_type);
+
+        // Use alert_message for detail, fallback to agent name
+        const detail = alertMsg || e.agent_name;
+
         unifiedEvents.push({
-          id: e.id, type: e.event_type, label: labelMap[e.event_type] || e.event_type,
-          detail: e.agent_name, severity: e.severity, created_at: e.created_at,
-          source: 'evidence_logs',
+          id: e.id, type: alertType || e.event_type, label, detail,
+          severity: (eventData as any).severity || e.severity, 
+          created_at: e.created_at, source: 'evidence_logs',
+          agentName: e.agent_name,
+          alertType,
+          remediable: !skipRemediation && remediableAlerts.has(alertType),
         });
       });
 
@@ -182,6 +212,30 @@ export default function SecurityMonitoring() {
       toast.success('Scan de segurança iniciado');
       refetch();
     } catch { toast.error('Erro ao iniciar scan'); }
+  };
+
+  const handleRemediate = async (event: { agentName?: string; alertType?: string; label: string }) => {
+    if (!event.agentName || !tenant?.id) return;
+    try {
+      const jobTypeMap: Record<string, string> = {
+        firewall_disabled: 'enable_firewall',
+        antivirus_inactive: 'check_antivirus',
+        service_stopped: 'restart_service',
+        policy_violation: 'enforce_policy',
+      };
+      const jobType = jobTypeMap[event.alertType || ''] || 'security_remediation';
+      const { error } = await (supabase as any).from('jobs').insert({
+        tenant_id: tenant.id,
+        agent_name: event.agentName,
+        job_type: jobType,
+        status: 'pending',
+        payload: { alert_type: event.alertType, source: 'security_monitoring' },
+      });
+      if (error) throw error;
+      toast.success(`Remediação "${event.label}" criada para ${event.agentName}`);
+    } catch (err: any) {
+      toast.error(`Erro ao criar remediação: ${err.message}`);
+    }
   };
 
   const m = data?.metrics;
@@ -348,18 +402,34 @@ export default function SecurityMonitoring() {
                       security_logs: <Shield className="h-3 w-3 text-amber-400" />,
                     }[event.source] || <Shield className="h-3 w-3" />;
                     return (
-                      <div key={event.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-muted/20">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                      <div key={event.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-muted/20 group">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <span className={cn("w-2 h-2 rounded-full shrink-0", severityColor)} />
                           {sourceIcon}
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium truncate">{event.label}</p>
                             <p className="text-[11px] text-muted-foreground truncate">{event.detail}</p>
+                            {event.agentName && event.detail !== event.agentName && (
+                              <p className="text-[10px] text-muted-foreground/70 truncate">📍 {event.agentName}</p>
+                            )}
                           </div>
                         </div>
-                        <span className="text-[11px] text-muted-foreground shrink-0 ml-2">
-                          {formatBrazilDateTime(event.created_at, 'short')}
-                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                          <span className="text-[11px] text-muted-foreground">
+                            {formatBrazilDateTime(event.created_at, 'short')}
+                          </span>
+                          {event.remediable && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Corrigir automaticamente"
+                              onClick={() => handleRemediate(event)}
+                            >
+                              <Wrench className="h-3.5 w-3.5 text-primary" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
