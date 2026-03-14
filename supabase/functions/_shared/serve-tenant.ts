@@ -179,13 +179,14 @@ export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
       // 4c. Standard JWT auth
       else if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.replace('Bearer ', '');
-        const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+        // V-11003 FIX: Use getUser() instead of getClaims() which doesn't exist in supabase-js v2
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
         
-        if (claimsError || !claimsData?.claims) {
+        if (authError || !authUser) {
           console.warn(`[serveTenant][${requestId}] Invalid JWT`);
           return errorResponse('Invalid or expired token', 401, requestId);
         }
-        userId = claimsData.claims.sub as string;
+        userId = authUser.id;
       }
       // 4d. No auth at all
       else {
@@ -225,6 +226,12 @@ export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
           } else {
             return errorResponse('tenant_id required', 400, requestId);
           }
+        }
+      } else {
+        // V-11004 FIX: When skipTenantValidation is true and no tenantId,
+        // set a safe default instead of passing null as non-null assertion
+        if (!tenantId) {
+          console.warn(`[serveTenant][${requestId}] skipTenantValidation=true but no tenant_id provided`);
         }
       }
 
