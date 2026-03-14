@@ -1908,7 +1908,7 @@ scan_handler() {
     local open_ports
     open_ports=$(lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null | tail -n +2 | awk '{print $9}' | head -20 | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
     local users_logged
-    users_logged=$(who 2>/dev/null | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" 2>/dev/null || echo '[]')
+    users_logged=$(who 2>/dev/null | jq -R -s '[split("\n")[] | select(length > 0)]' 2>/dev/null || echo '[]')
     local uptime_info
     uptime_info=$(uptime 2>/dev/null || echo "unknown")
     echo '{"open_ports":'"$open_ports"',"logged_users":'"$users_logged"',"uptime":"'"$uptime_info"'","scanned_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
