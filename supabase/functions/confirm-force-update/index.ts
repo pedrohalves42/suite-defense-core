@@ -73,6 +73,7 @@ Deno.serve(async (req) => {
       agent_version: string | null;
       force_update_version: string | null;
       force_update_delivery_count: number | null;
+      force_update_delivered_count: number | null;
       tenant_id: string;
     };
 
