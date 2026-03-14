@@ -381,7 +381,8 @@ add_aggregated_event() {
                 local burst_body
                 burst_body=$(python3 -c "import json; print(json.dumps({'agent_name':'$AGENT_NAME','event_type':'burst_$burst_type','severity':'critical','event_data':{'burst_type':'$burst_type','event_type':'$event_type','pattern':'$pattern','count':${AGG_BUFFER_COUNT[$key]},'window_seconds':$window_age}}))" 2>/dev/null)
                 if [[ -n "$burst_body" ]]; then
-                    make_authenticated_request "POST" "/functions/v1/submit-agent-evidence" "$burst_body" &>/dev/null || true
+                    # v5.0.14-fix: was 'make_authenticated_request' (non-existent function) - all burst alerts were silently lost
+                    invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "$burst_body" 15 1 &>/dev/null || true
                 fi
             fi
             return 0
