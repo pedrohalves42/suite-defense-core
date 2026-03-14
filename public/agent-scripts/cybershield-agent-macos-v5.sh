@@ -1732,7 +1732,7 @@ EOF
  service_health_check_handler() {
      local job="$1"
      local services
-     services=$(echo "$job" | python3 -c "import sys,json; [print(s) for s in json.loads(sys.stdin.read()).get('payload',{}).get('services',['com.apple.mDNSResponder','com.apple.ftp-proxy'])]" 2>/dev/null)
+     services=$(echo "$job" | jq -r '.payload.services // ["com.apple.mDNSResponder","com.apple.ftp-proxy"] | .[]' 2>/dev/null)
      
      local results="[]"
      local unhealthy=0
