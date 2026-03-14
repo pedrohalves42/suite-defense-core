@@ -58,7 +58,8 @@ import {
   Settings,
   Zap,
   History,
-  Globe
+  Globe,
+  XCircle
 } from 'lucide-react';
 import { prepareJobForInsert } from '@/lib/job-utils';
 import { toast } from 'sonner';
