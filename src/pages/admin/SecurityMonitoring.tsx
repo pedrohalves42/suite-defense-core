@@ -214,6 +214,30 @@ export default function SecurityMonitoring() {
     } catch { toast.error('Erro ao iniciar scan'); }
   };
 
+  const handleRemediate = async (event: { agentName?: string; alertType?: string; label: string }) => {
+    if (!event.agentName || !tenant?.id) return;
+    try {
+      const jobTypeMap: Record<string, string> = {
+        firewall_disabled: 'enable_firewall',
+        antivirus_inactive: 'check_antivirus',
+        service_stopped: 'restart_service',
+        policy_violation: 'enforce_policy',
+      };
+      const jobType = jobTypeMap[event.alertType || ''] || 'security_remediation';
+      const { error } = await (supabase as any).from('jobs').insert({
+        tenant_id: tenant.id,
+        agent_name: event.agentName,
+        job_type: jobType,
+        status: 'pending',
+        payload: { alert_type: event.alertType, source: 'security_monitoring' },
+      });
+      if (error) throw error;
+      toast.success(`Remediação "${event.label}" criada para ${event.agentName}`);
+    } catch (err: any) {
+      toast.error(`Erro ao criar remediação: ${err.message}`);
+    }
+  };
+
   const m = data?.metrics;
   const hasActivity = m && (m.rateLimitBreaches > 0 || m.failedLogins > 0 || m.criticalEvents > 0 || m.blockedIps > 0 || m.blockedAttempts > 0 || m.activeAlerts > 0);
   const hasCritical = m && m.criticalEvents > 0;
