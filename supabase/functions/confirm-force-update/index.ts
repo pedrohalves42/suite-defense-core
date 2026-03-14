@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     const tokenHash = await hashToken(agentToken);
     const { data: tokenData, error: tokenError } = await supabase
       .from('agent_tokens')
-      .select('agent_id, is_active, agents!inner(id, agent_name, hmac_secret, agent_version, force_update_version, force_update_delivery_count, tenant_id)')
+      .select('agent_id, is_active, agents!inner(id, agent_name, hmac_secret, agent_version, force_update_version, force_update_delivery_count, force_update_delivered_count, tenant_id)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .single();
