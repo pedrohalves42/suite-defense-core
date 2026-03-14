@@ -233,6 +233,9 @@ Deno.serve(async (req: Request) => {
         if (error) console.error(`[evaluate-edr] Insert error:`, error.message);
         else stats.detections += newDetections.length;
       }
+
+      offset += BATCH_SIZE;
+      } // end while pagination
     }
   }
 

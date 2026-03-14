@@ -222,7 +222,7 @@ async function createIncident(
     return;
   }
 
-  // Link events
+  // V-AUDIT: Parallel post-incident operations (event links + status update + alert)
   const eventLinks = matchedDets.map(det => ({
     incident_id: incident.id,
     tenant_id: tenantId,
@@ -235,26 +235,26 @@ async function createIncident(
     event_data: { detection_name: det.detection_name, command_line: det.command_line, process_name: det.process_name },
   }));
 
-  await supabase.from('correlated_incident_events').insert(eventLinks);
-
-  // V-2002 FIX: Batch UPDATE instead of N+1
   const detIds = matchedDets.map(d => d.id);
-  await supabase
-    .from('endpoint_detection_events')
-    .update({ status: 'investigating' })
-    .in('id', detIds)
-    .eq('status', 'open');
+  
+  const postOps: Promise<any>[] = [
+    supabase.from('correlated_incident_events').insert(eventLinks),
+    supabase.from('endpoint_detection_events').update({ status: 'investigating' }).in('id', detIds).eq('status', 'open'),
+  ];
 
-  // Create system alert for critical incidents
   if (rule.severity === 'critical') {
-    await supabase.from('system_alerts').insert({
-      tenant_id: tenantId,
-      alert_type: 'correlated_incident',
-      severity: 'critical',
-      title: `[INCIDENT] ${rule.rule_name}`,
-      description: `Multi-signal attack detected: ${tactics.join(' → ')}. ${matchedDets.length} events correlated.`,
-      status: 'active',
-      metadata: { incident_id: incident.id, affected_agents: [agentId], techniques },
-    });
+    postOps.push(
+      supabase.from('system_alerts').insert({
+        tenant_id: tenantId,
+        alert_type: 'correlated_incident',
+        severity: 'critical',
+        title: `[INCIDENT] ${rule.rule_name}`,
+        description: `Multi-signal attack detected: ${tactics.join(' → ')}. ${matchedDets.length} events correlated.`,
+        status: 'active',
+        metadata: { incident_id: incident.id, affected_agents: [agentId], techniques },
+      })
+    );
   }
+
+  await Promise.all(postOps);
 }
