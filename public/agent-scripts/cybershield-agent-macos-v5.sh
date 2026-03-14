@@ -1888,16 +1888,8 @@ light_vuln_scan_handler() {
     updates=$(softwareupdate --list 2>&1 | grep -i "recommended\|restart\|security" || echo "")
     
     if [[ -n "$updates" ]]; then
-        vulns=$(echo "$updates" | head -20 | python3 -c "
-import sys, json
-lines = [l.strip() for l in sys.stdin if l.strip()]
-results = []
-for l in lines:
-    sev = 'critical' if 'security' in l.lower() else 'high' if 'restart' in l.lower() else 'medium'
-    results.append({'package': l[:80], 'severity': sev, 'source': 'softwareupdate'})
-print(json.dumps(results))
-" 2>/dev/null || echo '[]')
-        total=$(echo "$vulns" | python3 -c "import sys,json; print(len(json.loads(sys.stdin.read())))" 2>/dev/null || echo 0)
+        vulns=$(echo "$updates" | head -20 | jq -R -s '[split("\n")[] | select(length > 0) | {package: .[:80], severity: (if (. | test("security";"i")) then "critical" elif (. | test("restart";"i")) then "high" else "medium" end), source: "softwareupdate"}]' 2>/dev/null || echo '[]')
+        total=$(echo "$vulns" | jq 'length' 2>/dev/null || echo 0)
     fi
     
     local scanned_at
