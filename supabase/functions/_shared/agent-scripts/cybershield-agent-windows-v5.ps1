@@ -2161,8 +2161,9 @@ function Execute-Job {
         
         # 4. Calculate output hash
         $outputJson = if ($output) { $output | ConvertTo-Json -Compress -Depth 10 } else { "{}" }
-        $sha256 = [System.Security.Cryptography.SHA256]::Create()
-        $outputHashBytes = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($outputJson))
+        # v5.0.14-perf: Reuse cached SHA256 instance
+        if (-not $Global:CachedSHA256) { $Global:CachedSHA256 = [System.Security.Cryptography.SHA256]::Create() }
+        $outputHashBytes = $Global:CachedSHA256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($outputJson))
         $outputHash = [BitConverter]::ToString($outputHashBytes).Replace("-", "").ToLower()
         
         Write-Log "[JOB] Completed $($Job.job_type) in ${duration}s (status: $status)" "SUCCESS"
