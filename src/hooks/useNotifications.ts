@@ -67,7 +67,7 @@ export function useNotifications() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   }, []);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
   // Monitor critical events via realtime
   useEffect(() => {
