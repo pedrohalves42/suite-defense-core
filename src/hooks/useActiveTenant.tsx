@@ -130,7 +130,8 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   // Determine active tenant
   // V-1014: localStorage is used as a hint for UX preference only,
   // but the actual selection is validated against server-fetched tenants
-  const activeTenant = (() => {
+  // V-12004 FIX: Compute activeTenant without calling setState during render
+  const activeTenant = useMemo(() => {
     if (tenants.length === 0) return null;
     
     // If we have a programmatically set active tenant ID, find it
@@ -140,22 +141,28 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     }
     
     // V-1014 FIX: Check localStorage hint ONLY after server validation
-    // This is safe because we verify the ID exists in the user's fetched tenants
     if (typeof window !== 'undefined') {
       const savedId = localStorage.getItem(ACTIVE_TENANT_KEY);
       if (savedId) {
         const found = tenants.find(t => t.id === savedId);
-        if (found) {
-          // Set state so subsequent renders don't re-read localStorage
-          setActiveTenantId(savedId);
-          return found;
-        }
+        if (found) return found;
       }
     }
     
     // Default to first tenant
     return tenants[0];
-  })();
+  }, [tenants, activeTenantId]);
+
+  // V-12004 FIX: Sync localStorage hint to state OUTSIDE render via useEffect
+  // This prevents the React anti-pattern of setState during render
+  useEffect(() => {
+    if (activeTenant && !activeTenantId && typeof window !== 'undefined') {
+      const savedId = localStorage.getItem(ACTIVE_TENANT_KEY);
+      if (savedId && savedId === activeTenant.id) {
+        setActiveTenantId(savedId);
+      }
+    }
+  }, [activeTenant, activeTenantId]);
 
   // CORREÇÃO: Calcular role baseada no tenant ATIVO
   const activeRole = useMemo((): AppRole | null => {

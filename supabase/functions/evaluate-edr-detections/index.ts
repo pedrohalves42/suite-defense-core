@@ -116,14 +116,15 @@ Deno.serve(async (req: Request) => {
   if (hasGlobalRules) {
     // V-9004 FIX: Get distinct tenants from recent events — use RPC or wider limit
     // to avoid missing tenants with data beyond the previous .limit(100)
+    // V-12005 FIX: Don't filter by is_suspicious=false here — we need ALL tenants with data
+    // The is_suspicious filter is applied later during actual event evaluation
     for (const eventType of eventTypes) {
       const table = `endpoint_${eventType}_events`;
       const { data: tenantRows } = await supabase
         .from(table)
         .select('tenant_id')
         .gte('event_time', since)
-        .eq('is_suspicious', false)
-        .limit(1000); // V-9004: Increased from 100 to 1000 to catch more tenants
+        .limit(1000);
       if (tenantRows) {
         const seen = new Set<string>();
         for (const row of tenantRows) {
