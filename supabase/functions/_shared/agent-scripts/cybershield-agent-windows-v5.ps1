@@ -4875,24 +4875,48 @@ function Apply-ForcedUpdate {
             method = "heartbeat_response"
         } -Severity "info"
         
-        # Confirmar no backend que force update foi aplicado
-        try {
-            $confirmResult = Invoke-SecureRequest `
-                -Path "/functions/v1/confirm-force-update" `
-                -Method "POST" `
-                -Body @{
-                    new_version = $targetVersion
-                    old_version = $Global:AgentVersion
-                } `
-                -TimeoutSec 10
-            
-            if ($confirmResult.Success) {
-                Write-Log "[FORCE UPDATE] Confirmacao enviada ao backend" "SUCCESS"
-            } else {
-                Write-Log "[FORCE UPDATE] Confirmacao falhou: $($confirmResult.Error)" "WARN"
+        # Confirmar no backend que force update foi aplicado (com retry resiliente)
+        $confirmSucceeded = $false
+        $confirmLastError = $null
+        $confirmMaxAttempts = 4
+
+        for ($attempt = 1; $attempt -le $confirmMaxAttempts; $attempt++) {
+            try {
+                $confirmResult = Invoke-SecureRequest `
+                    -Path "/functions/v1/confirm-force-update" `
+                    -Method "POST" `
+                    -Body @{
+                        new_version = $targetVersion
+                        old_version = $Global:AgentVersion
+                    } `
+                    -MaxRetries 2 `
+                    -TimeoutSec 15
+
+                if ($confirmResult.Success) {
+                    $confirmSucceeded = $true
+                    if (Test-Path $Global:PendingForceUpdateConfirmPath) {
+                        Remove-Item $Global:PendingForceUpdateConfirmPath -Force -ErrorAction SilentlyContinue
+                    }
+                    Write-Log "[FORCE UPDATE] Confirmacao enviada ao backend (tentativa $attempt/$confirmMaxAttempts)" "SUCCESS"
+                    break
+                }
+
+                $confirmLastError = if ($confirmResult.Error) { $confirmResult.Error } else { "unknown_error" }
+                Write-Log "[FORCE UPDATE] Confirmacao falhou (tentativa $attempt/$confirmMaxAttempts): $confirmLastError" "WARN"
+            } catch {
+                $confirmLastError = $_.Exception.Message
+                Write-Log "[FORCE UPDATE] Excecao ao confirmar (tentativa $attempt/$confirmMaxAttempts): $confirmLastError" "WARN"
             }
-        } catch {
-            Write-Log "[FORCE UPDATE] Falha ao confirmar no backend (nao critico): $($_.Exception.Message)" "WARN"
+
+            if ($attempt -lt $confirmMaxAttempts) {
+                $delaySeconds = [int][Math]::Min([Math]::Pow(2, $attempt - 1), 8)
+                Start-Sleep -Seconds $delaySeconds
+            }
+        }
+
+        if (-not $confirmSucceeded) {
+            Save-PendingForceUpdateConfirmation -TargetVersion $targetVersion -OldVersion $Global:AgentVersion -LastError $confirmLastError
+            Write-Log "[FORCE UPDATE] Confirmacao nao concluida; retry sera feito nos proximos heartbeats" "WARN"
         }
         
         Write-Log "[FORCE UPDATE] Update $targetVersion aplicado com sucesso!" "SUCCESS"
