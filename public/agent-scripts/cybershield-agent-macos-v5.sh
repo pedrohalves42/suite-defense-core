@@ -1781,7 +1781,7 @@ EOF
                  dns_result='{"success":true}'
              fi
              
-             diagnostics=$(echo "$diagnostics" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); d.append({'target':'$target','ping':$ping_result,'dns':$dns_result}); print(json.dumps(d))" 2>/dev/null)
+             diagnostics=$(echo "$diagnostics" | jq --arg t "$target" --argjson p "$ping_result" --argjson d "$dns_result" '. + [{"target":$t,"ping":$p,"dns":$d}]')
          fi
      done <<< "$targets"
      
