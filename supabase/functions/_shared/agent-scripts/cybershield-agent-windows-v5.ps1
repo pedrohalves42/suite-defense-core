@@ -453,6 +453,7 @@ $Global:AutoRepairLogPath = Join-Path -Path $dataDir -ChildPath "auto_repair.log
 $Global:KeyStorePath = Join-Path -Path $dataDir -ChildPath "agent_keys.json"
 $Global:StatePath = Join-Path -Path $dataDir -ChildPath "agent_state.json"
 $Global:DnsBlocklistPath = Join-Path -Path $dataDir -ChildPath "dns_blocklist.json"
+$Global:PendingForceUpdateConfirmPath = Join-Path -Path $dataDir -ChildPath "pending_force_update_confirm.json"
 
 # Intervals
 $Global:PollIntervalSeconds = 60
