@@ -5009,6 +5009,12 @@ function Send-Heartbeat {
         
         if ($result.Success) {
             Write-Log "[HEARTBEAT] Sent successfully" "SUCCESS"
+
+            # Retry de confirmacao pendente de force update (best-effort, nao bloqueante)
+            $pendingConfirmOk = Invoke-PendingForceUpdateConfirmation
+            if (-not $pendingConfirmOk) {
+                Write-Log "[FORCE UPDATE] Confirmacao pendente ainda sem ACK; novo retry no proximo heartbeat" "WARN"
+            }
             
             # Processar resposta do servidor (force update, rotate key, intervals, etc.)
             if ($result.Content) {
