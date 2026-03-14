@@ -108,9 +108,10 @@ export function useNetworkEvents(agentId: string, options?: { limit?: number; su
   return useQuery({
     queryKey: ['edr-network-events', activeTenant?.id, agentId, options?.suspiciousOnly, limit],
     queryFn: async () => {
+      // PERF-FIX: Slim select for network events
       let query = supabase
         .from('endpoint_network_events')
-        .select('*')
+        .select('id, tenant_id, agent_id, process_name, remote_address, remote_port, local_port, direction, protocol, domain, event_time, is_suspicious, mitre_technique_id, mitre_tactic, detection_tags, created_at')
         .eq('tenant_id', activeTenant!.id)
         .eq('agent_id', agentId)
         .order('event_time', { ascending: false })
