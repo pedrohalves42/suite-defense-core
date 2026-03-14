@@ -1617,7 +1617,7 @@ EOF
 
      # v5.0.13-patch: Verify Ed25519/ECDSA signature on update payload (mandatory)
      local update_signature
-     update_signature=$(python3 -c "import json; print(json.loads('''$response''').get('ecdsa_signature', '') or json.loads('''$response''').get('signature_base64', ''))" 2>/dev/null)
+     update_signature=$(echo "$response" | jq -r '.ecdsa_signature // .signature_base64 // ""' 2>/dev/null)
      if [[ -n "$update_signature" && ${#update_signature} -gt 10 ]]; then
          local ed25519_pubkey_path="${BASE_DIR:-/opt/cybershield}/keys/ed25519_server.pub"
          if [[ -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
