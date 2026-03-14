@@ -416,10 +416,12 @@ async function executeAction(
         throw new Error('Agent ID required for isolation');
       }
 
+      // P-13006 FIX: Add tenant_id filter to prevent cross-tenant agent lookup
       const { data: agent } = await supabase
         .from('agents')
         .select('agent_name')
         .eq('id', agentId)
+        .eq('tenant_id', tenantId)
         .single();
 
       const { data: job } = await supabase
