@@ -960,11 +960,11 @@ restart_service_handler() {
      start_time=$(date +%s)
      
      local execution_id
-     execution_id=$(python3 -c "import json; print(json.loads('$job').get('execution_id', ''))" 2>/dev/null)
-     local job_id
-     job_id=$(python3 -c "import json; print(json.loads('$job').get('id', ''))" 2>/dev/null)
-     local job_type
-     job_type=$(python3 -c "import json; j=json.loads('$job'); print(j.get('job_type', '') or j.get('type', ''))" 2>/dev/null)
+      execution_id=$(echo "$job" | jq -r '.execution_id // empty' 2>/dev/null)
+      local job_id
+      job_id=$(echo "$job" | jq -r '.id // empty' 2>/dev/null)
+      local job_type
+      job_type=$(echo "$job" | jq -r '.job_type // .type // empty' 2>/dev/null)
      
      log "INFO" "[JOB] Starting execution: $job_type (ID: $job_id)"
      
