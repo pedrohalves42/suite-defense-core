@@ -355,16 +355,16 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    const results: TaskResult[] = [];
-
-    for (const task of tasks) {
-      const fn = TASK_MAP[task];
-      if (fn) {
+    // P-13008 FIX: Run independent tasks in parallel instead of sequential
+    const results: TaskResult[] = await Promise.all(
+      tasks.map(async (task) => {
+        const fn = TASK_MAP[task];
+        if (!fn) return { task, processed: 0, cleaned: 0, errors: ['Unknown task'], duration_ms: 0 };
         const taskResult = await fn(supabase);
-        results.push(taskResult);
         console.log(`[system-maintenance][${requestId}] ${task}: cleaned=${taskResult.cleaned} errors=${taskResult.errors.length}`);
-      }
-    }
+        return taskResult;
+      })
+    );
 
     const totalCleaned = results.reduce((s, r) => s + r.cleaned, 0);
     const totalErrors = results.reduce((s, r) => s + r.errors.length, 0);

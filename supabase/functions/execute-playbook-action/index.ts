@@ -444,11 +444,12 @@ async function executeAction(
         .select('id')
         .single();
 
-      // Atualizar status do agente
+      // P-13007 FIX: Add tenant_id filter to status update to prevent cross-tenant state mutation
       await supabase
         .from('agents')
         .update({ status: 'isolated' })
-        .eq('id', agentId);
+        .eq('id', agentId)
+        .eq('tenant_id', tenantId);
 
       return { job_id: job?.id, isolation_level: payload.isolation_level };
     }
