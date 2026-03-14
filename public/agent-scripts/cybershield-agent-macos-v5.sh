@@ -843,28 +843,28 @@ kill_process_handler() {
 #  v5.0.1: STOP SERVICE HANDLER (launchctl)
 # ============================================
 stop_service_handler() {
-    local job="\$1"
+    local job="$1"
     local service_name
-    service_name=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('payload',{}).get('service_name',''))" 2>/dev/null)
+    service_name=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
     
-    if [[ -z "\$service_name" ]]; then
+    if [[ -z "$service_name" ]]; then
         echo '{"success":false,"error":"Missing service_name in payload"}'
         return
     fi
     
     # Security check: Protected service list
-    if echo "\$PROTECTED_SERVICES" | grep -qw "\$service_name"; then
-        log "WARN" "[STOP-SERVICE] BLOCKED: \$service_name is a protected service"
-        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: \$service_name is a protected system service\",\"blocked\":true}"
+    if echo "$PROTECTED_SERVICES" | grep -qw "$service_name"; then
+        log "WARN" "[STOP-SERVICE] BLOCKED: $service_name is a protected service"
+        echo "{\"success\":false,\"error\":\"SECURITY_BLOCK: $service_name is a protected system service\",\"blocked\":true}"
         return
     fi
     
     # macOS uses launchctl
-    if launchctl stop "\$service_name" 2>/dev/null; then
-        log "SUCCESS" "[STOP-SERVICE] Stopped: \$service_name"
-        echo "{\"success\":true,\"service_name\":\"\$service_name\",\"new_status\":\"stopped\",\"stopped_at\":\"\$(date -Iseconds)\"}"
+    if launchctl stop "$service_name" 2>/dev/null; then
+        log "SUCCESS" "[STOP-SERVICE] Stopped: $service_name"
+        echo "{\"success\":true,\"service_name\":\"$service_name\",\"new_status\":\"stopped\",\"stopped_at\":\"$(date -Iseconds)\"}"
     else
-        echo "{\"success\":false,\"error\":\"Failed to stop service: \$service_name\"}"
+        echo "{\"success\":false,\"error\":\"Failed to stop service: $service_name\"}"
     fi
 }
 
