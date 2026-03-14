@@ -344,8 +344,8 @@ add_aggregated_event() {
     fi
 
     AGG_EVENTS_RECEIVED=$((AGG_EVENTS_RECEIVED + 1))
-    local now_epoch
-    now_epoch=$(date +%s)
+    # v5.0.14-perf: Use cached epoch to avoid date subprocess per event
+    local now_epoch=${CACHED_EPOCH:-$(date +%s)}
     local key="${event_type}:${pattern}"
 
     if [[ -n "${AGG_BUFFER_COUNT[$key]+x}" ]]; then
@@ -1532,19 +1532,18 @@ restart_service_handler() {
              fi
          done
          
-         if [[ "$is_protected" == "false" ]]; then
-             log "WARN" "[PROCESS-CHECK] High CPU detected: $name (PID: $pid) at $cpu%"
-             
+          if [[ "$is_protected" == "false" ]]; then
+              log "WARN" "[PROCESS-CHECK] High CPU detected: $name (PID: $pid) at $cpu%"
+              
               # v5.0.13-perf: O(1) baseline check via associative array
+              # v5.0.14-fix: Removed duplicate if check (was triggering double evaluation)
               if [[ -z "${PROCESS_BASELINE_MAP[$name]+_}" ]]; then
-             
-             if [[ -z "${PROCESS_BASELINE_MAP[$name]+_}" ]]; then
-                 log "WARN" "[PROCESS-CHECK] Process $name NOT in baseline - killing..."
-                 kill -9 "$pid" 2>/dev/null || true
-                 killed_count=$((killed_count + 1))
-                 log "SUCCESS" "[PROCESS-CHECK] Killed suspicious process: $name (PID: $pid)"
-             fi
-         fi
+                  log "WARN" "[PROCESS-CHECK] Process $name NOT in baseline - killing..."
+                  kill -9 "$pid" 2>/dev/null || true
+                  killed_count=$((killed_count + 1))
+                  log "SUCCESS" "[PROCESS-CHECK] Killed suspicious process: $name (PID: $pid)"
+              fi
+          fi
      done
      
      if [[ $killed_count -gt 0 ]]; then

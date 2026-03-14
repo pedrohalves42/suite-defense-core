@@ -1322,7 +1322,10 @@ function Update-AggregationConfig {
     }
 }
 
-
+# ============================================
+#  INFO DO SISTEMA
+# ============================================
+function Get-SystemInfo {
     <#
     .SYNOPSIS
         Collects comprehensive system information (adapted for v5 FSM)
