@@ -437,7 +437,8 @@ flush_aggregated_entry() {
         '{agent_name:$ENV.AGENT_NAME,event_type:"aggregated_event",severity:$sev,event_data:{event_type:$et,pattern:$p,count:$c,duration_seconds:$d,burst_detected:($b=="true"),first_seen:$fs,last_seen:$ls}}' 2>/dev/null)
 
     if [[ -n "$body" ]]; then
-        make_authenticated_request "POST" "/functions/v1/submit-agent-evidence" "$body" &>/dev/null || true
+        # v5.0.14-fix: was 'make_authenticated_request' (non-existent) - all aggregated events were silently lost
+        invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "$body" 15 1 &>/dev/null || true
         AGG_EVENTS_SENT=$((AGG_EVENTS_SENT + 1))
     fi
 
