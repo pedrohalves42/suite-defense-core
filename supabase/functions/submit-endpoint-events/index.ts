@@ -230,17 +230,17 @@ serveAgent(async (_req, ctx) => {
   // The flush-event-buffer worker distributes to final tables in batch
   const bufferRows: { tenant_id: string; agent_id: string; event_category: string; payload: any }[] = [];
 
-  for (const e of preparedProcess) {
-    bufferRows.push({ tenant_id: tenantId, agent_id: agentId, event_category: 'process', payload: e });
-  }
-  for (const e of preparedFile) {
-    bufferRows.push({ tenant_id: tenantId, agent_id: agentId, event_category: 'file', payload: e });
-  }
-  for (const e of preparedNetwork) {
-    bufferRows.push({ tenant_id: tenantId, agent_id: agentId, event_category: 'network', payload: e });
-  }
-  for (const e of preparedRegistry) {
-    bufferRows.push({ tenant_id: tenantId, agent_id: agentId, event_category: 'registry', payload: e });
+  // V-AUDIT: Consolidated loop instead of 4 separate iterations
+  const categories: { events: any[]; category: string }[] = [
+    { events: preparedProcess, category: 'process' },
+    { events: preparedFile, category: 'file' },
+    { events: preparedNetwork, category: 'network' },
+    { events: preparedRegistry, category: 'registry' },
+  ];
+  for (const { events, category } of categories) {
+    for (const e of events) {
+      bufferRows.push({ tenant_id: tenantId, agent_id: agentId, event_category: category, payload: e });
+    }
   }
 
   // Single bulk INSERT into buffer (instead of 4 separate table inserts)
