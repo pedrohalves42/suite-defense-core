@@ -387,7 +387,8 @@ add_aggregated_event() {
                     --argjson c "${AGG_BUFFER_COUNT[$key]}" --argjson w "$window_age" \
                     '{agent_name:$ENV.AGENT_NAME,event_type:("burst_"+$t),severity:"critical",event_data:{burst_type:$t,event_type:$et,pattern:$p,count:$c,window_seconds:$w}}' 2>/dev/null)
                 if [[ -n "$burst_body" ]]; then
-                    make_authenticated_request "POST" "/functions/v1/submit-agent-evidence" "$burst_body" &>/dev/null || true
+                    # v5.0.14-fix: was 'make_authenticated_request' (non-existent function) - all burst alerts were silently lost
+                    invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "$burst_body" 15 1 &>/dev/null || true
                 fi
             fi
             return 0
@@ -436,7 +437,8 @@ flush_aggregated_entry() {
         '{agent_name:$ENV.AGENT_NAME,event_type:"aggregated_event",severity:$sev,event_data:{event_type:$et,pattern:$p,count:$c,duration_seconds:$d,burst_detected:($b=="true"),first_seen:$fs,last_seen:$ls}}' 2>/dev/null)
 
     if [[ -n "$body" ]]; then
-        make_authenticated_request "POST" "/functions/v1/submit-agent-evidence" "$body" &>/dev/null || true
+        # v5.0.14-fix: was 'make_authenticated_request' (non-existent) - all aggregated events were silently lost
+        invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "$body" 15 1 &>/dev/null || true
         AGG_EVENTS_SENT=$((AGG_EVENTS_SENT + 1))
     fi
 
@@ -1653,17 +1655,30 @@ restart_service_handler() {
  #  SYSTEM METRICS
  # ============================================
   get_system_metrics() {
-      # v5.0.14-perf: Use /proc/stat directly instead of top -bn1 (~5ms vs ~1s)
+      # v5.0.14-fix: /proc/stat single-snapshot gives cumulative avg since boot (WRONG for monitoring)
+      # Use two-sample delta method (~1s) for accurate instantaneous CPU, fallback to top
       local cpu_percent=0
       if [[ -f /proc/stat ]]; then
-          local cpu_line
-          cpu_line=$(head -1 /proc/stat)
-          local user nice system idle iowait
-          read -r _ user nice system idle iowait _ <<< "$cpu_line"
-          local total=$((user + nice + system + idle + iowait))
-          local active=$((user + nice + system))
-          if [[ $total -gt 0 ]]; then
-              cpu_percent=$((active * 100 / total))
+          # Sample 1
+          local line1
+          line1=$(head -1 /proc/stat)
+          local u1 n1 s1 i1 w1
+          read -r _ u1 n1 s1 i1 w1 _ <<< "$line1"
+          local total1=$((u1 + n1 + s1 + i1 + w1))
+          
+          sleep 1
+          
+          # Sample 2
+          local line2
+          line2=$(head -1 /proc/stat)
+          local u2 n2 s2 i2 w2
+          read -r _ u2 n2 s2 i2 w2 _ <<< "$line2"
+          local total2=$((u2 + n2 + s2 + i2 + w2))
+          
+          local dtotal=$((total2 - total1))
+          local didle=$((i2 - i1))
+          if [[ $dtotal -gt 0 ]]; then
+              cpu_percent=$(( (dtotal - didle) * 100 / dtotal ))
           fi
       else
           cpu_percent=$(top -bn1 2>/dev/null | grep "Cpu(s)" | awk '{print $2}' | cut -d. -f1 || echo 0)

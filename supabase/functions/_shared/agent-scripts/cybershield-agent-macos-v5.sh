@@ -381,7 +381,8 @@ add_aggregated_event() {
                 local burst_body
                 burst_body=$(python3 -c "import json; print(json.dumps({'agent_name':'$AGENT_NAME','event_type':'burst_$burst_type','severity':'critical','event_data':{'burst_type':'$burst_type','event_type':'$event_type','pattern':'$pattern','count':${AGG_BUFFER_COUNT[$key]},'window_seconds':$window_age}}))" 2>/dev/null)
                 if [[ -n "$burst_body" ]]; then
-                    make_authenticated_request "POST" "/functions/v1/submit-agent-evidence" "$burst_body" &>/dev/null || true
+                    # v5.0.14-fix: was 'make_authenticated_request' (non-existent function) - all burst alerts were silently lost
+                    invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "$burst_body" 15 1 &>/dev/null || true
                 fi
             fi
             return 0
@@ -422,7 +423,8 @@ flush_aggregated_entry() {
     body=$(python3 -c "import json; print(json.dumps({'agent_name':'$AGENT_NAME','event_type':'aggregated_event','severity':'$severity','event_data':{'event_type':'$event_type','pattern':'$pattern','count':$count,'duration_seconds':$duration,'burst_detected':$([[ "$burst" == "true" ]] && echo "True" || echo "False"),'first_seen':'$(date -u +"%Y-%m-%dT%H:%M:%SZ")','last_seen':'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'} }))" 2>/dev/null)
 
     if [[ -n "$body" ]]; then
-        make_authenticated_request "POST" "/functions/v1/submit-agent-evidence" "$body" &>/dev/null || true
+        # v5.0.14-fix: was 'make_authenticated_request' (non-existent) - all aggregated events were silently lost
+        invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "$body" 15 1 &>/dev/null || true
         AGG_EVENTS_SENT=$((AGG_EVENTS_SENT + 1))
     fi
 
