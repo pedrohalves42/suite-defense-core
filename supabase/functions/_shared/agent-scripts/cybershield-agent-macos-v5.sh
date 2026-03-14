@@ -423,7 +423,8 @@ flush_aggregated_entry() {
     body=$(python3 -c "import json; print(json.dumps({'agent_name':'$AGENT_NAME','event_type':'aggregated_event','severity':'$severity','event_data':{'event_type':'$event_type','pattern':'$pattern','count':$count,'duration_seconds':$duration,'burst_detected':$([[ "$burst" == "true" ]] && echo "True" || echo "False"),'first_seen':'$(date -u +"%Y-%m-%dT%H:%M:%SZ")','last_seen':'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'} }))" 2>/dev/null)
 
     if [[ -n "$body" ]]; then
-        make_authenticated_request "POST" "/functions/v1/submit-agent-evidence" "$body" &>/dev/null || true
+        # v5.0.14-fix: was 'make_authenticated_request' (non-existent) - all aggregated events were silently lost
+        invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "$body" 15 1 &>/dev/null || true
         AGG_EVENTS_SENT=$((AGG_EVENTS_SENT + 1))
     fi
 

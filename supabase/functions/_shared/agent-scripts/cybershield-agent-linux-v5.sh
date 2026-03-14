@@ -1655,17 +1655,30 @@ restart_service_handler() {
  #  SYSTEM METRICS
  # ============================================
   get_system_metrics() {
-      # v5.0.14-perf: Use /proc/stat directly instead of top -bn1 (~5ms vs ~1s)
+      # v5.0.14-fix: /proc/stat single-snapshot gives cumulative avg since boot (WRONG for monitoring)
+      # Use two-sample delta method (~1s) for accurate instantaneous CPU, fallback to top
       local cpu_percent=0
       if [[ -f /proc/stat ]]; then
-          local cpu_line
-          cpu_line=$(head -1 /proc/stat)
-          local user nice system idle iowait
-          read -r _ user nice system idle iowait _ <<< "$cpu_line"
-          local total=$((user + nice + system + idle + iowait))
-          local active=$((user + nice + system))
-          if [[ $total -gt 0 ]]; then
-              cpu_percent=$((active * 100 / total))
+          # Sample 1
+          local line1
+          line1=$(head -1 /proc/stat)
+          local u1 n1 s1 i1 w1
+          read -r _ u1 n1 s1 i1 w1 _ <<< "$line1"
+          local total1=$((u1 + n1 + s1 + i1 + w1))
+          
+          sleep 1
+          
+          # Sample 2
+          local line2
+          line2=$(head -1 /proc/stat)
+          local u2 n2 s2 i2 w2
+          read -r _ u2 n2 s2 i2 w2 _ <<< "$line2"
+          local total2=$((u2 + n2 + s2 + i2 + w2))
+          
+          local dtotal=$((total2 - total1))
+          local didle=$((i2 - i1))
+          if [[ $dtotal -gt 0 ]]; then
+              cpu_percent=$(( (dtotal - didle) * 100 / dtotal ))
           fi
       else
           cpu_percent=$(top -bn1 2>/dev/null | grep "Cpu(s)" | awk '{print $2}' | cut -d. -f1 || echo 0)
