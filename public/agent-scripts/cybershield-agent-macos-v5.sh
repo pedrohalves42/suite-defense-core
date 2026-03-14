@@ -1202,15 +1202,15 @@ restart_service_handler() {
  fix_firewall() {
      local job="$1"
      local payload
-     payload=$(python3 -c "import json; print(json.dumps(json.loads('$job').get('payload', {})))" 2>/dev/null || echo '{}')
-     
-     local results='{}'
-     
-     # macOS Application Firewall
-     local enable
-     enable=$(python3 -c "import json; print(json.loads('$payload').get('enable', False))" 2>/dev/null)
-     
-     if [[ "$enable" == "True" || "$enable" == "true" ]]; then
+      payload=$(echo "$job" | jq -c '.payload // {}' 2>/dev/null || echo '{}')
+      
+      local results='{}'
+      
+      # macOS Application Firewall
+      local enable
+      enable=$(echo "$payload" | jq -r '.enable // false' 2>/dev/null)
+      
+      if [[ "$enable" == "true" ]]; then
          /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on 2>/dev/null || true
          results='{"firewall":"enabled"}'
      fi
