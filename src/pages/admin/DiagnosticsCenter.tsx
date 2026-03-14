@@ -137,6 +137,27 @@ export default function DiagnosticsCenter() {
     enabled: !tenantLoading && !!tenant?.id,
   });
 
+  // Query agents with recent failed jobs (not reflected in v_problematic_agents)
+  const { data: agentsWithFailedJobs = [] } = useQuery({
+    queryKey: ['agents-failed-jobs', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await (supabase as any)
+        .from('jobs')
+        .select('agent_name')
+        .eq('tenant_id', tenant.id)
+        .eq('status', 'failed')
+        .gte('created_at', since);
+      if (error) return [];
+      // Unique agent names with failures
+      const names = [...new Set((data || []).map((j: any) => j.agent_name))];
+      return names as string[];
+    },
+    enabled: !tenantLoading && !!tenant?.id,
+    refetchInterval: 120000,
+  });
+
   // Get selected agent data
   const selectedAgent = useMemo(() => {
     return allAgents.find(a => a.id === selectedAgentId) || null;
