@@ -145,16 +145,22 @@ Deno.serve(async (req: Request) => {
       const typeRules = tenantRules.filter(r => r.event_type === eventType);
       if (!typeRules.length) continue;
 
+      // V-AUDIT: Pagination to avoid permanently missing events beyond BATCH_SIZE
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
       const { data: events } = await supabase
         .from(table)
         .select('*')
         .eq('tenant_id', tenantId) // V-2009: Enforce tenant isolation
         .gte('event_time', since)
         .eq('is_suspicious', false)
-        .limit(BATCH_SIZE);
+          .range(offset, offset + BATCH_SIZE - 1)
+          .order('event_time', { ascending: true });
 
-      if (!events?.length) continue;
-      stats.evaluated += events.length;
+      if (!events?.length) { hasMore = false; break; }
+        stats.evaluated += events.length;
+        if (events.length < BATCH_SIZE) hasMore = false;
 
       const newDetections: any[] = [];
       const matchedEventIds: string[] = [];
