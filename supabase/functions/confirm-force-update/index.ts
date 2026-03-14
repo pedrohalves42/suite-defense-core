@@ -33,11 +33,11 @@ Deno.serve(async (req) => {
   try {
     logger.info('[confirm-force-update] Requisição recebida', { requestId });
 
-    // Verificar HMAC headers
+    // Verificar headers de autenticação (aceita padrão novo X-HMAC-* + legado X-*)
     const agentToken = req.headers.get('X-Agent-Token');
     const signature = req.headers.get('X-HMAC-Signature');
-    const timestamp = req.headers.get('X-Timestamp');
-    const nonce = req.headers.get('X-Nonce');
+    const hmacTimestamp = req.headers.get('X-HMAC-Timestamp') || req.headers.get('X-Timestamp');
+    const hmacNonce = req.headers.get('X-HMAC-Nonce') || req.headers.get('X-Nonce');
 
     if (!agentToken) {
       logger.warn('[confirm-force-update] Missing X-Agent-Token', { requestId });
