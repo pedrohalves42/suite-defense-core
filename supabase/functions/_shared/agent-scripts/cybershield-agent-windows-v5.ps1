@@ -606,7 +606,8 @@ function Write-Log {
         [string]$Level = "INFO"
     )
 
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    # v5.0.14-perf: Use cached loop timestamp when available (eliminates Get-Date per log call)
+    $timestamp = if ($Global:LoopTimestampStr) { $Global:LoopTimestampStr } else { Get-Date -Format "yyyy-MM-dd HH:mm:ss" }
     $logEntry = "[$timestamp] [$Level] $Message"
 
     # Console output with colors
@@ -1151,7 +1152,8 @@ function Add-AggregatedEvent {
     }
 
     $Global:AggregationStats.events_received++
-    $now = Get-Date
+    # v5.0.14-perf: Use cached loop timestamp to avoid Get-Date per event
+    $now = if ($Global:LoopTimestamp) { $Global:LoopTimestamp } else { Get-Date }
     $key = "${EventType}:${Pattern}"
 
     if ($Global:EventAggregationBuffer.ContainsKey($key)) {
@@ -1885,8 +1887,9 @@ function Get-ExecutionHash {
         $index = $Global:ExecutionChain.execution_index + 1
         $payload = "$ExecutionId`:$JobId`:$PreviousHash`:$index"
         
-        $sha256 = [System.Security.Cryptography.SHA256]::Create()
-        $hashBytes = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($payload))
+        # v5.0.14-perf: Reuse cached SHA256 instance (avoids per-call allocation)
+        if (-not $Global:CachedSHA256) { $Global:CachedSHA256 = [System.Security.Cryptography.SHA256]::Create() }
+        $hashBytes = $Global:CachedSHA256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($payload))
         $hash = [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
         
         # Update chain
@@ -2158,8 +2161,9 @@ function Execute-Job {
         
         # 4. Calculate output hash
         $outputJson = if ($output) { $output | ConvertTo-Json -Compress -Depth 10 } else { "{}" }
-        $sha256 = [System.Security.Cryptography.SHA256]::Create()
-        $outputHashBytes = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($outputJson))
+        # v5.0.14-perf: Reuse cached SHA256 instance
+        if (-not $Global:CachedSHA256) { $Global:CachedSHA256 = [System.Security.Cryptography.SHA256]::Create() }
+        $outputHashBytes = $Global:CachedSHA256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($outputJson))
         $outputHash = [BitConverter]::ToString($outputHashBytes).Replace("-", "").ToLower()
         
         Write-Log "[JOB] Completed $($Job.job_type) in ${duration}s (status: $status)" "SUCCESS"
@@ -2317,14 +2321,21 @@ function Test-DnsBlock {
 }
 
 # ============================================
-#  v5.0.1: NETWORK WATCHDOG
+#  v5.0.1: NETWORK WATCHDOG (v5.0.14-perf: cached with 10s TTL)
 # ============================================
+$Global:CachedNetworkOk = $false
+$Global:CachedNetworkCheckTime = [datetime]::MinValue
+
 function Test-NetworkConnectivity {
     <#
     .SYNOPSIS
-        Tests network connectivity
+        Tests network connectivity with 10s cache to avoid TCP connect spam
     #>
     try {
+        $now = if ($Global:LoopTimestamp) { $Global:LoopTimestamp } else { Get-Date }
+        if (($now - $Global:CachedNetworkCheckTime).TotalSeconds -lt 10) {
+            return $Global:CachedNetworkOk
+        }
         # Try TCP connection on server port 443
         $uri = [System.Uri]::new($Global:ServerUrl)
         $tcpClient = New-Object System.Net.Sockets.TcpClient
@@ -2333,13 +2344,19 @@ function Test-NetworkConnectivity {
         
         if ($wait -and $tcpClient.Connected) {
             $tcpClient.Close()
+            $Global:CachedNetworkOk = $true
+            $Global:CachedNetworkCheckTime = $now
             return $true
         }
         
         $tcpClient.Close()
+        $Global:CachedNetworkOk = $false
+        $Global:CachedNetworkCheckTime = $now
         return $false
         
     } catch {
+        $Global:CachedNetworkOk = $false
+        $Global:CachedNetworkCheckTime = if ($Global:LoopTimestamp) { $Global:LoopTimestamp } else { Get-Date }
         return $false
     }
 }
@@ -4566,15 +4583,23 @@ function Invoke-ApplySecurityPatch {
 # ============================================
 #  SYSTEM METRICS (Basic - inherited from v4)
 # ============================================
+# v5.0.14-perf: Cached system metrics with 30s TTL (avoids 3 CIM queries per heartbeat)
+$Global:CachedSystemMetrics = $null
+$Global:CachedSystemMetricsTime = [datetime]::MinValue
+
 function Get-SystemMetrics {
     try {
+        $now = if ($Global:LoopTimestamp) { $Global:LoopTimestamp } else { Get-Date }
+        if ($Global:CachedSystemMetrics -and ($now - $Global:CachedSystemMetricsTime).TotalSeconds -lt 30) {
+            return $Global:CachedSystemMetrics
+        }
         # v5.0.13-perf: Use CIM instead of WMI (faster, uses WSMan)
         $cpu = Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average | Select-Object -ExpandProperty Average
         $os = Get-CimInstance Win32_OperatingSystem
         $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
-        $uptime = (Get-Date) - $os.LastBootUpTime
+        $uptime = $now - $os.LastBootUpTime
         
-        return @{
+        $Global:CachedSystemMetrics = @{
             cpu_percent = [math]::Round($cpu, 2)
             memory_total_gb = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2)
             memory_used_gb = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1MB, 2)
@@ -4584,6 +4609,8 @@ function Get-SystemMetrics {
             disk_used_percent = [math]::Round((($disk.Size - $disk.FreeSpace) / $disk.Size) * 100, 2)
             uptime_seconds = [math]::Round($uptime.TotalSeconds)
         }
+        $Global:CachedSystemMetricsTime = $now
+        return $Global:CachedSystemMetrics
     } catch {
         return @{ error = $_.Exception.Message }
     }
@@ -5904,15 +5931,13 @@ function Invoke-CollectProcessLineage {
     Write-Log "[PROCESS-LINEAGE] Collecting process tree for EDR visibility..." "INFO"
     
     try {
-        # Collect all running processes with parent info via CIM (faster than WMI)
-        $processes = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | 
-            Select-Object ProcessId, ParentProcessId, Name, CommandLine, 
-                          ExecutablePath, CreationDate, @{N='UserName';E={
-                              try { 
-                                  $owner = Invoke-CimMethod -InputObject $_ -MethodName GetOwner -ErrorAction SilentlyContinue
-                                  if ($owner.Domain) { "$($owner.Domain)\$($owner.User)" } else { $owner.User }
-                              } catch { "UNKNOWN" }
-                          }}
+        # v5.0.14-perf: Collect CIM processes WITHOUT per-process GetOwner (which is ~50ms each)
+        # Batch owner lookup only for suspicious processes to reduce CIM round-trips from ~200 to ~10
+        $rawProcesses = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            Select-Object ProcessId, ParentProcessId, Name, CommandLine, ExecutablePath, CreationDate
+        
+        # Defer owner resolution - will only call GetOwner for suspicious processes
+        $processes = $rawProcesses
         
         if (-not $processes) {
             Write-Log "[PROCESS-LINEAGE] No processes found" "WARN"
@@ -6002,13 +6027,26 @@ function Invoke-CollectProcessLineage {
                 try { $startTime = $proc.CreationDate.ToUniversalTime().ToString("o") } catch { }
             }
             
+            # v5.0.14-perf: Only resolve owner for suspicious processes (avoids ~50ms CIM call per process)
+            $userName = "UNKNOWN"
+            if ($isSuspicious) {
+                try {
+                    $cimProc = Get-CimInstance Win32_Process -Filter "ProcessId=$($proc.ProcessId)" -ErrorAction SilentlyContinue
+                    if ($cimProc) {
+                        $owner = Invoke-CimMethod -InputObject $cimProc -MethodName GetOwner -ErrorAction SilentlyContinue
+                        if ($owner -and $owner.Domain) { $userName = "$($owner.Domain)\$($owner.User)" }
+                        elseif ($owner -and $owner.User) { $userName = $owner.User }
+                    }
+                } catch { }
+            }
+            
             $processEntries += @{
                 name = $proc.Name
                 pid = $proc.ProcessId
                 ppid = $proc.ParentProcessId
                 parent_name = $parentName
                 cmd = if ($proc.CommandLine) { $proc.CommandLine.Substring(0, [Math]::Min($proc.CommandLine.Length, 2048)) } else { $null }
-                user = $proc.UserName
+                user = $userName
                 start_time = $startTime
                 path = $proc.ExecutablePath
                 is_suspicious = $isSuspicious

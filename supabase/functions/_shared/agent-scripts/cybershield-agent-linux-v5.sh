@@ -345,8 +345,8 @@ add_aggregated_event() {
     fi
 
     AGG_EVENTS_RECEIVED=$((AGG_EVENTS_RECEIVED + 1))
-    local now_epoch
-    now_epoch=$(date +%s)
+    # v5.0.14-perf: Use cached epoch to avoid date subprocess per event
+    local now_epoch=${CACHED_EPOCH:-$(date +%s)}
     local key="${event_type}:${pattern}"
 
     if [[ -n "${AGG_BUFFER_COUNT[$key]+x}" ]]; then
@@ -1556,19 +1556,18 @@ restart_service_handler() {
              fi
          done
          
-         if [[ "$is_protected" == "false" ]]; then
-             log "WARN" "[PROCESS-CHECK] High CPU detected: $name (PID: $pid) at $cpu%"
-             
+          if [[ "$is_protected" == "false" ]]; then
+              log "WARN" "[PROCESS-CHECK] High CPU detected: $name (PID: $pid) at $cpu%"
+              
               # v5.0.13-perf: O(1) baseline check via associative array
+              # v5.0.14-fix: Removed duplicate if check (was triggering double evaluation)
               if [[ -z "${PROCESS_BASELINE_MAP[$name]+_}" ]]; then
-             
-             if [[ -z "${PROCESS_BASELINE_MAP[$name]+_}" ]]; then
-                 log "WARN" "[PROCESS-CHECK] Process $name NOT in baseline - killing..."
-                 kill -9 "$pid" 2>/dev/null || true
-                 killed_count=$((killed_count + 1))
-                 log "SUCCESS" "[PROCESS-CHECK] Killed suspicious process: $name (PID: $pid)"
-             fi
-         fi
+                  log "WARN" "[PROCESS-CHECK] Process $name NOT in baseline - killing..."
+                  kill -9 "$pid" 2>/dev/null || true
+                  killed_count=$((killed_count + 1))
+                  log "SUCCESS" "[PROCESS-CHECK] Killed suspicious process: $name (PID: $pid)"
+              fi
+          fi
      done
      
      if [[ $killed_count -gt 0 ]]; then
@@ -1653,35 +1652,48 @@ restart_service_handler() {
  # ============================================
  #  SYSTEM METRICS
  # ============================================
- get_system_metrics() {
-     local cpu_percent
-     cpu_percent=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d. -f1 2>/dev/null || echo 0)
-     
-     local mem_info
-     mem_info=$(free -b 2>/dev/null)
-     local mem_total
-     mem_total=$(echo "$mem_info" | awk '/Mem:/ {print $2}')
-     local mem_used
-     mem_used=$(echo "$mem_info" | awk '/Mem:/ {print $3}')
-     local mem_percent
-     mem_percent=$(echo "scale=2; $mem_used * 100 / $mem_total" | bc 2>/dev/null || echo 0)
-     
-     local disk_info
-     disk_info=$(df / | tail -1)
-     local disk_total
-     disk_total=$(echo "$disk_info" | awk '{print $2}')
-     local disk_used
-     disk_used=$(echo "$disk_info" | awk '{print $3}')
-     local disk_percent
-     disk_percent=$(echo "$disk_info" | awk '{print $5}' | tr -d '%')
-     
-     local uptime_seconds
-     uptime_seconds=$(awk '{print int($1)}' /proc/uptime 2>/dev/null || echo 0)
-     
-     cat <<EOF
- {"cpu_percent":$cpu_percent,"memory_total_gb":$(echo "scale=2; $mem_total / 1073741824" | bc 2>/dev/null || echo 0),"memory_used_gb":$(echo "scale=2; $mem_used / 1073741824" | bc 2>/dev/null || echo 0),"memory_used_percent":$mem_percent,"disk_total_gb":$(echo "scale=2; $disk_total / 1048576" | bc 2>/dev/null || echo 0),"disk_used_percent":$disk_percent,"uptime_seconds":$uptime_seconds}
- EOF
- }
+  get_system_metrics() {
+      # v5.0.14-perf: Use /proc/stat directly instead of top -bn1 (~5ms vs ~1s)
+      local cpu_percent=0
+      if [[ -f /proc/stat ]]; then
+          local cpu_line
+          cpu_line=$(head -1 /proc/stat)
+          local user nice system idle iowait
+          read -r _ user nice system idle iowait _ <<< "$cpu_line"
+          local total=$((user + nice + system + idle + iowait))
+          local active=$((user + nice + system))
+          if [[ $total -gt 0 ]]; then
+              cpu_percent=$((active * 100 / total))
+          fi
+      else
+          cpu_percent=$(top -bn1 2>/dev/null | grep "Cpu(s)" | awk '{print $2}' | cut -d. -f1 || echo 0)
+      fi
+      
+      local mem_info
+      mem_info=$(free -b 2>/dev/null)
+      local mem_total
+      mem_total=$(echo "$mem_info" | awk '/Mem:/ {print $2}')
+      local mem_used
+      mem_used=$(echo "$mem_info" | awk '/Mem:/ {print $3}')
+      local mem_percent
+      mem_percent=$(echo "scale=2; $mem_used * 100 / $mem_total" | bc 2>/dev/null || echo 0)
+      
+      local disk_info
+      disk_info=$(df / | tail -1)
+      local disk_total
+      disk_total=$(echo "$disk_info" | awk '{print $2}')
+      local disk_used
+      disk_used=$(echo "$disk_info" | awk '{print $3}')
+      local disk_percent
+      disk_percent=$(echo "$disk_info" | awk '{print $5}' | tr -d '%')
+      
+      local uptime_seconds
+      uptime_seconds=$(awk '{print int($1)}' /proc/uptime 2>/dev/null || echo 0)
+      
+      cat <<EOF
+  {"cpu_percent":$cpu_percent,"memory_total_gb":$(echo "scale=2; $mem_total / 1073741824" | bc 2>/dev/null || echo 0),"memory_used_gb":$(echo "scale=2; $mem_used / 1073741824" | bc 2>/dev/null || echo 0),"memory_used_percent":$mem_percent,"disk_total_gb":$(echo "scale=2; $disk_total / 1048576" | bc 2>/dev/null || echo 0),"disk_used_percent":$disk_percent,"uptime_seconds":$uptime_seconds}
+  EOF
+  }
  
  # ============================================
  #  HEARTBEAT
@@ -2237,6 +2249,82 @@ remove_dns_filter_handler() {
 }
 
 # ============================================
+#  v5.0.14: PROCESS LINEAGE HANDLER
+#  v5.0.14-fix: MOVED BEFORE main loop (was unreachable after while true)
+# ============================================
+collect_process_lineage_handler() {
+    log "INFO" "[PROCESS-LINEAGE] Collecting process tree for EDR visibility"
+    
+    local collected_at
+    collected_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    local processes='[]'
+    if [[ -d /proc ]]; then
+        processes=$(ps -eo pid,ppid,comm,user,args --no-headers 2>/dev/null | head -200 | while IFS= read -r line; do
+            local pid ppid name user cmd
+            pid=$(echo "$line" | awk '{print $1}')
+            ppid=$(echo "$line" | awk '{print $2}')
+            name=$(echo "$line" | awk '{print $3}')
+            user=$(echo "$line" | awk '{print $4}')
+            cmd=$(echo "$line" | awk '{for(i=5;i<=NF;i++) printf "%s ", $i; print ""}' | head -c 2048)
+            
+            # Get parent name
+            local parent_name=""
+            if [[ -f "/proc/$ppid/comm" ]]; then
+                parent_name=$(cat "/proc/$ppid/comm" 2>/dev/null || echo "")
+            fi
+            
+            # Get executable path
+            local exe_path=""
+            if [[ -L "/proc/$pid/exe" ]]; then
+                exe_path=$(readlink -f "/proc/$pid/exe" 2>/dev/null || echo "")
+            fi
+            
+            printf '{"name":"%s","pid":%s,"ppid":%s,"parent_name":"%s","cmd":"%s","user":"%s","path":"%s"},' \
+                "$name" "$pid" "$ppid" "$parent_name" "$(echo "$cmd" | sed 's/"/\\"/g' | tr -d '\n')" "$user" "$exe_path"
+        done | sed 's/,$//' | sed 's/^/[/' | sed 's/$/]/')
+    fi
+    
+    # Submit to backend
+    local submit_body='{"processes":'"${processes:-[]}"'}'
+    local submit_result
+    submit_result=$(invoke_secure_request "POST" "/functions/v1/submit-process-lineage" "$submit_body" 30 2 2>/dev/null)
+    
+    echo '{"total_processes":'"$(echo "${processes:-[]}" | jq 'length' 2>/dev/null || echo 0)"',"collected_at":"'"$collected_at"'","source":"linux"}'
+}
+
+# ============================================
+#  v5.0.14: BACKUP STATUS HANDLER
+#  v5.0.14-fix: MOVED BEFORE main loop (was unreachable after while true)
+# ============================================
+collect_backup_status_handler() {
+    log "INFO" "[BACKUP] Collecting backup status"
+    
+    local collected_at
+    collected_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    # Check for common backup tools
+    local backup_tools='[]'
+    for tool in rsnapshot borgbackup duplicity restic rdiff-backup timeshift; do
+        if command -v "$tool" &>/dev/null; then
+            backup_tools=$(echo "$backup_tools" | jq --arg t "$tool" '. + [{"name": $t, "installed": true}]' 2>/dev/null || echo "$backup_tools")
+        fi
+    done
+    
+    # Check systemd timers for backup jobs
+    local backup_timers='[]'
+    if command -v systemctl &>/dev/null; then
+        backup_timers=$(systemctl list-timers --all 2>/dev/null | grep -i "backup\|snapshot\|borg\|restic" | head -5 | jq -R -s '[split("\n")[] | select(length > 0) | {timer: .}]' 2>/dev/null || echo '[]')
+    fi
+    
+    # Check cron for backup jobs
+    local backup_crons='[]'
+    backup_crons=$(crontab -l 2>/dev/null | grep -i "backup\|rsync\|borg\|restic\|tar.*gz" | head -5 | jq -R -s '[split("\n")[] | select(length > 0) | {cron: .}]' 2>/dev/null || echo '[]')
+    
+    echo '{"backup_tools":'"$backup_tools"',"backup_timers":'"$backup_timers"',"backup_crons":'"$backup_crons"',"collected_at":"'"$collected_at"'","source":"linux"}'
+}
+
+# ============================================
 #  MAIN LOOP v5.0.1 FULL ENTERPRISE
 # ============================================
  log "============================================"
@@ -2472,76 +2560,4 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
      sleep "$sleep_time"
  done
 
-# ============================================
-#  v5.0.14: PROCESS LINEAGE HANDLER
-# ============================================
-collect_process_lineage_handler() {
-    log "INFO" "[PROCESS-LINEAGE] Collecting process tree for EDR visibility"
-    
-    local collected_at
-    collected_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    
-    local processes='[]'
-    if [[ -d /proc ]]; then
-        processes=$(ps -eo pid,ppid,comm,user,args --no-headers 2>/dev/null | head -200 | while IFS= read -r line; do
-            local pid ppid name user cmd
-            pid=$(echo "$line" | awk '{print $1}')
-            ppid=$(echo "$line" | awk '{print $2}')
-            name=$(echo "$line" | awk '{print $3}')
-            user=$(echo "$line" | awk '{print $4}')
-            cmd=$(echo "$line" | awk '{for(i=5;i<=NF;i++) printf "%s ", $i; print ""}' | head -c 2048)
-            
-            # Get parent name
-            local parent_name=""
-            if [[ -f "/proc/$ppid/comm" ]]; then
-                parent_name=$(cat "/proc/$ppid/comm" 2>/dev/null || echo "")
-            fi
-            
-            # Get executable path
-            local exe_path=""
-            if [[ -L "/proc/$pid/exe" ]]; then
-                exe_path=$(readlink -f "/proc/$pid/exe" 2>/dev/null || echo "")
-            fi
-            
-            printf '{"name":"%s","pid":%s,"ppid":%s,"parent_name":"%s","cmd":"%s","user":"%s","path":"%s"},' \
-                "$name" "$pid" "$ppid" "$parent_name" "$(echo "$cmd" | sed 's/"/\\"/g' | tr -d '\n')" "$user" "$exe_path"
-        done | sed 's/,$//' | sed 's/^/[/' | sed 's/$/]/')
-    fi
-    
-    # Submit to backend
-    local submit_body='{"processes":'"${processes:-[]}"'}'
-    local submit_result
-    submit_result=$(make_authenticated_request "POST" "/functions/v1/submit-process-lineage" "$submit_body" 2>/dev/null)
-    
-    echo '{"total_processes":'"$(echo "${processes:-[]}" | jq 'length' 2>/dev/null || echo 0)"',"collected_at":"'"$collected_at"'","source":"linux"}'
-}
-
-# ============================================
-#  v5.0.14: BACKUP STATUS HANDLER
-# ============================================
-collect_backup_status_handler() {
-    log "INFO" "[BACKUP] Collecting backup status"
-    
-    local collected_at
-    collected_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    
-    # Check for common backup tools
-    local backup_tools='[]'
-    for tool in rsnapshot borgbackup duplicity restic rdiff-backup timeshift; do
-        if command -v "$tool" &>/dev/null; then
-            backup_tools=$(echo "$backup_tools" | jq --arg t "$tool" '. + [{"name": $t, "installed": true}]' 2>/dev/null || echo "$backup_tools")
-        fi
-    done
-    
-    # Check systemd timers for backup jobs
-    local backup_timers='[]'
-    if command -v systemctl &>/dev/null; then
-        backup_timers=$(systemctl list-timers --all 2>/dev/null | grep -i "backup\|snapshot\|borg\|restic" | head -5 | jq -R -s '[split("\n")[] | select(length > 0) | {timer: .}]' 2>/dev/null || echo '[]')
-    fi
-    
-    # Check cron for backup jobs
-    local backup_crons='[]'
-    backup_crons=$(crontab -l 2>/dev/null | grep -i "backup\|rsync\|borg\|restic\|tar.*gz" | head -5 | jq -R -s '[split("\n")[] | select(length > 0) | {cron: .}]' 2>/dev/null || echo '[]')
-    
-    echo '{"backup_tools":'"$backup_tools"',"backup_timers":'"$backup_timers"',"backup_crons":'"$backup_crons"',"collected_at":"'"$collected_at"'","source":"linux"}'
-}
+# v5.0.14-fix: Handler functions moved BEFORE main loop (see above)
