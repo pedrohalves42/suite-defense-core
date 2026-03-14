@@ -33,9 +33,9 @@ export const useSessionTimeout = () => {
     const activeTenant = tenants.find((t: { id: string }) => t.id === activeTenantId);
     const role = activeTenant?.role || 'user';
     
-    if (isSuperAdmin) return 15;
-    if (role === 'admin') return 60;
-    return 480;
+    if (isSuperAdmin) return 60;      // was 15 → now 1 hour
+    if (role === 'admin') return 480;   // was 60 → now 8 hours
+    return 720;                         // was 480 → now 12 hours
   }, [user]);
 
   const resetTimer = useCallback(() => {
