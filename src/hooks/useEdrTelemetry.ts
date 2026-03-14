@@ -80,9 +80,10 @@ export function useFileEvents(agentId: string, options?: { limit?: number; suspi
   return useQuery({
     queryKey: ['edr-file-events', activeTenant?.id, agentId, options?.suspiciousOnly, limit],
     queryFn: async () => {
+      // PERF-FIX: Slim select for file events
       let query = supabase
         .from('endpoint_file_events')
-        .select('*')
+        .select('id, tenant_id, agent_id, file_path, file_name, file_extension, event_type, event_time, is_suspicious, mitre_technique_id, mitre_tactic, detection_tags, created_at')
         .eq('tenant_id', activeTenant!.id)
         .eq('agent_id', agentId)
         .order('event_time', { ascending: false })
