@@ -482,6 +482,9 @@ $Global:KeyFingerprint = $null
 $Global:KeyVersion = 0
 $Global:AgentSigningAlgorithm = "ECDSA-P256-SHA256"
 
+# v5.0.14-fix: CachedSHA256 must be declared before use (StrictMode compatibility)
+$Global:CachedSHA256 = $null
+
 # v5.0.13-fix: Evidence buffer for Add-EvidenceEntry (BUG 1)
 $Global:EvidenceBuffer = [System.Collections.ArrayList]::new()
 
