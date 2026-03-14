@@ -9,8 +9,9 @@ import type {
   DashboardAgentToken, DashboardRateLimit, DashboardVirusScan, DashboardAuditLog,
 } from "@/types/dashboard";
 
-const REFETCH_INTERVAL = 10_000;
-const STALE_TIME = 5_000;
+// PERF-FIX: Increase polling intervals to reduce DB pressure (10s → 30s for primary, 5s → 15s stale)
+const REFETCH_INTERVAL = 30_000;
+const STALE_TIME = 15_000;
 
 async function fetchAgents(tenantId: string): Promise<DashboardAgent[]> {
   const { data, error } = await supabase.rpc('get_agents_list', {

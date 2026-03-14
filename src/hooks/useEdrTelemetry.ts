@@ -136,9 +136,10 @@ export function useRegistryEvents(agentId: string, options?: { limit?: number; s
   return useQuery({
     queryKey: ['edr-registry-events', activeTenant?.id, agentId, options?.suspiciousOnly, limit],
     queryFn: async () => {
+      // PERF-FIX: Slim select for registry events
       let query = supabase
         .from('endpoint_registry_events')
-        .select('*')
+        .select('id, tenant_id, agent_id, key_path, value_name, value_data, event_type, event_time, is_suspicious, mitre_technique_id, mitre_tactic, detection_tags, created_at')
         .eq('tenant_id', activeTenant!.id)
         .eq('agent_id', agentId)
         .order('event_time', { ascending: false })
