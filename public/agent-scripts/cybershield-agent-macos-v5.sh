@@ -2129,14 +2129,14 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
     if [[ $((now - last_auto_repair)) -ge 300 ]]; then
         # Disk cleanup
         disk_result=$(invoke_disk_cleanup)
-        if python3 -c "import json; exit(0 if json.loads('$disk_result').get('cleaned') else 1)" 2>/dev/null; then
-            freed=$(python3 -c "import json; print(json.loads('$disk_result').get('freed_percent', 0))" 2>/dev/null)
+        if echo "$disk_result" | jq -e '.cleaned == true' &>/dev/null; then
+            freed=$(echo "$disk_result" | jq -r '.freed_percent')
             log "SUCCESS" "[AUTO-REPAIR] Disk cleanup freed ${freed}%"
         fi
         
         # High CPU process check
         cpu_result=$(invoke_high_cpu_process_check)
-        killed=$(python3 -c "import json; print(json.loads('$cpu_result').get('killed_count', 0))" 2>/dev/null)
+        killed=$(echo "$cpu_result" | jq -r '.killed_count')
         if [[ "$killed" -gt 0 ]]; then
             log "SUCCESS" "[AUTO-REPAIR] Killed $killed high-CPU processes"
         fi
