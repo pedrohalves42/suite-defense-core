@@ -1077,11 +1077,11 @@ restart_service_handler() {
      log "SUCCESS" "[JOB] Completed $job_type in ${duration}s (status: $status)"
      
      local exec_hash
-     exec_hash=$(python3 -c "import json; print(json.loads('$hash_data').get('execution_hash', ''))" 2>/dev/null)
-     local prev_hash
-     prev_hash=$(python3 -c "import json; print(json.loads('$hash_data').get('previous_execution_hash', ''))" 2>/dev/null)
-     local exec_index
-     exec_index=$(python3 -c "import json; print(json.loads('$hash_data').get('execution_index', 0))" 2>/dev/null)
+      exec_hash=$(echo "$hash_data" | jq -r '.execution_hash')
+      local prev_hash
+      prev_hash=$(echo "$hash_data" | jq -r '.previous_execution_hash')
+      local exec_index
+      exec_index=$(echo "$hash_data" | jq -r '.execution_index')
      
      cat <<EOF
  {"success":true,"status":"$status","output":$output,"output_hash":"$output_hash","error_message":"$error_message","duration_seconds":$duration,"execution_hash":"$exec_hash","previous_execution_hash":"$prev_hash","execution_index":$exec_index}
