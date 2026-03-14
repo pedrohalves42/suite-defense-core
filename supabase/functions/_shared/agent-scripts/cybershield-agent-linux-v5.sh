@@ -430,11 +430,11 @@ flush_aggregated_entry() {
     [[ $count -gt 10 && "$severity" == "info" ]] && severity="warning"
 
     local body
-    body=$(jq -n --arg et "$event_type" --arg p "$pattern" --argjson c "$count" \
+    body=$(jq -n --arg agent "$AGENT_NAME" --arg et "$event_type" --arg p "$pattern" --argjson c "$count" \
         --argjson d "$duration" --arg b "$burst" --arg sev "$severity" \
         --arg fs "$(date -u -d @"$first_seen" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ")" \
         --arg ls "$(date -u -d @"$last_seen" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-        '{agent_name:$ENV.AGENT_NAME,event_type:"aggregated_event",severity:$sev,event_data:{event_type:$et,pattern:$p,count:$c,duration_seconds:$d,burst_detected:($b=="true"),first_seen:$fs,last_seen:$ls}}' 2>/dev/null)
+        '{agent_name:$agent,event_type:"aggregated_event",severity:$sev,event_data:{event_type:$et,pattern:$p,count:$c,duration_seconds:$d,burst_detected:($b=="true"),first_seen:$fs,last_seen:$ls}}' 2>/dev/null)
 
     if [[ -n "$body" ]]; then
         # v5.0.14-fix: was 'make_authenticated_request' (non-existent) - all aggregated events were silently lost
