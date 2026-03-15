@@ -1737,9 +1737,19 @@ function Invoke-SignResult {
     )
     
     try {
-        if (-not $Global:AgentPrivateKey) {
+        if (-not $Global:AgentPrivateKey -and -not $Global:AgentRsaKey) {
             Write-Log "[SIGN] No private key available for signing" "ERROR"
             return $null
+        }
+        
+        # RSA-2048-CSP direct signing path (when ECDSA export failed, RSA object is in memory)
+        if ($Global:AgentSigningAlgorithm -eq "RSA-2048-CSP" -and $Global:AgentRsaKey) {
+            $canonicalPayload = "$ExecutionId`:$JobId`:$Status`:$OutputHash`:$FinishedAt"
+            $payloadBytesRsa = [System.Text.Encoding]::UTF8.GetBytes($canonicalPayload)
+            $signatureBytesRsa = $Global:AgentRsaKey.SignData($payloadBytesRsa, "SHA256")
+            $signatureRsa = [Convert]::ToBase64String($signatureBytesRsa)
+            Write-Log "[SIGN] Signed result for execution $ExecutionId using RSA-2048-CSP" "DEBUG"
+            return $signatureRsa
         }
 
         $algorithm = if ($Global:AgentSigningAlgorithm) { $Global:AgentSigningAlgorithm } else { "ECDSA-P256-SHA256" }
