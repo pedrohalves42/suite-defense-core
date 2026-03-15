@@ -4160,11 +4160,15 @@ function Get-ProcessAnomalies {
             try {
                 $normalizedForSave = @()
                 foreach ($be in $Global:ProcessBaseline) {
-                    $normalizedForSave += @{
-                        name        = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
-                        company     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
-                        description = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
-                        first_seen  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
+                    try {
+                        $h = [ordered]@{}
+                        $h["name"]        = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
+                        $h["company"]     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
+                        $h["description"] = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
+                        $h["first_seen"]  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
+                        $normalizedForSave += $h
+                    } catch {
+                        # Skip corrupt entry (PS 5.1 duplicate key edge case)
                     }
                 }
                 $normalizedForSave | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
