@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
         .eq('token_hash', tokenHash)
       
       return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // offline recovery - very slow poll
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 300 }), // offline recovery - aligned with heartbeat
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
@@ -257,7 +257,7 @@ Deno.serve(async (req) => {
         maxLimit: MAX_PENDING_JOBS 
       })
       return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // backlog limit - slow poll
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 300 }), // backlog limit - aligned with heartbeat
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
@@ -350,7 +350,7 @@ Deno.serve(async (req) => {
     if (validJobs.length === 0) {
       logger.debug('No valid jobs to return', { agentName: agent.agent_name })
       return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // no jobs - slow poll (COST-OPT v4: 10min backoff when idle)
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 300 }), // no jobs - aligned with heartbeat (was 600)
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }

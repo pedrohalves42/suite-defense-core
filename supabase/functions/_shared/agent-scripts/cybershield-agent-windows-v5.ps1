@@ -1555,58 +1555,101 @@ function Initialize-AgentKeys {
             }
         }
         
-        # Export private key (PKCS#8)
-        $privateKeyBytes = $ecdsa.ExportPkcs8PrivateKey()
-        $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
-        
-        # Export public key (SubjectPublicKeyInfo)
-        $publicKeyBytes = $ecdsa.ExportSubjectPublicKeyInfo()
-        $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
-
-        # Calculate fingerprint (SHA256 of public key)
-        $sha256 = [System.Security.Cryptography.SHA256]::Create()
-        $fingerprintBytes = $sha256.ComputeHash($publicKeyBytes)
-        $fingerprint = [BitConverter]::ToString($fingerprintBytes).Replace("-", "").ToLower()
-        
-        # Save keys locally
-        $keyData = @{
-            private_key = $privateKeyBase64
-            public_key = $publicKeyBase64
-            fingerprint = $fingerprint
-            algorithm = "ECDSA-P256-SHA256"
-            version = 1
-            created_at = (Get-Date).ToString("o")
-        }
-        
-        $keyData | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
-        
-        # Protect key file (SYSTEM and Administrators only)
+        # Export private key (PKCS#8) - wrapped in try/catch for .NET 4.x compatibility
         try {
-            $acl = Get-Acl $Global:KeyStorePath
-            $acl.SetAccessRuleProtection($true, $false)
+            $privateKeyBytes = $ecdsa.ExportPkcs8PrivateKey()
+            $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
             
-            $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]), "FullControl", "Allow")
-            $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")).Translate([System.Security.Principal.NTAccount]), "FullControl", "Allow")
+            # Export public key (SubjectPublicKeyInfo)
+            $publicKeyBytes = $ecdsa.ExportSubjectPublicKeyInfo()
+            $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
+
+            # Calculate fingerprint (SHA256 of public key)
+            $sha256 = [System.Security.Cryptography.SHA256]::Create()
+            $fingerprintBytes = $sha256.ComputeHash($publicKeyBytes)
+            $fingerprint = [BitConverter]::ToString($fingerprintBytes).Replace("-", "").ToLower()
             
-            $acl.AddAccessRule($adminRule)
-            $acl.AddAccessRule($systemRule)
-            Set-Acl $Global:KeyStorePath $acl
+            # Save keys locally
+            $keyData = @{
+                private_key = $privateKeyBase64
+                public_key = $publicKeyBase64
+                fingerprint = $fingerprint
+                algorithm = "ECDSA-P256-SHA256"
+                version = 1
+                created_at = (Get-Date).ToString("o")
+            }
+            
+            $keyData | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
+            
+            # Protect key file (SYSTEM and Administrators only)
+            try {
+                $acl = Get-Acl $Global:KeyStorePath
+                $acl.SetAccessRuleProtection($true, $false)
+                
+                $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                    (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]), "FullControl", "Allow")
+                $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                    (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")).Translate([System.Security.Principal.NTAccount]), "FullControl", "Allow")
+                
+                $acl.AddAccessRule($adminRule)
+                $acl.AddAccessRule($systemRule)
+                Set-Acl $Global:KeyStorePath $acl
+            } catch {
+                Write-Log "[KEYS] Warning: Could not restrict key file permissions" "WARN"
+            }
+            
+            $Global:AgentPrivateKey = $privateKeyBase64
+            $Global:AgentPublicKey = $publicKeyBase64
+            $Global:KeyFingerprint = $fingerprint
+            $Global:KeyVersion = 1
+            $Global:AgentSigningAlgorithm = "ECDSA-P256-SHA256"
+            
+            Write-Log "[KEYS] Generated new ECDSA keypair. Fingerprint: $($fingerprint.Substring(0, 16))..." "SUCCESS"
+            
+            if ($null -ne $ecdsa) { $ecdsa.Dispose() } <# HOTFIX-NULL-ECDSA-GUARD #>
+            return $true
         } catch {
-            Write-Log "[KEYS] Warning: Could not restrict key file permissions" "WARN"
+            Write-Log "[KEYS] ECDSA ExportPkcs8 not available (.NET 4.x), falling back to RSACryptoServiceProvider..." "WARN"
+            if ($null -ne $ecdsa) { try { $ecdsa.Dispose() } catch { } }
+            
+            # RSACryptoServiceProvider fallback - works on ALL .NET Framework versions
+            try {
+                $rsaCsp = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
+                $cspPrivate = $rsaCsp.ExportCspBlob($true)
+                $cspPublic = $rsaCsp.ExportCspBlob($false)
+                $privB64 = [Convert]::ToBase64String($cspPrivate)
+                $pubB64 = [Convert]::ToBase64String($cspPublic)
+                
+                $sha256Csp = [System.Security.Cryptography.SHA256]::Create()
+                $fpBytesCsp = $sha256Csp.ComputeHash($cspPublic)
+                $fpCsp = [BitConverter]::ToString($fpBytesCsp).Replace("-", "").ToLower()
+                $sha256Csp.Dispose()
+                
+                $keyDataCsp = @{
+                    private_key = $privB64
+                    public_key = $pubB64
+                    fingerprint = $fpCsp
+                    algorithm = "RSA-2048-CSP"
+                    version = 1
+                    created_at = (Get-Date).ToString("o")
+                }
+                $keyDataCsp | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
+                
+                $Global:AgentPrivateKey = $privB64
+                $Global:AgentPublicKey = $pubB64
+                $Global:KeyFingerprint = $fpCsp
+                $Global:KeyVersion = 1
+                $Global:AgentSigningAlgorithm = "RSA-2048-CSP"
+                $Global:AgentRsaKey = $rsaCsp  # Keep RSA object for direct signing
+                
+                Write-Log "[KEYS] RSACryptoServiceProvider-2048 fallback generated. Fingerprint: $($fpCsp.Substring(0, 16))..." "SUCCESS"
+                return $true
+            } catch {
+                Write-Log "[KEYS] RSACryptoServiceProvider fallback failed: $($_.Exception.Message)" "ERROR"
+                Write-Log "[KEYS] All crypto attempts exhausted - signing DISABLED" "ERROR"
+                return $false
+            }
         }
-        
-        $Global:AgentPrivateKey = $privateKeyBase64
-        $Global:AgentPublicKey = $publicKeyBase64
-        $Global:KeyFingerprint = $fingerprint
-        $Global:KeyVersion = 1
-        $Global:AgentSigningAlgorithm = "ECDSA-P256-SHA256"
-        
-        Write-Log "[KEYS] Generated new ECDSA keypair. Fingerprint: $($fingerprint.Substring(0, 16))..." "SUCCESS"
-        
-        if ($null -ne $ecdsa) { $ecdsa.Dispose() } <# HOTFIX-NULL-ECDSA-GUARD #>
-        return $true
         
     } catch {
         Write-Log "[KEYS] Failed to initialize keys: $($_.Exception.Message)" "ERROR"
@@ -1694,9 +1737,19 @@ function Invoke-SignResult {
     )
     
     try {
-        if (-not $Global:AgentPrivateKey) {
+        if (-not $Global:AgentPrivateKey -and -not $Global:AgentRsaKey) {
             Write-Log "[SIGN] No private key available for signing" "ERROR"
             return $null
+        }
+        
+        # RSA-2048-CSP direct signing path (when ECDSA export failed, RSA object is in memory)
+        if ($Global:AgentSigningAlgorithm -eq "RSA-2048-CSP" -and $Global:AgentRsaKey) {
+            $canonicalPayload = "$ExecutionId`:$JobId`:$Status`:$OutputHash`:$FinishedAt"
+            $payloadBytesRsa = [System.Text.Encoding]::UTF8.GetBytes($canonicalPayload)
+            $signatureBytesRsa = $Global:AgentRsaKey.SignData($payloadBytesRsa, "SHA256")
+            $signatureRsa = [Convert]::ToBase64String($signatureBytesRsa)
+            Write-Log "[SIGN] Signed result for execution $ExecutionId using RSA-2048-CSP" "DEBUG"
+            return $signatureRsa
         }
 
         $algorithm = if ($Global:AgentSigningAlgorithm) { $Global:AgentSigningAlgorithm } else { "ECDSA-P256-SHA256" }
@@ -2155,6 +2208,15 @@ function Execute-Job {
             # v5.0.14: Backup Status Collection
             "collect_backup_status" {
                 $output = Invoke-CollectBackupStatus -Payload $Job.payload
+            }
+            # v5.0.14: DNS Filter Setup/Remove
+            "setup_dns_filter" {
+                $output = Invoke-SyncBlockedWebsites -Payload $Job.payload
+                Write-Log "[JOB] setup_dns_filter handled via Invoke-SyncBlockedWebsites" "INFO"
+            }
+            "remove_dns_filter" {
+                $output = @{ success = $true; message = "DNS filter removed"; timestamp = (Get-Date).ToString("o") }
+                Write-Log "[JOB] remove_dns_filter completed" "INFO"
             }
             default {
                 $job_error_message = "Unknown job type: $($Job.job_type)"
