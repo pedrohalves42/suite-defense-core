@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
         .eq('token_hash', tokenHash)
       
       return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // offline recovery - very slow poll
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 300 }), // offline recovery - aligned with heartbeat
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
