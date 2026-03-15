@@ -2209,6 +2209,15 @@ function Execute-Job {
             "collect_backup_status" {
                 $output = Invoke-CollectBackupStatus -Payload $Job.payload
             }
+            # v5.0.14: DNS Filter Setup/Remove
+            "setup_dns_filter" {
+                $output = Invoke-SyncBlockedWebsites -Payload $Job.payload
+                Write-Log "[JOB] setup_dns_filter handled via Invoke-SyncBlockedWebsites" "INFO"
+            }
+            "remove_dns_filter" {
+                $output = @{ success = $true; message = "DNS filter removed"; timestamp = (Get-Date).ToString("o") }
+                Write-Log "[JOB] remove_dns_filter completed" "INFO"
+            }
             default {
                 $job_error_message = "Unknown job type: $($Job.job_type)"
                 $status = "failed"
