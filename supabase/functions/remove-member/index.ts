@@ -45,13 +45,16 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Verificar se e admin
-    const { data: hasAdminRole, error: roleError } = await supabaseAdmin.rpc('has_role', { 
-      _user_id: user.id, 
-      _role: 'admin' 
-    });
+    // Verificar se e admin ou super_admin
+    const { data: callerRole } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .in('role', ['admin', 'super_admin'])
+      .limit(1)
+      .maybeSingle();
 
-    if (roleError || !hasAdminRole) {
+    if (!callerRole) {
       return createErrorResponse(ErrorCode.FORBIDDEN, 'Apenas admins podem remover membros', 403, requestId);
     }
 
