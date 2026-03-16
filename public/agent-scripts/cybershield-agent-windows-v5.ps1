@@ -3854,8 +3854,8 @@ function Get-TopProcesses {
         }
         
         return @{
-            top_by_cpu = $topByCpu
-            top_by_memory = $topByMemory
+            top_by_cpu = @($topByCpu)
+            top_by_memory = @($topByMemory)
             total_processes = $procArray.Count
             collected_at = (Get-Date).ToString("o")
         }
