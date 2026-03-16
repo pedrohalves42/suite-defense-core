@@ -83,11 +83,13 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
     }
   }
 
-  // HOTFIX 3: ExportPkcs8PrivateKey not available in .NET Framework 4.x (PowerShell 5.1)
+  // HOTFIX 3+26 COMBINED: ExportPkcs8PrivateKey not available in .NET Framework 4.x (PowerShell 5.1)
+  // Directly applies RSA-2048 fallback instead of intermediate ECDSA-in-memory step
+  // This ensures v5.0.13 scripts (without HOTFIX-EXPORT marker) get the full RSA fallback
   if (content.includes('$ecdsa.ExportPkcs8PrivateKey()') && !content.includes('HOTFIX-EXPORT')) {
     content = content.replace(
       /# Export private key \(PKCS#8\)\s*\r?\n\s*\$privateKeyBytes = \$ecdsa\.ExportPkcs8PrivateKey\(\)\s*\r?\n\s*\$privateKeyBase64 = \[Convert\]::ToBase64String\(\$privateKeyBytes\)\s*\r?\n\s*\r?\n\s*# Export public key \(SubjectPublicKeyInfo\)\s*\r?\n\s*\$publicKeyBytes = \$ecdsa\.ExportSubjectPublicKeyInfo\(\)\s*\r?\n\s*\$publicKeyBase64 = \[Convert\]::ToBase64String\(\$publicKeyBytes\)/,
-      `# HOTFIX-EXPORT: Export keys with .NET Framework 4.x compatibility
+      `# HOTFIX-EXPORT + HOTFIX-RSA-FALLBACK: Export keys with RSA-2048 fallback for .NET 4.x
         $privateKeyBase64 = $null
         $publicKeyBase64 = $null
         $publicKeyBytes = $null
@@ -98,15 +100,25 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
             $publicKeyBytes = $ecdsa.ExportSubjectPublicKeyInfo()
             $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
         } catch {
-            Write-Log "[KEYS] ExportPkcs8/SPKI not available ($($_.Exception.Message)), using in-memory ECDSA object" "WARN"
-            # Keep $ecdsa object in memory for direct signing - no export needed
-            # Generate a synthetic fingerprint from the key parameters
+            Write-Log "[KEYS] ECDSA PKCS8 export not available, falling back to RSA-2048..." "WARN"
+            # HOTFIX-RSA-FALLBACK: Generate RSA-2048 keypair using RSACryptoServiceProvider (.NET 4.x compatible)
             try {
-                $ecParams = $ecdsa.ExportParameters($false)
-                $publicKeyBytes = [byte[]]($ecParams.Q.X + $ecParams.Q.Y)
-                $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
+                $ecdsa.Dispose()  # Release the unusable ECDSA key
+                $ecdsa = $null
+            } catch { }
+            try {
+                # RSACryptoServiceProvider works on ALL .NET Framework versions (4.0+)
+                $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
+                $privateKeyBase64 = [Convert]::ToBase64String($rsa.ExportCspBlob($true))
+                $publicKeyBase64 = [Convert]::ToBase64String($rsa.ExportCspBlob($false))
+                $publicKeyBytes = $rsa.ExportCspBlob($false)
+                # Store RSA object globally for signing
+                $Global:AgentRsaKey = $rsa
+                $Global:AgentSigningAlgorithm = "RSA-2048-SHA256"
+                Write-Log "[KEYS] RSA-2048 fallback keypair generated successfully (RSACryptoServiceProvider)" "INFO"
             } catch {
-                Write-Log "[KEYS] ExportParameters also failed, using random fingerprint" "WARN"
+                Write-Log "[KEYS] RSA-2048 fallback also failed: $($_.Exception.Message)" "ERROR"
+                # Last resort: synthetic fingerprint with .NET 4.x compatible RNG
                 $randomBytes = [byte[]]::new(32)
                 $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create(); $rng.GetBytes($randomBytes)
                 $publicKeyBytes = $randomBytes
@@ -114,7 +126,7 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
             }
         }`
     );
-    reasons.push('export_pkcs8_compat');
+    reasons.push('export_pkcs8_rsa_fallback_combined');
   }
 
   // HOTFIX 4: $anomalies.anomalies crashes when $anomalies is not a hashtable (PSObject vs Hashtable)
