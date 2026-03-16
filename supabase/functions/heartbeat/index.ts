@@ -398,7 +398,7 @@ Deno.serve(async (req) => {
     // ============================================================
     const { data: forceCheck } = await supabase
       .from('agents')
-      .select('force_update_version, force_update_reason, force_update_at, force_update_override_safe_mode, force_update_override_safe_mode_expires_at, force_update_delivered_count, force_update_first_delivered_at')
+      .select('force_update_version, force_update_reason, force_update_at, force_update_override_safe_mode, force_update_override_safe_mode_expires_at, force_update_delivered_count, force_update_first_delivered_at, last_forced_update_applied')
       .eq('id', agent.id)
       .single()
 
@@ -466,13 +466,19 @@ Deno.serve(async (req) => {
         .eq('id', agent.id)
       // Fall through to normal heartbeat response (no force update)
     } else if (effectiveForceVersion) {
-      // FIX: force_update_at é o gatilho autoritativo para re-push,
-      // inclusive quando currentVersion === targetVersion (hotfix same-version)
+      // Guard contra reentrega stale da mesma versão sem bloquear hotfix same-version
       const currentVersion = agentVersion || updateData.agent_version
       const forceTriggeredAt = (forceCheck as any)?.force_update_at
       const hasExplicitForceTrigger = !!forceTriggeredAt
+      const currentNorm = normalizeVersion(currentVersion)
+      const targetNorm = normalizeVersion(effectiveForceVersion)
+      const lastForcedUpdateApplied = (forceCheck as any)?.last_forced_update_applied
+      const forceTriggeredAtMs = forceTriggeredAt ? new Date(forceTriggeredAt).getTime() : null
+      const lastAppliedMs = lastForcedUpdateApplied ? new Date(lastForcedUpdateApplied).getTime() : null
+      const sameVersionAlreadyApplied = !!currentNorm && !!targetNorm && currentNorm === targetNorm
+      const staleSameVersionTrigger = sameVersionAlreadyApplied && lastAppliedMs !== null && (forceTriggeredAtMs === null || forceTriggeredAtMs <= lastAppliedMs)
 
-      if (!hasExplicitForceTrigger && normalizeVersion(currentVersion) === normalizeVersion(effectiveForceVersion)) {
+      if (!hasExplicitForceTrigger && sameVersionAlreadyApplied) {
         logger.info('Agent already at target version (no explicit force trigger), clearing force_update flag', {
           agentName: agent.agent_name,
           version: currentVersion
@@ -480,16 +486,38 @@ Deno.serve(async (req) => {
         await supabase
           .from('agents')
           .update({ 
-            force_update_version: null, 
+            force_update_version: null,
             force_update_reason: null,
+            force_update_at: null,
             force_update_delivered_count: 0,
             force_update_first_delivered_at: null,
             force_update_override_safe_mode: false,
             force_update_override_safe_mode_expires_at: null
           })
           .eq('id', agent.id)
-        
+
         // Response normal - agente já está atualizado e não houve trigger explícito
+      } else if (staleSameVersionTrigger) {
+        logger.warn('Stale same-version force_update detected after successful apply, clearing flag', {
+          agentName: agent.agent_name,
+          version: currentVersion,
+          forceTriggeredAt,
+          lastForcedUpdateApplied,
+        })
+        await supabase
+          .from('agents')
+          .update({
+            force_update_version: null,
+            force_update_reason: 'auto_cleared_already_applied',
+            force_update_at: null,
+            force_update_delivered_count: 0,
+            force_update_first_delivered_at: null,
+            force_update_override_safe_mode: false,
+            force_update_override_safe_mode_expires_at: null
+          })
+          .eq('id', agent.id)
+
+        // Response normal - mesmo target já foi aplicado com sucesso
       } else {
         // PARTE 1: Verificar delivered_count - se > 50, limpar flag (agente não suporta)
         const deliveredCount = (forceCheck as any).force_update_delivered_count || 0
