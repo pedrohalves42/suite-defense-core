@@ -422,9 +422,9 @@ verify_jwt = true
 [functions.security-alert-dispatcher]
 verify_jwt = false
 
+# security-cleanup-cron - DISABLED COST-OPT-V6 (covered by system-maintenance)
 [functions.security-cleanup-cron]
 verify_jwt = false
-schedule = "0 3 * * *"
 
 [functions.send-security-notification]
 verify_jwt = false
