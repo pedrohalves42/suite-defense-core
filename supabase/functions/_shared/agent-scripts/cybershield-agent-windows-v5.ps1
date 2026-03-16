@@ -3997,7 +3997,8 @@ function Initialize-ProcessBaseline {
             }
 
             $Global:ProcessBaseline = $baseline
-            $baseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+            $psoBaseline = $baseline | ForEach-Object { [PSCustomObject]$_ }
+            $psoBaseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
 
             Write-Log "[BASELINE] Created baseline with $($baseline.Count) processes" "SUCCESS"
         }
