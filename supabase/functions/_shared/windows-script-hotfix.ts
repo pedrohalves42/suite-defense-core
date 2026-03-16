@@ -86,8 +86,9 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
   // HOTFIX 3+26 COMBINED: ExportPkcs8PrivateKey not available in .NET Framework 4.x (PowerShell 5.1)
   // Directly applies RSA-2048 fallback instead of intermediate ECDSA-in-memory step
   // This ensures v5.0.13 scripts (without HOTFIX-EXPORT marker) get the full RSA fallback
-  if (content.includes('$ecdsa.ExportPkcs8PrivateKey()') && !content.includes('HOTFIX-EXPORT')) {
-    content = content.replace(
+  // NOTE: v5.0.14+ scripts already have built-in RSA fallback, so the regex won't match (expected)
+  if (content.includes('$ecdsa.ExportPkcs8PrivateKey()') && !content.includes('HOTFIX-EXPORT') && !content.includes('RSACryptoServiceProvider fallback')) {
+    const updated = content.replace(
       /# Export private key \(PKCS#8\)\s*\r?\n\s*\$privateKeyBytes = \$ecdsa\.ExportPkcs8PrivateKey\(\)\s*\r?\n\s*\$privateKeyBase64 = \[Convert\]::ToBase64String\(\$privateKeyBytes\)\s*\r?\n\s*\r?\n\s*# Export public key \(SubjectPublicKeyInfo\)\s*\r?\n\s*\$publicKeyBytes = \$ecdsa\.ExportSubjectPublicKeyInfo\(\)\s*\r?\n\s*\$publicKeyBase64 = \[Convert\]::ToBase64String\(\$publicKeyBytes\)/,
       `# HOTFIX-EXPORT + HOTFIX-RSA-FALLBACK: Export keys with RSA-2048 fallback for .NET 4.x
         $privateKeyBase64 = $null
@@ -126,7 +127,10 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
             }
         }`
     );
-    reasons.push('export_pkcs8_rsa_fallback_combined');
+    if (updated !== content) {
+      content = updated;
+      reasons.push('export_pkcs8_rsa_fallback_combined');
+    }
   }
 
   // HOTFIX 4: $anomalies.anomalies crashes when $anomalies is not a hashtable (PSObject vs Hashtable)
