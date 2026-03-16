@@ -3984,7 +3984,7 @@ function Initialize-ProcessBaseline {
 
             foreach ($group in $grouped) {
                 $proc = $group.Group[0]
-                $baseline += @{
+                $baseline += [ordered]@{
                     name = $proc.ProcessName
                     company = $proc.Company
                     description = $proc.Description
