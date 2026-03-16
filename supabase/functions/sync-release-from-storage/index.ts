@@ -26,8 +26,8 @@ serve(async (req) => {
     const scriptBytes = new Uint8Array(await fileData.arrayBuffer());
     const scriptText = new TextDecoder().decode(scriptBytes);
     
-    // Base64 encode
-    const base64Content = btoa(scriptText);
+    // Base64 encode (handle UTF-8 properly)
+    const base64Content = btoa(Array.from(scriptBytes).map(b => String.fromCharCode(b)).join(''));
     
     // SHA256
     const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes);
