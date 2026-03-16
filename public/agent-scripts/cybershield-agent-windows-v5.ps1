@@ -3960,7 +3960,7 @@ function Initialize-ProcessBaseline {
                 # HOTFIX-BASELINE-NORMALIZE-SAVE: Normalize all entries to hashtables to avoid PS 5.1 mixed-type serialization issues
                 $normalizedBaseline = @()
                 foreach ($be in $loadedBaseline) {
-                    $normalizedBaseline += @{
+                    $normalizedBaseline += [ordered]@{
                         name        = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
                         company     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
                         description = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
@@ -3984,7 +3984,7 @@ function Initialize-ProcessBaseline {
 
             foreach ($group in $grouped) {
                 $proc = $group.Group[0]
-                $baseline += @{
+                $baseline += [ordered]@{
                     name = $proc.ProcessName
                     company = $proc.Company
                     description = $proc.Description
@@ -4079,7 +4079,7 @@ function Get-ProcessAnomalies {
             # DEFINITIVE FIX: Idempotent add - check HashSet BEFORE adding to baseline array
             foreach ($proc in $anomalies) {
                 if (-not $Global:ProcessBaselineSet.Contains($proc)) {
-                    $Global:ProcessBaseline += @{
+                    $Global:ProcessBaseline += [ordered]@{
                         name = $proc
                         company = $null
                         description = "Auto-added"
@@ -4093,7 +4093,7 @@ function Get-ProcessAnomalies {
             try {
                 $normalizedForSave = @()
                 foreach ($be in $Global:ProcessBaseline) {
-                    $normalizedForSave += @{
+                    $normalizedForSave += [ordered]@{
                         name        = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
                         company     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
                         description = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
