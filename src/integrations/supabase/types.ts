@@ -36691,6 +36691,10 @@ export type Database = {
         Args: { p_job_type: string }
         Returns: number
       }
+      handle_archived_agent_heartbeat: {
+        Args: { p_agent_id: string; p_tenant_id: string }
+        Returns: Json
+      }
       hard_delete_agent: { Args: { p_agent_id: string }; Returns: Json }
       has_recent_playbook_execution: {
         Args: {
