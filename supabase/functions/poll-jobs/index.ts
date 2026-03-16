@@ -257,7 +257,7 @@ Deno.serve(async (req) => {
         maxLimit: MAX_PENDING_JOBS 
       })
       return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 300 }), // backlog limit - aligned with heartbeat
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // COST-OPT-V6
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
