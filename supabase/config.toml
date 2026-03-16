@@ -517,10 +517,9 @@ verify_jwt = true
 [functions.execute-playbook-action]
 verify_jwt = true
 
-# === Auto Cleanup Jobs (every 6 hours) COST-OPT-V5 ===
+# === Auto Cleanup Jobs - DISABLED COST-OPT-V6 (redundant with system-maintenance) ===
 [functions.auto-cleanup-jobs]
 verify_jwt = false
-schedule = "0 */6 * * *"
 
 # === Storage Bucket Sync (fallback de emergência) ===
 [functions.sync-storage-bucket]
