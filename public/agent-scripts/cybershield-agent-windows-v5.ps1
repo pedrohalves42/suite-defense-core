@@ -4195,8 +4195,10 @@ function Invoke-SyncBlockedWebsites {
         
         # Get URLs from payload or fetch from server
         $urls = @()
-        if ($Payload.urls) {
-            $urls = @($Payload.urls)
+        $payloadUrls = $null
+        if ($Payload -is [hashtable]) { $payloadUrls = $Payload["urls"] } elseif ($Payload.PSObject.Properties["urls"]) { $payloadUrls = $Payload.urls }
+        if ($payloadUrls) {
+            $urls = @($payloadUrls)
         } else {
             # Fetch from server
             $result = Invoke-SecureRequest `
