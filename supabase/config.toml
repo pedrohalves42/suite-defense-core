@@ -537,15 +537,13 @@ verify_jwt = true
 [functions.register-agent-key]
 verify_jwt = false
 
-# === FASE 1: Autonomous SAFE_MODE (every 6 hours) COST-OPT-V5 ===
+# === FASE 1: Autonomous SAFE_MODE - DISABLED COST-OPT-V6 (unnecessary for small fleet) ===
 [functions.autonomous-safe-mode]
 verify_jwt = false
-schedule = "0 */6 * * *"
 
-# === Watchdog Non-Execution Detection (every 6 hours) COST-OPT-V5 ===
+# === Watchdog Non-Execution Detection - DISABLED COST-OPT-V6 (unnecessary for small fleet) ===
 [functions.watchdog-non-execution]
 verify_jwt = false
-schedule = "0 */6 * * *"
 
 # === Executive Report Generator - DISABLED schedule COST-OPT-V5 ===
 [functions.generate-executive-report]
