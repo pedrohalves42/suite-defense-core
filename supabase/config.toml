@@ -177,14 +177,13 @@ verify_jwt = true
 [functions.diagnose-agent]
 verify_jwt = true
 
-# Build cleanup (every 12 hours) COST-OPT-V5
+# Build cleanup - DISABLED COST-OPT-V6 (covered by system-maintenance)
 [functions.cleanup-stuck-builds]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
+# Build watchdog - DISABLED COST-OPT-V6 (covered by system-maintenance)
 [functions.build-watchdog]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
 [functions.get-agent-dashboard-data]
 verify_jwt = true
