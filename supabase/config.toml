@@ -340,10 +340,9 @@ verify_jwt = false
 verify_jwt = false
 schedule = "0 */12 * * *"
 
-# Monitor stuck agents (every 6 hours) COST-OPT-V5
+# Monitor stuck agents - DISABLED COST-OPT-V6 (visible in dashboard for 1 agent)
 [functions.monitor-stuck-agents]
 verify_jwt = false
-schedule = "0 */6 * * *"
 
 # === FASE 3+4: Agent Release Management ===
 [functions.register-agent-release]
