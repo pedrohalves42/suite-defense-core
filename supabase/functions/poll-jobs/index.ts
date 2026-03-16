@@ -300,7 +300,7 @@ Deno.serve(async (req) => {
         agentId: token.agent_id
       })
       return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 300 }), // claim error - normal poll
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // COST-OPT-V6
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
