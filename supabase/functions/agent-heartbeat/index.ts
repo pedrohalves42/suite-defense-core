@@ -139,58 +139,8 @@ Deno.serve(async (req) => {
       archived_at: string | null;
     }
 
-    // === ARCHIVED AGENT HEARTBEAT HANDLER ===
-    // If agent is archived, delegate to handle_archived_agent_heartbeat RPC
-    if (agent.agent_state === 'archived' || agent.archived_at) {
-      logger.info('[PROXY] Heartbeat from archived agent, delegating to reactivation handler', {
-        agentName: agent.agent_name,
-        agentState: agent.agent_state,
-        archivedAt: agent.archived_at,
-      })
+    let archivedHeartbeatAction: 'reactivated' | 'alert_only' | null = null
 
-      const { data: reactivationResult, error: reactivationError } = await supabase
-        .rpc('handle_archived_agent_heartbeat', {
-          p_agent_id: agent.id,
-          p_tenant_id: agent.tenant_id,
-        })
-
-      if (reactivationError) {
-        logger.error('[PROXY] Archived agent reactivation handler failed', {
-          error: reactivationError,
-          agentName: agent.agent_name,
-        })
-      } else {
-        logger.info('[PROXY] Archived agent handler result', {
-          agentName: agent.agent_name,
-          result: reactivationResult,
-        })
-      }
-
-      const action = (reactivationResult as any)?.action || 'error'
-      if (action === 'reactivated') {
-        // Agent was reactivated, return normal heartbeat response
-        return new Response(
-          JSON.stringify({ 
-            status: 'ok', 
-            reactivated: true,
-            message: 'Agent reactivated from archived state',
-            poll_interval_seconds: 600 
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        )
-      } else {
-        // Agent stays archived (15+ days), acknowledge but don't process
-        return new Response(
-          JSON.stringify({ 
-            status: 'archived', 
-            message: 'Agent is archived. Manual approval required for reactivation.',
-            poll_interval_seconds: 3600 // Check back in 1 hour
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        )
-      }
-    }
-    
     // HMAC verification
     if (!agent.hmac_secret) {
       logger.error('[PROXY] Agent without HMAC secret', { agentName: agent.agent_name })
@@ -226,7 +176,7 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-
+ 
     // Parse body after HMAC verification
     let osInfo: OSInfo = {}
     if (hmacResult.rawBody) {
@@ -237,14 +187,14 @@ Deno.serve(async (req) => {
         // Empty or invalid body is OK for legacy heartbeats
       }
     }
-
+ 
     // Rate limiting
     const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'heartbeat', {
       maxRequests: 3,
       windowMinutes: 1,
       blockMinutes: 5,
     })
-
+ 
     if (!rateLimitResult.allowed) {
       return new Response(
         JSON.stringify({ 
@@ -254,8 +204,68 @@ Deno.serve(async (req) => {
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    if (agent.archived_at) {
+      logger.info('[PROXY] Heartbeat from archived agent, delegating to reactivation handler', {
+        agentName: agent.agent_name,
+        agentState: agent.agent_state,
+        archivedAt: agent.archived_at,
+      })
+
+      const { data: reactivationResult, error: reactivationError } = await supabase
+        .rpc('handle_archived_agent_heartbeat', {
+          p_agent_id: agent.id,
+          p_tenant_id: agent.tenant_id,
+        })
+
+      if (reactivationError) {
+        logger.error('[PROXY] Archived agent reactivation handler failed', {
+          error: reactivationError,
+          agentName: agent.agent_name,
+        })
+
+        return new Response(
+          JSON.stringify({ error: 'Failed to handle archived agent heartbeat' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      archivedHeartbeatAction = (reactivationResult as any)?.action === 'reactivated'
+        ? 'reactivated'
+        : 'alert_only'
+
+      logger.info('[PROXY] Archived agent handler result', {
+        agentName: agent.agent_name,
+        result: reactivationResult,
+      })
+
+      if (archivedHeartbeatAction === 'alert_only') {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            agent: agent.agent_name,
+            timestamp: new Date().toISOString(),
+            proxy: true,
+            archived: true,
+            requires_manual_approval: true,
+            message: 'Agent is archived. Manual approval required for reactivation.',
+            heartbeat_interval_seconds: 3600,
+            poll_interval_seconds: 3600,
+            jobs: [],
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        )
+      }
+
+      logger.info('[PROXY] Archived agent reactivated, continuing heartbeat processing', {
+        agentName: agent.agent_name,
+      })
+    }
     
-    logger.info('[PROXY] Heartbeat received via legacy endpoint', { agentName: agent.agent_name })
+    logger.info('[PROXY] Heartbeat received via legacy endpoint', { 
+      agentName: agent.agent_name,
+      reactivated: archivedHeartbeatAction === 'reactivated',
+    })
 
     // Build update data
     interface AgentUpdate {
