@@ -4264,12 +4264,20 @@ function Invoke-SyncBlockedWebsites {
         $markerStart = "# === CyberShield Blocked Websites Start ==="
         $markerEnd = "# === CyberShield Blocked Websites End ==="
         
-        # Get URLs from payload or fetch from server
+        # Get URLs from payload (supports 'blocked_domains', 'urls', or 'domains' keys)
         $urls = @()
-        $payloadUrls = $null
-        if ($Payload -is [hashtable]) { $payloadUrls = $Payload["urls"] } elseif ($Payload.PSObject.Properties["urls"]) { $payloadUrls = $Payload.urls }
-        if ($payloadUrls) {
-            $urls = @($payloadUrls)
+        $payloadDomains = $null
+        if ($Payload -is [hashtable]) {
+            if ($Payload.ContainsKey("blocked_domains")) { $payloadDomains = $Payload["blocked_domains"] }
+            elseif ($Payload.ContainsKey("urls")) { $payloadDomains = $Payload["urls"] }
+            elseif ($Payload.ContainsKey("domains")) { $payloadDomains = $Payload["domains"] }
+        } elseif ($Payload -ne $null) {
+            if ($Payload.PSObject.Properties["blocked_domains"]) { $payloadDomains = $Payload.blocked_domains }
+            elseif ($Payload.PSObject.Properties["urls"]) { $payloadDomains = $Payload.urls }
+            elseif ($Payload.PSObject.Properties["domains"]) { $payloadDomains = $Payload.domains }
+        }
+        if ($payloadDomains) {
+            $urls = @($payloadDomains)
         } else {
             # Fetch from server
             $result = Invoke-SecureRequest `
