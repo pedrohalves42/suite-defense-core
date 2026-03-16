@@ -1,0 +1,1 @@
+UPDATE agents SET force_update_version = 'v5.0.14', force_update_at = NOW() WHERE id = 'd7c0e8c8-cd1d-4801-8516-c229f98ec4d5'
