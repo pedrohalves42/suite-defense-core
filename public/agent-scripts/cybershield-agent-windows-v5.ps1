@@ -4079,7 +4079,8 @@ function Get-ProcessAnomalies {
                         $n = if ($e -is [hashtable]) { $e["name"] } else { $e.name }
                         if ($n) { [void]$Global:ProcessBaselineSet.Add($n) }
                     }
-                    $cleanBaseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                    $psoClean = $cleanBaseline | ForEach-Object { [PSCustomObject]$_ }
+                    $psoClean | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
                 }
             }
         } catch {
