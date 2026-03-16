@@ -4014,7 +4014,9 @@ function Initialize-ProcessBaseline {
             }
 
             $Global:ProcessBaseline = $baseline
-            $baseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+            # v5.0.14-fix: Convert to PSCustomObject array before JSON serialization to prevent PS 5.1 duplicate key errors
+            $psoBaseline = $baseline | ForEach-Object { [PSCustomObject]$_ }
+            $psoBaseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
 
             Write-Log "[BASELINE] Created baseline with $($baseline.Count) processes" "SUCCESS"
         }
