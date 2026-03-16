@@ -3804,34 +3804,37 @@ function Get-TopProcesses {
         P1 Important: Resource consumption visibility in heartbeat.
     #>
     try {
-        # v5.0.13-perf: Single Get-Process call, pre-filter, then sort for both CPU and Memory
+        # v5.0.14-fix: Single Get-Process call with safe CPU access (prevents TotalSeconds errors)
         $allProcesses = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.WorkingSet -gt 0 }
         $procArray = @($allProcesses)
         
-        # Sort once by CPU (descending), take top 5
-        $topByCpu = @($procArray | 
-            Where-Object { $_.CPU -ne $null } |
-            Sort-Object CPU -Descending | 
-            Select-Object -First 5 | 
-            ForEach-Object { 
-                @{
-                    name = $_.ProcessName; pid = $_.Id
-                    cpu_seconds = [math]::Round($_.CPU, 2)
-                    memory_mb = [math]::Round($_.WorkingSet / 1MB, 1)
-                }
+        # Sort once by CPU (descending), take top 5 — safe CPU access via try/catch per process
+        $topByCpu = New-Object System.Collections.ArrayList
+        $cpuSorted = @($procArray | ForEach-Object {
+            $cpuVal = 0
+            try { if ($null -ne $_.CPU) { $cpuVal = $_.CPU } } catch { $cpuVal = 0 }
+            $_ | Add-Member -NotePropertyName _SafeCPU -NotePropertyValue $cpuVal -Force -PassThru
+        } | Where-Object { $_._SafeCPU -gt 0 } | Sort-Object _SafeCPU -Descending | Select-Object -First 5)
+        foreach ($p in $cpuSorted) {
+            [void]$topByCpu.Add(@{
+                name = $p.ProcessName; pid = $p.Id
+                cpu_seconds = [math]::Round($p._SafeCPU, 2)
+                memory_mb = [math]::Round($p.WorkingSet / 1MB, 1)
             })
+        }
         
         # Sort once by WorkingSet (descending), take top 5
-        $topByMemory = @($procArray | 
-            Sort-Object WorkingSet -Descending | 
-            Select-Object -First 5 | 
-            ForEach-Object { 
-                @{
-                    name = $_.ProcessName; pid = $_.Id
-                    memory_mb = [math]::Round($_.WorkingSet / 1MB, 1)
-                    cpu_seconds = if ($_.CPU) { [math]::Round($_.CPU, 2) } else { 0 }
-                }
+        $topByMemory = New-Object System.Collections.ArrayList
+        $memSorted = @($procArray | Sort-Object WorkingSet -Descending | Select-Object -First 5)
+        foreach ($p in $memSorted) {
+            $cpuVal = 0
+            try { if ($null -ne $p.CPU) { $cpuVal = [math]::Round($p.CPU, 2) } } catch { $cpuVal = 0 }
+            [void]$topByMemory.Add(@{
+                name = $p.ProcessName; pid = $p.Id
+                memory_mb = [math]::Round($p.WorkingSet / 1MB, 1)
+                cpu_seconds = $cpuVal
             })
+        }
         
         return @{
             top_by_cpu = $topByCpu
