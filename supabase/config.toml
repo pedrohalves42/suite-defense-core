@@ -353,7 +353,7 @@ verify_jwt = true
 
 [functions.process-agent-updates]
 verify_jwt = false
-schedule = "0 */6 * * *"
+schedule = "0 */12 * * *"
 
 # === Security Features v3.10.0 ===
 [functions.submit-software-inventory]
