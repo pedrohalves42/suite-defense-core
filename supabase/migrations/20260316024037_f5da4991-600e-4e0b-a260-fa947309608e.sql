@@ -1,0 +1,1 @@
+INSERT INTO jobs (agent_name, agent_id, tenant_id, type, payload, status, priority) VALUES ('pcteste1', 'd7c0e8c8-cd1d-4801-8516-c229f98ec4d5', '3adc67e6-8908-4d98-b85b-5e93be4673a1', 'setup_dns_filter', '{"dns_servers": ["1.1.1.2", "1.0.0.2"], "reason": "retest-after-rsa-fix"}'::jsonb, 'queued', 5)
