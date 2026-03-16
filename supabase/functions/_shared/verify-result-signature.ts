@@ -288,10 +288,10 @@ async function importEd25519PublicKey(keyData: string): Promise<CryptoKey> {
 }
 
 /**
- * Imports an RSA public key from PEM or raw Base64 format
- * Used for PS 5.1 agents that fall back to RSA-2048 when ECDSA PKCS8 export is unavailable
+ * Imports an RSA public key from PEM, SPKI Base64, or CSP blob format
+ * CSP blob: Microsoft CryptoAPI format from ExportCspBlob($false) — needs conversion to SPKI
  */
-async function importRsaPublicKey(keyData: string): Promise<CryptoKey> {
+async function importRsaPublicKey(keyData: string, isCspBlob = false): Promise<CryptoKey> {
   let keyBytes: ArrayBuffer
   
   if (keyData.includes('-----BEGIN PUBLIC KEY-----')) {
@@ -302,6 +302,11 @@ async function importRsaPublicKey(keyData: string): Promise<CryptoKey> {
     keyBytes = base64ToArrayBuffer(pemContent)
   } else {
     keyBytes = base64ToArrayBuffer(keyData)
+  }
+
+  // CSP blob: convert to SPKI format for Web Crypto API
+  if (isCspBlob) {
+    keyBytes = cspBlobToSpki(new Uint8Array(keyBytes))
   }
   
   return await crypto.subtle.importKey(
@@ -314,6 +319,80 @@ async function importRsaPublicKey(keyData: string): Promise<CryptoKey> {
     false,
     ['verify']
   )
+}
+
+/**
+ * Converts a Microsoft CSP PUBLICKEYBLOB to SPKI DER format
+ * CSP format: BLOBHEADER(8) + RSAPUBKEY(12) + modulus(n) + exponent(already in RSAPUBKEY)
+ * Reference: https://docs.microsoft.com/en-us/windows/win32/seccrypto/base-provider-key-blobs
+ */
+function cspBlobToSpki(cspBlob: Uint8Array): ArrayBuffer {
+  // BLOBHEADER: 8 bytes (bType, bVersion, reserved, aiKeyAlg)
+  // RSAPUBKEY: 12 bytes (magic "RSA1", bitlen, pubexp)
+  const bitLen = new DataView(cspBlob.buffer, cspBlob.byteOffset + 12, 4).getUint32(0, true)
+  const modulusLen = bitLen / 8
+  
+  // Public exponent: 4 bytes at offset 16 (little-endian)
+  const pubExpLE = cspBlob.slice(16, 20)
+  // Convert to big-endian and trim leading zeros
+  const pubExpBE: number[] = []
+  for (let i = pubExpLE.length - 1; i >= 0; i--) {
+    if (pubExpBE.length > 0 || pubExpLE[i] !== 0) pubExpBE.push(pubExpLE[i])
+  }
+  if (pubExpBE.length === 0) pubExpBE.push(0)
+  
+  // Modulus: modulusLen bytes at offset 20 (little-endian) → reverse to big-endian
+  const modulusLE = cspBlob.slice(20, 20 + modulusLen)
+  const modulusBE = new Uint8Array(modulusLen)
+  for (let i = 0; i < modulusLen; i++) {
+    modulusBE[i] = modulusLE[modulusLen - 1 - i]
+  }
+  
+  // Prepend 0x00 if high bit is set (to ensure positive integer in DER)
+  const modPadded = modulusBE[0] & 0x80 ? new Uint8Array([0, ...modulusBE]) : modulusBE
+  const expBytes = new Uint8Array(pubExpBE)
+  
+  // Build DER RSAPublicKey SEQUENCE { modulus INTEGER, exponent INTEGER }
+  const modInteger = derInteger(modPadded)
+  const expInteger = derInteger(expBytes)
+  const rsaPublicKey = derSequence(new Uint8Array([...modInteger, ...expInteger]))
+  
+  // Wrap in BIT STRING (prepend 0x00 unused bits)
+  const bitString = new Uint8Array([0, ...rsaPublicKey])
+  
+  // AlgorithmIdentifier for RSA: OID 1.2.840.113549.1.1.1 + NULL
+  const rsaOid = new Uint8Array([0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01])
+  const nullParam = new Uint8Array([0x05, 0x00])
+  const algorithmId = derSequence(new Uint8Array([...rsaOid, ...nullParam]))
+  
+  // SubjectPublicKeyInfo SEQUENCE { algorithmId, BIT STRING }
+  const bitStringDer = derTag(0x03, bitString)
+  const spki = derSequence(new Uint8Array([...algorithmId, ...bitStringDer]))
+  
+  return spki.buffer
+}
+
+function derTag(tag: number, content: Uint8Array): Uint8Array {
+  const lenBytes = derLength(content.length)
+  const result = new Uint8Array(1 + lenBytes.length + content.length)
+  result[0] = tag
+  result.set(lenBytes, 1)
+  result.set(content, 1 + lenBytes.length)
+  return result
+}
+
+function derInteger(value: Uint8Array): Uint8Array {
+  return derTag(0x02, value)
+}
+
+function derSequence(content: Uint8Array): Uint8Array {
+  return derTag(0x30, content)
+}
+
+function derLength(len: number): Uint8Array {
+  if (len < 128) return new Uint8Array([len])
+  if (len < 256) return new Uint8Array([0x81, len])
+  return new Uint8Array([0x82, (len >> 8) & 0xff, len & 0xff])
 }
 
 /**
