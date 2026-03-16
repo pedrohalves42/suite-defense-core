@@ -467,10 +467,10 @@ verify_jwt = false
 verify_jwt = false
 schedule = "0 3 * * *"
 
-# === Blocked Access Detection (every 12 hours) COST-OPT-V5 ===
+# === Blocked Access Detection (daily at 4 AM) COST-OPT-V6 ===
 [functions.detect-blocked-attempts]
 verify_jwt = false
-schedule = "0 */12 * * *"
+schedule = "0 4 * * *"
 
 # === V4.0 Software Risk Engine ===
 # (Moved to line 107-108 with verify_jwt = false for cron access)
