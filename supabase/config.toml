@@ -521,6 +521,11 @@ verify_jwt = true
 [functions.auto-cleanup-jobs]
 verify_jwt = false
 
+# === System Maintenance (daily at 3 AM UTC) COST-OPT-V6 - consolidated cleanup ===
+[functions.system-maintenance]
+verify_jwt = false
+schedule = "0 3 * * *"
+
 # === Storage Bucket Sync (fallback de emergência) ===
 [functions.sync-storage-bucket]
 verify_jwt = false

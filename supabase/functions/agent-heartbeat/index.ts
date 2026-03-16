@@ -1,11 +1,11 @@
 /**
- * Agent Heartbeat Proxy - v4.0.7 Compatibility + Force Update
+ * Agent Heartbeat Proxy - v4.0.7 Compatibility + Force Update + COST-OPT-V6 Job Delivery
+ * 
+ * COST-OPT-V6: Now includes pending jobs in heartbeat response to eliminate
+ * separate poll-jobs calls. Agent processes jobs from heartbeat response.
  * 
  * This Edge Function acts as a proxy/alias for the main heartbeat endpoint.
  * VIKTOR RECOVERY: Now includes force_update logic to update v4.0.6-SAFE-ROLLBACK agents
- * 
- * Purpose: Allow agents with v4.0.6 (which incorrectly call /agent-heartbeat) 
- * to send heartbeats AND receive force updates directly in response.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
@@ -18,6 +18,7 @@ import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-
 import { hashToken } from '../_shared/token-hash.ts'
 import { encodeBase64 } from "https://deno.land/std@0.208.0/encoding/base64.ts"
 import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts'
+import { signJob } from '../_shared/crypto-utils.ts'
 
 Deno.serve(async (req) => {
   // CORS preflight
