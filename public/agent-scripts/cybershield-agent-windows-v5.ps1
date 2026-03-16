@@ -460,6 +460,7 @@ $Global:DiskCleanupThresholdPercent = 95
 $Global:HighCpuThresholdPercent = 90
 $Global:MaxLogSizeBytes = 10MB
 $Global:JobPollIntervalSeconds = 30
+$Global:HeartbeatJobs = @()  # COST-OPT-V6: Jobs piggybacked from heartbeat response
 
 # v5.0: Auto-repair counters
 $Global:AutoRepairStats = @{
