@@ -228,10 +228,9 @@ schedule = "0 */12 * * *"
 verify_jwt = false
 schedule = "0 */12 * * *"
 
-# Network Anomalies Analysis (every 6 hours - cron mode)
+# Network Anomalies Analysis - DISABLED COST-OPT-V6 (insufficient volume for 1 agent)
 [functions.analyze-network-anomalies]
 verify_jwt = false
-schedule = "0 */6 * * *"
 
 # Production health (every 12 hours) COST-OPT-V5
 [functions.check-production-health]
