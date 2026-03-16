@@ -200,7 +200,7 @@ async function tryVerifyWithKey(
         signatureBytes,
         payloadBytes
       )
-    } else if (algorithm === 'RSA-2048-SHA256' || algorithm === 'RSA') {
+    } else if (algorithm === 'RSA-2048-SHA256' || algorithm === 'RSA' || algorithm === 'RSA-2048-CSP') {
       isValid = await crypto.subtle.verify(
         {
           name: 'RSASSA-PKCS1-v1_5'
