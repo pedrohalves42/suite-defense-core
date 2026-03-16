@@ -1,4 +1,4 @@
-import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
+// deno-lint-ignore-file
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 
