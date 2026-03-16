@@ -135,6 +135,60 @@ Deno.serve(async (req) => {
       force_update_override_safe_mode: boolean | null;
       force_update_at: string | null;
       agent_version: string | null;
+      agent_state: string | null;
+      archived_at: string | null;
+    }
+
+    // === ARCHIVED AGENT HEARTBEAT HANDLER ===
+    // If agent is archived, delegate to handle_archived_agent_heartbeat RPC
+    if (agent.agent_state === 'archived' || agent.archived_at) {
+      logger.info('[PROXY] Heartbeat from archived agent, delegating to reactivation handler', {
+        agentName: agent.agent_name,
+        agentState: agent.agent_state,
+        archivedAt: agent.archived_at,
+      })
+
+      const { data: reactivationResult, error: reactivationError } = await supabase
+        .rpc('handle_archived_agent_heartbeat', {
+          p_agent_id: agent.id,
+          p_tenant_id: agent.tenant_id,
+        })
+
+      if (reactivationError) {
+        logger.error('[PROXY] Archived agent reactivation handler failed', {
+          error: reactivationError,
+          agentName: agent.agent_name,
+        })
+      } else {
+        logger.info('[PROXY] Archived agent handler result', {
+          agentName: agent.agent_name,
+          result: reactivationResult,
+        })
+      }
+
+      const action = (reactivationResult as any)?.action || 'error'
+      if (action === 'reactivated') {
+        // Agent was reactivated, return normal heartbeat response
+        return new Response(
+          JSON.stringify({ 
+            status: 'ok', 
+            reactivated: true,
+            message: 'Agent reactivated from archived state',
+            poll_interval_seconds: 600 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        )
+      } else {
+        // Agent stays archived (15+ days), acknowledge but don't process
+        return new Response(
+          JSON.stringify({ 
+            status: 'archived', 
+            message: 'Agent is archived. Manual approval required for reactivation.',
+            poll_interval_seconds: 3600 // Check back in 1 hour
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        )
+      }
     }
     
     // HMAC verification
