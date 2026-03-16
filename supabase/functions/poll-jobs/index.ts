@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
         .eq('token_hash', tokenHash)
       
       return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 300 }), // offline recovery - aligned with heartbeat
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // COST-OPT-V6
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
@@ -257,7 +257,7 @@ Deno.serve(async (req) => {
         maxLimit: MAX_PENDING_JOBS 
       })
       return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 300 }), // backlog limit - aligned with heartbeat
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // COST-OPT-V6
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
@@ -300,7 +300,7 @@ Deno.serve(async (req) => {
         agentId: token.agent_id
       })
       return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 300 }), // claim error - normal poll
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // COST-OPT-V6
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
@@ -350,7 +350,7 @@ Deno.serve(async (req) => {
     if (validJobs.length === 0) {
       logger.debug('No valid jobs to return', { agentName: agent.agent_name })
       return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 300 }), // no jobs - aligned with heartbeat (was 600)
+        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // COST-OPT-V6
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
@@ -481,7 +481,7 @@ Deno.serve(async (req) => {
     // Novo formato encapsulado para agentes modernos
     const responsePayload = {
       jobs: jobsResponse,
-      poll_interval_seconds: 300, // COST-OPT v4: 120s → 300s (5min when jobs exist)
+      poll_interval_seconds: 600, // COST-OPT-V6: 300s → 600s (jobs now come via heartbeat)
     };
     return new Response(
       JSON.stringify(responsePayload),

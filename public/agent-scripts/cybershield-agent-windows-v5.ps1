@@ -460,6 +460,7 @@ $Global:DiskCleanupThresholdPercent = 95
 $Global:HighCpuThresholdPercent = 90
 $Global:MaxLogSizeBytes = 10MB
 $Global:JobPollIntervalSeconds = 30
+$Global:HeartbeatJobs = @()  # COST-OPT-V6: Jobs piggybacked from heartbeat response
 
 # v5.0: Auto-repair counters
 $Global:AutoRepairStats = @{
@@ -5001,6 +5002,17 @@ function Send-Heartbeat {
                     }
 
                     # ============================================
+                    # COST-OPT-V6: PROCESS JOBS FROM HEARTBEAT RESPONSE
+                    # Jobs are now piggybacked on heartbeat to eliminate poll-jobs calls
+                    # ============================================
+                    if ($response.jobs -and $response.jobs.Count -gt 0) {
+                        Write-Log "[HEARTBEAT] Received $($response.jobs.Count) job(s) piggybacked on heartbeat" "INFO"
+                        $Global:HeartbeatJobs = @($response.jobs)
+                    } else {
+                        $Global:HeartbeatJobs = @()
+                    }
+                    
+                    # ============================================
                     # FORCE UPDATE VIA HEARTBEAT RESPONSE
                     # Ported from v4 - bypasses job system completely
                     # ============================================
@@ -5985,9 +5997,19 @@ while ($true) {
         
         # ============================================
         # JOB POLLING AND EXECUTION
+        # COST-OPT-V6: Jobs come from heartbeat response first, poll-jobs as fallback
         # ============================================
         if (($now - $lastJobPoll).TotalSeconds -ge $Global:JobPollIntervalSeconds -and $networkOk) {
-            $jobs = Poll-Jobs
+            # COST-OPT-V6: Use jobs from heartbeat if available, otherwise poll
+            $jobs = @()
+            if ($Global:HeartbeatJobs -and $Global:HeartbeatJobs.Count -gt 0) {
+                $jobs = $Global:HeartbeatJobs
+                $Global:HeartbeatJobs = @()
+                Write-Log "[JOB] Processing $($jobs.Count) job(s) from heartbeat response" "DEBUG"
+            } elseif (($now - $lastJobPoll).TotalSeconds -ge ($Global:JobPollIntervalSeconds * 2)) {
+                # Only do standalone poll if 2x interval has passed (safety net)
+                $jobs = Poll-Jobs
+            }
             
             foreach ($job in $jobs) {
                 $jobType = if ($job.type) { $job.type } elseif ($job.job_type) { $job.job_type } else { "unknown" }
@@ -5996,8 +6018,6 @@ while ($true) {
                 $recoveryJobTypes = @("update_agent", "force_update", "reinstall_agent")
                 if ($Global:SecurityDegraded -and $jobType -notin $recoveryJobTypes) {
                     Write-Log "[SECURITY] BLOCKED job '$jobType' - SecurityDegraded=TRUE (only recovery jobs allowed)" "WARN"
-                    # Submit a rejection result so job doesn't stay in 'delivered' forever
-                    # BUG 6 fix: Include all mandatory fields for Submit-JobResult
                     Submit-JobResult -Job $job -Result @{
                         success = $false
                         status = "failed"

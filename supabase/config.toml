@@ -177,14 +177,13 @@ verify_jwt = true
 [functions.diagnose-agent]
 verify_jwt = true
 
-# Build cleanup (every 12 hours) COST-OPT-V5
+# Build cleanup - DISABLED COST-OPT-V6 (covered by system-maintenance)
 [functions.cleanup-stuck-builds]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
+# Build watchdog - DISABLED COST-OPT-V6 (covered by system-maintenance)
 [functions.build-watchdog]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
 [functions.get-agent-dashboard-data]
 verify_jwt = true
@@ -207,33 +206,31 @@ verify_jwt = true
 [functions.api-tenant-stats]
 verify_jwt = true
 
-# === Monitoring Functions (every 6 hours) COST-OPT-V5 ===
+# === Monitoring Functions (every 12 hours) COST-OPT-V6 ===
 [functions.monitor-agent-health]
 verify_jwt = false
-schedule = "0 */6 * * *"
+schedule = "0 */12 * * *"
 
 [functions.monitor-thresholds]
 verify_jwt = false
 
-# P1-01: Stuck Jobs Alert (every 12 hours) COST-OPT-V5
+# P1-01: Stuck Jobs Alert - DISABLED COST-OPT-V6 (redundant with cleanup-stuck-jobs)
 [functions.check-stuck-jobs]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
-# P1-01: Cleanup stuck jobs (every 6 hours) COST-OPT-V5
+# P1-01: Cleanup stuck jobs (every 12 hours) COST-OPT-V6
 [functions.cleanup-stuck-jobs]
 verify_jwt = false
-schedule = "0 */6 * * *"
+schedule = "0 */12 * * *"
 
 # P1-02: Cleanup jobs for offline agents (every 12 hours) COST-OPT-V5
 [functions.cleanup-offline-agents-jobs]
 verify_jwt = false
 schedule = "0 */12 * * *"
 
-# Network Anomalies Analysis (every 6 hours - cron mode)
+# Network Anomalies Analysis - DISABLED COST-OPT-V6 (insufficient volume for 1 agent)
 [functions.analyze-network-anomalies]
 verify_jwt = false
-schedule = "0 */6 * * *"
 
 # Production health (every 12 hours) COST-OPT-V5
 [functions.check-production-health]
@@ -343,10 +340,9 @@ verify_jwt = false
 verify_jwt = false
 schedule = "0 */12 * * *"
 
-# Monitor stuck agents (every 6 hours) COST-OPT-V5
+# Monitor stuck agents - DISABLED COST-OPT-V6 (visible in dashboard for 1 agent)
 [functions.monitor-stuck-agents]
 verify_jwt = false
-schedule = "0 */6 * * *"
 
 # === FASE 3+4: Agent Release Management ===
 [functions.register-agent-release]
@@ -357,7 +353,7 @@ verify_jwt = true
 
 [functions.process-agent-updates]
 verify_jwt = false
-schedule = "0 */6 * * *"
+schedule = "0 */12 * * *"
 
 # === Security Features v3.10.0 ===
 [functions.submit-software-inventory]
@@ -426,9 +422,9 @@ verify_jwt = true
 [functions.security-alert-dispatcher]
 verify_jwt = false
 
+# security-cleanup-cron - DISABLED COST-OPT-V6 (covered by system-maintenance)
 [functions.security-cleanup-cron]
 verify_jwt = false
-schedule = "0 3 * * *"
 
 [functions.send-security-notification]
 verify_jwt = false
@@ -471,10 +467,10 @@ verify_jwt = false
 verify_jwt = false
 schedule = "0 3 * * *"
 
-# === Blocked Access Detection (every 12 hours) COST-OPT-V5 ===
+# === Blocked Access Detection (daily at 4 AM) COST-OPT-V6 ===
 [functions.detect-blocked-attempts]
 verify_jwt = false
-schedule = "0 */12 * * *"
+schedule = "0 4 * * *"
 
 # === V4.0 Software Risk Engine ===
 # (Moved to line 107-108 with verify_jwt = false for cron access)
@@ -521,10 +517,14 @@ verify_jwt = true
 [functions.execute-playbook-action]
 verify_jwt = true
 
-# === Auto Cleanup Jobs (every 6 hours) COST-OPT-V5 ===
+# === Auto Cleanup Jobs - DISABLED COST-OPT-V6 (redundant with system-maintenance) ===
 [functions.auto-cleanup-jobs]
 verify_jwt = false
-schedule = "0 */6 * * *"
+
+# === System Maintenance (daily at 3 AM UTC) COST-OPT-V6 - consolidated cleanup ===
+[functions.system-maintenance]
+verify_jwt = false
+schedule = "0 3 * * *"
 
 # === Storage Bucket Sync (fallback de emergência) ===
 [functions.sync-storage-bucket]
@@ -542,15 +542,13 @@ verify_jwt = true
 [functions.register-agent-key]
 verify_jwt = false
 
-# === FASE 1: Autonomous SAFE_MODE (every 6 hours) COST-OPT-V5 ===
+# === FASE 1: Autonomous SAFE_MODE - DISABLED COST-OPT-V6 (unnecessary for small fleet) ===
 [functions.autonomous-safe-mode]
 verify_jwt = false
-schedule = "0 */6 * * *"
 
-# === Watchdog Non-Execution Detection (every 6 hours) COST-OPT-V5 ===
+# === Watchdog Non-Execution Detection - DISABLED COST-OPT-V6 (unnecessary for small fleet) ===
 [functions.watchdog-non-execution]
 verify_jwt = false
-schedule = "0 */6 * * *"
 
 # === Executive Report Generator - DISABLED schedule COST-OPT-V5 ===
 [functions.generate-executive-report]
@@ -589,30 +587,27 @@ verify_jwt = true
 [functions.action-center-feed]
 verify_jwt = false
 
-# === Invoke Scheduled Jobs (every 15 minutes) COST-OPT-V2 ===
+# === Invoke Scheduled Jobs (every 2 hours) COST-OPT-V6 ===
 [functions.invoke-scheduled-jobs]
 verify_jwt = false
-schedule = "*/30 * * * *"
+schedule = "0 */2 * * *"
 
-# === P0: Cleanup Stale Playbooks (every 12 hours) COST-OPT-V5 ===
+# === P0: Cleanup Stale Playbooks - DISABLED COST-OPT-V6 (covered by system-maintenance) ===
 [functions.cleanup-stale-playbooks]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
-# === P0: Process Failed Jobs (every 6 hours) COST-OPT-V5 ===
+# === P0: Process Failed Jobs (every 12 hours) COST-OPT-V6 ===
 [functions.process-failed-jobs]
 verify_jwt = false
-schedule = "0 */6 * * *"
-
-# === P1: Cleanup Stale Reports (every 12 hours) COST-OPT-V5 ===
-[functions.cleanup-stale-reports]
-verify_jwt = false
 schedule = "0 */12 * * *"
 
-# === P1: Job Health Monitor (every 6 hours) COST-OPT-V5 ===
+# === P1: Cleanup Stale Reports - DISABLED COST-OPT-V6 (covered by system-maintenance) ===
+[functions.cleanup-stale-reports]
+verify_jwt = false
+
+# === P1: Job Health Monitor - DISABLED COST-OPT-V6 (unnecessary for small fleet) ===
 [functions.job-health-monitor]
 verify_jwt = false
-schedule = "0 */6 * * *"
 
 # === AI Execute Solution ===
 [functions.ai-execute-solution]
