@@ -103,8 +103,21 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Apply runtime hotfix for legacy Windows crypto environments (non-breaking, self-healing)
+    // Detect and decode base64-encoded script_content from DB
     let releaseScriptContent = release.script_content;
+    if (releaseScriptContent && !releaseScriptContent.includes('[CmdletBinding()]') && !releaseScriptContent.startsWith('<#')) {
+      try {
+        const decoded = atob(releaseScriptContent);
+        if (decoded.includes('[CmdletBinding()]') || decoded.startsWith('<#')) {
+          console.log(`[${requestId}] Decoded base64 script_content (${releaseScriptContent.length} -> ${decoded.length} chars)`);
+          releaseScriptContent = decoded;
+        }
+      } catch {
+        // Not base64, use as-is
+      }
+    }
+
+    // Apply runtime hotfix for legacy Windows crypto environments (non-breaking, self-healing)
     if (platform === 'windows' && releaseScriptContent) {
       const hotfix = applyWindowsScriptHotfix(releaseScriptContent);
       if (hotfix.changed) {
