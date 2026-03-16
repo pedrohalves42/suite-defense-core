@@ -4116,8 +4116,8 @@ function Get-ProcessAnomalies {
         $errMsg = $_.Exception.Message
         Write-Log "[BASELINE] Failed to detect process anomalies: $errMsg" "WARN"
 
-        if ($errMsg -like "*first_seen*") {
-            Write-Log "[BASELINE] Corrupted baseline detected (duplicate first_seen). Rebuilding baseline..." "WARN"
+        if ($errMsg -like "*já foi adicionado*" -or $errMsg -like "*already been added*" -or $errMsg -like "*first_seen*" -or $errMsg -like "*name*") {
+            Write-Log "[BASELINE] Corrupted baseline detected (duplicate key). Rebuilding baseline..." "WARN"
             try {
                 if (Test-Path $Global:ProcessBaselinePath) {
                     $backupPath = "$($Global:ProcessBaselinePath).corrupt.$((Get-Date).ToString('yyyyMMddHHmmss'))"
@@ -4195,8 +4195,10 @@ function Invoke-SyncBlockedWebsites {
         
         # Get URLs from payload or fetch from server
         $urls = @()
-        if ($Payload.urls) {
-            $urls = @($Payload.urls)
+        $payloadUrls = $null
+        if ($Payload -is [hashtable]) { $payloadUrls = $Payload["urls"] } elseif ($Payload.PSObject.Properties["urls"]) { $payloadUrls = $Payload.urls }
+        if ($payloadUrls) {
+            $urls = @($payloadUrls)
         } else {
             # Fetch from server
             $result = Invoke-SecureRequest `

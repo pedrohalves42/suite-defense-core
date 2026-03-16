@@ -156,9 +156,9 @@ Deno.serve(async (req) => {
     const algorithm = payload.algorithm || 'ECDSA-P256-SHA256'
     
     // Validate algorithm
-    if (!['ECDSA-P256-SHA256', 'Ed25519', 'RSA-2048-SHA256', 'RSA-2048-XML'].includes(algorithm)) {
+    if (!['ECDSA-P256-SHA256', 'Ed25519', 'RSA-2048-SHA256', 'RSA-2048-XML', 'RSA-2048-CSP'].includes(algorithm)) {
       return new Response(
-        JSON.stringify({ error: 'algorithm must be ECDSA-P256-SHA256, Ed25519, RSA-2048-SHA256, or RSA-2048-XML' }),
+        JSON.stringify({ error: 'algorithm must be ECDSA-P256-SHA256, Ed25519, RSA-2048-SHA256, RSA-2048-XML, or RSA-2048-CSP' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
