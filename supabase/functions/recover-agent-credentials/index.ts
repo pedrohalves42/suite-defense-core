@@ -173,6 +173,7 @@ Deno.serve(async (req) => {
       .from('agent_tokens')
       .insert({
         agent_id: agent.id,
+        tenant_id: agent.tenant_id,
         token_hash: tokenHash,
         token_prefix: tokenPrefix,
         expires_at: tokenExpiresAt,
