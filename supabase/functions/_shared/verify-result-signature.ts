@@ -178,8 +178,8 @@ async function tryVerifyWithKey(
       cryptoKey = await importEcdsaPublicKey(publicKeyPem)
     } else if (algorithm === 'Ed25519') {
       cryptoKey = await importEd25519PublicKey(publicKeyPem)
-    } else if (algorithm === 'RSA-2048-SHA256' || algorithm === 'RSA') {
-      cryptoKey = await importRsaPublicKey(publicKeyPem)
+    } else if (algorithm === 'RSA-2048-SHA256' || algorithm === 'RSA' || algorithm === 'RSA-2048-CSP') {
+      cryptoKey = await importRsaPublicKey(publicKeyPem, algorithm === 'RSA-2048-CSP')
     } else {
       return { valid: false, error: `Unsupported algorithm: ${algorithm}` }
     }
