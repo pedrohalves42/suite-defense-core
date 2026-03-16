@@ -2932,7 +2932,7 @@ function Invoke-CollectWebActivity {
                 if ([DateTime]::UtcNow -gt $deadline) { break }
                 
                 try {
-                    $historyPath = Join-Path $userPath $bp.path
+                    $historyPath = if ($bp.absolute) { $bp.path } else { Join-Path $userPath $bp.path }
                     if (-not (Test-Path $historyPath)) { continue }
                     
                     $tempPath = "$env:TEMP\$($bp.browser)_history_$(Get-Random).db"
