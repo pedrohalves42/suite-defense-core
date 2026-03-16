@@ -4663,6 +4663,53 @@ function Apply-ForcedUpdate {
         }
         
         Write-Log "[FORCE UPDATE] Version: $targetVersion, Reason: $reason" "INFO"
+
+        $installDir = "C:\CyberShield"
+        $currentVersionNorm = if ($Global:AgentVersion) { $Global:AgentVersion.ToString().Trim().ToLower() } else { "" }
+        $targetVersionNorm = $targetVersion.ToString().Trim().ToLower()
+
+        if ($currentVersionNorm -eq $targetVersionNorm) {
+            $currentScriptCandidates = @(
+                $PSCommandPath,
+                (Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"),
+                (Join-Path $installDir "cybershield-agent-v5.ps1"),
+                (Join-Path $installDir "cybershield-agent-v4.ps1"),
+                (Join-Path $installDir "cybershield-agent.ps1")
+            ) | Where-Object { $_ }
+
+            foreach ($candidatePath in $currentScriptCandidates) {
+                if (-not (Test-Path $candidatePath)) { continue }
+
+                try {
+                    $installedHash = (Get-FileHash -Path $candidatePath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+                    if ($installedHash -eq $expectedHash.ToLower()) {
+                        Write-Log "[FORCE UPDATE] Mesmo payload ja instalado para a versao $targetVersion. Limpando pendencia sem reaplicar." "WARN"
+                        try {
+                            $confirmResult = Invoke-SecureRequest `
+                                -Path "/functions/v1/confirm-force-update" `
+                                -Method "POST" `
+                                -Body @{
+                                    new_version = $targetVersion
+                                    old_version = $Global:AgentVersion
+                                } `
+                                -TimeoutSec 10
+
+                            if ($confirmResult.Success) {
+                                Write-Log "[FORCE UPDATE] Confirmacao idempotente enviada ao backend" "SUCCESS"
+                            } else {
+                                Write-Log "[FORCE UPDATE] Confirmacao idempotente falhou: $($confirmResult.Error)" "WARN"
+                            }
+                        } catch {
+                            Write-Log "[FORCE UPDATE] Falha ao confirmar estado idempotente (nao critico): $($_.Exception.Message)" "WARN"
+                        }
+
+                        return @{ success = $true; skipped = $true; message = "Same version and payload already installed" }
+                    }
+                } catch {
+                    Write-Log "[FORCE UPDATE] Falha ao calcular hash do script atual para loop guard: $($_.Exception.Message)" "WARN"
+                }
+            }
+        }
         
         # SAFE MODE CHECK
         $rollbackState = Get-RollbackState
@@ -4681,7 +4728,6 @@ function Apply-ForcedUpdate {
         }
         
         # BUG FIX #5: Create temp file in SAME directory as target for atomic mv (same filesystem)
-        $installDir = "C:\CyberShield"
         $tempScript = Join-Path $installDir "cybershield-update-temp-$([Guid]::NewGuid().ToString('N').Substring(0,8)).ps1"
         
         # BUG FIX #3: Base64 decode with try/catch for invalid content
