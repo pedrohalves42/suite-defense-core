@@ -481,7 +481,7 @@ Deno.serve(async (req) => {
     // Novo formato encapsulado para agentes modernos
     const responsePayload = {
       jobs: jobsResponse,
-      poll_interval_seconds: 300, // COST-OPT v4: 120s → 300s (5min when jobs exist)
+      poll_interval_seconds: 600, // COST-OPT-V6: 300s → 600s (jobs now come via heartbeat)
     };
     return new Response(
       JSON.stringify(responsePayload),

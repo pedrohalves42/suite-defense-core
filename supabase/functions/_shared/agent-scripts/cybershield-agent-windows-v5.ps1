@@ -453,7 +453,6 @@ $Global:AutoRepairLogPath = Join-Path -Path $dataDir -ChildPath "auto_repair.log
 $Global:KeyStorePath = Join-Path -Path $dataDir -ChildPath "agent_keys.json"
 $Global:StatePath = Join-Path -Path $dataDir -ChildPath "agent_state.json"
 $Global:DnsBlocklistPath = Join-Path -Path $dataDir -ChildPath "dns_blocklist.json"
-$Global:PendingForceUpdateConfirmPath = Join-Path -Path $dataDir -ChildPath "pending_force_update_confirm.json"
 
 # Intervals
 $Global:PollIntervalSeconds = 60
@@ -461,6 +460,7 @@ $Global:DiskCleanupThresholdPercent = 95
 $Global:HighCpuThresholdPercent = 90
 $Global:MaxLogSizeBytes = 10MB
 $Global:JobPollIntervalSeconds = 30
+$Global:HeartbeatJobs = @()  # COST-OPT-V6: Jobs piggybacked from heartbeat response
 
 # v5.0: Auto-repair counters
 $Global:AutoRepairStats = @{
@@ -1555,101 +1555,58 @@ function Initialize-AgentKeys {
             }
         }
         
-        # Export private key (PKCS#8) - wrapped in try/catch for .NET 4.x compatibility
-        try {
-            $privateKeyBytes = $ecdsa.ExportPkcs8PrivateKey()
-            $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
-            
-            # Export public key (SubjectPublicKeyInfo)
-            $publicKeyBytes = $ecdsa.ExportSubjectPublicKeyInfo()
-            $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
+        # Export private key (PKCS#8)
+        $privateKeyBytes = $ecdsa.ExportPkcs8PrivateKey()
+        $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
+        
+        # Export public key (SubjectPublicKeyInfo)
+        $publicKeyBytes = $ecdsa.ExportSubjectPublicKeyInfo()
+        $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
 
-            # Calculate fingerprint (SHA256 of public key)
-            $sha256 = [System.Security.Cryptography.SHA256]::Create()
-            $fingerprintBytes = $sha256.ComputeHash($publicKeyBytes)
-            $fingerprint = [BitConverter]::ToString($fingerprintBytes).Replace("-", "").ToLower()
-            
-            # Save keys locally
-            $keyData = @{
-                private_key = $privateKeyBase64
-                public_key = $publicKeyBase64
-                fingerprint = $fingerprint
-                algorithm = "ECDSA-P256-SHA256"
-                version = 1
-                created_at = (Get-Date).ToString("o")
-            }
-            
-            $keyData | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
-            
-            # Protect key file (SYSTEM and Administrators only)
-            try {
-                $acl = Get-Acl $Global:KeyStorePath
-                $acl.SetAccessRuleProtection($true, $false)
-                
-                $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                    (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]), "FullControl", "Allow")
-                $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                    (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")).Translate([System.Security.Principal.NTAccount]), "FullControl", "Allow")
-                
-                $acl.AddAccessRule($adminRule)
-                $acl.AddAccessRule($systemRule)
-                Set-Acl $Global:KeyStorePath $acl
-            } catch {
-                Write-Log "[KEYS] Warning: Could not restrict key file permissions" "WARN"
-            }
-            
-            $Global:AgentPrivateKey = $privateKeyBase64
-            $Global:AgentPublicKey = $publicKeyBase64
-            $Global:KeyFingerprint = $fingerprint
-            $Global:KeyVersion = 1
-            $Global:AgentSigningAlgorithm = "ECDSA-P256-SHA256"
-            
-            Write-Log "[KEYS] Generated new ECDSA keypair. Fingerprint: $($fingerprint.Substring(0, 16))..." "SUCCESS"
-            
-            if ($null -ne $ecdsa) { $ecdsa.Dispose() } <# HOTFIX-NULL-ECDSA-GUARD #>
-            return $true
-        } catch {
-            Write-Log "[KEYS] ECDSA ExportPkcs8 not available (.NET 4.x), falling back to RSACryptoServiceProvider..." "WARN"
-            if ($null -ne $ecdsa) { try { $ecdsa.Dispose() } catch { } }
-            
-            # RSACryptoServiceProvider fallback - works on ALL .NET Framework versions
-            try {
-                $rsaCsp = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
-                $cspPrivate = $rsaCsp.ExportCspBlob($true)
-                $cspPublic = $rsaCsp.ExportCspBlob($false)
-                $privB64 = [Convert]::ToBase64String($cspPrivate)
-                $pubB64 = [Convert]::ToBase64String($cspPublic)
-                
-                $sha256Csp = [System.Security.Cryptography.SHA256]::Create()
-                $fpBytesCsp = $sha256Csp.ComputeHash($cspPublic)
-                $fpCsp = [BitConverter]::ToString($fpBytesCsp).Replace("-", "").ToLower()
-                $sha256Csp.Dispose()
-                
-                $keyDataCsp = @{
-                    private_key = $privB64
-                    public_key = $pubB64
-                    fingerprint = $fpCsp
-                    algorithm = "RSA-2048-CSP"
-                    version = 1
-                    created_at = (Get-Date).ToString("o")
-                }
-                $keyDataCsp | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
-                
-                $Global:AgentPrivateKey = $privB64
-                $Global:AgentPublicKey = $pubB64
-                $Global:KeyFingerprint = $fpCsp
-                $Global:KeyVersion = 1
-                $Global:AgentSigningAlgorithm = "RSA-2048-CSP"
-                $Global:AgentRsaKey = $rsaCsp  # Keep RSA object for direct signing
-                
-                Write-Log "[KEYS] RSACryptoServiceProvider-2048 fallback generated. Fingerprint: $($fpCsp.Substring(0, 16))..." "SUCCESS"
-                return $true
-            } catch {
-                Write-Log "[KEYS] RSACryptoServiceProvider fallback failed: $($_.Exception.Message)" "ERROR"
-                Write-Log "[KEYS] All crypto attempts exhausted - signing DISABLED" "ERROR"
-                return $false
-            }
+        # Calculate fingerprint (SHA256 of public key)
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        $fingerprintBytes = $sha256.ComputeHash($publicKeyBytes)
+        $fingerprint = [BitConverter]::ToString($fingerprintBytes).Replace("-", "").ToLower()
+        
+        # Save keys locally
+        $keyData = @{
+            private_key = $privateKeyBase64
+            public_key = $publicKeyBase64
+            fingerprint = $fingerprint
+            algorithm = "ECDSA-P256-SHA256"
+            version = 1
+            created_at = (Get-Date).ToString("o")
         }
+        
+        $keyData | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
+        
+        # Protect key file (SYSTEM and Administrators only)
+        try {
+            $acl = Get-Acl $Global:KeyStorePath
+            $acl.SetAccessRuleProtection($true, $false)
+            
+            $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]), "FullControl", "Allow")
+            $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")).Translate([System.Security.Principal.NTAccount]), "FullControl", "Allow")
+            
+            $acl.AddAccessRule($adminRule)
+            $acl.AddAccessRule($systemRule)
+            Set-Acl $Global:KeyStorePath $acl
+        } catch {
+            Write-Log "[KEYS] Warning: Could not restrict key file permissions" "WARN"
+        }
+        
+        $Global:AgentPrivateKey = $privateKeyBase64
+        $Global:AgentPublicKey = $publicKeyBase64
+        $Global:KeyFingerprint = $fingerprint
+        $Global:KeyVersion = 1
+        $Global:AgentSigningAlgorithm = "ECDSA-P256-SHA256"
+        
+        Write-Log "[KEYS] Generated new ECDSA keypair. Fingerprint: $($fingerprint.Substring(0, 16))..." "SUCCESS"
+        
+        if ($null -ne $ecdsa) { $ecdsa.Dispose() } <# HOTFIX-NULL-ECDSA-GUARD #>
+        return $true
         
     } catch {
         Write-Log "[KEYS] Failed to initialize keys: $($_.Exception.Message)" "ERROR"
@@ -1737,19 +1694,9 @@ function Invoke-SignResult {
     )
     
     try {
-        if (-not $Global:AgentPrivateKey -and -not $Global:AgentRsaKey) {
+        if (-not $Global:AgentPrivateKey) {
             Write-Log "[SIGN] No private key available for signing" "ERROR"
             return $null
-        }
-        
-        # RSA-2048-CSP direct signing path (when ECDSA export failed, RSA object is in memory)
-        if ($Global:AgentSigningAlgorithm -eq "RSA-2048-CSP" -and $Global:AgentRsaKey) {
-            $canonicalPayload = "$ExecutionId`:$JobId`:$Status`:$OutputHash`:$FinishedAt"
-            $payloadBytesRsa = [System.Text.Encoding]::UTF8.GetBytes($canonicalPayload)
-            $signatureBytesRsa = $Global:AgentRsaKey.SignData($payloadBytesRsa, "SHA256")
-            $signatureRsa = [Convert]::ToBase64String($signatureBytesRsa)
-            Write-Log "[SIGN] Signed result for execution $ExecutionId using RSA-2048-CSP" "DEBUG"
-            return $signatureRsa
         }
 
         $algorithm = if ($Global:AgentSigningAlgorithm) { $Global:AgentSigningAlgorithm } else { "ECDSA-P256-SHA256" }
@@ -2208,15 +2155,6 @@ function Execute-Job {
             # v5.0.14: Backup Status Collection
             "collect_backup_status" {
                 $output = Invoke-CollectBackupStatus -Payload $Job.payload
-            }
-            # v5.0.14: DNS Filter Setup/Remove
-            "setup_dns_filter" {
-                $output = Invoke-SyncBlockedWebsites -Payload $Job.payload
-                Write-Log "[JOB] setup_dns_filter handled via Invoke-SyncBlockedWebsites" "INFO"
-            }
-            "remove_dns_filter" {
-                $output = @{ success = $true; message = "DNS filter removed"; timestamp = (Get-Date).ToString("o") }
-                Write-Log "[JOB] remove_dns_filter completed" "INFO"
             }
             default {
                 $job_error_message = "Unknown job type: $($Job.job_type)"
@@ -4023,15 +3961,11 @@ function Initialize-ProcessBaseline {
                 # HOTFIX-BASELINE-NORMALIZE-SAVE: Normalize all entries to hashtables to avoid PS 5.1 mixed-type serialization issues
                 $normalizedBaseline = @()
                 foreach ($be in $loadedBaseline) {
-                    try {
-                        $h = [ordered]@{}
-                        $h["name"]        = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
-                        $h["company"]     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
-                        $h["description"] = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
-                        $h["first_seen"]  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
-                        $normalizedBaseline += $h
-                    } catch {
-                        # Skip corrupt entry silently (PS 5.1 duplicate key edge case)
+                    $normalizedBaseline += [ordered]@{
+                        name        = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
+                        company     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
+                        description = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
+                        first_seen  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
                     }
                 }
                 $Global:ProcessBaseline = $normalizedBaseline
@@ -4160,15 +4094,11 @@ function Get-ProcessAnomalies {
             try {
                 $normalizedForSave = @()
                 foreach ($be in $Global:ProcessBaseline) {
-                    try {
-                        $h = [ordered]@{}
-                        $h["name"]        = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
-                        $h["company"]     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
-                        $h["description"] = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
-                        $h["first_seen"]  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
-                        $normalizedForSave += $h
-                    } catch {
-                        # Skip corrupt entry (PS 5.1 duplicate key edge case)
+                    $normalizedForSave += [ordered]@{
+                        name        = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
+                        company     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
+                        description = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
+                        first_seen  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
                     }
                 }
                 $normalizedForSave | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
@@ -4705,73 +4635,6 @@ function Get-SystemMetrics {
 }
 
 # ============================================
-#  FORCE UPDATE CONFIRMATION RECOVERY (v5.0.14)
-# ============================================
-function Save-PendingForceUpdateConfirmation {
-    param(
-        [Parameter(Mandatory = $true)][string]$TargetVersion,
-        [Parameter(Mandatory = $false)][string]$OldVersion,
-        [Parameter(Mandatory = $false)][string]$LastError = ""
-    )
-
-    try {
-        $pending = @{
-            target_version = $TargetVersion
-            old_version = $OldVersion
-            created_at = (Get-Date).ToString("o")
-            last_error = $LastError
-        }
-        $pending | ConvertTo-Json -Depth 5 | Out-File -FilePath $Global:PendingForceUpdateConfirmPath -Encoding UTF8 -Force
-        Write-Log "[FORCE UPDATE] Confirmacao pendente salva para retry: $TargetVersion" "WARN"
-    } catch {
-        Write-Log "[FORCE UPDATE] Falha ao persistir confirmacao pendente: $($_.Exception.Message)" "WARN"
-    }
-}
-
-function Invoke-PendingForceUpdateConfirmation {
-    try {
-        if (-not (Test-Path $Global:PendingForceUpdateConfirmPath)) {
-            return $true
-        }
-
-        $pendingRaw = Get-Content -Path $Global:PendingForceUpdateConfirmPath -Raw -ErrorAction SilentlyContinue
-        if (-not $pendingRaw) {
-            Remove-Item $Global:PendingForceUpdateConfirmPath -Force -ErrorAction SilentlyContinue
-            return $true
-        }
-
-        $pending = $pendingRaw | ConvertFrom-Json
-        $targetVersion = if ($pending -and $pending.PSObject.Properties.Match('target_version')) { [string]$pending.target_version } else { $null }
-        $oldVersion = if ($pending -and $pending.PSObject.Properties.Match('old_version')) { [string]$pending.old_version } else { $Global:AgentVersion }
-
-        if (-not $targetVersion) {
-            Remove-Item $Global:PendingForceUpdateConfirmPath -Force -ErrorAction SilentlyContinue
-            return $true
-        }
-
-        Write-Log "[FORCE UPDATE] Tentando reenviar confirmacao pendente da versao $targetVersion" "INFO"
-        $confirmResult = Invoke-SecureRequest `
-            -Path "/functions/v1/confirm-force-update" `
-            -Method "POST" `
-            -Body @{ new_version = $targetVersion; old_version = $oldVersion } `
-            -MaxRetries 3 `
-            -TimeoutSec 15
-
-        if ($confirmResult.Success) {
-            Remove-Item $Global:PendingForceUpdateConfirmPath -Force -ErrorAction SilentlyContinue
-            Write-Log "[FORCE UPDATE] Confirmacao pendente reenviada com sucesso" "SUCCESS"
-            return $true
-        }
-
-        Write-Log "[FORCE UPDATE] Confirmacao pendente ainda falhou: $($confirmResult.Error)" "WARN"
-        return $false
-    } catch {
-        Write-Log "[FORCE UPDATE] Erro no retry da confirmacao pendente: $($_.Exception.Message)" "WARN"
-        return $false
-    }
-}
-
-# ============================================
 #  FORCE UPDATE VIA HEARTBEAT (v5.0.7 - Ported from v4)
 # ============================================
 # Esta funcao:
@@ -4955,48 +4818,24 @@ function Apply-ForcedUpdate {
             method = "heartbeat_response"
         } -Severity "info"
         
-        # Confirmar no backend que force update foi aplicado (com retry resiliente)
-        $confirmSucceeded = $false
-        $confirmLastError = $null
-        $confirmMaxAttempts = 4
-
-        for ($attempt = 1; $attempt -le $confirmMaxAttempts; $attempt++) {
-            try {
-                $confirmResult = Invoke-SecureRequest `
-                    -Path "/functions/v1/confirm-force-update" `
-                    -Method "POST" `
-                    -Body @{
-                        new_version = $targetVersion
-                        old_version = $Global:AgentVersion
-                    } `
-                    -MaxRetries 2 `
-                    -TimeoutSec 15
-
-                if ($confirmResult.Success) {
-                    $confirmSucceeded = $true
-                    if (Test-Path $Global:PendingForceUpdateConfirmPath) {
-                        Remove-Item $Global:PendingForceUpdateConfirmPath -Force -ErrorAction SilentlyContinue
-                    }
-                    Write-Log "[FORCE UPDATE] Confirmacao enviada ao backend (tentativa $attempt/$confirmMaxAttempts)" "SUCCESS"
-                    break
-                }
-
-                $confirmLastError = if ($confirmResult.Error) { $confirmResult.Error } else { "unknown_error" }
-                Write-Log "[FORCE UPDATE] Confirmacao falhou (tentativa $attempt/$confirmMaxAttempts): $confirmLastError" "WARN"
-            } catch {
-                $confirmLastError = $_.Exception.Message
-                Write-Log "[FORCE UPDATE] Excecao ao confirmar (tentativa $attempt/$confirmMaxAttempts): $confirmLastError" "WARN"
+        # Confirmar no backend que force update foi aplicado
+        try {
+            $confirmResult = Invoke-SecureRequest `
+                -Path "/functions/v1/confirm-force-update" `
+                -Method "POST" `
+                -Body @{
+                    new_version = $targetVersion
+                    old_version = $Global:AgentVersion
+                } `
+                -TimeoutSec 10
+            
+            if ($confirmResult.Success) {
+                Write-Log "[FORCE UPDATE] Confirmacao enviada ao backend" "SUCCESS"
+            } else {
+                Write-Log "[FORCE UPDATE] Confirmacao falhou: $($confirmResult.Error)" "WARN"
             }
-
-            if ($attempt -lt $confirmMaxAttempts) {
-                $delaySeconds = [int][Math]::Min([Math]::Pow(2, $attempt - 1), 8)
-                Start-Sleep -Seconds $delaySeconds
-            }
-        }
-
-        if (-not $confirmSucceeded) {
-            Save-PendingForceUpdateConfirmation -TargetVersion $targetVersion -OldVersion $Global:AgentVersion -LastError $confirmLastError
-            Write-Log "[FORCE UPDATE] Confirmacao nao concluida; retry sera feito nos proximos heartbeats" "WARN"
+        } catch {
+            Write-Log "[FORCE UPDATE] Falha ao confirmar no backend (nao critico): $($_.Exception.Message)" "WARN"
         }
         
         Write-Log "[FORCE UPDATE] Update $targetVersion aplicado com sucesso!" "SUCCESS"
@@ -5089,12 +4928,6 @@ function Send-Heartbeat {
         
         if ($result.Success) {
             Write-Log "[HEARTBEAT] Sent successfully" "SUCCESS"
-
-            # Retry de confirmacao pendente de force update (best-effort, nao bloqueante)
-            $pendingConfirmOk = Invoke-PendingForceUpdateConfirmation
-            if (-not $pendingConfirmOk) {
-                Write-Log "[FORCE UPDATE] Confirmacao pendente ainda sem ACK; novo retry no proximo heartbeat" "WARN"
-            }
             
             # Processar resposta do servidor (force update, rotate key, intervals, etc.)
             if ($result.Content) {
@@ -5168,6 +5001,17 @@ function Send-Heartbeat {
                         }
                     }
 
+                    # ============================================
+                    # COST-OPT-V6: PROCESS JOBS FROM HEARTBEAT RESPONSE
+                    # Jobs are now piggybacked on heartbeat to eliminate poll-jobs calls
+                    # ============================================
+                    if ($response.jobs -and $response.jobs.Count -gt 0) {
+                        Write-Log "[HEARTBEAT] Received $($response.jobs.Count) job(s) piggybacked on heartbeat" "INFO"
+                        $Global:HeartbeatJobs = @($response.jobs)
+                    } else {
+                        $Global:HeartbeatJobs = @()
+                    }
+                    
                     # ============================================
                     # FORCE UPDATE VIA HEARTBEAT RESPONSE
                     # Ported from v4 - bypasses job system completely
@@ -6153,9 +5997,19 @@ while ($true) {
         
         # ============================================
         # JOB POLLING AND EXECUTION
+        # COST-OPT-V6: Jobs come from heartbeat response first, poll-jobs as fallback
         # ============================================
         if (($now - $lastJobPoll).TotalSeconds -ge $Global:JobPollIntervalSeconds -and $networkOk) {
-            $jobs = Poll-Jobs
+            # COST-OPT-V6: Use jobs from heartbeat if available, otherwise poll
+            $jobs = @()
+            if ($Global:HeartbeatJobs -and $Global:HeartbeatJobs.Count -gt 0) {
+                $jobs = $Global:HeartbeatJobs
+                $Global:HeartbeatJobs = @()
+                Write-Log "[JOB] Processing $($jobs.Count) job(s) from heartbeat response" "DEBUG"
+            } elseif (($now - $lastJobPoll).TotalSeconds -ge ($Global:JobPollIntervalSeconds * 2)) {
+                # Only do standalone poll if 2x interval has passed (safety net)
+                $jobs = Poll-Jobs
+            }
             
             foreach ($job in $jobs) {
                 $jobType = if ($job.type) { $job.type } elseif ($job.job_type) { $job.job_type } else { "unknown" }
@@ -6164,8 +6018,6 @@ while ($true) {
                 $recoveryJobTypes = @("update_agent", "force_update", "reinstall_agent")
                 if ($Global:SecurityDegraded -and $jobType -notin $recoveryJobTypes) {
                     Write-Log "[SECURITY] BLOCKED job '$jobType' - SecurityDegraded=TRUE (only recovery jobs allowed)" "WARN"
-                    # Submit a rejection result so job doesn't stay in 'delivered' forever
-                    # BUG 6 fix: Include all mandatory fields for Submit-JobResult
                     Submit-JobResult -Job $job -Result @{
                         success = $false
                         status = "failed"
