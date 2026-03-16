@@ -773,8 +773,9 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
 
   // HOTFIX 26b: RSA signing in Submit-JobResult when ECDSA private key is unavailable
   // If $Global:AgentSigningAlgorithm is "RSA-2048-SHA256", use RSA-PKCS1-SHA256 to sign
-  if (content.includes('$ecdsa.SignData') && !content.includes('HOTFIX-RSA-SIGN')) {
-    content = content.replace(
+  // NOTE: v5.0.14+ already has comprehensive RSA signing built-in (HOTFIX-ECDSA-RSA-AUTOREGEN)
+  if (content.includes('$ecdsa.SignData') && !content.includes('HOTFIX-RSA-SIGN') && !content.includes('HOTFIX-ECDSA-RSA-AUTOREGEN')) {
+    const updated26b = content.replace(
       /\$signatureBytes = \$ecdsa\.SignData\(\[System\.Text\.Encoding\]::UTF8\.GetBytes\(\$canonicalPayload\), \[System\.Security\.Cryptography\.HashAlgorithmName\]::SHA256\)/g,
       `# HOTFIX-RSA-SIGN: Use RSA if ECDSA private key was not exportable
             if ($Global:AgentSigningAlgorithm -eq "RSA-2048-SHA256" -and $Global:AgentRsaKey) {
@@ -783,7 +784,10 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
                 $signatureBytes = $ecdsa.SignData([System.Text.Encoding]::UTF8.GetBytes($canonicalPayload), [System.Security.Cryptography.HashAlgorithmName]::SHA256)
             } <# HOTFIX-RSA-SIGN #>`
     );
-    reasons.push('rsa_sign_fallback');
+    if (updated26b !== content) {
+      content = updated26b;
+      reasons.push('rsa_sign_fallback');
+    }
   }
 
   // HOTFIX 26c: Report correct algorithm in key registration and heartbeat
