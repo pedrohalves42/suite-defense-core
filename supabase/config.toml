@@ -214,15 +214,14 @@ schedule = "0 */12 * * *"
 [functions.monitor-thresholds]
 verify_jwt = false
 
-# P1-01: Stuck Jobs Alert (every 12 hours) COST-OPT-V5
+# P1-01: Stuck Jobs Alert - DISABLED COST-OPT-V6 (redundant with cleanup-stuck-jobs)
 [functions.check-stuck-jobs]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
-# P1-01: Cleanup stuck jobs (every 6 hours) COST-OPT-V5
+# P1-01: Cleanup stuck jobs (every 12 hours) COST-OPT-V6
 [functions.cleanup-stuck-jobs]
 verify_jwt = false
-schedule = "0 */6 * * *"
+schedule = "0 */12 * * *"
 
 # P1-02: Cleanup jobs for offline agents (every 12 hours) COST-OPT-V5
 [functions.cleanup-offline-agents-jobs]
