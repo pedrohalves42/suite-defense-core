@@ -1,0 +1,1 @@
+UPDATE jobs SET status = 'expired' WHERE id = '30394a9d-8c6e-4ac6-970e-b5ebcbf17413' AND status = 'delivered'

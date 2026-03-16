@@ -1,0 +1,1 @@
+UPDATE jobs SET status = 'archived' WHERE agent_id = 'd7c0e8c8-cd1d-4801-8516-c229f98ec4d5' AND type = 'setup_dns_filter' AND status = 'failed'
