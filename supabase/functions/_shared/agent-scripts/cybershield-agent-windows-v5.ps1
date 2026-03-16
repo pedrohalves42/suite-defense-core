@@ -4146,7 +4146,7 @@ function Get-ProcessAnomalies {
             # DEFINITIVE FIX: Idempotent add - check HashSet BEFORE adding to baseline array
             foreach ($proc in $anomalies) {
                 if (-not $Global:ProcessBaselineSet.Contains($proc)) {
-                    $Global:ProcessBaseline += @{
+                    $Global:ProcessBaseline += [ordered]@{
                         name = $proc
                         company = $null
                         description = "Auto-added"

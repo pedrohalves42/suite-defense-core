@@ -4093,7 +4093,7 @@ function Get-ProcessAnomalies {
             try {
                 $normalizedForSave = @()
                 foreach ($be in $Global:ProcessBaseline) {
-                    $normalizedForSave += @{
+                    $normalizedForSave += [ordered]@{
                         name        = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
                         company     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
                         description = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
