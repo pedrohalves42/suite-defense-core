@@ -2905,17 +2905,34 @@ function Invoke-CollectWebActivity {
             $userName = $userProfile.Name
             $userPath = $userProfile.FullName
             
-            # Browser DB paths to scan
+            # Browser DB paths to scan (Chrome, Edge, Firefox, Opera, Opera GX, Brave, Vivaldi)
             $browserPaths = @(
                 @{ path = "AppData\Local\Google\Chrome\User Data\Default\History"; browser = "chrome" },
-                @{ path = "AppData\Local\Microsoft\Edge\User Data\Default\History"; browser = "edge" }
+                @{ path = "AppData\Local\Microsoft\Edge\User Data\Default\History"; browser = "edge" },
+                @{ path = "AppData\Roaming\Opera Software\Opera Stable\History"; browser = "opera" },
+                @{ path = "AppData\Roaming\Opera Software\Opera GX Stable\History"; browser = "opera_gx" },
+                @{ path = "AppData\Local\BraveSoftware\Brave-Browser\User Data\Default\History"; browser = "brave" },
+                @{ path = "AppData\Local\Vivaldi\User Data\Default\History"; browser = "vivaldi" }
             )
+            
+            # Firefox uses places.sqlite with different schema
+            $firefoxProfileDir = Join-Path $userPath "AppData\Roaming\Mozilla\Firefox\Profiles"
+            if (Test-Path $firefoxProfileDir) {
+                $ffProfiles = Get-ChildItem -Path $firefoxProfileDir -Directory -ErrorAction SilentlyContinue
+                foreach ($ffProfile in $ffProfiles) {
+                    $ffHistory = Join-Path $ffProfile.FullName "places.sqlite"
+                    if (Test-Path $ffHistory) {
+                        $browserPaths += @{ path = $ffHistory; browser = "firefox"; absolute = $true }
+                        break # Use first profile found
+                    }
+                }
+            }
             
             foreach ($bp in $browserPaths) {
                 if ([DateTime]::UtcNow -gt $deadline) { break }
                 
                 try {
-                    $historyPath = Join-Path $userPath $bp.path
+                    $historyPath = if ($bp.absolute) { $bp.path } else { Join-Path $userPath $bp.path }
                     if (-not (Test-Path $historyPath)) { continue }
                     
                     $tempPath = "$env:TEMP\$($bp.browser)_history_$(Get-Random).db"

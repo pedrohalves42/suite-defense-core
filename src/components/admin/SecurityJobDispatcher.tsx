@@ -47,7 +47,7 @@ export function SecurityJobDispatcher({ agents }: { agents: Agent[] }) {
         browsers: string[];
         days_back: number;
       }>> = {
-        collect_web_activity: { max_domains: 500, browsers: ['chrome', 'firefox', 'edge'], days_back: 7 },
+        collect_web_activity: { max_domains: 500, browsers: ['chrome', 'firefox', 'edge', 'opera', 'opera_gx', 'brave', 'vivaldi'], days_back: 7 },
       };
 
       // Create job
