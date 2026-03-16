@@ -396,20 +396,77 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Standard response (no force_update) - include key rotation signal if needed
+    // ============================================
+    // COST-OPT-V6: Claim pending jobs in heartbeat response
+    // Eliminates separate poll-jobs call (~144 invocations/day saved per agent)
+    // ============================================
+    let jobsResponse: Record<string, unknown>[] = [];
+    try {
+      const { data: claimedJobs, error: claimError } = await supabase
+        .rpc('claim_jobs_for_agent', {
+          p_agent_id: agent.id,
+          p_limit: 3
+        });
+
+      if (!claimError && claimedJobs && claimedJobs.length > 0) {
+        const privateKey = Deno.env.get('ED25519_PRIVATE_KEY');
+        
+        jobsResponse = await Promise.all(
+          claimedJobs.filter((j: any) => j && j.job_id && j.job_type && j.execution_id).map(async (j: any) => {
+            let signatureInfo: Record<string, string> = {};
+            if (privateKey) {
+              try {
+                const signed = await signJob(j.job_id, j.job_type, j.payload || {}, privateKey);
+                signatureInfo = { payload_signature: signed.signature, signing_alg: signed.algorithm };
+              } catch (signErr) {
+                logger.warn('[PROXY] Failed to sign job in heartbeat', { jobId: j.job_id, error: (signErr as Error).message });
+                return null;
+              }
+            }
+            return {
+              id: j.job_id,
+              type: j.job_type,
+              job_type: j.job_type,
+              payload: j.payload || {},
+              approved: true,
+              agent_id: agent.id,
+              expires_at: j.expires_at,
+              execution_id: j.execution_id,
+              nonce: j.nonce,
+              payload_hash: j.payload_hash,
+              execution_index: j.execution_index,
+              previous_execution_hash: j.previous_execution_hash,
+              ...signatureInfo,
+            };
+          })
+        ).then(results => results.filter(Boolean) as Record<string, unknown>[]);
+
+        if (jobsResponse.length > 0) {
+          logger.info('[PROXY] Jobs piggybacked on heartbeat response', {
+            agentName: agent.agent_name,
+            jobCount: jobsResponse.length,
+            jobIds: jobsResponse.map(j => j.id),
+          });
+        }
+      }
+    } catch (jobErr) {
+      logger.warn('[PROXY] Failed to claim jobs in heartbeat (non-fatal)', { error: (jobErr as Error).message });
+    }
+
+    // Standard response (no force_update) - include key rotation signal + jobs if available
     const response: Record<string, unknown> = { 
       ok: true,
       agent: agent.agent_name,
       timestamp: new Date().toISOString(),
       proxy: true,
-      script_sha256: null, // FIXED: Include so old agents don't crash accessing this property
+      script_sha256: null,
       skip_firewall_remediation: (agent as any).skip_firewall_remediation || false,
-      // v5.0.14: Aggregation config (safe default so agents don't crash on missing property)
       aggregation: null,
-      // COST-OPT: Send intervals to control agent polling cadence
+      // COST-OPT-V6: Heartbeat = 600s, poll = 600s (same interval, jobs come via heartbeat)
       heartbeat_interval_seconds: 600,
-      poll_interval_seconds: 300,
-      message: 'Heartbeat received via legacy endpoint - please update agent to v4.0.7+'
+      poll_interval_seconds: 600,
+      // COST-OPT-V6: Include jobs in heartbeat response
+      jobs: jobsResponse,
     };
     
     // Add key rotation signal if needed
