@@ -4106,7 +4106,8 @@ function Get-ProcessAnomalies {
                         first_seen  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
                     }
                 }
-                $normalizedForSave | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                $psoForSave = $normalizedForSave | ForEach-Object { [PSCustomObject]$_ }
+                $psoForSave | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
             } catch {
                 Write-Log "[BASELINE] Failed to save baseline: $($_.Exception.Message)" "WARN"
             }
