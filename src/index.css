@@ -49,6 +49,12 @@
     --success: 160 60% 45%;            /* #10B981 */
     --success-foreground: 0 0% 98%;
     
+    /* Strategic Green — CTA & Shields (psicologia das cores: segurança + ação) */
+    --cta-positive: 160 84% 39%;       /* #059669 — Esmeralda para CTAs */
+    --cta-positive-foreground: 0 0% 98%;
+    --shield-active: 152 69% 47%;      /* #22C55E — Verde vivo para shields */
+    --metric-positive: 142 71% 45%;    /* Para KPIs positivos */
+    
     --info: 217 55% 55%;               /* #3B82F6 */
     --info-foreground: 0 0% 98%;
     
