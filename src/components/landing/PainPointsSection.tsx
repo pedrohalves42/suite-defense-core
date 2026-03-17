@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { AlertTriangle, ArrowRight, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useLandingContent } from "@/hooks/useLandingContent";
@@ -10,12 +10,14 @@ export function PainPointsSection() {
 
   return (
     <section className="py-24 relative overflow-hidden">
-      {/* Subtle red gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-destructive/[0.03] to-background" />
+      {/* Red gradient — danger, urgency, fear (psicologia: vermelho = alerta) */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-destructive/[0.04] to-background" />
+      {/* Subtle red side glow */}
+      <div className="absolute top-1/2 -left-32 w-[300px] h-[300px] bg-destructive/5 rounded-full blur-[100px]" />
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Left: Questions */}
+          {/* Left: Questions — red = urgency */}
           <div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -24,7 +26,7 @@ export function PainPointsSection() {
               className="space-y-6"
             >
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/10 border border-destructive/20">
-                <AlertTriangle className="w-4 h-4 text-destructive" />
+                <ShieldAlert className="w-4 h-4 text-destructive" />
                 <span className="text-sm font-medium text-destructive">{painPoints.badge}</span>
               </div>
 
@@ -47,11 +49,12 @@ export function PainPointsSection() {
                 {painPoints.conclusion}
               </h2>
 
+              {/* CTA verde aqui = "escape do perigo" — contraste vermelho→verde */}
               <Button 
                 asChild 
                 size="lg" 
                 variant="cta"
-                className="mt-4"
+                className="mt-4 shadow-lg shadow-cta-positive/20"
               >
                 <Link to="/signup">
                   {painPoints.cta}
@@ -61,7 +64,7 @@ export function PainPointsSection() {
             </motion.div>
           </div>
 
-          {/* Right: Stats grid */}
+          {/* Right: Stats grid — red cards = danger emphasis */}
           <div className="grid grid-cols-2 gap-4">
             {painPoints.stats.map((stat, index) => (
               <motion.div

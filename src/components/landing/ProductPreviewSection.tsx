@@ -3,9 +3,9 @@ import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
 
 const dashboardStats = [
-  { label: "Dispositivos Monitorados", value: "32", icon: Monitor },
-  { label: "Ameaças Bloqueadas (30d)", value: "17", icon: Shield },
-  { label: "Score de Segurança", value: "87/100", icon: CheckCircle },
+  { label: "Dispositivos Monitorados", value: "32", icon: Monitor, color: "text-info" },
+  { label: "Ameaças Bloqueadas (30d)", value: "17", icon: Shield, color: "text-cta-positive" },
+  { label: "Score de Segurança", value: "87/100", icon: CheckCircle, color: "text-cta-positive" },
 ];
 
 const alertExamples = [
@@ -33,18 +33,18 @@ export function ProductPreviewSection() {
         />
 
         <div className="grid lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {/* Dashboard Preview */}
+          {/* Dashboard Preview — green accented */}
           <motion.div 
-            className="rounded-2xl bg-card border border-border overflow-hidden hover:border-accent/20 transition-colors"
+            className="rounded-2xl bg-card border border-border overflow-hidden hover:border-cta-positive/20 transition-colors"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <div className="bg-primary/5 border-b border-border px-5 py-3 flex items-center gap-2">
+            <div className="bg-cta-positive/5 border-b border-border px-5 py-3 flex items-center gap-2">
               <div className="flex gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-destructive/60" />
                 <div className="w-3 h-3 rounded-full bg-warning/60" />
-                <div className="w-3 h-3 rounded-full bg-success/60" />
+                <div className="w-3 h-3 rounded-full bg-cta-positive/60" />
               </div>
               <span className="text-xs text-muted-foreground font-medium ml-2">Painel CyberShield</span>
             </div>
@@ -54,7 +54,7 @@ export function ProductPreviewSection() {
                 return (
                   <div key={i} className="flex items-center justify-between p-3 bg-muted/40 rounded-xl">
                     <div className="flex items-center gap-2">
-                      <Icon className="w-4 h-4 text-cta-positive" />
+                      <Icon className={`w-4 h-4 ${stat.color}`} />
                       <span className="text-sm text-muted-foreground">{stat.label}</span>
                     </div>
                     <span className="text-lg font-bold text-foreground">{stat.value}</span>
@@ -70,16 +70,16 @@ export function ProductPreviewSection() {
             </div>
           </motion.div>
 
-          {/* Real-time Alerts */}
+          {/* Real-time Alerts — semantic colors for severity */}
           <motion.div 
-            className="rounded-2xl bg-card border border-border overflow-hidden hover:border-accent/20 transition-colors"
+            className="rounded-2xl bg-card border border-border overflow-hidden hover:border-warning/20 transition-colors"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
           >
-            <div className="bg-primary/5 border-b border-border px-5 py-3 flex items-center gap-2">
-              <Bell className="w-4 h-4 text-accent" />
+            <div className="bg-warning/5 border-b border-border px-5 py-3 flex items-center gap-2">
+              <Bell className="w-4 h-4 text-warning" />
               <span className="text-xs text-muted-foreground font-medium">Alertas em Tempo Real</span>
             </div>
             <div className="p-5 space-y-3">
@@ -88,12 +88,12 @@ export function ProductPreviewSection() {
                 const severityStyles = {
                   critical: "border-destructive/30 bg-destructive/5",
                   warning: "border-warning/30 bg-warning/5",
-                  info: "border-success/30 bg-success/5",
+                  info: "border-cta-positive/30 bg-cta-positive/5",
                 };
                 const iconColor = {
                   critical: "text-destructive",
                   warning: "text-warning",
-                  info: "text-success",
+                  info: "text-cta-positive",
                 };
                 return (
                   <div key={i} className={`p-3 rounded-xl border ${severityStyles[alert.severity as keyof typeof severityStyles]}`}>
@@ -113,35 +113,35 @@ export function ProductPreviewSection() {
             </div>
           </motion.div>
 
-          {/* LGPD Report Preview */}
+          {/* LGPD Report — green = compliance achieved */}
           <motion.div 
-            className="rounded-2xl bg-card border border-border overflow-hidden hover:border-accent/20 transition-colors"
+            className="rounded-2xl bg-card border border-border overflow-hidden hover:border-cta-positive/20 transition-colors"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.2 }}
           >
-            <div className="bg-primary/5 border-b border-border px-5 py-3 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-accent" />
+            <div className="bg-cta-positive/5 border-b border-border px-5 py-3 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-cta-positive" />
               <span className="text-xs text-muted-foreground font-medium">Relatório LGPD</span>
             </div>
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm font-medium text-foreground">Conformidade LGPD</span>
-                <span className="text-lg font-bold text-success">92%</span>
+                <span className="text-lg font-bold text-cta-positive">92%</span>
               </div>
               <div className="w-full h-2 bg-muted rounded-full mb-5 overflow-hidden">
-                <div className="h-full bg-success rounded-full" style={{ width: "92%" }} />
+                <div className="h-full bg-cta-positive rounded-full" style={{ width: "92%" }} />
               </div>
               <ul className="space-y-3">
                 {lgpdItems.map((item, i) => (
                   <li key={i} className="flex items-center gap-3">
-                    <CheckCircle className="w-4 h-4 text-success shrink-0" />
+                    <CheckCircle className="w-4 h-4 text-cta-positive shrink-0" />
                     <span className="text-sm text-muted-foreground">{item}</span>
                   </li>
                 ))}
               </ul>
-              <div className="mt-5 p-3 bg-muted/40 rounded-xl text-center">
+              <div className="mt-5 p-3 bg-cta-positive/5 rounded-xl text-center border border-cta-positive/10">
                 <p className="text-xs text-muted-foreground">
                   📄 Relatório exportável em PDF — pronto para auditoria
                 </p>

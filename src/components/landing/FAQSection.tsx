@@ -8,7 +8,7 @@ export function FAQSection() {
 
   return (
     <section id="faq" className="py-24 relative">
-      <div className="absolute inset-0 bg-gradient-to-b from-muted/30 via-cta-positive/[0.02] to-background" />
+      <div className="absolute inset-0 bg-gradient-to-b from-muted/30 via-background to-background" />
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader 
           title={faq.title}
@@ -25,9 +25,9 @@ export function FAQSection() {
               <AccordionItem 
                 key={index} 
                 value={`q${index}`}
-                className="bg-card border border-border rounded-xl px-6 data-[state=open]:border-cta-positive/30 transition-colors"
+                className="bg-card border border-border rounded-xl px-6 data-[state=open]:border-cta-positive/30 data-[state=open]:shadow-sm transition-all"
               >
-                <AccordionTrigger className="text-left font-medium hover:no-underline py-5">
+                <AccordionTrigger className="text-left font-medium hover:no-underline py-5 hover:text-cta-positive transition-colors">
                   {item.question}
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground pb-5 leading-relaxed">
