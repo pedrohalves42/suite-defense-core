@@ -65,11 +65,11 @@ Deno.serve(async (req) => {
       enrollment_keys_used: 0,
     };
 
-    // 1. Limpar eventos de telemetria
+    // 1. Limpar eventos de telemetria - SECURITY FIX: scoped to tenant
     const { error: analyticsError, count: analyticsCount } = await supabaseAdmin
       .from('installation_analytics')
       .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+      .eq('tenant_id', callerTenantId);
 
     if (analyticsError) {
       console.error('[cleanup-test-data] Error cleaning installation_analytics:', analyticsError);
