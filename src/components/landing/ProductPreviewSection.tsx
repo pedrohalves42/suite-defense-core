@@ -150,6 +150,7 @@ export function ProductPreviewSection() {
           </motion.div>
         </div>
       </div>
+      </div>
     </section>
   );
 }
