@@ -7,7 +7,8 @@ export function FAQSection() {
   const { faq } = useLandingContent();
 
   return (
-    <section id="faq" className="py-24">
+    <section id="faq" className="py-24 relative">
+      <div className="absolute inset-0 bg-gradient-to-b from-muted/30 via-cta-positive/[0.02] to-background" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader 
           title={faq.title}
