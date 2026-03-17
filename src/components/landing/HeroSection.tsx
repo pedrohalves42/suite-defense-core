@@ -64,7 +64,7 @@ export function HeroSection() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 + index * 0.1 }}
                   >
-                    <CheckCircle className="w-5 h-5 text-accent flex-shrink-0" aria-hidden="true" />
+                    <CheckCircle className="w-5 h-5 text-cta-positive flex-shrink-0" aria-hidden="true" />
                     <span className="text-sm md:text-base">{benefit}</span>
                   </motion.li>
                 ))}
@@ -76,7 +76,8 @@ export function HeroSection() {
               <Button 
                 asChild 
                 size="lg" 
-                className="text-lg h-14 px-8 bg-accent hover:bg-accent/90 text-accent-foreground font-semibold shadow-lg shadow-accent/20"
+                variant="cta"
+                className="text-lg h-14 px-8 font-semibold"
               >
                 <Link to="/signup" aria-label="Descobrir se minha empresa está vulnerável">
                   {hero.ctaButton}
@@ -131,8 +132,8 @@ export function HeroSection() {
                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
               >
                 <div className="relative">
-                  <Shield className="w-20 h-20 text-accent/20" />
-                  <Zap className="w-8 h-8 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                  <Shield className="w-20 h-20 text-cta-positive/20" />
+                  <Zap className="w-8 h-8 text-cta-positive absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </div>
               </motion.div>
             </div>

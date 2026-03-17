@@ -26,7 +26,8 @@ export function CTASection() {
           <Button 
             asChild 
             size="lg" 
-            className="text-lg h-14 px-10 bg-accent hover:bg-accent/90 text-accent-foreground font-semibold shadow-lg shadow-accent/25"
+            variant="cta"
+            className="text-lg h-14 px-10 font-semibold"
           >
             <Link to="/signup">
               {ctaFinal.cta}

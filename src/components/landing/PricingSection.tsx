@@ -120,7 +120,7 @@ export function PricingSection() {
 
                 {/* CTA — always at bottom */}
                 {isHighlighted ? (
-                  <Button className="w-full h-12 bg-accent hover:bg-accent/90 text-accent-foreground font-semibold mt-auto" asChild>
+                  <Button variant="cta" className="w-full h-12 font-semibold mt-auto" asChild>
                     <Link to="/signup">{plan.cta}</Link>
                   </Button>
                 ) : (
