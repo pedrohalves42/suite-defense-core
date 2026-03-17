@@ -25,7 +25,7 @@ export function useTaskEvidence(taskId: string | null) {
 
       const { data, error } = await supabase
         .from('task_evidence')
-        .select('*')
+        .select('id, task_id, tenant_id, evidence_type, title, content_hash, storage_ref, created_at, created_by')
         .eq('task_id', taskId)
         .order('created_at', { ascending: true });
 

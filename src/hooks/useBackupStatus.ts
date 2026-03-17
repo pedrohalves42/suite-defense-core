@@ -40,7 +40,7 @@ export function useBackupStatus() {
     queryFn: async (): Promise<BackupSummary> => {
       const { data, error } = await supabase
         .from('backup_status')
-        .select('*')
+        .select('id, agent_id, tenant_id, backup_type, backup_tool, status, is_enabled, is_scheduled, last_backup_at, next_scheduled_at, backup_age_hours, error_message, collected_at')
         .eq('tenant_id', tenant!.id)
         .order('status', { ascending: true });
 

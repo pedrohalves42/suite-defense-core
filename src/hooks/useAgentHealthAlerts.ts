@@ -102,7 +102,7 @@ export function useNonExecutionAlerts() {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('system_alerts')
-        .select('*')
+        .select('id, tenant_id, agent_id, alert_type, severity, title, message, resolved, resolved_at, created_at, details')
         .eq('tenant_id', tenant.id)
         .eq('alert_type', 'non_execution_detected')
         .eq('resolved', false)

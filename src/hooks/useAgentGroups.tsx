@@ -28,7 +28,7 @@ export function useAgentGroups() {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('agent_groups')
-        .select('*')
+        .select('id, tenant_id, name, description, created_at, updated_at')
         .eq('tenant_id', tenant.id)
         .order('name');
       if (error) throw error;

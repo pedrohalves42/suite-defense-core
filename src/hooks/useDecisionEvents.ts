@@ -33,7 +33,7 @@ export function useDecisionEvents(options: UseDecisionEventsOptions = {}) {
     queryFn: async () => {
       let query = supabase
         .from('decision_events')
-        .select('*')
+        .select('id, tenant_id, rule_code, agent_id, agent_name, action, decision_source, decision_type, created_at')
         .order('created_at', { ascending: false })
         .limit(limit);
 
