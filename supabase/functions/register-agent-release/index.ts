@@ -177,6 +177,40 @@ Deno.serve(async (req) => {
       isUnixScript
     });
 
+    const embeddedVersion = extractEmbeddedVersion(script_content);
+    if (!embeddedVersion) {
+      logger.error('[register-agent-release] Could not extract embedded version from script', {
+        requestId,
+        platform,
+        version,
+      });
+      return new Response(
+        JSON.stringify({
+          error: 'Embedded version not found in script content',
+          message: 'The uploaded script must declare its own version in the header or AGENT_VERSION variable.'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (normalizeVersion(embeddedVersion) !== normalizeVersion(version)) {
+      logger.error('[register-agent-release] Embedded script version mismatch', {
+        requestId,
+        platform,
+        declaredVersion: version,
+        embeddedVersion,
+      });
+      return new Response(
+        JSON.stringify({
+          error: 'Embedded script version mismatch',
+          message: `Declared version ${version} does not match embedded script version ${embeddedVersion}`,
+          declared_version: version,
+          embedded_version: embeddedVersion,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Use manual SHA256 if provided (for BOM compatibility with old agents)
     // Otherwise calculate SHA256 normally
     let sha256: string;
