@@ -106,7 +106,7 @@ export function useUnifiedMetrics() {
       const sevenDaysAgo = subDays(now, 7).toISOString();
       const thirtyDaysAgo = subDays(now, 30).toISOString();
 
-      const [alertsRes, blockedRes, evidence7dRes, evidence30dRes, vulnRes, insightsRes, blockedItemsRes] = await Promise.all([
+      const [alertsRes, blockedRes, evidenceSummaryRes, vulnRes, insightsRes, blockedItemsRes] = await Promise.all([
         sb.from('system_alerts')
           .select('id, severity, message, alert_type, status, title, created_at')
           .eq('tenant_id', tenant.id)
@@ -116,14 +116,8 @@ export function useUnifiedMetrics() {
           .select('*', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id)
           .gte('attempted_at', sevenDaysAgo),
-        sb.from('agent_evidence_logs')
-          .select('event_type, severity, agent_name, event_data')
-          .eq('tenant_id', tenant.id)
-          .gte('created_at', sevenDaysAgo),
-        sb.from('agent_evidence_logs')
-          .select('event_type, severity, agent_name, event_data')
-          .eq('tenant_id', tenant.id)
-          .gte('created_at', thirtyDaysAgo),
+        // Use server-side RPC for accurate, deduplicated evidence counts
+        sb.rpc('get_evidence_summary', { p_tenant_id: tenant.id }),
         sb.from('vuln_findings')
           .select('severity')
           .eq('tenant_id', tenant.id),
