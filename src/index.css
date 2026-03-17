@@ -140,6 +140,27 @@
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
+  /* === Strategic Green Highlights (psicologia das cores) === */
+  
+  /* Shield icons: green = "proteção ativa" */
+  .shield-active {
+    color: hsl(var(--shield-active)) !important;
+    filter: drop-shadow(0 0 3px hsl(var(--shield-active) / 0.3));
+  }
+
+  /* Positive metrics: green numbers for good KPIs */
+  .metric-positive {
+    color: hsl(var(--metric-positive));
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Green accent border for success/security cards */
+  .card-secure {
+    @apply bg-card border border-border rounded-xl relative;
+    border-left: 3px solid hsl(var(--cta-positive));
+    box-shadow: var(--shadow-sm), inset 3px 0 8px -3px hsl(var(--cta-positive) / 0.1);
+  }
+
   /* === Card Variants === */
   .card-intel {
     @apply bg-card border border-border rounded-xl relative;
