@@ -115,7 +115,7 @@ export function useCreateReport() {
       toast.success('Relatório gerado com sucesso');
     },
     onError: (error) => {
-      console.error('Error creating report:', error);
+      logger.error('Error creating report', error instanceof Error ? error : undefined);
       toast.error('Erro ao gerar relatório');
     },
   });
