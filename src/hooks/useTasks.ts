@@ -119,28 +119,28 @@ export function useTaskStats() {
         .eq('tenant_id', tenant!.id)
         .maybeSingle();
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return {
-            tenant_id: tenant!.id,
-            total_tasks: 0,
-            pending: 0,
-            in_progress: 0,
-            completed: 0,
-            failed: 0,
-            open_count: 0,
-            in_progress_count: 0,
-            blocked_count: 0,
-            resolved_count: 0,
-            ignored_count: 0,
-            critical_open: 0,
-            high_open: 0,
-            sla_breached: 0,
-            avg_resolution_hours: null,
-          } as TaskStats;
-        }
-        throw error;
+      if (error) throw error;
+      
+      if (!data) {
+        return {
+          tenant_id: tenant!.id,
+          total_tasks: 0,
+          pending: 0,
+          in_progress: 0,
+          completed: 0,
+          failed: 0,
+          open_count: 0,
+          in_progress_count: 0,
+          blocked_count: 0,
+          resolved_count: 0,
+          ignored_count: 0,
+          critical_open: 0,
+          high_open: 0,
+          sla_breached: 0,
+          avg_resolution_hours: null,
+        } as TaskStats;
       }
+      
       const stats = data as TaskStats;
       return {
         ...stats,
