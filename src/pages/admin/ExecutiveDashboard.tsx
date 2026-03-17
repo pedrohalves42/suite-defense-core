@@ -450,7 +450,7 @@ export default function ExecutiveDashboard() {
                       <span className="text-[10px] text-muted-foreground">Confiabilidade do sistema</span>
                       {(() => {
                         const rate = summaryData?.totalJobs30d ? Math.round((summaryData.automatedJobsCompleted / summaryData.totalJobs30d) * 100) : 0;
-                        return <span className={cn("text-xs font-bold", rate >= 80 ? "text-green-500" : rate >= 50 ? "text-amber-500" : "text-red-500")}>{rate}%</span>;
+                        return <span className={cn("text-xs font-bold", rate >= 80 ? "text-success" : rate >= 50 ? "text-warning" : "text-destructive")}>{rate}%</span>;
                       })()}
                     </div>
                     <Progress value={summaryData?.totalJobs30d ? Math.round((summaryData.automatedJobsCompleted / summaryData.totalJobs30d) * 100) : 0} className="h-1.5" />
