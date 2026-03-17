@@ -139,7 +139,7 @@ export function useFeedbackQualityMetrics() {
         .eq('tenant_id', activeTenant.id);
 
       if (error) {
-        console.warn('insight_feedback_quality view not accessible:', error);
+        logger.debug('insight_feedback_quality view not accessible:', error);
         return [];
       }
 

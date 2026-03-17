@@ -34,7 +34,7 @@ async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebA
     throw new Error(`Failed to fetch web activity: ${error.message}`);
   }
 
-  console.log('[useWebActivity] Fetched rows:', data?.length || 0, 'for agent:', agentId);
+  logger.debug('[useWebActivity] Fetched rows:', data?.length || 0, 'for agent:', agentId);
   const rows = (data || []) as WebActivityRow[];
 
   // Aggregate by domain

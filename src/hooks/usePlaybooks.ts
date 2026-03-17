@@ -128,7 +128,7 @@ export function usePendingPlaybookExecutions() {
           filter: `tenant_id=eq.${tenant.id}`,
         },
         (payload) => {
-          console.log('[usePlaybooks] Realtime update:', payload);
+          logger.debug('[usePlaybooks] Realtime update:', payload);
           queryClient.invalidateQueries({ 
             queryKey: ['playbook-executions-pending', tenant.id] 
           });

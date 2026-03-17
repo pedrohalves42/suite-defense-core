@@ -73,7 +73,7 @@ export const useAgentReleases = () => {
         logger.debug('[useAgentReleases] Calculated SHA256 from normalized content:', sha256.substring(0, 16) + '...');
       }
 
-      console.log('[useAgentReleases] Registering release', {
+      logger.debug('[useAgentReleases] Registering release', {
         platform,
         version,
         hasSignature: !!signature_base64,

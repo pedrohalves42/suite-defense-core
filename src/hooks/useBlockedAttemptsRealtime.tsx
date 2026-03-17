@@ -53,7 +53,7 @@ export function useBlockedAttemptsRealtime(enabled = true) {
         handleNewAttempt
       )
       .subscribe((status) => {
-        console.log('[useBlockedAttemptsRealtime] Subscription status:', status);
+        logger.debug('[useBlockedAttemptsRealtime] Subscription status:', status);
       });
 
     return () => {
