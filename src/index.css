@@ -213,8 +213,8 @@
 
   /* === Futuristic Sidebar System === */
   
-  /* Neon glow tokens */
-  --neon-cyan: 190 95% 55%;
+  /* Neon glow tokens — Green primary for cybersecurity identity */
+  --neon-cyan: 160 84% 42%;           /* Esmeralda — replaces cyan for security feel */
   --neon-blue: 220 90% 60%;
   --neon-purple: 270 85% 60%;
   --neon-green: 150 90% 50%;

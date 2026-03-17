@@ -63,6 +63,12 @@ export default {
           foreground: "hsl(var(--accent-foreground))",
           soft: "hsl(var(--accent-soft))",
         },
+        "cta-positive": {
+          DEFAULT: "hsl(var(--cta-positive))",
+          foreground: "hsl(var(--cta-positive-foreground))",
+        },
+        "shield-active": "hsl(var(--shield-active))",
+        "metric-positive": "hsl(var(--metric-positive))",
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
