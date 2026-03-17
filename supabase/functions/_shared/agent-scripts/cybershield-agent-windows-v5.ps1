@@ -1953,9 +1953,10 @@ function Poll-Jobs {
         # v5.0.12 FIX: Backend may return wrapped {jobs:[...], poll_interval_seconds:N} 
         # OR flat array [...] depending on version. Handle both formats.
         $jobsList = $null
-        if ($response.PSObject -and $response.PSObject.Properties['jobs']) {
+        $jobsPropPoll = $response.PSObject.Properties['jobs']
+        if ($response.PSObject -and $jobsPropPoll) {
             # Wrapped format: { jobs: [...], poll_interval_seconds: N }
-            $jobsList = @($response.jobs)
+            $jobsList = @($jobsPropPoll.Value)
             # Read dynamic poll interval from response
             if ($response.poll_interval_seconds -and $response.poll_interval_seconds -ge 10) {
                 $newInterval = [int]$response.poll_interval_seconds
