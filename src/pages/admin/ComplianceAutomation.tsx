@@ -127,12 +127,11 @@ export default function ComplianceAutomation() {
     queryKey: ['compliance-metrics', tenantId],
     queryFn: async () => {
       if (!tenantId) return null;
-      const sb = supabase as any;
 
       const [agentsRes, alertsRes, vulnsRes] = await Promise.all([
-        sb.rpc('get_agents_list', { p_tenant_id: tenantId, p_include_archived: false }),
-        sb.from('system_alerts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active'),
-        sb.from('vulnerability_scans').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('remediation_status', 'pending'),
+        supabase.rpc('get_agents_list', { p_tenant_id: tenantId, p_include_archived: false }),
+        supabase.from('system_alerts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active'),
+        supabase.from('vulnerability_scans' as any).select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('remediation_status', 'pending'),
       ]);
 
       return {
