@@ -178,21 +178,7 @@ Deno.serve(async (req) => {
 
     logger.debug('Agent polling', { agentName: agent.agent_name })
 
-    // FASE CORRECAO: Verificar se agente está online antes de entregar jobs
-    // Buscar dados completos do agente incluindo last_heartbeat e agent_version
-    const { data: agentData, error: agentError } = await supabase
-      .from('agents')
-      .select('id, last_heartbeat, status, agent_version')
-      .eq('id', token.agent_id)
-      .single()
-
-    if (agentError || !agentData) {
-      logger.error('Error fetching agent data', { error: agentError?.message, agentId: token.agent_id })
-      return new Response(
-        JSON.stringify({ error: 'Agent not found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-      )
-    }
+    // TUNING: agentData already fetched above (single query), reused here
 
     // COMPAT: Detectar versão do agente para formato de resposta
     const agentVersionForCompat = agentData.agent_version || 'v0.0.0'
