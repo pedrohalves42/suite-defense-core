@@ -501,10 +501,10 @@ export default function ExecutiveDashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="flex items-center gap-3 p-3 rounded-lg border border-green-500/20 bg-green-500/5">
-                  <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                <div className="flex items-center gap-3 p-3 rounded-xl border border-success/20 bg-success/5">
+                  <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-green-500">Tudo sob controle</p>
+                    <p className="text-sm font-medium text-success">Tudo sob controle</p>
                     <p className="text-xs text-muted-foreground">O CyberShield está cuidando da segurança da sua empresa automaticamente</p>
                   </div>
                 </div>
