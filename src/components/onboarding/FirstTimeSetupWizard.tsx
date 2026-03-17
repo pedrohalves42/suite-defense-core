@@ -85,7 +85,7 @@ export function FirstTimeSetupWizard() {
       id: 'verify_status',
       title: 'Verificar Status',
       description: 'Confira se o agente está funcionando corretamente e coletando dados do seu ambiente.',
-      icon: <Shield className="h-8 w-8" />,
+      icon: <Shield className="h-8 w-8 text-cta-positive" />,
       checkFn: async () => {
         if (!tenantId) return false;
         // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues

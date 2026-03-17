@@ -117,7 +117,7 @@ export function SystemScanButton() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="default">
+        <Button variant="cta">
           <Shield className="mr-2 h-4 w-4" />
           Scan Completo do Sistema
         </Button>

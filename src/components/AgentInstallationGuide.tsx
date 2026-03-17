@@ -77,7 +77,7 @@ export default function AgentInstallationGuide({
                       </ol>
                       {installCommand && (
                         <Button
-                          variant="outline"
+                          variant="cta"
                           size="sm"
                           className="mt-3 w-full"
                           onClick={copyCommand}

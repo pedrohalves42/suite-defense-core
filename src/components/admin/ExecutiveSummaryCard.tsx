@@ -86,8 +86,8 @@ export function ExecutiveSummaryCard() {
         {/* Header bar */}
         <div className="flex items-center justify-between px-5 pt-4 pb-2">
           <div className="flex items-center gap-2.5">
-            <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
-              <ShieldCheck className="h-4 w-4 text-primary" />
+            <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-cta-positive/10">
+              <ShieldCheck className="h-4 w-4 text-cta-positive" />
             </div>
             <div>
               <h3 className="text-sm font-semibold text-foreground">Resumo Executivo</h3>
