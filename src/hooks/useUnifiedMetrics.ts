@@ -143,10 +143,10 @@ export function useUnifiedMetrics() {
       const vulns: Array<{ severity: string }> = vulnRes.data || [];
 
       // Evidence summary from server-side RPC (deduplicated, no truncation)
-      const evidenceSummary = evidenceSummaryRes.data || {
+      const evidenceSummary = (evidenceSummaryRes.data || {
         auto_repairs: 0, auto_recoveries: 0, policy_drifts: 0,
         critical_prevented: 0, high_prevented: 0, medium_prevented: 0, incidents_contained: 0,
-      };
+      }) as Record<string, number>;
 
       const autoRepairs = evidenceSummary.auto_repairs || 0;
       const autoRecoveries = evidenceSummary.auto_recoveries || 0;
