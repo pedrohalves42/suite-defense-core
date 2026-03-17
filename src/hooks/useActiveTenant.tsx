@@ -204,7 +204,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         }
         
         // Sync needed - but don't block UI
-        console.log('[useActiveTenant] Syncing tenant to backend...');
+        logger.debug('[useActiveTenant] Syncing tenant to backend...');
         syncActiveTenantToBackend(activeTenant.id)
           .then(async (synced) => {
             if (synced) {
