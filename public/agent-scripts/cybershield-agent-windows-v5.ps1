@@ -5044,8 +5044,9 @@ function Send-Heartbeat {
                     # HOTFIX-SKIP-FW-HEARTBEAT-READ: AGENT CONFIG FLAGS (v5.0.13)
                     # Server-side feature toggles
                     # ============================================
-                    if ($null -ne $response.skip_firewall_remediation) {
-                        $Global:SkipFirewallRemediation = [bool]$response.skip_firewall_remediation
+                    $skipFwProp = $response.PSObject.Properties['skip_firewall_remediation']
+                    if ($null -ne $skipFwProp) {
+                        $Global:SkipFirewallRemediation = [bool]$skipFwProp.Value
                         # HOTFIX-SKIP-FW-PERSIST: Persist to HARDCODED path C:\CyberShield (not $PSScriptRoot)
                         try {
                             $flagFile = "C:\CyberShield\skip_firewall.flag"
