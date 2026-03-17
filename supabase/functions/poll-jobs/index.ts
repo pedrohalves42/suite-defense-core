@@ -42,9 +42,11 @@ Deno.serve(async (req) => {
 
     // FASE 2: Buscar agente pelo hash do token
     const tokenHash = await hashToken(agentToken)
+    // TUNING: Expanded join to include tenant_id, last_heartbeat, status
+    // Eliminates separate agentData query below
     const { data: token } = await supabase
       .from('agent_tokens')
-      .select('agent_id, agents!inner(agent_name, hmac_secret, agent_version)')
+      .select('agent_id, agents!inner(agent_name, hmac_secret, agent_version, tenant_id, last_heartbeat, status)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
