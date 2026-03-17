@@ -41,7 +41,7 @@ export function useBlockedAttempts(options: UseBlockedAttemptsOptions = {}) {
     queryFn: async (): Promise<BlockedAttempt[]> => {
       let query = (supabase as any)
         .from('blocked_access_attempts')
-        .select('*')
+        .select('id, tenant_id, agent_id, agent_name, domain, policy_id, attempted_at, blocked_by, user_name, source, created_at')
         .eq('tenant_id', activeTenant!.id) // P0 CRIT-02: Explicit tenant filter
         .order('attempted_at', { ascending: false })
         .limit(limit);

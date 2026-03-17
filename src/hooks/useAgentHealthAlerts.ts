@@ -56,7 +56,7 @@ export function useAgentExecutionHealth() {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('v_agent_execution_health')
-        .select('*')
+        .select('agent_id, agent_name, tenant_id, status, last_heartbeat, agent_mode, agent_version, minutes_since_heartbeat, last_execution_at, minutes_since_execution, stale_queued_jobs, stale_delivered_jobs, pending_jobs, health_status, severity, health_description, checked_at')
         .eq('tenant_id', tenant.id)
         .order('severity', { ascending: false });
 
@@ -79,7 +79,7 @@ export function useUnhealthyAgents() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from('v_agent_execution_health')
-        .select('*')
+        .select('agent_id, agent_name, tenant_id, status, last_heartbeat, agent_mode, agent_version, minutes_since_heartbeat, last_execution_at, minutes_since_execution, stale_queued_jobs, stale_delivered_jobs, pending_jobs, health_status, severity, health_description, checked_at')
         .eq('tenant_id', tenant.id)
         .neq('health_status', 'healthy')
         .order('severity', { ascending: false });
@@ -102,7 +102,7 @@ export function useNonExecutionAlerts() {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('system_alerts')
-        .select('*')
+        .select('id, tenant_id, agent_id, alert_type, severity, title, message, resolved, resolved_at, created_at, details')
         .eq('tenant_id', tenant.id)
         .eq('alert_type', 'non_execution_detected')
         .eq('resolved', false)
@@ -150,9 +150,9 @@ export function useResolveAlert() {
         .select('severity, tenant_id')
         .eq('id', alertId)
         .eq('tenant_id', tenant.id)
-        .single();
+        .maybeSingle();
 
-      if (alertError) throw alertError;
+      if (alertError || !alert) throw new Error(alertError?.message || 'Alert not found');
 
       // 3. Validate resolution notes for critical alerts
       if (alert.severity === 'critical' && (!resolutionNotes || resolutionNotes.trim().length < 5)) {
@@ -199,7 +199,7 @@ export function useResolveAlert() {
           .eq('rule_code', 'CRITICAL_ALERT_RESOLUTION')
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (decisionEvent) {
           await supabase

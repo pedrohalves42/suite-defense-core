@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
+import { logger } from '@/lib/logger';
 
 export interface PlaybookAction {
   id: string;
@@ -127,7 +128,7 @@ export function usePendingPlaybookExecutions() {
           filter: `tenant_id=eq.${tenant.id}`,
         },
         (payload) => {
-          console.log('[usePlaybooks] Realtime update:', payload);
+          logger.debug('[usePlaybooks] Realtime update:', payload);
           queryClient.invalidateQueries({ 
             queryKey: ['playbook-executions-pending', tenant.id] 
           });

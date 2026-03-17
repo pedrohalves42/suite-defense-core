@@ -82,10 +82,10 @@ export function useRedTeamById(id: string | null) {
         .from('red_team_assessments')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      return data as unknown as RedTeamAssessment;
+      return data as unknown as RedTeamAssessment | null;
     },
     enabled: !!id,
   });

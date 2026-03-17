@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { ShieldX } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTenant } from '@/hooks/useTenant';
+import { logger } from '@/lib/logger';
 
 interface BlockedAttemptPayload {
   id: string;
@@ -52,7 +53,7 @@ export function useBlockedAttemptsRealtime(enabled = true) {
         handleNewAttempt
       )
       .subscribe((status) => {
-        console.log('[useBlockedAttemptsRealtime] Subscription status:', status);
+        logger.debug('[useBlockedAttemptsRealtime] Subscription status', { status: String(status) });
       });
 
     return () => {

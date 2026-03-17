@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTenant } from './useTenant';
 import type { Json } from '@/integrations/supabase/types';
+import { logger } from '@/lib/logger';
 
 export interface DismissInsightParams {
   insightId: string;
@@ -34,7 +35,7 @@ export function useDismissInsight() {
         .select('*')
         .eq('id', insightId)
         .eq('tenant_id', tenant.id)
-        .single();
+        .maybeSingle();
 
       if (insightError || !insight) throw new Error('Insight not found');
 
@@ -84,7 +85,7 @@ export function useDismissInsight() {
       toast.success('Insight dispensado com sucesso');
     },
     onError: (error) => {
-      console.error('[useDismissInsight] Error:', error);
+      logger.error('[useDismissInsight] Error:', error instanceof Error ? error : undefined);
       toast.error(error instanceof Error ? error.message : 'Erro ao dispensar insight');
     },
   });

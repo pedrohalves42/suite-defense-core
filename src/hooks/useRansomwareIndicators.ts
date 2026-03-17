@@ -42,7 +42,7 @@ export function useRansomwareIndicators() {
     queryFn: async (): Promise<RansomwareSummary> => {
       const { data, error } = await supabase
         .from('ransomware_indicators')
-        .select('*')
+        .select('id, agent_id, tenant_id, indicator_type, severity, process_name, process_path, affected_path, affected_files_count, status, auto_response_taken, contained_at, detected_at')
         .eq('tenant_id', tenant!.id)
         .order('detected_at', { ascending: false })
         .limit(100);

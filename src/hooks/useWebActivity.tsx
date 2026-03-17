@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { WebActivityItem } from '@/types/security';
 import { useActiveTenant } from './useActiveTenant';
+import { logger } from '@/lib/logger';
 // Removed unused import: tenantQuery
 
 interface WebActivityRow {
@@ -9,13 +10,14 @@ interface WebActivityRow {
   visited_at: string;
   category?: string | null;
   is_blocked?: boolean | null;
+  visit_count?: number | null;
 }
 
 async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebActivityItem[]> {
   // Fetch raw data and aggregate manually - expanded to 7 days for better visibility
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   
-  console.log('[useWebActivity] Starting fetch:', { agentId, tenantId, since: sevenDaysAgo });
+  logger.debug('[useWebActivity] Starting fetch:', { agentId, tenantId, since: sevenDaysAgo });
   
   // ADR-026 FIX: Use direct supabase query to avoid RLS issues with JWT sync delay
   // The RLS policy tenant_web_activity_select uses user_roles subquery which should work
@@ -33,7 +35,7 @@ async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebA
     throw new Error(`Failed to fetch web activity: ${error.message}`);
   }
 
-  console.log('[useWebActivity] Fetched rows:', data?.length || 0, 'for agent:', agentId);
+  logger.debug('[useWebActivity] Fetched rows', { count: data?.length || 0, agentId });
   const rows = (data || []) as WebActivityRow[];
 
   // Aggregate by domain
@@ -55,7 +57,7 @@ async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebA
         existing.last = item.visited_at;
       }
       // Usar visit_count do agente se disponível, senão incrementar 1
-      existing.count += (item as any).visit_count || 1;
+      existing.count += item.visit_count || 1;
       // Keep latest category/is_blocked values
       if (item.category) existing.category = item.category;
       if (item.is_blocked !== null) existing.is_blocked = item.is_blocked ?? undefined;

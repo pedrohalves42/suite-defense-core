@@ -134,7 +134,7 @@ export const useTenantSetup = () => {
         .from('tenant_settings')
         .select('id')
         .eq('tenant_id', activeTenant.id)
-        .single();
+        .maybeSingle();
 
       if (existingSettings) {
         // Update existing

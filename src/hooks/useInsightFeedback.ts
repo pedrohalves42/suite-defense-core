@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export type FeedbackType = 'useful' | 'noise' | 'false_positive';
 
@@ -138,7 +139,7 @@ export function useFeedbackQualityMetrics() {
         .eq('tenant_id', activeTenant.id);
 
       if (error) {
-        console.warn('insight_feedback_quality view not accessible:', error);
+        logger.debug('insight_feedback_quality view not accessible:', error);
         return [];
       }
 

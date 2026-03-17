@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 
 interface PushNotificationOptions {
   title: string;
@@ -23,7 +24,7 @@ export const usePushNotifications = () => {
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (!('Notification' in window)) {
-      console.warn('[PushNotifications] Not supported in this browser');
+      logger.debug('[PushNotifications] Not supported in this browser');
       return false;
     }
 
