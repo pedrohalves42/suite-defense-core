@@ -182,7 +182,7 @@ export function useSubmitApproval() {
       }
     },
     onError: (error) => {
-      console.error('Failed to submit approval:', error);
+      logger.error('Failed to submit approval', error instanceof Error ? error : undefined);
       toast.error(error.message || 'Erro ao submeter aprovação');
     },
   });
