@@ -53,22 +53,23 @@ export interface RedTeamAssessment {
 }
 
 export function useRedTeamHistory() {
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, loading } = useActiveTenant();
   
-  // V-9001 FIX: Add tenantId to queryKey to prevent cross-tenant cache pollution
   return useQuery({
     queryKey: ['red-team-history', activeTenant?.id],
     queryFn: async () => {
+      if (!activeTenant?.id) return [];
       const { data, error } = await supabase
         .from('red_team_assessments')
-        .select('*')
+        .select('id, tenant_id, threat_level, red_score, attack_vectors, residual_risks, executive_threat_summary, worst_case_scenario, recommended_hardening, ai_model, created_at, threat_system_identity, threat_governance, threat_evidence_proof, threat_human_oversight, threat_operational_resilience, threat_cross_tenant_isolation, threat_transparency_explainability, threat_compliance_alignment, threat_market_trust')
+        .eq('tenant_id', activeTenant.id)
         .order('created_at', { ascending: false })
         .limit(20);
 
       if (error) throw error;
       return (data || []) as unknown as RedTeamAssessment[];
     },
-    enabled: !!activeTenant?.id,
+    enabled: !loading && !!activeTenant?.id,
   });
 }
 
@@ -91,26 +92,24 @@ export function useRedTeamById(id: string | null) {
 }
 
 export function useLatestRedTeam() {
-  const { activeTenant } = useActiveTenant();
-  const activeTenantId = activeTenant?.id ?? null;
+  const { activeTenant, loading } = useActiveTenant();
 
   return useQuery({
-    queryKey: ['red-team-latest', activeTenantId],
+    queryKey: ['red-team-latest', activeTenant?.id],
     queryFn: async () => {
-      let query = supabase
+      if (!activeTenant?.id) return null;
+      const { data, error } = await supabase
         .from('red_team_assessments')
-        .select('*')
+        .select('id, tenant_id, threat_level, red_score, attack_vectors, residual_risks, executive_threat_summary, worst_case_scenario, recommended_hardening, ai_model, created_at, threat_system_identity, threat_governance, threat_evidence_proof, threat_human_oversight, threat_operational_resilience, threat_cross_tenant_isolation, threat_transparency_explainability, threat_compliance_alignment, threat_market_trust')
+        .eq('tenant_id', activeTenant.id)
         .order('created_at', { ascending: false })
-        .limit(1);
+        .limit(1)
+        .maybeSingle();
 
-      if (activeTenantId) {
-        query = query.eq('tenant_id', activeTenantId);
-      }
-
-      const { data, error } = await query.single();
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
       return data as unknown as RedTeamAssessment | null;
     },
+    enabled: !loading && !!activeTenant?.id,
   });
 }
 

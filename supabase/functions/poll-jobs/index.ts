@@ -42,9 +42,11 @@ Deno.serve(async (req) => {
 
     // FASE 2: Buscar agente pelo hash do token
     const tokenHash = await hashToken(agentToken)
+    // TUNING: Expanded join to include tenant_id, last_heartbeat, status
+    // Eliminates separate agentData query below
     const { data: token } = await supabase
       .from('agent_tokens')
-      .select('agent_id, agents!inner(agent_name, hmac_secret, agent_version)')
+      .select('agent_id, agents!inner(agent_name, hmac_secret, agent_version, tenant_id, last_heartbeat, status)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -94,19 +96,13 @@ Deno.serve(async (req) => {
     const hmacMinNormV = normalizeVersion(HMAC_REQUIRED_MIN_VERSION)
     const isModernAgent = !!(currentNormV && hmacMinNormV && currentNormV >= hmacMinNormV)
 
-    // TUNING: Fetch agent data once (reused for tenant_id, version, heartbeat checks later)
-    const { data: agentData, error: agentError } = await supabase
-      .from('agents')
-      .select('id, tenant_id, last_heartbeat, status, agent_version')
-      .eq('id', token.agent_id)
-      .single()
-
-    if (agentError || !agentData) {
-      logger.error('Error fetching agent data', { error: agentError?.message, agentId: token.agent_id })
-      return new Response(
-        JSON.stringify({ error: 'Agent not found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-      )
+    // TUNING: agentData now comes from initial join — zero extra queries
+    const agentData = {
+      id: token.agent_id,
+      tenant_id: (agent as any).tenant_id || null,
+      last_heartbeat: (agent as any).last_heartbeat || null,
+      status: (agent as any).status || null,
+      agent_version: (agent as any).agent_version || null,
     }
 
     if (hasAnyHmacHeader) {

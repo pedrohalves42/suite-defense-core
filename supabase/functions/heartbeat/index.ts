@@ -56,9 +56,11 @@ Deno.serve(async (req) => {
 
     // FASE 2: Buscar agente pelo hash do token (não mais token em plaintext)
     const tokenHash = await hashToken(agentToken)
+    // TUNING: Expanded join to include tenant_id + force_update fields
+    // This eliminates 2 redundant DB queries later (getTenantId + forceCheck)
     const { data: token } = await supabase
       .from('agent_tokens')
-      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status, skip_firewall_remediation, agent_version)')
+      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status, skip_firewall_remediation, agent_version, tenant_id, force_update_version, force_update_reason, force_update_at, force_update_override_safe_mode, force_update_override_safe_mode_expires_at, force_update_delivered_count, force_update_first_delivered_at, last_forced_update_applied)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -80,6 +82,15 @@ Deno.serve(async (req) => {
       status: string;
       skip_firewall_remediation: boolean;
       agent_version: string | null;
+      tenant_id: string | null;
+      force_update_version: string | null;
+      force_update_reason: string | null;
+      force_update_at: string | null;
+      force_update_override_safe_mode: boolean;
+      force_update_override_safe_mode_expires_at: string | null;
+      force_update_delivered_count: number;
+      force_update_first_delivered_at: string | null;
+      last_forced_update_applied: string | null;
     }
     
     // FASE 1.2: HMAC OBRIGATORIO - Agora hmac_secret e NOT NULL
@@ -260,14 +271,8 @@ Deno.serve(async (req) => {
     // ============================================================
     const systemMetrics = (osInfo as any).system_metrics
     
-    // TUNING: Fetch tenant_id eagerly (needed by metrics + processes + force_update)
-    // Avoids repeated lazy queries inside Promise.all
-    const { data: agentTenantData } = await supabase
-      .from('agents')
-      .select('tenant_id')
-      .eq('id', agent.id)
-      .single()
-    const cachedTenantId = agentTenantData?.tenant_id || null
+    // TUNING: tenant_id already available from initial join — zero extra queries
+    const cachedTenantId = agent.tenant_id || null
     const getTenantId = async (): Promise<string | null> => cachedTenantId
 
     // Build all parallel promises
@@ -393,11 +398,17 @@ Deno.serve(async (req) => {
     // Se agent tem force_update_version pendente, incluir dados completos no response
     // Isso bypassa completamente o job system e funciona com agentes antigos
     // ============================================================
-    const { data: forceCheck } = await supabase
-      .from('agents')
-      .select('force_update_version, force_update_reason, force_update_at, force_update_override_safe_mode, force_update_override_safe_mode_expires_at, force_update_delivered_count, force_update_first_delivered_at, last_forced_update_applied')
-      .eq('id', agent.id)
-      .single()
+    // TUNING: forceCheck data already available from initial join — zero extra queries
+    const forceCheck = {
+      force_update_version: agent.force_update_version,
+      force_update_reason: agent.force_update_reason,
+      force_update_at: agent.force_update_at,
+      force_update_override_safe_mode: agent.force_update_override_safe_mode,
+      force_update_override_safe_mode_expires_at: agent.force_update_override_safe_mode_expires_at,
+      force_update_delivered_count: agent.force_update_delivered_count || 0,
+      force_update_first_delivered_at: agent.force_update_first_delivered_at,
+      last_forced_update_applied: agent.last_forced_update_applied,
+    }
 
     // Self-heal: if force_update was scheduled without force_update_version, recover target from latest active release
     const platform = updateData.os_type || 'windows'

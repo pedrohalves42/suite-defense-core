@@ -5023,15 +5023,17 @@ function Send-Heartbeat {
                     # DYNAMIC INTERVAL ADJUSTMENT (v5.0.9)
                     # Server controls agent polling cadence
                     # ============================================
-                    if ($response.heartbeat_interval_seconds -and $response.heartbeat_interval_seconds -ge 10) {
-                        $newHbInterval = [int]$response.heartbeat_interval_seconds
+                    $hbIntervalProp = $response.PSObject.Properties['heartbeat_interval_seconds']
+                    if ($hbIntervalProp -and $hbIntervalProp.Value -and $hbIntervalProp.Value -ge 10) {
+                        $newHbInterval = [int]$hbIntervalProp.Value
                         if ($newHbInterval -ne $Global:PollIntervalSeconds) {
                             Write-Log "[HEARTBEAT] Server adjusted heartbeat interval: $($Global:PollIntervalSeconds)s -> ${newHbInterval}s" "INFO"
                             $Global:PollIntervalSeconds = $newHbInterval
                         }
                     }
-                    if ($response.poll_interval_seconds -and $response.poll_interval_seconds -ge 10) {
-                        $newJobInterval = [int]$response.poll_interval_seconds
+                    $pollIntervalProp = $response.PSObject.Properties['poll_interval_seconds']
+                    if ($pollIntervalProp -and $pollIntervalProp.Value -and $pollIntervalProp.Value -ge 10) {
+                        $newJobInterval = [int]$pollIntervalProp.Value
                         if ($newJobInterval -ne $Global:JobPollIntervalSeconds) {
                             Write-Log "[HEARTBEAT] Server adjusted job poll interval: $($Global:JobPollIntervalSeconds)s -> ${newJobInterval}s" "INFO"
                             $Global:JobPollIntervalSeconds = $newJobInterval
@@ -5042,8 +5044,9 @@ function Send-Heartbeat {
                     # HOTFIX-SKIP-FW-HEARTBEAT-READ: AGENT CONFIG FLAGS (v5.0.13)
                     # Server-side feature toggles
                     # ============================================
-                    if ($null -ne $response.skip_firewall_remediation) {
-                        $Global:SkipFirewallRemediation = [bool]$response.skip_firewall_remediation
+                    $skipFwProp = $response.PSObject.Properties['skip_firewall_remediation']
+                    if ($null -ne $skipFwProp) {
+                        $Global:SkipFirewallRemediation = [bool]$skipFwProp.Value
                         # HOTFIX-SKIP-FW-PERSIST: Persist to HARDCODED path C:\CyberShield (not $PSScriptRoot)
                         try {
                             $flagFile = "C:\CyberShield\skip_firewall.flag"
@@ -5071,9 +5074,10 @@ function Send-Heartbeat {
                     # ============================================
                     # v5.0.14: AGGREGATION CONFIG FROM SERVER
                     # ============================================
-                    if ($response.PSObject.Properties.Match('aggregation') -and $response.aggregation) {
+                    $aggProp = $response.PSObject.Properties['aggregation']
+                    if ($aggProp -and $aggProp.Value) {
                         try {
-                            $aggConfig = $response.aggregation
+                            $aggConfig = $aggProp.Value
                             if ($aggConfig -is [PSCustomObject]) {
                                 $aggHash = @{}
                                 $aggConfig.PSObject.Properties | ForEach-Object { $aggHash[$_.Name] = $_.Value }
@@ -5103,9 +5107,11 @@ function Send-Heartbeat {
                     # FORCE UPDATE VIA HEARTBEAT RESPONSE
                     # Ported from v4 - bypasses job system completely
                     # ============================================
-                    if ($response.force_update -eq $true) {
+                    $forceUpdateProp = $response.PSObject.Properties['force_update']
+                    if ($forceUpdateProp -and $forceUpdateProp.Value -eq $true) {
+                        $targetVerProp = $response.PSObject.Properties['target_version']
                         Write-Log "[FORCE UPDATE] Update forcado detectado via heartbeat!" "WARN"
-                        Write-Log "[FORCE UPDATE] Target version: $($response.target_version)" "INFO"
+                        Write-Log "[FORCE UPDATE] Target version: $($targetVerProp.Value)" "INFO"
                         
                         $updateResult = Apply-ForcedUpdate -Response $response
                         
@@ -5122,11 +5128,14 @@ function Send-Heartbeat {
                     # Server provides script_sha256 + script_hash_signature for integrity
                     # Hash is only trusted if accompanied by valid signature
                     # ============================================
-                    if ($response.script_sha256) {
+                    $scriptSha256Prop = $response.PSObject.Properties['script_sha256']
+                    if ($scriptSha256Prop -and $scriptSha256Prop.Value) {
                         try {
-                            $hashSig = if ($response.script_hash_signature) { $response.script_hash_signature } else { "" }
-                            $hashTs = if ($response.script_hash_signed_at) { $response.script_hash_signed_at } else { (Get-Date -Format "o") }
-                            Save-SignedHashCache -Hash $response.script_sha256 -Signature $hashSig -Timestamp $hashTs
+                            $hashSigProp = $response.PSObject.Properties['script_hash_signature']
+                            $hashTsProp = $response.PSObject.Properties['script_hash_signed_at']
+                            $hashSig = if ($hashSigProp -and $hashSigProp.Value) { $hashSigProp.Value } else { "" }
+                            $hashTs = if ($hashTsProp -and $hashTsProp.Value) { $hashTsProp.Value } else { (Get-Date -Format "o") }
+                            Save-SignedHashCache -Hash $scriptSha256Prop.Value -Signature $hashSig -Timestamp $hashTs
                         } catch {
                             Write-Log "[INTEGRITY] Failed to cache signed hash: $($_.Exception.Message)" "WARN"
                         }
