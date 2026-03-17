@@ -18,9 +18,9 @@ interface PlatformResult {
 }
 
 const SCRIPT_FILES: Record<string, string> = {
-  windows: "cybershield-agent-windows-v4.ps1",
-  linux: "cybershield-agent-linux-v4.sh",
-  macos: "cybershield-agent-macos-v4.sh",
+  windows: "cybershield-agent-windows-v5.ps1",
+  linux: "cybershield-agent-linux-v5.sh",
+  macos: "cybershield-agent-macos-v5.sh",
 };
 
 export function RegisterLatestRelease() {

@@ -7,6 +7,25 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ED25519_PRIVATE_KEY = Deno.env.get('ED25519_PRIVATE_KEY');
 
+function normalizeVersion(version: string | null | undefined): string {
+  return (version ?? '').trim().toLowerCase().replace(/^v/, '');
+}
+
+function extractEmbeddedVersion(scriptContent: string): string | null {
+  const patterns = [
+    /CyberShield\s+Agent\s*-\s*(?:Windows|Linux|macOS)\s+v?(\d+\.\d+\.\d+)/i,
+    /AGENT_VERSION\s*=\s*["']v?(\d+\.\d+\.\d+)["']/i,
+    /\$AgentVersion\s*=\s*["']v?(\d+\.\d+\.\d+)["']/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = scriptContent.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+
+  return null;
+}
+
 /**
  * FASE 3 + SSA-004: Edge Function para registrar novas releases de agentes
  * 
@@ -157,6 +176,40 @@ Deno.serve(async (req) => {
       isWindowsScript,
       isUnixScript
     });
+
+    const embeddedVersion = extractEmbeddedVersion(script_content);
+    if (!embeddedVersion) {
+      logger.error('[register-agent-release] Could not extract embedded version from script', {
+        requestId,
+        platform,
+        version,
+      });
+      return new Response(
+        JSON.stringify({
+          error: 'Embedded version not found in script content',
+          message: 'The uploaded script must declare its own version in the header or AGENT_VERSION variable.'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (normalizeVersion(embeddedVersion) !== normalizeVersion(version)) {
+      logger.error('[register-agent-release] Embedded script version mismatch', {
+        requestId,
+        platform,
+        declaredVersion: version,
+        embeddedVersion,
+      });
+      return new Response(
+        JSON.stringify({
+          error: 'Embedded script version mismatch',
+          message: `Declared version ${version} does not match embedded script version ${embeddedVersion}`,
+          declared_version: version,
+          embedded_version: embeddedVersion,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Use manual SHA256 if provided (for BOM compatibility with old agents)
     // Otherwise calculate SHA256 normally
