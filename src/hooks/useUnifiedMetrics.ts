@@ -17,8 +17,7 @@ import { useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
-import { subDays, subHours } from 'date-fns';
-import { AGENT_STATUS_THRESHOLDS } from '@/lib/agent-status-constants';
+import { subDays } from 'date-fns';
 
 // === Modelo de custo REALISTA para PMEs brasileiras ===
 // Valores conservadores baseados em custo médio de suporte técnico local
