@@ -419,22 +419,47 @@ Deno.serve(async (req) => {
         .maybeSingle()
 
       if (latestActiveRelease?.version) {
-        effectiveForceVersion = latestActiveRelease.version
-        effectiveForceReason = effectiveForceReason || 'Recovered from pending force_update_at without version'
+        const recoveredVersion = latestActiveRelease.version
+        const currentAgentVersion = agentVersion || updateData.agent_version
 
-        await supabase
-          .from('agents')
-          .update({
-            force_update_version: effectiveForceVersion,
-            force_update_reason: effectiveForceReason,
+        // FIX: If recovered version matches agent's current version, clear the flag instead of delivering
+        if (currentAgentVersion && normalizeVersion(currentAgentVersion) === normalizeVersion(recoveredVersion)) {
+          logger.warn('Self-heal recovered version matches current agent version, clearing stale force_update flag', {
+            agentName: agent.agent_name,
+            currentVersion: currentAgentVersion,
+            recoveredVersion,
           })
-          .eq('id', agent.id)
+          await supabase
+            .from('agents')
+            .update({
+              force_update_version: null,
+              force_update_reason: 'auto_cleared_version_matched_on_recovery',
+              force_update_at: null,
+              force_update_delivered_count: 0,
+              force_update_first_delivered_at: null,
+              force_update_override_safe_mode: false,
+              force_update_override_safe_mode_expires_at: null,
+            })
+            .eq('id', agent.id)
+          // effectiveForceVersion stays null → no force update delivered
+        } else {
+          effectiveForceVersion = recoveredVersion
+          effectiveForceReason = effectiveForceReason || 'Recovered from pending force_update_at without version'
 
-        logger.warn('Recovered missing force_update_version from latest active release', {
-          agentName: agent.agent_name,
-          targetVersion: effectiveForceVersion,
-          platform,
-        })
+          await supabase
+            .from('agents')
+            .update({
+              force_update_version: effectiveForceVersion,
+              force_update_reason: effectiveForceReason,
+            })
+            .eq('id', agent.id)
+
+          logger.warn('Recovered missing force_update_version from latest active release', {
+            agentName: agent.agent_name,
+            targetVersion: effectiveForceVersion,
+            platform,
+          })
+        }
       }
     }
 
