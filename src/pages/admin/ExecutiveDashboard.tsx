@@ -231,7 +231,7 @@ export default function ExecutiveDashboard() {
             <Card className="h-full border-info/15 bg-gradient-to-br from-info/[0.06] to-transparent backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <HeartPulse className="h-4 w-4 text-blue-500" />
+                  <HeartPulse className="h-4 w-4 text-info" />
                   O que fizemos pela sua empresa (30 dias)
                 </CardTitle>
               </CardHeader>
