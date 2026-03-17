@@ -66,46 +66,46 @@
   }
   
   .dark {
-    /* === PREMIUM DARK MODE === */
-    --background: 224 18% 5%;          /* #0B0D10 */
-    --foreground: 220 14% 90%;         /* #E5E7EB */
+    /* === PREMIUM DARK MODE — TEAL + GOLD === */
+    --background: 170 25% 5%;           /* #0A1614 — deep teal-black */
+    --foreground: 160 14% 88%;          /* #D6E4E0 — soft teal-white */
     
-    --card: 224 16% 8%;                /* #111318 */
-    --card-foreground: 220 14% 90%;
+    --card: 170 22% 8%;                 /* #101F1C — dark teal card */
+    --card-foreground: 160 14% 88%;
     
-    --popover: 224 14% 16%;             /* #232730 - elevated surface */
-    --popover-foreground: 220 14% 90%;
+    --popover: 170 18% 14%;             /* #1A2F2B — elevated teal surface */
+    --popover-foreground: 160 14% 88%;
     
-    --primary: 220 14% 90%;            /* Inverted for dark */
-    --primary-foreground: 224 18% 5%;
-    --primary-hover: 220 14% 82%;
-    --primary-active: 220 14% 96%;
+    --primary: 168 70% 50%;             /* #0D9488 — bright teal for dark mode */
+    --primary-foreground: 170 25% 5%;
+    --primary-hover: 168 65% 42%;
+    --primary-active: 168 75% 58%;
     
-    --secondary: 224 14% 12%;          /* #1A1D23 */
-    --secondary-foreground: 220 14% 90%;
+    --secondary: 170 20% 12%;           /* #162623 — dark teal surface */
+    --secondary-foreground: 160 14% 88%;
     
-    --muted: 224 14% 12%;
-    --muted-foreground: 220 8% 55%;    /* #868E9C */
+    --muted: 170 18% 12%;
+    --muted-foreground: 160 10% 52%;    /* #778D88 — teal-gray muted */
     
     --accent: 40 52% 48%;
-    --accent-foreground: 220 14% 90%;
+    --accent-foreground: 160 14% 88%;
     --accent-soft: 40 40% 30%;
     
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
     
     --warning: 38 92% 50%;
-    --warning-foreground: 220 20% 10%;
+    --warning-foreground: 170 25% 12%;
     
     --success: 160 60% 45%;
     --success-foreground: 0 0% 98%;
     
-    --info: 217 55% 55%;
+    --info: 190 60% 50%;                /* Teal-blue info for dark mode */
     --info-foreground: 0 0% 98%;
     
-    --border: 224 14% 20%;             /* #2E3340 - more visible */
-    --input: 224 14% 14%;
-    --ring: 220 14% 90%;
+    --border: 170 16% 20%;              /* #263B37 — visible teal border */
+    --input: 170 18% 14%;
+    --ring: 168 70% 50%;                /* Teal ring */
     
     --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.2);
     --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.25), 0 1px 2px -1px rgb(0 0 0 / 0.2);
