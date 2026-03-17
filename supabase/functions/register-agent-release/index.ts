@@ -7,6 +7,25 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ED25519_PRIVATE_KEY = Deno.env.get('ED25519_PRIVATE_KEY');
 
+function normalizeVersion(version: string | null | undefined): string {
+  return (version ?? '').trim().toLowerCase().replace(/^v/, '');
+}
+
+function extractEmbeddedVersion(scriptContent: string): string | null {
+  const patterns = [
+    /CyberShield\s+Agent\s*-\s*(?:Windows|Linux|macOS)\s+v?(\d+\.\d+\.\d+)/i,
+    /AGENT_VERSION\s*=\s*["']v?(\d+\.\d+\.\d+)["']/i,
+    /\$AgentVersion\s*=\s*["']v?(\d+\.\d+\.\d+)["']/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = scriptContent.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+
+  return null;
+}
+
 /**
  * FASE 3 + SSA-004: Edge Function para registrar novas releases de agentes
  * 
