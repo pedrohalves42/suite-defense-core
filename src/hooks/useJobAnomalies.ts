@@ -96,7 +96,7 @@ export const useJobAnomalies = () => {
       // RLS on base tables (jobs, enrollment_keys) provides tenant isolation
       const { data, error } = await supabase
         .from('v_job_health_anomalies')
-        .select('*');
+        .select('anomaly_type, count, oldest_occurrence, description');
 
       if (error) {
         logger.error('[useJobAnomalies] Error fetching anomalies', error);
