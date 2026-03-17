@@ -268,7 +268,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         description: 'Dados atualizados para a nova empresa'
       });
     } catch (err) {
-      console.error('[setActiveTenant] Unexpected error:', err);
+      logger.error('[setActiveTenant] Unexpected error', err instanceof Error ? err : undefined);
       toast.error('Erro ao trocar de empresa', {
         description: 'Erro inesperado. Tente novamente.'
       });

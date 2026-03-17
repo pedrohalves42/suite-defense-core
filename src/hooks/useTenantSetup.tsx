@@ -169,7 +169,7 @@ export const useTenantSetup = () => {
       queryClient.invalidateQueries({ queryKey: ['user-tenants'] });
     },
     onError: (error) => {
-      console.error('Error saving tenant setup:', error);
+      logger.error('Error saving tenant setup', error instanceof Error ? error : undefined);
       toast.error('Erro ao salvar configuração. Tente novamente.');
     },
   });

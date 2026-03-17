@@ -225,7 +225,7 @@ export function useCreateApprovalRequest() {
       toast.success('Solicitação de aprovação criada. Aguardando aprovadores.');
     },
     onError: (error) => {
-      console.error('Failed to create approval request:', error);
+      logger.error('Failed to create approval request', error instanceof Error ? error : undefined);
       toast.error(error.message || 'Erro ao criar solicitação');
     },
   });

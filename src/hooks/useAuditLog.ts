@@ -90,7 +90,7 @@ export const useAuditLog = () => {
         },
       });
     } catch (error) {
-      console.error('[AuditLog] Failed to log state change:', error);
+      logger.error('[AuditLog] Failed to log state change', error instanceof Error ? error : undefined);
     }
   };
 

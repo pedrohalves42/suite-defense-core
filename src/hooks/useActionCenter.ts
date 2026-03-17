@@ -176,7 +176,7 @@ export function useExecuteActionItem() {
       queryClient.invalidateQueries({ queryKey: ['playbook-executions-pending'] });
     },
     onError: (error) => {
-      console.error('Execute action error:', error);
+      logger.error('Execute action error', error instanceof Error ? error : undefined);
       toast.error('Erro ao executar ação');
     },
   });

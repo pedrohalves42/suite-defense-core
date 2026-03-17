@@ -162,7 +162,7 @@ export function useRejectAiAction() {
       toast.success('Ação rejeitada');
     },
     onError: (error) => {
-      console.error('[useRejectAiAction] Error:', error);
+      logger.error('[useRejectAiAction] Error', error instanceof Error ? error : undefined);
       toast.error(error instanceof Error ? error.message : 'Erro ao rejeitar ação');
     },
   });

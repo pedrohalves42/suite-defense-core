@@ -29,7 +29,7 @@ export function useAgentSyncStatus() {
       });
 
       if (error) {
-        console.error('[useAgentSyncStatus] Error fetching agents:', error);
+        logger.error('[useAgentSyncStatus] Error fetching agents', error);
         throw error;
       }
 

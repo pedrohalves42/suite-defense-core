@@ -51,7 +51,7 @@ export function useAgentSnapshot(agentId?: string) {
       });
       
       if (error) {
-        console.error('[useAgentSnapshot] Error:', error);
+        logger.error('[useAgentSnapshot] Error', error instanceof Error ? error : undefined);
         throw new Error(error.message || 'Failed to fetch agent snapshot');
       }
       

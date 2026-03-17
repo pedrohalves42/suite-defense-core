@@ -149,7 +149,7 @@ export function useApproveReport() {
       toast.success('Relatório aprovado');
     },
     onError: (error) => {
-      console.error('Error approving report:', error);
+      logger.error('Error approving report', error instanceof Error ? error : undefined);
       toast.error('Erro ao aprovar relatório');
     },
   });

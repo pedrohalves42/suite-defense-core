@@ -29,7 +29,7 @@ export function useSmartNotifications() {
       });
       
       if (error) {
-        console.error('[useSmartNotifications] Error:', error);
+        logger.error('[useSmartNotifications] Error', error);
         return [];
       }
       

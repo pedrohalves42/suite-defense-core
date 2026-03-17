@@ -99,7 +99,7 @@ export const useJobAnomalies = () => {
         .select('*');
 
       if (error) {
-        console.error('[useJobAnomalies] Error fetching anomalies:', error);
+        logger.error('[useJobAnomalies] Error fetching anomalies', error);
         throw error;
       }
 

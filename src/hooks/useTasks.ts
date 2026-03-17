@@ -266,7 +266,7 @@ export function useAssignTask() {
       toast.success('Task atribuída com sucesso');
     },
     onError: (error) => {
-      console.error('Error assigning task:', error);
+      logger.error('Error assigning task', error instanceof Error ? error : undefined);
       toast.error('Erro ao atribuir task');
     },
   });

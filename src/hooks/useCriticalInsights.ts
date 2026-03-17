@@ -20,7 +20,7 @@ export function useCriticalInsights() {
         .in("severity", ["critical", "high"]);
       
       if (error) {
-        console.error("Error fetching critical insights:", error);
+        logger.error("Error fetching critical insights", error);
         return 0;
       }
       
