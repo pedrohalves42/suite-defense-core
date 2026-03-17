@@ -66,51 +66,53 @@
   }
   
   .dark {
-    /* === PREMIUM DARK MODE — TEAL + GOLD === */
-    --background: 170 25% 5%;           /* #0A1614 — deep teal-black */
-    --foreground: 160 14% 88%;          /* #D6E4E0 — soft teal-white */
+    /* === DARK MODE — CYBER NEON === */
+    --background: 0 0% 4%;              /* #0A0A0B — near-black */
+    --foreground: 140 10% 88%;          /* #D8E5DE — soft green-white */
     
-    --card: 170 22% 8%;                 /* #101F1C — dark teal card */
-    --card-foreground: 160 14% 88%;
+    --card: 150 8% 7%;                  /* #101512 — dark with green tint */
+    --card-foreground: 140 10% 88%;
     
-    --popover: 170 18% 14%;             /* #1A2F2B — elevated teal surface */
-    --popover-foreground: 160 14% 88%;
+    --popover: 150 8% 11%;              /* #171E1A */
+    --popover-foreground: 140 10% 88%;
     
-    --primary: 168 70% 50%;             /* #0D9488 — bright teal for dark mode */
-    --primary-foreground: 170 25% 5%;
-    --primary-hover: 168 65% 42%;
-    --primary-active: 168 75% 58%;
+    /* Neon Green — Primary (glows in dark) */
+    --primary: 142 71% 45%;             /* #22C55E */
+    --primary-foreground: 0 0% 2%;
+    --primary-hover: 142 65% 38%;
+    --primary-active: 142 76% 55%;
     
-    --secondary: 170 20% 12%;           /* #162623 — dark teal surface */
-    --secondary-foreground: 160 14% 88%;
+    --secondary: 150 10% 11%;           /* #181E1A */
+    --secondary-foreground: 140 10% 88%;
     
-    --muted: 170 18% 12%;
-    --muted-foreground: 160 10% 52%;    /* #778D88 — teal-gray muted */
+    --muted: 150 8% 11%;
+    --muted-foreground: 140 6% 48%;     /* #6E7D73 */
     
-    --accent: 40 52% 48%;
-    --accent-foreground: 160 14% 88%;
-    --accent-soft: 40 40% 30%;
+    /* Neon Lime — Accent (high energy) */
+    --accent: 150 100% 50%;             /* #00FF87 */
+    --accent-foreground: 0 0% 2%;
+    --accent-soft: 150 50% 25%;
     
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
     
     --warning: 38 92% 50%;
-    --warning-foreground: 170 25% 12%;
+    --warning-foreground: 0 0% 4%;
     
-    --success: 160 60% 45%;
+    --success: 142 71% 45%;
     --success-foreground: 0 0% 98%;
     
-    --info: 190 60% 50%;                /* Teal-blue info for dark mode */
+    --info: 199 89% 48%;
     --info-foreground: 0 0% 98%;
     
-    --border: 170 16% 20%;              /* #263B37 — visible teal border */
-    --input: 170 18% 14%;
-    --ring: 168 70% 50%;                /* Teal ring */
+    --border: 150 10% 16%;              /* #232E28 — subtle green border */
+    --input: 150 8% 13%;
+    --ring: 142 71% 45%;
     
-    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.2);
-    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.25), 0 1px 2px -1px rgb(0 0 0 / 0.2);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.35), 0 4px 6px -4px rgb(0 0 0 / 0.2);
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.35), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(34 197 94 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.3);
   }
 }
 
