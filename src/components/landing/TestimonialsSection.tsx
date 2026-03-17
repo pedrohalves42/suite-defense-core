@@ -15,7 +15,7 @@ export function TestimonialsSection() {
 
   return (
     <section id="depoimentos" className="py-24 relative">
-      <div className="absolute inset-0 bg-gradient-to-b from-muted/40 to-background" />
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-cta-positive/[0.03] to-background" />
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader 
