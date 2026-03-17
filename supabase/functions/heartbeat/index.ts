@@ -709,9 +709,9 @@ Deno.serve(async (req) => {
                     new_version: release.version,
                     old_version: currentVersion || 'unknown',
                   },
-                  // COST-OPT v4: 300s→600s heartbeat, 120s→300s poll (~75% cost reduction)
+                  // COST-OPT v6: Unified intervals — BUG 5 fix: eliminates ping-pong
                   heartbeat_interval_seconds: 600,
-                  poll_interval_seconds: 300,
+                  poll_interval_seconds: 600,
                   // v5.0.14: Aggregation config (safe default)
                   aggregation: null,
                 }),
@@ -745,9 +745,9 @@ Deno.serve(async (req) => {
         agent: agent.agent_name,
         timestamp: new Date().toISOString(),
         script_sha256: null, // Compatibility field for legacy/v5.0.13 parsing
-        // COST-OPT v4: 300s→600s heartbeat, 120s→300s poll (~75% cost reduction target: R$10/endpoint/mês)
-        heartbeat_interval_seconds: 600,   // Heartbeat every 10min (was 5min)
-        poll_interval_seconds: 300,        // Poll jobs every 5min (was 2min)
+        // COST-OPT v6: Unified intervals (heartbeat=600s, poll=600s) — BUG 5 fix: eliminates ping-pong
+        heartbeat_interval_seconds: 600,   // Heartbeat every 10min
+        poll_interval_seconds: 600,        // Poll jobs every 10min (aligned with agent-heartbeat)
         // Agent config flags
         skip_firewall_remediation: agent.skip_firewall_remediation || false,
         // v5.0.14: Aggregation config (safe default so agents don't crash on missing property)
