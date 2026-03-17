@@ -216,7 +216,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
             setIsSyncing(false);
           });
       } catch (err) {
-        console.warn('[useActiveTenant] JWT check failed:', err);
+        logger.warn('[useActiveTenant] JWT check failed');
         setIsSyncing(false);
       }
     };
