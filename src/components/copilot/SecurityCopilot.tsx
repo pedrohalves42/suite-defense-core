@@ -28,7 +28,7 @@ const CopilotMarkdown = ({ content }: { content: string }) => {
         components={{
           h1: ({ children }) => (
             <h1 className="text-base font-bold text-foreground mt-3 mb-1.5 pb-1 border-b border-border/50 flex items-center gap-1.5">
-              <Shield className="h-4 w-4 text-primary shrink-0" />
+              <Shield className="h-4 w-4 text-cta-positive shrink-0" />
               {children}
             </h1>
           ),
