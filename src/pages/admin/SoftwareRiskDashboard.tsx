@@ -400,7 +400,7 @@ export default function SoftwareRiskDashboard() {
       )}
 
       {/* Software List */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+      <motion.div id="software-list" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-4">
@@ -408,12 +408,23 @@ export default function SoftwareRiskDashboard() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Monitor className="h-5 w-5" />
-                    {selectedRisk 
-                      ? `Programas - ${RISK_CONFIG[selectedRisk]?.label || selectedRisk}`
-                      : 'Todos os Programas'}
+                    {selectedCategory
+                      ? `Programas - ${CATEGORY_LABELS[selectedCategory] || selectedCategory}`
+                      : selectedRisk 
+                        ? `Programas - ${RISK_CONFIG[selectedRisk]?.label || selectedRisk}`
+                        : 'Todos os Programas'}
                     <Badge variant="secondary" className="ml-2">{filteredSoftware.length}</Badge>
                   </CardTitle>
-                  <CardDescription className="mt-1">
+                  <CardDescription className="mt-1 flex gap-2">
+                    {selectedCategory && (
+                      <Button 
+                        variant="link" 
+                        className="p-0 h-auto text-sm"
+                        onClick={() => setSelectedCategory(undefined)}
+                      >
+                        Limpar filtro de categoria
+                      </Button>
+                    )}
                     {selectedRisk && (
                       <Button 
                         variant="link" 
