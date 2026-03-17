@@ -198,7 +198,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         
         // If JWT already has correct tenant, skip sync
         if (currentJWTTenantId === activeTenant.id) {
-          console.log('[useActiveTenant] JWT already synced, skipping backend call');
+          logger.debug('[useActiveTenant] JWT already synced, skipping backend call');
           setIsSyncing(false);
           return;
         }
