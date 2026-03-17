@@ -97,7 +97,7 @@ export function useApproveAiAction() {
       toast.success('Ação aprovada e executada com sucesso');
     },
     onError: (error) => {
-      console.error('[useApproveAiAction] Error:', error);
+      logger.error('[useApproveAiAction] Error', error instanceof Error ? error : undefined);
       toast.error(error instanceof Error ? error.message : 'Erro ao aprovar ação');
     },
   });
