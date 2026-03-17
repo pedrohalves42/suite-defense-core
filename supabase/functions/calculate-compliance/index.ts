@@ -75,28 +75,29 @@ Deno.serve(async (req) => {
       .from('agents')
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenant_id)
-      .eq('status', 'active');
+      .not('status', 'in', '("archived","deleted")');
 
     const { count: criticalVulns } = await supabase
       .from('vuln_findings')
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenant_id)
-      .eq('severity', 'CRITICAL');
+      .ilike('severity', 'critical');
 
     const { count: highVulns } = await supabase
       .from('vuln_findings')
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenant_id)
-      .eq('severity', 'HIGH');
+      .ilike('severity', 'high');
 
     const vulnScore = Math.max(0, 100 - (criticalVulns || 0) * 15 - (highVulns || 0) * 5);
 
     // 2. Agent Health (weight: 20%)
+    // Count agents NOT in online-equivalent states
     const { count: offlineAgents } = await supabase
       .from('agents')
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenant_id)
-      .eq('status', 'inactive');
+      .not('status', 'in', '("active","online","warning","degraded","recovery","healthy","enforcing")');
 
     const agentHealthScore = totalAgents
       ? Math.round(((totalAgents - (offlineAgents || 0)) / totalAgents) * 100)
