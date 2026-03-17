@@ -5107,9 +5107,11 @@ function Send-Heartbeat {
                     # FORCE UPDATE VIA HEARTBEAT RESPONSE
                     # Ported from v4 - bypasses job system completely
                     # ============================================
-                    if ($response.force_update -eq $true) {
+                    $forceUpdateProp = $response.PSObject.Properties['force_update']
+                    if ($forceUpdateProp -and $forceUpdateProp.Value -eq $true) {
+                        $targetVerProp = $response.PSObject.Properties['target_version']
                         Write-Log "[FORCE UPDATE] Update forcado detectado via heartbeat!" "WARN"
-                        Write-Log "[FORCE UPDATE] Target version: $($response.target_version)" "INFO"
+                        Write-Log "[FORCE UPDATE] Target version: $($targetVerProp.Value)" "INFO"
                         
                         $updateResult = Apply-ForcedUpdate -Response $response
                         
