@@ -27,7 +27,7 @@ export const useForensicSnapshots = (agentId?: string) => {
       if (!tenant?.id) return [];
 
       let query = supabase
-        .from('forensic_snapshots' as any)
+        .from('forensic_snapshots')
         .select('*')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
