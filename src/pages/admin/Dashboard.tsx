@@ -347,7 +347,7 @@ export default function Dashboard() {
             const Icon = item.icon;
             return (
               <Link key={item.label} to={item.to}>
-                <Card className="card-enterprise-hover transition-all hover:scale-[1.02] cursor-pointer">
+                <Card className="card-enterprise-hover transition-all hover:scale-[1.02] cursor-pointer backdrop-blur-sm">
                   <CardContent className="py-3 px-4 flex items-center gap-3">
                     <div className="p-1.5 rounded-md bg-muted/60">
                       <Icon className={cn("h-4 w-4", item.color)} />
