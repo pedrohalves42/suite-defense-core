@@ -1958,8 +1958,9 @@ function Poll-Jobs {
             # Wrapped format: { jobs: [...], poll_interval_seconds: N }
             $jobsList = @($jobsPropPoll.Value)
             # Read dynamic poll interval from response
-            if ($response.poll_interval_seconds -and $response.poll_interval_seconds -ge 10) {
-                $newInterval = [int]$response.poll_interval_seconds
+            $pollIntervalProp = $response.PSObject.Properties['poll_interval_seconds']
+            if ($pollIntervalProp -and $pollIntervalProp.Value -and $pollIntervalProp.Value -ge 10) {
+                $newInterval = [int]$pollIntervalProp.Value
                 if ($newInterval -ne $Global:JobPollIntervalSeconds) {
                     Write-Log "[POLL-JOBS] Server adjusted job poll interval: $($Global:JobPollIntervalSeconds)s -> ${newInterval}s" "INFO"
                     $Global:JobPollIntervalSeconds = $newInterval
