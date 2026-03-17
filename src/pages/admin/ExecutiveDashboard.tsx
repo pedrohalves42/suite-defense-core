@@ -181,11 +181,11 @@ export default function ExecutiveDashboard() {
         </div>
 
         {/* === HERO: Protection Status === */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-          <Card className={cn("border", healthStatus?.bgClass)}>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <Card className={cn("border backdrop-blur-sm", healthStatus?.bgClass)}>
             <CardContent className="pt-5 pb-5 space-y-4">
               <div className="flex items-center gap-4">
-                <div className={cn("flex items-center justify-center h-14 w-14 rounded-xl", healthStatus?.bgClass)}>
+                <div className={cn("flex items-center justify-center h-14 w-14 rounded-2xl shadow-lg", healthStatus?.bgClass)}>
                   {healthStatus?.status === 'excellent' && <ShieldCheck className={cn("h-8 w-8", healthStatus.color)} />}
                   {healthStatus?.status === 'good' && <Shield className={cn("h-8 w-8", healthStatus.color)} />}
                   {healthStatus?.status === 'warning' && <ShieldAlert className={cn("h-8 w-8", healthStatus.color)} />}
@@ -198,10 +198,10 @@ export default function ExecutiveDashboard() {
                       {overallScore}%
                     </Badge>
                     {onlineAgents > 0 && (
-                      <Badge variant="outline" className="gap-1 text-[10px] border-green-500/30 text-green-500">
+                      <Badge variant="outline" className="gap-1 text-[10px] border-success/30 text-success">
                         <span className="relative flex h-1.5 w-1.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success" />
                         </span>
                         Monitorando 24/7
                       </Badge>
