@@ -13,56 +13,56 @@
 
 @layer base {
   :root {
-    /* === PREMIUM LIGHT MODE === */
-    --background: 220 14% 96%;         /* #F3F4F6 */
-    --foreground: 220 20% 10%;         /* #171A1F */
+    /* === PREMIUM LIGHT MODE — TEAL + GOLD === */
+    --background: 160 20% 97%;          /* #F2F8F7 — warm teal-tinted white */
+    --foreground: 170 25% 12%;          /* #172B27 — deep teal-black */
     
     --card: 0 0% 100%;                 /* #FFFFFF */
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 170 25% 12%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover-foreground: 170 25% 12%;
     
-    /* Deep Graphite — Primary */
-    --primary: 220 12% 12%;            /* #1A1D21 */
+    /* Deep Teal — Primary */
+    --primary: 170 80% 30%;             /* #0D6B5E — rich teal */
     --primary-foreground: 0 0% 98%;
-    --primary-hover: 220 10% 18%;
-    --primary-active: 220 14% 8%;
+    --primary-hover: 170 75% 25%;       /* Darker teal on hover */
+    --primary-active: 170 85% 20%;      /* Deepest teal on press */
     
-    --secondary: 220 14% 94%;          /* #ECEEF1 */
-    --secondary-foreground: 220 20% 10%;
+    --secondary: 160 18% 93%;           /* #E8F0EE — teal-tinted light */
+    --secondary-foreground: 170 25% 12%;
     
-    --muted: 220 14% 94%;
-    --muted-foreground: 220 8% 46%;    /* #6B7280 */
+    --muted: 160 14% 93%;
+    --muted-foreground: 170 8% 46%;     /* #6B7E79 — teal-gray */
     
-    /* Warm Gold — Accent (use sparingly) */
+    /* Warm Gold — Accent (use sparingly for CTAs, badges) */
     --accent: 40 52% 48%;              /* #B8963E */
-    --accent-foreground: 220 20% 10%;
+    --accent-foreground: 170 25% 12%;
     --accent-soft: 40 40% 72%;
     
     --destructive: 0 72% 51%;          /* #EF4444 */
     --destructive-foreground: 0 0% 98%;
     
     --warning: 38 92% 50%;             /* #F59E0B */
-    --warning-foreground: 220 20% 10%;
+    --warning-foreground: 170 25% 12%;
     
     --success: 160 60% 45%;            /* #10B981 */
     --success-foreground: 0 0% 98%;
     
-    --info: 217 55% 55%;               /* #3B82F6 */
+    --info: 190 60% 45%;               /* #0E8E9E — teal-blue info */
     --info-foreground: 0 0% 98%;
     
-    --border: 220 13% 91%;             /* #E5E7EB */
-    --input: 220 13% 91%;
-    --ring: 220 12% 12%;
+    --border: 160 12% 89%;             /* #DEE8E5 — soft teal border */
+    --input: 160 12% 89%;
+    --ring: 170 80% 30%;               /* Teal ring */
     
     --radius: 0.625rem;
     
     /* Elevation */
-    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
-    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.03);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.03);
+    --shadow-xs: 0 1px 2px 0 rgb(13 107 94 / 0.03);
+    --shadow-sm: 0 1px 3px 0 rgb(13 107 94 / 0.04), 0 1px 2px -1px rgb(13 107 94 / 0.03);
+    --shadow-md: 0 4px 6px -1px rgb(13 107 94 / 0.06), 0 2px 4px -2px rgb(13 107 94 / 0.03);
+    --shadow-lg: 0 10px 15px -3px rgb(13 107 94 / 0.07), 0 4px 6px -4px rgb(13 107 94 / 0.03);
   }
   
   .dark {
