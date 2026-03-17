@@ -70,7 +70,7 @@ export const useAgentReleases = () => {
         const hashBuffer = await crypto.subtle.digest('SHA-256', contentBytes);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         sha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        console.log('[useAgentReleases] Calculated SHA256 from normalized content:', sha256.substring(0, 16) + '...');
+        logger.debug('[useAgentReleases] Calculated SHA256 from normalized content:', sha256.substring(0, 16) + '...');
       }
 
       console.log('[useAgentReleases] Registering release', {
