@@ -55,7 +55,7 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
     clearTimeout(timeoutId);
 
     if (error) {
-      console.error('[syncActiveTenantToBackend] Edge function error:', error);
+      logger.error('[syncActiveTenantToBackend] Edge function error', error);
       return false;
     }
 
