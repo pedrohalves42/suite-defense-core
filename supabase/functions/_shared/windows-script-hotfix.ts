@@ -1267,5 +1267,69 @@ try {
     }
   }
 
+  // HOTFIX 38: BUG 2 fix — Ensure keys are generated BEFORE first poll-jobs/heartbeat
+  // Root cause: Initialize-AgentKeys runs RSA fallback but the first heartbeat/poll-jobs call
+  // happens before the key registration completes, leaving jobs unsigned in the first cycle.
+  // Fix: Inject a synchronous key-readiness gate after Initialize-AgentKeys returns
+  if (content.includes('Initialize-AgentKeys') && !content.includes('HOTFIX-KEY-READY-GATE')) {
+    // Find the pattern: Initialize-AgentKeys call followed by the main loop or heartbeat
+    const keyReadyGate = `
+    # HOTFIX-KEY-READY-GATE: BUG 2 fix - ensure signing key is ready before first job submission
+    # Without this, the first poll-jobs cycle submits results without a signature
+    if (-not $Global:AgentPrivateKey -and -not $Global:AgentRsaKey) {
+        Write-Log "[BOOT] No signing key available after Initialize-AgentKeys. Attempting RSA-2048 emergency generation..." "WARN"
+        try {
+            $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
+            $rsaPrivB64 = [Convert]::ToBase64String($rsa.ExportCspBlob($true))
+            $rsaPubB64 = [Convert]::ToBase64String($rsa.ExportCspBlob($false))
+            $Global:AgentPrivateKey = $rsaPrivB64
+            $Global:AgentPublicKey = $rsaPubB64
+            $Global:AgentRsaKey = $rsa
+            $Global:AgentSigningAlgorithm = "RSA-2048-CSP"
+            # Compute fingerprint
+            $fpBytes = $rsa.ExportCspBlob($false)
+            $sha = [System.Security.Cryptography.SHA256]::Create()
+            $fpHash = $sha.ComputeHash($fpBytes)
+            $Global:KeyFingerprint = [BitConverter]::ToString($fpHash).Replace("-","").ToLower()
+            $sha.Dispose()
+            # Persist keys
+            $keyDir = "C:\\\\CyberShield\\\\keys"
+            if (-not (Test-Path $keyDir)) { New-Item -ItemType Directory -Path $keyDir -Force | Out-Null }
+            @{ algorithm = "RSA-2048-CSP"; private_key = $rsaPrivB64; public_key = $rsaPubB64; fingerprint = $Global:KeyFingerprint; created_at = (Get-Date).ToString("o") } | ConvertTo-Json -Depth 3 | Out-File "$keyDir\\\\agent_keys.json" -Encoding UTF8 -Force
+            Write-Log "[BOOT] RSA-2048-CSP emergency key generated and persisted. Signing ready." "SUCCESS"
+        } catch {
+            Write-Log "[BOOT] Emergency key generation failed: $($_.Exception.Message). Jobs will be unsigned." "ERROR"
+        }
+    }
+`;
+    // Inject after the Initialize-AgentKeys call
+    const updated38 = content.replace(
+      /(Initialize-AgentKeys[^\r\n]*(?:\r?\n\s*\})?)/,
+      '$1' + keyReadyGate
+    );
+    if (updated38 !== content) {
+      content = updated38;
+      reasons.push('key_ready_gate');
+    }
+  }
+
+  // HOTFIX 39: BUG 5 fix — Normalize poll interval to 600s to match server-side unification
+  // Prevents agent-side ping-pong between heartbeat (600s) and poll-jobs (previously 300s)
+  if (content.includes('$Global:JobPollIntervalSeconds') && !content.includes('HOTFIX-UNIFIED-POLL')) {
+    // Replace any hardcoded 300 poll interval with 600
+    content = content.replace(
+      /\$Global:JobPollIntervalSeconds\s*=\s*300/g,
+      '$Global:JobPollIntervalSeconds = 600 <# HOTFIX-UNIFIED-POLL #>'
+    );
+    // Also clamp the dynamic adjustment minimum to 600
+    content = content.replace(
+      /if\s*\(\$newJobInterval\s*-lt\s*\d+\)\s*\{\s*\$newJobInterval\s*=\s*\d+\s*\}/g,
+      'if ($newJobInterval -lt 600) { $newJobInterval = 600 } <# HOTFIX-UNIFIED-POLL #>'
+    );
+    if (content.includes('HOTFIX-UNIFIED-POLL')) {
+      reasons.push('unified_poll_interval');
+    }
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }

@@ -258,6 +258,48 @@ Deno.serve(async (req) => {
       )
     }
 
+    // 7.5 BUG 6 FIX: Cleanup orphan keys from previous boot cycles before registering new one
+    // When the agent restarts frequently (~2.5min), it generates new keys each time,
+    // leaving orphan active keys that never get used. Deactivate all previous active keys.
+    try {
+      const { data: orphanKeys, error: orphanError } = await supabase
+        .from('agent_signing_keys')
+        .select('id, key_fingerprint, algorithm, created_at')
+        .eq('agent_id', agent.id)
+        .eq('is_active', true)
+        .is('revoked_at', null)
+
+      if (!orphanError && orphanKeys && orphanKeys.length > 0) {
+        const orphanIds = orphanKeys.map(k => k.id)
+        console.log('[register-agent-key] BUG 6: Deactivating orphan keys before new registration:', {
+          agent: agent.agent_name,
+          orphanCount: orphanIds.length,
+          orphanFingerprints: orphanKeys.map(k => k.key_fingerprint?.substring(0, 16) + '...')
+        })
+        
+        // Keep only the most recent key active (N+N-1 policy), deactivate the rest
+        if (orphanIds.length > 1) {
+          // Sort by created_at desc, keep the newest, deactivate others
+          const sortedOrphans = orphanKeys.sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          )
+          const toDeactivate = sortedOrphans.slice(1).map(k => k.id)
+          
+          if (toDeactivate.length > 0) {
+            await supabase
+              .from('agent_signing_keys')
+              .update({ is_active: false, valid_until: new Date().toISOString() })
+              .in('id', toDeactivate)
+            
+            console.log('[register-agent-key] BUG 6: Deactivated', toDeactivate.length, 'orphan keys for', agent.agent_name)
+          }
+        }
+      }
+    } catch (orphanCleanupErr) {
+      // Non-fatal: log and continue with registration
+      console.warn('[register-agent-key] BUG 6: Orphan cleanup failed (non-fatal):', orphanCleanupErr)
+    }
+
     // 8. Register new key using the RPC function
     const { data: registerResult, error: registerError } = await supabase
       .rpc('register_agent_signing_key', {

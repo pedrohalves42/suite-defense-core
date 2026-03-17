@@ -709,9 +709,9 @@ Deno.serve(async (req) => {
                     new_version: release.version,
                     old_version: currentVersion || 'unknown',
                   },
-                  // COST-OPT v4: 300s→600s heartbeat, 120s→300s poll (~75% cost reduction)
+                  // COST-OPT v6: Unified intervals — BUG 5 fix: eliminates ping-pong
                   heartbeat_interval_seconds: 600,
-                  poll_interval_seconds: 300,
+                  poll_interval_seconds: 600,
                   // v5.0.14: Aggregation config (safe default)
                   aggregation: null,
                 }),
