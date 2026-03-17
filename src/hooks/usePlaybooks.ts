@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
+import { logger } from '@/lib/logger';
 
 export interface PlaybookAction {
   id: string;

@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { ShieldX } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTenant } from '@/hooks/useTenant';
+import { logger } from '@/lib/logger';
 
 interface BlockedAttemptPayload {
   id: string;
