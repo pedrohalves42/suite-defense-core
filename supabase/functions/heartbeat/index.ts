@@ -511,25 +511,33 @@ Deno.serve(async (req) => {
       const sameVersionAlreadyApplied = !!currentNorm && !!targetNorm && currentNorm === targetNorm
       const staleSameVersionTrigger = sameVersionAlreadyApplied && lastAppliedMs !== null && (forceTriggeredAtMs === null || forceTriggeredAtMs <= lastAppliedMs)
 
-      if (!hasExplicitForceTrigger && sameVersionAlreadyApplied) {
-        logger.info('Agent already at target version (no explicit force trigger), clearing force_update flag', {
+      if (sameVersionAlreadyApplied) {
+        // BUG-1 FIX: Agent is already running the target version.
+        // Clear force_update flag immediately — regardless of whether the agent
+        // confirmed via confirm-force-update (last_forced_update_applied may be null).
+        // Previously, only cleared when !hasExplicitForceTrigger, causing a loop
+        // where explicit triggers kept re-delivering to agents already at target version.
+        logger.info('Agent already at target version, clearing force_update flag', {
           agentName: agent.agent_name,
-          version: currentVersion
+          version: currentVersion,
+          hadExplicitTrigger: hasExplicitForceTrigger,
+          lastApplied: lastForcedUpdateApplied,
         })
         await supabase
           .from('agents')
           .update({ 
             force_update_version: null,
-            force_update_reason: null,
+            force_update_reason: 'auto_cleared_version_matched',
             force_update_at: null,
             force_update_delivered_count: 0,
             force_update_first_delivered_at: null,
             force_update_override_safe_mode: false,
-            force_update_override_safe_mode_expires_at: null
+            force_update_override_safe_mode_expires_at: null,
+            last_forced_update_applied: new Date().toISOString(),
           })
           .eq('id', agent.id)
 
-        // Response normal - agente já está atualizado e não houve trigger explícito
+        // Response normal - agente já está atualizado
       } else if (staleSameVersionTrigger) {
         logger.warn('Stale same-version force_update detected after successful apply, clearing flag', {
           agentName: agent.agent_name,
