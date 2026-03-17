@@ -17,8 +17,7 @@ import { useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
-import { subDays, subHours } from 'date-fns';
-import { AGENT_STATUS_THRESHOLDS } from '@/lib/agent-status-constants';
+import { subDays } from 'date-fns';
 
 // === Modelo de custo REALISTA para PMEs brasileiras ===
 // Valores conservadores baseados em custo médio de suporte técnico local
@@ -64,6 +63,9 @@ export interface UnifiedMetrics {
     autoRepairs: number;
     autoRecoveries: number;
     policyDrifts: number;
+    criticalPrevented: number;
+    highPrevented: number;
+    mediumPrevented: number;
   };
   // Vulnerabilities
   vulnerabilities: {
@@ -106,7 +108,7 @@ export function useUnifiedMetrics() {
       const sevenDaysAgo = subDays(now, 7).toISOString();
       const thirtyDaysAgo = subDays(now, 30).toISOString();
 
-      const [alertsRes, blockedRes, evidence7dRes, evidence30dRes, vulnRes, insightsRes, blockedItemsRes] = await Promise.all([
+      const [alertsRes, blockedRes, evidenceSummaryRes, vulnRes, insightsRes, blockedItemsRes] = await Promise.all([
         sb.from('system_alerts')
           .select('id, severity, message, alert_type, status, title, created_at')
           .eq('tenant_id', tenant.id)
@@ -116,14 +118,8 @@ export function useUnifiedMetrics() {
           .select('*', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id)
           .gte('attempted_at', sevenDaysAgo),
-        sb.from('agent_evidence_logs')
-          .select('event_type, severity, agent_name, event_data')
-          .eq('tenant_id', tenant.id)
-          .gte('created_at', sevenDaysAgo),
-        sb.from('agent_evidence_logs')
-          .select('event_type, severity, agent_name, event_data')
-          .eq('tenant_id', tenant.id)
-          .gte('created_at', thirtyDaysAgo),
+        // Use server-side RPC for accurate, deduplicated evidence counts
+        sb.rpc('get_evidence_summary', { p_tenant_id: tenant.id }),
         sb.from('vuln_findings')
           .select('severity')
           .eq('tenant_id', tenant.id),
@@ -144,57 +140,24 @@ export function useUnifiedMetrics() {
       const activeAlerts = allAlerts.filter(a => unresolvedStatuses.includes(a.status));
       const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical' || a.severity === 'high');
 
-      type EvidenceRow = { event_type: string; severity: string; agent_name?: string; event_data?: any };
-      const evidence7d: EvidenceRow[] = evidence7dRes.data || [];
-      const evidence30d: EvidenceRow[] = evidence30dRes.data || [];
       const vulns: Array<{ severity: string }> = vulnRes.data || [];
 
-      // =============================================
-      // DEDUPLICATION: Count unique incidents, not repeated log entries
-      // An event with empty event_data is noise/duplicate
-      // Same alert_type + agent = 1 incident (not N log entries)
-      // =============================================
-      const realEvents30d = evidence30d.filter(e => {
-        if (e.severity === 'info' || e.severity === 'debug') return false;
-        // Filter out events with empty event_data (noise)
-        if (e.event_data && typeof e.event_data === 'object') {
-          const keys = Object.keys(e.event_data);
-          if (keys.length === 0) return false;
-        }
-        return true;
-      });
-
-      // Deduplicate security events: count unique (agent_name + alert_type) combos
-      const deduplicateSecurityEvents = (events: EvidenceRow[], severityFilter: string[]): number => {
-        const seen = new Set<string>();
-        let count = 0;
-        for (const e of events) {
-          if (e.event_type !== 'security_event') continue;
-          if (!severityFilter.includes(e.severity)) continue;
-          const alertType = e.event_data?.alert_type || e.event_data?.type || 'unknown';
-          const key = `${e.agent_name || 'unknown'}::${alertType}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            count++;
-          }
-        }
-        return count;
+      // Evidence summary from server-side RPC (deduplicated, no truncation)
+      const evidenceSummary = evidenceSummaryRes.data || {
+        auto_repairs: 0, auto_recoveries: 0, policy_drifts: 0,
+        critical_prevented: 0, high_prevented: 0, medium_prevented: 0, incidents_contained: 0,
       };
 
-      const autoRepairs = realEvents30d.filter(e => e.event_type === 'auto_repair').length;
-      const autoRecoveries = realEvents30d.filter(e => e.event_type === 'auto_recovery').length;
-      const policyDrifts = realEvents30d.filter(e => e.event_type === 'policy_drift').length;
-      
-      // Deduplicated counts — 1 incident per agent per alert type
-      const criticalPrevented = deduplicateSecurityEvents(realEvents30d, ['critical']);
-      const highPrevented = deduplicateSecurityEvents(realEvents30d, ['high', 'error']);
-      const mediumPrevented = deduplicateSecurityEvents(realEvents30d, ['warning']);
-      const incidentsContained = criticalPrevented + highPrevented + mediumPrevented;
+      const autoRepairs = evidenceSummary.auto_repairs || 0;
+      const autoRecoveries = evidenceSummary.auto_recoveries || 0;
+      const policyDrifts = evidenceSummary.policy_drifts || 0;
+      const criticalPrevented = evidenceSummary.critical_prevented || 0;
+      const highPrevented = evidenceSummary.high_prevented || 0;
+      const mediumPrevented = evidenceSummary.medium_prevented || 0;
+      const incidentsContained = evidenceSummary.incidents_contained || 0;
 
-      // Blocked access: count unique domains blocked (not individual attempts)
+      // Blocked access
       const blockedCount = blockedRes.count || 0;
-      const blockedItems: Array<{ domain: string }> = blockedItemsRes.data || [];
-      const uniqueBlockedDomains = new Set(blockedItems.map(b => b.domain)).size;
 
       // Financial impact — use deduplicated numbers
       const breakdown: Record<string, number> = {
@@ -221,12 +184,15 @@ export function useUnifiedMetrics() {
           items: (blockedItemsRes.data || []) as Array<{ id: string; agent_name: string; domain: string; attempted_at: string; blocked_by: string }>,
         },
         evidence: {
-          last7d: evidence7d,
-          last30d: evidence30d,
+          last7d: [],
+          last30d: [],
           incidentsContained,
           autoRepairs,
           autoRecoveries,
           policyDrifts,
+          criticalPrevented,
+          highPrevented,
+          mediumPrevented,
         },
         vulnerabilities: {
           total: vulns.length,
