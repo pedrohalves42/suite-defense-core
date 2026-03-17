@@ -111,11 +111,11 @@ Deno.serve(async (req) => {
       console.log(`[cleanup-test-data] Cleaned ${results.agent_tokens} agent_tokens records`);
     }
 
-    // 4. Limpar agentes
+    // 4. Limpar agentes - SECURITY FIX: scoped to tenant
     const { error: agentsError, count: agentsCount } = await supabaseAdmin
       .from('agents')
       .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+      .eq('tenant_id', callerTenantId);
 
     if (agentsError) {
       console.error('[cleanup-test-data] Error cleaning agents:', agentsError);
