@@ -45,7 +45,8 @@ async function fetchReports(tenantId: string): Promise<DashboardReport[]> {
 
 // P-13004 FIX: Slim select for tokens — avoid fetching sensitive fields
 async function fetchTokens(tenantId: string): Promise<DashboardAgentToken[]> {
-  const { data, error } = await supabase.from("agent_tokens" as any)
+  const { data, error } = await supabase
+    .from("agent_tokens")
     .select("id, tenant_id, agent_id, is_active, created_at, expires_at, last_used_at")
     .eq("tenant_id", tenantId).order("created_at", { ascending: false });
   if (error) throw error;
