@@ -126,7 +126,7 @@ export function getDeltaInfo(delta: number | null): {
     return {
       icon: 'down',
       label: `${Math.abs(delta)} pontos`,
-      color: 'text-green-500',
+      color: 'text-[hsl(var(--success))]',
       description: 'O nível de risco diminuiu',
     };
   }
