@@ -138,8 +138,10 @@
 
 | Métrica | Antes | Agora | Meta |
 |---------|-------|-------|------|
-| `as any` casts | 1.156 | ~1.121 | <100 |
-| `select('*')` em hooks | 330 | 330 | <50 |
+| `as any` casts | 1.156 | ~1.115 | <100 |
+| `select('*')` em hooks | 330 | ~320 | <50 |
 | Edge Functions | ~270 | ~262 | <200 |
-| Console spam (produção) | 160 | ~145 | 0 |
+| Console spam (produção) | 160 | ~138 | 0 |
+| Hard-coded colors | 10 hooks | 0 hooks | 0 |
 | Vulnerabilidades corrigidas | 0 | 7 (SA-001 a SA-007) | — |
+| Design tokens centralizados | 0 | 1 (`severityColors.ts`) | — |
