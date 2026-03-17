@@ -241,7 +241,7 @@ export default function Dashboard() {
             >
               <Link to={card.to}>
                 <Card className={cn(
-                  "card-enterprise-hover cursor-pointer h-full transition-all duration-200 hover:scale-[1.02]",
+                  "card-enterprise-hover cursor-pointer h-full transition-all duration-200 hover:scale-[1.02] backdrop-blur-sm",
                   card.ring && "ring-1 ring-destructive/20"
                 )}>
                   <CardContent className="p-4">
