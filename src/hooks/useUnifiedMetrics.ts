@@ -64,6 +64,9 @@ export interface UnifiedMetrics {
     autoRepairs: number;
     autoRecoveries: number;
     policyDrifts: number;
+    criticalPrevented: number;
+    highPrevented: number;
+    mediumPrevented: number;
   };
   // Vulnerabilities
   vulnerabilities: {
