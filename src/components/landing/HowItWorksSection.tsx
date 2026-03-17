@@ -28,7 +28,7 @@ export function HowItWorksSection() {
                 transition={{ delay: index * 0.2 }}
               >
                 <div className="relative inline-flex mb-8">
-                  <div className="w-16 h-16 bg-primary text-primary-foreground rounded-2xl flex items-center justify-center font-bold text-2xl shadow-lg">
+                  <div className="w-16 h-16 bg-cta-positive text-cta-positive-foreground rounded-2xl flex items-center justify-center font-bold text-2xl shadow-lg shadow-cta-positive/20">
                     {step.number}
                   </div>
                   {/* Accent ring */}

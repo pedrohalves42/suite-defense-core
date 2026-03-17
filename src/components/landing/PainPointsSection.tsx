@@ -50,7 +50,8 @@ export function PainPointsSection() {
               <Button 
                 asChild 
                 size="lg" 
-                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground mt-4"
+                variant="cta"
+                className="mt-4"
               >
                 <Link to="/signup">
                   {painPoints.cta}

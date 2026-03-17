@@ -157,7 +157,7 @@ export function MiniDiagnosticSection() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-                <Button asChild size="lg" className="h-12 bg-accent hover:bg-accent/90 text-accent-foreground font-semibold">
+                <Button asChild size="lg" variant="cta" className="h-12 font-semibold">
                   <Link to="/signup">
                     Fazer diagnóstico completo grátis
                     <ArrowRight className="ml-2 h-4 w-4" />

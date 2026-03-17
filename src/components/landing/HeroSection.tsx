@@ -132,8 +132,8 @@ export function HeroSection() {
                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
               >
                 <div className="relative">
-                  <Shield className="w-20 h-20 text-accent/20" />
-                  <Zap className="w-8 h-8 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                  <Shield className="w-20 h-20 text-cta-positive/20" />
+                  <Zap className="w-8 h-8 text-cta-positive absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </div>
               </motion.div>
             </div>
