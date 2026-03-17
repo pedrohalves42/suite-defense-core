@@ -86,7 +86,7 @@ export const useTenantSetup = () => {
         .maybeSingle();
 
       if (settingsError && settingsError.code !== 'PGRST116') {
-        console.error('Error fetching tenant settings:', settingsError);
+        logger.error('Error fetching tenant settings', settingsError);
       }
 
       const bh = settings?.business_hours as Record<string, unknown> | null;
