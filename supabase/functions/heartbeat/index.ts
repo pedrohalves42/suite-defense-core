@@ -722,6 +722,8 @@ Deno.serve(async (req) => {
                   poll_interval_seconds: 600,
                   // v5.0.14: Aggregation config (safe default)
                   aggregation: null,
+                  // v5.0.14-fix: Always include jobs array to prevent StrictMode error in PS 5.1
+                  jobs: [],
                 }),
                 {
                   headers: { ...corsHeaders, 'Content-Type': 'application/json' },
