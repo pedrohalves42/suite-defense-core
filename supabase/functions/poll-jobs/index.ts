@@ -159,9 +159,9 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Rate limiting
+    // Rate limiting — TUNING: 120/min was absurd for 600s interval; 6/min allows burst retries
     const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'poll-jobs', {
-      maxRequests: 120,
+      maxRequests: 6,
       windowMinutes: 1,
       blockMinutes: 5,
     })
