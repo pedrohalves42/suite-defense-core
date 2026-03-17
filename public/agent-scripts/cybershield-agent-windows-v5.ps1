@@ -5128,11 +5128,14 @@ function Send-Heartbeat {
                     # Server provides script_sha256 + script_hash_signature for integrity
                     # Hash is only trusted if accompanied by valid signature
                     # ============================================
-                    if ($response.script_sha256) {
+                    $scriptSha256Prop = $response.PSObject.Properties['script_sha256']
+                    if ($scriptSha256Prop -and $scriptSha256Prop.Value) {
                         try {
-                            $hashSig = if ($response.script_hash_signature) { $response.script_hash_signature } else { "" }
-                            $hashTs = if ($response.script_hash_signed_at) { $response.script_hash_signed_at } else { (Get-Date -Format "o") }
-                            Save-SignedHashCache -Hash $response.script_sha256 -Signature $hashSig -Timestamp $hashTs
+                            $hashSigProp = $response.PSObject.Properties['script_hash_signature']
+                            $hashTsProp = $response.PSObject.Properties['script_hash_signed_at']
+                            $hashSig = if ($hashSigProp -and $hashSigProp.Value) { $hashSigProp.Value } else { "" }
+                            $hashTs = if ($hashTsProp -and $hashTsProp.Value) { $hashTsProp.Value } else { (Get-Date -Format "o") }
+                            Save-SignedHashCache -Hash $scriptSha256Prop.Value -Signature $hashSig -Timestamp $hashTs
                         } catch {
                             Write-Log "[INTEGRITY] Failed to cache signed hash: $($_.Exception.Message)" "WARN"
                         }
