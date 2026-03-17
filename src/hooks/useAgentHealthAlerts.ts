@@ -76,8 +76,7 @@ export function useUnhealthyAgents() {
     queryKey: ['unhealthy-agents', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('v_agent_execution_health')
         .select('agent_id, agent_name, tenant_id, status, last_heartbeat, agent_mode, agent_version, minutes_since_heartbeat, last_execution_at, minutes_since_execution, stale_queued_jobs, stale_delivered_jobs, pending_jobs, health_status, severity, health_description, checked_at')
         .eq('tenant_id', tenant.id)
