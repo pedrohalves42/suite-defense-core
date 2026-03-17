@@ -9,9 +9,9 @@ export function CTASection() {
 
   return (
     <section className="py-24 relative overflow-hidden">
-      {/* Dark background with accent glow */}
-      <div className="absolute inset-0 bg-primary" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-accent/15 rounded-full blur-[120px]" />
+      {/* Green-tinted gradient instead of pure black */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-cta-positive/10" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-cta-positive/15 rounded-full blur-[120px]" />
       
       <motion.div 
         className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center"

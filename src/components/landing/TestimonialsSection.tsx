@@ -15,7 +15,7 @@ export function TestimonialsSection() {
 
   return (
     <section id="depoimentos" className="py-24 relative">
-      <div className="absolute inset-0 bg-gradient-to-b from-muted/40 to-background" />
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-cta-positive/[0.03] to-background" />
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader 
@@ -45,7 +45,7 @@ export function TestimonialsSection() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
                 <div className="absolute bottom-2 left-3 right-3">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/20 text-accent text-[11px] font-semibold backdrop-blur-sm border border-accent/20">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cta-positive/20 text-cta-positive text-[11px] font-semibold backdrop-blur-sm border border-cta-positive/20">
                     <CheckCircle className="w-3 h-3" />
                     {testimonial.metric}
                   </span>
@@ -89,7 +89,7 @@ export function TestimonialsSection() {
             { value: "0", label: "Incidentes em clientes ativos" },
           ].map((stat, i) => (
             <div key={i} className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-accent/60" />
+              <TrendingUp className="w-4 h-4 text-cta-positive/60" />
               <span className="text-sm font-bold text-foreground">{stat.value}</span>
               <span className="text-xs text-muted-foreground">{stat.label}</span>
             </div>
