@@ -179,16 +179,16 @@ export default function Dashboard() {
         transition={{ duration: 0.4 }}
       >
         <Card className={cn(
-          "border-l-4 overflow-hidden",
-          globalStatus.variant === 'success' && "border-l-success bg-success/5",
-          globalStatus.variant === 'warning' && "border-l-warning bg-warning/5",
-          globalStatus.variant === 'danger' && "border-l-destructive bg-destructive/5"
+          "border-l-4 overflow-hidden backdrop-blur-sm",
+          globalStatus.variant === 'success' && "border-l-success bg-gradient-to-r from-success/8 to-transparent",
+          globalStatus.variant === 'warning' && "border-l-warning bg-gradient-to-r from-warning/8 to-transparent",
+          globalStatus.variant === 'danger' && "border-l-destructive bg-gradient-to-r from-destructive/8 to-transparent"
         )}>
           <CardContent className="py-5">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-4 min-w-0">
                 <div className={cn(
-                  "p-3 rounded-full shrink-0",
+                  "p-3 rounded-2xl shrink-0 shadow-sm",
                   globalStatus.variant === 'success' && "bg-success/10",
                   globalStatus.variant === 'warning' && "bg-warning/10",
                   globalStatus.variant === 'danger' && "bg-destructive/10"
@@ -241,7 +241,7 @@ export default function Dashboard() {
             >
               <Link to={card.to}>
                 <Card className={cn(
-                  "card-enterprise-hover cursor-pointer h-full transition-all duration-200 hover:scale-[1.02]",
+                  "card-enterprise-hover cursor-pointer h-full transition-all duration-200 hover:scale-[1.02] backdrop-blur-sm",
                   card.ring && "ring-1 ring-destructive/20"
                 )}>
                   <CardContent className="p-4">
@@ -347,7 +347,7 @@ export default function Dashboard() {
             const Icon = item.icon;
             return (
               <Link key={item.label} to={item.to}>
-                <Card className="card-enterprise-hover transition-all hover:scale-[1.02] cursor-pointer">
+                <Card className="card-enterprise-hover transition-all hover:scale-[1.02] cursor-pointer backdrop-blur-sm">
                   <CardContent className="py-3 px-4 flex items-center gap-3">
                     <div className="p-1.5 rounded-md bg-muted/60">
                       <Icon className={cn("h-4 w-4", item.color)} />

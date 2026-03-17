@@ -120,10 +120,10 @@ export default function ExecutiveDashboard() {
   } : null;
 
   const getHealthStatus = (score: number) => {
-    if (score >= 90) return { status: 'excellent' as const, message: 'Sua empresa está protegida', color: 'text-green-500', bgClass: 'border-green-500/20 bg-green-500/5' };
-    if (score >= 70) return { status: 'good' as const, message: 'Proteção ativa na sua empresa', color: 'text-emerald-500', bgClass: 'border-emerald-500/20 bg-emerald-500/5' };
-    if (score >= 50) return { status: 'warning' as const, message: 'Sua empresa precisa de atenção', color: 'text-amber-500', bgClass: 'border-amber-500/20 bg-amber-500/5' };
-    return { status: 'critical' as const, message: 'Risco elevado para sua empresa', color: 'text-red-500', bgClass: 'border-red-500/20 bg-red-500/5' };
+    if (score >= 90) return { status: 'excellent' as const, message: 'Sua empresa está protegida', color: 'text-success', bgClass: 'border-success/20 bg-gradient-to-br from-success/8 to-success/3' };
+    if (score >= 70) return { status: 'good' as const, message: 'Proteção ativa na sua empresa', color: 'text-success', bgClass: 'border-success/15 bg-gradient-to-br from-success/6 to-transparent' };
+    if (score >= 50) return { status: 'warning' as const, message: 'Sua empresa precisa de atenção', color: 'text-warning', bgClass: 'border-warning/20 bg-gradient-to-br from-warning/8 to-warning/3' };
+    return { status: 'critical' as const, message: 'Risco elevado para sua empresa', color: 'text-destructive', bgClass: 'border-destructive/20 bg-gradient-to-br from-destructive/8 to-destructive/3' };
   };
 
   const healthStatus = summaryData ? getHealthStatus(overallScore) : null;
@@ -181,11 +181,11 @@ export default function ExecutiveDashboard() {
         </div>
 
         {/* === HERO: Protection Status === */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-          <Card className={cn("border", healthStatus?.bgClass)}>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <Card className={cn("border backdrop-blur-sm", healthStatus?.bgClass)}>
             <CardContent className="pt-5 pb-5 space-y-4">
               <div className="flex items-center gap-4">
-                <div className={cn("flex items-center justify-center h-14 w-14 rounded-xl", healthStatus?.bgClass)}>
+                <div className={cn("flex items-center justify-center h-14 w-14 rounded-2xl shadow-lg", healthStatus?.bgClass)}>
                   {healthStatus?.status === 'excellent' && <ShieldCheck className={cn("h-8 w-8", healthStatus.color)} />}
                   {healthStatus?.status === 'good' && <Shield className={cn("h-8 w-8", healthStatus.color)} />}
                   {healthStatus?.status === 'warning' && <ShieldAlert className={cn("h-8 w-8", healthStatus.color)} />}
@@ -198,10 +198,10 @@ export default function ExecutiveDashboard() {
                       {overallScore}%
                     </Badge>
                     {onlineAgents > 0 && (
-                      <Badge variant="outline" className="gap-1 text-[10px] border-green-500/30 text-green-500">
+                      <Badge variant="outline" className="gap-1 text-[10px] border-success/30 text-success">
                         <span className="relative flex h-1.5 w-1.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success" />
                         </span>
                         Monitorando 24/7
                       </Badge>
@@ -228,10 +228,10 @@ export default function ExecutiveDashboard() {
           
           {/* What CyberShield did - Business focused */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.06 }}>
-            <Card className="h-full border-blue-500/15 bg-blue-500/[0.02]">
+            <Card className="h-full border-info/15 bg-gradient-to-br from-info/[0.06] to-transparent backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <HeartPulse className="h-4 w-4 text-blue-500" />
+                  <HeartPulse className="h-4 w-4 text-info" />
                   O que fizemos pela sua empresa (30 dias)
                 </CardTitle>
               </CardHeader>
@@ -240,8 +240,8 @@ export default function ExecutiveDashboard() {
                 <div className="grid grid-cols-3 gap-3">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 cursor-help">
-                        <p className="text-2xl font-bold text-blue-500">{summaryData?.automatedActions || 0}</p>
+                      <div className="text-center p-3 rounded-xl bg-info/10 border border-info/20 cursor-help shadow-sm">
+                        <p className="text-2xl font-bold text-info">{summaryData?.automatedActions || 0}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Problemas corrigidos<br/>automaticamente</p>
                       </div>
                     </TooltipTrigger>
@@ -253,8 +253,8 @@ export default function ExecutiveDashboard() {
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-help">
-                        <p className="text-2xl font-bold text-red-500">{summaryData?.incidentsContained || 0}</p>
+                      <div className="text-center p-3 rounded-xl bg-destructive/10 border border-destructive/20 cursor-help shadow-sm">
+                        <p className="text-2xl font-bold text-destructive">{summaryData?.incidentsContained || 0}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Incidentes de segurança<br/>contidos</p>
                       </div>
                     </TooltipTrigger>
@@ -266,8 +266,8 @@ export default function ExecutiveDashboard() {
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 cursor-help">
-                        <p className="text-2xl font-bold text-amber-500">{summaryData?.hoursOfITSaved ? Math.round(summaryData.hoursOfITSaved) : 0}h</p>
+                      <div className="text-center p-3 rounded-xl bg-warning/10 border border-warning/20 cursor-help shadow-sm">
+                        <p className="text-2xl font-bold text-warning">{summaryData?.hoursOfITSaved ? Math.round(summaryData.hoursOfITSaved) : 0}h</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Horas de TI<br/>economizadas</p>
                       </div>
                     </TooltipTrigger>
@@ -287,12 +287,12 @@ export default function ExecutiveDashboard() {
                 {/* Detailed breakdown - friendly language */}
                 <div className="space-y-1">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1.5">Detalhamento</p>
-                  <ActionRow icon={<Wrench className="h-3 w-3 text-blue-400" />} label="Problemas corrigidos automaticamente" count={summaryData?.actions30d.auto_repairs || 0} description="Falhas detectadas e resolvidas sem intervenção" tooltip="Eventos do tipo 'auto_repair' com severity ≥ warning nos últimos 30 dias" />
-                  <ActionRow icon={<RefreshCw className="h-3 w-3 text-emerald-400" />} label="Serviços restaurados" count={summaryData?.actions30d.auto_recoveries || 0} description="Recuperação automática sem downtime" tooltip="Eventos 'auto_recovery' com severity ≥ warning nos últimos 30 dias" />
-                  <ActionRow icon={<Flame className="h-3 w-3 text-red-400" />} label="Ameaças críticas neutralizadas" count={summaryData?.actions30d.critical_prevented || 0} description="Incidentes graves bloqueados pelo sistema" tooltip="Eventos 'security_event' com severity 'critical' nos últimos 30 dias" />
-                  <ActionRow icon={<Bug className="h-3 w-3 text-orange-400" />} label="Riscos de segurança contidos" count={summaryData?.actions30d.high_prevented || 0} description="Vulnerabilidades identificadas e tratadas" tooltip="Eventos 'security_event' com severity 'high' nos últimos 30 dias" />
-                  <ActionRow icon={<Lock className="h-3 w-3 text-amber-400" />} label="Políticas de segurança realinhadas" count={summaryData?.actions30d.policy_corrections || 0} description="Desvios de conformidade corrigidos" tooltip="Eventos 'policy_drift' registrados nos últimos 30 dias" />
-                  <ActionRow icon={<ShieldBan className="h-3 w-3 text-purple-400" />} label="Acessos não autorizados bloqueados" count={summaryData?.blockedThreats || 0} description="Tentativas barradas nos últimos 7 dias" tooltip="Total de registros na tabela 'blocked_access_attempts' dos últimos 7 dias" />
+                  <ActionRow icon={<Wrench className="h-3 w-3 text-info" />} label="Problemas corrigidos automaticamente" count={summaryData?.actions30d.auto_repairs || 0} description="Falhas detectadas e resolvidas sem intervenção" tooltip="Eventos do tipo 'auto_repair' com severity ≥ warning nos últimos 30 dias" />
+                  <ActionRow icon={<RefreshCw className="h-3 w-3 text-success" />} label="Serviços restaurados" count={summaryData?.actions30d.auto_recoveries || 0} description="Recuperação automática sem downtime" tooltip="Eventos 'auto_recovery' com severity ≥ warning nos últimos 30 dias" />
+                  <ActionRow icon={<Flame className="h-3 w-3 text-destructive" />} label="Ameaças críticas neutralizadas" count={summaryData?.actions30d.critical_prevented || 0} description="Incidentes graves bloqueados pelo sistema" tooltip="Eventos 'security_event' com severity 'critical' nos últimos 30 dias" />
+                  <ActionRow icon={<Bug className="h-3 w-3 text-warning" />} label="Riscos de segurança contidos" count={summaryData?.actions30d.high_prevented || 0} description="Vulnerabilidades identificadas e tratadas" tooltip="Eventos 'security_event' com severity 'high' nos últimos 30 dias" />
+                  <ActionRow icon={<Lock className="h-3 w-3 text-accent" />} label="Políticas de segurança realinhadas" count={summaryData?.actions30d.policy_corrections || 0} description="Desvios de conformidade corrigidos" tooltip="Eventos 'policy_drift' registrados nos últimos 30 dias" />
+                  <ActionRow icon={<ShieldBan className="h-3 w-3 text-info" />} label="Acessos não autorizados bloqueados" count={summaryData?.blockedThreats || 0} description="Tentativas barradas nos últimos 7 dias" tooltip="Total de registros na tabela 'blocked_access_attempts' dos últimos 7 dias" />
                   {(summaryData?.actions30d.auto_detections || 0) > 0 && (
                     <div className="pt-1.5 mt-1.5 border-t border-border/30">
                       <ActionRow icon={<Eye className="h-3 w-3 text-muted-foreground" />} label="Verificações de rotina realizadas" count={summaryData?.actions30d.auto_detections || 0} description="Monitoramento contínuo (não contabilizado como ação)" tooltip="Detecções com severity 'info'/'debug' — são checagens periódicas, não ações corretivas" />
@@ -305,16 +305,16 @@ export default function ExecutiveDashboard() {
 
           {/* Financial Impact */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.1 }}>
-            <Card className="h-full border-emerald-500/15 bg-emerald-500/[0.02]">
+            <Card className="h-full border-success/15 bg-gradient-to-br from-success/[0.06] to-transparent backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <HandCoins className="h-4 w-4 text-emerald-500" />
+                    <HandCoins className="h-4 w-4 text-success" />
                     Economia para a Empresa (30 dias)
                   </CardTitle>
                   <Tooltip>
                     <TooltipTrigger>
-                      <Badge variant="outline" className="text-[10px] text-emerald-500 border-emerald-500/30">
+                      <Badge variant="outline" className="text-[10px] text-success border-success/30">
                         <Eye className="h-3 w-3 mr-1" />
                         Metodologia
                       </Badge>
@@ -335,7 +335,7 @@ export default function ExecutiveDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="text-3xl font-bold text-emerald-500">
+                <div className="text-3xl font-bold text-success">
                   {formatCurrency(summaryData?.totalCostAvoided || 0)}
                 </div>
                 <p className="text-xs text-muted-foreground -mt-1">
@@ -356,11 +356,11 @@ export default function ExecutiveDashboard() {
 
                 {/* ROI Summary */}
                 {summaryData?.hoursOfITSaved && summaryData.hoursOfITSaved > 0 ? (
-                  <div className="mt-3 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="mt-3 p-2.5 rounded-xl bg-success/10 border border-success/20">
                     <div className="flex items-center gap-2 text-xs">
-                      <Clock className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                      <Clock className="h-3.5 w-3.5 text-success shrink-0" />
                       <span className="text-muted-foreground">
-                        Sua equipe de TI economizou <strong className="text-emerald-500">{Math.round(summaryData.hoursOfITSaved)}h</strong> de trabalho manual este mês
+                        Sua equipe de TI economizou <strong className="text-success">{Math.round(summaryData.hoursOfITSaved)}h</strong> de trabalho manual este mês
                       </span>
                     </div>
                   </div>
@@ -383,9 +383,9 @@ export default function ExecutiveDashboard() {
                   </CardTitle>
                   {summaryData?.compliance && (
                     <Badge variant="outline" className={cn("text-xs",
-                      summaryData.compliance.overall_score >= 80 ? "text-green-500 border-green-500/30" : 
-                      summaryData.compliance.overall_score >= 60 ? "text-amber-500 border-amber-500/30" :
-                      "text-red-500 border-red-500/30"
+                      summaryData.compliance.overall_score >= 80 ? "text-success border-success/30" : 
+                      summaryData.compliance.overall_score >= 60 ? "text-warning border-warning/30" :
+                      "text-destructive border-destructive/30"
                     )}>
                       Nota: {summaryData.compliance.grade} ({summaryData.compliance.overall_score}%)
                     </Badge>
@@ -417,15 +417,15 @@ export default function ExecutiveDashboard() {
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">Hoje</p>
                   <div className="grid grid-cols-3 gap-2">
                     <MiniStat label="Verificações" value={summaryData?.totalJobsToday || 0} color="text-foreground" />
-                    <MiniStat label="Concluídas" value={summaryData?.completedJobsToday || 0} color="text-green-500" />
-                    <MiniStat label="Com problema" value={summaryData?.failedJobsToday || 0} color="text-red-500" />
+                    <MiniStat label="Concluídas" value={summaryData?.completedJobsToday || 0} color="text-success" />
+                    <MiniStat label="Com problema" value={summaryData?.failedJobsToday || 0} color="text-destructive" />
                   </div>
                   <div className="mt-2">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] text-muted-foreground">Taxa de sucesso</span>
                       <span className={cn("text-xs font-bold",
-                        (summaryData?.successRateToday || 0) >= 80 ? "text-green-500" :
-                        (summaryData?.successRateToday || 0) >= 50 ? "text-amber-500" : "text-red-500"
+                        (summaryData?.successRateToday || 0) >= 80 ? "text-success" :
+                        (summaryData?.successRateToday || 0) >= 50 ? "text-warning" : "text-destructive"
                       )}>{summaryData?.successRateToday || 0}%</span>
                     </div>
                     <Progress value={summaryData?.successRateToday || 0} className="h-1.5" />
@@ -450,7 +450,7 @@ export default function ExecutiveDashboard() {
                       <span className="text-[10px] text-muted-foreground">Confiabilidade do sistema</span>
                       {(() => {
                         const rate = summaryData?.totalJobs30d ? Math.round((summaryData.automatedJobsCompleted / summaryData.totalJobs30d) * 100) : 0;
-                        return <span className={cn("text-xs font-bold", rate >= 80 ? "text-green-500" : rate >= 50 ? "text-amber-500" : "text-red-500")}>{rate}%</span>;
+                        return <span className={cn("text-xs font-bold", rate >= 80 ? "text-success" : rate >= 50 ? "text-warning" : "text-destructive")}>{rate}%</span>;
                       })()}
                     </div>
                     <Progress value={summaryData?.totalJobs30d ? Math.round((summaryData.automatedJobsCompleted / summaryData.totalJobs30d) * 100) : 0} className="h-1.5" />
@@ -483,16 +483,16 @@ export default function ExecutiveDashboard() {
                       key={idx}
                       to={action.link}
                       className={cn(
-                        "flex items-center justify-between p-3 rounded-lg border transition-colors hover:bg-muted/50",
-                        action.priority === 'high' && "border-red-500/20 bg-red-500/5",
-                        action.priority === 'medium' && "border-amber-500/20 bg-amber-500/5",
+                        "flex items-center justify-between p-3 rounded-xl border transition-colors hover:bg-muted/50",
+                        action.priority === 'high' && "border-destructive/20 bg-destructive/5",
+                        action.priority === 'medium' && "border-warning/20 bg-warning/5",
                       )}
                     >
                       <div className="flex items-center gap-2.5">
                         {action.priority === 'high' ? (
-                          <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+                          <XCircle className="h-4 w-4 text-destructive shrink-0" />
                         ) : (
-                          <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                          <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
                         )}
                         <span className="text-sm font-medium">{action.title}</span>
                       </div>
@@ -501,10 +501,10 @@ export default function ExecutiveDashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="flex items-center gap-3 p-3 rounded-lg border border-green-500/20 bg-green-500/5">
-                  <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                <div className="flex items-center gap-3 p-3 rounded-xl border border-success/20 bg-success/5">
+                  <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-green-500">Tudo sob controle</p>
+                    <p className="text-sm font-medium text-success">Tudo sob controle</p>
                     <p className="text-xs text-muted-foreground">O CyberShield está cuidando da segurança da sua empresa automaticamente</p>
                   </div>
                 </div>
@@ -532,21 +532,21 @@ function MetricTile({ icon, label, value, sub, color, pulse }: {
   color: 'green' | 'red' | 'emerald' | 'muted' | 'amber'; pulse?: boolean;
 }) {
   const valueColor = {
-    green: 'text-green-500', red: 'text-red-500',
-    emerald: 'text-emerald-500', muted: 'text-foreground', amber: 'text-amber-500',
+    green: 'text-success', red: 'text-destructive',
+    emerald: 'text-success', muted: 'text-foreground', amber: 'text-warning',
   }[color];
   const bgAccent = {
-    green: 'bg-green-500/5 border-green-500/15', red: 'bg-red-500/5 border-red-500/15',
-    emerald: 'bg-emerald-500/5 border-emerald-500/15', muted: 'bg-muted/30 border-border/40',
-    amber: 'bg-amber-500/5 border-amber-500/15',
+    green: 'bg-success/5 border-success/15', red: 'bg-destructive/5 border-destructive/15',
+    emerald: 'bg-success/5 border-success/15', muted: 'bg-muted/30 border-border/40',
+    amber: 'bg-warning/5 border-warning/15',
   }[color];
 
   return (
-    <div className={cn("relative p-2.5 rounded-lg border", bgAccent)}>
+    <div className={cn("relative p-2.5 rounded-xl border backdrop-blur-sm", bgAccent)}>
       {pulse && (
         <span className="absolute top-2 right-2 flex h-1.5 w-1.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60" />
-          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success" />
         </span>
       )}
       <div className="flex items-center gap-1 mb-1">
@@ -600,7 +600,7 @@ function ImpactRow({ label, count, value, icon, unitCost }: { label: string; cou
             <span className="text-xs">{label}</span>
             <Badge variant="secondary" className="text-[10px] h-4 px-1">{count}x</Badge>
           </div>
-          <span className="text-xs font-semibold text-emerald-500">{formatCurrency(value)}</span>
+          <span className="text-xs font-semibold text-success">{formatCurrency(value)}</span>
         </div>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs text-xs">
@@ -618,7 +618,7 @@ function ComplianceRow({ category, score, details }: { category: string; score: 
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium truncate">{category}</span>
           <span className={cn("text-xs font-bold",
-            score >= 80 ? "text-green-500" : score >= 60 ? "text-amber-500" : "text-red-500"
+            score >= 80 ? "text-success" : score >= 60 ? "text-warning" : "text-destructive"
           )}>{score}%</span>
         </div>
         <Progress value={score} className="h-1.5" />
