@@ -20,7 +20,7 @@ export function ExecutiveSummaryCard() {
   const { data: snapshots, isLoading: fleetLoading } = useAgentSnapshots();
   const fleet = (() => {
     const counts = getAgentStatusCounts(snapshots);
-    return counts.total > 0 ? { online: counts.online, offline: counts.offline + counts.warning + counts.never_connected, total: counts.total } : null;
+    return counts.total > 0 ? { online: counts.online + counts.warning, offline: counts.offline + counts.never_connected, total: counts.total } : null;
   })();
   const generateReport = useGenerateExecutiveReport();
 

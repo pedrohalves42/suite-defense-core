@@ -249,14 +249,18 @@ export function useUnifiedMetrics() {
   });
 
   // PERF-FIX: Memoize agent-dependent computed values to prevent re-render cascade
-  const agents = useMemo(() => ({
-    total: agentCounts.total,
-    online: agentCounts.online,
-    offline: agentCounts.offline,
-    warning: agentCounts.warning,
-    neverConnected: agentCounts.never_connected,
-    protectionPercent: agentCounts.total > 0 ? Math.round((agentCounts.online / agentCounts.total) * 100) : 0,
-  }), [agentCounts]);
+  const agents = useMemo(() => {
+    const protectedOnline = agentCounts.online + agentCounts.warning;
+
+    return {
+      total: agentCounts.total,
+      online: protectedOnline,
+      offline: agentCounts.offline,
+      warning: agentCounts.warning,
+      neverConnected: agentCounts.never_connected,
+      protectionPercent: agentCounts.total > 0 ? Math.round((protectedOnline / agentCounts.total) * 100) : 0,
+    };
+  }, [agentCounts]);
 
   // PERF-FIX: Memoize security score
   const securityScore = useMemo(() => {
