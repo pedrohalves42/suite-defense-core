@@ -233,7 +233,7 @@ export function useUpdateTaskStatus() {
       toast.success('Task atualizada com sucesso');
     },
     onError: (error) => {
-      console.error('Error updating task:', error);
+      logger.error('Error updating task', error instanceof Error ? error : undefined);
       toast.error('Erro ao atualizar task');
     },
   });
