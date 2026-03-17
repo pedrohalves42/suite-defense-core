@@ -209,7 +209,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
           .then(async (synced) => {
             if (synced) {
               await supabase.auth.refreshSession();
-              console.log('[useActiveTenant] Session refreshed after sync');
+              logger.debug('[useActiveTenant] Session refreshed after sync');
             }
           })
           .finally(() => {
