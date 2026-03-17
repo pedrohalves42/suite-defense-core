@@ -243,7 +243,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
-        console.error('[setActiveTenant] Edge function error:', error);
+        logger.error('[setActiveTenant] Edge function error', error);
         toast.error('Erro ao trocar de empresa', {
           description: 'Não foi possível sincronizar com o servidor. Tente novamente.'
         });
