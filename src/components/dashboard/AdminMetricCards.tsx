@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { IntegrityScoreCard } from "@/components/integrity/IntegrityScoreCard";
 import { JobWasteCard } from "@/components/dashboard/JobWasteCard";
 import { useNavigate } from "react-router-dom";
-import type { DashboardAgent, DashboardJob, DashboardAgentToken, DashboardRateLimit } from "@/hooks/useDashboardData";
+import type { DashboardAgent, DashboardJob, DashboardAgentToken, DashboardRateLimit } from "@/types/dashboard";
 
 interface AdminMetricCardsProps {
   agents: DashboardAgent[];

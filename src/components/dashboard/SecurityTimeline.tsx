@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatBrazilDateTime } from "@/lib/date-utils";
-import type { DashboardAuditLog } from "@/hooks/useDashboardData";
+import type { DashboardAuditLog } from "@/types/dashboard";
 
 const formatUnknownAction = (action: string, resource: string): string => {
   const resourceMap: Record<string, string> = {
