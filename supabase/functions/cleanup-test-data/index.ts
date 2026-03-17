@@ -124,10 +124,11 @@ Deno.serve(async (req) => {
       console.log(`[cleanup-test-data] Cleaned ${results.agents} agents records`);
     }
 
-    // 5. Limpar chaves de enrollment usadas
+    // 5. Limpar chaves de enrollment usadas - SECURITY FIX: scoped to tenant
     const { error: keysError, count: keysCount } = await supabaseAdmin
       .from('enrollment_keys')
       .delete()
+      .eq('tenant_id', callerTenantId)
       .not('used_at', 'is', null);
 
     if (keysError) {
