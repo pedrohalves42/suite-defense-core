@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, AlertTriangle, CheckCircle, Monitor } from "lucide-react";
+import { ArrowRight, AlertTriangle, CheckCircle, Monitor, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -83,7 +83,8 @@ export function MiniDiagnosticSection() {
 
   return (
     <section id="mini-diagnostico" className="py-24 relative">
-      <div className="absolute inset-0 bg-gradient-to-b from-muted/40 to-background" />
+      {/* Orange/amber tint — curiosity, engagement (psicologia: laranja = interação) */}
+      <div className="absolute inset-0 bg-gradient-to-b from-warning/[0.03] via-background to-background" />
       
       <div className="relative max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div 
@@ -92,9 +93,9 @@ export function MiniDiagnosticSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 mb-4">
-            <Monitor className="w-4 h-4 text-accent" />
-            <span className="text-sm font-medium">Mini Diagnóstico — 30 segundos</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-warning/10 border border-warning/20 mb-4">
+            <ShieldCheck className="w-4 h-4 text-warning" />
+            <span className="text-sm font-medium text-warning">Mini Diagnóstico — 30 segundos</span>
           </div>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground">
             Sua empresa está protegida?
@@ -105,7 +106,7 @@ export function MiniDiagnosticSection() {
         </motion.div>
 
         <div className="rounded-2xl bg-card border border-border p-8 md:p-10 shadow-elevated">
-          {/* Progress bar */}
+          {/* Progress bar — green = progress toward safety */}
           <div className="w-full h-1.5 bg-muted rounded-full mb-8 overflow-hidden">
             <div
               className="h-full bg-cta-positive rounded-full transition-all duration-500 ease-out"
@@ -131,9 +132,9 @@ export function MiniDiagnosticSection() {
                     onClick={() => handleAnswer(questions[currentStep].id, option.score)}
                     className={cn(
                       "w-full p-5 rounded-xl border text-left transition-all duration-200",
-                      "hover:border-accent hover:bg-accent/5 hover:shadow-sm",
+                      "hover:border-cta-positive hover:bg-cta-positive/5 hover:shadow-sm",
                       answers[questions[currentStep].id] === option.score
-                        ? "border-accent bg-accent/10"
+                        ? "border-cta-positive bg-cta-positive/10"
                         : "border-border bg-card"
                     )}
                   >
@@ -157,7 +158,7 @@ export function MiniDiagnosticSection() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-                <Button asChild size="lg" variant="cta" className="h-12 font-semibold">
+                <Button asChild size="lg" variant="cta" className="h-12 font-semibold shadow-lg shadow-cta-positive/20">
                   <Link to="/signup">
                     Fazer diagnóstico completo grátis
                     <ArrowRight className="ml-2 h-4 w-4" />
