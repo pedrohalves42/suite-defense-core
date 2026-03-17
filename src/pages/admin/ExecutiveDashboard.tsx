@@ -417,8 +417,8 @@ export default function ExecutiveDashboard() {
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">Hoje</p>
                   <div className="grid grid-cols-3 gap-2">
                     <MiniStat label="Verificações" value={summaryData?.totalJobsToday || 0} color="text-foreground" />
-                    <MiniStat label="Concluídas" value={summaryData?.completedJobsToday || 0} color="text-green-500" />
-                    <MiniStat label="Com problema" value={summaryData?.failedJobsToday || 0} color="text-red-500" />
+                    <MiniStat label="Concluídas" value={summaryData?.completedJobsToday || 0} color="text-success" />
+                    <MiniStat label="Com problema" value={summaryData?.failedJobsToday || 0} color="text-destructive" />
                   </div>
                   <div className="mt-2">
                     <div className="flex items-center justify-between mb-1">
