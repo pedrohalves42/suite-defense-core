@@ -76,7 +76,8 @@ export function HeroSection() {
               <Button 
                 asChild 
                 size="lg" 
-                className="text-lg h-14 px-8 bg-accent hover:bg-accent/90 text-accent-foreground font-semibold shadow-lg shadow-accent/20"
+                variant="cta"
+                className="text-lg h-14 px-8 font-semibold"
               >
                 <Link to="/signup" aria-label="Descobrir se minha empresa está vulnerável">
                   {hero.ctaButton}
