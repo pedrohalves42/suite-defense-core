@@ -1,19 +1,22 @@
+import { lazy, Suspense } from "react";
 import { Navbar } from "@/components/Navbar";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { SEOHead } from "@/components/SEOHead";
-import {
-  HeroSection,
-  PainPointsSection,
-  BenefitsSection,
-  HowItWorksSection,
-  PricingSection,
-  TestimonialsSection,
-  FAQSection,
-  CTASection,
-  ContactSection,
-  MiniDiagnosticSection,
-  ProductPreviewSection
-} from "@/components/landing";
+import { HeroSection } from "@/components/landing";
+
+// PERF: Lazy load below-the-fold sections to improve FCP
+const PainPointsSection = lazy(() => import("@/components/landing").then(m => ({ default: m.PainPointsSection })));
+const MiniDiagnosticSection = lazy(() => import("@/components/landing").then(m => ({ default: m.MiniDiagnosticSection })));
+const ProductPreviewSection = lazy(() => import("@/components/landing").then(m => ({ default: m.ProductPreviewSection })));
+const BenefitsSection = lazy(() => import("@/components/landing").then(m => ({ default: m.BenefitsSection })));
+const HowItWorksSection = lazy(() => import("@/components/landing").then(m => ({ default: m.HowItWorksSection })));
+const PricingSection = lazy(() => import("@/components/landing").then(m => ({ default: m.PricingSection })));
+const TestimonialsSection = lazy(() => import("@/components/landing").then(m => ({ default: m.TestimonialsSection })));
+const FAQSection = lazy(() => import("@/components/landing").then(m => ({ default: m.FAQSection })));
+const CTASection = lazy(() => import("@/components/landing").then(m => ({ default: m.CTASection })));
+const ContactSection = lazy(() => import("@/components/landing").then(m => ({ default: m.ContactSection })));
+
+const SectionFallback = () => <div className="h-32" />;
 
 const Landing = () => {
   return (
@@ -30,16 +33,18 @@ const Landing = () => {
 
         <main>
           <HeroSection />
-          <PainPointsSection />
-          <MiniDiagnosticSection />
-          <ProductPreviewSection />
-          <BenefitsSection />
-          <HowItWorksSection />
-          <PricingSection />
-          <TestimonialsSection />
-          <FAQSection />
-          <CTASection />
-          <ContactSection />
+          <Suspense fallback={<SectionFallback />}>
+            <PainPointsSection />
+            <MiniDiagnosticSection />
+            <ProductPreviewSection />
+            <BenefitsSection />
+            <HowItWorksSection />
+            <PricingSection />
+            <TestimonialsSection />
+            <FAQSection />
+            <CTASection />
+            <ContactSection />
+          </Suspense>
         </main>
       </div>
     </>
