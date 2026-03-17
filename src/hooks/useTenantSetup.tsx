@@ -50,7 +50,7 @@ export const useTenantSetup = () => {
         .single();
 
       if (error) {
-        console.error('Error checking tenant setup status:', error);
+        logger.error('Error checking tenant setup status', error);
         return false;
       }
 
