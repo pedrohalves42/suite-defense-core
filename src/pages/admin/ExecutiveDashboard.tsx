@@ -335,7 +335,7 @@ export default function ExecutiveDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="text-3xl font-bold text-emerald-500">
+                <div className="text-3xl font-bold text-success">
                   {formatCurrency(summaryData?.totalCostAvoided || 0)}
                 </div>
                 <p className="text-xs text-muted-foreground -mt-1">
