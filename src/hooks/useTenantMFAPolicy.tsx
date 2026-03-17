@@ -85,7 +85,7 @@ export const useTenantMFAPolicy = (): TenantMFAStatus => {
           .from('tenants')
           .select('break_glass_enabled')
           .eq('id', currentTenant.id)
-          .single();
+          .maybeSingle();
 
         if (!cancelled) {
           setBreakGlassEnabled(tenantData?.break_glass_enabled || false);

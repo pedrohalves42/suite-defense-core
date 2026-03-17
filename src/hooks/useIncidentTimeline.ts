@@ -77,10 +77,10 @@ export function useIncidentTimeline(incidentId: string) {
         .from('incident_timelines')
         .select('*, agents:agent_id(agent_name, hostname)')
         .eq('id', incidentId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (!data) return null;
       return data as unknown as IncidentTimeline;
     },
     enabled: !!incidentId,

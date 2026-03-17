@@ -72,10 +72,10 @@ export function useDecisionEventDetail(eventId: string | null) {
         .select('*')
         .eq('id', eventId)
         .eq('tenant_id', tenant.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      return data as DecisionEvent;
+      return data as DecisionEvent | null;
     },
     enabled: !!eventId && !!tenant?.id,
   });
