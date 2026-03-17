@@ -16,7 +16,7 @@ async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebA
   // Fetch raw data and aggregate manually - expanded to 7 days for better visibility
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   
-  console.log('[useWebActivity] Starting fetch:', { agentId, tenantId, since: sevenDaysAgo });
+  logger.debug('[useWebActivity] Starting fetch:', { agentId, tenantId, since: sevenDaysAgo });
   
   // ADR-026 FIX: Use direct supabase query to avoid RLS issues with JWT sync delay
   // The RLS policy tenant_web_activity_select uses user_roles subquery which should work
