@@ -108,7 +108,7 @@ export function MiniDiagnosticSection() {
           {/* Progress bar */}
           <div className="w-full h-1.5 bg-muted rounded-full mb-8 overflow-hidden">
             <div
-              className="h-full bg-accent rounded-full transition-all duration-500 ease-out"
+              className="h-full bg-cta-positive rounded-full transition-all duration-500 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
