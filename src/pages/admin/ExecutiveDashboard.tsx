@@ -228,7 +228,7 @@ export default function ExecutiveDashboard() {
           
           {/* What CyberShield did - Business focused */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.06 }}>
-            <Card className="h-full border-blue-500/15 bg-blue-500/[0.02]">
+            <Card className="h-full border-info/15 bg-gradient-to-br from-info/[0.06] to-transparent backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <HeartPulse className="h-4 w-4 text-blue-500" />
