@@ -182,12 +182,15 @@ export function useUnifiedMetrics() {
           items: (blockedItemsRes.data || []) as Array<{ id: string; agent_name: string; domain: string; attempted_at: string; blocked_by: string }>,
         },
         evidence: {
-          last7d: evidence7d,
-          last30d: evidence30d,
+          last7d: [],
+          last30d: [],
           incidentsContained,
           autoRepairs,
           autoRecoveries,
           policyDrifts,
+          criticalPrevented,
+          highPrevented,
+          mediumPrevented,
         },
         vulnerabilities: {
           total: vulns.length,
