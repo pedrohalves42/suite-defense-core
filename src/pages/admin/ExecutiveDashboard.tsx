@@ -76,7 +76,7 @@ export default function ExecutiveDashboard() {
   // Derive from unified metrics
   const totalAgents = metrics?.agents.total || 0;
   const onlineAgents = metrics?.agents.online || 0;
-  const offlineAgents = (metrics?.agents.offline || 0) + (metrics?.agents.warning || 0) + (metrics?.agents.neverConnected || 0);
+  const offlineAgents = (metrics?.agents.offline || 0) + (metrics?.agents.neverConnected || 0);
   const protectionCoverage = metrics?.agents.protectionPercent || 0;
   const agentHealthScore = totalAgents > 0 ? (onlineAgents / totalAgents) * 100 : 100;
   const alertPenalty = Math.min((metrics?.alerts.active || 0) * 5, 30);

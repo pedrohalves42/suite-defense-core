@@ -121,8 +121,8 @@ export function DailySummaryCard() {
         actionsExecuted: executedActions.length,
         alertsCreated: alertsRes.count || 0,
         costAvoided,
-        agentsOnline: agentCounts.online,
-        agentsOffline: agentCounts.offline + agentCounts.warning + agentCounts.never_connected,
+        agentsOnline: agentCounts.online + agentCounts.warning,
+        agentsOffline: agentCounts.offline + agentCounts.never_connected,
         agentsTotal: agentCounts.total,
         topEvents,
       };
