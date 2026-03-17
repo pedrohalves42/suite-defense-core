@@ -88,6 +88,7 @@ const POLICY_MODE_CONFIG: Record<string, { label: string; icon: typeof Eye; colo
 
 export default function SoftwareRiskDashboard() {
   const [selectedRisk, setSelectedRisk] = useState<string | undefined>(undefined);
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgent, setSelectedAgent] = useState<string>('all');
   
@@ -121,8 +122,8 @@ export default function SoftwareRiskDashboard() {
   })) || [];
 
   const filteredSoftware = software?.filter(item => {
-    // Filter by agent
     if (selectedAgent !== 'all' && item.agent_id !== selectedAgent) return false;
+    if (selectedCategory && (item as any).software_category !== selectedCategory) return false;
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (
@@ -317,15 +318,26 @@ export default function SoftwareRiskDashboard() {
                         ?.filter(s => level === 'all' || s.risk_level === level)
                         .map(s => 
                           Object.entries(s.category_breakdown || {}).map(([cat, count]) => (
-                            <div 
+                            <button 
                               key={`${s.risk_level}-${cat}`}
-                              className="flex items-center justify-between p-2 rounded-lg border bg-muted/30"
+                              onClick={() => {
+                                setSelectedCategory(prev => prev === cat ? undefined : cat);
+                                if (level !== 'all') setSelectedRisk(s.risk_level);
+                                else setSelectedRisk(undefined);
+                                // Scroll to software list
+                                document.getElementById('software-list')?.scrollIntoView({ behavior: 'smooth' });
+                              }}
+                              className={cn(
+                                "flex items-center justify-between p-2 rounded-lg border bg-muted/30 transition-colors text-left",
+                                "hover:bg-primary/10 hover:border-primary/40 cursor-pointer",
+                                selectedCategory === cat && "bg-primary/15 border-primary/50 ring-1 ring-primary/30"
+                              )}
                             >
                               <span className="text-sm truncate">
                                 {CATEGORY_LABELS[cat] || cat}
                               </span>
                               <Badge variant="secondary">{count as number}</Badge>
-                            </div>
+                            </button>
                           ))
                         )}
                     </div>
@@ -388,7 +400,7 @@ export default function SoftwareRiskDashboard() {
       )}
 
       {/* Software List */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+      <motion.div id="software-list" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-4">
@@ -396,12 +408,23 @@ export default function SoftwareRiskDashboard() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Monitor className="h-5 w-5" />
-                    {selectedRisk 
-                      ? `Programas - ${RISK_CONFIG[selectedRisk]?.label || selectedRisk}`
-                      : 'Todos os Programas'}
+                    {selectedCategory
+                      ? `Programas - ${CATEGORY_LABELS[selectedCategory] || selectedCategory}`
+                      : selectedRisk 
+                        ? `Programas - ${RISK_CONFIG[selectedRisk]?.label || selectedRisk}`
+                        : 'Todos os Programas'}
                     <Badge variant="secondary" className="ml-2">{filteredSoftware.length}</Badge>
                   </CardTitle>
-                  <CardDescription className="mt-1">
+                  <CardDescription className="mt-1 flex gap-2">
+                    {selectedCategory && (
+                      <Button 
+                        variant="link" 
+                        className="p-0 h-auto text-sm"
+                        onClick={() => setSelectedCategory(undefined)}
+                      >
+                        Limpar filtro de categoria
+                      </Button>
+                    )}
                     {selectedRisk && (
                       <Button 
                         variant="link" 
