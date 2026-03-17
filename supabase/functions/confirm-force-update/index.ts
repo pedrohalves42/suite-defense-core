@@ -134,10 +134,13 @@ Deno.serve(async (req) => {
     // ============================================================
     const currentNorm = normalizeVersion(agent.agent_version);
     const newNorm = normalizeVersion(new_version);
-    
+    const targetNorm = normalizeVersion(agent.force_update_version);
+    const deliveryCount = agent.force_update_delivered_count ?? agent.force_update_delivery_count ?? 0;
+    const nowIso = new Date().toISOString();
+
     if (currentNorm === newNorm && !agent.force_update_version) {
-      logger.info('[confirm-force-update] Idempotent: agent already at version, no force_update pending', { 
-        requestId, agentName: agent.agent_name, version: new_version 
+      logger.info('[confirm-force-update] Idempotent: agent already at version, no force_update pending', {
+        requestId, agentName: agent.agent_name, version: new_version
       });
       return new Response(
         JSON.stringify({
@@ -151,41 +154,106 @@ Deno.serve(async (req) => {
       );
     }
 
-    const deliveryCount = agent.force_update_delivered_count ?? agent.force_update_delivery_count ?? 0;
+    // ============================================================
+    // GUARD 2: Reject mismatched confirmation for a different target
+    // ============================================================
+    if (targetNorm && newNorm !== targetNorm) {
+      logger.warn('[confirm-force-update] Rejecting mismatched force update confirmation', {
+        requestId,
+        agentName: agent.agent_name,
+        currentVersion: agent.agent_version,
+        targetVersion: agent.force_update_version,
+        reportedVersion: new_version,
+      });
 
-    logger.info('[confirm-force-update] Confirmando force update', {
+      return new Response(
+        JSON.stringify({
+          error: 'Reported version does not match pending force update target',
+          agent_name: agent.agent_name,
+          current_version: agent.agent_version,
+          target_version: agent.force_update_version,
+          reported_version: new_version,
+        }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    logger.info('[confirm-force-update] Processing force update confirmation', {
       requestId,
       agentName: agent.agent_name,
       oldVersion: old_version || agent.agent_version,
+      currentVersion: agent.agent_version,
       newVersion: new_version,
+      pendingTargetVersion: agent.force_update_version,
       wasForceUpdate: !!agent.force_update_version,
       deliveryCount,
     });
 
-    // Atualizar agente: limpar force_update e atualizar versão
+    // IMPORTANT:
+    // For legacy agents, this endpoint can be called by the *old* process immediately
+    // after file replacement but before the new script produces a heartbeat.
+    // Never trust this callback alone to flip agent_version or clear force_update
+    // when DB still shows the previous version.
+    if (currentNorm !== newNorm) {
+      const { error: evidenceError } = await supabase
+        .from('agent_evidence_logs')
+        .insert({
+          agent_id: agent.id,
+          agent_name: agent.agent_name,
+          agent_version: agent.agent_version,
+          tenant_id: agent.tenant_id,
+          event_type: 'force_update_staged',
+          event_data: {
+            old_version: old_version || agent.agent_version,
+            new_version: new_version,
+            pending_target_version: agent.force_update_version,
+            delivery_count: deliveryCount,
+            staged_at: nowIso,
+            waiting_for_post_update_heartbeat: true,
+          },
+          evidence_hash: crypto.randomUUID(),
+          severity: 'info'
+        });
+
+      if (evidenceError) {
+        logger.warn('[confirm-force-update] Failed to register staged evidence (non-critical)', { requestId, error: evidenceError });
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Force update staged; waiting for heartbeat from the new version before clearing pending update',
+          agent_name: agent.agent_name,
+          current_version: agent.agent_version,
+          new_version: new_version,
+          awaiting_heartbeat: true,
+        }),
+        { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Current DB version already matches the reported version, so it is safe to clear
     const { error: updateError } = await supabase
       .from('agents')
       .update({
-        agent_version: new_version,
         force_update_version: null,
         force_update_reason: null,
         force_update_at: null,
         force_update_delivery_count: 0,
         force_update_delivered_count: 0,
         force_update_first_delivered_at: null,
-        last_forced_update_applied: new Date().toISOString()
+        last_forced_update_applied: nowIso
       })
       .eq('id', agent.id);
 
     if (updateError) {
-      logger.error('[confirm-force-update] Erro ao atualizar agente', { requestId, error: updateError });
+      logger.error('[confirm-force-update] Erro ao limpar force update', { requestId, error: updateError });
       return new Response(
-        JSON.stringify({ error: 'Failed to update agent' }),
+        JSON.stringify({ error: 'Failed to clear pending force update' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Registrar evento de evidence
     const { error: evidenceError } = await supabase
       .from('agent_evidence_logs')
       .insert({
@@ -199,7 +267,7 @@ Deno.serve(async (req) => {
           new_version: new_version,
           was_force_update: !!agent.force_update_version,
           delivery_count: deliveryCount,
-          applied_at: new Date().toISOString()
+          applied_at: nowIso
         },
         evidence_hash: crypto.randomUUID(),
         severity: 'info'
@@ -209,8 +277,8 @@ Deno.serve(async (req) => {
       logger.warn('[confirm-force-update] Falha ao registrar evidence (não crítico)', { requestId, error: evidenceError });
     }
 
-    logger.info('[confirm-force-update] Force update confirmado com sucesso', { 
-      requestId, 
+    logger.info('[confirm-force-update] Force update confirmado com sucesso', {
+      requestId,
       agentName: agent.agent_name,
       newVersion: new_version
     });
