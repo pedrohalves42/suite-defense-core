@@ -192,10 +192,10 @@ export const INCIDENT_STATUS_LABELS: Record<IncidentTimeline['status'], string> 
 };
 
 export const INCIDENT_STATUS_COLORS: Record<IncidentTimeline['status'], string> = {
-  open: 'bg-red-500/10 text-red-500 border-red-500/20',
-  investigating: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  contained: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  resolved: 'bg-green-500/10 text-green-500 border-green-500/20',
+  open: 'bg-destructive/10 text-destructive border-destructive/20',
+  investigating: 'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))] border-[hsl(var(--warning))]/20',
+  contained: 'bg-[hsl(var(--info))]/10 text-[hsl(var(--info))] border-[hsl(var(--info))]/20',
+  resolved: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] border-[hsl(var(--success))]/20',
   closed: 'bg-muted text-muted-foreground border-border',
 };
 

@@ -80,8 +80,7 @@ export function IncidentTimelineViewer({ incident, onClose }: IncidentTimelineVi
   };
 
   const handleExportPDF = async () => {
-    // Placeholder for PDF export
-    console.log('Exporting incident timeline as PDF...');
+    // TODO: Implement PDF export
   };
 
   return (

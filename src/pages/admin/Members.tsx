@@ -156,13 +156,6 @@ export default function Members() {
   const isUnlimited = memberLimit === null;
   const isAtLimit = !isUnlimited && currentUsersCount >= (memberLimit ?? 0);
   
-  console.log('[Members] Subscription check:', { 
-    planName, 
-    currentUsersCount, 
-    memberLimit, 
-    isAtLimit,
-    maxUsersFeature: maxUsersFeature ? `limit=${maxUsersFeature.quota_limit}, used=${maxUsersFeature.quota_used}` : 'not found'
-  });
 
   return (
     <div className="space-y-6">

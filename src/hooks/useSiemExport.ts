@@ -36,7 +36,7 @@ export const useSiemExport = () => {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('siem_export_configs')
-        .select('*')
+        .select('id, tenant_id, format, is_active, webhook_url, include_event_types, batch_size, export_interval_minutes, last_export_at')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -51,7 +51,7 @@ export const useSiemExport = () => {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('siem_export_history')
-        .select('*')
+        .select('id, events_exported, format, status, error_message, exported_at')
         .eq('tenant_id', tenant.id)
         .order('exported_at', { ascending: false })
         .limit(50);

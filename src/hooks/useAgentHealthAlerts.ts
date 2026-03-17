@@ -296,39 +296,7 @@ export function useResolveAllAlerts() {
   });
 }
 
-export function useHealthStatusColor(status: string): string {
-  switch (status) {
-    case 'healthy':
-      return 'text-green-500';
-    case 'not_polling_jobs':
-    case 'not_executing_jobs':
-      return 'text-amber-500';
-    case 'execution_stale':
-      return 'text-orange-500';
-    case 'safe_mode':
-      return 'text-blue-500';
-    case 'offline':
-    case 'never_connected':
-      return 'text-red-500';
-    default:
-      return 'text-muted-foreground';
-  }
-}
-
-export function useSeverityColor(severity: string): string {
-  switch (severity) {
-    case 'critical':
-      return 'text-red-500 bg-red-500/10';
-    case 'high':
-      return 'text-orange-500 bg-orange-500/10';
-    case 'medium':
-      return 'text-amber-500 bg-amber-500/10';
-    case 'low':
-      return 'text-green-500 bg-green-500/10';
-    default:
-      return 'text-muted-foreground bg-muted/10';
-  }
-}
+export { getHealthStatusTextColor as useHealthStatusColor, getSeverityCombo as useSeverityColor } from '@/lib/severityColors';
 
 export function useHealthStatusLabel(status: string): string {
   switch (status) {

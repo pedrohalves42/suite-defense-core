@@ -103,7 +103,7 @@ export function useUnifiedMetrics() {
     queryKey: ['unified-metrics', tenant?.id],
     queryFn: async (): Promise<Omit<UnifiedMetrics, 'agents' | 'securityScore' | 'globalStatus'> & { _raw: true }> => {
       if (!tenant?.id) throw new Error('No tenant');
-      const sb = supabase as any;
+      const sb = supabase;
       const now = new Date();
       const sevenDaysAgo = subDays(now, 7).toISOString();
       const thirtyDaysAgo = subDays(now, 30).toISOString();
@@ -143,10 +143,10 @@ export function useUnifiedMetrics() {
       const vulns: Array<{ severity: string }> = vulnRes.data || [];
 
       // Evidence summary from server-side RPC (deduplicated, no truncation)
-      const evidenceSummary = evidenceSummaryRes.data || {
+      const evidenceSummary = (evidenceSummaryRes.data || {
         auto_repairs: 0, auto_recoveries: 0, policy_drifts: 0,
         critical_prevented: 0, high_prevented: 0, medium_prevented: 0, incidents_contained: 0,
-      };
+      }) as Record<string, number>;
 
       const autoRepairs = evidenceSummary.auto_repairs || 0;
       const autoRecoveries = evidenceSummary.auto_recoveries || 0;

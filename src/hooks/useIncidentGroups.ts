@@ -118,27 +118,27 @@ export const getSeverityColor = (severity: IncidentGroup['severity_hint']) => {
   switch (severity) {
     case 'critical':
       return {
-        text: 'text-red-600 dark:text-red-400',
-        bg: 'bg-red-500/10',
-        border: 'border-red-500',
+        text: 'text-destructive',
+        bg: 'bg-destructive/10',
+        border: 'border-destructive',
       };
     case 'high':
       return {
-        text: 'text-orange-600 dark:text-orange-400',
-        bg: 'bg-orange-500/10',
-        border: 'border-orange-500',
+        text: 'text-[hsl(var(--warning))]',
+        bg: 'bg-[hsl(var(--warning))]/10',
+        border: 'border-[hsl(var(--warning))]',
       };
     case 'medium':
       return {
-        text: 'text-amber-600 dark:text-amber-400',
-        bg: 'bg-amber-500/10',
-        border: 'border-amber-500',
+        text: 'text-[hsl(var(--warning))]',
+        bg: 'bg-[hsl(var(--warning))]/10',
+        border: 'border-[hsl(var(--warning))]',
       };
     default:
       return {
-        text: 'text-blue-600 dark:text-blue-400',
-        bg: 'bg-blue-500/10',
-        border: 'border-blue-500',
+        text: 'text-[hsl(var(--info))]',
+        bg: 'bg-[hsl(var(--info))]/10',
+        border: 'border-[hsl(var(--info))]',
       };
   }
 };

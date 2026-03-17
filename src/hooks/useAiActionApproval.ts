@@ -189,8 +189,8 @@ export const RISK_LEVEL_LABELS: Record<string, string> = {
  * Cores para níveis de risco
  */
 export const RISK_LEVEL_COLORS: Record<string, string> = {
-  low: 'text-green-500 bg-green-500/10',
-  medium: 'text-amber-500 bg-amber-500/10',
-  high: 'text-orange-500 bg-orange-500/10',
-  critical: 'text-red-500 bg-red-500/10',
+  low: 'text-[hsl(var(--success))] bg-[hsl(var(--success))]/10',
+  medium: 'text-[hsl(var(--warning))] bg-[hsl(var(--warning))]/10',
+  high: 'text-[hsl(var(--warning))] bg-[hsl(var(--warning))]/10',
+  critical: 'text-destructive bg-destructive/10',
 };

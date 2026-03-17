@@ -28,7 +28,7 @@ export function useSystemMode() {
       if (mode !== 'normal') {
         const { data: stateRow } = await supabase
           .from('system_global_state')
-          .select('*')
+          .select('mode, triggered_at, reason, triggered_by, expires_at')
           .order('triggered_at', { ascending: false })
           .limit(1)
           .maybeSingle();

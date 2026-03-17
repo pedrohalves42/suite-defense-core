@@ -41,7 +41,7 @@ export function useTodayRiskDelta() {
 
       const { data, error } = await supabase
         .from('risk_delta_snapshots')
-        .select('*')
+        .select('id, tenant_id, snapshot_date, risk_score_start, risk_score_end, delta, threats_blocked, incidents_prevented, actions_executed, actions_pending_approval, estimated_cost_avoided, executive_summary, key_events, created_at')
         .eq('tenant_id', tenant.id)
         .eq('snapshot_date', today)
         .maybeSingle();
@@ -66,7 +66,7 @@ export function useRiskDeltaHistory(days = 30) {
 
       const { data, error } = await supabase
         .from('risk_delta_snapshots')
-        .select('*')
+        .select('id, tenant_id, snapshot_date, risk_score_start, risk_score_end, delta, threats_blocked, incidents_prevented, actions_executed, actions_pending_approval, estimated_cost_avoided, executive_summary, key_events, created_at')
         .eq('tenant_id', tenant.id)
         .gte('snapshot_date', startDate.toISOString().split('T')[0])
         .order('snapshot_date', { ascending: false });
@@ -126,7 +126,7 @@ export function getDeltaInfo(delta: number | null): {
     return {
       icon: 'down',
       label: `${Math.abs(delta)} pontos`,
-      color: 'text-green-500',
+      color: 'text-[hsl(var(--success))]',
       description: 'O nível de risco diminuiu',
     };
   }
@@ -134,7 +134,7 @@ export function getDeltaInfo(delta: number | null): {
   return {
     icon: 'up',
     label: `+${delta} pontos`,
-    color: 'text-red-500',
+    color: 'text-destructive',
     description: 'O nível de risco aumentou',
   };
 }

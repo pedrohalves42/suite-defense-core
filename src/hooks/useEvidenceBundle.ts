@@ -52,7 +52,7 @@ export function useEvidenceBundles() {
 
       const { data, error } = await supabase
         .from('evidence_bundles')
-        .select('*')
+        .select('id, tenant_id, audit_id, bundle_type, period_start, period_end, manifest_hash, included_evidence, file_count, total_size_bytes, download_url, download_expires_at, verification_url, created_by, created_at')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false });
 
