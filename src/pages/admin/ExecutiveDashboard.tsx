@@ -309,7 +309,7 @@ export default function ExecutiveDashboard() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <HandCoins className="h-4 w-4 text-emerald-500" />
+                    <HandCoins className="h-4 w-4 text-success" />
                     Economia para a Empresa (30 dias)
                   </CardTitle>
                   <Tooltip>
