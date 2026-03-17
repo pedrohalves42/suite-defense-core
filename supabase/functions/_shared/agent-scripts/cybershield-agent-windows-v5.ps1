@@ -2905,17 +2905,34 @@ function Invoke-CollectWebActivity {
             $userName = $userProfile.Name
             $userPath = $userProfile.FullName
             
-            # Browser DB paths to scan
+            # Browser DB paths to scan (Chrome, Edge, Firefox, Opera, Opera GX, Brave, Vivaldi)
             $browserPaths = @(
                 @{ path = "AppData\Local\Google\Chrome\User Data\Default\History"; browser = "chrome" },
-                @{ path = "AppData\Local\Microsoft\Edge\User Data\Default\History"; browser = "edge" }
+                @{ path = "AppData\Local\Microsoft\Edge\User Data\Default\History"; browser = "edge" },
+                @{ path = "AppData\Roaming\Opera Software\Opera Stable\History"; browser = "opera" },
+                @{ path = "AppData\Roaming\Opera Software\Opera GX Stable\History"; browser = "opera_gx" },
+                @{ path = "AppData\Local\BraveSoftware\Brave-Browser\User Data\Default\History"; browser = "brave" },
+                @{ path = "AppData\Local\Vivaldi\User Data\Default\History"; browser = "vivaldi" }
             )
+            
+            # Firefox uses places.sqlite with different schema
+            $firefoxProfileDir = Join-Path $userPath "AppData\Roaming\Mozilla\Firefox\Profiles"
+            if (Test-Path $firefoxProfileDir) {
+                $ffProfiles = Get-ChildItem -Path $firefoxProfileDir -Directory -ErrorAction SilentlyContinue
+                foreach ($ffProfile in $ffProfiles) {
+                    $ffHistory = Join-Path $ffProfile.FullName "places.sqlite"
+                    if (Test-Path $ffHistory) {
+                        $browserPaths += @{ path = $ffHistory; browser = "firefox"; absolute = $true }
+                        break # Use first profile found
+                    }
+                }
+            }
             
             foreach ($bp in $browserPaths) {
                 if ([DateTime]::UtcNow -gt $deadline) { break }
                 
                 try {
-                    $historyPath = Join-Path $userPath $bp.path
+                    $historyPath = if ($bp.absolute) { $bp.path } else { Join-Path $userPath $bp.path }
                     if (-not (Test-Path $historyPath)) { continue }
                     
                     $tempPath = "$env:TEMP\$($bp.browser)_history_$(Get-Random).db"
@@ -3962,16 +3979,28 @@ function Initialize-ProcessBaseline {
 
             if ($loadedBaseline) {
                 # HOTFIX-BASELINE-NORMALIZE-SAVE: Normalize all entries to hashtables to avoid PS 5.1 mixed-type serialization issues
+                # v5.0.14-fix2: Dedup by name during load to prevent duplicate key errors
                 $normalizedBaseline = @()
+                $loadSeenNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
                 foreach ($be in $loadedBaseline) {
+                    $beName = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
+                    if (-not $beName -or $loadSeenNames.Contains($beName)) { continue }
+                    [void]$loadSeenNames.Add($beName)
                     $normalizedBaseline += [ordered]@{
-                        name        = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
+                        name        = $beName
                         company     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
                         description = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
                         first_seen  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
                     }
                 }
                 $Global:ProcessBaseline = $normalizedBaseline
+                $dupsRemoved = ([array]$loadedBaseline).Count - $normalizedBaseline.Count
+                if ($dupsRemoved -gt 0) {
+                    Write-Log "[BASELINE] Load dedup: removed $dupsRemoved duplicate entries" "WARN"
+                    # Re-save cleaned baseline immediately
+                    $psoCleanLoad = $normalizedBaseline | ForEach-Object { [PSCustomObject]$_ }
+                    $psoCleanLoad | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                }
                 Write-Log "[BASELINE] Loaded and normalized baseline with $($normalizedBaseline.Count) processes" "INFO"
             } else {
                 # File missing or corrupted — create fresh
@@ -3997,6 +4026,7 @@ function Initialize-ProcessBaseline {
             }
 
             $Global:ProcessBaseline = $baseline
+            # v5.0.14-fix: Convert to PSCustomObject array before JSON serialization to prevent PS 5.1 duplicate key errors
             $psoBaseline = $baseline | ForEach-Object { [PSCustomObject]$_ }
             $psoBaseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
 
@@ -4106,6 +4136,7 @@ function Get-ProcessAnomalies {
                         first_seen  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
                     }
                 }
+                # v5.0.14-fix: Convert to PSCustomObject before serialization (prevents PS 5.1 duplicate key)
                 $psoForSave = $normalizedForSave | ForEach-Object { [PSCustomObject]$_ }
                 $psoForSave | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
             } catch {
@@ -5057,8 +5088,9 @@ function Send-Heartbeat {
                     # COST-OPT-V6: PROCESS JOBS FROM HEARTBEAT RESPONSE
                     # Jobs are now piggybacked on heartbeat to eliminate poll-jobs calls
                     # ============================================
-                    if ($response.jobs -and $response.jobs.Count -gt 0) {
-                        Write-Log "[HEARTBEAT] Received $($response.jobs.Count) job(s) piggybacked on heartbeat" "INFO"
+                    # v5.0.14-fix2: Guard against PS 5.1 ConvertFrom-Json converting [] to $null
+                    if ($response.PSObject.Properties['jobs'] -and $response.jobs -and @($response.jobs).Count -gt 0) {
+                        Write-Log "[HEARTBEAT] Received $(@($response.jobs).Count) job(s) piggybacked on heartbeat" "INFO"
                         $Global:HeartbeatJobs = @($response.jobs)
                     } else {
                         $Global:HeartbeatJobs = @()
