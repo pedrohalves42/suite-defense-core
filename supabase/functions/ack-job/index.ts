@@ -6,8 +6,8 @@ import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { hashToken } from '../_shared/token-hash.ts'
 
 Deno.serve(async (req) => {
-  // [WARN] ? DEPRECATION WARNING - This endpoint is being phased out
-  console.warn('[ack-job] [WARN] ? DEPRECATED: This endpoint is being phased out. Use /submit-job-result instead.');
+  // [WARN] ⚠️ DEPRECATED: Sunset date 2026-06-01. Use /submit-job-result (v3) instead.
+  console.warn('[ack-job] [WARN] ⚠️ DEPRECATED: Sunset 2026-06-01. Use /submit-job-result instead.');
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -239,14 +239,14 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         ok: true,
         message: 'Job acknowledged (v1 - DEPRECATED)',
-        deprecation_warning: 'This endpoint will be removed on 2025-12-31. Migrate to submit-job-result'
+        deprecation_warning: 'This endpoint will be removed on 2026-06-01. Migrate to submit-job-result'
       }),
       {
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json',
           'X-Deprecation-Warning': 'ack-job is deprecated. Migrate to submit-job-result',
-          'X-Sunset-Date': '2025-12-31'
+          'X-Sunset-Date': '2026-06-01'
         },
         status: 200
       }

@@ -43,9 +43,10 @@ export const useIncidentGroups = (limit = 50) => {
       // Note: v_incident_groups aggregates cross-tenant data for super admins
       // RLS on base tables (failure_fingerprints, failure_occurrences) provides isolation
       // V-1038 FIX: Add tenant_id filter to view
-      const { data, error } = await supabase
-        .from('v_incident_groups' as any)
-        .select('*')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TS2589: view type too deeply nested
+      const { data, error } = await (supabase
+        .from('v_incident_groups') as any)
+        .select('id, fingerprint_hash, source_type, failure_class, normalized_signature, severity_hint, total_occurrences, distinct_agents, first_seen_at, last_seen_at, is_active, is_ongoing, tenant_id')
         .eq('tenant_id', activeTenant.id)
         .limit(limit);
 
