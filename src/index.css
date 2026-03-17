@@ -72,57 +72,61 @@
   }
   
   .dark {
-    /* === PREMIUM DARK MODE — Lighter, less black === */
-    --background: 220 16% 12%;          /* #181C24 — dark slate, not black */
-    --foreground: 220 14% 92%;         /* #EAECF0 */
+    /* === PREMIUM DARK MODE — Sophisticated deep palette === */
+    --background: 222 18% 10%;          /* #141820 — deep navy ink */
+    --foreground: 215 20% 93%;          /* #ECF0F6 */
     
-    --card: 220 14% 16%;                /* #222833 — visible cards */
-    --card-foreground: 220 14% 92%;
+    --card: 220 16% 14%;                /* #1E2430 — elevated surface */
+    --card-foreground: 215 20% 93%;
     
-    --popover: 220 12% 20%;             /* #2C3240 - elevated surface */
-    --popover-foreground: 220 14% 92%;
+    --popover: 220 14% 17%;             /* #272E3B */
+    --popover-foreground: 215 20% 93%;
     
-    --primary: 220 14% 92%;            /* Inverted for dark */
-    --primary-foreground: 220 16% 12%;
-    --primary-hover: 220 14% 82%;
-    --primary-active: 220 14% 96%;
+    --primary: 215 20% 93%;
+    --primary-foreground: 222 18% 10%;
+    --primary-hover: 215 18% 82%;
+    --primary-active: 215 20% 96%;
     
-    --secondary: 220 12% 20%;          /* #2C3240 */
-    --secondary-foreground: 220 14% 92%;
+    --secondary: 220 14% 18%;           /* #262D39 */
+    --secondary-foreground: 215 20% 93%;
     
-    --muted: 220 12% 18%;
-    --muted-foreground: 220 8% 60%;    /* #919AAA — brighter muted text */
+    --muted: 220 14% 16%;
+    --muted-foreground: 215 12% 58%;    /* #8694A8 — softer, bluer grey */
     
-    --accent: 40 52% 48%;
-    --accent-foreground: 220 14% 92%;
-    --accent-soft: 40 40% 30%;
+    --accent: 40 52% 50%;
+    --accent-foreground: 215 20% 93%;
+    --accent-soft: 40 38% 32%;
     
-    --destructive: 0 72% 51%;
+    --destructive: 0 72% 54%;           /* Slightly brighter for contrast */
     --destructive-foreground: 0 0% 98%;
     
-    --warning: 38 92% 50%;
-    --warning-foreground: 220 20% 10%;
+    --warning: 38 92% 52%;
+    --warning-foreground: 222 18% 10%;
     
-    --success: 160 60% 45%;
+    --success: 160 60% 48%;             /* Slightly brighter emerald */
     --success-foreground: 0 0% 98%;
     
-    /* Strategic Green — Dark mode variants */
-    --cta-positive: 160 84% 39%;
+    /* Strategic Green — Dark mode (slightly luminous) */
+    --cta-positive: 160 84% 42%;
     --cta-positive-foreground: 0 0% 98%;
-    --shield-active: 152 69% 50%;
-    --metric-positive: 142 71% 50%;
+    --shield-active: 152 69% 52%;
+    --metric-positive: 142 71% 52%;
     
-    --info: 217 55% 55%;
+    --info: 217 60% 58%;                /* Brighter blue */
     --info-foreground: 0 0% 98%;
     
-    --border: 220 12% 25%;             /* #373F4E — more visible borders */
-    --input: 220 12% 20%;
-    --ring: 220 14% 92%;
+    --border: 220 14% 22%;              /* #323A48 — subtle but visible */
+    --input: 220 14% 18%;
+    --ring: 215 20% 93%;
     
-    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.15);
-    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.2), 0 1px 2px -1px rgb(0 0 0 / 0.15);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.15);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.25), 0 4px 6px -4px rgb(0 0 0 / 0.15);
+    /* Glass effects */
+    --glass-bg: 220 16% 14% / 0.7;
+    --glass-border: 220 14% 30% / 0.4;
+    
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+    --shadow-sm: 0 2px 4px 0 rgb(0 0 0 / 0.15), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.2), 0 2px 6px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 12px 24px -4px rgb(0 0 0 / 0.25), 0 4px 8px -4px rgb(0 0 0 / 0.1);
   }
 }
 
