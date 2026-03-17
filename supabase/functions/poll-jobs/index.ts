@@ -94,13 +94,25 @@ Deno.serve(async (req) => {
     const hmacMinNormV = normalizeVersion(HMAC_REQUIRED_MIN_VERSION)
     const isModernAgent = !!(currentNormV && hmacMinNormV && currentNormV >= hmacMinNormV)
 
+    // TUNING: Fetch agent data once (reused for tenant_id, version, heartbeat checks later)
+    const { data: agentData, error: agentError } = await supabase
+      .from('agents')
+      .select('id, tenant_id, last_heartbeat, status, agent_version')
+      .eq('id', token.agent_id)
+      .single()
+
+    if (agentError || !agentData) {
+      logger.error('Error fetching agent data', { error: agentError?.message, agentId: token.agent_id })
+      return new Response(
+        JSON.stringify({ error: 'Agent not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      )
+    }
+
     if (hasAnyHmacHeader) {
-      // V-1023 FIX: Resolve tenant_id from agent data instead of passing undefined
-      const agentTenantLookup = await supabase.from('agents').select('tenant_id').eq('id', token.agent_id).single();
-      const resolvedTenantId = agentTenantLookup.data?.tenant_id || undefined;
       const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret, {
         agentId: token.agent_id,
-        tenantId: resolvedTenantId,
+        tenantId: agentData.tenant_id || undefined,
         endpoint: 'poll-jobs',
         ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined
       })
