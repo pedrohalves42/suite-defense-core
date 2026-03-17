@@ -157,6 +157,7 @@ export function useRegistryEvents(agentId: string, options?: { limit?: number; s
       return (data || []) as unknown as EndpointRegistryEvent[];
     },
     enabled: !loading && !!activeTenant?.id && !!agentId,
+    staleTime: 15_000,
   });
 }
 

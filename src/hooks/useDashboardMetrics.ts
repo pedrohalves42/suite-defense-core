@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { OFFLINE_THRESHOLD_MS } from '@/lib/agent-status-constants';
-import type { DashboardAgent, DashboardJob } from "./useDashboardData";
+import type { DashboardAgent, DashboardJob } from "@/types/dashboard";
 
 export function useDashboardMetrics(
   agents: DashboardAgent[],

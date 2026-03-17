@@ -100,46 +100,49 @@ export function useDashboardQueries() {
   const tenantId = tenant?.id;
   const enabled = !!tenantId && isOnline;
 
+  // PERF-FIX: refetchOnWindowFocus pauses polling when tab is inactive
+  const queryOpts = { enabled, staleTime: STALE_TIME, refetchInterval: REFETCH_INTERVAL, refetchOnWindowFocus: true, refetchIntervalInBackground: false };
+
   const agents = useQuery({
     queryKey: ["dashboard", "agents", tenantId],
     queryFn: () => fetchAgents(tenantId!),
-    enabled, staleTime: STALE_TIME, refetchInterval: REFETCH_INTERVAL,
+    ...queryOpts,
   });
 
   const jobs = useQuery({
     queryKey: ["dashboard", "jobs", tenantId],
     queryFn: () => fetchJobs(tenantId!),
-    enabled, staleTime: STALE_TIME, refetchInterval: REFETCH_INTERVAL,
+    ...queryOpts,
   });
 
   const reports = useQuery({
     queryKey: ["dashboard", "reports", tenantId],
     queryFn: () => fetchReports(tenantId!),
-    enabled, staleTime: STALE_TIME, refetchInterval: REFETCH_INTERVAL,
+    ...queryOpts,
   });
 
   const agentTokens = useQuery({
     queryKey: ["dashboard", "tokens", tenantId],
     queryFn: () => fetchTokens(tenantId!),
-    enabled, staleTime: STALE_TIME, refetchInterval: 30_000,
+    ...queryOpts, refetchInterval: 30_000,
   });
 
   const rateLimits = useQuery({
     queryKey: ["dashboard", "rateLimits", tenantId],
     queryFn: () => fetchRateLimits(tenantId!),
-    enabled, staleTime: STALE_TIME, refetchInterval: 30_000,
+    ...queryOpts, refetchInterval: 30_000,
   });
 
   const virusScans = useQuery({
     queryKey: ["dashboard", "virusScans", tenantId],
     queryFn: () => fetchVirusScans(tenantId!),
-    enabled, staleTime: STALE_TIME, refetchInterval: REFETCH_INTERVAL,
+    ...queryOpts,
   });
 
   const auditLogs = useQuery({
     queryKey: ["dashboard", "auditLogs", tenantId],
     queryFn: () => fetchAuditLogs(tenantId!),
-    enabled, staleTime: STALE_TIME, refetchInterval: 30_000,
+    ...queryOpts, refetchInterval: 30_000,
   });
 
   const tenantNames = useQuery({
