@@ -1,0 +1,1 @@
+UPDATE public.agents SET force_update_at = NULL, force_update_version = NULL WHERE agent_name = 'pcteste1' AND agent_version = 'v5.0.14' AND force_update_version = 'v5.0.14';
