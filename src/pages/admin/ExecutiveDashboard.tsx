@@ -600,7 +600,7 @@ function ImpactRow({ label, count, value, icon, unitCost }: { label: string; cou
             <span className="text-xs">{label}</span>
             <Badge variant="secondary" className="text-[10px] h-4 px-1">{count}x</Badge>
           </div>
-          <span className="text-xs font-semibold text-emerald-500">{formatCurrency(value)}</span>
+          <span className="text-xs font-semibold text-success">{formatCurrency(value)}</span>
         </div>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs text-xs">
