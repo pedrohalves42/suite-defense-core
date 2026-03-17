@@ -58,7 +58,7 @@ export const useAgentReleases = () => {
       let sha256: string;
       if (manual_sha256) {
         sha256 = manual_sha256;
-        logger.debug('[useAgentReleases] Using manual SHA256:', sha256.substring(0, 16) + '...');
+        logger.debug('[useAgentReleases] Using manual SHA256', { sha256: sha256.substring(0, 16) });
       } else {
         // Normalize content for Windows platform before calculating SHA256
         const normalizedContent = platform === 'windows' 
