@@ -98,10 +98,15 @@ async function scanAgentVulnerabilities(
     }
   }
 
-  // Store findings
+  // Store findings using upsert to avoid duplicate key violations
   if (vulnerabilities.length > 0) {
-    await supabase.from('vuln_findings').delete().eq('agent_id', agent_id);
-    await supabase.from('vuln_findings').insert(vulnerabilities);
+    const { error: upsertError } = await supabase
+      .from('vuln_findings')
+      .upsert(vulnerabilities, { onConflict: 'agent_id,check_key' });
+    
+    if (upsertError) {
+      console.error('[scan-vulnerabilities] Upsert error:', upsertError);
+    }
   }
 
   return { vulnerabilities_found: vulnerabilities.length };
