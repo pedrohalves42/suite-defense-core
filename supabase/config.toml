@@ -758,3 +758,7 @@ verify_jwt = false
 # === P2: Zero-touch Deploy ===
 [functions.generate-deploy-package]
 verify_jwt = false
+
+# === Script Sync ===
+[functions.sync-scripts-direct]
+verify_jwt = false
