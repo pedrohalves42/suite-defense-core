@@ -239,14 +239,14 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         ok: true,
         message: 'Job acknowledged (v1 - DEPRECATED)',
-        deprecation_warning: 'This endpoint will be removed on 2025-12-31. Migrate to submit-job-result'
+        deprecation_warning: 'This endpoint will be removed on 2026-06-01. Migrate to submit-job-result'
       }),
       {
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json',
           'X-Deprecation-Warning': 'ack-job is deprecated. Migrate to submit-job-result',
-          'X-Sunset-Date': '2025-12-31'
+          'X-Sunset-Date': '2026-06-01'
         },
         status: 200
       }
