@@ -5023,15 +5023,17 @@ function Send-Heartbeat {
                     # DYNAMIC INTERVAL ADJUSTMENT (v5.0.9)
                     # Server controls agent polling cadence
                     # ============================================
-                    if ($response.heartbeat_interval_seconds -and $response.heartbeat_interval_seconds -ge 10) {
-                        $newHbInterval = [int]$response.heartbeat_interval_seconds
+                    $hbIntervalProp = $response.PSObject.Properties['heartbeat_interval_seconds']
+                    if ($hbIntervalProp -and $hbIntervalProp.Value -and $hbIntervalProp.Value -ge 10) {
+                        $newHbInterval = [int]$hbIntervalProp.Value
                         if ($newHbInterval -ne $Global:PollIntervalSeconds) {
                             Write-Log "[HEARTBEAT] Server adjusted heartbeat interval: $($Global:PollIntervalSeconds)s -> ${newHbInterval}s" "INFO"
                             $Global:PollIntervalSeconds = $newHbInterval
                         }
                     }
-                    if ($response.poll_interval_seconds -and $response.poll_interval_seconds -ge 10) {
-                        $newJobInterval = [int]$response.poll_interval_seconds
+                    $pollIntervalProp = $response.PSObject.Properties['poll_interval_seconds']
+                    if ($pollIntervalProp -and $pollIntervalProp.Value -and $pollIntervalProp.Value -ge 10) {
+                        $newJobInterval = [int]$pollIntervalProp.Value
                         if ($newJobInterval -ne $Global:JobPollIntervalSeconds) {
                             Write-Log "[HEARTBEAT] Server adjusted job poll interval: $($Global:JobPollIntervalSeconds)s -> ${newJobInterval}s" "INFO"
                             $Global:JobPollIntervalSeconds = $newJobInterval
