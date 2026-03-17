@@ -57,7 +57,7 @@ async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebA
         existing.last = item.visited_at;
       }
       // Usar visit_count do agente se disponível, senão incrementar 1
-      existing.count += (item as any).visit_count || 1;
+      existing.count += item.visit_count || 1;
       // Keep latest category/is_blocked values
       if (item.category) existing.category = item.category;
       if (item.is_blocked !== null) existing.is_blocked = item.is_blocked ?? undefined;

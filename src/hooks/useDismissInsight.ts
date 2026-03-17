@@ -84,7 +84,7 @@ export function useDismissInsight() {
       toast.success('Insight dispensado com sucesso');
     },
     onError: (error) => {
-      console.error('[useDismissInsight] Error:', error);
+      logger.error('[useDismissInsight] Error:', error instanceof Error ? error : undefined);
       toast.error(error instanceof Error ? error.message : 'Erro ao dispensar insight');
     },
   });
