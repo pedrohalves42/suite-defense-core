@@ -60,10 +60,14 @@ export function getAgentStatusCounts(snapshots: AgentSnapshot[] | undefined) {
         switch (snapshot.agent_state) {
           case 'healthy':
           case 'enforcing':
+          case 'syncing':
+          case 'authenticating':
             acc.online++;
             break;
+          case 'updating':
           case 'degraded':
           case 'recovery':
+          case 'warning':
             acc.warning++;
             break;
           case 'error':
