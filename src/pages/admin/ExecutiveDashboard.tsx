@@ -490,9 +490,9 @@ export default function ExecutiveDashboard() {
                     >
                       <div className="flex items-center gap-2.5">
                         {action.priority === 'high' ? (
-                          <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+                          <XCircle className="h-4 w-4 text-destructive shrink-0" />
                         ) : (
-                          <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                          <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
                         )}
                         <span className="text-sm font-medium">{action.title}</span>
                       </div>
