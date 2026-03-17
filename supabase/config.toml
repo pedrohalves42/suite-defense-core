@@ -89,6 +89,9 @@ verify_jwt = false
 [functions.confirm-force-update]
 verify_jwt = false
 
+[functions.serve-dns-filter]
+verify_jwt = false
+
 [functions.get-blocked-websites]
 verify_jwt = false
 
