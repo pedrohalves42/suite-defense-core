@@ -70,6 +70,7 @@ export function useProcessEvents(agentId: string, options?: { limit?: number; su
       return (data || []) as unknown as EndpointProcessEvent[];
     },
     enabled: !loading && !!activeTenant?.id && !!agentId,
+    staleTime: 15_000,
   });
 }
 
