@@ -142,10 +142,10 @@ export function usePipelineHealth(
 
       const nowIso = new Date().toISOString();
 
-      const heartbeatLast = (heartbeatsRes.data as any)?.last_heartbeat ?? null;
-      const jobLast = (jobsRes.data as any)?.completed_at ?? (jobsRes.data as any)?.created_at ?? null;
-      const webLast = (webRes.data as any)?.visited_at ?? null;
-      const dnsLast = (dnsRes.data as any)?.updated_at ?? (dnsRes.data as any)?.created_at ?? null;
+      const heartbeatLast = heartbeatsRes.data?.last_heartbeat ?? null;
+      const jobLast = jobsRes.data?.completed_at ?? jobsRes.data?.created_at ?? null;
+      const webLast = webRes.data?.visited_at ?? null;
+      const dnsLast = dnsRes.data?.updated_at ?? dnsRes.data?.created_at ?? null;
 
       const hbT = SIGNAL_THRESHOLDS.heartbeats;
       const jobT = SIGNAL_THRESHOLDS.jobs;

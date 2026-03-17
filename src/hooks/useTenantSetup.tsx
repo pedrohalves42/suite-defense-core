@@ -71,7 +71,7 @@ export const useTenantSetup = () => {
         .from('tenants')
         .select('*')
         .eq('id', activeTenant.id)
-        .single();
+        .maybeSingle();
 
       if (tenantError) {
         logger.error('Error fetching tenant data', tenantError);
