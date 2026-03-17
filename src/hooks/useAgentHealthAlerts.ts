@@ -152,7 +152,7 @@ export function useResolveAlert() {
         .eq('tenant_id', tenant.id)
         .maybeSingle();
 
-      if (alertError) throw alertError;
+      if (alertError || !alert) throw new Error(alertError?.message || 'Alert not found');
 
       // 3. Validate resolution notes for critical alerts
       if (alert.severity === 'critical' && (!resolutionNotes || resolutionNotes.trim().length < 5)) {
