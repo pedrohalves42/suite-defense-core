@@ -91,11 +91,18 @@ Deno.serve(async (req) => {
       console.log(`[cleanup-test-data] Cleaned ${results.agent_system_metrics} agent_system_metrics records`);
     }
 
-    // 3. Limpar tokens de agente
-    const { error: tokensError, count: tokensCount } = await supabaseAdmin
-      .from('agent_tokens')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+    // 3. Limpar tokens de agente - SECURITY FIX: scoped to tenant via agent join
+    const { data: tenantAgents } = await supabaseAdmin
+      .from('agents')
+      .select('id')
+      .eq('tenant_id', callerTenantId);
+    const agentIds = tenantAgents?.map(a => a.id) || [];
+    const { error: tokensError, count: tokensCount } = agentIds.length > 0
+      ? await supabaseAdmin
+          .from('agent_tokens')
+          .delete()
+          .in('agent_id', agentIds)
+      : { error: null, count: 0 };
 
     if (tokensError) {
       console.error('[cleanup-test-data] Error cleaning agent_tokens:', tokensError);
