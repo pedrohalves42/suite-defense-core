@@ -199,7 +199,7 @@ export function useResolveAlert() {
           .eq('rule_code', 'CRITICAL_ALERT_RESOLUTION')
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (decisionEvent) {
           await supabase
