@@ -398,11 +398,17 @@ Deno.serve(async (req) => {
     // Se agent tem force_update_version pendente, incluir dados completos no response
     // Isso bypassa completamente o job system e funciona com agentes antigos
     // ============================================================
-    const { data: forceCheck } = await supabase
-      .from('agents')
-      .select('force_update_version, force_update_reason, force_update_at, force_update_override_safe_mode, force_update_override_safe_mode_expires_at, force_update_delivered_count, force_update_first_delivered_at, last_forced_update_applied')
-      .eq('id', agent.id)
-      .single()
+    // TUNING: forceCheck data already available from initial join — zero extra queries
+    const forceCheck = {
+      force_update_version: agent.force_update_version,
+      force_update_reason: agent.force_update_reason,
+      force_update_at: agent.force_update_at,
+      force_update_override_safe_mode: agent.force_update_override_safe_mode,
+      force_update_override_safe_mode_expires_at: agent.force_update_override_safe_mode_expires_at,
+      force_update_delivered_count: agent.force_update_delivered_count || 0,
+      force_update_first_delivered_at: agent.force_update_first_delivered_at,
+      last_forced_update_applied: agent.last_forced_update_applied,
+    }
 
     // Self-heal: if force_update was scheduled without force_update_version, recover target from latest active release
     const platform = updateData.os_type || 'windows'
