@@ -49,34 +49,36 @@ export default function ConfidenceGapDashboard() {
   const { data: gapHistory } = useConfidenceGapHistory();
   const calculateGap = useCalculateConfidenceGap();
 
-  const { data: dimensionalScores } = useQuery({
-    queryKey: ['dimensional-scores', tenant?.id],
-    queryFn: async (): Promise<DimensionalScore[]> => {
-      if (!tenant?.id) return [];
-      
-      // Fetch latest confidence gap which has dimensional data
-      const { data: gapData } = await supabase
-        .from('audit_confidence_gaps')
-        .select('*')
-        .eq('tenant_id', tenant.id)
-        .order('calculated_at', { ascending: false })
-        .limit(1)
-        .single();
-      
-      if (!gapData) return [];
-      
-      // Parse dimensional data from the gap record
-      const dimensions: DimensionalScore[] = Object.keys(DIMENSION_LABELS).map(dim => ({
-        dimension: dim,
-        ana_score: 70, // Default values since we don't have dimensional breakdown in gap table
-        red_score: 65,
-        gap: (gapData as any).confidence_gap || 0,
-      }));
-      
-      return dimensions;
-    },
-    enabled: !!tenant?.id,
-  });
+  // TUNING: Use latestGap data directly instead of a separate redundant query
+  // Fixed: was using non-existent column 'calculated_at' (should be 'created_at')
+  // Fixed: was using hardcoded scores instead of actual dimension_gaps from DB
+  const dimensionalScores = React.useMemo((): DimensionalScore[] => {
+    if (!latestGap?.dimension_gaps) return [];
+    
+    const gaps = latestGap.dimension_gaps as Record<string, number>;
+    // Map DB dimension keys to our labels, using both possible key formats
+    const DIMENSION_KEY_MAP: Record<string, string> = {
+      system_identity: 'data_protection',
+      governance: 'access_control',
+      evidence_proof: 'audit_logging',
+      human_oversight: 'vulnerability_management',
+      operational_resilience: 'incident_response',
+      compliance_alignment: 'compliance',
+      transparency_explainability: 'network_security',
+      market_trust: 'endpoint_protection',
+      cross_tenant_isolation: 'cross_tenant_isolation',
+    };
+
+    return Object.entries(gaps).map(([key, gapValue]) => {
+      const mappedKey = DIMENSION_KEY_MAP[key] || key;
+      return {
+        dimension: mappedKey,
+        ana_score: latestGap.ana_score,
+        red_score: latestGap.red_score,
+        gap: typeof gapValue === 'number' ? gapValue : 0,
+      };
+    }).filter(d => DIMENSION_LABELS[d.dimension]); // Only show known dimensions
+  }, [latestGap]);
 
   const overallGap = latestGap?.confidence_gap || 0;
   const healthStatus = latestGap?.health_status || 'unknown';
