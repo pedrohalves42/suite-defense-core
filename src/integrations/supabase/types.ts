@@ -36475,6 +36475,7 @@ export type Database = {
         Returns: Json
       }
       get_enrollment_key_full: { Args: { p_key_id: string }; Returns: string }
+      get_evidence_summary: { Args: { p_tenant_id: string }; Returns: Json }
       get_governance_snapshot:
         | { Args: never; Returns: Json }
         | { Args: { p_tenant_id?: string }; Returns: Json }
