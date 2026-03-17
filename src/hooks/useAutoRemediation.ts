@@ -50,10 +50,10 @@ export const useAutoRemediation = () => {
     queryKey: ['remediation-actions', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-      // PERF-FIX: Slim select — avoid fetching large execution_details blob
+      // PERF-FIX: Slim select — avoid fetching large result/trigger_details blobs
       const { data, error } = await supabase
         .from('auto_remediation_actions')
-        .select('id, agent_id, tenant_id, action_type, status, trigger_source, approved_at, approved_by, executed_at, error_message, rollback_status, created_at')
+        .select('id, agent_id, agent_name, tenant_id, action_type, status, trigger_source, requires_approval, approved_at, approved_by, executed_at, completed_at, error_message, created_at')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
         .limit(100);
