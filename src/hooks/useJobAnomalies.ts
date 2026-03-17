@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
+import { logger } from '@/lib/logger';
 
 export interface JobAnomaly {
   anomaly_type: string;
@@ -95,10 +96,10 @@ export const useJobAnomalies = () => {
       // RLS on base tables (jobs, enrollment_keys) provides tenant isolation
       const { data, error } = await supabase
         .from('v_job_health_anomalies')
-        .select('*');
+        .select('anomaly_type, count, oldest_occurrence, description');
 
       if (error) {
-        console.error('[useJobAnomalies] Error fetching anomalies:', error);
+        logger.error('[useJobAnomalies] Error fetching anomalies', error);
         throw error;
       }
 

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveTenant } from "@/hooks/useActiveTenant";
+import { logger } from "@/lib/logger";
 
 export function useCriticalInsights() {
   const { activeTenant, loading } = useActiveTenant(); // V-1045 FIX: Use standard tenant hook
@@ -19,7 +20,7 @@ export function useCriticalInsights() {
         .in("severity", ["critical", "high"]);
       
       if (error) {
-        console.error("Error fetching critical insights:", error);
+        logger.error("Error fetching critical insights", error);
         return 0;
       }
       

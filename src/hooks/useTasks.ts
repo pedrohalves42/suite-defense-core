@@ -4,6 +4,7 @@ import { useTenant } from '@/hooks/useTenant';
 import { tenantQuery } from '@/lib/tenantQuery';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
+import { logger } from '@/lib/logger';
 
 export type TaskStatus = 'open' | 'in_progress' | 'blocked' | 'resolved' | 'ignored' | 'accepted_risk';
 export type TaskSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
@@ -232,7 +233,7 @@ export function useUpdateTaskStatus() {
       toast.success('Task atualizada com sucesso');
     },
     onError: (error) => {
-      console.error('Error updating task:', error);
+      logger.error('Error updating task', error instanceof Error ? error : undefined);
       toast.error('Erro ao atualizar task');
     },
   });
@@ -265,7 +266,7 @@ export function useAssignTask() {
       toast.success('Task atribuída com sucesso');
     },
     onError: (error) => {
-      console.error('Error assigning task:', error);
+      logger.error('Error assigning task', error instanceof Error ? error : undefined);
       toast.error('Erro ao atribuir task');
     },
   });

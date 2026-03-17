@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 import { type AppRole } from '@/types/roles';
+import { logger } from '@/lib/logger';
 
 interface Tenant {
   id: string;
@@ -54,14 +55,14 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
     clearTimeout(timeoutId);
 
     if (error) {
-      console.error('[syncActiveTenantToBackend] Edge function error:', error);
+      logger.error('[syncActiveTenantToBackend] Edge function error', error);
       return false;
     }
 
     // Refresh session to get updated JWT with active_tenant_id
     const { error: refreshError } = await supabase.auth.refreshSession();
     if (refreshError) {
-      console.warn('[syncActiveTenantToBackend] Session refresh warning:', refreshError);
+      logger.warn('[syncActiveTenantToBackend] Session refresh warning');
       // Non-blocking - continue even if refresh fails
     }
 
@@ -69,10 +70,10 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
   } catch (err) {
     // P2 MED-01: Handle timeout specifically
     if (err instanceof Error && err.name === 'AbortError') {
-      console.error('[syncActiveTenantToBackend] Sync timeout after 10s');
+      logger.error('[syncActiveTenantToBackend] Sync timeout after 10s');
       return false;
     }
-    console.error('[syncActiveTenantToBackend] Unexpected error:', err);
+    logger.error('[syncActiveTenantToBackend] Unexpected error', err instanceof Error ? err : undefined);
     return false;
   }
 }
@@ -197,25 +198,25 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         
         // If JWT already has correct tenant, skip sync
         if (currentJWTTenantId === activeTenant.id) {
-          console.log('[useActiveTenant] JWT already synced, skipping backend call');
+          logger.debug('[useActiveTenant] JWT already synced, skipping backend call');
           setIsSyncing(false);
           return;
         }
         
         // Sync needed - but don't block UI
-        console.log('[useActiveTenant] Syncing tenant to backend...');
+        logger.debug('[useActiveTenant] Syncing tenant to backend...');
         syncActiveTenantToBackend(activeTenant.id)
           .then(async (synced) => {
             if (synced) {
               await supabase.auth.refreshSession();
-              console.log('[useActiveTenant] Session refreshed after sync');
+              logger.debug('[useActiveTenant] Session refreshed after sync');
             }
           })
           .finally(() => {
             setIsSyncing(false);
           });
       } catch (err) {
-        console.warn('[useActiveTenant] JWT check failed:', err);
+        logger.warn('[useActiveTenant] JWT check failed');
         setIsSyncing(false);
       }
     };
@@ -242,7 +243,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
-        console.error('[setActiveTenant] Edge function error:', error);
+        logger.error('[setActiveTenant] Edge function error', error);
         toast.error('Erro ao trocar de empresa', {
           description: 'Não foi possível sincronizar com o servidor. Tente novamente.'
         });
@@ -252,7 +253,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       // 2. Refresh session to get new JWT with updated active_tenant_id
       const { error: refreshError } = await supabase.auth.refreshSession();
       if (refreshError) {
-        console.warn('[setActiveTenant] Session refresh warning:', refreshError);
+        logger.warn('[setActiveTenant] Session refresh warning');
       }
 
       // 3. Update local state AFTER JWT is confirmed updated
@@ -267,7 +268,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         description: 'Dados atualizados para a nova empresa'
       });
     } catch (err) {
-      console.error('[setActiveTenant] Unexpected error:', err);
+      logger.error('[setActiveTenant] Unexpected error', err instanceof Error ? err : undefined);
       toast.error('Erro ao trocar de empresa', {
         description: 'Erro inesperado. Tente novamente.'
       });

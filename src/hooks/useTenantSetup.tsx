@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from './useActiveTenant';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
+import { logger } from '@/lib/logger';
 
 export interface TenantCompanyData {
   company_name: string;
@@ -46,10 +47,10 @@ export const useTenantSetup = () => {
         .from('tenants')
         .select('setup_completed')
         .eq('id', activeTenant.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        console.error('Error checking tenant setup status:', error);
+        logger.error('Error checking tenant setup status', error);
         return false;
       }
 
@@ -70,10 +71,10 @@ export const useTenantSetup = () => {
         .from('tenants')
         .select('*')
         .eq('id', activeTenant.id)
-        .single();
+        .maybeSingle();
 
       if (tenantError) {
-        console.error('Error fetching tenant data:', tenantError);
+        logger.error('Error fetching tenant data', tenantError);
         return null;
       }
 
@@ -85,7 +86,7 @@ export const useTenantSetup = () => {
         .maybeSingle();
 
       if (settingsError && settingsError.code !== 'PGRST116') {
-        console.error('Error fetching tenant settings:', settingsError);
+        logger.error('Error fetching tenant settings', settingsError);
       }
 
       const bh = settings?.business_hours as Record<string, unknown> | null;
@@ -168,7 +169,7 @@ export const useTenantSetup = () => {
       queryClient.invalidateQueries({ queryKey: ['user-tenants'] });
     },
     onError: (error) => {
-      console.error('Error saving tenant setup:', error);
+      logger.error('Error saving tenant setup', error instanceof Error ? error : undefined);
       toast.error('Erro ao salvar configuração. Tente novamente.');
     },
   });

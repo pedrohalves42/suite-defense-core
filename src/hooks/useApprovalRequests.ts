@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
+import { logger } from '@/lib/logger';
 
 export interface ApprovalRequest {
   id: string;
@@ -129,7 +130,7 @@ export function useApprovalVotes(requestId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('approvals')
-        .select('*')
+        .select('id, request_id, approved_by, decision, reason, created_at')
         .eq('request_id', requestId)
         .order('created_at', { ascending: true });
 
@@ -181,7 +182,7 @@ export function useSubmitApproval() {
       }
     },
     onError: (error) => {
-      console.error('Failed to submit approval:', error);
+      logger.error('Failed to submit approval', error instanceof Error ? error : undefined);
       toast.error(error.message || 'Erro ao submeter aprovação');
     },
   });
@@ -224,7 +225,7 @@ export function useCreateApprovalRequest() {
       toast.success('Solicitação de aprovação criada. Aguardando aprovadores.');
     },
     onError: (error) => {
-      console.error('Failed to create approval request:', error);
+      logger.error('Failed to create approval request', error instanceof Error ? error : undefined);
       toast.error(error.message || 'Erro ao criar solicitação');
     },
   });

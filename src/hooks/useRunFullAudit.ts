@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { callEdgeFunction } from '@/lib/edge-function-client';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { AuditResult } from './useSystemAudit';
 import { RedTeamAssessment } from './useRedTeamAssessment';
 
@@ -71,7 +72,7 @@ export function useRunFullAudit() {
       
       return result;
     } catch (error) {
-      console.error('Full audit error:', error);
+      logger.error('Full audit error', error instanceof Error ? error : undefined);
       toast.error(error instanceof Error ? error.message : 'Erro ao executar auditoria completa');
       return null;
     } finally {

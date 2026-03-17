@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
+import { logger } from '@/lib/logger';
 
 export interface GovernanceReport {
   id: string;
@@ -44,7 +45,7 @@ export function useGovernanceReports() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('governance_reports')
-        .select('*')
+        .select('id, tenant_id, report_type, period_start, period_end, executive_summary, key_metrics, generated_by, generated_at, approved_by, approved_at')
         .eq('tenant_id', tenant!.id)
         .order('period_start', { ascending: false })
         .limit(20);
@@ -114,7 +115,7 @@ export function useCreateReport() {
       toast.success('Relatório gerado com sucesso');
     },
     onError: (error) => {
-      console.error('Error creating report:', error);
+      logger.error('Error creating report', error instanceof Error ? error : undefined);
       toast.error('Erro ao gerar relatório');
     },
   });
@@ -148,7 +149,7 @@ export function useApproveReport() {
       toast.success('Relatório aprovado');
     },
     onError: (error) => {
-      console.error('Error approving report:', error);
+      logger.error('Error approving report', error instanceof Error ? error : undefined);
       toast.error('Erro ao aprovar relatório');
     },
   });

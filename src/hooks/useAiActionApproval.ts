@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTenant } from './useTenant';
 import type { Json } from '@/integrations/supabase/types';
+import { logger } from '@/lib/logger';
 
 export interface AiActionApprovalParams {
   actionId: string;
@@ -37,7 +38,7 @@ export function useApproveAiAction() {
         .select('*, ai_insights(*)')
         .eq('id', actionId)
         .eq('tenant_id', tenant.id)
-        .single();
+        .maybeSingle();
 
       if (actionError || !action) throw new Error('Action not found');
 
@@ -96,7 +97,7 @@ export function useApproveAiAction() {
       toast.success('Ação aprovada e executada com sucesso');
     },
     onError: (error) => {
-      console.error('[useApproveAiAction] Error:', error);
+      logger.error('[useApproveAiAction] Error', error instanceof Error ? error : undefined);
       toast.error(error instanceof Error ? error.message : 'Erro ao aprovar ação');
     },
   });
@@ -119,7 +120,7 @@ export function useRejectAiAction() {
         .select('*')
         .eq('id', actionId)
         .eq('tenant_id', tenant.id)
-        .single();
+        .maybeSingle();
 
       if (actionError || !action) throw new Error('Action not found');
 
@@ -161,7 +162,7 @@ export function useRejectAiAction() {
       toast.success('Ação rejeitada');
     },
     onError: (error) => {
-      console.error('[useRejectAiAction] Error:', error);
+      logger.error('[useRejectAiAction] Error', error instanceof Error ? error : undefined);
       toast.error(error instanceof Error ? error.message : 'Erro ao rejeitar ação');
     },
   });

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import { logger } from "@/lib/logger";
 
 type ResourceType = 'enrollment_key' | 'agent_token' | 'api_key' | 'agent_secret' | 'security_policy' | 'agent_group';
 type ActionType = 'view' | 'copy' | 'export' | 'reveal' | 'list' | 'high_impact_confirm' | 'assign' | 'deactivate' | 'delete';
@@ -32,7 +33,7 @@ export const useAuditLog = () => {
       });
     } catch (error) {
       // Silent fail - don't break UI if audit fails
-      console.error('[AuditLog] Failed to log sensitive access:', error);
+      logger.error('[AuditLog] Failed to log sensitive access', error instanceof Error ? error : undefined);
     }
   };
 
@@ -60,7 +61,7 @@ export const useAuditLog = () => {
       });
     } catch (error) {
       // Silent fail - don't break UI if audit fails
-      console.error('[AuditLog] Failed to log high impact action:', error);
+      logger.error('[AuditLog] Failed to log high impact action', error instanceof Error ? error : undefined);
     }
   };
 
@@ -89,7 +90,7 @@ export const useAuditLog = () => {
         },
       });
     } catch (error) {
-      console.error('[AuditLog] Failed to log state change:', error);
+      logger.error('[AuditLog] Failed to log state change', error instanceof Error ? error : undefined);
     }
   };
 

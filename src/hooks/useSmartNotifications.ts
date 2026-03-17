@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
+import { logger } from '@/lib/logger';
 
 interface SmartNotification {
   type: string;
@@ -28,7 +29,7 @@ export function useSmartNotifications() {
       });
       
       if (error) {
-        console.error('[useSmartNotifications] Error:', error);
+        logger.error('[useSmartNotifications] Error', error);
         return [];
       }
       

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
+import { logger } from '@/lib/logger';
 
 /**
  * AgentSnapshot - Contrato da Edge Function canônica
@@ -50,7 +51,7 @@ export function useAgentSnapshot(agentId?: string) {
       });
       
       if (error) {
-        console.error('[useAgentSnapshot] Error:', error);
+        logger.error('[useAgentSnapshot] Error', error instanceof Error ? error : undefined);
         throw new Error(error.message || 'Failed to fetch agent snapshot');
       }
       

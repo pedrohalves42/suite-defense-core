@@ -161,7 +161,7 @@ export const useIncidentGroupsWithSLO = (limit = 50) => {
       // RLS on base tables provides tenant isolation
       const { data, error } = await supabase
         .from('v_incident_groups_with_slo' as any)
-        .select('*')
+        .select('id, fingerprint_hash, source_type, failure_class, normalized_signature, severity_hint, total_occurrences, distinct_agents, first_seen_at, last_seen_at, is_active, is_ongoing, slo_target, error_budget, burn_rate_1h, burn_rate_6h, burn_rate_24h, budget_consumed, budget_remaining, slo_status, occurrences_1h, occurrences_6h, last_evaluated_at')
         .limit(limit);
 
       if (error) throw error;
