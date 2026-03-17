@@ -81,13 +81,13 @@ Deno.serve(async (req) => {
       .from('vuln_findings')
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenant_id)
-      .eq('severity', 'CRITICAL');
+      .ilike('severity', 'critical');
 
     const { count: highVulns } = await supabase
       .from('vuln_findings')
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenant_id)
-      .eq('severity', 'HIGH');
+      .ilike('severity', 'high');
 
     const vulnScore = Math.max(0, 100 - (criticalVulns || 0) * 15 - (highVulns || 0) * 5);
 
