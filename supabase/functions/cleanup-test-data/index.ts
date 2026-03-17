@@ -78,11 +78,11 @@ Deno.serve(async (req) => {
       console.log(`[cleanup-test-data] Cleaned ${results.installation_analytics} installation_analytics records`);
     }
 
-    // 2. Limpar metricas de sistema
+    // 2. Limpar metricas de sistema - SECURITY FIX: scoped to tenant
     const { error: metricsError, count: metricsCount } = await supabaseAdmin
       .from('agent_system_metrics_partitioned')
       .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+      .eq('tenant_id', callerTenantId);
 
     if (metricsError) {
       console.error('[cleanup-test-data] Error cleaning agent_system_metrics:', metricsError);
