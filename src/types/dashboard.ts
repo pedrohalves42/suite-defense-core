@@ -1,6 +1,6 @@
 /**
  * Dashboard type definitions.
- * Extracted from useDashboardData.ts to allow clean separation of types from hooks.
+ * Canonical source for all dashboard-related types.
  */
 
 export interface DashboardAgent {

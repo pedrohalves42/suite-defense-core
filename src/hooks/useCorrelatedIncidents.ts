@@ -44,9 +44,10 @@ export function useCorrelatedIncidents(options?: { status?: string; limit?: numb
   return useQuery({
     queryKey: ['correlated-incidents', activeTenant?.id, options?.status, limit],
     queryFn: async () => {
+      // PERF-FIX: Slim select — avoid fetching large resolution_notes and full arrays
       let query = supabase
         .from('correlated_incidents')
-        .select('*')
+        .select('id, tenant_id, title, severity, confidence_score, status, mitre_tactics, mitre_techniques, affected_agents, event_count, first_event_time, last_event_time, correlation_rule, assigned_to, created_at')
         .eq('tenant_id', activeTenant!.id)
         .order('created_at', { ascending: false })
         .limit(limit);

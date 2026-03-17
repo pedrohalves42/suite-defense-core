@@ -32,7 +32,8 @@ export function useRiskDebt() {
       return data as RiskDebtItem[];
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
+    staleTime: 60_000,
   });
 }
 
