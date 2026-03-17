@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import { logger } from "@/lib/logger";
 
 type ResourceType = 'enrollment_key' | 'agent_token' | 'api_key' | 'agent_secret' | 'security_policy' | 'agent_group';
 type ActionType = 'view' | 'copy' | 'export' | 'reveal' | 'list' | 'high_impact_confirm' | 'assign' | 'deactivate' | 'delete';
