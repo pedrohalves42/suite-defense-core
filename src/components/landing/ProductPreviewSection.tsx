@@ -24,8 +24,9 @@ const lgpdItems = [
 
 export function ProductPreviewSection() {
   return (
-    <section className="py-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-24 relative">
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-cta-positive/[0.02] to-background" />
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
           title="Veja o CyberShield funcionando"
           subtitle="É assim que você enxerga a segurança da sua empresa — simples, visual e em português"
