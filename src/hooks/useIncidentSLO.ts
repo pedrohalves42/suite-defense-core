@@ -110,10 +110,10 @@ export function getOverallBurnRateStatus(
  * Returns color for error budget bar based on consumption percentage
  */
 export function getErrorBudgetColor(consumed: number): string {
-  if (consumed >= 80) return 'bg-red-500';
-  if (consumed >= 50) return 'bg-orange-500';
-  if (consumed >= 30) return 'bg-amber-500';
-  return 'bg-green-500';
+  if (consumed >= 80) return 'bg-destructive';
+  if (consumed >= 50) return 'bg-[hsl(var(--warning))]';
+  if (consumed >= 30) return 'bg-[hsl(var(--warning))]';
+  return 'bg-[hsl(var(--success))]';
 }
 
 /**

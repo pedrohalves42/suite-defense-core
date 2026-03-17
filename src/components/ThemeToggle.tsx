@@ -30,7 +30,7 @@ export function ThemeToggle({
   const toggleTheme = () => {
     const nextTheme = isDark ? "light" : "dark";
     setTheme(nextTheme);
-    console.debug("[ThemeToggle] Set theme to:", nextTheme);
+    
   };
 
   // Show placeholder while mounting to avoid hydration issues

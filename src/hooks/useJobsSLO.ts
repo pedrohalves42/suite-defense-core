@@ -35,48 +35,18 @@ export interface BurnRateStatus {
  */
 export function getBurnRateStatus(burnRate: number): BurnRateStatus {
   if (burnRate >= 10) {
-    return {
-      level: 'critical',
-      label: 'CRÍTICO',
-      color: 'red',
-      bgColor: 'bg-red-500/10',
-      textColor: 'text-red-600 dark:text-red-400'
-    };
+    return { level: 'critical', label: 'CRÍTICO', color: 'red', bgColor: 'bg-destructive/10', textColor: 'text-destructive' };
   }
   if (burnRate >= 4) {
-    return {
-      level: 'high',
-      label: 'ALTO',
-      color: 'orange',
-      bgColor: 'bg-orange-500/10',
-      textColor: 'text-orange-600 dark:text-orange-400'
-    };
+    return { level: 'high', label: 'ALTO', color: 'orange', bgColor: 'bg-[hsl(var(--warning))]/10', textColor: 'text-[hsl(var(--warning))]' };
   }
   if (burnRate >= 2) {
-    return {
-      level: 'warning',
-      label: 'ATENÇÃO',
-      color: 'amber',
-      bgColor: 'bg-amber-500/10',
-      textColor: 'text-amber-600 dark:text-amber-400'
-    };
+    return { level: 'warning', label: 'ATENÇÃO', color: 'amber', bgColor: 'bg-[hsl(var(--warning))]/10', textColor: 'text-[hsl(var(--warning))]' };
   }
   if (burnRate >= 1) {
-    return {
-      level: 'alert',
-      label: 'ALERTA',
-      color: 'yellow',
-      bgColor: 'bg-yellow-500/10',
-      textColor: 'text-yellow-600 dark:text-yellow-400'
-    };
+    return { level: 'alert', label: 'ALERTA', color: 'yellow', bgColor: 'bg-[hsl(var(--warning))]/10', textColor: 'text-[hsl(var(--warning))]' };
   }
-  return {
-    level: 'ok',
-    label: 'OK',
-    color: 'green',
-    bgColor: 'bg-green-500/10',
-    textColor: 'text-green-600 dark:text-green-400'
-  };
+  return { level: 'ok', label: 'OK', color: 'green', bgColor: 'bg-[hsl(var(--success))]/10', textColor: 'text-[hsl(var(--success))]' };
 }
 
 /**

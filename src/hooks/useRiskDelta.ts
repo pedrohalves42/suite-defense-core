@@ -134,7 +134,7 @@ export function getDeltaInfo(delta: number | null): {
   return {
     icon: 'up',
     label: `+${delta} pontos`,
-    color: 'text-red-500',
+    color: 'text-destructive',
     description: 'O nível de risco aumentou',
   };
 }

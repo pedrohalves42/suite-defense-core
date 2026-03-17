@@ -175,23 +175,7 @@ export function useCalculateConfidenceGap() {
   });
 }
 
-export function getHealthStatusColor(status: string): string {
-  switch (status) {
-    case 'healthy': return 'text-green-500';
-    case 'attention': return 'text-yellow-500';
-    case 'critical': return 'text-red-500';
-    default: return 'text-muted-foreground';
-  }
-}
-
-export function getHealthStatusBg(status: string): string {
-  switch (status) {
-    case 'healthy': return 'bg-green-500/10 border-green-500/20';
-    case 'attention': return 'bg-yellow-500/10 border-yellow-500/20';
-    case 'critical': return 'bg-red-500/10 border-red-500/20';
-    default: return 'bg-muted';
-  }
-}
+export { getHealthStatusTextColor as getHealthStatusColor, getHealthStatusBgColor as getHealthStatusBg } from '@/lib/severityColors';
 
 export function getHealthStatusLabel(status: string): string {
   switch (status) {

@@ -154,22 +154,4 @@ export function useRunRedTeam() {
   });
 }
 
-export function getThreatLevelColor(level: string): string {
-  switch (level) {
-    case 'critical': return 'text-red-500';
-    case 'high': return 'text-orange-500';
-    case 'medium': return 'text-yellow-500';
-    case 'low': return 'text-green-500';
-    default: return 'text-muted-foreground';
-  }
-}
-
-export function getThreatLevelBg(level: string): string {
-  switch (level) {
-    case 'critical': return 'bg-red-500/10 border-red-500/20';
-    case 'high': return 'bg-orange-500/10 border-orange-500/20';
-    case 'medium': return 'bg-yellow-500/10 border-yellow-500/20';
-    case 'low': return 'bg-green-500/10 border-green-500/20';
-    default: return 'bg-muted';
-  }
-}
+export { getThreatLevelTextColor as getThreatLevelColor, getThreatLevelBgColor as getThreatLevelBg } from '@/lib/severityColors';

@@ -663,7 +663,7 @@ const AgentInstaller = () => {
               }
             );
           } else {
-            console.log('[HMAC Validation] [OK]  Passed:', validationResult);
+            
             toast.success("[OK]  Validacao de seguranca OK", { duration: 3000 });
           }
         } catch (validationException) {
