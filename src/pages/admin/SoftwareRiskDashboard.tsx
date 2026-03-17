@@ -318,15 +318,26 @@ export default function SoftwareRiskDashboard() {
                         ?.filter(s => level === 'all' || s.risk_level === level)
                         .map(s => 
                           Object.entries(s.category_breakdown || {}).map(([cat, count]) => (
-                            <div 
+                            <button 
                               key={`${s.risk_level}-${cat}`}
-                              className="flex items-center justify-between p-2 rounded-lg border bg-muted/30"
+                              onClick={() => {
+                                setSelectedCategory(prev => prev === cat ? undefined : cat);
+                                if (level !== 'all') setSelectedRisk(s.risk_level);
+                                else setSelectedRisk(undefined);
+                                // Scroll to software list
+                                document.getElementById('software-list')?.scrollIntoView({ behavior: 'smooth' });
+                              }}
+                              className={cn(
+                                "flex items-center justify-between p-2 rounded-lg border bg-muted/30 transition-colors text-left",
+                                "hover:bg-primary/10 hover:border-primary/40 cursor-pointer",
+                                selectedCategory === cat && "bg-primary/15 border-primary/50 ring-1 ring-primary/30"
+                              )}
                             >
                               <span className="text-sm truncate">
                                 {CATEGORY_LABELS[cat] || cat}
                               </span>
                               <Badge variant="secondary">{count as number}</Badge>
-                            </div>
+                            </button>
                           ))
                         )}
                     </div>
