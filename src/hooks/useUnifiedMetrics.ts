@@ -103,7 +103,7 @@ export function useUnifiedMetrics() {
     queryKey: ['unified-metrics', tenant?.id],
     queryFn: async (): Promise<Omit<UnifiedMetrics, 'agents' | 'securityScore' | 'globalStatus'> & { _raw: true }> => {
       if (!tenant?.id) throw new Error('No tenant');
-      const sb = supabase as any;
+      const sb = supabase;
       const now = new Date();
       const sevenDaysAgo = subDays(now, 7).toISOString();
       const thirtyDaysAgo = subDays(now, 30).toISOString();

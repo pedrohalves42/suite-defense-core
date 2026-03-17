@@ -69,7 +69,7 @@ export function useScheduledJobsHealth() {
     queryFn: async (): Promise<ScheduledJobRun[]> => {
       const { data, error } = await supabase
         .from('scheduled_job_runs')
-        .select('*')
+        .select('id, job_key, job_source, ran_at, duration_ms, success, error, processed_count, tenant_id, created_at')
         .order('ran_at', { ascending: false })
         .limit(100);
 

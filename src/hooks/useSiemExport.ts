@@ -51,7 +51,7 @@ export const useSiemExport = () => {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('siem_export_history')
-        .select('*')
+        .select('id, events_exported, format, status, error_message, exported_at')
         .eq('tenant_id', tenant.id)
         .order('exported_at', { ascending: false })
         .limit(50);

@@ -92,7 +92,7 @@ export function useNotifications() {
         event: 'INSERT', schema: 'public', table: 'virus_scans',
         filter: `tenant_id=eq.${tenant.id}`,
       }, (payload) => {
-        const scan = payload.new as any;
+        const scan = payload.new as Record<string, unknown>;
         if (scan.is_malicious) {
           addNotification({
             title: "⚠️ Malware detectado",

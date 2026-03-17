@@ -24,7 +24,7 @@ export function useRiskDebt() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('v_active_risk_debt')
-        .select('*')
+        .select('id, tenant_id, title, description, severity, risk_accepted_by, risk_accepted_at, risk_expiry_at, risk_justification, days_until_expiry, risk_status')
         .eq('tenant_id', tenant!.id)
         .order('risk_expiry_at', { ascending: true });
 
