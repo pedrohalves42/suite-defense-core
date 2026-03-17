@@ -58,7 +58,9 @@ export function useCorrelatedIncidents(options?: { status?: string; limit?: numb
       return (data || []) as unknown as CorrelatedIncident[];
     },
     enabled: !loading && !!activeTenant?.id,
-    refetchInterval: 30_000,
+    refetchInterval: 120_000, // COST-OPT: 30s → 2min (correlations don't change rapidly)
+    staleTime: 30_000,
+    refetchIntervalInBackground: false,
   });
 }
 

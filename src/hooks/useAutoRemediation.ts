@@ -61,6 +61,7 @@ export const useAutoRemediation = () => {
     },
     enabled: !!tenant?.id,
     refetchInterval: 120000,
+    staleTime: 30_000,
   });
 
   const executeRemediation = useMutation({
