@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
+import { logger } from '@/lib/logger';
 
 /**
  * AgentSnapshot - Contrato da Edge Function canônica
