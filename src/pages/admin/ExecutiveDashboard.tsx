@@ -532,21 +532,21 @@ function MetricTile({ icon, label, value, sub, color, pulse }: {
   color: 'green' | 'red' | 'emerald' | 'muted' | 'amber'; pulse?: boolean;
 }) {
   const valueColor = {
-    green: 'text-green-500', red: 'text-red-500',
-    emerald: 'text-emerald-500', muted: 'text-foreground', amber: 'text-amber-500',
+    green: 'text-success', red: 'text-destructive',
+    emerald: 'text-success', muted: 'text-foreground', amber: 'text-warning',
   }[color];
   const bgAccent = {
-    green: 'bg-green-500/5 border-green-500/15', red: 'bg-red-500/5 border-red-500/15',
-    emerald: 'bg-emerald-500/5 border-emerald-500/15', muted: 'bg-muted/30 border-border/40',
-    amber: 'bg-amber-500/5 border-amber-500/15',
+    green: 'bg-success/5 border-success/15', red: 'bg-destructive/5 border-destructive/15',
+    emerald: 'bg-success/5 border-success/15', muted: 'bg-muted/30 border-border/40',
+    amber: 'bg-warning/5 border-warning/15',
   }[color];
 
   return (
-    <div className={cn("relative p-2.5 rounded-lg border", bgAccent)}>
+    <div className={cn("relative p-2.5 rounded-xl border backdrop-blur-sm", bgAccent)}>
       {pulse && (
         <span className="absolute top-2 right-2 flex h-1.5 w-1.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60" />
-          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success" />
         </span>
       )}
       <div className="flex items-center gap-1 mb-1">
