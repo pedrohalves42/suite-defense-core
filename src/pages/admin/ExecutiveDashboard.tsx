@@ -356,11 +356,11 @@ export default function ExecutiveDashboard() {
 
                 {/* ROI Summary */}
                 {summaryData?.hoursOfITSaved && summaryData.hoursOfITSaved > 0 ? (
-                  <div className="mt-3 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="mt-3 p-2.5 rounded-xl bg-success/10 border border-success/20">
                     <div className="flex items-center gap-2 text-xs">
-                      <Clock className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                      <Clock className="h-3.5 w-3.5 text-success shrink-0" />
                       <span className="text-muted-foreground">
-                        Sua equipe de TI economizou <strong className="text-emerald-500">{Math.round(summaryData.hoursOfITSaved)}h</strong> de trabalho manual este mês
+                        Sua equipe de TI economizou <strong className="text-success">{Math.round(summaryData.hoursOfITSaved)}h</strong> de trabalho manual este mês
                       </span>
                     </div>
                   </div>
