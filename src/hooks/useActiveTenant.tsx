@@ -253,7 +253,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       // 2. Refresh session to get new JWT with updated active_tenant_id
       const { error: refreshError } = await supabase.auth.refreshSession();
       if (refreshError) {
-        console.warn('[setActiveTenant] Session refresh warning:', refreshError);
+        logger.warn('[setActiveTenant] Session refresh warning');
       }
 
       // 3. Update local state AFTER JWT is confirmed updated
