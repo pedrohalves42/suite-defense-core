@@ -101,10 +101,10 @@ export function useAuditById(auditId: string | null) {
         .from('system_audits')
         .select('*')
         .eq('id', auditId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      return data as SystemAudit;
+      return data as SystemAudit | null;
     },
     enabled: !!auditId,
   });

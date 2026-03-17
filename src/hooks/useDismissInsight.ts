@@ -34,7 +34,7 @@ export function useDismissInsight() {
         .select('*')
         .eq('id', insightId)
         .eq('tenant_id', tenant.id)
-        .single();
+        .maybeSingle();
 
       if (insightError || !insight) throw new Error('Insight not found');
 

@@ -117,7 +117,7 @@ export function useTaskStats() {
         .from('v_task_stats')
         .select('*')
         .eq('tenant_id', tenant!.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         if (error.code === 'PGRST116') {

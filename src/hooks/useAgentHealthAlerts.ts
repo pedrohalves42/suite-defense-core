@@ -150,7 +150,7 @@ export function useResolveAlert() {
         .select('severity, tenant_id')
         .eq('id', alertId)
         .eq('tenant_id', tenant.id)
-        .single();
+        .maybeSingle();
 
       if (alertError) throw alertError;
 

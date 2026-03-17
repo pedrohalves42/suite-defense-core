@@ -101,7 +101,7 @@ export const useAutoRemediation = () => {
         .select('*')
         .eq('id', actionId)
         .eq('tenant_id', tenant.id)
-        .single();
+        .maybeSingle();
       if (fetchErr || !action) throw new Error('Ação não encontrada');
 
       // V-3009 FIX: Set approved_by to track who approved
