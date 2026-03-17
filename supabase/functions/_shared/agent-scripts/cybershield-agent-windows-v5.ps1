@@ -5088,10 +5088,11 @@ function Send-Heartbeat {
                     # COST-OPT-V6: PROCESS JOBS FROM HEARTBEAT RESPONSE
                     # Jobs are now piggybacked on heartbeat to eliminate poll-jobs calls
                     # ============================================
-                    # v5.0.14-fix2: Guard against PS 5.1 ConvertFrom-Json converting [] to $null
-                    if ($response.PSObject.Properties['jobs'] -and $response.jobs -and @($response.jobs).Count -gt 0) {
-                        Write-Log "[HEARTBEAT] Received $(@($response.jobs).Count) job(s) piggybacked on heartbeat" "INFO"
-                        $Global:HeartbeatJobs = @($response.jobs)
+                    # v5.0.14-fix3: Use Properties[].Value for StrictMode compatibility in PS 5.1
+                    $jobsProp = $response.PSObject.Properties['jobs']
+                    if ($jobsProp -and $jobsProp.Value -and @($jobsProp.Value).Count -gt 0) {
+                        Write-Log "[HEARTBEAT] Received $(@($jobsProp.Value).Count) job(s) piggybacked on heartbeat" "INFO"
+                        $Global:HeartbeatJobs = @($jobsProp.Value)
                     } else {
                         $Global:HeartbeatJobs = @()
                     }

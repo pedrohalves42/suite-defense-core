@@ -744,6 +744,8 @@ Deno.serve(async (req) => {
         skip_firewall_remediation: agent.skip_firewall_remediation || false,
         // v5.0.14: Aggregation config (safe default so agents don't crash on missing property)
         aggregation: null,
+        // v5.0.14-fix: Always include jobs array to prevent StrictMode error in PS 5.1
+        jobs: [],
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
