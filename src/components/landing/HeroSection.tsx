@@ -64,7 +64,7 @@ export function HeroSection() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 + index * 0.1 }}
                   >
-                    <CheckCircle className="w-5 h-5 text-accent flex-shrink-0" aria-hidden="true" />
+                    <CheckCircle className="w-5 h-5 text-cta-positive flex-shrink-0" aria-hidden="true" />
                     <span className="text-sm md:text-base">{benefit}</span>
                   </motion.li>
                 ))}
