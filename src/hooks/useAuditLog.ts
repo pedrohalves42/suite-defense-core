@@ -33,7 +33,7 @@ export const useAuditLog = () => {
       });
     } catch (error) {
       // Silent fail - don't break UI if audit fails
-      console.error('[AuditLog] Failed to log sensitive access:', error);
+      logger.error('[AuditLog] Failed to log sensitive access', error instanceof Error ? error : undefined);
     }
   };
 
