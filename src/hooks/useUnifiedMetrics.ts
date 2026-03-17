@@ -211,7 +211,8 @@ export function useUnifiedMetrics() {
     },
     enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 60000,
-    staleTime: 15000,
+    staleTime: 30000, // PERF-FIX: Aligned with refetchInterval to prevent gap refetches
+    refetchIntervalInBackground: false,
   });
 
   // PERF-FIX: Memoize agent-dependent computed values to prevent re-render cascade

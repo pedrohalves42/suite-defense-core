@@ -45,8 +45,9 @@ export function useSmartNotifications() {
       return [];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 60000, // Refresh every minute
-    staleTime: 30000,
+    refetchInterval: 120000, // COST-OPT: 60s → 2min
+    staleTime: 60000,
+    refetchIntervalInBackground: false,
   });
 
   return {

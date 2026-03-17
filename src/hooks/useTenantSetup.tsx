@@ -82,7 +82,7 @@ export const useTenantSetup = () => {
         .from('tenant_settings')
         .select('business_hours')
         .eq('tenant_id', activeTenant.id)
-        .single();
+        .maybeSingle();
 
       if (settingsError && settingsError.code !== 'PGRST116') {
         console.error('Error fetching tenant settings:', settingsError);

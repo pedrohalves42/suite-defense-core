@@ -109,6 +109,7 @@ export function usePendingPlaybookExecutions() {
     },
     enabled: !!tenant?.id,
     refetchInterval: 120000, // COST-OPT: 30s → 2min
+    staleTime: 30_000,
   });
 
   // Subscribe to realtime updates

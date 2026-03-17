@@ -42,9 +42,10 @@ export function useDataExposure() {
   const query = useQuery({
     queryKey: ['data-exposure', tenant?.id],
     queryFn: async (): Promise<DataExposureSummary> => {
+      // PERF-FIX: Slim select — avoid fetching large details/sample_preview blobs
       const { data, error } = await supabase
         .from('data_exposure_findings')
-        .select('*')
+        .select('id, agent_id, tenant_id, finding_type, data_category, severity, file_path, file_name, file_size_bytes, file_owner, match_count, detection_method, confidence_score, status, remediated_at, detected_at, created_at')
         .eq('tenant_id', tenant!.id)
         .order('detected_at', { ascending: false })
         .limit(200);

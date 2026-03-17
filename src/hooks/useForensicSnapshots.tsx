@@ -105,10 +105,10 @@ export const useForensicSnapshotById = (snapshotId: string) => {
         .from('forensic_snapshots' as any)
         .select('*')
         .eq('id', snapshotId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      return data as unknown as ForensicSnapshot;
+      return (data as unknown as ForensicSnapshot) || null;
     },
     enabled: !!snapshotId
   });
