@@ -99,6 +99,7 @@ export function useFileEvents(agentId: string, options?: { limit?: number; suspi
       return (data || []) as unknown as EndpointFileEvent[];
     },
     enabled: !loading && !!activeTenant?.id && !!agentId,
+    staleTime: 15_000,
   });
 }
 
