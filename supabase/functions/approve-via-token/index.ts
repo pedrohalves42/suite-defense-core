@@ -1,4 +1,4 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+// SECURITY FIX: Removed deprecated std/http/server import (bundling risk)
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 
