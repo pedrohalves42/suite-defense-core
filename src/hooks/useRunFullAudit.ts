@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { callEdgeFunction } from '@/lib/edge-function-client';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { AuditResult } from './useSystemAudit';
 import { RedTeamAssessment } from './useRedTeamAssessment';
 
