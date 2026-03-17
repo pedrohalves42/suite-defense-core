@@ -4,103 +4,118 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Package, RefreshCw, Loader2, CheckCircle } from "lucide-react";
+import { Package, Shield, AlertTriangle, Activity, Loader2, CheckCircle, Rocket } from "lucide-react";
 import { prepareJobForInsert } from "@/lib/job-utils";
+
+const ALL_JOB_TYPES = [
+  {
+    type: 'software_inventory_collect',
+    name: 'Inventário de Software',
+    icon: Package,
+    payload: {},
+  },
+  {
+    type: 'light_vuln_scan',
+    name: 'Scan de Vulnerabilidades',
+    icon: AlertTriangle,
+    payload: {},
+  },
+  {
+    type: 'collect_web_activity',
+    name: 'Atividade Web',
+    icon: Activity,
+    payload: { max_domains: 500, browsers: ['chrome', 'firefox', 'edge', 'opera', 'opera_gx', 'brave', 'vivaldi'], days_back: 7 },
+  },
+  {
+    type: 'collect_antivirus_status',
+    name: 'Status do Antivírus',
+    icon: Shield,
+    payload: {},
+  },
+];
 
 export function ValidationJobDispatcher() {
   const { tenant } = useTenant();
   const [isCreatingJobs, setIsCreatingJobs] = useState(false);
   const [jobsCreated, setJobsCreated] = useState<string[]>([]);
+  const [jobsFailed, setJobsFailed] = useState<string[]>([]);
 
-  const createValidationJobs = async () => {
+  const createAllJobsForAllAgents = async () => {
     setIsCreatingJobs(true);
     setJobsCreated([]);
+    setJobsFailed([]);
     const created: string[] = [];
+    const failed: string[] = [];
 
     try {
       if (!tenant) throw new Error("Tenant não selecionado");
 
-      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
+      // Get all active agents on v5.0.14
       const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
         p_tenant_id: tenant.id,
         p_include_archived: false,
       });
-      const allAgents = (agentsRaw as unknown as Array<{ id: string; agent_name: string }>) || [];
-      const testemitAgent = allAgents.find(a => a.agent_name === 'TESTEMIT');
-      const testemitError = !testemitAgent ? 'Not found' : null;
+      const allAgents = (agentsRaw as unknown as Array<{ id: string; agent_name: string; status: string; agent_version: string | null }>) || [];
+      
+      const targetAgents = allAgents.filter(a => 
+        a.status === 'active' && a.agent_version && a.agent_version.includes('5.0.14')
+      );
 
-      if (testemitError || !testemitAgent) {
-        toast.error("Agente TESTEMIT não encontrado");
-      } else {
-        // Create software_inventory_collect job for TESTEMIT
-        const testemitJobData = await prepareJobForInsert({
-          tenant_id: tenant.id,
-          agent_id: testemitAgent.id,
-          agent_name: testemitAgent.agent_name,
-          type: 'software_inventory_collect',
-          status: 'queued',
-          payload: {},
-          approved: true
-        });
-
-        const { error: testemitJobError } = await supabase
-          .from('jobs')
-          .insert(testemitJobData);
-
-        if (testemitJobError) {
-          toast.error(`Erro ao criar job para TESTEMIT: ${testemitJobError.message}`);
-        } else {
-          created.push('software_inventory_collect para TESTEMIT');
-          toast.success('Job de inventário criado para TESTEMIT');
-        }
+      if (targetAgents.length === 0) {
+        toast.error("Nenhum agente ativo na versão v5.0.14 encontrado");
+        setIsCreatingJobs(false);
+        return;
       }
 
-      // Reuse the same RPC data for testepc2
-      const testepc2Agent = allAgents.find(a => a.agent_name === 'testepc2');
-      const testepc2Error = !testepc2Agent ? 'Not found' : null;
+      toast.info(`Criando ${ALL_JOB_TYPES.length} jobs para ${targetAgents.length} agentes v5.0.14...`);
 
-      if (testepc2Error || !testepc2Agent) {
-        toast.error("Agente testepc2 não encontrado");
-      } else {
-        // Create update_agent job for testepc2
-        const testepc2JobData = await prepareJobForInsert({
-          tenant_id: tenant.id,
-          agent_id: testepc2Agent.id,
-          agent_name: testepc2Agent.agent_name,
-          type: 'update_agent',
-          status: 'queued',
-          payload: {
-            target_version: 'v3.10.9-PSCUSTOMOBJECT-FIX',
-            platform: 'windows'
-          },
-          approved: true
-        });
+      for (const agent of targetAgents) {
+        for (const jobDef of ALL_JOB_TYPES) {
+          try {
+            const jobData = await prepareJobForInsert({
+              tenant_id: tenant.id,
+              agent_id: agent.id,
+              agent_name: agent.agent_name,
+              type: jobDef.type,
+              status: 'queued',
+              payload: jobDef.payload,
+              approved: true,
+            });
 
-        const { error: updateJobError } = await supabase
-          .from('jobs')
-          .insert(testepc2JobData);
+            const { error } = await supabase.from('jobs').insert(jobData);
 
-        if (updateJobError) {
-          toast.error(`Erro ao criar job para testepc2: ${updateJobError.message}`);
-        } else {
-          created.push('update_agent para testepc2');
-          toast.success('Job de atualização criado para testepc2');
+            if (error) {
+              // Dedup index may block — not a real failure
+              if (error.message.includes('duplicate') || error.message.includes('idx_jobs_dedup')) {
+                failed.push(`${jobDef.type} → ${agent.agent_name} (já existe)`);
+              } else {
+                throw error;
+              }
+            } else {
+              created.push(`${jobDef.name} → ${agent.agent_name}`);
+            }
+          } catch (err: any) {
+            failed.push(`${jobDef.type} → ${agent.agent_name}: ${err.message}`);
+          }
         }
       }
 
       setJobsCreated(created);
+      setJobsFailed(failed);
 
-      if (created.length === 2) {
-        toast.success("Todos os jobs de validação criados!", {
-          description: "Aguarde 60 segundos e verifique os resultados"
+      if (created.length > 0) {
+        toast.success(`${created.length} jobs criados com sucesso!`, {
+          description: `Para ${targetAgents.length} agentes. Aguarde o processamento.`,
         });
       }
-
+      if (failed.length > 0) {
+        toast.warning(`${failed.length} jobs não foram criados`, {
+          description: "Podem já existir jobs ativos para esses agentes",
+        });
+      }
     } catch (error: any) {
       console.error('Error creating validation jobs:', error);
-      toast.error('Erro ao criar jobs', {
-        description: error.message
-      });
+      toast.error('Erro ao criar jobs', { description: error.message });
     } finally {
       setIsCreatingJobs(false);
     }
@@ -110,63 +125,74 @@ export function ValidationJobDispatcher() {
     <Card className="border-l-4 border-l-primary">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <CheckCircle className="h-5 w-5" />
-          Validação do Sistema
+          <Rocket className="h-5 w-5" />
+          Validação Completa — Todos os Agentes v5.0.14
         </CardTitle>
         <CardDescription>
-          Criar jobs de validação para TESTEMIT e testepc2
+          Cria todos os jobs de segurança para cada agente ativo na versão v5.0.14
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            Este botão irá criar automaticamente:
+            Jobs que serão criados para <strong>cada agente</strong>:
           </p>
           <ul className="text-sm space-y-1 ml-4">
-            <li className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-blue-500" />
-              <span>
-                <strong>software_inventory_collect</strong> para TESTEMIT
-              </span>
-            </li>
-            <li className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4 text-orange-500" />
-              <span>
-                <strong>update_agent</strong> para testepc2 (v3.10.9)
-              </span>
-            </li>
+            {ALL_JOB_TYPES.map((job) => {
+              const Icon = job.icon;
+              return (
+                <li key={job.type} className="flex items-center gap-2">
+                  <Icon className="h-4 w-4 text-primary" />
+                  <span><strong>{job.type}</strong> — {job.name}</span>
+                </li>
+              );
+            })}
           </ul>
         </div>
 
         <Button
-          onClick={createValidationJobs}
+          onClick={createAllJobsForAllAgents}
           disabled={isCreatingJobs}
           className="w-full gap-2"
+          size="lg"
         >
           {isCreatingJobs ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Criando Jobs...
+              Criando Jobs para Todos os Agentes...
             </>
           ) : (
             <>
-              <CheckCircle className="h-4 w-4" />
-              Criar Jobs de Validação
+              <Rocket className="h-4 w-4" />
+              Disparar Todos os Jobs (v5.0.14)
             </>
           )}
         </Button>
 
         {jobsCreated.length > 0 && (
-          <div className="p-3 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+          <div className="p-3 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 max-h-48 overflow-y-auto">
             <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">
-              Jobs Criados com Sucesso:
+              ✅ {jobsCreated.length} Jobs Criados:
             </p>
-            <ul className="text-xs text-green-700 dark:text-green-300 space-y-1">
+            <ul className="text-xs text-green-700 dark:text-green-300 space-y-0.5">
               {jobsCreated.map((job, idx) => (
-                <li key={idx} className="flex items-center gap-2">
-                  <CheckCircle className="h-3 w-3" />
+                <li key={idx} className="flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3 shrink-0" />
                   {job}
                 </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {jobsFailed.length > 0 && (
+          <div className="p-3 rounded-md bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900 max-h-32 overflow-y-auto">
+            <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">
+              ⚠️ {jobsFailed.length} Jobs Ignorados:
+            </p>
+            <ul className="text-xs text-yellow-700 dark:text-yellow-300 space-y-0.5">
+              {jobsFailed.map((job, idx) => (
+                <li key={idx}>{job}</li>
               ))}
             </ul>
           </div>
