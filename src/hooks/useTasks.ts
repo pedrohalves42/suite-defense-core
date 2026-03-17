@@ -4,6 +4,7 @@ import { useTenant } from '@/hooks/useTenant';
 import { tenantQuery } from '@/lib/tenantQuery';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
+import { logger } from '@/lib/logger';
 
 export type TaskStatus = 'open' | 'in_progress' | 'blocked' | 'resolved' | 'ignored' | 'accepted_risk';
 export type TaskSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
