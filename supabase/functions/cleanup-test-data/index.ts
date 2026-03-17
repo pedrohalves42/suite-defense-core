@@ -31,17 +31,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se e admin
+    // SECURITY FIX: Only super_admin can run destructive cleanup (was allowing any admin cross-tenant)
     const { data: roles } = await supabaseAdmin
       .from('user_roles')
-      .select('role')
+      .select('role, tenant_id')
       .eq('user_id', user.id)
-      .in('role', ['admin', 'super_admin']);
+      .in('role', ['super_admin']);
 
     if (!roles || roles.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'Forbidden: Admin role required' }),
+        JSON.stringify({ error: 'Forbidden: Super admin role required for data cleanup' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // SECURITY FIX: Get tenant_id from the caller's role to scope cleanup
+    const callerTenantId = roles[0].tenant_id;
+    if (!callerTenantId) {
+      return new Response(
+        JSON.stringify({ error: 'No tenant context found' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -56,11 +65,11 @@ Deno.serve(async (req) => {
       enrollment_keys_used: 0,
     };
 
-    // 1. Limpar eventos de telemetria
+    // 1. Limpar eventos de telemetria - SECURITY FIX: scoped to tenant
     const { error: analyticsError, count: analyticsCount } = await supabaseAdmin
       .from('installation_analytics')
       .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+      .eq('tenant_id', callerTenantId);
 
     if (analyticsError) {
       console.error('[cleanup-test-data] Error cleaning installation_analytics:', analyticsError);
@@ -69,11 +78,11 @@ Deno.serve(async (req) => {
       console.log(`[cleanup-test-data] Cleaned ${results.installation_analytics} installation_analytics records`);
     }
 
-    // 2. Limpar metricas de sistema
+    // 2. Limpar metricas de sistema - SECURITY FIX: scoped to tenant
     const { error: metricsError, count: metricsCount } = await supabaseAdmin
       .from('agent_system_metrics_partitioned')
       .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+      .eq('tenant_id', callerTenantId);
 
     if (metricsError) {
       console.error('[cleanup-test-data] Error cleaning agent_system_metrics:', metricsError);
@@ -82,11 +91,18 @@ Deno.serve(async (req) => {
       console.log(`[cleanup-test-data] Cleaned ${results.agent_system_metrics} agent_system_metrics records`);
     }
 
-    // 3. Limpar tokens de agente
-    const { error: tokensError, count: tokensCount } = await supabaseAdmin
-      .from('agent_tokens')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+    // 3. Limpar tokens de agente - SECURITY FIX: scoped to tenant via agent join
+    const { data: tenantAgents } = await supabaseAdmin
+      .from('agents')
+      .select('id')
+      .eq('tenant_id', callerTenantId);
+    const agentIds = tenantAgents?.map(a => a.id) || [];
+    const { error: tokensError, count: tokensCount } = agentIds.length > 0
+      ? await supabaseAdmin
+          .from('agent_tokens')
+          .delete()
+          .in('agent_id', agentIds)
+      : { error: null, count: 0 };
 
     if (tokensError) {
       console.error('[cleanup-test-data] Error cleaning agent_tokens:', tokensError);
@@ -95,11 +111,11 @@ Deno.serve(async (req) => {
       console.log(`[cleanup-test-data] Cleaned ${results.agent_tokens} agent_tokens records`);
     }
 
-    // 4. Limpar agentes
+    // 4. Limpar agentes - SECURITY FIX: scoped to tenant
     const { error: agentsError, count: agentsCount } = await supabaseAdmin
       .from('agents')
       .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+      .eq('tenant_id', callerTenantId);
 
     if (agentsError) {
       console.error('[cleanup-test-data] Error cleaning agents:', agentsError);
@@ -108,10 +124,11 @@ Deno.serve(async (req) => {
       console.log(`[cleanup-test-data] Cleaned ${results.agents} agents records`);
     }
 
-    // 5. Limpar chaves de enrollment usadas
+    // 5. Limpar chaves de enrollment usadas - SECURITY FIX: scoped to tenant
     const { error: keysError, count: keysCount } = await supabaseAdmin
       .from('enrollment_keys')
       .delete()
+      .eq('tenant_id', callerTenantId)
       .not('used_at', 'is', null);
 
     if (keysError) {

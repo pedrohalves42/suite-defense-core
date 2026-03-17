@@ -37,13 +37,18 @@ Deno.serve(async (req: Request) => {
   console.log(`[${requestId}] Starting RLS tests - Edge v${EDGE_VERSION}`);
 
   try {
-    // Security: Allow cron/internal calls OR authenticated service_role
+    // SECURITY FIX: x-cron-source header was spoofable by anyone. 
+    // Now uses assertInternalCaller pattern - validates service_role or X-Internal-Secret
     const authHeader = req.headers.get('Authorization');
-    const isCronCall = req.headers.get('x-cron-source') === 'true';
+    const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');
+    const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+    const serviceRoleKeyValue = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
-    // Validate: either cron with internal secret, or valid JWT
-    if (!isCronCall && !authHeader) {
-      console.log(`[${requestId}] Rejected: No auth header and not cron call`);
+    const isInternalCall = (internalSecret && expectedSecret && internalSecret === expectedSecret) ||
+      (authHeader && serviceRoleKeyValue && authHeader === `Bearer ${serviceRoleKeyValue}`);
+    
+    if (!isInternalCall && !authHeader) {
+      console.log(`[${requestId}] Rejected: No valid auth`);
       return secureErrorResponse('Unauthorized', 401, { request_id: requestId });
     }
 

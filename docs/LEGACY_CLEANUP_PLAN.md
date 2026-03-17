@@ -87,3 +87,31 @@ Removidos `as any` desnecessários de views já tipadas:
 | Patches obsoletos | 4 | 0 | -4 |
 | `as any` em views tipadas | 8 | 2 | -6 |
 | Superfície de ataque | ~270 funções | ~262 funções | -8 |
+
+---
+
+## Auditoria de Superfícies de Ataque (2026-03-17)
+
+### Vulnerabilidades Corrigidas
+
+| # | Função | Severidade | Vulnerabilidade | Correção |
+|---|--------|-----------|----------------|---------|
+| SA-001 | `clear-failed-logins` | **CRÍTICA** | Sem autenticação — qualquer pessoa podia limpar proteção brute-force | Adicionado JWT auth obrigatório |
+| SA-002 | `cleanup-test-data` | **CRÍTICA** | Sem filtro `tenant_id` — admin de tenant A podia apagar dados de tenant B | Escopo restrito a `super_admin` + filtro por `tenant_id` do caller |
+| SA-003 | `run-rls-tests` | **ALTA** | Header `x-cron-source` spoofável — bypass de autenticação | Substituído por validação `service_role` / `X-Internal-Secret` |
+| SA-004 | `test-virustotal-integration` | **MÉDIA** | Bloqueava `super_admin` (verificava apenas `admin`) | Adicionado `super_admin` à lista de roles permitidos |
+| SA-005 | `test-webhook` | **MÉDIA** | Idem SA-004 | Idem |
+| SA-006 | `admin-create-user` | **MÉDIA** | Import `serve` de `deno.land/std` (risco de bundling/500) | Migrado para `Deno.serve()` nativo |
+| SA-007 | `approve-via-token` | **MÉDIA** | Idem SA-006 | Idem |
+
+### Superfícies Auditadas e Aprovadas
+
+| Categoria | Funções Analisadas | Status |
+|-----------|-------------------|--------|
+| Admin privilegiadas | `admin-create-user`, `list-all-users-admin`, `update-user-role`, `remove-member` | ✅ Auth + tenant isolation |
+| Agent-facing (X-Agent-Token) | `heartbeat`, `poll-jobs`, `submit-job-result`, `enroll-agent` | ✅ Token hash auth |
+| Públicas (sem auth) | `submit-contact`, `health` | ✅ Rate-limited + validação |
+| Token-based | `approve-via-token` | ✅ Single-use + rate-limited |
+| Cron/Internal | `cleanup-*`, `monitor-*`, `cron-sentinel` | ✅ `assertInternalCaller` |
+| Upload/Sync | `upload-agent-script`, `sync-*` | ✅ `super_admin` required |
+| Destrutivas | `force-reinstall-fleet`, `cleanup-test-data` | ✅ Admin + tenant scoped |
