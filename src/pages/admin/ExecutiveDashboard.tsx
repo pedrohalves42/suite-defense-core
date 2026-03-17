@@ -305,7 +305,7 @@ export default function ExecutiveDashboard() {
 
           {/* Financial Impact */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.1 }}>
-            <Card className="h-full border-emerald-500/15 bg-emerald-500/[0.02]">
+            <Card className="h-full border-success/15 bg-gradient-to-br from-success/[0.06] to-transparent backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
