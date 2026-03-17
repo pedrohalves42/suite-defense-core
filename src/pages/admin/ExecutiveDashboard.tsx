@@ -383,9 +383,9 @@ export default function ExecutiveDashboard() {
                   </CardTitle>
                   {summaryData?.compliance && (
                     <Badge variant="outline" className={cn("text-xs",
-                      summaryData.compliance.overall_score >= 80 ? "text-green-500 border-green-500/30" : 
-                      summaryData.compliance.overall_score >= 60 ? "text-amber-500 border-amber-500/30" :
-                      "text-red-500 border-red-500/30"
+                      summaryData.compliance.overall_score >= 80 ? "text-success border-success/30" : 
+                      summaryData.compliance.overall_score >= 60 ? "text-warning border-warning/30" :
+                      "text-destructive border-destructive/30"
                     )}>
                       Nota: {summaryData.compliance.grade} ({summaryData.compliance.overall_score}%)
                     </Badge>
