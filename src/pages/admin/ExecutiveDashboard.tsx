@@ -424,8 +424,8 @@ export default function ExecutiveDashboard() {
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] text-muted-foreground">Taxa de sucesso</span>
                       <span className={cn("text-xs font-bold",
-                        (summaryData?.successRateToday || 0) >= 80 ? "text-green-500" :
-                        (summaryData?.successRateToday || 0) >= 50 ? "text-amber-500" : "text-red-500"
+                        (summaryData?.successRateToday || 0) >= 80 ? "text-success" :
+                        (summaryData?.successRateToday || 0) >= 50 ? "text-warning" : "text-destructive"
                       )}>{summaryData?.successRateToday || 0}%</span>
                     </div>
                     <Progress value={summaryData?.successRateToday || 0} className="h-1.5" />
