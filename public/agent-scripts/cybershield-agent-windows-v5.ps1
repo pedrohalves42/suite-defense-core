@@ -3979,16 +3979,28 @@ function Initialize-ProcessBaseline {
 
             if ($loadedBaseline) {
                 # HOTFIX-BASELINE-NORMALIZE-SAVE: Normalize all entries to hashtables to avoid PS 5.1 mixed-type serialization issues
+                # v5.0.14-fix2: Dedup by name during load to prevent duplicate key errors
                 $normalizedBaseline = @()
+                $loadSeenNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
                 foreach ($be in $loadedBaseline) {
+                    $beName = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
+                    if (-not $beName -or $loadSeenNames.Contains($beName)) { continue }
+                    [void]$loadSeenNames.Add($beName)
                     $normalizedBaseline += [ordered]@{
-                        name        = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
+                        name        = $beName
                         company     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
                         description = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
                         first_seen  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
                     }
                 }
                 $Global:ProcessBaseline = $normalizedBaseline
+                $dupsRemoved = ([array]$loadedBaseline).Count - $normalizedBaseline.Count
+                if ($dupsRemoved -gt 0) {
+                    Write-Log "[BASELINE] Load dedup: removed $dupsRemoved duplicate entries" "WARN"
+                    # Re-save cleaned baseline immediately
+                    $psoCleanLoad = $normalizedBaseline | ForEach-Object { [PSCustomObject]$_ }
+                    $psoCleanLoad | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                }
                 Write-Log "[BASELINE] Loaded and normalized baseline with $($normalizedBaseline.Count) processes" "INFO"
             } else {
                 # File missing or corrupted — create fresh
