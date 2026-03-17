@@ -240,8 +240,8 @@ export default function ExecutiveDashboard() {
                 <div className="grid grid-cols-3 gap-3">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 cursor-help">
-                        <p className="text-2xl font-bold text-blue-500">{summaryData?.automatedActions || 0}</p>
+                      <div className="text-center p-3 rounded-xl bg-info/10 border border-info/20 cursor-help shadow-sm">
+                        <p className="text-2xl font-bold text-info">{summaryData?.automatedActions || 0}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Problemas corrigidos<br/>automaticamente</p>
                       </div>
                     </TooltipTrigger>
@@ -253,8 +253,8 @@ export default function ExecutiveDashboard() {
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-help">
-                        <p className="text-2xl font-bold text-red-500">{summaryData?.incidentsContained || 0}</p>
+                      <div className="text-center p-3 rounded-xl bg-destructive/10 border border-destructive/20 cursor-help shadow-sm">
+                        <p className="text-2xl font-bold text-destructive">{summaryData?.incidentsContained || 0}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Incidentes de segurança<br/>contidos</p>
                       </div>
                     </TooltipTrigger>
@@ -266,8 +266,8 @@ export default function ExecutiveDashboard() {
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 cursor-help">
-                        <p className="text-2xl font-bold text-amber-500">{summaryData?.hoursOfITSaved ? Math.round(summaryData.hoursOfITSaved) : 0}h</p>
+                      <div className="text-center p-3 rounded-xl bg-warning/10 border border-warning/20 cursor-help shadow-sm">
+                        <p className="text-2xl font-bold text-warning">{summaryData?.hoursOfITSaved ? Math.round(summaryData.hoursOfITSaved) : 0}h</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Horas de TI<br/>economizadas</p>
                       </div>
                     </TooltipTrigger>
