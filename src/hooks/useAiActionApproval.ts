@@ -120,7 +120,7 @@ export function useRejectAiAction() {
         .select('*')
         .eq('id', actionId)
         .eq('tenant_id', tenant.id)
-        .single();
+        .maybeSingle();
 
       if (actionError || !action) throw new Error('Action not found');
 
