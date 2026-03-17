@@ -106,6 +106,12 @@
     --success: 160 60% 45%;
     --success-foreground: 0 0% 98%;
     
+    /* Strategic Green — Dark mode variants */
+    --cta-positive: 160 84% 39%;
+    --cta-positive-foreground: 0 0% 98%;
+    --shield-active: 152 69% 50%;      /* Brighter in dark mode */
+    --metric-positive: 142 71% 50%;
+    
     --info: 217 55% 55%;
     --info-foreground: 0 0% 98%;
     
