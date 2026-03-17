@@ -70,10 +70,10 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
   } catch (err) {
     // P2 MED-01: Handle timeout specifically
     if (err instanceof Error && err.name === 'AbortError') {
-      console.error('[syncActiveTenantToBackend] Sync timeout after 10s');
+      logger.error('[syncActiveTenantToBackend] Sync timeout after 10s');
       return false;
     }
-    console.error('[syncActiveTenantToBackend] Unexpected error:', err);
+    logger.error('[syncActiveTenantToBackend] Unexpected error', err instanceof Error ? err : undefined);
     return false;
   }
 }
