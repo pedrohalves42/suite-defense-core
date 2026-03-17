@@ -174,10 +174,10 @@ export function useTaskDetail(taskId: string | null) {
         .select('*')
         .eq('id', taskId)
         .eq('tenant_id', tenant.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      return data as Task;
+      return data as Task | null;
     },
     enabled: !!taskId && !loading && !!tenant?.id,
   });
