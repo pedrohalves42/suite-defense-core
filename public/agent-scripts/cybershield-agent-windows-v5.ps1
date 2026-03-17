@@ -5074,9 +5074,10 @@ function Send-Heartbeat {
                     # ============================================
                     # v5.0.14: AGGREGATION CONFIG FROM SERVER
                     # ============================================
-                    if ($response.PSObject.Properties.Match('aggregation') -and $response.aggregation) {
+                    $aggProp = $response.PSObject.Properties['aggregation']
+                    if ($aggProp -and $aggProp.Value) {
                         try {
-                            $aggConfig = $response.aggregation
+                            $aggConfig = $aggProp.Value
                             if ($aggConfig -is [PSCustomObject]) {
                                 $aggHash = @{}
                                 $aggConfig.PSObject.Properties | ForEach-Object { $aggHash[$_.Name] = $_.Value }
