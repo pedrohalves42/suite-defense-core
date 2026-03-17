@@ -74,7 +74,7 @@ export const useTenantSetup = () => {
         .single();
 
       if (tenantError) {
-        console.error('Error fetching tenant data:', tenantError);
+        logger.error('Error fetching tenant data', tenantError);
         return null;
       }
 
