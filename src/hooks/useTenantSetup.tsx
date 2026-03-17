@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from './useActiveTenant';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
+import { logger } from '@/lib/logger';
 
 export interface TenantCompanyData {
   company_name: string;
