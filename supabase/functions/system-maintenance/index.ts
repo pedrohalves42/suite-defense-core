@@ -244,10 +244,11 @@ async function cleanOfflineAgentsJobs(supabase: ReturnType<typeof createClient>)
     // Cancel pending jobs for agents offline > 2h
     const offlineThreshold = new Date(Date.now() - 2 * 3600 * 1000).toISOString();
 
+    // TUNING: Fixed column name from 'last_seen' (doesn't exist) to 'last_heartbeat'
     const { data: offlineAgents } = await supabase
       .from('agents')
       .select('id')
-      .lt('last_seen', offlineThreshold);
+      .lt('last_heartbeat', offlineThreshold);
 
     if (offlineAgents && offlineAgents.length > 0) {
       const agentIds = offlineAgents.map((a: any) => a.id);

@@ -260,18 +260,15 @@ Deno.serve(async (req) => {
     // ============================================================
     const systemMetrics = (osInfo as any).system_metrics
     
-    // Get tenant_id once for all inserts
-    let cachedTenantId: string | null = null
-    const getTenantId = async (): Promise<string | null> => {
-      if (cachedTenantId) return cachedTenantId
-      const { data: agentTenant } = await supabase
-        .from('agents')
-        .select('tenant_id')
-        .eq('id', agent.id)
-        .single()
-      cachedTenantId = agentTenant?.tenant_id || null
-      return cachedTenantId
-    }
+    // TUNING: Fetch tenant_id eagerly (needed by metrics + processes + force_update)
+    // Avoids repeated lazy queries inside Promise.all
+    const { data: agentTenantData } = await supabase
+      .from('agents')
+      .select('tenant_id')
+      .eq('id', agent.id)
+      .single()
+    const cachedTenantId = agentTenantData?.tenant_id || null
+    const getTenantId = async (): Promise<string | null> => cachedTenantId
 
     // Build all parallel promises
     const parallelOps: Promise<void>[] = []

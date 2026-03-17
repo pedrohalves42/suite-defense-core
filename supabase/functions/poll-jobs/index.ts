@@ -277,12 +277,7 @@ Deno.serve(async (req) => {
       previous_execution_hash: string | null
     }
     
-    // Buscar tenant_id do agente para a RPC
-    const { data: agentFullData } = await supabase
-      .from('agents')
-      .select('tenant_id')
-      .eq('id', token.agent_id)
-      .single()
+    // TUNING: tenant_id already available from agentData fetched above
     
     const { data: jobs, error: jobsError } = await supabase
       .rpc('claim_jobs_for_agent', {
