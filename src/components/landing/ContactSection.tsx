@@ -6,7 +6,8 @@ export function ContactSection() {
   const { contact } = useLandingContent();
 
   return (
-    <section id="contato" className="py-24">
+    <section id="contato" className="py-24 relative">
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-cta-positive/[0.03] to-muted/20" />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
