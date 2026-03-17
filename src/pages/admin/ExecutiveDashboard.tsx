@@ -618,7 +618,7 @@ function ComplianceRow({ category, score, details }: { category: string; score: 
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium truncate">{category}</span>
           <span className={cn("text-xs font-bold",
-            score >= 80 ? "text-green-500" : score >= 60 ? "text-amber-500" : "text-red-500"
+            score >= 80 ? "text-success" : score >= 60 ? "text-warning" : "text-destructive"
           )}>{score}%</span>
         </div>
         <Progress value={score} className="h-1.5" />
