@@ -483,9 +483,9 @@ export default function ExecutiveDashboard() {
                       key={idx}
                       to={action.link}
                       className={cn(
-                        "flex items-center justify-between p-3 rounded-lg border transition-colors hover:bg-muted/50",
-                        action.priority === 'high' && "border-red-500/20 bg-red-500/5",
-                        action.priority === 'medium' && "border-amber-500/20 bg-amber-500/5",
+                        "flex items-center justify-between p-3 rounded-xl border transition-colors hover:bg-muted/50",
+                        action.priority === 'high' && "border-destructive/20 bg-destructive/5",
+                        action.priority === 'medium' && "border-warning/20 bg-warning/5",
                       )}
                     >
                       <div className="flex items-center gap-2.5">
