@@ -88,6 +88,7 @@ const POLICY_MODE_CONFIG: Record<string, { label: string; icon: typeof Eye; colo
 
 export default function SoftwareRiskDashboard() {
   const [selectedRisk, setSelectedRisk] = useState<string | undefined>(undefined);
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgent, setSelectedAgent] = useState<string>('all');
   
