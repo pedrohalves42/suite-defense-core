@@ -33,7 +33,7 @@ export const useBlastRadiusPolicies = () => {
       if (!tenant?.id) return [];
 
       const { data, error } = await supabase
-        .from('blast_radius_policies' as any)
+        .from('blast_radius_policies')
         .select('id, tenant_id, action_type, max_affected_percent, max_affected_count, require_approval_above, cooldown_minutes, is_active, created_at, updated_at')
         .eq('tenant_id', tenant.id)
         .order('action_type');
