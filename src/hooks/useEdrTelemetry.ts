@@ -128,6 +128,7 @@ export function useNetworkEvents(agentId: string, options?: { limit?: number; su
       return (data || []) as unknown as EndpointNetworkEvent[];
     },
     enabled: !loading && !!activeTenant?.id && !!agentId,
+    staleTime: 15_000,
   });
 }
 
