@@ -31,7 +31,7 @@ const questions = [
     question: "Já sofreu algum ataque ou perda de dados?",
     options: [
       { label: "Nunca", score: 1 },
-      { label: "Não sei", score: 3 },
+      { label: "Não sei", score: 2 },
       { label: "Sim, uma vez", score: 3 },
       { label: "Sim, mais de uma vez", score: 4 },
     ],
