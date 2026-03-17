@@ -2,19 +2,19 @@ import { lazy, Suspense } from "react";
 import { Navbar } from "@/components/Navbar";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { SEOHead } from "@/components/SEOHead";
-import { HeroSection } from "@/components/landing";
+import { HeroSection } from "@/components/landing/HeroSection";
 
 // PERF: Lazy load below-the-fold sections to improve FCP
-const PainPointsSection = lazy(() => import("@/components/landing").then(m => ({ default: m.PainPointsSection })));
-const MiniDiagnosticSection = lazy(() => import("@/components/landing").then(m => ({ default: m.MiniDiagnosticSection })));
-const ProductPreviewSection = lazy(() => import("@/components/landing").then(m => ({ default: m.ProductPreviewSection })));
-const BenefitsSection = lazy(() => import("@/components/landing").then(m => ({ default: m.BenefitsSection })));
-const HowItWorksSection = lazy(() => import("@/components/landing").then(m => ({ default: m.HowItWorksSection })));
-const PricingSection = lazy(() => import("@/components/landing").then(m => ({ default: m.PricingSection })));
-const TestimonialsSection = lazy(() => import("@/components/landing").then(m => ({ default: m.TestimonialsSection })));
-const FAQSection = lazy(() => import("@/components/landing").then(m => ({ default: m.FAQSection })));
-const CTASection = lazy(() => import("@/components/landing").then(m => ({ default: m.CTASection })));
-const ContactSection = lazy(() => import("@/components/landing").then(m => ({ default: m.ContactSection })));
+const PainPointsSection = lazy(() => import("@/components/landing/PainPointsSection").then(m => ({ default: m.PainPointsSection })));
+const MiniDiagnosticSection = lazy(() => import("@/components/landing/MiniDiagnosticSection").then(m => ({ default: m.MiniDiagnosticSection })));
+const ProductPreviewSection = lazy(() => import("@/components/landing/ProductPreviewSection").then(m => ({ default: m.ProductPreviewSection })));
+const BenefitsSection = lazy(() => import("@/components/landing/BenefitsSection").then(m => ({ default: m.BenefitsSection })));
+const HowItWorksSection = lazy(() => import("@/components/landing/HowItWorksSection").then(m => ({ default: m.HowItWorksSection })));
+const PricingSection = lazy(() => import("@/components/landing/PricingSection").then(m => ({ default: m.PricingSection })));
+const TestimonialsSection = lazy(() => import("@/components/landing/TestimonialsSection").then(m => ({ default: m.TestimonialsSection })));
+const FAQSection = lazy(() => import("@/components/landing/FAQSection").then(m => ({ default: m.FAQSection })));
+const CTASection = lazy(() => import("@/components/landing/CTASection").then(m => ({ default: m.CTASection })));
+const ContactSection = lazy(() => import("@/components/landing/ContactSection").then(m => ({ default: m.ContactSection })));
 
 const SectionFallback = () => <div className="h-32" />;
 
