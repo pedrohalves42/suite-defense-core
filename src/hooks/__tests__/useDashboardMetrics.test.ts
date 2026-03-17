@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useDashboardMetrics } from "../useDashboardMetrics";
-import type { DashboardAgent, DashboardJob } from "../useDashboardData";
+import type { DashboardAgent, DashboardJob } from "@/types/dashboard";
 
 const makeAgent = (overrides: Partial<DashboardAgent> = {}): DashboardAgent => ({
   id: crypto.randomUUID(),
