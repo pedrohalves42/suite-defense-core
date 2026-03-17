@@ -47,7 +47,7 @@ export const useTenantSetup = () => {
         .from('tenants')
         .select('setup_completed')
         .eq('id', activeTenant.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         logger.error('Error checking tenant setup status', error);
