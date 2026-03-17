@@ -314,7 +314,7 @@ export default function ExecutiveDashboard() {
                   </CardTitle>
                   <Tooltip>
                     <TooltipTrigger>
-                      <Badge variant="outline" className="text-[10px] text-emerald-500 border-emerald-500/30">
+                      <Badge variant="outline" className="text-[10px] text-success border-success/30">
                         <Eye className="h-3 w-3 mr-1" />
                         Metodologia
                       </Badge>
