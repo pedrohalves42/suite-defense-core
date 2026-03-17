@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
       .from('agents')
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenant_id)
-      .eq('status', 'active');
+      .not('status', 'in', '("archived","deleted")');
 
     const { count: criticalVulns } = await supabase
       .from('vuln_findings')
