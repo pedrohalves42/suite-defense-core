@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Users, Package } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { DashboardAgent, DashboardJob, DashboardReport, DashboardAgentToken, DashboardRateLimit } from "@/hooks/useDashboardData";
+import type { DashboardAgent, DashboardJob, DashboardReport, DashboardAgentToken, DashboardRateLimit } from "@/types/dashboard";
 
 const AgentsTab = lazy(() => import("./tabs/AgentsTab"));
 const JobsTab = lazy(() => import("./tabs/JobsTab"));

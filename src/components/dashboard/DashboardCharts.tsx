@@ -5,7 +5,7 @@ import { Line, LineChart as RechartsLineChart, Bar, BarChart as RechartsBarChart
 import { Skeleton } from "@/components/ui/skeleton";
 import { getJobTypeLabelNoEmoji } from "@/lib/job-labels";
 import { formatBrazilDateTime } from "@/lib/date-utils";
-import type { DashboardJob, DashboardVirusScan } from "@/hooks/useDashboardData";
+import type { DashboardJob, DashboardVirusScan } from "@/types/dashboard";
 
 const ChartItemSkeleton = () => (
   <div className="h-[250px] flex items-end gap-2 px-4 py-4">

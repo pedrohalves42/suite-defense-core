@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { DashboardAgent, DashboardAgentToken, DashboardRateLimit } from "@/hooks/useDashboardData";
+import type { DashboardAgent, DashboardAgentToken, DashboardRateLimit } from "@/types/dashboard";
 
 interface SecurityTabProps {
   agents: DashboardAgent[];

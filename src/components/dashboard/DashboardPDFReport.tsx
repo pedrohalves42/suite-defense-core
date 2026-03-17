@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FileDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import type { DashboardAgent, DashboardJob } from "@/hooks/useDashboardData";
+import type { DashboardAgent, DashboardJob } from "@/types/dashboard";
 
 interface DashboardPDFReportProps {
   agents: DashboardAgent[];
