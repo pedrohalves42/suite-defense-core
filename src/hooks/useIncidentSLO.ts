@@ -68,48 +68,18 @@ export interface BurnRateInfo {
  */
 export function getBurnRateInfo(rate: number): BurnRateInfo {
   if (rate >= 5) {
-    return {
-      level: 'critical',
-      text: 'text-red-600 dark:text-red-400',
-      bg: 'bg-red-500/10',
-      label: 'CRÍTICO',
-      labelEn: 'CRITICAL',
-    };
+    return { level: 'critical', text: 'text-destructive', bg: 'bg-destructive/10', label: 'CRÍTICO', labelEn: 'CRITICAL' };
   }
   if (rate >= 2) {
-    return {
-      level: 'high',
-      text: 'text-orange-600 dark:text-orange-400',
-      bg: 'bg-orange-500/10',
-      label: 'ALTO',
-      labelEn: 'HIGH',
-    };
+    return { level: 'high', text: 'text-[hsl(var(--warning))]', bg: 'bg-[hsl(var(--warning))]/10', label: 'ALTO', labelEn: 'HIGH' };
   }
   if (rate >= 1.5) {
-    return {
-      level: 'warning',
-      text: 'text-amber-600 dark:text-amber-400',
-      bg: 'bg-amber-500/10',
-      label: 'ATENÇÃO',
-      labelEn: 'WARNING',
-    };
+    return { level: 'warning', text: 'text-[hsl(var(--warning))]', bg: 'bg-[hsl(var(--warning))]/10', label: 'ATENÇÃO', labelEn: 'WARNING' };
   }
   if (rate >= 1) {
-    return {
-      level: 'alert',
-      text: 'text-yellow-600 dark:text-yellow-400',
-      bg: 'bg-yellow-500/10',
-      label: 'ALERTA',
-      labelEn: 'ALERT',
-    };
+    return { level: 'alert', text: 'text-[hsl(var(--warning))]', bg: 'bg-[hsl(var(--warning))]/10', label: 'ALERTA', labelEn: 'ALERT' };
   }
-  return {
-    level: 'ok',
-    text: 'text-green-600 dark:text-green-400',
-    bg: 'bg-green-500/10',
-    label: 'OK',
-    labelEn: 'OK',
-  };
+  return { level: 'ok', text: 'text-[hsl(var(--success))]', bg: 'bg-[hsl(var(--success))]/10', label: 'OK', labelEn: 'OK' };
 }
 
 /**
