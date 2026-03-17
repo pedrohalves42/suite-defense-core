@@ -44,7 +44,7 @@ export const useIncidentGroups = (limit = 50) => {
       // RLS on base tables (failure_fingerprints, failure_occurrences) provides isolation
       // V-1038 FIX: Add tenant_id filter to view
       const { data, error } = await supabase
-        .from('v_incident_groups' as any)
+        .from('v_incident_groups')
         .select('*')
         .eq('tenant_id', activeTenant.id)
         .limit(limit);

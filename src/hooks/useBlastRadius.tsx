@@ -82,7 +82,7 @@ export const useUpdateBlastRadiusPolicy = () => {
       if (!tenant?.id) throw new Error('Tenant not found');
 
       const { data, error } = await supabase
-        .from('blast_radius_policies' as any)
+        .from('blast_radius_policies')
         .upsert({
           ...policy,
           tenant_id: tenant.id,

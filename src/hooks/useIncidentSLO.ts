@@ -183,7 +183,7 @@ export const useIncidentSLOSummary = () => {
     queryKey: ['incident-slo-summary', activeTenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('incident_slo_state' as any)
+        .from('incident_slo_state')
         .select('status, burn_rate_1h, budget_consumed');
 
       if (error) throw error;
