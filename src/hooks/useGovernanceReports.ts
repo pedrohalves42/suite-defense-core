@@ -45,7 +45,7 @@ export function useGovernanceReports() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('governance_reports')
-        .select('*')
+        .select('id, tenant_id, report_type, period_start, period_end, executive_summary, key_metrics, generated_by, generated_at, created_at, approved_by, approved_at')
         .eq('tenant_id', tenant!.id)
         .order('period_start', { ascending: false })
         .limit(20);

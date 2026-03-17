@@ -130,7 +130,7 @@ export function useApprovalVotes(requestId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('approvals')
-        .select('*')
+        .select('id, request_id, approved_by, decision, reason, created_at')
         .eq('request_id', requestId)
         .order('created_at', { ascending: true });
 

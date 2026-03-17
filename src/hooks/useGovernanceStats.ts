@@ -22,7 +22,7 @@ export function useGovernanceStats() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('v_governance_stats')
-        .select('*')
+        .select('tenant_id, active_tasks, unassigned_tasks, sla_breached_active, critical_open, high_open, avg_resolution_hours, resolved_24h, ignored_24h')
         .eq('tenant_id', tenant!.id)
         .maybeSingle();
 

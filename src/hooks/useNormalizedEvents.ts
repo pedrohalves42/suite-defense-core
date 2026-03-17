@@ -50,7 +50,7 @@ export function useNormalizedEvents(filters: NormalizedEventFilters, enabled = t
     queryFn: async () => {
       let query = supabase
         .from('v_normalized_events' as any)
-        .select('*')
+        .select('id, tenant_id, agent_id, event_time, event_category, event_type, process_name, command_line, file_path, remote_address, domain, key_path, user_name, mitre_technique_id, is_suspicious, detection_tags, severity, detection_name, created_at')
         .eq('tenant_id', activeTenant!.id)
         .order('event_time', { ascending: false })
         .limit(limit);
