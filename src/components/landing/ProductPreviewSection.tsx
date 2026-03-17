@@ -54,7 +54,7 @@ export function ProductPreviewSection() {
                 return (
                   <div key={i} className="flex items-center justify-between p-3 bg-muted/40 rounded-xl">
                     <div className="flex items-center gap-2">
-                      <Icon className="w-4 h-4 text-accent" />
+                      <Icon className="w-4 h-4 text-cta-positive" />
                       <span className="text-sm text-muted-foreground">{stat.label}</span>
                     </div>
                     <span className="text-lg font-bold text-foreground">{stat.value}</span>

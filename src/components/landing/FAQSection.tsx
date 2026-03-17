@@ -25,7 +25,7 @@ export function FAQSection() {
               <AccordionItem 
                 key={index} 
                 value={`q${index}`}
-                className="bg-card border border-border rounded-xl px-6 data-[state=open]:border-accent/30 transition-colors"
+                className="bg-card border border-border rounded-xl px-6 data-[state=open]:border-cta-positive/30 transition-colors"
               >
                 <AccordionTrigger className="text-left font-medium hover:no-underline py-5">
                   {item.question}

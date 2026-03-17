@@ -89,7 +89,7 @@ export function TestimonialsSection() {
             { value: "0", label: "Incidentes em clientes ativos" },
           ].map((stat, i) => (
             <div key={i} className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-accent/60" />
+              <TrendingUp className="w-4 h-4 text-cta-positive/60" />
               <span className="text-sm font-bold text-foreground">{stat.value}</span>
               <span className="text-xs text-muted-foreground">{stat.label}</span>
             </div>
