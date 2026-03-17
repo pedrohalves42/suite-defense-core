@@ -10,6 +10,7 @@ interface WebActivityRow {
   visited_at: string;
   category?: string | null;
   is_blocked?: boolean | null;
+  visit_count?: number | null;
 }
 
 async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebActivityItem[]> {
