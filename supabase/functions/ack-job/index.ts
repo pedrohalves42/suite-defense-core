@@ -6,8 +6,8 @@ import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { hashToken } from '../_shared/token-hash.ts'
 
 Deno.serve(async (req) => {
-  // [WARN] ? DEPRECATION WARNING - This endpoint is being phased out
-  console.warn('[ack-job] [WARN] ? DEPRECATED: This endpoint is being phased out. Use /submit-job-result instead.');
+  // [WARN] ⚠️ DEPRECATED: Sunset date 2026-06-01. Use /submit-job-result (v3) instead.
+  console.warn('[ack-job] [WARN] ⚠️ DEPRECATED: Sunset 2026-06-01. Use /submit-job-result instead.');
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
