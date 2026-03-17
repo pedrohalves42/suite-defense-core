@@ -24,15 +24,13 @@ const SCRIPT_FILES: Record<string, string> = {
 };
 
 export function RegisterLatestRelease() {
-  const [version, setVersion] = useState("v4.1.7");
+  const [version, setVersion] = useState("v5.0.14");
   const [releaseNotes, setReleaseNotes] = useState(
-    "v4.1.7 — Phase 1: Process Control\n" +
-    "- NEW: kill_process handler - Terminate processes by name\n" +
-    "- NEW: stop_service handler - Stop system services\n" +
-    "- NEW: disable_service handler - Stop + disable startup\n" +
-    "- NEW: restart_service handler - Restart system services\n" +
-    "- SECURITY: Protected processes/services lists (defense in depth)\n" +
-    "- SECURITY: Agent-side validation prevents killing critical processes\n" +
+    "v5.0.14 — THREAT NETWORK + PROCESS LINEAGE + EDGE EVENT AGGREGATION\n" +
+    "- NEW: Edge Event Aggregation Engine\n" +
+    "- NEW: Threat Network correlation\n" +
+    "- NEW: Process Lineage tracking\n" +
+    "- SECURITY: Ed25519 signed releases\n" +
     "- PARITY: Windows / Linux / macOS support"
   );
   const [platforms, setPlatforms] = useState({
