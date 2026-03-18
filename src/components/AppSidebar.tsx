@@ -163,9 +163,9 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   ], []);
 
   const intelligenceItems = useMemo<MenuItem[]>(() => [
-    { icon: BrainCircuit, label: 'Insights', to: '/admin/intelligence-hub', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
+    { icon: BrainCircuit, label: 'Sugestões', to: '/admin/intelligence-hub', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
     { icon: Zap, label: 'Automação', to: '/admin/intelligence-hub?tab=automation' },
-    { icon: Eye, label: 'Governança', to: '/admin/intelligence-hub?tab=governance' },
+    { icon: Eye, label: 'Revisão de Decisões', to: '/admin/intelligence-hub?tab=governance' },
     { icon: BookOpen, label: 'Conhecimento', to: '/admin/intelligence-hub?tab=knowledge' },
   ], [criticalInsightsCount]);
 
