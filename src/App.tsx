@@ -173,6 +173,9 @@ const SecurityGraph = lazy(() => import("./pages/admin/SecurityGraph"));
 const RansomwareIncident = lazy(() => import("./pages/admin/RansomwareIncident"));
 const SecurityBenchmark = lazy(() => import("./pages/admin/SecurityBenchmark"));
 const OnboardingWizard = lazy(() => import("./pages/admin/OnboardingWizard"));
+const ComplianceHub = lazy(() => import("./pages/admin/ComplianceHub"));
+const IntelligenceHub = lazy(() => import("./pages/admin/IntelligenceHub"));
+const OperationsHub = lazy(() => import("./pages/admin/OperationsHub"));
 
 // ─── Client pages ───
 const ClientDashboard = lazy(() => import("./pages/client").then(m => ({ default: m.ClientDashboard })));
