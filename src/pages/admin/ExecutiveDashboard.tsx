@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { format, ptBR } from '@/lib/date-utils';
 import { subDays } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
