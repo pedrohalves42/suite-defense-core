@@ -426,34 +426,92 @@ export default function AIInsights() {
 
                   {/* Evidence */}
                   {insight.evidence && Object.keys(insight.evidence).length > 0 && (
-                    <div className="border rounded-lg p-4">
-                      <p className="font-semibold text-sm mb-2">Evidencias:</p>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="border rounded-lg p-4 space-y-3">
+                      <p className="font-semibold text-sm">Evidências:</p>
+                      
+                      {/* Key metrics grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                         {insight.evidence.failureRate !== undefined && (
-                          <div>
-                            <span className="text-muted-foreground">Taxa de Falha:</span>
-                            <span className="ml-2 font-medium">{insight.evidence.failureRate.toFixed(1)}%</span>
+                          <div className="bg-muted/50 rounded p-2">
+                            <span className="text-muted-foreground text-xs block">Taxa de Falha</span>
+                            <span className="font-semibold">{Number(insight.evidence.failureRate).toFixed(1)}%</span>
                           </div>
                         )}
                         {insight.evidence.avgCpuUsage !== undefined && (
-                          <div>
-                            <span className="text-muted-foreground">CPU Media:</span>
-                            <span className="ml-2 font-medium">{insight.evidence.avgCpuUsage.toFixed(1)}%</span>
+                          <div className="bg-muted/50 rounded p-2">
+                            <span className="text-muted-foreground text-xs block">CPU Média</span>
+                            <span className="font-semibold">{Number(insight.evidence.avgCpuUsage).toFixed(1)}%</span>
                           </div>
                         )}
                         {insight.evidence.avgMemoryUsage !== undefined && (
-                          <div>
-                            <span className="text-muted-foreground">Memoria Media:</span>
-                            <span className="ml-2 font-medium">{insight.evidence.avgMemoryUsage.toFixed(1)}%</span>
+                          <div className="bg-muted/50 rounded p-2">
+                            <span className="text-muted-foreground text-xs block">Memória Média</span>
+                            <span className="font-semibold">{Number(insight.evidence.avgMemoryUsage).toFixed(1)}%</span>
                           </div>
                         )}
                         {insight.evidence.problematicJobsCount !== undefined && (
-                          <div>
-                            <span className="text-muted-foreground">Jobs Problematicos:</span>
-                            <span className="ml-2 font-medium">{insight.evidence.problematicJobsCount}</span>
+                          <div className="bg-muted/50 rounded p-2">
+                            <span className="text-muted-foreground text-xs block">Jobs Problemáticos</span>
+                            <span className="font-semibold">{insight.evidence.problematicJobsCount}</span>
+                          </div>
+                        )}
+                        {insight.evidence.systemAlertsCount !== undefined && (
+                          <div className="bg-muted/50 rounded p-2">
+                            <span className="text-muted-foreground text-xs block">Alertas do Sistema</span>
+                            <span className="font-semibold text-destructive">{insight.evidence.systemAlertsCount}</span>
                           </div>
                         )}
                       </div>
+
+                      {/* Evidence Pack - detailed data points */}
+                      {Array.isArray(insight.evidence.evidence_pack) && insight.evidence.evidence_pack.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="font-semibold text-xs text-muted-foreground">Pontos de Dados Detalhados:</p>
+                          <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                            {insight.evidence.evidence_pack.map((ep: any, idx: number) => (
+                              <div key={idx} className="flex items-start gap-2 text-xs bg-muted/30 rounded p-2">
+                                <Badge variant={
+                                  ep.severity === 'critical' ? 'destructive' : 
+                                  ep.severity === 'warning' ? 'outline' : 'secondary'
+                                } className="text-[10px] shrink-0 mt-0.5">
+                                  {ep.severity}
+                                </Badge>
+                                <div className="min-w-0 flex-1">
+                                  <span className="font-medium">{ep.data_point}</span>
+                                  {ep.value !== undefined && (
+                                    <span className="text-muted-foreground ml-1">
+                                      {typeof ep.value === 'object' 
+                                        ? Object.entries(ep.value).map(([k, v]) => `${k}: ${v}`).join(', ')
+                                        : typeof ep.value === 'number' ? Number(ep.value).toFixed(1) : String(ep.value)
+                                      }
+                                    </span>
+                                  )}
+                                  {ep.source_table && (
+                                    <span className="text-muted-foreground/60 ml-1 text-[10px]">({ep.source_table})</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Data sources */}
+                      {Array.isArray(insight.evidence.data_sources) && (
+                        <div className="text-xs text-muted-foreground">
+                          <span>Fontes: </span>
+                          {insight.evidence.data_sources.map((src: string, i: number) => (
+                            <Badge key={i} variant="outline" className="text-[10px] mr-1">{src}</Badge>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Reasoning summary */}
+                      {insight.evidence.reasoning_summary && (
+                        <p className="text-xs text-muted-foreground italic border-t pt-2">
+                          {insight.evidence.reasoning_summary}
+                        </p>
+                      )}
                     </div>
                   )}
 
