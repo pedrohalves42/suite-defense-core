@@ -46,13 +46,14 @@ const statusConfig: Record<TaskStatus, { label: string; color: string; icon: Rea
 };
 
 const sourceTypeConfig: Record<string, { label: string; icon: React.ReactNode }> = {
-  ai_insight: { label: 'AI Insight', icon: <Brain className="h-4 w-4" /> },
+  ai_insight: { label: 'Sugestão IA', icon: <Brain className="h-4 w-4" /> },
   system_alert: { label: 'Alerta', icon: <Bell className="h-4 w-4" /> },
-  playbook_execution: { label: 'Playbook', icon: <Shield className="h-4 w-4" /> },
-  red_team: { label: 'Red Team', icon: <Crosshair className="h-4 w-4" /> },
+  playbook_execution: { label: 'Plano de Ação', icon: <Shield className="h-4 w-4" /> },
+  red_team: { label: 'Teste de Resistência', icon: <Crosshair className="h-4 w-4" /> },
   manual: { label: 'Manual', icon: <ListTodo className="h-4 w-4" /> },
-  job: { label: 'Job Falho', icon: <AlertTriangle className="h-4 w-4 text-orange-500" /> },
-  dlq: { label: 'DLQ', icon: <AlertOctagon className="h-4 w-4 text-red-500" /> },
+  job: { label: 'Verificação Falha', icon: <AlertTriangle className="h-4 w-4 text-orange-500" /> },
+  dlq: { label: 'Erro de Processamento', icon: <AlertOctagon className="h-4 w-4 text-red-500" /> },
+  incident_group: { label: 'Grupo de Incidentes', icon: <AlertTriangle className="h-4 w-4" /> },
 };
 
 export default function Tasks() {

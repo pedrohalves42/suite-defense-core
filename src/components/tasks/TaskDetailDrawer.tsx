@@ -84,7 +84,7 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
 
   const severity = severityConfig[task.severity];
   const status = statusConfig[task.status];
-  const source = sourceTypeConfig[task.source_type];
+  const source = sourceTypeConfig[task.source_type] || { label: task.source_type || 'Outro', icon: <ListTodo className="h-5 w-5" /> };
   const isActive = task.status === 'open' || task.status === 'in_progress';
   const isSlaBreach = !!task.sla_breached_at;
 
