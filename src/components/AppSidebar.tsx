@@ -6,8 +6,8 @@ import {
   Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, 
   Heart, Search, Monitor, AppWindow, GitBranch,
   Download, Building2, FileText, Cpu, Network, Percent, ClipboardCheck, FileBarChart,
-  AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch, Tag, Crosshair,
-  Zap, X, UserPlus, Archive, ListTodo, BookOpen, ShieldAlert, Fingerprint,
+  AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch,
+  Zap, X, UserPlus, ListTodo, BookOpen, ShieldAlert, Fingerprint,
   Eye, Workflow, Database, HardDrive, Plug, Palette, Headphones, Map, Code,
   BrainCircuit, Sparkles, BarChart, ThumbsUp, Bot, Layers
 } from 'lucide-react';
