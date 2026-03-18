@@ -126,7 +126,14 @@ export default function SecurityMonitoring() {
         });
       });
 
-      evidenceLogs.filter(e => e.severity !== 'info' && e.severity !== 'debug').forEach(e => {
+      evidenceLogs
+        .filter(e => e.severity !== 'info' && e.severity !== 'debug')
+        .filter(e => {
+          // Skip events with empty event_data - they carry no useful information
+          const eventData = e.event_data || {};
+          return Object.keys(eventData).length > 0;
+        })
+        .forEach(e => {
         const eventData = e.event_data || {};
         const alertType = (eventData as any).alert_type as string || '';
         const alertMsg = (eventData as any).alert_message as string || '';
@@ -137,6 +144,8 @@ export default function SecurityMonitoring() {
         let label: string;
         if (alertType && alertTypeLabels[alertType]) {
           label = alertTypeLabels[alertType];
+        } else if (alertMsg) {
+          label = alertMsg;
         } else if (alertType) {
           label = alertType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
         } else {
@@ -144,7 +153,11 @@ export default function SecurityMonitoring() {
         }
 
         // Build a meaningful detail string from event_data
-        let detail = alertMsg;
+        let detail = '';
+        if (alertMsg && alertType) {
+          // Use alert_message as detail when label came from alertType mapping
+          detail = alertMsg;
+        }
         if (!detail) {
           const parts: string[] = [];
           if (details.service_name) parts.push(`Serviço: ${details.service_name}`);
@@ -152,6 +165,8 @@ export default function SecurityMonitoring() {
           if (details.rule_name) parts.push(`Regra: ${details.rule_name}`);
           if (details.policy_name) parts.push(`Política: ${details.policy_name}`);
           if (details.file_path) parts.push(`Arquivo: ${details.file_path}`);
+          if (details.detection_method) parts.push(`Método: ${details.detection_method}`);
+          if (details.checked_edrs) parts.push(`EDRs verificados: ${details.checked_edrs}`);
           if (details.expected !== undefined && details.actual !== undefined) {
             parts.push(`Esperado: ${details.expected} → Atual: ${details.actual}`);
           }
