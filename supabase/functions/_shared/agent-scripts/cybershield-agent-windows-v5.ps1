@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v5.0.14 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.15 FULL ENTERPRISE
 
     v5.0.14: THREAT NETWORK + PROCESS LINEAGE + EDGE EVENT AGGREGATION
     - NEW: Edge Event Aggregation Engine - Local event deduplication before submission
@@ -4670,14 +4670,15 @@ function Get-SystemMetrics {
             return $Global:CachedSystemMetrics
         }
 
-        # v5.0.14-fix: Use Get-Counter with 2s sample for accurate CPU reading
-        # Win32_Processor.LoadPercentage is instantaneous and returns 0-2% almost always
+        # v5.0.15-fix: Use Get-Counter with 2s interval + 3 samples averaged for accurate CPU reading
+        # Single samples can still return 0-1% on idle machines
         $cpuPercent = 0
         try {
-            $counter = Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 2 -MaxSamples 1 -ErrorAction Stop
-            $cpuPercent = [math]::Round($counter.CounterSamples[0].CookedValue, 2)
-            if ($cpuPercent -gt 100) { $cpuPercent = 100 }
-            if ($cpuPercent -lt 0) { $cpuPercent = 0 }
+            $samples = Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 2 -MaxSamples 3 -ErrorAction Stop
+            $values = $samples.CounterSamples | ForEach-Object { $_.CookedValue } | Where-Object { $_ -ge 0 -and $_ -le 100 }
+            if ($values.Count -gt 0) {
+                $cpuPercent = [math]::Round(($values | Measure-Object -Average).Average, 2)
+            }
         } catch {
             # Fallback: try CIM LoadPercentage if Get-Counter fails (e.g., on Server Core)
             try {
