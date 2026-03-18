@@ -253,7 +253,7 @@ export default function ExecutiveDashboard() {
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-3 rounded-xl bg-destructive/10 border border-destructive/20 cursor-help shadow-sm">
+                      <div className="text-center p-3 rounded-xl bg-destructive/10 border border-destructive/20 shadow-sm">
                         <p className="text-2xl font-bold text-destructive">{summaryData?.incidentsContained || 0}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Incidentes de segurança<br/>contidos</p>
                       </div>
