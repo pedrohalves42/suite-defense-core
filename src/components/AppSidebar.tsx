@@ -159,7 +159,6 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Scale, label: 'Linha do Tempo', to: '/admin/compliance-timeline' },
     { icon: FileText, label: 'Automação', to: '/admin/compliance-automation' },
     { icon: Eye, label: 'Controle Interno', to: '/admin/governance' },
-    { icon: FileBarChart, label: 'Relatórios', to: '/admin/governance-reports' },
     { icon: BookOpen, label: 'Provas', to: '/admin/evidence-bundle' },
     { icon: Workflow, label: 'Procedimentos', to: '/admin/playbooks' },
     { icon: BarChart3, label: 'Nível de Risco', to: '/admin/risk-score' },
