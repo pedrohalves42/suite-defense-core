@@ -49,6 +49,9 @@ export default function Dashboard() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const { isSimple } = useSimpleModeContext();
 
+  // Proactive real-time alerts
+  useProactiveAlerts();
+
   useEffect(() => {
     const onboardingParam = searchParams.get('onboarding');
     if (onboardingParam === 'true') {
