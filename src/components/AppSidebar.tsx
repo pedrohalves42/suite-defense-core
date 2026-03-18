@@ -216,8 +216,8 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   ], []);
 
   const superIntegrationsItems = useMemo<MenuItem[]>(() => [
-    { icon: Plug, label: 'ITSM', to: '/admin/itsm' },
-    { icon: FileText, label: 'Exportar SIEM', to: '/admin/siem-export' },
+    { icon: Plug, label: 'Service Desk', to: '/admin/itsm' },
+    { icon: FileText, label: 'Exportar Logs', to: '/admin/siem-export' },
     { icon: Palette, label: 'Marca Própria', to: '/admin/white-label' },
     { icon: Map, label: 'Plataformas', to: '/admin/platforms' },
     { icon: Code, label: 'API', to: '/admin/api-docs' },
