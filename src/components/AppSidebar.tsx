@@ -548,9 +548,9 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                 <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--neon-cyan)_/_0.2)]">Administração</span>
               </div>
 
-              {renderCollapsibleSection('📋 Normas e Regras', 'compliance', complianceItems)}
-              {renderCollapsibleSection('🧠 Automação Inteligente', 'aiAnalysis', intelligenceItems)}
-              {renderCollapsibleSection('🔧 Ferramentas', 'advanced', advancedItems)}
+              {renderCollapsibleSection('📋 Conformidade', 'compliance', complianceItems)}
+              {renderCollapsibleSection('🧠 Assistente IA', 'aiAnalysis', intelligenceItems)}
+              {renderCollapsibleSection('🔧 Configurar', 'advanced', advancedItems)}
             </motion.div>
           ) : (
             <motion.div className="space-y-0.5" variants={containerVariants} initial="hidden" animate="show">
