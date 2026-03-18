@@ -325,13 +325,15 @@ export default function Dashboard() {
         <HealthTrendChart />
       </motion.div>
 
-      {/* ═══ SEÇÃO 4.5: Assistente de Segurança IA ═══ */}
+      {/* ═══ SEÇÃO 4.5: Assistente de Segurança + Conquistas ═══ */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.4 }}
+        className="grid grid-cols-1 md:grid-cols-2 gap-4"
       >
         <SecurityAdvisorCard />
+        <SecurityAchievements />
       </motion.div>
 
       {/* ═══ SEÇÃO 4.6: Status Ed25519 (super_admin only) ═══ */}
