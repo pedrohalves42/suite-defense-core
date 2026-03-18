@@ -130,15 +130,40 @@ export default function SecurityMonitoring() {
         const eventData = e.event_data || {};
         const alertType = (eventData as any).alert_type as string || '';
         const alertMsg = (eventData as any).alert_message as string || '';
-        const skipRemediation = (eventData as any).details?.skip_remediation === true;
+        const details = (eventData as any).details || {};
+        const skipRemediation = details?.skip_remediation === true;
 
-        const label = alertType 
-          ? (alertTypeLabels[alertType] || alertType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
-          : (eventTypeLabels[e.event_type]?.label || e.event_type.replace(/_/g, ' '));
+        // Build a descriptive label using the actual alert data
+        let label: string;
+        if (alertType && alertTypeLabels[alertType]) {
+          label = alertTypeLabels[alertType];
+        } else if (alertType) {
+          label = alertType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        } else {
+          label = eventTypeLabels[e.event_type]?.label || e.event_type.replace(/_/g, ' ');
+        }
+
+        // Build a meaningful detail string from event_data
+        let detail = alertMsg;
+        if (!detail) {
+          const parts: string[] = [];
+          if (details.service_name) parts.push(`Serviço: ${details.service_name}`);
+          if (details.process_name) parts.push(`Processo: ${details.process_name}`);
+          if (details.rule_name) parts.push(`Regra: ${details.rule_name}`);
+          if (details.policy_name) parts.push(`Política: ${details.policy_name}`);
+          if (details.file_path) parts.push(`Arquivo: ${details.file_path}`);
+          if (details.expected !== undefined && details.actual !== undefined) {
+            parts.push(`Esperado: ${details.expected} → Atual: ${details.actual}`);
+          }
+          if ((eventData as any).state_before && (eventData as any).state_after) {
+            parts.push(`${(eventData as any).state_before} → ${(eventData as any).state_after}`);
+          }
+          detail = parts.join(' · ') || '';
+        }
 
         unifiedEvents.push({
           id: e.id, type: alertType || e.event_type, label, 
-          detail: alertMsg || '',
+          detail,
           severity: (eventData as any).severity || e.severity, 
           created_at: e.created_at, source: 'evidence_logs',
           agentName: e.agent_name, alertType,
