@@ -99,7 +99,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('sidebar-sections-v5', JSON.stringify(sectionStates));
+    localStorage.setItem('sidebar-sections-v6', JSON.stringify(sectionStates));
   }, [sectionStates]);
 
   useEffect(() => {
