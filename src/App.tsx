@@ -261,17 +261,55 @@ const App = () => (
                 <Route path="agent-center" element={<AgentCenter />} />
                 <Route path="agent-health" element={<Navigate to="/admin/agent-center?tab=health" replace />} />
                 <Route path="diagnostics" element={<DiagnosticsCenter />} />
-                <Route path="ai-insights" element={<AIInsights />} />
-                <Route path="ai-actions" element={<AIActionApproval />} />
+                
+                {/* Hub Routes */}
+                <Route path="compliance-hub" element={<ComplianceHub />} />
+                <Route path="intelligence-hub" element={<IntelligenceHub />} />
+                <Route path="operations-hub" element={<OperationsHub />} />
+                
+                {/* Compliance redirects to hub */}
+                <Route path="soc2-compliance" element={<Navigate to="/admin/compliance-hub?tab=overview" replace />} />
+                <Route path="system-audit" element={<Navigate to="/admin/compliance-hub?tab=evidence" replace />} />
+                <Route path="compliance-timeline" element={<Navigate to="/admin/compliance-hub?tab=overview" replace />} />
+                <Route path="compliance-automation" element={<Navigate to="/admin/compliance-hub?tab=procedures" replace />} />
+                <Route path="governance" element={<Navigate to="/admin/compliance-hub?tab=procedures" replace />} />
+                <Route path="governance-reports" element={<Navigate to="/admin/compliance-hub?tab=evidence" replace />} />
+                <Route path="evidence-bundle" element={<Navigate to="/admin/compliance-hub?tab=evidence" replace />} />
+                <Route path="playbooks" element={<Navigate to="/admin/compliance-hub?tab=procedures" replace />} />
+                <Route path="risk-score" element={<Navigate to="/admin/compliance-hub?tab=risk" replace />} />
+                <Route path="security-benchmark" element={<Navigate to="/admin/compliance-hub?tab=risk" replace />} />
+                <Route path="ransomware-incident" element={<Navigate to="/admin/compliance-hub?tab=risk" replace />} />
+                
+                {/* Intelligence redirects to hub */}
+                <Route path="ai-insights" element={<Navigate to="/admin/intelligence-hub?tab=insights" replace />} />
+                <Route path="ai-actions" element={<Navigate to="/admin/intelligence-hub?tab=automation" replace />} />
+                <Route path="ai-anomalies" element={<Navigate to="/admin/intelligence-hub?tab=automation" replace />} />
+                <Route path="rules-management" element={<Navigate to="/admin/intelligence-hub?tab=automation" replace />} />
+                <Route path="ai-feedback" element={<Navigate to="/admin/intelligence-hub?tab=governance" replace />} />
+                <Route path="decision-audit" element={<Navigate to="/admin/intelligence-hub?tab=governance" replace />} />
+                <Route path="insight-triage" element={<Navigate to="/admin/intelligence-hub?tab=insights" replace />} />
+                <Route path="confidence-gap" element={<Navigate to="/admin/intelligence-hub?tab=insights" replace />} />
+                <Route path="software-knowledge-base" element={<Navigate to="/admin/intelligence-hub?tab=knowledge" replace />} />
+                
+                {/* Operations redirects to hub */}
+                <Route path="cron-health" element={<Navigate to="/admin/operations-hub?tab=health" replace />} />
+                <Route path="system-health" element={<Navigate to="/admin/operations-hub?tab=health" replace />} />
+                <Route path="jobs-health" element={<Navigate to="/admin/operations-hub?tab=health" replace />} />
+                <Route path="job-health" element={<Navigate to="/admin/operations-hub?tab=health" replace />} />
+                <Route path="installation-health" element={<Navigate to="/admin/operations-hub?tab=health" replace />} />
+                <Route path="performance-metrics" element={<Navigate to="/admin/operations-hub?tab=performance" replace />} />
+                <Route path="rate-limiting" element={<Navigate to="/admin/operations-hub?tab=performance" replace />} />
+                <Route path="slo-dashboard" element={<Navigate to="/admin/operations-hub?tab=performance" replace />} />
+                <Route path="system-operations" element={<Navigate to="/admin/operations-hub?tab=logs" replace />} />
+                <Route path="system-logs" element={<Navigate to="/admin/operations-hub?tab=logs" replace />} />
+                <Route path="dead-letter-queue" element={<Navigate to="/admin/operations-hub?tab=logs" replace />} />
+                <Route path="mass-reinstall" element={<Navigate to="/admin/operations-hub?tab=tools" replace />} />
+                <Route path="jobs-v3-migration" element={<Navigate to="/admin/operations-hub?tab=tools" replace />} />
+                
+                {/* Remaining standalone routes */}
                 <Route path="ai-metrics" element={<AIMetrics />} />
                 <Route path="ai-governance" element={<AIGovernance />} />
-                <Route path="ai-anomalies" element={<AIAnomalies />} />
-                <Route path="system-logs" element={<SystemLogs />} />
                 <Route path="tenant" element={<Tenant />} />
-                <Route path="jobs-v3-migration" element={<JobsV3Migration />} />
-                <Route path="installation-health" element={<InstallationHealth />} />
-                <Route path="performance-metrics" element={<PerformanceMetrics />} />
-                <Route path="system-health" element={<SystemHealth />} />
                 <Route path="software-inventory" element={<Navigate to="/admin/asset-security?tab=inventory" replace />} />
                 <Route path="vulnerabilities" element={<Navigate to="/admin/vulnerability-center?tab=vulnerabilities" replace />} />
                 <Route path="web-activity" element={<Navigate to="/admin/network-security?tab=web-activity" replace />} />
@@ -286,59 +324,34 @@ const App = () => (
                 <Route path="agent-releases" element={<AgentReleases />} />
                 <Route path="agent-versions" element={<Navigate to="/admin/agent-center?tab=versions" replace />} />
                 <Route path="reports" element={<Reports />} />
-                <Route path="rate-limiting" element={<RateLimitingStats />} />
-                <Route path="dead-letter-queue" element={<DeadLetterQueue />} />
                 <Route path="security-policies" element={<SecurityPolicies />} />
                 <Route path="security-policies/auto-actions" element={<SecurityPoliciesAutoActions />} />
                 <Route path="agent-groups" element={<Navigate to="/admin/agent-center?tab=groups" replace />} />
                 <Route path="agent-tags" element={<Navigate to="/admin/agent-center?tab=tags" replace />} />
                 <Route path="notification-settings" element={<NotificationSettings />} />
                 <Route path="security-monitoring" element={<Navigate to="/admin/threat-center?tab=alerts" replace />} />
-                <Route path="mass-reinstall" element={<MassReinstall />} />
                 <Route path="invites" element={<Invites />} />
                 <Route path="api-docs" element={<ApiDocumentation />} />
                 <Route path="my-account" element={<MyAccount />} />
-                <Route path="slo-dashboard" element={<SLODashboard />} />
-                <Route path="jobs-health" element={<JobsHealthDashboard />} />
-                <Route path="system-operations" element={<SystemOperations />} />
-                <Route path="compliance-timeline" element={<ComplianceTimeline />} />
-                <Route path="risk-score" element={<RiskScore />} />
-                <Route path="playbooks" element={<Playbooks />} />
-                <Route path="notification-channels" element={<NotificationChannels />} />
-                <Route path="decision-audit" element={<DecisionAudit />} />
-                <Route path="rules-management" element={<RulesManagement />} />
-                <Route path="realtime-security" element={<RealTimeSecurityDashboard />} />
-                <Route path="ai-autonomy" element={<AutonomyDashboard />} />
-                <Route path="system-audit" element={<SystemAudit />} />
-                <Route path="soc2-compliance" element={<SOC2Dashboard />} />
-                <Route path="software-risk" element={<Navigate to="/admin/vulnerability-center?tab=software-risk" replace />} />
-                <Route path="data-exposure" element={<Navigate to="/admin/asset-security?tab=data-exposure" replace />} />
-                <Route path="software-knowledge-base" element={<SoftwareKnowledgeBase />} />
                 <Route path="automations" element={<Automations />} />
                 <Route path="archived-agents" element={<Navigate to="/admin/agent-center?tab=archived" replace />} />
                 <Route path="alert-resolution" element={<AlertResolutionCenter />} />
-                <Route path="insight-triage" element={<InsightTriageCenter />} />
-                <Route path="confidence-gap" element={<ConfidenceGapDashboardPage />} />
-                <Route path="job-health" element={<Navigate to="/admin/jobs-health" replace />} />
-                <Route path="tasks" element={<Tasks />} />
-                <Route path="governance" element={<Governance />} />
-                <Route path="governance-reports" element={<GovernanceReports />} />
-                <Route path="evidence-bundle" element={<EvidenceBundlePage />} />
                 <Route path="auto-remediation" element={<AutoRemediation />} />
                 <Route path="siem-export" element={<SiemExport />} />
-                <Route path="ai-feedback" element={<AIFeedbackDashboard />} />
                 <Route path="white-label" element={<WhiteLabelSettings />} />
                 <Route path="itsm" element={<ItsmSettings />} />
                 <Route path="platforms" element={<PlatformManagement />} />
-                <Route path="compliance-automation" element={<ComplianceAutomation />} />
                 <Route path="threat-intelligence" element={<ThreatIntelligence />} />
-                <Route path="cron-health" element={<CronHealthDashboard />} />
                 <Route path="shadow-it" element={<ShadowITDiscovery />} />
                 <Route path="attack-simulation" element={<AttackSimulation />} />
                 <Route path="identity-security" element={<IdentitySecurity />} />
                 <Route path="security-graph" element={<SecurityGraph />} />
-                <Route path="ransomware-incident" element={<RansomwareIncident />} />
-                <Route path="security-benchmark" element={<SecurityBenchmark />} />
+                <Route path="software-risk" element={<Navigate to="/admin/vulnerability-center?tab=software-risk" replace />} />
+                <Route path="data-exposure" element={<Navigate to="/admin/asset-security?tab=data-exposure" replace />} />
+                <Route path="notification-channels" element={<NotificationChannels />} />
+                <Route path="realtime-security" element={<RealTimeSecurityDashboard />} />
+                <Route path="ai-autonomy" element={<AutonomyDashboard />} />
+                <Route path="tasks" element={<Tasks />} />
                 <Route path="onboarding" element={<OnboardingWizard />} />
               </Route>
 
