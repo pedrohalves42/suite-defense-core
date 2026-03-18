@@ -90,74 +90,33 @@ const TenantSuspensionManager = lazy(() => import("./pages/admin/TenantSuspensio
 const StripeSetup = lazy(() => import("./pages/admin/StripeSetup"));
 const DiagnosticsCenter = lazy(() => import("./pages/admin/DiagnosticsCenter"));
 const BuildHealthDashboard = lazy(() => import("./pages/admin/BuildHealthDashboard"));
-const CronHealthDashboard = lazy(() => import("./pages/admin/CronHealthDashboard"));
 const SystemLogs = lazy(() => import("./pages/admin/SystemLogs"));
-const AgentHealthMonitor = lazy(() => import("./pages/admin/AgentHealthMonitor"));
-const AIInsights = lazy(() => import("./pages/admin/AIInsights"));
-const AIActionApproval = lazy(() => import("./pages/admin/AIActionApproval"));
 const Installations = lazy(() => import("./pages/admin/Installations"));
 const Tenant = lazy(() => import("./pages/admin/Tenant"));
-const JobsV3Migration = lazy(() => import("./pages/admin/JobsV3Migration"));
-const InstallationHealth = lazy(() => import("./pages/admin/InstallationHealth"));
-const PerformanceMetrics = lazy(() => import("./pages/admin/PerformanceMetrics"));
-const SystemHealth = lazy(() => import("./pages/admin/SystemHealth"));
-const SoftwareInventory = lazy(() => import("./pages/admin/SoftwareInventory"));
-const VulnerabilityFindings = lazy(() => import("./pages/admin/VulnerabilityFindings"));
-const WebActivity = lazy(() => import("./pages/admin/WebActivity"));
-const DNSFilter = lazy(() => import("./pages/admin/DNSFilter"));
-const AgentTimeline = lazy(() => import("./pages/admin/AgentTimeline"));
 const AgentReleases = lazy(() => import("./pages/admin/AgentReleases"));
-const AgentVersionMonitor = lazy(() => import("./pages/admin/AgentVersionMonitor"));
 const Reports = lazy(() => import("./pages/admin/Reports"));
-const CustomTrials = lazy(() => import("./pages/admin/CustomTrials"));
-const RateLimitingStats = lazy(() => import("./pages/admin/RateLimitingStats"));
-const DeadLetterQueue = lazy(() => import("./pages/admin/DeadLetterQueue"));
 const SecurityPolicies = lazy(() => import("./pages/admin/SecurityPolicies"));
 const SecurityPoliciesAutoActions = lazy(() => import("./pages/admin/SecurityPoliciesAutoActions"));
-const AgentGroups = lazy(() => import("./pages/admin/AgentGroups"));
-const AgentTags = lazy(() => import("./pages/admin/AgentTags"));
 const NotificationSettings = lazy(() => import("./pages/admin/NotificationSettings"));
-const SecurityMonitoring = lazy(() => import("./pages/admin/SecurityMonitoring"));
-const MassReinstall = lazy(() => import("./pages/admin/MassReinstall"));
 const AIMetrics = lazy(() => import("./pages/admin/AIMetrics"));
 const AIGovernance = lazy(() => import("./pages/admin/AIGovernance"));
 const ApiDocumentation = lazy(() => import("./pages/admin/ApiDocumentation"));
 const MyAccount = lazy(() => import("./pages/admin/MyAccount"));
-const SLODashboard = lazy(() => import("./pages/admin/SLODashboard"));
-const SystemOperations = lazy(() => import("./pages/admin/SystemOperations"));
-const ComplianceTimeline = lazy(() => import("./pages/admin/ComplianceTimeline"));
-const RiskScore = lazy(() => import("./pages/admin/RiskScore"));
-const Playbooks = lazy(() => import("./pages/admin/Playbooks"));
-const DecisionAudit = lazy(() => import("./pages/admin/DecisionAudit"));
-const RulesManagement = lazy(() => import("./pages/admin/RulesManagement"));
 const RealTimeSecurityDashboard = lazy(() => import("./pages/admin/RealTimeSecurityDashboard"));
 const AutonomyDashboard = lazy(() => import("./pages/admin/AutonomyDashboard"));
-const SystemAudit = lazy(() => import("./pages/admin/SystemAudit"));
-const AIAnomalies = lazy(() => import("./pages/admin/AIAnomalies"));
-const SOC2Dashboard = lazy(() => import("./pages/admin/SOC2Dashboard"));
-const JobsHealthDashboard = lazy(() => import("./pages/admin/JobsHealthDashboard"));
-const SoftwareRiskDashboard = lazy(() => import("./pages/admin/SoftwareRiskDashboard"));
-const SoftwareKnowledgeBase = lazy(() => import("./pages/admin/SoftwareKnowledgeBase"));
 const ActionCenterDashboard = lazy(() => import("./pages/admin/ActionCenterDashboard"));
 const Automations = lazy(() => import("./pages/admin/Automations"));
-const ArchivedAgents = lazy(() => import("./pages/admin/ArchivedAgents"));
 const MFASetupRequired = lazy(() => import("./pages/admin/MFASetupRequired"));
 const ExecutiveDashboard = lazy(() => import("./pages/admin/ExecutiveDashboard"));
 const AlertResolutionCenter = lazy(() => import("./pages/admin/AlertResolutionCenter"));
-const InsightTriageCenter = lazy(() => import("./pages/admin/InsightTriageCenter"));
-const ConfidenceGapDashboardPage = lazy(() => import("./pages/admin/ConfidenceGapDashboard"));
 const Tasks = lazy(() => import("./pages/admin/Tasks"));
-const Governance = lazy(() => import("./pages/admin/Governance"));
-const GovernanceReports = lazy(() => import("./pages/admin/GovernanceReports"));
-const EvidenceBundlePage = lazy(() => import("./pages/admin/EvidenceBundlePage"));
 const AutoRemediation = lazy(() => import("./pages/admin/AutoRemediation"));
 const SiemExport = lazy(() => import("./pages/admin/SiemExport"));
 const WhiteLabelSettings = lazy(() => import("./pages/admin/WhiteLabelSettings"));
 const ItsmSettings = lazy(() => import("./pages/admin/ItsmSettings"));
 const PlatformManagement = lazy(() => import("./pages/admin/PlatformManagement"));
-const ComplianceAutomation = lazy(() => import("./pages/admin/ComplianceAutomation"));
 const ThreatIntelligence = lazy(() => import("./pages/admin/ThreatIntelligence"));
-const AIFeedbackDashboard = lazy(() => import("./pages/admin/AIFeedbackDashboard"));
+const CustomTrials = lazy(() => import("./pages/admin/CustomTrials"));
 const AgentCenter = lazy(() => import("./pages/admin/AgentCenter"));
 const VulnerabilityCenter = lazy(() => import("./pages/admin/VulnerabilityCenter"));
 const NetworkSecurityCenter = lazy(() => import("./pages/admin/NetworkSecurityCenter"));
@@ -165,14 +124,14 @@ const AssetSecurityCenter = lazy(() => import("./pages/admin/AssetSecurityCenter
 const ThreatCenter = lazy(() => import("./pages/admin/ThreatCenter"));
 const ThreatHunting = lazy(() => import("./pages/admin/ThreatHunting"));
 const MitreAttackDashboard = lazy(() => import("./pages/admin/MitreAttackDashboard"));
-const DataExposure = lazy(() => import("./pages/admin/DataExposure"));
 const ShadowITDiscovery = lazy(() => import("./pages/admin/ShadowITDiscovery"));
 const AttackSimulation = lazy(() => import("./pages/admin/AttackSimulation"));
 const IdentitySecurity = lazy(() => import("./pages/admin/IdentitySecurity"));
 const SecurityGraph = lazy(() => import("./pages/admin/SecurityGraph"));
-const RansomwareIncident = lazy(() => import("./pages/admin/RansomwareIncident"));
-const SecurityBenchmark = lazy(() => import("./pages/admin/SecurityBenchmark"));
 const OnboardingWizard = lazy(() => import("./pages/admin/OnboardingWizard"));
+const ComplianceHub = lazy(() => import("./pages/admin/ComplianceHub"));
+const IntelligenceHub = lazy(() => import("./pages/admin/IntelligenceHub"));
+const OperationsHub = lazy(() => import("./pages/admin/OperationsHub"));
 
 // ─── Client pages ───
 const ClientDashboard = lazy(() => import("./pages/client").then(m => ({ default: m.ClientDashboard })));
@@ -258,17 +217,55 @@ const App = () => (
                 <Route path="agent-center" element={<AgentCenter />} />
                 <Route path="agent-health" element={<Navigate to="/admin/agent-center?tab=health" replace />} />
                 <Route path="diagnostics" element={<DiagnosticsCenter />} />
-                <Route path="ai-insights" element={<AIInsights />} />
-                <Route path="ai-actions" element={<AIActionApproval />} />
+                
+                {/* Hub Routes */}
+                <Route path="compliance-hub" element={<ComplianceHub />} />
+                <Route path="intelligence-hub" element={<IntelligenceHub />} />
+                <Route path="operations-hub" element={<OperationsHub />} />
+                
+                {/* Compliance redirects to hub */}
+                <Route path="soc2-compliance" element={<Navigate to="/admin/compliance-hub?tab=overview" replace />} />
+                <Route path="system-audit" element={<Navigate to="/admin/compliance-hub?tab=evidence" replace />} />
+                <Route path="compliance-timeline" element={<Navigate to="/admin/compliance-hub?tab=overview" replace />} />
+                <Route path="compliance-automation" element={<Navigate to="/admin/compliance-hub?tab=procedures" replace />} />
+                <Route path="governance" element={<Navigate to="/admin/compliance-hub?tab=procedures" replace />} />
+                <Route path="governance-reports" element={<Navigate to="/admin/compliance-hub?tab=evidence" replace />} />
+                <Route path="evidence-bundle" element={<Navigate to="/admin/compliance-hub?tab=evidence" replace />} />
+                <Route path="playbooks" element={<Navigate to="/admin/compliance-hub?tab=procedures" replace />} />
+                <Route path="risk-score" element={<Navigate to="/admin/compliance-hub?tab=risk" replace />} />
+                <Route path="security-benchmark" element={<Navigate to="/admin/compliance-hub?tab=risk" replace />} />
+                <Route path="ransomware-incident" element={<Navigate to="/admin/compliance-hub?tab=risk" replace />} />
+                
+                {/* Intelligence redirects to hub */}
+                <Route path="ai-insights" element={<Navigate to="/admin/intelligence-hub?tab=insights" replace />} />
+                <Route path="ai-actions" element={<Navigate to="/admin/intelligence-hub?tab=automation" replace />} />
+                <Route path="ai-anomalies" element={<Navigate to="/admin/intelligence-hub?tab=automation" replace />} />
+                <Route path="rules-management" element={<Navigate to="/admin/intelligence-hub?tab=automation" replace />} />
+                <Route path="ai-feedback" element={<Navigate to="/admin/intelligence-hub?tab=governance" replace />} />
+                <Route path="decision-audit" element={<Navigate to="/admin/intelligence-hub?tab=governance" replace />} />
+                <Route path="insight-triage" element={<Navigate to="/admin/intelligence-hub?tab=insights" replace />} />
+                <Route path="confidence-gap" element={<Navigate to="/admin/intelligence-hub?tab=insights" replace />} />
+                <Route path="software-knowledge-base" element={<Navigate to="/admin/intelligence-hub?tab=knowledge" replace />} />
+                
+                {/* Operations redirects to hub */}
+                <Route path="cron-health" element={<Navigate to="/admin/operations-hub?tab=health" replace />} />
+                <Route path="system-health" element={<Navigate to="/admin/operations-hub?tab=health" replace />} />
+                <Route path="jobs-health" element={<Navigate to="/admin/operations-hub?tab=health" replace />} />
+                <Route path="job-health" element={<Navigate to="/admin/operations-hub?tab=health" replace />} />
+                <Route path="installation-health" element={<Navigate to="/admin/operations-hub?tab=health" replace />} />
+                <Route path="performance-metrics" element={<Navigate to="/admin/operations-hub?tab=performance" replace />} />
+                <Route path="rate-limiting" element={<Navigate to="/admin/operations-hub?tab=performance" replace />} />
+                <Route path="slo-dashboard" element={<Navigate to="/admin/operations-hub?tab=performance" replace />} />
+                <Route path="system-operations" element={<Navigate to="/admin/operations-hub?tab=logs" replace />} />
+                <Route path="system-logs" element={<Navigate to="/admin/operations-hub?tab=logs" replace />} />
+                <Route path="dead-letter-queue" element={<Navigate to="/admin/operations-hub?tab=logs" replace />} />
+                <Route path="mass-reinstall" element={<Navigate to="/admin/operations-hub?tab=tools" replace />} />
+                <Route path="jobs-v3-migration" element={<Navigate to="/admin/operations-hub?tab=tools" replace />} />
+                
+                {/* Remaining standalone routes */}
                 <Route path="ai-metrics" element={<AIMetrics />} />
                 <Route path="ai-governance" element={<AIGovernance />} />
-                <Route path="ai-anomalies" element={<AIAnomalies />} />
-                <Route path="system-logs" element={<SystemLogs />} />
                 <Route path="tenant" element={<Tenant />} />
-                <Route path="jobs-v3-migration" element={<JobsV3Migration />} />
-                <Route path="installation-health" element={<InstallationHealth />} />
-                <Route path="performance-metrics" element={<PerformanceMetrics />} />
-                <Route path="system-health" element={<SystemHealth />} />
                 <Route path="software-inventory" element={<Navigate to="/admin/asset-security?tab=inventory" replace />} />
                 <Route path="vulnerabilities" element={<Navigate to="/admin/vulnerability-center?tab=vulnerabilities" replace />} />
                 <Route path="web-activity" element={<Navigate to="/admin/network-security?tab=web-activity" replace />} />
@@ -283,59 +280,34 @@ const App = () => (
                 <Route path="agent-releases" element={<AgentReleases />} />
                 <Route path="agent-versions" element={<Navigate to="/admin/agent-center?tab=versions" replace />} />
                 <Route path="reports" element={<Reports />} />
-                <Route path="rate-limiting" element={<RateLimitingStats />} />
-                <Route path="dead-letter-queue" element={<DeadLetterQueue />} />
                 <Route path="security-policies" element={<SecurityPolicies />} />
                 <Route path="security-policies/auto-actions" element={<SecurityPoliciesAutoActions />} />
                 <Route path="agent-groups" element={<Navigate to="/admin/agent-center?tab=groups" replace />} />
                 <Route path="agent-tags" element={<Navigate to="/admin/agent-center?tab=tags" replace />} />
                 <Route path="notification-settings" element={<NotificationSettings />} />
                 <Route path="security-monitoring" element={<Navigate to="/admin/threat-center?tab=alerts" replace />} />
-                <Route path="mass-reinstall" element={<MassReinstall />} />
                 <Route path="invites" element={<Invites />} />
                 <Route path="api-docs" element={<ApiDocumentation />} />
                 <Route path="my-account" element={<MyAccount />} />
-                <Route path="slo-dashboard" element={<SLODashboard />} />
-                <Route path="jobs-health" element={<JobsHealthDashboard />} />
-                <Route path="system-operations" element={<SystemOperations />} />
-                <Route path="compliance-timeline" element={<ComplianceTimeline />} />
-                <Route path="risk-score" element={<RiskScore />} />
-                <Route path="playbooks" element={<Playbooks />} />
-                <Route path="notification-channels" element={<NotificationChannels />} />
-                <Route path="decision-audit" element={<DecisionAudit />} />
-                <Route path="rules-management" element={<RulesManagement />} />
-                <Route path="realtime-security" element={<RealTimeSecurityDashboard />} />
-                <Route path="ai-autonomy" element={<AutonomyDashboard />} />
-                <Route path="system-audit" element={<SystemAudit />} />
-                <Route path="soc2-compliance" element={<SOC2Dashboard />} />
-                <Route path="software-risk" element={<Navigate to="/admin/vulnerability-center?tab=software-risk" replace />} />
-                <Route path="data-exposure" element={<Navigate to="/admin/asset-security?tab=data-exposure" replace />} />
-                <Route path="software-knowledge-base" element={<SoftwareKnowledgeBase />} />
                 <Route path="automations" element={<Automations />} />
                 <Route path="archived-agents" element={<Navigate to="/admin/agent-center?tab=archived" replace />} />
                 <Route path="alert-resolution" element={<AlertResolutionCenter />} />
-                <Route path="insight-triage" element={<InsightTriageCenter />} />
-                <Route path="confidence-gap" element={<ConfidenceGapDashboardPage />} />
-                <Route path="job-health" element={<Navigate to="/admin/jobs-health" replace />} />
-                <Route path="tasks" element={<Tasks />} />
-                <Route path="governance" element={<Governance />} />
-                <Route path="governance-reports" element={<GovernanceReports />} />
-                <Route path="evidence-bundle" element={<EvidenceBundlePage />} />
                 <Route path="auto-remediation" element={<AutoRemediation />} />
                 <Route path="siem-export" element={<SiemExport />} />
-                <Route path="ai-feedback" element={<AIFeedbackDashboard />} />
                 <Route path="white-label" element={<WhiteLabelSettings />} />
                 <Route path="itsm" element={<ItsmSettings />} />
                 <Route path="platforms" element={<PlatformManagement />} />
-                <Route path="compliance-automation" element={<ComplianceAutomation />} />
                 <Route path="threat-intelligence" element={<ThreatIntelligence />} />
-                <Route path="cron-health" element={<CronHealthDashboard />} />
                 <Route path="shadow-it" element={<ShadowITDiscovery />} />
                 <Route path="attack-simulation" element={<AttackSimulation />} />
                 <Route path="identity-security" element={<IdentitySecurity />} />
                 <Route path="security-graph" element={<SecurityGraph />} />
-                <Route path="ransomware-incident" element={<RansomwareIncident />} />
-                <Route path="security-benchmark" element={<SecurityBenchmark />} />
+                <Route path="software-risk" element={<Navigate to="/admin/vulnerability-center?tab=software-risk" replace />} />
+                <Route path="data-exposure" element={<Navigate to="/admin/asset-security?tab=data-exposure" replace />} />
+                <Route path="notification-channels" element={<NotificationChannels />} />
+                <Route path="realtime-security" element={<RealTimeSecurityDashboard />} />
+                <Route path="ai-autonomy" element={<AutonomyDashboard />} />
+                <Route path="tasks" element={<Tasks />} />
                 <Route path="onboarding" element={<OnboardingWizard />} />
               </Route>
 

@@ -5,11 +5,11 @@ import {
   Brain, Terminal, Globe, Clock, Gauge, 
   Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, 
   Heart, Search, Monitor, AppWindow, GitBranch,
-  Download, Building2, FileText, Cpu, Network, Percent, ClipboardCheck, FileBarChart,
-  AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch,
+  Download, FileText, Cpu, Percent, ClipboardCheck, FileBarChart,
+  AlertCircle, Wrench, Key, ShieldCheck, FileSearch,
   Zap, X, UserPlus, ListTodo, BookOpen, ShieldAlert, Fingerprint,
-  Eye, Workflow, Database, HardDrive, Plug, Palette, Headphones, Map, Code,
-  BrainCircuit, Sparkles, BarChart, ThumbsUp, Bot, Layers
+  Eye, Workflow, Plug, Palette, Map, Code,
+  BrainCircuit, Sparkles, BarChart, Bot, Layers
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -154,28 +154,17 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
 
   // ─── ADMIN: Collapsed by default ─────────────────────
   const complianceItems = useMemo<MenuItem[]>(() => [
-    { icon: ClipboardCheck, label: 'SOC 2', to: '/admin/soc2-compliance' },
-    { icon: ScrollText, label: 'Histórico de Ações', to: '/admin/system-audit' },
-    { icon: Scale, label: 'Linha do Tempo', to: '/admin/compliance-timeline' },
-    { icon: FileText, label: 'Automação', to: '/admin/compliance-automation' },
-    { icon: Eye, label: 'Controle Interno', to: '/admin/governance' },
-    { icon: BookOpen, label: 'Provas', to: '/admin/evidence-bundle' },
-    { icon: Workflow, label: 'Procedimentos', to: '/admin/playbooks' },
-    { icon: BarChart3, label: 'Nível de Risco', to: '/admin/risk-score' },
-    { icon: Target, label: 'Comparativo', to: '/admin/security-benchmark' },
-    { icon: ShieldAlert, label: 'Ransomware', to: '/admin/ransomware-incident' },
+    { icon: ClipboardCheck, label: 'Visão Geral', to: '/admin/compliance-hub' },
+    { icon: FileSearch, label: 'Provas & Auditoria', to: '/admin/compliance-hub?tab=evidence' },
+    { icon: Workflow, label: 'Procedimentos', to: '/admin/compliance-hub?tab=procedures' },
+    { icon: BarChart3, label: 'Risco', to: '/admin/compliance-hub?tab=risk' },
   ], []);
 
   const intelligenceItems = useMemo<MenuItem[]>(() => [
-    { icon: Brain, label: 'Regras Automáticas', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
-    { icon: BrainCircuit, label: 'Sugestões', to: '/admin/ai-insights' },
-    { icon: Sparkles, label: 'Ações Automáticas', to: '/admin/ai-actions' },
-    { icon: AlertTriangle, label: 'Comportamento Incomum', to: '/admin/ai-anomalies' },
-    { icon: ThumbsUp, label: 'Avaliações', to: '/admin/ai-feedback' },
-    { icon: Lightbulb, label: 'Priorização', to: '/admin/insight-triage' },
-    { icon: TrendingUp, label: 'Nível de Certeza', to: '/admin/confidence-gap' },
-    { icon: FileSearch, label: 'Decisões do Sistema', to: '/admin/decision-audit' },
-    { icon: BookOpen, label: 'Base de Conhecimento', to: '/admin/software-knowledge-base' },
+    { icon: BrainCircuit, label: 'Insights', to: '/admin/intelligence-hub', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
+    { icon: Zap, label: 'Automação', to: '/admin/intelligence-hub?tab=automation' },
+    { icon: Eye, label: 'Governança', to: '/admin/intelligence-hub?tab=governance' },
+    { icon: BookOpen, label: 'Conhecimento', to: '/admin/intelligence-hub?tab=knowledge' },
   ], [criticalInsightsCount]);
 
   const advancedItems = useMemo<MenuItem[]>(() => [
@@ -217,17 +206,10 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const superSystemItems = useMemo<MenuItem[]>(() => [
     { icon: ScrollText, label: 'Auditoria', to: '/super-admin/audit-logs' },
     { icon: Activity, label: 'Logs', to: '/super-admin/system-logs' },
-    { icon: Clock, label: 'Saúde dos Crons', to: '/admin/cron-health' },
-    { icon: Gauge, label: 'Saúde do Sistema', to: '/admin/system-health' },
-    { icon: Wrench, label: 'Saúde dos Jobs', to: '/admin/job-health' },
-    { icon: HardDrive, label: 'Metas de Serviço', to: '/admin/slo-dashboard' },
-    { icon: Database, label: 'Fila de Erros', to: '/admin/dead-letter-queue' },
-    { icon: Percent, label: 'Limite de Uso', to: '/admin/rate-limiting' },
-    { icon: BarChart, label: 'Performance', to: '/admin/performance-metrics' },
-    { icon: Heart, label: 'Saúde Instalação', to: '/admin/installation-health' },
-    { icon: Activity, label: 'Operações', to: '/admin/system-operations' },
-    { icon: Download, label: 'Reinstalação em Massa', to: '/admin/mass-reinstall' },
-    { icon: Layers, label: 'Migração Jobs V3', to: '/admin/jobs-v3-migration' },
+    { icon: Gauge, label: 'Operações', to: '/admin/operations-hub' },
+    { icon: Heart, label: 'Saúde', to: '/admin/operations-hub?tab=health' },
+    { icon: BarChart, label: 'Performance', to: '/admin/operations-hub?tab=performance' },
+    { icon: Wrench, label: 'Ferramentas', to: '/admin/operations-hub?tab=tools' },
   ], []);
 
   const superAIItems = useMemo<MenuItem[]>(() => [
