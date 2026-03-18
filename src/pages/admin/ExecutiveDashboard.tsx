@@ -71,6 +71,19 @@ export default function ExecutiveDashboard() {
     staleTime: 15000,
   });
 
+  // Auto-trigger compliance calculation when no data exists
+  const [complianceTriggered, setComplianceTriggered] = useState(false);
+  useEffect(() => {
+    if (tenantId && execData && !execData.compliance && !complianceTriggered) {
+      setComplianceTriggered(true);
+      supabase.functions.invoke('calculate-compliance', {
+        body: { tenant_id: tenantId }
+      }).then(() => {
+        setTimeout(() => refetchExec(), 3000);
+      }).catch(console.error);
+    }
+  }, [tenantId, execData, complianceTriggered, refetchExec]);
+
   const isLoading = unifiedLoading || execLoading;
   const refetch = () => { refetchUnified(); refetchExec(); };
 
