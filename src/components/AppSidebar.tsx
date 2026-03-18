@@ -223,14 +223,11 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: HardDrive, label: 'Metas de Serviço', to: '/admin/slo-dashboard' },
     { icon: Database, label: 'Fila de Erros', to: '/admin/dead-letter-queue' },
     { icon: Percent, label: 'Limite de Uso', to: '/admin/rate-limiting' },
-    { icon: GitBranch, label: 'Versões dos Agentes', to: '/admin/agent-center?tab=versions' },
     { icon: BarChart, label: 'Performance', to: '/admin/performance-metrics' },
     { icon: Heart, label: 'Saúde Instalação', to: '/admin/installation-health' },
     { icon: Activity, label: 'Operações', to: '/admin/system-operations' },
-    { icon: Activity, label: 'Logs do Sistema', to: '/admin/system-logs' },
     { icon: Download, label: 'Reinstalação em Massa', to: '/admin/mass-reinstall' },
     { icon: Layers, label: 'Migração Jobs V3', to: '/admin/jobs-v3-migration' },
-    { icon: Settings, label: 'Configurações', to: '/super-admin/settings' },
   ], []);
 
   const superAIItems = useMemo<MenuItem[]>(() => [
