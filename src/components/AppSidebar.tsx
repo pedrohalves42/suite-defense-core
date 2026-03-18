@@ -138,12 +138,12 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   ], [urgentCount]);
 
   const securityItems = useMemo<MenuItem[]>(() => [
-    { icon: AlertTriangle, label: 'Central de Ameaças', to: '/admin/threat-center' },
-    { icon: ShieldCheck, label: 'Vulnerabilidades', to: '/admin/vulnerability-center' },
-    { icon: Globe, label: 'Segurança de Rede', to: '/admin/network-security' },
-    { icon: AppWindow, label: 'Segurança de Ativos', to: '/admin/asset-security' },
+    { icon: AlertTriangle, label: 'Alertas de Segurança', to: '/admin/threat-center' },
+    { icon: ShieldCheck, label: 'Pontos Fracos', to: '/admin/vulnerability-center' },
+    { icon: Globe, label: 'Internet e Navegação', to: '/admin/network-security' },
+    { icon: AppWindow, label: 'Programas e Dispositivos', to: '/admin/asset-security' },
     { icon: AlertCircle, label: 'Alertas', to: '/quarantine' },
-    { icon: ShieldAlert, label: 'Proteção ao Vivo', to: '/admin/realtime-security' },
+    { icon: ShieldAlert, label: 'Monitoramento Contínuo', to: '/admin/realtime-security' },
   ], []);
 
   const managementItems = useMemo<MenuItem[]>(() => [
