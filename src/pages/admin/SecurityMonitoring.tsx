@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
@@ -12,7 +12,7 @@ import {
   Shield, AlertTriangle, Ban, RefreshCw, Clock, Unlock,
   ShieldCheck, Activity, MonitorOff, Wrench, 
   ArrowUpRight, TrendingUp, Zap, Globe, Lock, Eye, Flame,
-  ChevronRight, Server, ShieldAlert, ShieldOff
+  ChevronRight, Server, ShieldAlert, ShieldOff, ArrowDown
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
@@ -64,7 +64,7 @@ export default function SecurityMonitoring() {
   const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('24h');
   const [eventFilter, setEventFilter] = useState<string>('all');
   const { tenant } = useTenant();
-  
+  const eventsRef = useRef<HTMLDivElement>(null);
   const getTimeRangeDate = useCallback(() => {
     const hours = timeRange === '1h' ? 1 : timeRange === '6h' ? 6 : timeRange === '24h' ? 24 : 168;
     return subHours(new Date(), hours);
@@ -130,15 +130,40 @@ export default function SecurityMonitoring() {
         const eventData = e.event_data || {};
         const alertType = (eventData as any).alert_type as string || '';
         const alertMsg = (eventData as any).alert_message as string || '';
-        const skipRemediation = (eventData as any).details?.skip_remediation === true;
+        const details = (eventData as any).details || {};
+        const skipRemediation = details?.skip_remediation === true;
 
-        const label = alertType 
-          ? (alertTypeLabels[alertType] || alertType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
-          : (eventTypeLabels[e.event_type]?.label || e.event_type.replace(/_/g, ' '));
+        // Build a descriptive label using the actual alert data
+        let label: string;
+        if (alertType && alertTypeLabels[alertType]) {
+          label = alertTypeLabels[alertType];
+        } else if (alertType) {
+          label = alertType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        } else {
+          label = eventTypeLabels[e.event_type]?.label || e.event_type.replace(/_/g, ' ');
+        }
+
+        // Build a meaningful detail string from event_data
+        let detail = alertMsg;
+        if (!detail) {
+          const parts: string[] = [];
+          if (details.service_name) parts.push(`Serviço: ${details.service_name}`);
+          if (details.process_name) parts.push(`Processo: ${details.process_name}`);
+          if (details.rule_name) parts.push(`Regra: ${details.rule_name}`);
+          if (details.policy_name) parts.push(`Política: ${details.policy_name}`);
+          if (details.file_path) parts.push(`Arquivo: ${details.file_path}`);
+          if (details.expected !== undefined && details.actual !== undefined) {
+            parts.push(`Esperado: ${details.expected} → Atual: ${details.actual}`);
+          }
+          if ((eventData as any).state_before && (eventData as any).state_after) {
+            parts.push(`${(eventData as any).state_before} → ${(eventData as any).state_after}`);
+          }
+          detail = parts.join(' · ') || '';
+        }
 
         unifiedEvents.push({
           id: e.id, type: alertType || e.event_type, label, 
-          detail: alertMsg || '',
+          detail,
           severity: (eventData as any).severity || e.severity, 
           created_at: e.created_at, source: 'evidence_logs',
           agentName: e.agent_name, alertType,
@@ -356,39 +381,47 @@ export default function SecurityMonitoring() {
                     <p className="text-sm font-semibold text-destructive">
                       {m.criticalEvents} evento{m.criticalEvents > 1 ? 's' : ''} crítico{m.criticalEvents > 1 ? 's' : ''} detectado{m.criticalEvents > 1 ? 's' : ''}
                     </p>
-                    <p className="text-xs text-muted-foreground">Revise os eventos abaixo e tome ações corretivas</p>
-                  </div>
-                  <Badge variant="destructive" className="shrink-0 gap-1">
-                    <Flame className="h-3 w-3" /> Ação necessária
-                  </Badge>
-                </>
-              ) : hasActivity ? (
-                <>
-                  <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
-                    <Shield className="h-5 w-5 text-amber-500" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-amber-500">Atividade detectada</p>
-                    <p className="text-xs text-muted-foreground">
-                      {m.totalEvents} evento{m.totalEvents > 1 ? 's' : ''} no período
-                      {m.blockedAttempts > 0 && ` · ${m.blockedAttempts} acesso${m.blockedAttempts > 1 ? 's' : ''} bloqueado${m.blockedAttempts > 1 ? 's' : ''}`}
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
-                    <ShieldCheck className="h-5 w-5 text-emerald-500" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-emerald-500">Tudo tranquilo</p>
-                    <p className="text-xs text-muted-foreground">Nenhuma ameaça detectada no período selecionado</p>
-                  </div>
-                  <Badge variant="outline" className="shrink-0 text-emerald-500 border-emerald-500/30 gap-1">
-                    <ShieldCheck className="h-3 w-3" /> Protegido
-                  </Badge>
-                </>
-              )}
+                   <p className="text-xs text-muted-foreground">Revise os eventos abaixo e tome ações corretivas</p>
+                   </div>
+                   <Button
+                     variant="destructive"
+                     size="sm"
+                     className="shrink-0 gap-1.5"
+                     onClick={() => {
+                       setEventFilter('security');
+                       eventsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                     }}
+                   >
+                     <ArrowDown className="h-3.5 w-3.5" /> Ver eventos críticos
+                   </Button>
+                 </>
+               ) : hasActivity ? (
+                 <>
+                   <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
+                     <Shield className="h-5 w-5 text-amber-500" />
+                   </div>
+                   <div className="flex-1">
+                     <p className="text-sm font-semibold text-amber-500">Atividade detectada</p>
+                     <p className="text-xs text-muted-foreground">
+                       {m.totalEvents} evento{m.totalEvents > 1 ? 's' : ''} no período
+                       {m.blockedAttempts > 0 && ` · ${m.blockedAttempts} acesso${m.blockedAttempts > 1 ? 's' : ''} bloqueado${m.blockedAttempts > 1 ? 's' : ''}`}
+                     </p>
+                   </div>
+                 </>
+               ) : (
+                 <>
+                   <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                     <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                   </div>
+                   <div className="flex-1">
+                     <p className="text-sm font-semibold text-emerald-500">Tudo tranquilo</p>
+                     <p className="text-xs text-muted-foreground">Nenhuma ameaça detectada no período selecionado</p>
+                   </div>
+                   <Badge variant="outline" className="shrink-0 text-emerald-500 border-emerald-500/30 gap-1">
+                     <ShieldCheck className="h-3 w-3" /> Protegido
+                   </Badge>
+                 </>
+               )}
             </CardContent>
           </Card>
         </motion.div>
@@ -493,7 +526,7 @@ export default function SecurityMonitoring() {
         {/* === EVENTS + SIDEBAR === */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Events List - 2 cols */}
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-2" ref={eventsRef}>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div>
@@ -559,7 +592,12 @@ export default function SecurityMonitoring() {
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium truncate">{event.label}</p>
+                                <p className="text-sm font-medium truncate">
+                                  {event.label}
+                                  {event.agentName && (
+                                    <span className="text-muted-foreground font-normal"> em {event.agentName}</span>
+                                  )}
+                                </p>
                                 {(event as any).count > 1 && (
                                   <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 shrink-0">
                                     ×{(event as any).count}
@@ -567,13 +605,12 @@ export default function SecurityMonitoring() {
                                 )}
                               </div>
                               {event.detail && (
-                                <p className="text-[11px] text-muted-foreground truncate mt-0.5">{event.detail}</p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{event.detail}</p>
                               )}
-                              {event.agentName && (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <Server className="h-3 w-3 text-muted-foreground/50" />
-                                  <span className="text-[10px] text-muted-foreground/70">{event.agentName}</span>
-                                </div>
+                              {!event.detail && event.alertType && (
+                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                  Tipo: {alertTypeLabels[event.alertType] || event.alertType}
+                                </p>
                               )}
                             </div>
 
