@@ -2546,7 +2546,7 @@ function Invoke-CollectAntivirusStatus {
             @{ Name = "Bitdefender GravityZone";Services = @("EPSecurityService","BDAuxSrv");      Processes = @("EPSecurityService.exe","bdagent.exe") },
             @{ Name = "FortiClient";            Services = @("FortiClientMonitor","FA_Scheduler");  Processes = @("FortiClient.exe","FortiTray.exe") },
             @{ Name = "Cylance";                Services = @("CylanceSvc");                        Processes = @("CylanceSvc.exe","CylanceUI.exe") },
-            @{ Name = "Malwarebytes EP";        Services = @("MBAMService");                       Processes = @("MBAMService.exe","mbamtray.exe") },
+            @{ Name = "Malwarebytes";          Services = @("MBAMService","MBEndpointAgent","MBAMProtection","MBAMSwissArmy","MBAMChameleon","MBAMFarflt","MBAMWebProtection"); Processes = @("MBAMService.exe","mbamtray.exe","mbam.exe","MBEndpointAgent.exe","MBAMInstallerService.exe") },
             @{ Name = "Webroot";                Services = @("WRSVC");                             Processes = @("WRSA.exe") }
         )
 
