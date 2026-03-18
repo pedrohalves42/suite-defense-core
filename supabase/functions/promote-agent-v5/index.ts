@@ -102,18 +102,32 @@ Deno.serve(async (req) => {
     for (const { platform, file } of platforms) {
       try {
         let scriptContent: string | null = null;
-        const possiblePaths = [
-          `/home/deno/functions/_shared/agent-scripts/${file}`,
-          `../_shared/agent-scripts/${file}`,
-          `./_shared/agent-scripts/${file}`,
-        ];
 
-        for (const path of possiblePaths) {
+        // Priority 1: Read from request body (allows passing scripts directly)
+        const bodyScripts = body?.scripts as Record<string, string> | undefined;
+        if (bodyScripts?.[platform]) {
+          scriptContent = bodyScripts[platform];
+        }
+
+        // Priority 2: import.meta.url (bundled with the function)
+        if (!scriptContent) {
           try {
-            scriptContent = await Deno.readTextFile(path);
-            break;
-          } catch {
-            continue;
+            scriptContent = await Deno.readTextFile(
+              new URL(`../_shared/agent-scripts/${file}`, import.meta.url)
+            );
+          } catch { /* continue */ }
+        }
+
+        // Priority 3: Absolute paths (legacy)
+        if (!scriptContent) {
+          const possiblePaths = [
+            `/home/deno/functions/_shared/agent-scripts/${file}`,
+          ];
+          for (const path of possiblePaths) {
+            try {
+              scriptContent = await Deno.readTextFile(path);
+              break;
+            } catch { continue; }
           }
         }
 
