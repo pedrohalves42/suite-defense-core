@@ -193,7 +193,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: DollarSign, label: 'Indicadores', to: '/super-admin/unit-economics' },
     { icon: TrendingUp, label: 'Retenção', to: '/super-admin/cohort-analysis' },
     { icon: Target, label: 'Projeções', to: '/super-admin/revenue-projections' },
-    { icon: Presentation, label: 'Pipeline', to: '/super-admin/sales-pipeline' },
+    { icon: Presentation, label: 'Funil de Vendas', to: '/super-admin/sales-pipeline' },
     { icon: Scale, label: 'Apresentação', to: '/super-admin/pitch-deck' },
     { icon: AlertTriangle, label: 'Riscos', to: '/super-admin/risk-analysis' },
     
