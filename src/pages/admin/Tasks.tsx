@@ -46,13 +46,14 @@ const statusConfig: Record<TaskStatus, { label: string; color: string; icon: Rea
 };
 
 const sourceTypeConfig: Record<string, { label: string; icon: React.ReactNode }> = {
-  ai_insight: { label: 'AI Insight', icon: <Brain className="h-4 w-4" /> },
+  ai_insight: { label: 'Sugestão IA', icon: <Brain className="h-4 w-4" /> },
   system_alert: { label: 'Alerta', icon: <Bell className="h-4 w-4" /> },
-  playbook_execution: { label: 'Playbook', icon: <Shield className="h-4 w-4" /> },
-  red_team: { label: 'Red Team', icon: <Crosshair className="h-4 w-4" /> },
+  playbook_execution: { label: 'Plano de Ação', icon: <Shield className="h-4 w-4" /> },
+  red_team: { label: 'Teste de Resistência', icon: <Crosshair className="h-4 w-4" /> },
   manual: { label: 'Manual', icon: <ListTodo className="h-4 w-4" /> },
-  job: { label: 'Job Falho', icon: <AlertTriangle className="h-4 w-4 text-orange-500" /> },
-  dlq: { label: 'DLQ', icon: <AlertOctagon className="h-4 w-4 text-red-500" /> },
+  job: { label: 'Verificação Falha', icon: <AlertTriangle className="h-4 w-4 text-orange-500" /> },
+  dlq: { label: 'Erro de Processamento', icon: <AlertOctagon className="h-4 w-4 text-red-500" /> },
+  incident_group: { label: 'Grupo de Incidentes', icon: <AlertTriangle className="h-4 w-4" /> },
 };
 
 export default function Tasks() {
@@ -86,9 +87,9 @@ export default function Tasks() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Central de Tarefas</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Tarefas</h1>
           <p className="text-muted-foreground">
-            Gerencie trabalho pendente de insights, alertas e ações
+            Gerencie trabalho pendente de sugestões, alertas e ações
           </p>
         </div>
       </div>
@@ -97,7 +98,7 @@ export default function Tasks() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tasks Abertas</CardTitle>
+            <CardTitle className="text-sm font-medium">Tarefas Abertas</CardTitle>
             <ListTodo className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -123,7 +124,7 @@ export default function Tasks() {
         
         <Card className={stats?.sla_breached ? 'border-orange-500' : ''}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">SLA Violado</CardTitle>
+            <CardTitle className="text-sm font-medium">Prazo Vencido</CardTitle>
             <Clock className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
@@ -272,7 +273,7 @@ function TaskRow({ task, onSelect, onQuickAction }: TaskRowProps) {
             )}
             {task.requires_human_review && (
               <Badge variant="outline" className="text-xs">
-                Revisão Humana
+                Aprovação Pendente
               </Badge>
             )}
           </div>

@@ -64,12 +64,15 @@ const statusConfig: Record<TaskStatus, { label: string; color: string; icon: Rea
   accepted_risk: { label: 'Risco Aceito', color: 'bg-orange-500', icon: <AlertTriangle className="h-4 w-4" /> },
 };
 
-const sourceTypeConfig = {
-  ai_insight: { label: 'AI Insight', icon: <Brain className="h-5 w-5" /> },
+const sourceTypeConfig: Record<string, { label: string; icon: React.ReactNode }> = {
+  ai_insight: { label: 'Sugestão IA', icon: <Brain className="h-5 w-5" /> },
   system_alert: { label: 'Alerta do Sistema', icon: <Bell className="h-5 w-5" /> },
-  playbook_execution: { label: 'Execução de Playbook', icon: <Shield className="h-5 w-5" /> },
-  red_team: { label: 'Simulação Red Team', icon: <Crosshair className="h-5 w-5" /> },
+  playbook_execution: { label: 'Plano de Ação', icon: <Shield className="h-5 w-5" /> },
+  red_team: { label: 'Teste de Resistência', icon: <Crosshair className="h-5 w-5" /> },
   manual: { label: 'Criação Manual', icon: <ListTodo className="h-5 w-5" /> },
+  job: { label: 'Verificação Falha', icon: <AlertTriangle className="h-5 w-5" /> },
+  dlq: { label: 'Erro de Processamento', icon: <AlertOctagon className="h-5 w-5" /> },
+  incident_group: { label: 'Grupo de Incidentes', icon: <AlertTriangle className="h-5 w-5" /> },
 };
 
 export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps) {
@@ -81,7 +84,7 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
 
   const severity = severityConfig[task.severity];
   const status = statusConfig[task.status];
-  const source = sourceTypeConfig[task.source_type];
+  const source = sourceTypeConfig[task.source_type] || { label: task.source_type || 'Outro', icon: <ListTodo className="h-5 w-5" /> };
   const isActive = task.status === 'open' || task.status === 'in_progress';
   const isSlaBreach = !!task.sla_breached_at;
 
@@ -147,11 +150,11 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
             {isSlaBreach && isActive && (
               <Badge variant="destructive" className="gap-1 animate-pulse">
                 <Clock className="h-3 w-3" />
-                SLA Violado
+                Prazo Vencido
               </Badge>
             )}
             {task.requires_human_review && (
-              <Badge variant="outline">Revisão Humana Requerida</Badge>
+              <Badge variant="outline">Aprovação Pendente</Badge>
             )}
             {task.auto_generated && (
               <Badge variant="outline">Auto-gerada</Badge>
