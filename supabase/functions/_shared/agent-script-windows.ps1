@@ -561,18 +561,42 @@ function Send-SystemMetrics {
         Write-Log "Collecting and sending system metrics..." "INFO"
         
         $os = Get-CimInstance Win32_OperatingSystem
-        $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
         $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
         
-        # Calcular CPU usage
-        $cpuUsage = (Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 1 -MaxSamples 2 | 
-            Select-Object -ExpandProperty CounterSamples | 
-            Select-Object -Last 1).CookedValue
+        # Cache CPU info (name/cores rarely change)
+        if (-not $Global:CachedCpuInfo) {
+            $cpuObj = Get-CimInstance Win32_Processor | Select-Object -First 1
+            $Global:CachedCpuInfo = @{
+                Name = $cpuObj.Name
+                Cores = $cpuObj.NumberOfCores
+                LogicalProcessors = $cpuObj.NumberOfLogicalProcessors
+            }
+        }
+        
+        # CPU usage: Get-Counter with 2-second sampling for accurate reading
+        $cpuUsage = 0
+        try {
+            $samples = Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 2 -MaxSamples 3 -ErrorAction Stop
+            $values = $samples.CounterSamples | ForEach-Object { $_.CookedValue } | Where-Object { $_ -ge 0 -and $_ -le 100 }
+            if ($values.Count -gt 0) {
+                $cpuUsage = ($values | Measure-Object -Average).Average
+            }
+        } catch {
+            # Fallback: WMI LoadPercentage (less accurate but always available)
+            Write-Log "Get-Counter failed, using WMI fallback: $_" "WARN"
+            try {
+                $cpuUsage = (Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
+            } catch {
+                Write-Log "WMI CPU fallback also failed: $_" "WARN"
+                $cpuUsage = 0
+            }
+        }
         
         $metrics = @{
             cpu_usage_percent = [math]::Round($cpuUsage, 2)
-            cpu_name = $cpu.Name
-            cpu_cores = $cpu.NumberOfCores
+            cpu_name = $Global:CachedCpuInfo.Name
+            cpu_cores = $Global:CachedCpuInfo.Cores
+            cpu_logical = $Global:CachedCpuInfo.LogicalProcessors
             memory_total_gb = [math]::Round($os.TotalVisibleMemorySize/1MB, 2)
             memory_used_gb = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory)/1MB, 2)
             memory_free_gb = [math]::Round($os.FreePhysicalMemory/1MB, 2)
