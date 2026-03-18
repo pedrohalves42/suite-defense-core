@@ -2546,7 +2546,7 @@ function Invoke-CollectAntivirusStatus {
             @{ Name = "Bitdefender GravityZone";Services = @("EPSecurityService","BDAuxSrv");      Processes = @("EPSecurityService.exe","bdagent.exe") },
             @{ Name = "FortiClient";            Services = @("FortiClientMonitor","FA_Scheduler");  Processes = @("FortiClient.exe","FortiTray.exe") },
             @{ Name = "Cylance";                Services = @("CylanceSvc");                        Processes = @("CylanceSvc.exe","CylanceUI.exe") },
-            @{ Name = "Malwarebytes EP";        Services = @("MBAMService");                       Processes = @("MBAMService.exe","mbamtray.exe") },
+            @{ Name = "Malwarebytes";          Services = @("MBAMService","MBEndpointAgent","MBAMProtection","MBAMSwissArmy","MBAMChameleon","MBAMFarflt","MBAMWebProtection"); Processes = @("MBAMService.exe","mbamtray.exe","mbam.exe","MBEndpointAgent.exe","MBAMInstallerService.exe") },
             @{ Name = "Webroot";                Services = @("WRSVC");                             Processes = @("WRSA.exe") }
         )
 
@@ -2599,6 +2599,29 @@ function Invoke-CollectAntivirusStatus {
                     path   = if ($foundProcess) { $foundProcess.Path } elseif ($foundService) { $foundService.BinaryPathName } else { "" }
                     source = "EDR_Process_Detection"
                     status = $status
+                }
+            }
+        }
+
+        # -- Phase 3: Fallback por pasta de instalacao (Malwarebytes Free e outros sem servico) --
+        $installPaths = @(
+            @{ Name = "Malwarebytes"; Paths = @("$env:ProgramFiles\Malwarebytes\Anti-Malware", "${env:ProgramFiles(x86)}\Malwarebytes\Anti-Malware", "$env:ProgramData\Malwarebytes") },
+            @{ Name = "HitmanPro";    Paths = @("$env:ProgramFiles\HitmanPro", "${env:ProgramFiles(x86)}\HitmanPro") }
+        )
+
+        $currentNames = $avList | ForEach-Object { $_.name.ToLower() }
+        foreach ($app in $installPaths) {
+            if ($currentNames -contains $app.Name.ToLower()) { continue }
+            foreach ($p in $app.Paths) {
+                if (Test-Path $p) {
+                    $avList += @{
+                        name   = $app.Name
+                        state  = 0
+                        path   = $p
+                        source = "InstallPath_Detection"
+                        status = "installed"
+                    }
+                    break
                 }
             }
         }
