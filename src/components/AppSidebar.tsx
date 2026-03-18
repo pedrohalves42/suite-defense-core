@@ -157,8 +157,8 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   // ─── ADMIN: Collapsed by default ─────────────────────
   const complianceItems = useMemo<MenuItem[]>(() => [
     { icon: ClipboardCheck, label: 'Visão Geral', to: '/admin/compliance-hub' },
-    { icon: FileSearch, label: 'Provas & Auditoria', to: '/admin/compliance-hub?tab=evidence' },
-    { icon: Workflow, label: 'Procedimentos', to: '/admin/compliance-hub?tab=procedures' },
+    { icon: FileSearch, label: 'Registros e Evidências', to: '/admin/compliance-hub?tab=evidence' },
+    { icon: Workflow, label: 'Planos de Ação', to: '/admin/compliance-hub?tab=procedures' },
     { icon: BarChart3, label: 'Risco', to: '/admin/compliance-hub?tab=risk' },
   ], []);
 
