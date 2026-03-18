@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { signPayload } from '../_shared/crypto-utils.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -84,7 +85,23 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const user = await requireSuperAdmin(supabase, req);
+
+    // Auth: internal caller (service_role/X-Internal-Secret) OR super_admin
+    const authHeader = req.headers.get('Authorization') ?? '';
+    const apiKey = req.headers.get('apikey') ?? '';
+    const isServiceRole = 
+      authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` ||
+      apiKey === SUPABASE_SERVICE_ROLE_KEY;
+    
+    const internalAuth = assertInternalCaller(req);
+    let user: { id: string; email?: string };
+    if (isServiceRole || internalAuth === null) {
+      user = { id: '00000000-0000-0000-0000-000000000000', email: 'system@internal' };
+    } else {
+      user = await requireSuperAdmin(supabase, req);
+    }
+    let body: Record<string, unknown> = {};
+    try { body = await req.json(); } catch { /* empty body ok */ }
     const results: Record<string, unknown> = {};
 
     const platforms = [
@@ -96,18 +113,32 @@ Deno.serve(async (req) => {
     for (const { platform, file } of platforms) {
       try {
         let scriptContent: string | null = null;
-        const possiblePaths = [
-          `/home/deno/functions/_shared/agent-scripts/${file}`,
-          `../_shared/agent-scripts/${file}`,
-          `./_shared/agent-scripts/${file}`,
-        ];
 
-        for (const path of possiblePaths) {
+        // Priority 1: Read from request body (allows passing scripts directly)
+        const bodyScripts = body?.scripts as Record<string, string> | undefined;
+        if (bodyScripts?.[platform]) {
+          scriptContent = bodyScripts[platform];
+        }
+
+        // Priority 2: import.meta.url (bundled with the function)
+        if (!scriptContent) {
           try {
-            scriptContent = await Deno.readTextFile(path);
-            break;
-          } catch {
-            continue;
+            scriptContent = await Deno.readTextFile(
+              new URL(`../_shared/agent-scripts/${file}`, import.meta.url)
+            );
+          } catch { /* continue */ }
+        }
+
+        // Priority 3: Absolute paths (legacy)
+        if (!scriptContent) {
+          const possiblePaths = [
+            `/home/deno/functions/_shared/agent-scripts/${file}`,
+          ];
+          for (const path of possiblePaths) {
+            try {
+              scriptContent = await Deno.readTextFile(path);
+              break;
+            } catch { continue; }
           }
         }
 
@@ -158,8 +189,8 @@ Deno.serve(async (req) => {
             script_content: normalized,
             sha256: hash,
             is_active: true,
-            release_notes: `Emergency re-sync of authoritative ${VERSION} scripts`,
-            created_by: user.id,
+            release_notes: `Sync of authoritative ${VERSION} scripts`,
+            // created_by omitted for service_role calls (FK to auth.users)
             signature_base64: signatureBase64,
             signed_at: signedAt,
             signed_by: signedBy,
@@ -197,9 +228,11 @@ Deno.serve(async (req) => {
           signed: !!signatureBase64,
         };
       } catch (error) {
+        const errMsg = error instanceof Error ? error.message : JSON.stringify(error);
+        console.error(`[promote-agent-v5] ${platform} failed:`, errMsg);
         results[platform] = {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: errMsg,
         };
       }
     }
