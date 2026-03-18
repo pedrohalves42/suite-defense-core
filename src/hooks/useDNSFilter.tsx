@@ -124,11 +124,11 @@ export function useDNSFilter() {
       });
 
       const now = new Date();
-      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+      const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
 
       return (agents || []).map(agent => {
         const lastHeartbeat = agent.last_heartbeat ? new Date(agent.last_heartbeat) : null;
-        const isOnline = lastHeartbeat && lastHeartbeat > fiveMinutesAgo;
+        const isOnline = lastHeartbeat && lastHeartbeat > thirtyMinutesAgo;
         const pendingTypes = pendingJobsMap.get(agent.id) || new Set();
 
         // For now, we assume DNS filter is installed if last_block_sync_at is set
