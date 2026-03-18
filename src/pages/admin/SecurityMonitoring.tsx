@@ -64,7 +64,7 @@ export default function SecurityMonitoring() {
   const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('24h');
   const [eventFilter, setEventFilter] = useState<string>('all');
   const { tenant } = useTenant();
-  
+  const eventsRef = useRef<HTMLDivElement>(null);
   const getTimeRangeDate = useCallback(() => {
     const hours = timeRange === '1h' ? 1 : timeRange === '6h' ? 6 : timeRange === '24h' ? 24 : 168;
     return subHours(new Date(), hours);
