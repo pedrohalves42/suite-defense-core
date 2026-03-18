@@ -396,7 +396,11 @@ export default function ExecutiveDashboard() {
                 {complianceCats ? complianceCats.map((cat, i) => (
                   <ComplianceRow key={i} category={translateCategory(cat.category)} score={cat.score} details={cat.details} />
                 )) : (
-                  <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma avaliação disponível</p>
+                  <div className="text-center py-6 space-y-2">
+                    <FileText className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+                    <p className="text-sm text-muted-foreground">Aguardando primeira avaliação de conformidade</p>
+                    <p className="text-xs text-muted-foreground/60">O sistema precisa de alguns dias coletando dados para gerar o relatório.</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
