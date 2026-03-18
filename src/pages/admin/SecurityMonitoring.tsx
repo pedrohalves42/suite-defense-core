@@ -299,7 +299,7 @@ export default function SecurityMonitoring() {
       const { error } = await (supabase as any).from('jobs').insert({
         tenant_id: tenant.id,
         agent_name: event.agentName,
-        job_type: jobType,
+        type: jobType,
         status: 'pending',
         payload: { alert_type: event.alertType, source: 'security_monitoring' },
       });
