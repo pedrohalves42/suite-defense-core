@@ -23,9 +23,9 @@ const TabLoader = () => (
 );
 
 const TABS = [
-  { value: 'insights', label: 'Insights', icon: BrainCircuit },
+  { value: 'insights', label: 'Sugestões', icon: BrainCircuit },
   { value: 'automation', label: 'Automação', icon: Zap },
-  { value: 'governance', label: 'Governança', icon: Eye },
+  { value: 'governance', label: 'Revisão de Decisões', icon: Eye },
   { value: 'knowledge', label: 'Conhecimento', icon: BookOpen },
 ] as const;
 
