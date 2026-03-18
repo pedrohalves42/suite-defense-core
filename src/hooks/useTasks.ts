@@ -107,53 +107,59 @@ export function useTasks(filters?: TaskFilters) {
   });
 }
 
-// Hook para estatísticas de tasks
+// Hook para estatísticas de tasks - computed from actual data
 export function useTaskStats() {
   const { tenant, loading } = useTenant();
 
   return useQuery({
     queryKey: ['task-stats', tenant?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('v_task_stats')
-        .select('*')
-        .eq('tenant_id', tenant!.id)
-        .maybeSingle();
+      const { data, error } = await tenantQuery('tasks', tenant!.id)
+        .select('status, severity, sla_breached_at, closed_at, created_at');
 
       if (error) throw error;
-      
-      if (!data) {
-        return {
-          tenant_id: tenant!.id,
-          total_tasks: 0,
-          pending: 0,
-          in_progress: 0,
-          completed: 0,
-          failed: 0,
-          open_count: 0,
-          in_progress_count: 0,
-          blocked_count: 0,
-          resolved_count: 0,
-          ignored_count: 0,
-          critical_open: 0,
-          high_open: 0,
-          sla_breached: 0,
-          avg_resolution_hours: null,
-        } as TaskStats;
+      const tasks = (data || []) as Pick<Task, 'status' | 'severity' | 'sla_breached_at' | 'closed_at' | 'created_at'>[];
+
+      const activeStatuses: TaskStatus[] = ['open', 'in_progress', 'blocked'];
+      const active = tasks.filter(t => activeStatuses.includes(t.status as TaskStatus));
+
+      const open_count = tasks.filter(t => t.status === 'open').length;
+      const in_progress_count = tasks.filter(t => t.status === 'in_progress').length;
+      const blocked_count = tasks.filter(t => t.status === 'blocked').length;
+      const resolved_count = tasks.filter(t => t.status === 'resolved').length;
+      const ignored_count = tasks.filter(t => t.status === 'ignored').length;
+      const critical_open = active.filter(t => t.severity === 'critical').length;
+      const high_open = active.filter(t => t.severity === 'high').length;
+      const sla_breached = active.filter(t => t.sla_breached_at != null).length;
+
+      // Avg resolution hours for resolved tasks
+      const resolved = tasks.filter(t => t.closed_at);
+      let avg_resolution_hours: number | null = null;
+      if (resolved.length > 0) {
+        const totalHours = resolved.reduce((sum, t) => {
+          const created = new Date(t.created_at).getTime();
+          const closed = new Date(t.closed_at!).getTime();
+          return sum + (closed - created) / 3600000;
+        }, 0);
+        avg_resolution_hours = totalHours / resolved.length;
       }
-      
-      const stats = data as TaskStats;
+
       return {
-        ...stats,
-        open_count: stats.pending || 0,
-        in_progress_count: stats.in_progress || 0,
-        blocked_count: 0,
-        resolved_count: stats.completed || 0,
-        ignored_count: 0,
-        critical_open: 0,
-        high_open: 0,
-        sla_breached: 0,
-        avg_resolution_hours: null,
+        tenant_id: tenant!.id,
+        total_tasks: tasks.length,
+        pending: open_count,
+        in_progress: in_progress_count,
+        completed: resolved_count,
+        failed: 0,
+        open_count,
+        in_progress_count,
+        blocked_count,
+        resolved_count,
+        ignored_count,
+        critical_open,
+        high_open,
+        sla_breached,
+        avg_resolution_hours,
       } as TaskStats;
     },
     enabled: !loading && !!tenant?.id,
