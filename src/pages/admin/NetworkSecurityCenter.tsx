@@ -34,8 +34,8 @@ export default function NetworkSecurityCenter() {
 
   return (
     <AdminPageLayout
-      title="Segurança de Rede"
-      description="Monitore atividade web, gerencie filtros DNS e visualize o mapa de segurança"
+      title="Internet e Navegação"
+      description="Monitore a atividade web e gerencie filtros de segurança da navegação"
       icon={Network}
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

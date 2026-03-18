@@ -23,9 +23,9 @@ const TabLoader = () => (
 );
 
 const TABS = [
-  { value: 'insights', label: 'Insights', icon: BrainCircuit },
+  { value: 'insights', label: 'Sugestões', icon: BrainCircuit },
   { value: 'automation', label: 'Automação', icon: Zap },
-  { value: 'governance', label: 'Governança', icon: Eye },
+  { value: 'governance', label: 'Revisão de Decisões', icon: Eye },
   { value: 'knowledge', label: 'Conhecimento', icon: BookOpen },
 ] as const;
 
@@ -41,8 +41,8 @@ export default function IntelligenceHub() {
 
   return (
     <AdminPageLayout
-      title="Inteligência IA"
-      description="Insights, automação, governança e base de conhecimento em um só lugar"
+      title="Assistente IA"
+      description="Sugestões, automação, revisão de decisões e base de conhecimento"
       icon={BrainCircuit}
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

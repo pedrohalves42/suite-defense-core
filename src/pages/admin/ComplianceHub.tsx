@@ -26,8 +26,8 @@ const TabLoader = () => (
 
 const TABS = [
   { value: 'overview', label: 'Visão Geral', icon: ClipboardCheck },
-  { value: 'evidence', label: 'Provas & Auditoria', icon: FileSearch },
-  { value: 'procedures', label: 'Procedimentos', icon: Workflow },
+  { value: 'evidence', label: 'Registros e Evidências', icon: FileSearch },
+  { value: 'procedures', label: 'Planos de Ação', icon: Workflow },
   { value: 'risk', label: 'Risco', icon: BarChart3 },
 ] as const;
 
@@ -59,7 +59,7 @@ export default function ComplianceHub() {
   return (
     <AdminPageLayout
       title="Conformidade"
-      description="SOC 2, auditoria, procedimentos e gestão de risco em um só lugar"
+      description="SOC 2, registros, planos de ação e gestão de risco em um só lugar"
       icon={ClipboardCheck}
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

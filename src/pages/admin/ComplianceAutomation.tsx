@@ -180,7 +180,7 @@ export default function ComplianceAutomation() {
 
   if (isLoading) {
     return (
-      <AdminPageLayout title="Compliance Automation" description="Mapeamento automático de frameworks">
+      <AdminPageLayout title="Conformidade Automática" description="Mapeamento automático de frameworks">
         <div className="space-y-6">
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-64 w-full" />
@@ -191,7 +191,7 @@ export default function ComplianceAutomation() {
 
   return (
     <AdminPageLayout
-      title="Compliance Automation"
+      title="Conformidade Automática"
       description="Mapeamento automático ISO 27001, SOC 2, LGPD e NIST CSF"
     >
       <div className="space-y-6">
