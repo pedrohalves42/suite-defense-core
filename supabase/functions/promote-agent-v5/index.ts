@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
             sha256: hash,
             is_active: true,
             release_notes: `Sync of authoritative ${VERSION} scripts`,
-            created_by: user.id,
+            // created_by omitted for service_role calls (FK to auth.users)
             signature_base64: signatureBase64,
             signed_at: signedAt,
             signed_by: signedBy,
