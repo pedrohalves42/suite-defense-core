@@ -64,12 +64,15 @@ const statusConfig: Record<TaskStatus, { label: string; color: string; icon: Rea
   accepted_risk: { label: 'Risco Aceito', color: 'bg-orange-500', icon: <AlertTriangle className="h-4 w-4" /> },
 };
 
-const sourceTypeConfig = {
-  ai_insight: { label: 'AI Insight', icon: <Brain className="h-5 w-5" /> },
+const sourceTypeConfig: Record<string, { label: string; icon: React.ReactNode }> = {
+  ai_insight: { label: 'Sugestão IA', icon: <Brain className="h-5 w-5" /> },
   system_alert: { label: 'Alerta do Sistema', icon: <Bell className="h-5 w-5" /> },
-  playbook_execution: { label: 'Execução de Playbook', icon: <Shield className="h-5 w-5" /> },
-  red_team: { label: 'Simulação Red Team', icon: <Crosshair className="h-5 w-5" /> },
+  playbook_execution: { label: 'Plano de Ação', icon: <Shield className="h-5 w-5" /> },
+  red_team: { label: 'Teste de Resistência', icon: <Crosshair className="h-5 w-5" /> },
   manual: { label: 'Criação Manual', icon: <ListTodo className="h-5 w-5" /> },
+  job: { label: 'Verificação Falha', icon: <AlertTriangle className="h-5 w-5" /> },
+  dlq: { label: 'Erro de Processamento', icon: <AlertOctagon className="h-5 w-5" /> },
+  incident_group: { label: 'Grupo de Incidentes', icon: <AlertTriangle className="h-5 w-5" /> },
 };
 
 export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps) {
