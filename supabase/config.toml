@@ -723,6 +723,10 @@ verify_jwt = false
 verify_jwt = false
 schedule = "0 * * * *"
 
+# === Security Advisor (AI-powered tips) ===
+[functions.security-advisor]
+verify_jwt = false
+
 # === AI Insight Dispatcher (Phase 2) ===
 [functions.ai-insight-dispatcher]
 verify_jwt = false
