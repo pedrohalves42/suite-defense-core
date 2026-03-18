@@ -181,7 +181,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const superOpsItems = useMemo<MenuItem[]>(() => [
     { icon: Server, label: 'Empresas', to: '/super-admin/tenants', end: true },
     { icon: Key, label: 'Chaves de Cadastro', to: '/super-admin/enrollment-keys' },
-    { icon: Percent, label: 'Rollout', to: '/super-admin/rollout-policies' },
+    { icon: Percent, label: 'Distribuição Gradual', to: '/super-admin/rollout-policies' },
     { icon: Users, label: 'Usuários', to: '/super-admin/users' },
     { icon: Shield, label: 'Funcionalidades', to: '/super-admin/features' },
     { icon: Clock, label: 'Suspensão', to: '/super-admin/tenant-suspension' },
