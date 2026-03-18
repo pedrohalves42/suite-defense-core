@@ -4643,6 +4643,7 @@ function Invoke-ApplySecurityPatch {
 # v5.0.14-perf: Cached system metrics with 30s TTL (avoids 3 CIM queries per heartbeat)
 $Global:CachedSystemMetrics = $null
 $Global:CachedSystemMetricsTime = [datetime]::MinValue
+$Global:CachedCpuInfo = $null
 
 function Get-SystemMetrics {
     try {
