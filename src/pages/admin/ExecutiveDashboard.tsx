@@ -72,10 +72,16 @@ export default function ExecutiveDashboard() {
     staleTime: 15000,
   });
 
-  // Auto-trigger compliance calculation when no data exists
+  // Auto-trigger compliance calculation when no data exists OR data is stale (>1h)
   const [complianceTriggered, setComplianceTriggered] = useState(false);
   useEffect(() => {
-    if (tenantId && execData && !execData.compliance && !complianceTriggered) {
+    if (!tenantId || !execData || complianceTriggered) return;
+    
+    const needsCalc = !execData.compliance || 
+      (execData.compliance?.calculated_at && 
+       (Date.now() - new Date(execData.compliance.calculated_at).getTime()) > 3600000); // 1 hour
+    
+    if (needsCalc) {
       setComplianceTriggered(true);
       supabase.functions.invoke('calculate-compliance', {
         body: { tenant_id: tenantId }
@@ -86,7 +92,18 @@ export default function ExecutiveDashboard() {
   }, [tenantId, execData, complianceTriggered, refetchExec]);
 
   const isLoading = unifiedLoading || execLoading;
-  const refetch = () => { refetchUnified(); refetchExec(); };
+  const refetch = () => {
+    refetchUnified();
+    refetchExec();
+    // Also recalculate compliance on manual refresh
+    if (tenantId) {
+      supabase.functions.invoke('calculate-compliance', {
+        body: { tenant_id: tenantId }
+      }).then(() => {
+        setTimeout(() => refetchExec(), 3000);
+      }).catch(console.error);
+    }
+  };
 
   // Derive from unified metrics
   const totalAgents = metrics?.agents.total || 0;
