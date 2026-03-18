@@ -84,7 +84,13 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const user = await requireSuperAdmin(supabase, req);
+
+    // Allow internal/service_role calls (e.g. from curl_edge_functions tooling)
+    const authHeader = req.headers.get('Authorization') ?? '';
+    const isServiceRole = authHeader.replace('Bearer ', '') === SUPABASE_SERVICE_ROLE_KEY;
+    const user = isServiceRole
+      ? { id: 'service_role', email: 'system@internal' }
+      : await requireSuperAdmin(supabase, req);
     const results: Record<string, unknown> = {};
 
     const platforms = [
