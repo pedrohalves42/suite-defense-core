@@ -217,7 +217,7 @@ export default function ExecutiveDashboard() {
                 <MetricTile icon={<ShieldBan className="h-3.5 w-3.5" />} label="Ameaças Bloqueadas" value={`${summaryData?.blockedThreats || 0}`} sub="últimos 7 dias" color={summaryData?.blockedThreats ? 'green' : 'muted'} />
                 <MetricTile icon={<DeltaIcon className="h-3.5 w-3.5" />} label="Nível de Risco" value={deltaInfo.label} sub={deltaInfo.description} color={deltaInfo.color === 'green' ? 'green' : deltaInfo.color === 'red' ? 'red' : 'muted'} />
                 <MetricTile icon={<Hammer className="h-3.5 w-3.5" />} label="Correções Automáticas" value={`${summaryData?.automatedActions || 0}`} sub="últimos 30 dias" color={summaryData?.automatedActions ? 'emerald' : 'muted'} />
-                <MetricTile icon={<FileCheck className="h-3.5 w-3.5" />} label="Conformidade" value={summaryData?.compliance?.grade || 'N/A'} sub={`Score: ${summaryData?.compliance?.overall_score || 0}/100`} color={summaryData?.compliance?.overall_score >= 80 ? 'green' : summaryData?.compliance?.overall_score >= 60 ? 'amber' : 'red'} />
+                <MetricTile icon={<FileCheck className="h-3.5 w-3.5" />} label="Conformidade" value={summaryData?.compliance?.grade || 'Pendente'} sub={summaryData?.compliance ? `Score: ${summaryData.compliance.overall_score}/100` : 'Aguardando primeira avaliação'} color={summaryData?.compliance?.overall_score >= 80 ? 'green' : summaryData?.compliance?.overall_score >= 60 ? 'amber' : 'muted'} />
               </div>
             </CardContent>
           </Card>
