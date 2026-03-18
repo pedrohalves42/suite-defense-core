@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
@@ -12,7 +12,7 @@ import {
   Shield, AlertTriangle, Ban, RefreshCw, Clock, Unlock,
   ShieldCheck, Activity, MonitorOff, Wrench, 
   ArrowUpRight, TrendingUp, Zap, Globe, Lock, Eye, Flame,
-  ChevronRight, Server, ShieldAlert, ShieldOff
+  ChevronRight, Server, ShieldAlert, ShieldOff, ArrowDown
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
