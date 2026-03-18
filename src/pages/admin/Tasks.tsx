@@ -273,7 +273,7 @@ function TaskRow({ task, onSelect, onQuickAction }: TaskRowProps) {
             )}
             {task.requires_human_review && (
               <Badge variant="outline" className="text-xs">
-                Revisão Humana
+                Aprovação Pendente
               </Badge>
             )}
           </div>
