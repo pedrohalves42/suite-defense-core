@@ -266,7 +266,7 @@ export default function ExecutiveDashboard() {
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-3 rounded-xl bg-warning/10 border border-warning/20 cursor-help shadow-sm">
+                      <div className="text-center p-3 rounded-xl bg-warning/10 border border-warning/20 shadow-sm">
                         <p className="text-2xl font-bold text-warning">{summaryData?.hoursOfITSaved ? Math.round(summaryData.hoursOfITSaved) : 0}h</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Horas de TI<br/>economizadas</p>
                       </div>
