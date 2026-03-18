@@ -26,8 +26,8 @@ const TabLoader = () => (
 
 const TABS = [
   { value: 'overview', label: 'Visão Geral', icon: ClipboardCheck },
-  { value: 'evidence', label: 'Provas & Auditoria', icon: FileSearch },
-  { value: 'procedures', label: 'Procedimentos', icon: Workflow },
+  { value: 'evidence', label: 'Registros e Evidências', icon: FileSearch },
+  { value: 'procedures', label: 'Planos de Ação', icon: Workflow },
   { value: 'risk', label: 'Risco', icon: BarChart3 },
 ] as const;
 
