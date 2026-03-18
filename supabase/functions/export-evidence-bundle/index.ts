@@ -63,22 +63,35 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get user's tenant
+    // Get user's tenant - try user_roles first, then profiles
+    let tenantId: string | null = null;
+
     const { data: userRole } = await supabase
       .from('user_roles')
       .select('tenant_id, role')
       .eq('user_id', user.id)
-      .in('role', ['admin', 'super_admin'])
       .single();
 
-    if (!userRole) {
+    if (userRole?.tenant_id) {
+      tenantId = userRole.tenant_id;
+    } else {
+      // Fallback: get tenant from profiles
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single();
+      
+      tenantId = profile?.tenant_id || null;
+    }
+
+    if (!tenantId) {
+      console.error('No tenant found for user:', user.id);
       return new Response(
-        JSON.stringify({ success: false, error: 'Forbidden: Admin access required' }),
+        JSON.stringify({ success: false, error: 'No tenant found for this user' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const tenantId = userRole.tenant_id;
 
     // Parse request
     const body: EvidenceRequest = await req.json();
