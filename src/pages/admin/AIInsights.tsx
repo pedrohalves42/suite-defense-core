@@ -30,6 +30,7 @@ interface AIInsight {
   created_at: string;
   acknowledged: boolean;
   acknowledged_at?: string;
+  status?: string;
 }
 
 interface Statistics {
@@ -208,8 +209,10 @@ export default function AIInsights() {
     pending: 0,
   };
 
-  const pendingInsights = insights.filter(i => !i.acknowledged);
-  const acknowledgedInsights = insights.filter(i => i.acknowledged);
+  // Fix: Use status-based filtering instead of acknowledged flag
+  // "Aguardando" = open insights (not yet resolved), "Resolvidos" = resolved/rejected
+  const pendingInsights = insights.filter(i => !['resolved', 'rejected'].includes((i as any).status || 'open'));
+  const acknowledgedInsights = insights.filter(i => ['resolved', 'rejected'].includes((i as any).status || ''));
 
   // Get global status
   const getGlobalStatus = () => {
@@ -367,11 +370,11 @@ export default function AIInsights() {
         <TabsList>
           <TabsTrigger value="pending" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
-            Aguardando ({stats.pending})
+            Aguardando ({pendingInsights.length})
           </TabsTrigger>
           <TabsTrigger value="acknowledged" className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
-            Resolvidos ({stats.acknowledged})
+            Resolvidos ({acknowledgedInsights.length})
           </TabsTrigger>
         </TabsList>
 
