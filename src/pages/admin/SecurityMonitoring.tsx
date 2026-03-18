@@ -592,7 +592,12 @@ export default function SecurityMonitoring() {
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium truncate">{event.label}</p>
+                                <p className="text-sm font-medium truncate">
+                                  {event.label}
+                                  {event.agentName && (
+                                    <span className="text-muted-foreground font-normal"> em {event.agentName}</span>
+                                  )}
+                                </p>
                                 {(event as any).count > 1 && (
                                   <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 shrink-0">
                                     ×{(event as any).count}
@@ -600,13 +605,12 @@ export default function SecurityMonitoring() {
                                 )}
                               </div>
                               {event.detail && (
-                                <p className="text-[11px] text-muted-foreground truncate mt-0.5">{event.detail}</p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{event.detail}</p>
                               )}
-                              {event.agentName && (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <Server className="h-3 w-3 text-muted-foreground/50" />
-                                  <span className="text-[10px] text-muted-foreground/70">{event.agentName}</span>
-                                </div>
+                              {!event.detail && event.alertType && (
+                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                  Tipo: {alertTypeLabels[event.alertType] || event.alertType}
+                                </p>
                               )}
                             </div>
 
