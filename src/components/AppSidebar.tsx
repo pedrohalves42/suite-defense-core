@@ -5,11 +5,11 @@ import {
   Brain, Terminal, Globe, Clock, Gauge, 
   Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, 
   Heart, Search, Monitor, AppWindow, GitBranch,
-  Download, Building2, FileText, Cpu, Network, Percent, ClipboardCheck, FileBarChart,
-  AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch,
+  Download, FileText, Cpu, Percent, ClipboardCheck, FileBarChart,
+  AlertCircle, Wrench, Key, ShieldCheck, FileSearch,
   Zap, X, UserPlus, ListTodo, BookOpen, ShieldAlert, Fingerprint,
-  Eye, Workflow, Database, HardDrive, Plug, Palette, Headphones, Map, Code,
-  BrainCircuit, Sparkles, BarChart, ThumbsUp, Bot, Layers
+  Eye, Workflow, Plug, Palette, Map, Code,
+  BrainCircuit, Sparkles, BarChart, Bot, Layers
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
