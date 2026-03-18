@@ -217,7 +217,7 @@ export default function ExecutiveDashboard() {
                 <MetricTile icon={<ShieldBan className="h-3.5 w-3.5" />} label="Ameaças Bloqueadas" value={`${summaryData?.blockedThreats || 0}`} sub="últimos 7 dias" color={summaryData?.blockedThreats ? 'green' : 'muted'} />
                 <MetricTile icon={<DeltaIcon className="h-3.5 w-3.5" />} label="Nível de Risco" value={deltaInfo.label} sub={deltaInfo.description} color={deltaInfo.color === 'green' ? 'green' : deltaInfo.color === 'red' ? 'red' : 'muted'} />
                 <MetricTile icon={<Hammer className="h-3.5 w-3.5" />} label="Correções Automáticas" value={`${summaryData?.automatedActions || 0}`} sub="últimos 30 dias" color={summaryData?.automatedActions ? 'emerald' : 'muted'} />
-                <MetricTile icon={<FileCheck className="h-3.5 w-3.5" />} label="Conformidade" value={summaryData?.compliance?.grade || 'N/A'} sub={`Score: ${summaryData?.compliance?.overall_score || 0}/100`} color={summaryData?.compliance?.overall_score >= 80 ? 'green' : summaryData?.compliance?.overall_score >= 60 ? 'amber' : 'red'} />
+                <MetricTile icon={<FileCheck className="h-3.5 w-3.5" />} label="Conformidade" value={summaryData?.compliance?.grade || 'Pendente'} sub={summaryData?.compliance ? `Score: ${summaryData.compliance.overall_score}/100` : 'Aguardando primeira avaliação'} color={summaryData?.compliance?.overall_score >= 80 ? 'green' : summaryData?.compliance?.overall_score >= 60 ? 'amber' : 'muted'} />
               </div>
             </CardContent>
           </Card>
@@ -240,7 +240,7 @@ export default function ExecutiveDashboard() {
                 <div className="grid grid-cols-3 gap-3">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-3 rounded-xl bg-info/10 border border-info/20 cursor-help shadow-sm">
+                      <div className="text-center p-3 rounded-xl bg-info/10 border border-info/20 shadow-sm">
                         <p className="text-2xl font-bold text-info">{summaryData?.automatedActions || 0}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Problemas corrigidos<br/>automaticamente</p>
                       </div>
@@ -253,7 +253,7 @@ export default function ExecutiveDashboard() {
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-3 rounded-xl bg-destructive/10 border border-destructive/20 cursor-help shadow-sm">
+                      <div className="text-center p-3 rounded-xl bg-destructive/10 border border-destructive/20 shadow-sm">
                         <p className="text-2xl font-bold text-destructive">{summaryData?.incidentsContained || 0}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Incidentes de segurança<br/>contidos</p>
                       </div>
@@ -266,7 +266,7 @@ export default function ExecutiveDashboard() {
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-3 rounded-xl bg-warning/10 border border-warning/20 cursor-help shadow-sm">
+                      <div className="text-center p-3 rounded-xl bg-warning/10 border border-warning/20 shadow-sm">
                         <p className="text-2xl font-bold text-warning">{summaryData?.hoursOfITSaved ? Math.round(summaryData.hoursOfITSaved) : 0}h</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Horas de TI<br/>economizadas</p>
                       </div>
@@ -396,7 +396,11 @@ export default function ExecutiveDashboard() {
                 {complianceCats ? complianceCats.map((cat, i) => (
                   <ComplianceRow key={i} category={translateCategory(cat.category)} score={cat.score} details={cat.details} />
                 )) : (
-                  <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma avaliação disponível</p>
+                  <div className="text-center py-6 space-y-2">
+                    <FileText className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+                    <p className="text-sm text-muted-foreground">Aguardando primeira avaliação de conformidade</p>
+                    <p className="text-xs text-muted-foreground/60">O sistema precisa de alguns dias coletando dados para gerar o relatório.</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
