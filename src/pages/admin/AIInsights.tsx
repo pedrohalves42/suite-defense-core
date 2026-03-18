@@ -30,6 +30,7 @@ interface AIInsight {
   created_at: string;
   acknowledged: boolean;
   acknowledged_at?: string;
+  status?: string;
 }
 
 interface Statistics {
