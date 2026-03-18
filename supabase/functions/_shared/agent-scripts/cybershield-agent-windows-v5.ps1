@@ -4650,14 +4650,60 @@ function Get-SystemMetrics {
         if ($Global:CachedSystemMetrics -and ($now - $Global:CachedSystemMetricsTime).TotalSeconds -lt 30) {
             return $Global:CachedSystemMetrics
         }
-        # v5.0.13-perf: Use CIM instead of WMI (faster, uses WSMan)
-        $cpu = Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average | Select-Object -ExpandProperty Average
+
+        # v5.0.14-fix: Use Get-Counter with 2s sample for accurate CPU reading
+        # Win32_Processor.LoadPercentage is instantaneous and returns 0-2% almost always
+        $cpuPercent = 0
+        try {
+            $counter = Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 2 -MaxSamples 1 -ErrorAction Stop
+            $cpuPercent = [math]::Round($counter.CounterSamples[0].CookedValue, 2)
+            if ($cpuPercent -gt 100) { $cpuPercent = 100 }
+            if ($cpuPercent -lt 0) { $cpuPercent = 0 }
+        } catch {
+            # Fallback: try CIM LoadPercentage if Get-Counter fails (e.g., on Server Core)
+            try {
+                $cpuPercent = Get-CimInstance Win32_Processor | 
+                    Measure-Object -Property LoadPercentage -Average | 
+                    Select-Object -ExpandProperty Average
+                $cpuPercent = [math]::Round($cpuPercent, 2)
+            } catch {
+                Write-Log "[METRICS] CPU collection failed: $($_.Exception.Message)" "WARN"
+            }
+        }
+
+        # v5.0.14-fix: Collect CPU info (name + cores) - cached separately (rarely changes)
+        $cpuName = $null
+        $cpuCores = $null
+        $cpuLogical = $null
+        if (-not $Global:CachedCpuInfo) {
+            try {
+                $cpuInfo = Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue | Select-Object -First 1
+                if ($cpuInfo) {
+                    $Global:CachedCpuInfo = @{
+                        name = $cpuInfo.Name.Trim()
+                        cores = $cpuInfo.NumberOfCores
+                        logical = $cpuInfo.NumberOfLogicalProcessors
+                    }
+                }
+            } catch {
+                Write-Log "[METRICS] CPU info collection failed: $($_.Exception.Message)" "DEBUG"
+            }
+        }
+        if ($Global:CachedCpuInfo) {
+            $cpuName = $Global:CachedCpuInfo.name
+            $cpuCores = $Global:CachedCpuInfo.cores
+            $cpuLogical = $Global:CachedCpuInfo.logical
+        }
+
         $os = Get-CimInstance Win32_OperatingSystem
         $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
         $uptime = $now - $os.LastBootUpTime
         
         $Global:CachedSystemMetrics = @{
-            cpu_percent = [math]::Round($cpu, 2)
+            cpu_percent = $cpuPercent
+            cpu_name = $cpuName
+            cpu_cores = $cpuCores
+            cpu_logical = $cpuLogical
             memory_total_gb = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2)
             memory_used_gb = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1MB, 2)
             memory_used_percent = [math]::Round((($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / $os.TotalVisibleMemorySize) * 100, 2)
