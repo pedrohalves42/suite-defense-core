@@ -180,7 +180,7 @@ export default function ComplianceAutomation() {
 
   if (isLoading) {
     return (
-      <AdminPageLayout title="Compliance Automation" description="Mapeamento automático de frameworks">
+      <AdminPageLayout title="Conformidade Automática" description="Mapeamento automático de frameworks">
         <div className="space-y-6">
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-64 w-full" />
