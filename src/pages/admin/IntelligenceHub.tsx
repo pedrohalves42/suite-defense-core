@@ -41,8 +41,8 @@ export default function IntelligenceHub() {
 
   return (
     <AdminPageLayout
-      title="Inteligência IA"
-      description="Insights, automação, governança e base de conhecimento em um só lugar"
+      title="Assistente IA"
+      description="Sugestões, automação, revisão de decisões e base de conhecimento"
       icon={BrainCircuit}
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

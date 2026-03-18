@@ -59,7 +59,7 @@ export default function ComplianceHub() {
   return (
     <AdminPageLayout
       title="Conformidade"
-      description="SOC 2, auditoria, procedimentos e gestão de risco em um só lugar"
+      description="SOC 2, registros, planos de ação e gestão de risco em um só lugar"
       icon={ClipboardCheck}
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

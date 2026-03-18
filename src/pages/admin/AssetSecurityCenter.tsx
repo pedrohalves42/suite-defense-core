@@ -34,8 +34,8 @@ export default function AssetSecurityCenter() {
 
   return (
     <AdminPageLayout
-      title="Segurança de Ativos"
-      description="Inventário de software, descoberta de Shadow IT e exposição de dados"
+      title="Programas e Dispositivos"
+      description="Veja os programas instalados, detecte softwares não autorizados e proteja seus dados"
       icon={Package}
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

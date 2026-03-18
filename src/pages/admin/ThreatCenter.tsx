@@ -34,8 +34,8 @@ export default function ThreatCenter() {
 
   return (
     <AdminPageLayout
-      title="Central de Ameaças"
-      description="Monitore alertas, intelligence de ameaças e teste a resistência dos endpoints"
+      title="Alertas de Segurança"
+      description="Monitore alertas e ameaças identificadas nos seus computadores"
       icon={Shield}
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
