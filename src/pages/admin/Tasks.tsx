@@ -87,9 +87,9 @@ export default function Tasks() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Central de Tarefas</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Tarefas</h1>
           <p className="text-muted-foreground">
-            Gerencie trabalho pendente de insights, alertas e ações
+            Gerencie trabalho pendente de sugestões, alertas e ações
           </p>
         </div>
       </div>
