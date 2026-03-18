@@ -718,6 +718,11 @@ verify_jwt = false
 [functions.calculate-compliance]
 verify_jwt = false
 
+# === Scheduled Compliance Refresh (hourly) ===
+[functions.scheduled-compliance-refresh]
+verify_jwt = false
+schedule = "0 * * * *"
+
 # === AI Insight Dispatcher (Phase 2) ===
 [functions.ai-insight-dispatcher]
 verify_jwt = false
