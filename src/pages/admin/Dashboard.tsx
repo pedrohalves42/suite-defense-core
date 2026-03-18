@@ -20,6 +20,7 @@ import { HealthTrendChart } from '@/components/admin/HealthTrendChart';
 import { SystemCyclesHealthCard } from '@/components/admin/SystemCyclesHealthCard';
 import { ReleaseSignatureStatusCard } from '@/components/admin/ReleaseSignatureStatusCard';
 import { GovernanceHealthBanner } from '@/components/admin/GovernanceHealthBanner';
+import { SecurityAdvisorCard } from '@/components/admin/SecurityAdvisorCard';
 import { NotificationSetupBanner } from '@/components/admin/NotificationSetupBanner';
 import { OnboardingRequiredBanner } from '@/components/admin/OnboardingRequiredBanner';
 import { SimpleDashboard } from '@/components/dashboard/SimpleDashboard';
