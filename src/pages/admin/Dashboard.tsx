@@ -319,11 +319,20 @@ export default function Dashboard() {
         <HealthTrendChart />
       </motion.div>
 
-      {/* ═══ SEÇÃO 4.5: Status Ed25519 (super_admin only) ═══ */}
+      {/* ═══ SEÇÃO 4.5: Assistente de Segurança IA ═══ */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.4 }}
+      >
+        <SecurityAdvisorCard />
+      </motion.div>
+
+      {/* ═══ SEÇÃO 4.6: Status Ed25519 (super_admin only) ═══ */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35, duration: 0.4 }}
       >
         <ReleaseSignatureStatusCard />
       </motion.div>
