@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
     const internalAuth = assertInternalCaller(req);
     let user: { id: string; email?: string };
     if (isServiceRole || internalAuth === null) {
-      user = { id: 'service_role', email: 'system@internal' };
+      user = { id: '00000000-0000-0000-0000-000000000000', email: 'system@internal' };
     } else {
       user = await requireSuperAdmin(supabase, req);
     }
