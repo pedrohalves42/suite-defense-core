@@ -6,8 +6,8 @@ import {
   Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, 
   Heart, Search, Monitor, AppWindow, GitBranch,
   Download, Building2, FileText, Cpu, Network, Percent, ClipboardCheck, FileBarChart,
-  AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch, Tag, Crosshair,
-  Zap, X, UserPlus, Archive, ListTodo, BookOpen, ShieldAlert, Fingerprint,
+  AlertCircle, Lightbulb, Wrench, Key, ShieldCheck, FileSearch,
+  Zap, X, UserPlus, ListTodo, BookOpen, ShieldAlert, Fingerprint,
   Eye, Workflow, Database, HardDrive, Plug, Palette, Headphones, Map, Code,
   BrainCircuit, Sparkles, BarChart, ThumbsUp, Bot, Layers
 } from 'lucide-react';
@@ -141,13 +141,10 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Globe, label: 'Segurança de Rede', to: '/admin/network-security' },
     { icon: AppWindow, label: 'Segurança de Ativos', to: '/admin/asset-security' },
     { icon: AlertCircle, label: 'Itens Suspeitos', to: '/quarantine' },
-    { icon: FileSearch, label: 'Histórico', to: '/admin/agent-center?tab=timeline' },
     { icon: AlertCircle, label: 'Resolver Alertas', to: '/admin/alert-resolution' },
   ], []);
 
   const managementItems = useMemo<MenuItem[]>(() => [
-    { icon: Users, label: 'Grupos', to: '/admin/agent-center?tab=groups' },
-    { icon: Tag, label: 'Etiquetas', to: '/admin/agent-center?tab=tags' },
     { icon: Shield, label: 'Regras', to: '/admin/security-policies' },
     { icon: Crown, label: 'Equipe', to: '/admin/members' },
     { icon: FileBarChart, label: 'Relatórios', to: '/admin/reports' },
@@ -162,7 +159,6 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Scale, label: 'Linha do Tempo', to: '/admin/compliance-timeline' },
     { icon: FileText, label: 'Automação', to: '/admin/compliance-automation' },
     { icon: Eye, label: 'Controle Interno', to: '/admin/governance' },
-    { icon: FileBarChart, label: 'Relatórios', to: '/admin/governance-reports' },
     { icon: BookOpen, label: 'Provas', to: '/admin/evidence-bundle' },
     { icon: Workflow, label: 'Procedimentos', to: '/admin/playbooks' },
     { icon: BarChart3, label: 'Nível de Risco', to: '/admin/risk-score' },
@@ -172,7 +168,6 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
 
   const intelligenceItems = useMemo<MenuItem[]>(() => [
     { icon: Brain, label: 'Regras Automáticas', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
-    { icon: Crosshair, label: 'Ameaças Conhecidas', to: '/admin/threat-center?tab=threat-intel' },
     { icon: BrainCircuit, label: 'Sugestões', to: '/admin/ai-insights' },
     { icon: Sparkles, label: 'Ações Automáticas', to: '/admin/ai-actions' },
     { icon: AlertTriangle, label: 'Comportamento Incomum', to: '/admin/ai-anomalies' },
@@ -191,7 +186,6 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Zap, label: 'Correção Automática', to: '/admin/auto-remediation' },
     { icon: ShieldAlert, label: 'Proteção ao Vivo', to: '/admin/realtime-security' },
     { icon: UserPlus, label: 'Convites', to: '/admin/invites' },
-    { icon: Archive, label: 'Inativos', to: '/admin/agent-center?tab=archived' },
     { icon: ListTodo, label: 'Tarefas', to: '/admin/tasks' },
     { icon: Fingerprint, label: 'Minha Conta', to: '/admin/my-account' },
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
@@ -229,14 +223,11 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: HardDrive, label: 'Metas de Serviço', to: '/admin/slo-dashboard' },
     { icon: Database, label: 'Fila de Erros', to: '/admin/dead-letter-queue' },
     { icon: Percent, label: 'Limite de Uso', to: '/admin/rate-limiting' },
-    { icon: GitBranch, label: 'Versões dos Agentes', to: '/admin/agent-center?tab=versions' },
     { icon: BarChart, label: 'Performance', to: '/admin/performance-metrics' },
     { icon: Heart, label: 'Saúde Instalação', to: '/admin/installation-health' },
     { icon: Activity, label: 'Operações', to: '/admin/system-operations' },
-    { icon: Activity, label: 'Logs do Sistema', to: '/admin/system-logs' },
     { icon: Download, label: 'Reinstalação em Massa', to: '/admin/mass-reinstall' },
     { icon: Layers, label: 'Migração Jobs V3', to: '/admin/jobs-v3-migration' },
-    { icon: Settings, label: 'Configurações', to: '/super-admin/settings' },
   ], []);
 
   const superAIItems = useMemo<MenuItem[]>(() => [
