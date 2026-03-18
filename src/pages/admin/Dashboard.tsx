@@ -395,6 +395,9 @@ export default function Dashboard() {
       </Card>
 
       <OnboardingWizard open={showOnboarding} onComplete={() => setShowOnboarding(false)} />
+
+      {/* Guided Tour - shows on first visit */}
+      <GuidedTour />
     </div>
   );
 }
