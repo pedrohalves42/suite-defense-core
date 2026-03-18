@@ -7,7 +7,7 @@ import {
   Heart, Search, Monitor, AppWindow, GitBranch,
   Download, FileText, Cpu, Percent, ClipboardCheck, FileBarChart,
   AlertCircle, Wrench, Key, ShieldCheck, FileSearch,
-  Zap, X, UserPlus, ListTodo, BookOpen, ShieldAlert, Fingerprint,
+  Zap, X, ListTodo, BookOpen, ShieldAlert, Fingerprint,
   Eye, Workflow, Plug, Palette, Map, Code,
   BrainCircuit, Sparkles, BarChart, Bot, Layers
 } from 'lucide-react';
