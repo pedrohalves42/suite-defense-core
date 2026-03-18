@@ -206,17 +206,10 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const superSystemItems = useMemo<MenuItem[]>(() => [
     { icon: ScrollText, label: 'Auditoria', to: '/super-admin/audit-logs' },
     { icon: Activity, label: 'Logs', to: '/super-admin/system-logs' },
-    { icon: Clock, label: 'Saúde dos Crons', to: '/admin/cron-health' },
-    { icon: Gauge, label: 'Saúde do Sistema', to: '/admin/system-health' },
-    { icon: Wrench, label: 'Saúde dos Jobs', to: '/admin/job-health' },
-    { icon: HardDrive, label: 'Metas de Serviço', to: '/admin/slo-dashboard' },
-    { icon: Database, label: 'Fila de Erros', to: '/admin/dead-letter-queue' },
-    { icon: Percent, label: 'Limite de Uso', to: '/admin/rate-limiting' },
-    { icon: BarChart, label: 'Performance', to: '/admin/performance-metrics' },
-    { icon: Heart, label: 'Saúde Instalação', to: '/admin/installation-health' },
-    { icon: Activity, label: 'Operações', to: '/admin/system-operations' },
-    { icon: Download, label: 'Reinstalação em Massa', to: '/admin/mass-reinstall' },
-    { icon: Layers, label: 'Migração Jobs V3', to: '/admin/jobs-v3-migration' },
+    { icon: Gauge, label: 'Operações', to: '/admin/operations-hub' },
+    { icon: Heart, label: 'Saúde', to: '/admin/operations-hub?tab=health' },
+    { icon: BarChart, label: 'Performance', to: '/admin/operations-hub?tab=performance' },
+    { icon: Wrench, label: 'Ferramentas', to: '/admin/operations-hub?tab=tools' },
   ], []);
 
   const superAIItems = useMemo<MenuItem[]>(() => [
