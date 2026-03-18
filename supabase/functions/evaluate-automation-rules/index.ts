@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// Native Deno.serve() used — no external HTTP server import needed
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsSecurityHeaders, secureJsonResponse, secureErrorResponse, secureCorsPreflightResponse } from '../_shared/security-headers.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
