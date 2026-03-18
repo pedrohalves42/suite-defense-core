@@ -154,28 +154,17 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
 
   // ─── ADMIN: Collapsed by default ─────────────────────
   const complianceItems = useMemo<MenuItem[]>(() => [
-    { icon: ClipboardCheck, label: 'SOC 2', to: '/admin/soc2-compliance' },
-    { icon: ScrollText, label: 'Histórico de Ações', to: '/admin/system-audit' },
-    { icon: Scale, label: 'Linha do Tempo', to: '/admin/compliance-timeline' },
-    { icon: FileText, label: 'Automação', to: '/admin/compliance-automation' },
-    { icon: Eye, label: 'Controle Interno', to: '/admin/governance' },
-    { icon: BookOpen, label: 'Provas', to: '/admin/evidence-bundle' },
-    { icon: Workflow, label: 'Procedimentos', to: '/admin/playbooks' },
-    { icon: BarChart3, label: 'Nível de Risco', to: '/admin/risk-score' },
-    { icon: Target, label: 'Comparativo', to: '/admin/security-benchmark' },
-    { icon: ShieldAlert, label: 'Ransomware', to: '/admin/ransomware-incident' },
+    { icon: ClipboardCheck, label: 'Visão Geral', to: '/admin/compliance-hub' },
+    { icon: FileSearch, label: 'Provas & Auditoria', to: '/admin/compliance-hub?tab=evidence' },
+    { icon: Workflow, label: 'Procedimentos', to: '/admin/compliance-hub?tab=procedures' },
+    { icon: BarChart3, label: 'Risco', to: '/admin/compliance-hub?tab=risk' },
   ], []);
 
   const intelligenceItems = useMemo<MenuItem[]>(() => [
-    { icon: Brain, label: 'Regras Automáticas', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
-    { icon: BrainCircuit, label: 'Sugestões', to: '/admin/ai-insights' },
-    { icon: Sparkles, label: 'Ações Automáticas', to: '/admin/ai-actions' },
-    { icon: AlertTriangle, label: 'Comportamento Incomum', to: '/admin/ai-anomalies' },
-    { icon: ThumbsUp, label: 'Avaliações', to: '/admin/ai-feedback' },
-    { icon: Lightbulb, label: 'Priorização', to: '/admin/insight-triage' },
-    { icon: TrendingUp, label: 'Nível de Certeza', to: '/admin/confidence-gap' },
-    { icon: FileSearch, label: 'Decisões do Sistema', to: '/admin/decision-audit' },
-    { icon: BookOpen, label: 'Base de Conhecimento', to: '/admin/software-knowledge-base' },
+    { icon: BrainCircuit, label: 'Insights', to: '/admin/intelligence-hub', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
+    { icon: Zap, label: 'Automação', to: '/admin/intelligence-hub?tab=automation' },
+    { icon: Eye, label: 'Governança', to: '/admin/intelligence-hub?tab=governance' },
+    { icon: BookOpen, label: 'Conhecimento', to: '/admin/intelligence-hub?tab=knowledge' },
   ], [criticalInsightsCount]);
 
   const advancedItems = useMemo<MenuItem[]>(() => [
