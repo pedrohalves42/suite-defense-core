@@ -531,9 +531,10 @@ export default function ExecutiveDashboard() {
 
 /* ─── Sub-components ──────────────────────────── */
 
-function MetricTile({ icon, label, value, sub, color, pulse }: {
+function MetricTile({ icon, label, value, sub, color, pulse, onClick }: {
   icon: React.ReactNode; label: string; value: string; sub: string;
   color: 'green' | 'red' | 'emerald' | 'muted' | 'amber'; pulse?: boolean;
+  onClick?: () => void;
 }) {
   const valueColor = {
     green: 'text-success', red: 'text-destructive',
@@ -546,7 +547,17 @@ function MetricTile({ icon, label, value, sub, color, pulse }: {
   }[color];
 
   return (
-    <div className={cn("relative p-2.5 rounded-xl border backdrop-blur-sm", bgAccent)}>
+    <div 
+      className={cn(
+        "relative p-2.5 rounded-xl border backdrop-blur-sm", 
+        bgAccent,
+        onClick && "cursor-pointer hover:brightness-110 hover:scale-[1.02] transition-all duration-200"
+      )}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); } : undefined}
+    >
       {pulse && (
         <span className="absolute top-2 right-2 flex h-1.5 w-1.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
