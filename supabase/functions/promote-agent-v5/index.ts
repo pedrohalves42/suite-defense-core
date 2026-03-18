@@ -86,14 +86,18 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Allow internal/service_role calls OR super_admin
+    // Auth: internal caller (service_role/X-Internal-Secret) OR super_admin
+    const authHeader = req.headers.get('Authorization') ?? '';
+    const apiKey = req.headers.get('apikey') ?? '';
+    const isServiceRole = 
+      authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` ||
+      apiKey === SUPABASE_SERVICE_ROLE_KEY;
+    
     const internalAuth = assertInternalCaller(req);
     let user: { id: string; email?: string };
-    if (internalAuth === null) {
-      // Internal caller authorized
+    if (isServiceRole || internalAuth === null) {
       user = { id: 'service_role', email: 'system@internal' };
     } else {
-      // Try super_admin auth
       user = await requireSuperAdmin(supabase, req);
     }
     let body: Record<string, unknown> = {};
