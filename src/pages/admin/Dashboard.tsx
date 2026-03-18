@@ -24,6 +24,9 @@ import { SecurityAdvisorCard } from '@/components/admin/SecurityAdvisorCard';
 import { NotificationSetupBanner } from '@/components/admin/NotificationSetupBanner';
 import { OnboardingRequiredBanner } from '@/components/admin/OnboardingRequiredBanner';
 import { SimpleDashboard } from '@/components/dashboard/SimpleDashboard';
+import { GuidedTour } from '@/components/admin/GuidedTour';
+import { SecurityAchievements } from '@/components/admin/SecurityAchievements';
+import { useProactiveAlerts } from '@/hooks/useProactiveAlerts';
 import { useSimpleModeContext } from '@/hooks/useSimpleMode';
 import { useTranslation } from 'react-i18next';
 import { useUnifiedMetrics } from '@/hooks/useUnifiedMetrics';
@@ -45,6 +48,9 @@ export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const { isSimple } = useSimpleModeContext();
+
+  // Proactive real-time alerts
+  useProactiveAlerts();
 
   useEffect(() => {
     const onboardingParam = searchParams.get('onboarding');
@@ -319,13 +325,15 @@ export default function Dashboard() {
         <HealthTrendChart />
       </motion.div>
 
-      {/* ═══ SEÇÃO 4.5: Assistente de Segurança IA ═══ */}
+      {/* ═══ SEÇÃO 4.5: Assistente de Segurança + Conquistas ═══ */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.4 }}
+        className="grid grid-cols-1 md:grid-cols-2 gap-4"
       >
         <SecurityAdvisorCard />
+        <SecurityAchievements />
       </motion.div>
 
       {/* ═══ SEÇÃO 4.6: Status Ed25519 (super_admin only) ═══ */}
@@ -387,6 +395,9 @@ export default function Dashboard() {
       </Card>
 
       <OnboardingWizard open={showOnboarding} onComplete={() => setShowOnboarding(false)} />
+
+      {/* Guided Tour - shows on first visit */}
+      <GuidedTour />
     </div>
   );
 }
