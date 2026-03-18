@@ -43,6 +43,9 @@ verify_jwt = true
 verify_jwt = true
 
 # === Agent Functions ===
+[functions.promote-agent-v5]
+verify_jwt = false
+
 [functions.sync-agent-script]
 verify_jwt = false
 
