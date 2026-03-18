@@ -3,132 +3,114 @@ import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { AgentSelector } from '@/components/AgentSelector';
 import { useAgentTimeline } from '@/hooks/useAgentTimeline';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertCircle, Clock, ChevronDown, Heart, Zap, Shield, FileText, Wrench, MonitorCheck, Wifi, RefreshCw, CheckCircle } from 'lucide-react';
+import {
+  AlertCircle, Clock, Heart, Shield, RefreshCw, Wifi,
+  MonitorCheck, Wrench, CheckCircle, FileText, Ban, Lock, HardDrive, Bug
+} from 'lucide-react';
 import { motion } from 'framer-motion';
-import { formatBrazilDateTime } from '@/lib/date-utils';
 import { AgentStateExplainer } from '@/components/agent/AgentStateExplainer';
 
-// === FRIENDLY LABELS for event types ===
-const EVENT_TYPE_LABELS: Record<string, { label: string; description: string }> = {
-  heartbeat: { label: '💓 Sinal de vida', description: 'O computador confirmou que está funcionando' },
-  auto_repair: { label: '🔧 Reparo automático', description: 'O sistema corrigiu um problema sozinho' },
-  auto_repair_telemetry: { label: '📊 Relatório de reparo', description: 'Dados sobre um reparo automático realizado' },
-  job: { label: '✅ Verificação', description: 'Uma tarefa de verificação foi executada' },
-  scan: { label: '🔍 Varredura', description: 'O computador foi escaneado em busca de problemas' },
-  enrollment: { label: '📥 Cadastro', description: 'Computador foi cadastrado no sistema' },
-  policy_applied: { label: '📋 Regra aplicada', description: 'Uma regra de segurança foi aplicada' },
-  policy_violation: { label: '⚠️ Regra violada', description: 'Uma regra de segurança foi descumprida' },
-  update: { label: '🔄 Atualização', description: 'O agente foi atualizado' },
-  shutdown: { label: '🔴 Desligamento', description: 'O computador foi desligado' },
-  startup: { label: '🟢 Inicialização', description: 'O computador foi ligado' },
-  network_change: { label: '🌐 Mudança de rede', description: 'A conexão de rede mudou' },
-  isolation: { label: '🔒 Quarentena', description: 'O computador foi isolado por segurança' },
-  threat_detected: { label: '🚨 Ameaça detectada', description: 'Uma ameaça de segurança foi encontrada' },
-  certificate_check: { label: '📜 Verificação de certificado', description: 'Certificados de segurança foram verificados' },
-  disk_check: { label: '💾 Verificação de disco', description: 'O espaço em disco foi verificado' },
-  process_killed: { label: '🛑 Programa encerrado', description: 'Um programa suspeito foi encerrado' },
+// ─── Friendly mapping ────────────────────────────────────────────
+interface EventMeta {
+  icon: typeof Heart;
+  color: string;       // tailwind text color token
+  dot: string;         // tailwind bg color token for the dot
+  label: string;
+  summary: (data: any) => string;
+}
+
+const fallbackSummary = () => '';
+
+const EVENT_MAP: Record<string, EventMeta> = {
+  heartbeat:             { icon: Heart,        color: 'text-success',        dot: 'bg-success',        label: 'Sinal de vida',           summary: fallbackSummary },
+  auto_repair:           { icon: Wrench,       color: 'text-warning',        dot: 'bg-warning',        label: 'Reparo automático',       summary: (d) => d?.repaired_items ? `${d.repaired_items} itens corrigidos` : 'Problema corrigido automaticamente' },
+  auto_repair_telemetry: { icon: Wrench,       color: 'text-warning',        dot: 'bg-warning',        label: 'Reparo automático',       summary: fallbackSummary },
+  job:                   { icon: CheckCircle,  color: 'text-primary',        dot: 'bg-primary',        label: 'Tarefa executada',        summary: (d) => d?.status === 'success' ? 'Concluída com sucesso' : d?.status === 'error' ? 'Falhou' : '' },
+  scan:                  { icon: Shield,       color: 'text-info',           dot: 'bg-info',           label: 'Varredura de segurança',  summary: (d) => d?.issues_found !== undefined ? `${d.issues_found} problema(s) encontrado(s)` : '' },
+  enrollment:            { icon: MonitorCheck, color: 'text-success',        dot: 'bg-success',        label: 'Computador cadastrado',   summary: fallbackSummary },
+  policy_applied:        { icon: Shield,       color: 'text-primary',        dot: 'bg-primary',        label: 'Regra aplicada',          summary: fallbackSummary },
+  policy_violation:      { icon: AlertCircle,  color: 'text-destructive',    dot: 'bg-destructive',    label: 'Regra violada',           summary: fallbackSummary },
+  update:                { icon: RefreshCw,    color: 'text-info',           dot: 'bg-info',           label: 'Atualização',             summary: (d) => d?.version ? `Atualizado para ${d.version}` : 'Agente atualizado' },
+  shutdown:              { icon: Ban,          color: 'text-muted-foreground', dot: 'bg-muted-foreground', label: 'Desligado',           summary: fallbackSummary },
+  startup:               { icon: MonitorCheck, color: 'text-success',        dot: 'bg-success',        label: 'Ligado',                  summary: fallbackSummary },
+  network_change:        { icon: Wifi,         color: 'text-warning',        dot: 'bg-warning',        label: 'Rede alterada',           summary: (d) => d?.ip_address ? `Novo IP: ${d.ip_address}` : '' },
+  isolation:             { icon: Lock,         color: 'text-destructive',    dot: 'bg-destructive',    label: 'Isolado por segurança',   summary: fallbackSummary },
+  threat_detected:       { icon: Bug,          color: 'text-destructive',    dot: 'bg-destructive',    label: 'Ameaça detectada',        summary: fallbackSummary },
+  certificate_check:     { icon: Shield,       color: 'text-primary',        dot: 'bg-primary',        label: 'Certificados verificados', summary: fallbackSummary },
+  disk_check:            { icon: HardDrive,    color: 'text-primary',        dot: 'bg-primary',        label: 'Disco verificado',        summary: (d) => d?.disk_usage_percent ? `${d.disk_usage_percent}% em uso` : '' },
+  process_killed:        { icon: Ban,          color: 'text-destructive',    dot: 'bg-destructive',    label: 'Programa suspeito encerrado', summary: fallbackSummary },
+  decision:              { icon: Shield,       color: 'text-warning',        dot: 'bg-warning',        label: 'Ação de segurança',       summary: (d) => d?.rule_name ? d.rule_name.replace(/_/g, ' ') : '' },
+  security_event:        { icon: Shield,       color: 'text-warning',        dot: 'bg-warning',        label: 'Evento de segurança',     summary: fallbackSummary },
 };
 
-function getFriendlyEventType(raw: string): { label: string; description: string } {
-  const lower = raw.toLowerCase();
-  if (EVENT_TYPE_LABELS[lower]) return EVENT_TYPE_LABELS[lower];
-  // Try partial match
-  for (const [key, val] of Object.entries(EVENT_TYPE_LABELS)) {
+function getEventMeta(eventType: string): EventMeta {
+  const lower = eventType.toLowerCase();
+  if (EVENT_MAP[lower]) return EVENT_MAP[lower];
+  for (const [key, val] of Object.entries(EVENT_MAP)) {
     if (lower.includes(key) || key.includes(lower)) return val;
   }
-  return { label: raw.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase()), description: 'Evento registrado pelo sistema' };
+  return { icon: FileText, color: 'text-muted-foreground', dot: 'bg-muted-foreground', label: eventType.replace(/_/g, ' '), summary: fallbackSummary };
 }
 
-// Friendly key/hash display
-function getFriendlyKey(key: string): string {
-  if (!key) return '';
-  // If it looks like a hash (long hex string), shorten it
-  if (/^[a-f0-9]{32,}$/i.test(key)) return `#${key.slice(0, 8)}…`;
-  return key.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
+// ─── Relative time ───────────────────────────────────────────────
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const d = new Date(dateStr);
+  const diffMs = now.getTime() - d.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'agora';
+  if (mins < 60) return `há ${mins} min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `há ${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'ontem';
+  if (days < 30) return `há ${days} dias`;
+  return d.toLocaleDateString('pt-BR');
 }
 
-const getEventIcon = (eventType: string) => {
+// ─── Filter categories ──────────────────────────────────────────
+const FILTER_CATEGORIES: { value: string; label: string; match: string[] }[] = [
+  { value: 'all', label: '🗂️ Todos os eventos', match: [] },
+  { value: 'security', label: '🛡️ Segurança', match: ['threat', 'violation', 'isolation', 'scan', 'decision', 'security', 'process_killed'] },
+  { value: 'updates', label: '🔄 Atualizações', match: ['update'] },
+  { value: 'health', label: '💓 Saúde', match: ['heartbeat', 'repair', 'startup', 'shutdown', 'disk_check'] },
+  { value: 'tasks', label: '✅ Tarefas', match: ['job', 'check', 'certificate', 'policy'] },
+  { value: 'network', label: '🌐 Rede', match: ['network'] },
+];
+
+function matchesCategory(eventType: string, category: string): boolean {
+  if (category === 'all') return true;
+  const cat = FILTER_CATEGORIES.find(c => c.value === category);
+  if (!cat) return true;
   const lower = eventType.toLowerCase();
-  if (lower.includes('heartbeat')) return Heart;
-  if (lower.includes('repair')) return Wrench;
-  if (lower.includes('job') || lower.includes('check')) return CheckCircle;
-  if (lower.includes('scan')) return Shield;
-  if (lower.includes('update')) return RefreshCw;
-  if (lower.includes('network')) return Wifi;
-  if (lower.includes('startup') || lower.includes('enrollment')) return MonitorCheck;
-  return FileText;
-};
-
-const getEventColor = (eventType: string) => {
-  const lower = eventType.toLowerCase();
-  if (lower.includes('heartbeat')) return 'text-success';
-  if (lower.includes('repair')) return 'text-warning';
-  if (lower.includes('job') || lower.includes('check')) return 'text-primary';
-  if (lower.includes('scan')) return 'text-info';
-  if (lower.includes('threat') || lower.includes('violation')) return 'text-destructive';
-  return 'text-muted-foreground';
-};
-
-// Extract friendly summary from event data
-function getFriendlyDataSummary(data: any): string | null {
-  if (!data || typeof data !== 'object') return null;
-  const parts: string[] = [];
-  if (data.status) parts.push(`Estado: ${data.status === 'success' ? '✅ Sucesso' : data.status === 'error' ? '❌ Erro' : data.status}`);
-  if (data.duration_ms) parts.push(`Duração: ${(data.duration_ms / 1000).toFixed(1)}s`);
-  if (data.agent_name) parts.push(`Computador: ${data.agent_name}`);
-  if (data.repaired_items) parts.push(`Itens reparados: ${data.repaired_items}`);
-  if (data.issues_found !== undefined) parts.push(`Problemas encontrados: ${data.issues_found}`);
-  if (data.cpu_percent) parts.push(`CPU: ${data.cpu_percent}%`);
-  if (data.memory_percent) parts.push(`Memória: ${data.memory_percent}%`);
-  if (data.disk_usage_percent) parts.push(`Disco: ${data.disk_usage_percent}%`);
-  if (data.ip_address) parts.push(`IP: ${data.ip_address}`);
-  if (data.version) parts.push(`Versão: ${data.version}`);
-  return parts.length > 0 ? parts.join(' · ') : null;
+  return cat.match.some(m => lower.includes(m));
 }
 
+// ─── Component ──────────────────────────────────────────────────
 export default function AgentTimeline() {
   const [selectedAgent, setSelectedAgent] = useState<string>('');
-  const [eventTypeFilter, setEventTypeFilter] = useState<string>('all');
-  const [openItems, setOpenItems] = useState<Set<string>>(new Set());
-  
+  const [category, setCategory] = useState('all');
+
   const { data: timeline, isLoading, error } = useAgentTimeline(selectedAgent, !!selectedAgent);
 
-  const eventTypes = Array.from(new Set(timeline?.map(e => e.event_type) || []));
-  const filteredTimeline = eventTypeFilter === 'all' 
-    ? timeline 
-    : timeline?.filter(e => e.event_type === eventTypeFilter);
-
-  const toggleItem = (id: string) => {
-    setOpenItems(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
+  const filtered = timeline?.filter(e => matchesCategory(e.event_type, category)) || [];
 
   return (
     <AdminPageLayout
       title="Histórico do Computador"
-      description="Veja tudo o que aconteceu no computador selecionado"
+      description="Veja o que aconteceu no computador selecionado"
     >
-      <div className="space-y-6">
-        {/* Agent Selector */}
-        <Card className="border-l-4 border-l-accent">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
+      <div className="space-y-5 max-w-2xl">
+        {/* Selector */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock className="h-4 w-4 text-muted-foreground" />
               Selecionar Computador
             </CardTitle>
-            <CardDescription>Escolha um computador para ver o que aconteceu</CardDescription>
           </CardHeader>
           <CardContent>
             <AgentSelector value={selectedAgent} onValueChange={setSelectedAgent} />
@@ -137,118 +119,86 @@ export default function AgentTimeline() {
 
         {selectedAgent && (
           <>
-            {/* State Explainer */}
+            {/* State */}
             <AgentStateExplainer agentId={selectedAgent} />
 
-            {/* Filter */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Filtrar por Tipo</CardTitle>
-                <CardDescription className="text-xs">Escolha um tipo para ver apenas esses eventos</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos os eventos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os eventos</SelectItem>
-                    {eventTypes.map(type => (
-                      <SelectItem key={type} value={type}>
-                        {getFriendlyEventType(type).label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
+            {/* Category filter — inline */}
+            <div className="flex flex-wrap gap-2">
+              {FILTER_CATEGORIES.map(cat => (
+                <button
+                  key={cat.value}
+                  onClick={() => setCategory(cat.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border
+                    ${category === cat.value
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-card text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground'
+                    }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
 
             {/* Timeline */}
             {isLoading ? (
-              <Card>
-                <CardContent className="pt-6 space-y-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-20 w-full" />
-                  ))}
-                </CardContent>
-              </Card>
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-14 w-full rounded-lg" />
+                ))}
+              </div>
             ) : error ? (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Erro ao carregar histórico: {error instanceof Error ? error.message : 'Erro desconhecido'}
-                </AlertDescription>
+                <AlertDescription>Erro ao carregar histórico.</AlertDescription>
               </Alert>
-            ) : filteredTimeline?.length === 0 ? (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Nenhum evento encontrado para este computador.
-                </AlertDescription>
-              </Alert>
+            ) : filtered.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground text-sm">
+                Nenhum evento encontrado.
+              </div>
             ) : (
-              <div className="space-y-3 relative">
-                {/* Timeline Line */}
-                <div className="absolute left-[30px] top-0 bottom-0 w-0.5 bg-border" />
+              <div className="relative pl-8">
+                {/* Vertical line */}
+                <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-border" />
 
-                {filteredTimeline?.map((event, idx) => {
-                  const EventIcon = getEventIcon(event.event_type);
-                  const eventId = `${event.source_id}-${event.event_time}`;
-                  const friendly = getFriendlyEventType(event.event_type);
-                  const dataSummary = getFriendlyDataSummary(event.data);
-                  
-                  return (
-                    <motion.div
-                      key={eventId}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: Math.min(idx * 0.03, 0.5) }}
-                    >
-                      <Collapsible
-                        open={openItems.has(eventId)}
-                        onOpenChange={() => toggleItem(eventId)}
+                <div className="space-y-1">
+                  {filtered.map((event, idx) => {
+                    const meta = getEventMeta(event.event_type);
+                    const Icon = meta.icon;
+                    const summary = meta.summary(event.data);
+
+                    return (
+                      <motion.div
+                        key={`${event.source_id}-${event.event_time}-${idx}`}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: Math.min(idx * 0.02, 0.4) }}
+                        className="relative flex items-start gap-3 py-2.5 group"
                       >
-                        <Card className="ml-12 border-l-4 border-l-accent relative">
-                          {/* Timeline Dot */}
-                          <div className="absolute -left-[62px] top-6 h-8 w-8 rounded-full bg-card border-2 border-border flex items-center justify-center">
-                            <EventIcon className={`h-4 w-4 ${getEventColor(event.event_type)}`} />
+                        {/* Dot */}
+                        <div className={`absolute -left-8 top-3 h-[22px] w-[22px] rounded-full border-2 border-background flex items-center justify-center ${meta.dot}`}>
+                          <Icon className="h-3 w-3 text-background" />
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-sm font-medium text-foreground truncate">
+                              {meta.label}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground whitespace-nowrap shrink-0">
+                              {timeAgo(event.event_time)}
+                            </span>
                           </div>
-
-                          <CollapsibleTrigger className="w-full">
-                            <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors py-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex flex-col items-start gap-1">
-                                  <span className="text-sm font-medium">{friendly.label}</span>
-                                  <span className="text-xs text-muted-foreground">{friendly.description}</span>
-                                </div>
-                                <ChevronDown className={`h-4 w-4 transition-transform shrink-0 ${openItems.has(eventId) ? 'rotate-180' : ''}`} />
-                              </div>
-                              {dataSummary && (
-                                <p className="text-xs text-muted-foreground text-left mt-1 truncate max-w-full">
-                                  {dataSummary}
-                                </p>
-                              )}
-                              <CardDescription className="text-left text-xs mt-1">
-                                {formatBrazilDateTime(event.event_time, 'full')}
-                              </CardDescription>
-                            </CardHeader>
-                          </CollapsibleTrigger>
-
-                          <CollapsibleContent>
-                            <CardContent className="pt-0">
-                              <p className="text-xs text-muted-foreground mb-2">
-                                Dados técnicos (para suporte):
-                              </p>
-                              <div className="bg-muted/50 rounded-lg p-3 font-mono text-xs overflow-auto max-h-64">
-                                <pre>{JSON.stringify(event.data, null, 2)}</pre>
-                              </div>
-                            </CardContent>
-                          </CollapsibleContent>
-                        </Card>
-                      </Collapsible>
-                    </motion.div>
-                  );
-                })}
+                          {summary && (
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                              {summary}
+                            </p>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </>
