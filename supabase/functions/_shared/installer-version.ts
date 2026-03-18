@@ -7,16 +7,16 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v5.0.15';
+export const INSTALLER_VERSION = 'v5.0.14';
 export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
 export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
 export const LAST_UPDATED = '2026-03-18T00:00:00Z';
 
 export const CHANGES = [
-  '[v5.0.15] FIX: CPU sampling with 2-second interval + 3 samples average for accurate readings',
-  '[v5.0.15] FIX: WMI fallback (Win32_Processor.LoadPercentage) when Get-Counter fails',
-  '[v5.0.15] OPT: CPU info caching ($Global:CachedCpuInfo) to avoid repeated WMI queries',
-  '[v5.0.15] FEAT: Added cpu_logical (logical processors count) to metrics payload',
+  '[v5.0.14] FIX: CPU sampling with 2-second interval + 3 samples average for accurate readings',
+  '[v5.0.14] FIX: WMI fallback (Win32_Processor.LoadPercentage) when Get-Counter fails',
+  '[v5.0.14] OPT: CPU info caching ($Global:CachedCpuInfo) to avoid repeated WMI queries',
+  '[v5.0.14] FEAT: Added cpu_logical (logical processors count) to metrics payload',
   '[v5.0.9] COST-OPT: Agent reads heartbeat_interval_seconds and poll_interval_seconds from server response',
   '[v5.0.9] COST-OPT: Dynamic interval adjustment eliminates hardcoded polling frequencies',
   '[v4.1.7] PHASE 1: Process Control - kill_process, stop_service, disable_service handlers',

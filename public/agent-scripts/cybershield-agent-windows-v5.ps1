@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v5.0.15 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.14 FULL ENTERPRISE
 
     v5.0.14: THREAT NETWORK + PROCESS LINEAGE + EDGE EVENT AGGREGATION
     - NEW: Edge Event Aggregation Engine - Local event deduplication before submission
@@ -4670,7 +4670,7 @@ function Get-SystemMetrics {
             return $Global:CachedSystemMetrics
         }
 
-        # v5.0.15-fix: Use Get-Counter with 2s interval + 3 samples averaged for accurate CPU reading
+        # v5.0.14-fix: Use Get-Counter with 2s interval + 3 samples averaged for accurate CPU reading
         # Single samples can still return 0-1% on idle machines
         $cpuPercent = 0
         try {
