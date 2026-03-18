@@ -150,7 +150,7 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
             {isSlaBreach && isActive && (
               <Badge variant="destructive" className="gap-1 animate-pulse">
                 <Clock className="h-3 w-3" />
-                SLA Violado
+                Prazo Vencido
               </Badge>
             )}
             {task.requires_human_review && (
