@@ -240,7 +240,7 @@ export default function ExecutiveDashboard() {
                 <div className="grid grid-cols-3 gap-3">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="text-center p-3 rounded-xl bg-info/10 border border-info/20 cursor-help shadow-sm">
+                      <div className="text-center p-3 rounded-xl bg-info/10 border border-info/20 shadow-sm">
                         <p className="text-2xl font-bold text-info">{summaryData?.automatedActions || 0}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Problemas corrigidos<br/>automaticamente</p>
                       </div>
