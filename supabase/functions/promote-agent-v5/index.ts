@@ -228,9 +228,11 @@ Deno.serve(async (req) => {
           signed: !!signatureBase64,
         };
       } catch (error) {
+        const errMsg = error instanceof Error ? error.message : JSON.stringify(error);
+        console.error(`[promote-agent-v5] ${platform} failed:`, errMsg);
         results[platform] = {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: errMsg,
         };
       }
     }
