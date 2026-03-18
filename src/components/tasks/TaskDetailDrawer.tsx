@@ -154,7 +154,7 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
               </Badge>
             )}
             {task.requires_human_review && (
-              <Badge variant="outline">Revisão Humana Requerida</Badge>
+              <Badge variant="outline">Aprovação Pendente</Badge>
             )}
             {task.auto_generated && (
               <Badge variant="outline">Auto-gerada</Badge>
