@@ -211,7 +211,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
 
   const superAIItems = useMemo<MenuItem[]>(() => [
     { icon: BarChart, label: 'Métricas IA', to: '/admin/ai-metrics' },
-    { icon: Eye, label: 'Governança IA', to: '/admin/ai-governance' },
+    { icon: Eye, label: 'Revisão IA', to: '/admin/ai-governance' },
     { icon: Bot, label: 'Autonomia IA', to: '/admin/ai-autonomy' },
   ], []);
 
