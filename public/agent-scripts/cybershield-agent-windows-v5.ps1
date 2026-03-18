@@ -4021,9 +4021,8 @@ function Initialize-ProcessBaseline {
                 $dupsRemoved = ([array]$loadedBaseline).Count - $normalizedBaseline.Count
                 if ($dupsRemoved -gt 0) {
                     Write-Log "[BASELINE] Load dedup: removed $dupsRemoved duplicate entries" "WARN"
-                    # Re-save cleaned baseline immediately
-                    $psoCleanLoad = $normalizedBaseline | ForEach-Object { [PSCustomObject]$_ }
-                    $psoCleanLoad | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                    # v5.0.14-fix3: Use ConvertTo-SafePSO to prevent PS 5.1 duplicate key errors
+                    $normalizedBaseline | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
                 }
                 Write-Log "[BASELINE] Loaded and normalized baseline with $($normalizedBaseline.Count) processes" "INFO"
             } else {
