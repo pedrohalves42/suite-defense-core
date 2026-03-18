@@ -919,7 +919,7 @@ async function evaluateForTenant(
 
 // ── Main Handler ──
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return secureCorsPreflightResponse();
   }
