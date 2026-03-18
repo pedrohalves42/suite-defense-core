@@ -132,6 +132,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Presentation, label: 'Resumo Executivo', to: '/admin/executive' },
     { icon: Cpu, label: 'Meus Computadores', to: '/admin/agent-center' },
     { icon: Activity, label: 'Tempo Real', to: '/admin/monitoring-advanced' },
+    { icon: ListTodo, label: 'Tarefas', to: '/admin/tasks' },
     { icon: Sparkles, label: 'Novo Cliente', to: '/admin/onboarding' },
   ], [urgentCount]);
 
@@ -140,8 +141,8 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: ShieldCheck, label: 'Vulnerabilidades', to: '/admin/vulnerability-center' },
     { icon: Globe, label: 'Segurança de Rede', to: '/admin/network-security' },
     { icon: AppWindow, label: 'Segurança de Ativos', to: '/admin/asset-security' },
-    { icon: AlertCircle, label: 'Itens Suspeitos', to: '/quarantine' },
-    { icon: AlertCircle, label: 'Resolver Alertas', to: '/admin/alert-resolution' },
+    { icon: AlertCircle, label: 'Alertas', to: '/quarantine' },
+    { icon: ShieldAlert, label: 'Proteção ao Vivo', to: '/admin/realtime-security' },
   ], []);
 
   const managementItems = useMemo<MenuItem[]>(() => [
@@ -171,13 +172,8 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Download, label: 'Instalações', to: '/admin/installations' },
     { icon: GitBranch, label: 'Atualizações', to: '/admin/agent-releases' },
     { icon: Terminal, label: 'Diagnóstico', to: '/admin/diagnostics' },
-    { icon: Clock, label: 'Tarefas Agendadas', to: '/admin/automations' },
-    { icon: Zap, label: 'Correção Automática', to: '/admin/auto-remediation' },
-    { icon: ShieldAlert, label: 'Proteção ao Vivo', to: '/admin/realtime-security' },
-    { icon: UserPlus, label: 'Convites', to: '/admin/invites' },
-    { icon: ListTodo, label: 'Tarefas', to: '/admin/tasks' },
-    { icon: Fingerprint, label: 'Minha Conta', to: '/admin/my-account' },
-    { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
+    { icon: Clock, label: 'Automação', to: '/admin/automations' },
+    { icon: Fingerprint, label: 'Conta', to: '/admin/my-account' },
   ], []);
 
   // ─── SUPER ADMIN Menu Items ─────────────────────
