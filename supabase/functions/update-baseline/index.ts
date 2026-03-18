@@ -191,6 +191,9 @@ Deno.serve(async (req) => {
         std_deviation: finalStdDev,
         anomalies_detected: anomaliesDetected,
         data_points_processed: data_points.length,
+        // v5.0.14-fix: Schema hint to prevent PSCustomObject duplicate key warnings
+        // Agent should use ONLY these property names when building baseline objects
+        property_schema: ['baseline_type', 'mean', 'std_deviation', 'threshold', 'anomalies_detected', 'last_updated'],
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
