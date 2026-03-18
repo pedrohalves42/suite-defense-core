@@ -145,8 +145,6 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   ], []);
 
   const managementItems = useMemo<MenuItem[]>(() => [
-    { icon: Users, label: 'Grupos', to: '/admin/agent-center?tab=groups' },
-    { icon: Tag, label: 'Etiquetas', to: '/admin/agent-center?tab=tags' },
     { icon: Shield, label: 'Regras', to: '/admin/security-policies' },
     { icon: Crown, label: 'Equipe', to: '/admin/members' },
     { icon: FileBarChart, label: 'Relatórios', to: '/admin/reports' },
