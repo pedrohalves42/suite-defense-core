@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +19,7 @@ import {
 } from 'lucide-react';
 import { format, ptBR } from '@/lib/date-utils';
 import { subDays } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
@@ -28,6 +29,7 @@ export default function ExecutiveDashboard() {
   const { metrics, isLoading: unifiedLoading, refetch: refetchUnified, tenant } = useUnifiedMetrics();
   const tenantId = tenant?.id;
   const { data: riskDelta } = useTodayRiskDelta();
+  const navigate = useNavigate();
 
   // Executive-specific data: jobs and compliance (not shared)
   const { data: execData, isLoading: execLoading, refetch: refetchExec } = useQuery({
@@ -69,6 +71,19 @@ export default function ExecutiveDashboard() {
     refetchInterval: 60000,
     staleTime: 15000,
   });
+
+  // Auto-trigger compliance calculation when no data exists
+  const [complianceTriggered, setComplianceTriggered] = useState(false);
+  useEffect(() => {
+    if (tenantId && execData && !execData.compliance && !complianceTriggered) {
+      setComplianceTriggered(true);
+      supabase.functions.invoke('calculate-compliance', {
+        body: { tenant_id: tenantId }
+      }).then(() => {
+        setTimeout(() => refetchExec(), 3000);
+      }).catch(console.error);
+    }
+  }, [tenantId, execData, complianceTriggered, refetchExec]);
 
   const isLoading = unifiedLoading || execLoading;
   const refetch = () => { refetchUnified(); refetchExec(); };
@@ -213,11 +228,11 @@ export default function ExecutiveDashboard() {
 
               {/* Key metrics - focused on BUSINESS impact */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                <MetricTile icon={<Laptop className="h-3.5 w-3.5" />} label="Computadores" value={`${onlineAgents}/${totalAgents}`} sub="protegidos" color="green" pulse={onlineAgents > 0} />
-                <MetricTile icon={<ShieldBan className="h-3.5 w-3.5" />} label="Ameaças Bloqueadas" value={`${summaryData?.blockedThreats || 0}`} sub="últimos 7 dias" color={summaryData?.blockedThreats ? 'green' : 'muted'} />
-                <MetricTile icon={<DeltaIcon className="h-3.5 w-3.5" />} label="Nível de Risco" value={deltaInfo.label} sub={deltaInfo.description} color={deltaInfo.color === 'green' ? 'green' : deltaInfo.color === 'red' ? 'red' : 'muted'} />
-                <MetricTile icon={<Hammer className="h-3.5 w-3.5" />} label="Correções Automáticas" value={`${summaryData?.automatedActions || 0}`} sub="últimos 30 dias" color={summaryData?.automatedActions ? 'emerald' : 'muted'} />
-                <MetricTile icon={<FileCheck className="h-3.5 w-3.5" />} label="Conformidade" value={summaryData?.compliance?.grade || 'Pendente'} sub={summaryData?.compliance ? `Score: ${summaryData.compliance.overall_score}/100` : 'Aguardando primeira avaliação'} color={summaryData?.compliance?.overall_score >= 80 ? 'green' : summaryData?.compliance?.overall_score >= 60 ? 'amber' : 'muted'} />
+                <MetricTile icon={<Laptop className="h-3.5 w-3.5" />} label="Computadores" value={`${onlineAgents}/${totalAgents}`} sub="protegidos" color="green" pulse={onlineAgents > 0} onClick={() => navigate('/admin/agent-center')} />
+                <MetricTile icon={<ShieldBan className="h-3.5 w-3.5" />} label="Ameaças Bloqueadas" value={`${summaryData?.blockedThreats || 0}`} sub="últimos 7 dias" color={summaryData?.blockedThreats ? 'green' : 'muted'} onClick={() => navigate('/admin/threat-center')} />
+                <MetricTile icon={<DeltaIcon className="h-3.5 w-3.5" />} label="Nível de Risco" value={deltaInfo.label} sub={deltaInfo.description} color={deltaInfo.color === 'green' ? 'green' : deltaInfo.color === 'red' ? 'red' : 'muted'} onClick={() => navigate('/admin/vulnerability-center')} />
+                <MetricTile icon={<Hammer className="h-3.5 w-3.5" />} label="Correções Automáticas" value={`${summaryData?.automatedActions || 0}`} sub="últimos 30 dias" color={summaryData?.automatedActions ? 'emerald' : 'muted'} onClick={() => navigate('/admin/intelligence-hub?tab=automation')} />
+                <MetricTile icon={<FileCheck className="h-3.5 w-3.5" />} label="Conformidade" value={summaryData?.compliance?.grade || 'Pendente'} sub={summaryData?.compliance ? `Score: ${summaryData.compliance.overall_score}/100` : 'Clique para avaliar'} color={summaryData?.compliance?.overall_score >= 80 ? 'green' : summaryData?.compliance?.overall_score >= 60 ? 'amber' : 'muted'} onClick={() => navigate('/admin/compliance-hub')} />
               </div>
             </CardContent>
           </Card>
@@ -531,9 +546,10 @@ export default function ExecutiveDashboard() {
 
 /* ─── Sub-components ──────────────────────────── */
 
-function MetricTile({ icon, label, value, sub, color, pulse }: {
+function MetricTile({ icon, label, value, sub, color, pulse, onClick }: {
   icon: React.ReactNode; label: string; value: string; sub: string;
   color: 'green' | 'red' | 'emerald' | 'muted' | 'amber'; pulse?: boolean;
+  onClick?: () => void;
 }) {
   const valueColor = {
     green: 'text-success', red: 'text-destructive',
@@ -546,7 +562,17 @@ function MetricTile({ icon, label, value, sub, color, pulse }: {
   }[color];
 
   return (
-    <div className={cn("relative p-2.5 rounded-xl border backdrop-blur-sm", bgAccent)}>
+    <div 
+      className={cn(
+        "relative p-2.5 rounded-xl border backdrop-blur-sm", 
+        bgAccent,
+        onClick && "cursor-pointer hover:brightness-110 hover:scale-[1.02] transition-all duration-200"
+      )}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); } : undefined}
+    >
       {pulse && (
         <span className="absolute top-2 right-2 flex h-1.5 w-1.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
