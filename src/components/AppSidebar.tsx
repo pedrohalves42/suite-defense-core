@@ -141,7 +141,6 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: Globe, label: 'Segurança de Rede', to: '/admin/network-security' },
     { icon: AppWindow, label: 'Segurança de Ativos', to: '/admin/asset-security' },
     { icon: AlertCircle, label: 'Itens Suspeitos', to: '/quarantine' },
-    { icon: FileSearch, label: 'Histórico', to: '/admin/agent-center?tab=timeline' },
     { icon: AlertCircle, label: 'Resolver Alertas', to: '/admin/alert-resolution' },
   ], []);
 
