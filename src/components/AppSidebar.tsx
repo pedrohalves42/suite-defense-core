@@ -79,8 +79,9 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   });
 
   const [sectionStates, setSectionStates] = useState<Record<string, boolean>>(() => {
-    const saved = localStorage.getItem('sidebar-sections-v5');
+    const saved = localStorage.getItem('sidebar-sections-v6');
     return saved ? JSON.parse(saved) : {
+      overview: true,
       protection: true,
       management: true,
       compliance: false,
@@ -98,7 +99,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('sidebar-sections-v5', JSON.stringify(sectionStates));
+    localStorage.setItem('sidebar-sections-v6', JSON.stringify(sectionStates));
   }, [sectionStates]);
 
   useEffect(() => {
@@ -524,14 +525,15 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                 );
               })()}
 
-              {/* OVERVIEW - always visible, no section header */}
+              {/* Pendências - always visible */}
               <div className="space-y-0.5">
-                {overviewItems.map((item, idx) => (
-                  <div key={item.to}>
-                    {renderNavItem(item, idx)}
-                  </div>
-                ))}
+                <div key={overviewItems[0].to}>
+                  {renderNavItem(overviewItems[0], 0)}
+                </div>
               </div>
+
+              {/* OVERVIEW - collapsible */}
+              {renderCollapsibleSection('📌 Visão Geral', 'overview', overviewItems.slice(1))}
 
               <div className="sidebar-divider-neon my-2.5 mx-2" />
 
