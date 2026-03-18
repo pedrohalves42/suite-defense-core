@@ -526,7 +526,7 @@ export default function SecurityMonitoring() {
         {/* === EVENTS + SIDEBAR === */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Events List - 2 cols */}
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-2" ref={eventsRef}>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div>
