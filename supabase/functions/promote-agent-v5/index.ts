@@ -91,6 +91,8 @@ Deno.serve(async (req) => {
     const user = isServiceRole
       ? { id: 'service_role', email: 'system@internal' }
       : await requireSuperAdmin(supabase, req);
+    let body: Record<string, unknown> = {};
+    try { body = await req.json(); } catch { /* empty body ok */ }
     const results: Record<string, unknown> = {};
 
     const platforms = [
