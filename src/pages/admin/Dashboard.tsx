@@ -20,6 +20,7 @@ import { HealthTrendChart } from '@/components/admin/HealthTrendChart';
 import { SystemCyclesHealthCard } from '@/components/admin/SystemCyclesHealthCard';
 import { ReleaseSignatureStatusCard } from '@/components/admin/ReleaseSignatureStatusCard';
 import { GovernanceHealthBanner } from '@/components/admin/GovernanceHealthBanner';
+import { SecurityAdvisorCard } from '@/components/admin/SecurityAdvisorCard';
 import { NotificationSetupBanner } from '@/components/admin/NotificationSetupBanner';
 import { OnboardingRequiredBanner } from '@/components/admin/OnboardingRequiredBanner';
 import { SimpleDashboard } from '@/components/dashboard/SimpleDashboard';
@@ -318,11 +319,20 @@ export default function Dashboard() {
         <HealthTrendChart />
       </motion.div>
 
-      {/* ═══ SEÇÃO 4.5: Status Ed25519 (super_admin only) ═══ */}
+      {/* ═══ SEÇÃO 4.5: Assistente de Segurança IA ═══ */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.4 }}
+      >
+        <SecurityAdvisorCard />
+      </motion.div>
+
+      {/* ═══ SEÇÃO 4.6: Status Ed25519 (super_admin only) ═══ */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35, duration: 0.4 }}
       >
         <ReleaseSignatureStatusCard />
       </motion.div>
