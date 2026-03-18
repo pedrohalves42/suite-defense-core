@@ -3956,6 +3956,28 @@ function Get-UnauthorizedSoftware {
 # v5.0.13-perf: Global HashSet for O(1) baseline lookups
 $Global:ProcessBaselineSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
+function ConvertTo-SafePSO {
+    <#
+    .SYNOPSIS
+        v5.0.14-fix3: Safely converts any baseline entry (hashtable, [ordered], or PSCustomObject)
+        to a clean [PSCustomObject] via [ordered]@{} to eliminate duplicate key warnings in PS 5.1.
+        Always extracts canonical properties by name, never re-casts an existing PSCustomObject.
+    #>
+    param([Parameter(ValueFromPipeline)]$Entry)
+    process {
+        $n = if ($Entry -is [hashtable]) { $Entry["name"] } else { $Entry.name }
+        $c = if ($Entry -is [hashtable]) { $Entry["company"] } else { $Entry.company }
+        $d = if ($Entry -is [hashtable]) { $Entry["description"] } else { $Entry.description }
+        $f = if ($Entry -is [hashtable]) { $Entry["first_seen"] } else { $Entry.first_seen }
+        [PSCustomObject]([ordered]@{
+            name        = $n
+            company     = $c
+            description = $d
+            first_seen  = $f
+        })
+    }
+}
+
 function Initialize-ProcessBaseline {
     <#
     .SYNOPSIS
@@ -3999,9 +4021,8 @@ function Initialize-ProcessBaseline {
                 $dupsRemoved = ([array]$loadedBaseline).Count - $normalizedBaseline.Count
                 if ($dupsRemoved -gt 0) {
                     Write-Log "[BASELINE] Load dedup: removed $dupsRemoved duplicate entries" "WARN"
-                    # Re-save cleaned baseline immediately
-                    $psoCleanLoad = $normalizedBaseline | ForEach-Object { [PSCustomObject]$_ }
-                    $psoCleanLoad | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                    # v5.0.14-fix3: Use ConvertTo-SafePSO to prevent PS 5.1 duplicate key errors
+                    $normalizedBaseline | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
                 }
                 Write-Log "[BASELINE] Loaded and normalized baseline with $($normalizedBaseline.Count) processes" "INFO"
             } else {
@@ -4028,9 +4049,8 @@ function Initialize-ProcessBaseline {
             }
 
             $Global:ProcessBaseline = $baseline
-            # v5.0.14-fix: Convert to PSCustomObject array before JSON serialization to prevent PS 5.1 duplicate key errors
-            $psoBaseline = $baseline | ForEach-Object { [PSCustomObject]$_ }
-            $psoBaseline | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+            # v5.0.14-fix3: Use ConvertTo-SafePSO to prevent PS 5.1 duplicate key errors
+            $baseline | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
 
             Write-Log "[BASELINE] Created baseline with $($baseline.Count) processes" "SUCCESS"
         }
@@ -4093,8 +4113,7 @@ function Get-ProcessAnomalies {
                         $n = if ($e -is [hashtable]) { $e["name"] } else { $e.name }
                         if ($n) { [void]$Global:ProcessBaselineSet.Add($n) }
                     }
-                    $psoClean = $cleanBaseline | ForEach-Object { [PSCustomObject]$_ }
-                    $psoClean | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                    $cleanBaseline | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
                 }
             }
         } catch {
@@ -4138,9 +4157,8 @@ function Get-ProcessAnomalies {
                         first_seen  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
                     }
                 }
-                # v5.0.14-fix: Convert to PSCustomObject before serialization (prevents PS 5.1 duplicate key)
-                $psoForSave = $normalizedForSave | ForEach-Object { [PSCustomObject]$_ }
-                $psoForSave | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                # v5.0.14-fix3: Use ConvertTo-SafePSO to prevent PS 5.1 duplicate key errors
+                $normalizedForSave | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
             } catch {
                 Write-Log "[BASELINE] Failed to save baseline: $($_.Exception.Message)" "WARN"
             }
