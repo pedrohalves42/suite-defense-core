@@ -49,33 +49,8 @@ export const useSessionTimeout = () => {
     const timeoutMs = getTimeoutMinutes() * 60 * 1000;
     const elapsed = Date.now() - lastActivityRef.current;
 
-    // V-706 FIX: Server-side session validation every 5 checks (~2.5 min)
-    serverCheckCountRef.current += 1;
-    if (serverCheckCountRef.current >= 5) {
-      serverCheckCountRef.current = 0;
-      try {
-        const { data: session } = await supabase
-          .from('active_sessions')
-          .select('expires_at')
-          .eq('user_id', user.id)
-          .gt('expires_at', new Date().toISOString())
-          .limit(1)
-          .maybeSingle();
-        
-        if (!session) {
-          logger.info('[SessionTimeout] Server-side session expired or not found');
-          toast.warning('Sessão expirada pelo servidor', {
-            description: 'Você será redirecionado para a tela de login.',
-            duration: 5000
-          });
-          setTimeout(async () => { await supabase.auth.signOut(); }, 1500);
-          return;
-        }
-      } catch (err) {
-        // Non-blocking: if server check fails, fall through to client-side check
-        logger.warn('[SessionTimeout] Server session check failed', err);
-      }
-    }
+    // Session validity is managed by Supabase Auth JWT + refresh tokens.
+    // No server-side active_sessions check needed.
 
     // Client-side check (defense in depth)
     if (elapsed >= timeoutMs) {
