@@ -28,6 +28,7 @@ export default function ExecutiveDashboard() {
   const { metrics, isLoading: unifiedLoading, refetch: refetchUnified, tenant } = useUnifiedMetrics();
   const tenantId = tenant?.id;
   const { data: riskDelta } = useTodayRiskDelta();
+  const navigate = useNavigate();
 
   // Executive-specific data: jobs and compliance (not shared)
   const { data: execData, isLoading: execLoading, refetch: refetchExec } = useQuery({
