@@ -79,8 +79,9 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   });
 
   const [sectionStates, setSectionStates] = useState<Record<string, boolean>>(() => {
-    const saved = localStorage.getItem('sidebar-sections-v5');
+    const saved = localStorage.getItem('sidebar-sections-v6');
     return saved ? JSON.parse(saved) : {
+      overview: true,
       protection: true,
       management: true,
       compliance: false,
