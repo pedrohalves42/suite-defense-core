@@ -765,3 +765,21 @@ verify_jwt = false
 # === Script Sync ===
 [functions.sync-scripts-direct]
 verify_jwt = false
+
+# === Threat Intelligence: Sync feeds daily at 4 AM UTC ===
+[functions.sync-threat-feeds]
+verify_jwt = false
+schedule = "0 4 * * *"
+
+# === EDR Correlation: Run every 30 minutes ===
+[functions.correlate-edr-events]
+verify_jwt = false
+schedule = "*/30 * * * *"
+
+# === Threat Intelligence Lookup (on-demand) ===
+[functions.threat-intelligence-lookup]
+verify_jwt = false
+
+# === Publish Threat IoC (on-demand) ===
+[functions.publish-threat-ioc]
+verify_jwt = false
