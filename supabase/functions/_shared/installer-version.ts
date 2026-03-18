@@ -7,7 +7,7 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v5.0.15';
+export const INSTALLER_VERSION = 'v5.0.14';
 export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
 export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
 export const LAST_UPDATED = '2026-03-18T00:00:00Z';
