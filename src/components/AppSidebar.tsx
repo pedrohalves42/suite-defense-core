@@ -138,12 +138,12 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   ], [urgentCount]);
 
   const securityItems = useMemo<MenuItem[]>(() => [
-    { icon: AlertTriangle, label: 'Central de Ameaças', to: '/admin/threat-center' },
-    { icon: ShieldCheck, label: 'Vulnerabilidades', to: '/admin/vulnerability-center' },
-    { icon: Globe, label: 'Segurança de Rede', to: '/admin/network-security' },
-    { icon: AppWindow, label: 'Segurança de Ativos', to: '/admin/asset-security' },
+    { icon: AlertTriangle, label: 'Alertas de Segurança', to: '/admin/threat-center' },
+    { icon: ShieldCheck, label: 'Pontos Fracos', to: '/admin/vulnerability-center' },
+    { icon: Globe, label: 'Internet e Navegação', to: '/admin/network-security' },
+    { icon: AppWindow, label: 'Programas e Dispositivos', to: '/admin/asset-security' },
     { icon: AlertCircle, label: 'Alertas', to: '/quarantine' },
-    { icon: ShieldAlert, label: 'Proteção ao Vivo', to: '/admin/realtime-security' },
+    { icon: ShieldAlert, label: 'Monitoramento Contínuo', to: '/admin/realtime-security' },
   ], []);
 
   const managementItems = useMemo<MenuItem[]>(() => [
@@ -157,15 +157,15 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   // ─── ADMIN: Collapsed by default ─────────────────────
   const complianceItems = useMemo<MenuItem[]>(() => [
     { icon: ClipboardCheck, label: 'Visão Geral', to: '/admin/compliance-hub' },
-    { icon: FileSearch, label: 'Provas & Auditoria', to: '/admin/compliance-hub?tab=evidence' },
-    { icon: Workflow, label: 'Procedimentos', to: '/admin/compliance-hub?tab=procedures' },
+    { icon: FileSearch, label: 'Registros e Evidências', to: '/admin/compliance-hub?tab=evidence' },
+    { icon: Workflow, label: 'Planos de Ação', to: '/admin/compliance-hub?tab=procedures' },
     { icon: BarChart3, label: 'Risco', to: '/admin/compliance-hub?tab=risk' },
   ], []);
 
   const intelligenceItems = useMemo<MenuItem[]>(() => [
-    { icon: BrainCircuit, label: 'Insights', to: '/admin/intelligence-hub', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
+    { icon: BrainCircuit, label: 'Sugestões', to: '/admin/intelligence-hub', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
     { icon: Zap, label: 'Automação', to: '/admin/intelligence-hub?tab=automation' },
-    { icon: Eye, label: 'Governança', to: '/admin/intelligence-hub?tab=governance' },
+    { icon: Eye, label: 'Revisão de Decisões', to: '/admin/intelligence-hub?tab=governance' },
     { icon: BookOpen, label: 'Conhecimento', to: '/admin/intelligence-hub?tab=knowledge' },
   ], [criticalInsightsCount]);
 
@@ -181,7 +181,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
   const superOpsItems = useMemo<MenuItem[]>(() => [
     { icon: Server, label: 'Empresas', to: '/super-admin/tenants', end: true },
     { icon: Key, label: 'Chaves de Cadastro', to: '/super-admin/enrollment-keys' },
-    { icon: Percent, label: 'Rollout', to: '/super-admin/rollout-policies' },
+    { icon: Percent, label: 'Distribuição Gradual', to: '/super-admin/rollout-policies' },
     { icon: Users, label: 'Usuários', to: '/super-admin/users' },
     { icon: Shield, label: 'Funcionalidades', to: '/super-admin/features' },
     { icon: Clock, label: 'Suspensão', to: '/super-admin/tenant-suspension' },
@@ -193,7 +193,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
     { icon: DollarSign, label: 'Indicadores', to: '/super-admin/unit-economics' },
     { icon: TrendingUp, label: 'Retenção', to: '/super-admin/cohort-analysis' },
     { icon: Target, label: 'Projeções', to: '/super-admin/revenue-projections' },
-    { icon: Presentation, label: 'Pipeline', to: '/super-admin/sales-pipeline' },
+    { icon: Presentation, label: 'Funil de Vendas', to: '/super-admin/sales-pipeline' },
     { icon: Scale, label: 'Apresentação', to: '/super-admin/pitch-deck' },
     { icon: AlertTriangle, label: 'Riscos', to: '/super-admin/risk-analysis' },
     
@@ -211,13 +211,13 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
 
   const superAIItems = useMemo<MenuItem[]>(() => [
     { icon: BarChart, label: 'Métricas IA', to: '/admin/ai-metrics' },
-    { icon: Eye, label: 'Governança IA', to: '/admin/ai-governance' },
+    { icon: Eye, label: 'Revisão IA', to: '/admin/ai-governance' },
     { icon: Bot, label: 'Autonomia IA', to: '/admin/ai-autonomy' },
   ], []);
 
   const superIntegrationsItems = useMemo<MenuItem[]>(() => [
-    { icon: Plug, label: 'ITSM', to: '/admin/itsm' },
-    { icon: FileText, label: 'Exportar SIEM', to: '/admin/siem-export' },
+    { icon: Plug, label: 'Service Desk', to: '/admin/itsm' },
+    { icon: FileText, label: 'Exportar Logs', to: '/admin/siem-export' },
     { icon: Palette, label: 'Marca Própria', to: '/admin/white-label' },
     { icon: Map, label: 'Plataformas', to: '/admin/platforms' },
     { icon: Code, label: 'API', to: '/admin/api-docs' },
@@ -548,9 +548,9 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
                 <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--neon-cyan)_/_0.2)]">Administração</span>
               </div>
 
-              {renderCollapsibleSection('📋 Normas e Regras', 'compliance', complianceItems)}
-              {renderCollapsibleSection('🧠 Automação Inteligente', 'aiAnalysis', intelligenceItems)}
-              {renderCollapsibleSection('🔧 Ferramentas', 'advanced', advancedItems)}
+              {renderCollapsibleSection('📋 Conformidade', 'compliance', complianceItems)}
+              {renderCollapsibleSection('🧠 Assistente IA', 'aiAnalysis', intelligenceItems)}
+              {renderCollapsibleSection('🔧 Configurar', 'advanced', advancedItems)}
             </motion.div>
           ) : (
             <motion.div className="space-y-0.5" variants={containerVariants} initial="hidden" animate="show">
