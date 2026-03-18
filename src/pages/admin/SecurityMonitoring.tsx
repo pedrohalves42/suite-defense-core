@@ -381,39 +381,47 @@ export default function SecurityMonitoring() {
                     <p className="text-sm font-semibold text-destructive">
                       {m.criticalEvents} evento{m.criticalEvents > 1 ? 's' : ''} crítico{m.criticalEvents > 1 ? 's' : ''} detectado{m.criticalEvents > 1 ? 's' : ''}
                     </p>
-                    <p className="text-xs text-muted-foreground">Revise os eventos abaixo e tome ações corretivas</p>
-                  </div>
-                  <Badge variant="destructive" className="shrink-0 gap-1">
-                    <Flame className="h-3 w-3" /> Ação necessária
-                  </Badge>
-                </>
-              ) : hasActivity ? (
-                <>
-                  <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
-                    <Shield className="h-5 w-5 text-amber-500" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-amber-500">Atividade detectada</p>
-                    <p className="text-xs text-muted-foreground">
-                      {m.totalEvents} evento{m.totalEvents > 1 ? 's' : ''} no período
-                      {m.blockedAttempts > 0 && ` · ${m.blockedAttempts} acesso${m.blockedAttempts > 1 ? 's' : ''} bloqueado${m.blockedAttempts > 1 ? 's' : ''}`}
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
-                    <ShieldCheck className="h-5 w-5 text-emerald-500" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-emerald-500">Tudo tranquilo</p>
-                    <p className="text-xs text-muted-foreground">Nenhuma ameaça detectada no período selecionado</p>
-                  </div>
-                  <Badge variant="outline" className="shrink-0 text-emerald-500 border-emerald-500/30 gap-1">
-                    <ShieldCheck className="h-3 w-3" /> Protegido
-                  </Badge>
-                </>
-              )}
+                   <p className="text-xs text-muted-foreground">Revise os eventos abaixo e tome ações corretivas</p>
+                   </div>
+                   <Button
+                     variant="destructive"
+                     size="sm"
+                     className="shrink-0 gap-1.5"
+                     onClick={() => {
+                       setEventFilter('security');
+                       eventsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                     }}
+                   >
+                     <ArrowDown className="h-3.5 w-3.5" /> Ver eventos críticos
+                   </Button>
+                 </>
+               ) : hasActivity ? (
+                 <>
+                   <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
+                     <Shield className="h-5 w-5 text-amber-500" />
+                   </div>
+                   <div className="flex-1">
+                     <p className="text-sm font-semibold text-amber-500">Atividade detectada</p>
+                     <p className="text-xs text-muted-foreground">
+                       {m.totalEvents} evento{m.totalEvents > 1 ? 's' : ''} no período
+                       {m.blockedAttempts > 0 && ` · ${m.blockedAttempts} acesso${m.blockedAttempts > 1 ? 's' : ''} bloqueado${m.blockedAttempts > 1 ? 's' : ''}`}
+                     </p>
+                   </div>
+                 </>
+               ) : (
+                 <>
+                   <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                     <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                   </div>
+                   <div className="flex-1">
+                     <p className="text-sm font-semibold text-emerald-500">Tudo tranquilo</p>
+                     <p className="text-xs text-muted-foreground">Nenhuma ameaça detectada no período selecionado</p>
+                   </div>
+                   <Badge variant="outline" className="shrink-0 text-emerald-500 border-emerald-500/30 gap-1">
+                     <ShieldCheck className="h-3 w-3" /> Protegido
+                   </Badge>
+                 </>
+               )}
             </CardContent>
           </Card>
         </motion.div>
