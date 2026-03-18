@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
             script_content: normalized,
             sha256: hash,
             is_active: true,
-            release_notes: `Emergency re-sync of authoritative ${VERSION} scripts`,
+            release_notes: `Sync of authoritative ${VERSION} scripts`,
             created_by: user.id,
             signature_base64: signatureBase64,
             signed_at: signedAt,
