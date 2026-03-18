@@ -191,7 +191,7 @@ export default function ComplianceAutomation() {
 
   return (
     <AdminPageLayout
-      title="Compliance Automation"
+      title="Conformidade Automática"
       description="Mapeamento automático ISO 27001, SOC 2, LGPD e NIST CSF"
     >
       <div className="space-y-6">
