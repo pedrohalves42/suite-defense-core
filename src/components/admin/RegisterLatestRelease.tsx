@@ -50,11 +50,33 @@ export function RegisterLatestRelease() {
     const fileName = SCRIPT_FILES[platform];
     if (!fileName) throw new Error(`Unknown platform: ${platform}`);
 
+    // Strategy 1: Storage bucket (works in production)
+    try {
+      const { data: fileData, error: storageError } = await supabase.storage
+        .from('agent-installers')
+        .download(`scripts/${fileName}`);
+      
+      if (!storageError && fileData) {
+        const content = await fileData.text();
+        if (content && content.length > 1000 && !content.trimStart().startsWith('<!DOCTYPE')) {
+          console.log(`[RegisterRelease] Loaded ${platform} from storage: ${content.length} chars`);
+          return content;
+        }
+      }
+    } catch (e) {
+      console.warn(`[RegisterRelease] Storage fallback for ${platform}:`, e);
+    }
+
+    // Strategy 2: Public URL (local dev only)
     const response = await fetch(`/agent-scripts/${fileName}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch ${platform} script: ${response.status}`);
     }
-    return response.text();
+    const text = await response.text();
+    if (text.trimStart().startsWith('<!DOCTYPE') || text.trimStart().startsWith('<html')) {
+      throw new Error(`${platform}: URL returned HTML instead of script. Upload the script to the storage bucket first.`);
+    }
+    return text;
   };
 
   const registerPlatform = async (platform: string, scriptContent: string): Promise<PlatformResult> => {
