@@ -10,6 +10,7 @@
  * - Comando de reinstalação
  */
 
+import { useState } from 'react';
 import {
   Sheet,
   SheetContent,
