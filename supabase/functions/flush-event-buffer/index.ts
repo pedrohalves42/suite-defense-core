@@ -5,8 +5,8 @@
  * distributes them to the correct final tables in bulk, then marks
  * rows as processed.
  * 
- * This is the second half of the Event Buffer pattern that provides
- * 10-30x throughput improvement over direct writes.
+ * HARDENING (v2): Includes inline Threat Intel matching (IP/hash/domain)
+ * and behavioral anomaly detection per agent.
  * 
  * Runs on cron every 10 seconds for near-real-time processing.
  * 
@@ -16,16 +16,97 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 
-const BATCH_SIZE = 5000; // Max rows per flush cycle
+const BATCH_SIZE = 5000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+// ── Threat Intel Cache (refreshed per invocation) ──
+interface ThreatIndicator {
+  indicator_value: string;
+  indicator_type: string;
+  severity: string;
+  source: string;
+  confidence_score: number;
+}
+
+async function loadThreatIntel(supabase: any): Promise<{
+  ips: Map<string, ThreatIndicator>;
+  hashes: Map<string, ThreatIndicator>;
+  domains: Map<string, ThreatIndicator>;
+}> {
+  const ips = new Map<string, ThreatIndicator>();
+  const hashes = new Map<string, ThreatIndicator>();
+  const domains = new Map<string, ThreatIndicator>();
+
+  try {
+    const { data } = await supabase
+      .from('threat_indicators')
+      .select('indicator_value, indicator_type, severity, source, confidence_score')
+      .eq('is_active', true)
+      .limit(10000);
+
+    if (data) {
+      for (const ti of data) {
+        const val = ti.indicator_value.toLowerCase();
+        switch (ti.indicator_type) {
+          case 'ip': ips.set(val, ti); break;
+          case 'hash_sha256': hashes.set(val, ti); break;
+          case 'domain': domains.set(val, ti); break;
+          case 'url': domains.set(val, ti); break;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[flush-event-buffer] Failed to load threat intel (non-blocking):', e);
+  }
+
+  return { ips, hashes, domains };
+}
+
+// ── Behavioral Anomaly Detection ──
+interface BaselineData {
+  mean_value: number;
+  std_deviation: number;
+  threshold_multiplier: number;
+}
+
+async function loadBaselines(supabase: any): Promise<Map<string, BaselineData>> {
+  const baselines = new Map<string, BaselineData>();
+  try {
+    const { data } = await supabase
+      .from('agent_behavioral_baseline')
+      .select('agent_id, baseline_type, mean_value, std_deviation, threshold_multiplier')
+      .eq('is_active', true)
+      .limit(5000);
+
+    if (data) {
+      for (const b of data) {
+        if (b.mean_value != null && b.std_deviation != null) {
+          const key = `${b.agent_id}:${b.baseline_type}`;
+          baselines.set(key, {
+            mean_value: b.mean_value,
+            std_deviation: b.std_deviation,
+            threshold_multiplier: b.threshold_multiplier || 2.5,
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[flush-event-buffer] Failed to load baselines (non-blocking):', e);
+  }
+  return baselines;
+}
+
+function isAnomaly(value: number, baseline: BaselineData): boolean {
+  const threshold = baseline.mean_value + (baseline.std_deviation * baseline.threshold_multiplier);
+  return value > threshold;
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  // V-11005 FIX: assertInternalCaller returns a Response if unauthorized — MUST check and return it
   const authError = assertInternalCaller(req);
   if (authError) return authError;
 
@@ -34,8 +115,7 @@ Deno.serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    // ── Step 1: Claim a batch of unprocessed rows atomically ──
-    // Uses FOR UPDATE SKIP LOCKED to prevent double-processing across concurrent workers
+    // ── Step 1: Claim batch ──
     const { data: claimedCount, error: claimError } = await supabase.rpc('claim_event_buffer_batch', {
       p_batch_id: batchId,
       p_limit: BATCH_SIZE,
@@ -44,8 +124,7 @@ Deno.serve(async (req) => {
     if (claimError) {
       console.error('[flush-event-buffer] claim error:', claimError.message);
       return new Response(JSON.stringify({ error: claimError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -55,33 +134,37 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── Step 2: Fetch claimed rows by batch_id ──
+    // ── Step 2: Fetch claimed rows ──
     const { data: rows, error: fetchError } = await supabase
       .from('endpoint_event_buffer')
       .select('id, tenant_id, agent_id, event_category, payload')
       .eq('batch_id', batchId)
       .is('processed_at', null);
 
-    if (fetchError) {
-      console.error('[flush-event-buffer] fetch error:', fetchError.message);
-      return new Response(JSON.stringify({ error: fetchError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (!rows || rows.length === 0) {
+    if (fetchError || !rows?.length) {
       return new Response(JSON.stringify({ flushed: 0, message: 'Buffer empty' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // ── Step 3: Group by category for batch inserts ──
+    // ── Step 2.5: Load Threat Intel & Baselines in parallel ──
+    const [threatIntel, baselines] = await Promise.all([
+      loadThreatIntel(supabase),
+      loadBaselines(supabase),
+    ]);
+
+    // ── Step 3: Group by category & enrich ──
     const processEvents: any[] = [];
     const fileEvents: any[] = [];
     const networkEvents: any[] = [];
     const registryEvents: any[] = [];
     const processedIds: string[] = [];
+    const threatMatches: any[] = [];
+    const anomalyAlerts: any[] = [];
+
+    // Track per-agent event counts for behavioral anomaly
+    const agentNetworkCounts = new Map<string, number>();
+    const agentProcessCounts = new Map<string, number>();
 
     for (const row of rows) {
       processedIds.push(row.id);
@@ -90,18 +173,140 @@ Deno.serve(async (req) => {
       switch (row.event_category) {
         case 'process':
           processEvents.push(payload);
+          agentProcessCounts.set(row.agent_id, (agentProcessCounts.get(row.agent_id) || 0) + 1);
+          // Check hash against threat intel
+          if (payload.sha256_hash) {
+            const match = threatIntel.hashes.get(payload.sha256_hash.toLowerCase());
+            if (match) {
+              payload.is_suspicious = true;
+              payload.detection_tags = [...(payload.detection_tags || []), 'threat_intel_hash'];
+              threatMatches.push({
+                tenant_id: row.tenant_id,
+                agent_id: row.agent_id,
+                indicator_type: 'hash_sha256',
+                indicator_value: payload.sha256_hash,
+                matched_source: match.source,
+                matched_severity: match.severity,
+                context: { process_name: payload.process_name, event_category: 'process' },
+              });
+            }
+          }
           break;
+
         case 'file':
           fileEvents.push(payload);
+          if (payload.sha256_hash) {
+            const match = threatIntel.hashes.get(payload.sha256_hash.toLowerCase());
+            if (match) {
+              payload.is_suspicious = true;
+              payload.detection_tags = [...(payload.detection_tags || []), 'threat_intel_hash'];
+              threatMatches.push({
+                tenant_id: row.tenant_id,
+                agent_id: row.agent_id,
+                indicator_type: 'hash_sha256',
+                indicator_value: payload.sha256_hash,
+                matched_source: match.source,
+                matched_severity: match.severity,
+                context: { file_path: payload.file_path, event_category: 'file' },
+              });
+            }
+          }
           break;
+
         case 'network':
           networkEvents.push(payload);
+          agentNetworkCounts.set(row.agent_id, (agentNetworkCounts.get(row.agent_id) || 0) + 1);
+          // Check IP against threat intel
+          if (payload.remote_address) {
+            const ipMatch = threatIntel.ips.get(payload.remote_address.toLowerCase());
+            if (ipMatch) {
+              payload.is_suspicious = true;
+              payload.detection_tags = [...(payload.detection_tags || []), 'threat_intel_ip'];
+              threatMatches.push({
+                tenant_id: row.tenant_id,
+                agent_id: row.agent_id,
+                indicator_type: 'ip',
+                indicator_value: payload.remote_address,
+                matched_source: ipMatch.source,
+                matched_severity: ipMatch.severity,
+                context: { process_name: payload.process_name, remote_port: payload.remote_port, event_category: 'network' },
+              });
+            }
+          }
+          // Check domain against threat intel
+          if (payload.domain) {
+            const domainMatch = threatIntel.domains.get(payload.domain.toLowerCase());
+            if (domainMatch) {
+              payload.is_suspicious = true;
+              payload.detection_tags = [...(payload.detection_tags || []), 'threat_intel_domain'];
+              threatMatches.push({
+                tenant_id: row.tenant_id,
+                agent_id: row.agent_id,
+                indicator_type: 'domain',
+                indicator_value: payload.domain,
+                matched_source: domainMatch.source,
+                matched_severity: domainMatch.severity,
+                context: { process_name: payload.process_name, event_category: 'network' },
+              });
+            }
+          }
           break;
+
         case 'registry':
           registryEvents.push(payload);
           break;
+
         default:
           console.warn(`[flush-event-buffer] Unknown category: ${row.event_category}`);
+      }
+    }
+
+    // ── Step 3.5: Behavioral anomaly checks ──
+    for (const [agentId, count] of agentNetworkCounts) {
+      const baseline = baselines.get(`${agentId}:network_connections`);
+      if (baseline && isAnomaly(count, baseline)) {
+        // Find tenant_id for this agent
+        const agentRow = rows.find(r => r.agent_id === agentId);
+        if (agentRow) {
+          anomalyAlerts.push({
+            tenant_id: agentRow.tenant_id,
+            agent_id: agentId,
+            alert_type: 'behavioral_anomaly',
+            severity: 'high',
+            title: '[Auto] Anomalia comportamental: Conexões de rede',
+            message: `Agente com ${count} conexões de rede neste ciclo (baseline: ${baseline.mean_value.toFixed(0)} ± ${baseline.std_deviation.toFixed(0)})`,
+            details: {
+              baseline_mean: baseline.mean_value,
+              baseline_std: baseline.std_deviation,
+              current_value: count,
+              threshold: baseline.mean_value + baseline.std_deviation * baseline.threshold_multiplier,
+              source: 'flush-event-buffer',
+            },
+          });
+        }
+      }
+    }
+
+    for (const [agentId, count] of agentProcessCounts) {
+      const baseline = baselines.get(`${agentId}:process_events`);
+      if (baseline && isAnomaly(count, baseline)) {
+        const agentRow = rows.find(r => r.agent_id === agentId);
+        if (agentRow) {
+          anomalyAlerts.push({
+            tenant_id: agentRow.tenant_id,
+            agent_id: agentId,
+            alert_type: 'behavioral_anomaly',
+            severity: 'medium',
+            title: '[Auto] Anomalia comportamental: Eventos de processo',
+            message: `Agente com ${count} eventos de processo neste ciclo (baseline: ${baseline.mean_value.toFixed(0)} ± ${baseline.std_deviation.toFixed(0)})`,
+            details: {
+              baseline_mean: baseline.mean_value,
+              baseline_std: baseline.std_deviation,
+              current_value: count,
+              source: 'flush-event-buffer',
+            },
+          });
+        }
       }
     }
 
@@ -110,40 +315,49 @@ Deno.serve(async (req) => {
 
     if (processEvents.length > 0) {
       insertPromises.push(
-        supabase.from('endpoint_process_events').insert(processEvents).then(({ error }) => ({
-          table: 'process',
-          count: error ? 0 : processEvents.length,
-          error: error?.message,
+        supabase.from('endpoint_process_events').insert(processEvents).then(({ error }: any) => ({
+          table: 'process', count: error ? 0 : processEvents.length, error: error?.message,
         }))
       );
     }
 
     if (fileEvents.length > 0) {
       insertPromises.push(
-        supabase.from('endpoint_file_events').insert(fileEvents).then(({ error }) => ({
-          table: 'file',
-          count: error ? 0 : fileEvents.length,
-          error: error?.message,
+        supabase.from('endpoint_file_events').insert(fileEvents).then(({ error }: any) => ({
+          table: 'file', count: error ? 0 : fileEvents.length, error: error?.message,
         }))
       );
     }
 
     if (networkEvents.length > 0) {
       insertPromises.push(
-        supabase.from('endpoint_network_events').insert(networkEvents).then(({ error }) => ({
-          table: 'network',
-          count: error ? 0 : networkEvents.length,
-          error: error?.message,
+        supabase.from('endpoint_network_events').insert(networkEvents).then(({ error }: any) => ({
+          table: 'network', count: error ? 0 : networkEvents.length, error: error?.message,
         }))
       );
     }
 
     if (registryEvents.length > 0) {
       insertPromises.push(
-        supabase.from('endpoint_registry_events').insert(registryEvents).then(({ error }) => ({
-          table: 'registry',
-          count: error ? 0 : registryEvents.length,
-          error: error?.message,
+        supabase.from('endpoint_registry_events').insert(registryEvents).then(({ error }: any) => ({
+          table: 'registry', count: error ? 0 : registryEvents.length, error: error?.message,
+        }))
+      );
+    }
+
+    // Insert threat matches and anomaly alerts in parallel
+    if (threatMatches.length > 0) {
+      insertPromises.push(
+        supabase.from('threat_matches').insert(threatMatches).then(({ error }: any) => ({
+          table: 'threat_matches', count: error ? 0 : threatMatches.length, error: error?.message,
+        }))
+      );
+    }
+
+    if (anomalyAlerts.length > 0) {
+      insertPromises.push(
+        supabase.from('system_alerts').insert(anomalyAlerts).then(({ error }: any) => ({
+          table: 'anomaly_alerts', count: error ? 0 : anomalyAlerts.length, error: error?.message,
         }))
       );
     }
@@ -156,15 +370,12 @@ Deno.serve(async (req) => {
       for (const f of failures) {
         console.error(`[flush-event-buffer] ${f.table} insert failed:`, f.error);
       }
-      // Don't mark failed rows as processed — they'll be retried next cycle
       const successTables = new Set(results.filter(r => !r.error).map(r => r.table));
-      // Only mark rows whose category succeeded
       const successIds = rows
         .filter(r => successTables.has(r.event_category))
         .map(r => r.id);
 
       if (successIds.length > 0) {
-        // V-10002: batch_id already set by claim_event_buffer_batch RPC, only update processed_at
         await supabase
           .from('endpoint_event_buffer')
           .update({ processed_at: new Date().toISOString() })
@@ -172,8 +383,6 @@ Deno.serve(async (req) => {
       }
     } else {
       // ── Step 5: Mark ALL rows as processed ──
-      // Chunk the IDs to avoid oversized IN clause
-      // V-11006 FIX: Parallel chunk updates instead of sequential
       const CHUNK = 500;
       const markPromises: Promise<any>[] = [];
       for (let i = 0; i < processedIds.length; i += CHUNK) {
@@ -195,11 +404,15 @@ Deno.serve(async (req) => {
       file: fileEvents.length,
       network: networkEvents.length,
       registry: registryEvents.length,
+      threat_matches: threatMatches.length,
+      anomaly_alerts: anomalyAlerts.length,
+      threat_intel_loaded: threatIntel.ips.size + threatIntel.hashes.size + threatIntel.domains.size,
+      baselines_loaded: baselines.size,
       failures: failures.length,
       elapsed_ms: elapsed,
     };
 
-    console.log(`[flush-event-buffer] Flushed ${stats.flushed} events in ${elapsed}ms (proc=${stats.process} file=${stats.file} net=${stats.network} reg=${stats.registry})`);
+    console.log(`[flush-event-buffer] Flushed ${stats.flushed} events in ${elapsed}ms (proc=${stats.process} file=${stats.file} net=${stats.network} reg=${stats.registry} threats=${stats.threat_matches} anomalies=${stats.anomaly_alerts})`);
 
     return new Response(JSON.stringify(stats), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -207,8 +420,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error('[flush-event-buffer] Unexpected error:', err);
     return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
