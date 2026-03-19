@@ -31,8 +31,27 @@ import { toast } from 'sonner';
 export default function Governance() {
   const { data: govStats, isLoading: govLoading } = useGovernanceStats();
   const { data: taskStats, isLoading: taskLoading } = useTaskStats();
+  const { tenant } = useTenant();
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   const isLoading = govLoading || taskLoading;
+
+  const handleTrustReport = async () => {
+    if (!tenant?.id) return;
+    setGeneratingReport(true);
+    try {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+      await generateTrustReportPDF(tenant.id, startDate, endDate);
+      toast.success('Trust Report gerado com sucesso!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao gerar Trust Report');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
 
   // Calculate governance health score (0-100)
   const calculateHealthScore = () => {
