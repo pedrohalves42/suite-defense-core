@@ -6470,6 +6470,7 @@ $lastSoftwareCheck = Get-Date
 $lastJobPoll = Get-Date
 $lastDnsSync = Get-Date
 $lastLocalDetection = Get-Date
+$lastEDRCollection = Get-Date
 $consecutiveNetworkFailures = 0
 $consecutiveHeartbeatFailures = 0  # Reset for main loop (also declared before Phase 2)
 # $maxConsecutiveFailures already declared at line ~4790
