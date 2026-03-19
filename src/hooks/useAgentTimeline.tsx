@@ -16,16 +16,25 @@ async function fetchAgentTimeline(agentId: string, tenantId: string): Promise<Ag
     throw new Error(`Failed to fetch agent timeline: ${error.message}`);
   }
 
-  // Map evidence logs to timeline event format
-  return (data || []).map((row) => ({
-    tenant_id: row.tenant_id,
-    agent_id: row.agent_id ?? '',
-    source_id: row.id,
-    event_type: row.event_type,
-    event_key: row.evidence_hash,
-    event_time: row.created_at,
-    data: row.event_data,
-  }));
+  // Map evidence logs to timeline event format, filtering out empty security events
+  return (data || [])
+    .filter((row) => {
+      // Skip security_event entries with empty event_data (ghost events without useful info)
+      if (row.event_type === 'security_event') {
+        const d = row.event_data as Record<string, unknown> | null;
+        if (!d || Object.keys(d).length === 0) return false;
+      }
+      return true;
+    })
+    .map((row) => ({
+      tenant_id: row.tenant_id,
+      agent_id: row.agent_id ?? '',
+      source_id: row.id,
+      event_type: row.event_type,
+      event_key: row.evidence_hash,
+      event_time: row.created_at,
+      data: row.event_data,
+    }));
 }
 
 export function useAgentTimeline(agentId: string, enabled = true) {
