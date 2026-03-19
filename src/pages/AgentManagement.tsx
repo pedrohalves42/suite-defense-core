@@ -26,8 +26,9 @@ import {
   Server, Trash2, Power, PowerOff, XCircle, Clock, Activity, 
   AlertTriangle, Loader2, Trash, Search, Monitor, Cpu, HardDrive,
   RefreshCw, Shield, ShieldAlert, ShieldCheck, ArrowUpCircle, Filter,
-  MemoryStick, Terminal
+  MemoryStick, Terminal, FileText
 } from 'lucide-react';
+import { generateForensicReportPDF } from '@/lib/forensicReportPDF';
 import AgentInstallationGuide from '@/components/AgentInstallationGuide';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
