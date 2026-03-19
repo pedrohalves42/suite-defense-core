@@ -321,7 +321,7 @@ export default function Dashboard() {
         transition={{ delay: 0.25, duration: 0.4 }}
         className="grid grid-cols-1 md:grid-cols-2 gap-4"
       >
-        <ProtectionTrendChart />
+        <ProtectionTrendChartV2 />
         <HealthTrendChart />
       </motion.div>
 
