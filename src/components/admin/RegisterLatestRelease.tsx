@@ -24,13 +24,13 @@ const SCRIPT_FILES: Record<string, string> = {
 };
 
 export function RegisterLatestRelease() {
-  const [version, setVersion] = useState("v5.0.14");
+  const [version, setVersion] = useState("v5.0.15");
   const [releaseNotes, setReleaseNotes] = useState(
-    "v5.0.14 — THREAT NETWORK + PROCESS LINEAGE + EDGE EVENT AGGREGATION\n" +
-    "- NEW: Edge Event Aggregation Engine\n" +
-    "- NEW: Threat Network correlation\n" +
-    "- NEW: Process Lineage tracking\n" +
-    "- SECURITY: Ed25519 signed releases\n" +
+    "v5.0.15 — STABILIZATION & BUGFIXES\n" +
+    "- FIX: $PID read-only variable renamed to $procId (EDR process collection)\n" +
+    "- NEW: Persistent USB whitelist (auto-whitelist after 3 detections)\n" +
+    "- FIX: DNS sync 403/404 handled gracefully\n" +
+    "- FIX: RSA-2048 signature fallback confirmed operational\n" +
     "- PARITY: Windows / Linux / macOS support"
   );
   const [platforms, setPlatforms] = useState({
@@ -50,11 +50,33 @@ export function RegisterLatestRelease() {
     const fileName = SCRIPT_FILES[platform];
     if (!fileName) throw new Error(`Unknown platform: ${platform}`);
 
+    // Strategy 1: Storage bucket (works in production)
+    try {
+      const { data: fileData, error: storageError } = await supabase.storage
+        .from('agent-installers')
+        .download(`scripts/${fileName}`);
+      
+      if (!storageError && fileData) {
+        const content = await fileData.text();
+        if (content && content.length > 1000 && !content.trimStart().startsWith('<!DOCTYPE')) {
+          console.log(`[RegisterRelease] Loaded ${platform} from storage: ${content.length} chars`);
+          return content;
+        }
+      }
+    } catch (e) {
+      console.warn(`[RegisterRelease] Storage fallback for ${platform}:`, e);
+    }
+
+    // Strategy 2: Public URL (local dev only)
     const response = await fetch(`/agent-scripts/${fileName}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch ${platform} script: ${response.status}`);
     }
-    return response.text();
+    const text = await response.text();
+    if (text.trimStart().startsWith('<!DOCTYPE') || text.trimStart().startsWith('<html')) {
+      throw new Error(`${platform}: URL returned HTML instead of script. Upload the script to the storage bucket first.`);
+    }
+    return text;
   };
 
   const registerPlatform = async (platform: string, scriptContent: string): Promise<PlatformResult> => {
