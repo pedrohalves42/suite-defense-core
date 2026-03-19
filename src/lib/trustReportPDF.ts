@@ -130,7 +130,7 @@ async function collectTrustData(tenantId: string, startDate: Date, endDate: Date
     },
     detectionRules: {
       total: rules.length,
-      enabled: rules.filter(r => r.is_enabled).length,
+      enabled: rules.filter((r: any) => r.is_enabled).length,
       bySeverity: bySeverityRules,
       byTactic,
     },
