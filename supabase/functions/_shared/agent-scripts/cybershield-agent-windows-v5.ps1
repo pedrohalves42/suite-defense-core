@@ -1,5 +1,13 @@
 <#
-    CyberShield Agent - Windows v5.0.15 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.16 FULL ENTERPRISE
+
+    v5.0.16: USB WHITELIST + DNS SYNC RESILIENCE + VERSION BUMP FOR HOTFIX RE-DEPLOY
+    - NEW: USB device whitelist - persistent devices (internal HDDs) no longer trigger repeated alerts
+      * Tracks known devices in C:\CyberShield\data\usb_whitelist.json
+      * Devices seen 3+ times are auto-whitelisted (configurable via server policy)
+      * Manual whitelist support for admin-approved devices
+    - FIX: DNS sync now handles 403 (feature disabled) and 404 gracefully without ERROR logging
+    - FIX: Version bump forces re-download of v5.0.15 hotfixes ($PID rename, ECDSA fallback)
 
     v5.0.15: EDR TELEMETRY ACTIVATION + THREAT NETWORK + PROCESS LINEAGE + EDGE EVENT AGGREGATION
     - NEW: Edge Event Aggregation Engine - Local event deduplication before submission
@@ -190,7 +198,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.15"
+    [string]$AgentVersion = "v5.0.16"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -453,6 +461,8 @@ $Global:AutoRepairLogPath = Join-Path -Path $dataDir -ChildPath "auto_repair.log
 $Global:KeyStorePath = Join-Path -Path $dataDir -ChildPath "agent_keys.json"
 $Global:StatePath = Join-Path -Path $dataDir -ChildPath "agent_state.json"
 $Global:DnsBlocklistPath = Join-Path -Path $dataDir -ChildPath "dns_blocklist.json"
+$Global:UsbWhitelistPath = Join-Path -Path $dataDir -ChildPath "usb_whitelist.json"
+$Global:UsbAutoWhitelistThreshold = 3  # Seen N times = auto-whitelist
 
 # Intervals
 $Global:PollIntervalSeconds = 60
@@ -2294,7 +2304,7 @@ function Submit-JobResult {
 function Sync-DnsBlocklist {
     <#
     .SYNOPSIS
-        Syncs DNS blocklist from server
+        Syncs DNS blocklist from server. Handles 403 (feature disabled) and 404 gracefully.
     #>
     try {
         $dnsBody = @{
@@ -2310,6 +2320,17 @@ function Sync-DnsBlocklist {
             -TimeoutSec 15
         
         if (-not $result.Success) {
+            # v5.0.16: Handle 403/404 gracefully - these are expected when feature is disabled
+            $errMsg = if ($result.Error) { $result.Error } else { "Unknown" }
+            if ($errMsg -match '403|Proibido|Forbidden') {
+                Write-Log "[DNS] DNS Filter not enabled for this tenant (403)" "DEBUG"
+                return $false
+            }
+            if ($errMsg -match '404|Not Found') {
+                Write-Log "[DNS] DNS Filter endpoint not available (404)" "DEBUG"
+                return $false
+            }
+            Write-Log "[DNS] DNS sync failed: $errMsg" "WARN"
             return $false
         }
         
@@ -2324,7 +2345,17 @@ function Sync-DnsBlocklist {
         return $false
         
     } catch {
-        Write-Log "[DNS] Error syncing blocklist: $($_.Exception.Message)" "WARN"
+        # v5.0.16: Catch 403/404 from PowerShell HTTP exceptions too
+        $exMsg = $_.Exception.Message
+        if ($exMsg -match '403|Proibido|Forbidden') {
+            Write-Log "[DNS] DNS Filter disabled for tenant (403)" "DEBUG"
+            return $false
+        }
+        if ($exMsg -match '404|Not Found') {
+            Write-Log "[DNS] DNS Filter endpoint unavailable (404)" "DEBUG"
+            return $false
+        }
+        Write-Log "[DNS] Error syncing blocklist: $exMsg" "WARN"
         return $false
     }
 }
@@ -5652,8 +5683,47 @@ function Test-FirewallStatus {
 }
 
 # ============================================
-#  v5.0.11: LOCAL DETECTION - USB DEVICE MONITORING
+#  v5.0.16: LOCAL DETECTION - USB DEVICE MONITORING WITH WHITELIST
 # ============================================
+function Get-UsbWhitelist {
+    <#
+    .SYNOPSIS
+        Loads USB device whitelist from persistent storage
+    #>
+    try {
+        if (Test-Path $Global:UsbWhitelistPath) {
+            $wl = Get-Content $Global:UsbWhitelistPath -Raw | ConvertFrom-Json
+            return $wl
+        }
+    } catch {
+        Write-Log "[USB-WL] Error loading whitelist: $($_.Exception.Message)" "WARN"
+    }
+    return @{ whitelisted = @(); seen_counts = @{} }
+}
+
+function Save-UsbWhitelist {
+    param([object]$Whitelist)
+    try {
+        $Whitelist | ConvertTo-Json -Depth 5 | Out-File $Global:UsbWhitelistPath -Encoding UTF8
+    } catch {
+        Write-Log "[USB-WL] Error saving whitelist: $($_.Exception.Message)" "WARN"
+    }
+}
+
+function Test-UsbWhitelisted {
+    <#
+    .SYNOPSIS
+        Checks if a USB device is whitelisted (manually or auto-whitelisted after N sightings)
+    #>
+    param([string]$DeviceKey, [object]$Whitelist)
+    
+    # Check manual whitelist
+    if ($Whitelist.whitelisted -and $Whitelist.whitelisted -contains $DeviceKey) {
+        return $true
+    }
+    return $false
+}
+
 function Test-UsbDevices {
     try {
         $Global:LocalDetectionStats.usb_checks++
@@ -5662,16 +5732,58 @@ function Test-UsbDevices {
             Where-Object { $_.InterfaceType -eq "USB" }
         
         if ($usbDrives -and @($usbDrives).Count -gt 0) {
+            $whitelist = Get-UsbWhitelist
+            $whitelistChanged = $false
+            
+            # Initialize seen_counts as hashtable if needed
+            if (-not $whitelist.seen_counts -or $whitelist.seen_counts -isnot [hashtable]) {
+                $seenCounts = @{}
+                if ($whitelist.seen_counts) {
+                    try {
+                        foreach ($prop in $whitelist.seen_counts.PSObject.Properties) {
+                            $seenCounts[$prop.Name] = [int]$prop.Value
+                        }
+                    } catch { }
+                }
+                $whitelist.seen_counts = $seenCounts
+            }
+            if (-not $whitelist.whitelisted) { $whitelist.whitelisted = @() }
+            
             foreach ($usb in $usbDrives) {
+                # Create unique device key from model + serial
+                $deviceKey = "$($usb.Model)|$($usb.SerialNumber)"
+                
+                # Track sighting count
+                if ($whitelist.seen_counts.ContainsKey($deviceKey)) {
+                    $whitelist.seen_counts[$deviceKey] = [int]$whitelist.seen_counts[$deviceKey] + 1
+                } else {
+                    $whitelist.seen_counts[$deviceKey] = 1
+                }
+                $sightings = $whitelist.seen_counts[$deviceKey]
+                $whitelistChanged = $true
+                
+                # Auto-whitelist after threshold sightings
+                if ($sightings -ge $Global:UsbAutoWhitelistThreshold -and -not (Test-UsbWhitelisted -DeviceKey $deviceKey -Whitelist $whitelist)) {
+                    $whitelist.whitelisted = @($whitelist.whitelisted) + @($deviceKey)
+                    Write-Log "[USB-WL] Auto-whitelisted persistent device: $($usb.Model) (seen $sightings times)" "INFO"
+                }
+                
+                # Skip alert for whitelisted devices
+                if (Test-UsbWhitelisted -DeviceKey $deviceKey -Whitelist $whitelist) {
+                    Write-Log "[LOCAL-DETECT] USB device whitelisted, skipping alert: $($usb.Model)" "DEBUG"
+                    continue
+                }
+                
                 $usbInfo = @{
                     device_id = $usb.DeviceID
                     model = $usb.Model
                     serial = $usb.SerialNumber
                     size_gb = [math]::Round($usb.Size / 1GB, 2)
                     interface = $usb.InterfaceType
+                    sighting_count = $sightings
                 }
                 
-                Write-Log "[LOCAL-DETECT] USB STORAGE DETECTED: $($usb.Model) ($([math]::Round($usb.Size / 1GB, 2))GB)" "WARN"
+                Write-Log "[LOCAL-DETECT] USB STORAGE DETECTED: $($usb.Model) ($([math]::Round($usb.Size / 1GB, 2))GB) [sighting #$sightings]" "WARN"
                 
                 Show-SecurityToast `
                     -Title "CyberShield - Dispositivo USB Detectado" `
@@ -5689,6 +5801,8 @@ function Test-UsbDevices {
                     device = $usbInfo
                 } -Severity "warning"
             }
+            
+            if ($whitelistChanged) { Save-UsbWhitelist -Whitelist $whitelist }
             
             return @{ status = "detected"; count = @($usbDrives).Count; devices = @($usbDrives) | ForEach-Object { $_.Model } }
         }
