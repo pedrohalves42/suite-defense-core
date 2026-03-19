@@ -15,7 +15,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { toast } from 'sonner';
-import { ProtectionTrendChart } from '@/components/admin/ProtectionTrendChart';
+import { ProtectionTrendChartV2 } from '@/components/admin/ProtectionTrendChartV2';
 import { HealthTrendChart } from '@/components/admin/HealthTrendChart';
 import { SystemCyclesHealthCard } from '@/components/admin/SystemCyclesHealthCard';
 import { ReleaseSignatureStatusCard } from '@/components/admin/ReleaseSignatureStatusCard';
