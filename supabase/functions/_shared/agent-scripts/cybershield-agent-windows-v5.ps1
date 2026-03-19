@@ -5426,6 +5426,15 @@ function Test-AntivirusStatus {
             @{ name = "Bitdefender"; processes = @("bdagent", "vsserv") },
             @{ name = "Trend Micro"; processes = @("coreServiceShell", "Ntrtscan") },
             @{ name = "Cylance"; processes = @("CylanceSvc") },
+            @{ name = "Malwarebytes"; processes = @("MBAMService", "mbamtray", "MBAMWsc") },
+            @{ name = "Avast"; processes = @("AvastSvc", "aswEngSrv") },
+            @{ name = "AVG"; processes = @("avgsvca", "AVGSvc") },
+            @{ name = "Norton"; processes = @("NortonSecurity", "nsWscSvc") },
+            @{ name = "McAfee"; processes = @("mcshield", "mfemms", "ModuleCoreService") },
+            @{ name = "Webroot"; processes = @("WRSA") },
+            @{ name = "F-Secure"; processes = @("fshoster", "fsav") },
+            @{ name = "Panda"; processes = @("PSANHost", "PSUAService") },
+            @{ name = "Comodo"; processes = @("CisTray", "cmdagent") },
             @{ name = "Windows Defender"; processes = @("MsMpEng") }
         )
         
