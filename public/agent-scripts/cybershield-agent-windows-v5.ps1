@@ -1,7 +1,15 @@
 <#
-    CyberShield Agent - Windows v5.0.15 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.16 FULL ENTERPRISE
 
-    v5.0.14: THREAT NETWORK + PROCESS LINEAGE + EDGE EVENT AGGREGATION
+    v5.0.16: USB WHITELIST + DNS SYNC RESILIENCE + VERSION BUMP FOR HOTFIX RE-DEPLOY
+    - NEW: USB device whitelist - persistent devices (internal HDDs) no longer trigger repeated alerts
+      * Tracks known devices in C:\CyberShield\data\usb_whitelist.json
+      * Devices seen 3+ times are auto-whitelisted (configurable via server policy)
+      * Manual whitelist support for admin-approved devices
+    - FIX: DNS sync now handles 403 (feature disabled) and 404 gracefully without ERROR logging
+    - FIX: Version bump forces re-download of v5.0.15 hotfixes ($PID rename, ECDSA fallback)
+
+    v5.0.15: EDR TELEMETRY ACTIVATION + THREAT NETWORK + PROCESS LINEAGE + EDGE EVENT AGGREGATION
     - NEW: Edge Event Aggregation Engine - Local event deduplication before submission
       * Configurable time windows (default 3s) for grouping similar events
       * File/Process/Network event type-specific thresholds
@@ -190,7 +198,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.15"
+    [string]$AgentVersion = "v5.0.16"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -453,6 +461,8 @@ $Global:AutoRepairLogPath = Join-Path -Path $dataDir -ChildPath "auto_repair.log
 $Global:KeyStorePath = Join-Path -Path $dataDir -ChildPath "agent_keys.json"
 $Global:StatePath = Join-Path -Path $dataDir -ChildPath "agent_state.json"
 $Global:DnsBlocklistPath = Join-Path -Path $dataDir -ChildPath "dns_blocklist.json"
+$Global:UsbWhitelistPath = Join-Path -Path $dataDir -ChildPath "usb_whitelist.json"
+$Global:UsbAutoWhitelistThreshold = 3  # Seen N times = auto-whitelist
 
 # Intervals
 $Global:PollIntervalSeconds = 60
@@ -1444,111 +1454,138 @@ function Initialize-AgentKeys {
                 
                 if ($attempt -eq $maxKeyAttempts) {
                     # v5.0.13 HOTFIX: fallback for legacy Windows/.NET where CNG container creation is unstable
+                    $ecdsaFallbackUsed = $false
                     try {
                         $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(256)
                         if ($null -ne $ecdsa) {
                             Write-Log "[KEYS] Fallback ECDSA keypair generated via ECDsaCng(256)" "WARN"
-                            break
+                            $ecdsaFallbackUsed = $true
+                            # v5.0.15-fix: Try export, if fails go to RSA fallback
+                            try {
+                                $testExport = $ecdsa.ExportPkcs8PrivateKey()
+                                if ($testExport) {
+                                    Write-Log "[KEYS] ECDsaCng export succeeded, using ECDSA" "INFO"
+                                    break
+                                }
+                            } catch {
+                                Write-Log "[KEYS] ExportPkcs8/SPKI not available ($($_.Exception.Message)), falling through to RSA-2048" "WARN"
+                                $ecdsa.Dispose()
+                                $ecdsa = $null
+                                $ecdsaFallbackUsed = $false
+                            }
                         }
                     } catch {
                         Write-Log "[KEYS] ECDsaCng fallback failed: $($_.Exception.Message)" "WARN"
                     }
 
-                    try {
-                        $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
-                        if ($null -ne $ecdsa) {
-                            try {
-                                if ($ecdsa.KeySize -ne 256) { $ecdsa.KeySize = 256 }
-                            } catch {
-                                Write-Log "[KEYS] Managed ECDSA fallback created key with KeySize=$($ecdsa.KeySize)" "WARN"
+                    if (-not $ecdsaFallbackUsed) {
+                        try {
+                            $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
+                            if ($null -ne $ecdsa) {
+                                try {
+                                    if ($ecdsa.KeySize -ne 256) { $ecdsa.KeySize = 256 }
+                                } catch {
+                                    Write-Log "[KEYS] Managed ECDSA fallback created key with KeySize=$($ecdsa.KeySize)" "WARN"
+                                }
+                                try {
+                                    $testExport2 = $ecdsa.ExportPkcs8PrivateKey()
+                                    if ($testExport2) {
+                                        Write-Log "[KEYS] Managed ECDSA export succeeded" "INFO"
+                                        break
+                                    }
+                                } catch {
+                                    Write-Log "[KEYS] Managed ECDSA export failed, falling through to RSA" "WARN"
+                                    $ecdsa.Dispose()
+                                    $ecdsa = $null
+                                }
                             }
-                            Write-Log "[KEYS] Fallback ECDSA keypair generated via managed API" "WARN"
-                            break
+                        } catch {
+                            Write-Log "[KEYS] Managed ECDSA fallback failed: $($_.Exception.Message)" "WARN"
                         }
-                    } catch {
-                        Write-Log "[KEYS] Managed ECDSA fallback failed: $($_.Exception.Message)" "WARN"
                     }
 
-                    Write-Log "[KEYS] All $maxKeyAttempts ECDSA attempts failed - trying RSA-2048 fallback" "WARN"
+                    if ($null -eq $ecdsa) {
+                        Write-Log "[KEYS] All ECDSA attempts failed - trying RSA-2048 fallback" "WARN"
                     
-                    # v5.0.13-fix: RSA-2048 fallback for legacy Windows without ECDSA support
-                    try {
-                        $rsa = [System.Security.Cryptography.RSA]::Create(2048)
-                        if ($null -ne $rsa) {
-                            $privateKeyBytes = $rsa.ExportPkcs8PrivateKey()
-                            $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
-                            $publicKeyBytes = $rsa.ExportSubjectPublicKeyInfo()
-                            $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
+                        # v5.0.13-fix: RSA-2048 fallback for legacy Windows without ECDSA support
+                        try {
+                            $rsa = [System.Security.Cryptography.RSA]::Create(2048)
+                            if ($null -ne $rsa) {
+                                $privateKeyBytes = $rsa.ExportPkcs8PrivateKey()
+                                $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
+                                $publicKeyBytes = $rsa.ExportSubjectPublicKeyInfo()
+                                $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
+                                
+                                $sha256Hash = [System.Security.Cryptography.SHA256]::Create()
+                                $fpBytes = $sha256Hash.ComputeHash($publicKeyBytes)
+                                $fp = [BitConverter]::ToString($fpBytes).Replace("-", "").ToLower()
+                                $sha256Hash.Dispose()
+                                
+                                $keyData = @{
+                                    private_key = $privateKeyBase64
+                                    public_key = $publicKeyBase64
+                                    fingerprint = $fp
+                                    algorithm = "RSA-2048-SHA256"
+                                    version = 1
+                                    created_at = (Get-Date).ToString("o")
+                                }
+                                $keyData | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
+                                
+                                $Global:AgentPrivateKey = $privateKeyBase64
+                                $Global:AgentPublicKey = $publicKeyBase64
+                                $Global:KeyFingerprint = $fp
+                                $Global:KeyVersion = 1
+                                $Global:AgentSigningAlgorithm = "RSA-2048-SHA256"
+                                
+                                Write-Log "[KEYS] RSA-2048 fallback keypair generated. Fingerprint: $($fp.Substring(0, 16))..." "SUCCESS"
+                                $rsa.Dispose()
+                                return $true
+                            }
+                        } catch {
+                            Write-Log "[KEYS] RSA fallback also failed: $($_.Exception.Message)" "WARN"
+                        }
+                        
+                        # v5.0.13-fix: Last resort - RSACryptoServiceProvider (works on .NET 2.0+)
+                        try {
+                            $rsaCsp = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
+                            $pubXml = $rsaCsp.ToXmlString($false)
+                            $privXml = $rsaCsp.ToXmlString($true)
                             
-                            $sha256Hash = [System.Security.Cryptography.SHA256]::Create()
-                            $fpBytes = $sha256Hash.ComputeHash($publicKeyBytes)
-                            $fp = [BitConverter]::ToString($fpBytes).Replace("-", "").ToLower()
-                            $sha256Hash.Dispose()
+                            $pubBytes = [System.Text.Encoding]::UTF8.GetBytes($pubXml)
+                            $privB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($privXml))
+                            $pubB64 = [Convert]::ToBase64String($pubBytes)
                             
-                            $keyData = @{
-                                private_key = $privateKeyBase64
-                                public_key = $publicKeyBase64
-                                fingerprint = $fp
-                                algorithm = "RSA-2048-SHA256"
+                            $sha256Hash2 = [System.Security.Cryptography.SHA256]::Create()
+                            $fpBytes2 = $sha256Hash2.ComputeHash($pubBytes)
+                            $fp2 = [BitConverter]::ToString($fpBytes2).Replace("-", "").ToLower()
+                            $sha256Hash2.Dispose()
+                            
+                            $keyData2 = @{
+                                private_key = $privB64
+                                public_key = $pubB64
+                                fingerprint = $fp2
+                                algorithm = "RSA-2048-XML"
                                 version = 1
                                 created_at = (Get-Date).ToString("o")
                             }
-                            $keyData | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
+                            $keyData2 | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
                             
-                            $Global:AgentPrivateKey = $privateKeyBase64
-                            $Global:AgentPublicKey = $publicKeyBase64
-                            $Global:KeyFingerprint = $fp
+                            $Global:AgentPrivateKey = $privB64
+                            $Global:AgentPublicKey = $pubB64
+                            $Global:KeyFingerprint = $fp2
                             $Global:KeyVersion = 1
-                            $Global:AgentSigningAlgorithm = "RSA-2048-SHA256"
+                            $Global:AgentSigningAlgorithm = "RSA-2048-XML"
                             
-                            Write-Log "[KEYS] RSA-2048 fallback keypair generated. Fingerprint: $($fp.Substring(0, 16))..." "SUCCESS"
-                            $rsa.Dispose()
+                            Write-Log "[KEYS] RSACryptoServiceProvider fallback generated. Fingerprint: $($fp2.Substring(0, 16))..." "SUCCESS"
+                            $rsaCsp.Dispose()
                             return $true
+                        } catch {
+                            Write-Log "[KEYS] RSACryptoServiceProvider fallback failed: $($_.Exception.Message)" "ERROR"
                         }
-                    } catch {
-                        Write-Log "[KEYS] RSA fallback also failed: $($_.Exception.Message)" "WARN"
+                        
+                        Write-Log "[KEYS] All crypto attempts exhausted - signing DISABLED" "ERROR"
+                        return $false
                     }
-                    
-                    # v5.0.13-fix: Last resort - RSACryptoServiceProvider (works on .NET 2.0+)
-                    try {
-                        $rsaCsp = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
-                        $pubXml = $rsaCsp.ToXmlString($false)
-                        $privXml = $rsaCsp.ToXmlString($true)
-                        
-                        $pubBytes = [System.Text.Encoding]::UTF8.GetBytes($pubXml)
-                        $privB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($privXml))
-                        $pubB64 = [Convert]::ToBase64String($pubBytes)
-                        
-                        $sha256Hash2 = [System.Security.Cryptography.SHA256]::Create()
-                        $fpBytes2 = $sha256Hash2.ComputeHash($pubBytes)
-                        $fp2 = [BitConverter]::ToString($fpBytes2).Replace("-", "").ToLower()
-                        $sha256Hash2.Dispose()
-                        
-                        $keyData2 = @{
-                            private_key = $privB64
-                            public_key = $pubB64
-                            fingerprint = $fp2
-                            algorithm = "RSA-2048-XML"
-                            version = 1
-                            created_at = (Get-Date).ToString("o")
-                        }
-                        $keyData2 | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
-                        
-                        $Global:AgentPrivateKey = $privB64
-                        $Global:AgentPublicKey = $pubB64
-                        $Global:KeyFingerprint = $fp2
-                        $Global:KeyVersion = 1
-                        $Global:AgentSigningAlgorithm = "RSA-2048-XML"
-                        
-                        Write-Log "[KEYS] RSACryptoServiceProvider fallback generated. Fingerprint: $($fp2.Substring(0, 16))..." "SUCCESS"
-                        $rsaCsp.Dispose()
-                        return $true
-                    } catch {
-                        Write-Log "[KEYS] RSACryptoServiceProvider fallback failed: $($_.Exception.Message)" "ERROR"
-                    }
-                    
-                    Write-Log "[KEYS] All crypto attempts exhausted - signing DISABLED" "ERROR"
-                    return $false
                 }
                 
                 Start-Sleep -Seconds 2
@@ -2267,7 +2304,7 @@ function Submit-JobResult {
 function Sync-DnsBlocklist {
     <#
     .SYNOPSIS
-        Syncs DNS blocklist from server
+        Syncs DNS blocklist from server. Handles 403 (feature disabled) and 404 gracefully.
     #>
     try {
         $dnsBody = @{
@@ -2283,6 +2320,17 @@ function Sync-DnsBlocklist {
             -TimeoutSec 15
         
         if (-not $result.Success) {
+            # v5.0.16: Handle 403/404 gracefully - these are expected when feature is disabled
+            $errMsg = if ($result.Error) { $result.Error } else { "Unknown" }
+            if ($errMsg -match '403|Proibido|Forbidden') {
+                Write-Log "[DNS] DNS Filter not enabled for this tenant (403)" "DEBUG"
+                return $false
+            }
+            if ($errMsg -match '404|Not Found') {
+                Write-Log "[DNS] DNS Filter endpoint not available (404)" "DEBUG"
+                return $false
+            }
+            Write-Log "[DNS] DNS sync failed: $errMsg" "WARN"
             return $false
         }
         
@@ -2297,7 +2345,17 @@ function Sync-DnsBlocklist {
         return $false
         
     } catch {
-        Write-Log "[DNS] Error syncing blocklist: $($_.Exception.Message)" "WARN"
+        # v5.0.16: Catch 403/404 from PowerShell HTTP exceptions too
+        $exMsg = $_.Exception.Message
+        if ($exMsg -match '403|Proibido|Forbidden') {
+            Write-Log "[DNS] DNS Filter disabled for tenant (403)" "DEBUG"
+            return $false
+        }
+        if ($exMsg -match '404|Not Found') {
+            Write-Log "[DNS] DNS Filter endpoint unavailable (404)" "DEBUG"
+            return $false
+        }
+        Write-Log "[DNS] Error syncing blocklist: $exMsg" "WARN"
         return $false
     }
 }
@@ -2546,7 +2604,7 @@ function Invoke-CollectAntivirusStatus {
             @{ Name = "Bitdefender GravityZone";Services = @("EPSecurityService","BDAuxSrv");      Processes = @("EPSecurityService.exe","bdagent.exe") },
             @{ Name = "FortiClient";            Services = @("FortiClientMonitor","FA_Scheduler");  Processes = @("FortiClient.exe","FortiTray.exe") },
             @{ Name = "Cylance";                Services = @("CylanceSvc");                        Processes = @("CylanceSvc.exe","CylanceUI.exe") },
-            @{ Name = "Malwarebytes EP";        Services = @("MBAMService");                       Processes = @("MBAMService.exe","mbamtray.exe") },
+            @{ Name = "Malwarebytes";          Services = @("MBAMService","MBEndpointAgent","MBAMProtection","MBAMSwissArmy","MBAMChameleon","MBAMFarflt","MBAMWebProtection"); Processes = @("MBAMService.exe","mbamtray.exe","mbam.exe","MBEndpointAgent.exe","MBAMInstallerService.exe") },
             @{ Name = "Webroot";                Services = @("WRSVC");                             Processes = @("WRSA.exe") }
         )
 
@@ -2599,6 +2657,29 @@ function Invoke-CollectAntivirusStatus {
                     path   = if ($foundProcess) { $foundProcess.Path } elseif ($foundService) { $foundService.BinaryPathName } else { "" }
                     source = "EDR_Process_Detection"
                     status = $status
+                }
+            }
+        }
+
+        # -- Phase 3: Fallback por pasta de instalacao (Malwarebytes Free e outros sem servico) --
+        $installPaths = @(
+            @{ Name = "Malwarebytes"; Paths = @("$env:ProgramFiles\Malwarebytes\Anti-Malware", "${env:ProgramFiles(x86)}\Malwarebytes\Anti-Malware", "$env:ProgramData\Malwarebytes") },
+            @{ Name = "HitmanPro";    Paths = @("$env:ProgramFiles\HitmanPro", "${env:ProgramFiles(x86)}\HitmanPro") }
+        )
+
+        $currentNames = $avList | ForEach-Object { $_.name.ToLower() }
+        foreach ($app in $installPaths) {
+            if ($currentNames -contains $app.Name.ToLower()) { continue }
+            foreach ($p in $app.Paths) {
+                if (Test-Path $p) {
+                    $avList += @{
+                        name   = $app.Name
+                        state  = 0
+                        path   = $p
+                        source = "InstallPath_Detection"
+                        status = "installed"
+                    }
+                    break
                 }
             }
         }
@@ -2853,6 +2934,15 @@ function Invoke-CollectWebActivity {
     param([object]$Payload)
     
     Write-Log "[WEB-ACTIVITY-V5] Starting web activity collection (timeout-safe)..." "INFO"
+    
+    # v5.0.15-fix: Safely extract max_domains from payload to avoid StrictMode PSObject errors
+    $maxDomains = 500
+    if ($null -ne $Payload) {
+        try {
+            $payloadProps = @($Payload.PSObject.Properties | ForEach-Object { $_.Name })
+            if ($payloadProps -contains "max_domains") { $maxDomains = [int]$Payload.max_domains }
+        } catch { }
+    }
     
     try {
         $nowUtc = [DateTime]::UtcNow
@@ -4252,16 +4342,24 @@ function Invoke-SyncBlockedWebsites {
         $markerEnd = "# === CyberShield Blocked Websites End ==="
         
         # Get URLs from payload (supports 'blocked_domains', 'urls', or 'domains' keys)
+        # v5.0.15-fix: Use try/catch for PSCustomObject property access to avoid StrictMode errors
         $urls = @()
         $payloadDomains = $null
-        if ($Payload -is [hashtable]) {
-            if ($Payload.ContainsKey("blocked_domains")) { $payloadDomains = $Payload["blocked_domains"] }
-            elseif ($Payload.ContainsKey("urls")) { $payloadDomains = $Payload["urls"] }
-            elseif ($Payload.ContainsKey("domains")) { $payloadDomains = $Payload["domains"] }
-        } elseif ($Payload -ne $null) {
-            if ($Payload.PSObject.Properties["blocked_domains"]) { $payloadDomains = $Payload.blocked_domains }
-            elseif ($Payload.PSObject.Properties["urls"]) { $payloadDomains = $Payload.urls }
-            elseif ($Payload.PSObject.Properties["domains"]) { $payloadDomains = $Payload.domains }
+        if ($null -ne $Payload) {
+            if ($Payload -is [hashtable]) {
+                if ($Payload.ContainsKey("blocked_domains")) { $payloadDomains = $Payload["blocked_domains"] }
+                elseif ($Payload.ContainsKey("urls")) { $payloadDomains = $Payload["urls"] }
+                elseif ($Payload.ContainsKey("domains")) { $payloadDomains = $Payload["domains"] }
+            } else {
+                try {
+                    $props = @($Payload.PSObject.Properties | ForEach-Object { $_.Name })
+                    if ($props -contains "blocked_domains") { $payloadDomains = $Payload.blocked_domains }
+                    elseif ($props -contains "urls") { $payloadDomains = $Payload.urls }
+                    elseif ($props -contains "domains") { $payloadDomains = $Payload.domains }
+                } catch {
+                    Write-Log "[SYNC-BLOCKED] Payload property access error (non-fatal): $($_.Exception.Message)" "DEBUG"
+                }
+            }
         }
         if ($payloadDomains) {
             $urls = @($payloadDomains)
@@ -4275,7 +4373,13 @@ function Invoke-SyncBlockedWebsites {
             
             if ($result.Success) {
                 $response = $result.Content | ConvertFrom-Json
-                if ($response.domains) { $urls = @($response.domains) }
+                try {
+                    $responseProps = @($response.PSObject.Properties | ForEach-Object { $_.Name })
+                    if ($responseProps -contains "domains") { $urls = @($response.domains) }
+                    elseif ($responseProps -contains "blocked_domains") { $urls = @($response.blocked_domains) }
+                } catch {
+                    Write-Log "[SYNC-BLOCKED] Response parse error: $($_.Exception.Message)" "WARN"
+                }
             }
         }
         
@@ -5403,6 +5507,15 @@ function Test-AntivirusStatus {
             @{ name = "Bitdefender"; processes = @("bdagent", "vsserv") },
             @{ name = "Trend Micro"; processes = @("coreServiceShell", "Ntrtscan") },
             @{ name = "Cylance"; processes = @("CylanceSvc") },
+            @{ name = "Malwarebytes"; processes = @("MBAMService", "mbamtray", "MBAMWsc") },
+            @{ name = "Avast"; processes = @("AvastSvc", "aswEngSrv") },
+            @{ name = "AVG"; processes = @("avgsvca", "AVGSvc") },
+            @{ name = "Norton"; processes = @("NortonSecurity", "nsWscSvc") },
+            @{ name = "McAfee"; processes = @("mcshield", "mfemms", "ModuleCoreService") },
+            @{ name = "Webroot"; processes = @("WRSA") },
+            @{ name = "F-Secure"; processes = @("fshoster", "fsav") },
+            @{ name = "Panda"; processes = @("PSANHost", "PSUAService") },
+            @{ name = "Comodo"; processes = @("CisTray", "cmdagent") },
             @{ name = "Windows Defender"; processes = @("MsMpEng") }
         )
         
@@ -5570,8 +5683,47 @@ function Test-FirewallStatus {
 }
 
 # ============================================
-#  v5.0.11: LOCAL DETECTION - USB DEVICE MONITORING
+#  v5.0.16: LOCAL DETECTION - USB DEVICE MONITORING WITH WHITELIST
 # ============================================
+function Get-UsbWhitelist {
+    <#
+    .SYNOPSIS
+        Loads USB device whitelist from persistent storage
+    #>
+    try {
+        if (Test-Path $Global:UsbWhitelistPath) {
+            $wl = Get-Content $Global:UsbWhitelistPath -Raw | ConvertFrom-Json
+            return $wl
+        }
+    } catch {
+        Write-Log "[USB-WL] Error loading whitelist: $($_.Exception.Message)" "WARN"
+    }
+    return @{ whitelisted = @(); seen_counts = @{} }
+}
+
+function Save-UsbWhitelist {
+    param([object]$Whitelist)
+    try {
+        $Whitelist | ConvertTo-Json -Depth 5 | Out-File $Global:UsbWhitelistPath -Encoding UTF8
+    } catch {
+        Write-Log "[USB-WL] Error saving whitelist: $($_.Exception.Message)" "WARN"
+    }
+}
+
+function Test-UsbWhitelisted {
+    <#
+    .SYNOPSIS
+        Checks if a USB device is whitelisted (manually or auto-whitelisted after N sightings)
+    #>
+    param([string]$DeviceKey, [object]$Whitelist)
+    
+    # Check manual whitelist
+    if ($Whitelist.whitelisted -and $Whitelist.whitelisted -contains $DeviceKey) {
+        return $true
+    }
+    return $false
+}
+
 function Test-UsbDevices {
     try {
         $Global:LocalDetectionStats.usb_checks++
@@ -5580,16 +5732,58 @@ function Test-UsbDevices {
             Where-Object { $_.InterfaceType -eq "USB" }
         
         if ($usbDrives -and @($usbDrives).Count -gt 0) {
+            $whitelist = Get-UsbWhitelist
+            $whitelistChanged = $false
+            
+            # Initialize seen_counts as hashtable if needed
+            if (-not $whitelist.seen_counts -or $whitelist.seen_counts -isnot [hashtable]) {
+                $seenCounts = @{}
+                if ($whitelist.seen_counts) {
+                    try {
+                        foreach ($prop in $whitelist.seen_counts.PSObject.Properties) {
+                            $seenCounts[$prop.Name] = [int]$prop.Value
+                        }
+                    } catch { }
+                }
+                $whitelist.seen_counts = $seenCounts
+            }
+            if (-not $whitelist.whitelisted) { $whitelist.whitelisted = @() }
+            
             foreach ($usb in $usbDrives) {
+                # Create unique device key from model + serial
+                $deviceKey = "$($usb.Model)|$($usb.SerialNumber)"
+                
+                # Track sighting count
+                if ($whitelist.seen_counts.ContainsKey($deviceKey)) {
+                    $whitelist.seen_counts[$deviceKey] = [int]$whitelist.seen_counts[$deviceKey] + 1
+                } else {
+                    $whitelist.seen_counts[$deviceKey] = 1
+                }
+                $sightings = $whitelist.seen_counts[$deviceKey]
+                $whitelistChanged = $true
+                
+                # Auto-whitelist after threshold sightings
+                if ($sightings -ge $Global:UsbAutoWhitelistThreshold -and -not (Test-UsbWhitelisted -DeviceKey $deviceKey -Whitelist $whitelist)) {
+                    $whitelist.whitelisted = @($whitelist.whitelisted) + @($deviceKey)
+                    Write-Log "[USB-WL] Auto-whitelisted persistent device: $($usb.Model) (seen $sightings times)" "INFO"
+                }
+                
+                # Skip alert for whitelisted devices
+                if (Test-UsbWhitelisted -DeviceKey $deviceKey -Whitelist $whitelist) {
+                    Write-Log "[LOCAL-DETECT] USB device whitelisted, skipping alert: $($usb.Model)" "DEBUG"
+                    continue
+                }
+                
                 $usbInfo = @{
                     device_id = $usb.DeviceID
                     model = $usb.Model
                     serial = $usb.SerialNumber
                     size_gb = [math]::Round($usb.Size / 1GB, 2)
                     interface = $usb.InterfaceType
+                    sighting_count = $sightings
                 }
                 
-                Write-Log "[LOCAL-DETECT] USB STORAGE DETECTED: $($usb.Model) ($([math]::Round($usb.Size / 1GB, 2))GB)" "WARN"
+                Write-Log "[LOCAL-DETECT] USB STORAGE DETECTED: $($usb.Model) ($([math]::Round($usb.Size / 1GB, 2))GB) [sighting #$sightings]" "WARN"
                 
                 Show-SecurityToast `
                     -Title "CyberShield - Dispositivo USB Detectado" `
@@ -5607,6 +5801,8 @@ function Test-UsbDevices {
                     device = $usbInfo
                 } -Severity "warning"
             }
+            
+            if ($whitelistChanged) { Save-UsbWhitelist -Whitelist $whitelist }
             
             return @{ status = "detected"; count = @($usbDrives).Count; devices = @($usbDrives) | ForEach-Object { $_.Model } }
         }
@@ -5913,6 +6109,323 @@ function Invoke-CollectProcessLineage {
 }
 
 # ============================================
+#  v5.0.14-EDR: CONTINUOUS EDR TELEMETRY COLLECTOR
+#  Collects processes, network connections, file changes, and registry
+#  and submits to submit-endpoint-events for MITRE ATT&CK detection
+# ============================================
+$Global:EDRCollectionIntervalSeconds = 120
+$Global:EDRLastProcessSnapshot = @{}
+$Global:EDRLastNetConnSnapshot = @{}
+$Global:EDRMonitoredPaths = @(
+    "$env:TEMP",
+    "$env:APPDATA",
+    "$env:USERPROFILE\Downloads",
+    "$env:USERPROFILE\Desktop",
+    "C:\Windows\Temp",
+    "C:\ProgramData"
+)
+$Global:EDRRegistryKeys = @(
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+    "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
+    "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+    "HKLM:\SYSTEM\CurrentControlSet\Services"
+)
+$Global:EDRLastRegistrySnapshot = @{}
+$Global:EDRInitialized = $false
+
+function Invoke-EDRTelemetryCollection {
+    <#
+    .SYNOPSIS
+        Collects EDR telemetry (processes, network, files, registry) and
+        submits to submit-endpoint-events for MITRE ATT&CK detection engine.
+    #>
+    if ($Global:SecurityDegraded) { return }
+    
+    Write-Log "[EDR-COLLECT] Starting telemetry collection cycle..." "DEBUG"
+    
+    $processEvents = @()
+    $networkEvents = @()
+    $fileEvents = @()
+    $registryEvents = @()
+    $nowStr = (Get-Date).ToUniversalTime().ToString("o")
+    
+    # ── 1. PROCESS TELEMETRY ──
+    try {
+        $currentProcs = @{}
+        $cimProcs = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            Select-Object ProcessId, ParentProcessId, Name, CommandLine, ExecutablePath, CreationDate
+        
+        foreach ($p in $cimProcs) {
+            $currentProcs[$p.ProcessId] = $p
+        }
+        
+        $parentMap = @{}
+        foreach ($p in $cimProcs) { $parentMap[$p.ProcessId] = $p.Name }
+        
+        # Detect NEW processes (v5.0.15-fix: renamed $pid -> $procId to avoid PS automatic $PID variable conflict)
+        foreach ($procId in $currentProcs.Keys) {
+            if (-not $Global:EDRLastProcessSnapshot.ContainsKey($procId)) {
+                $proc = $currentProcs[$procId]
+                $parentName = if ($parentMap.ContainsKey($proc.ParentProcessId)) { $parentMap[$proc.ParentProcessId] } else { $null }
+                
+                $startTime = $nowStr
+                if ($proc.CreationDate) {
+                    try { $startTime = $proc.CreationDate.ToUniversalTime().ToString("o") } catch { }
+                }
+                
+                $sha256 = $null
+                if ($proc.ExecutablePath -and (Test-Path $proc.ExecutablePath -ErrorAction SilentlyContinue)) {
+                    try { $sha256 = (Get-FileHash -Path $proc.ExecutablePath -Algorithm SHA256 -ErrorAction SilentlyContinue).Hash.ToLower() } catch { }
+                }
+                
+                $processEvents += @{
+                    event_type    = "process_start"
+                    pid           = $proc.ProcessId
+                    parent_pid    = $proc.ParentProcessId
+                    process_name  = $proc.Name
+                    command_line  = if ($proc.CommandLine) { $proc.CommandLine.Substring(0, [Math]::Min($proc.CommandLine.Length, 2048)) } else { $null }
+                    executable_path = $proc.ExecutablePath
+                    parent_process_name = $parentName
+                    parent_command_line = $null
+                    sha256_hash   = $sha256
+                    user_name     = $null
+                    event_time    = $startTime
+                    is_suspicious = $false
+                    detection_tags = @()
+                }
+            }
+        }
+        
+        # Detect TERMINATED processes (v5.0.15-fix: renamed $pid -> $procId)
+        foreach ($procId in @($Global:EDRLastProcessSnapshot.Keys)) {
+            if (-not $currentProcs.ContainsKey($procId)) {
+                $oldProc = $Global:EDRLastProcessSnapshot[$procId]
+                $processEvents += @{
+                    event_type    = "process_stop"
+                    pid           = $procId
+                    parent_pid    = $oldProc.ParentProcessId
+                    process_name  = $oldProc.Name
+                    command_line  = $null
+                    executable_path = $oldProc.ExecutablePath
+                    parent_process_name = $null
+                    parent_command_line = $null
+                    sha256_hash   = $null
+                    user_name     = $null
+                    event_time    = $nowStr
+                    is_suspicious = $false
+                    detection_tags = @()
+                }
+            }
+        }
+        
+        $Global:EDRLastProcessSnapshot = $currentProcs
+    } catch {
+        Write-Log "[EDR-COLLECT] Process collection error: $($_.Exception.Message)" "WARN"
+    }
+    
+    # ── 2. NETWORK TELEMETRY ──
+    try {
+        $currentConns = @{}
+        $tcpConns = Get-NetTCPConnection -ErrorAction SilentlyContinue |
+            Where-Object { $_.State -eq 'Established' -or $_.State -eq 'Listen' }
+        
+        foreach ($conn in $tcpConns) {
+            # Skip loopback
+            if ($conn.RemoteAddress -eq '127.0.0.1' -or $conn.RemoteAddress -eq '::1') { continue }
+            if ($conn.LocalAddress -eq '127.0.0.1' -and $conn.State -eq 'Listen') { continue }
+            
+            $connKey = "$($conn.LocalAddress):$($conn.LocalPort)->$($conn.RemoteAddress):$($conn.RemotePort):$($conn.State)"
+            $currentConns[$connKey] = $conn
+            
+            if (-not $Global:EDRLastNetConnSnapshot.ContainsKey($connKey)) {
+                $procName = $null
+                try {
+                    $proc = Get-Process -Id $conn.OwningProcess -ErrorAction SilentlyContinue
+                    if ($proc) { $procName = $proc.ProcessName }
+                } catch { }
+                
+                $direction = if ($conn.State -eq 'Listen') { "listen" } else { "outbound" }
+                
+                $networkEvents += @{
+                    event_type     = if ($conn.State -eq 'Listen') { "port_listen" } else { "connection_established" }
+                    protocol       = "TCP"
+                    local_address  = [string]$conn.LocalAddress
+                    local_port     = [int]$conn.LocalPort
+                    remote_address = if ($conn.RemoteAddress) { [string]$conn.RemoteAddress } else { $null }
+                    remote_port    = if ($conn.RemotePort) { [int]$conn.RemotePort } else { $null }
+                    direction      = $direction
+                    process_name   = $procName
+                    process_pid    = [int]$conn.OwningProcess
+                    bytes_sent     = $null
+                    bytes_received = $null
+                    domain         = $null
+                    dns_query_type = $null
+                    dns_response   = $null
+                    is_suspicious  = $false
+                    detection_tags = @()
+                    geo_country    = $null
+                    event_time     = $nowStr
+                }
+            }
+        }
+        
+        $Global:EDRLastNetConnSnapshot = $currentConns
+    } catch {
+        Write-Log "[EDR-COLLECT] Network collection error: $($_.Exception.Message)" "WARN"
+    }
+    
+    # ── 3. FILE TELEMETRY (monitored paths - recently modified) ──
+    try {
+        foreach ($monPath in $Global:EDRMonitoredPaths) {
+            if (-not (Test-Path $monPath -ErrorAction SilentlyContinue)) { continue }
+            
+            $recentFiles = Get-ChildItem -Path $monPath -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.LastWriteTime -gt (Get-Date).AddMinutes(-3) } |
+                Select-Object -First 50
+            
+            foreach ($f in $recentFiles) {
+                $fileEvents += @{
+                    event_type     = "file_modify"
+                    file_path      = $f.FullName
+                    file_name      = $f.Name
+                    file_extension = $f.Extension
+                    file_size      = $f.Length
+                    sha256_hash    = $null
+                    old_path       = $null
+                    process_name   = $null
+                    process_pid    = $null
+                    is_suspicious  = $false
+                    detection_tags = @()
+                    event_time     = $f.LastWriteTimeUtc.ToString("o")
+                }
+            }
+        }
+    } catch {
+        Write-Log "[EDR-COLLECT] File collection error: $($_.Exception.Message)" "WARN"
+    }
+    
+    # ── 4. REGISTRY TELEMETRY (persistence keys) ──
+    try {
+        $currentRegSnapshot = @{}
+        foreach ($regKey in $Global:EDRRegistryKeys) {
+            if (-not (Test-Path $regKey -ErrorAction SilentlyContinue)) { continue }
+            try {
+                $values = Get-ItemProperty -Path $regKey -ErrorAction SilentlyContinue
+                if ($values) {
+                    $props = $values.PSObject.Properties | Where-Object { $_.Name -notmatch '^PS' }
+                    foreach ($prop in $props) {
+                        $snapKey = "$regKey\$($prop.Name)"
+                        $currentRegSnapshot[$snapKey] = @{ key_path = $regKey; value_name = $prop.Name; value_data = [string]$prop.Value }
+                        
+                        if ($Global:EDRInitialized) {
+                            $oldVal = $Global:EDRLastRegistrySnapshot[$snapKey]
+                            if (-not $oldVal) {
+                                $registryEvents += @{
+                                    event_type       = "registry_value_set"
+                                    key_path         = $regKey
+                                    value_name       = $prop.Name
+                                    value_data       = [string]$prop.Value
+                                    value_type       = "REG_SZ"
+                                    old_value_data   = $null
+                                    process_name     = $null
+                                    process_pid      = $null
+                                    is_suspicious    = $false
+                                    detection_tags   = @()
+                                    mitre_technique_id = $null
+                                    event_time       = $nowStr
+                                }
+                            } elseif ($oldVal.value_data -ne [string]$prop.Value) {
+                                $registryEvents += @{
+                                    event_type       = "registry_value_set"
+                                    key_path         = $regKey
+                                    value_name       = $prop.Name
+                                    value_data       = [string]$prop.Value
+                                    value_type       = "REG_SZ"
+                                    old_value_data   = $oldVal.value_data
+                                    process_name     = $null
+                                    process_pid      = $null
+                                    is_suspicious    = $false
+                                    detection_tags   = @()
+                                    mitre_technique_id = $null
+                                    event_time       = $nowStr
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch { }
+        }
+        
+        # Detect deleted registry values
+        if ($Global:EDRInitialized) {
+            foreach ($snapKey in @($Global:EDRLastRegistrySnapshot.Keys)) {
+                if (-not $currentRegSnapshot.ContainsKey($snapKey)) {
+                    $old = $Global:EDRLastRegistrySnapshot[$snapKey]
+                    $registryEvents += @{
+                        event_type       = "registry_value_delete"
+                        key_path         = $old.key_path
+                        value_name       = $old.value_name
+                        value_data       = $null
+                        value_type       = "REG_SZ"
+                        old_value_data   = $old.value_data
+                        process_name     = $null
+                        process_pid      = $null
+                        is_suspicious    = $false
+                        detection_tags   = @()
+                        mitre_technique_id = $null
+                        event_time       = $nowStr
+                    }
+                }
+            }
+        }
+        
+        $Global:EDRLastRegistrySnapshot = $currentRegSnapshot
+        $Global:EDRInitialized = $true
+    } catch {
+        Write-Log "[EDR-COLLECT] Registry collection error: $($_.Exception.Message)" "WARN"
+    }
+    
+    # ── 5. SUBMIT TO BACKEND ──
+    $totalEvents = $processEvents.Count + $networkEvents.Count + $fileEvents.Count + $registryEvents.Count
+    
+    if ($totalEvents -eq 0) {
+        Write-Log "[EDR-COLLECT] No new events to submit" "DEBUG"
+        return
+    }
+    
+    Write-Log "[EDR-COLLECT] Submitting $totalEvents events (proc=$($processEvents.Count) net=$($networkEvents.Count) file=$($fileEvents.Count) reg=$($registryEvents.Count))" "INFO"
+    
+    try {
+        $body = @{}
+        if ($processEvents.Count -gt 0) { $body.process_events = $processEvents }
+        if ($networkEvents.Count -gt 0) { $body.network_events = $networkEvents }
+        if ($fileEvents.Count -gt 0) { $body.file_events = $fileEvents }
+        if ($registryEvents.Count -gt 0) { $body.registry_events = $registryEvents }
+        
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/submit-endpoint-events" `
+            -Method "POST" `
+            -Body $body `
+            -TimeoutSec 30
+        
+        if ($result.Success) {
+            Write-Log "[EDR-COLLECT] Telemetry submitted successfully ($totalEvents events)" "SUCCESS"
+            if ($processEvents.Count -gt 20) {
+                Add-AggregatedEvent -EventType "process_spawn" -Pattern "batch_$($processEvents.Count)" -Metadata @{ count = $processEvents.Count }
+            }
+            if ($networkEvents.Count -gt 30) {
+                Add-AggregatedEvent -EventType "network_connect" -Pattern "batch_$($networkEvents.Count)" -Metadata @{ count = $networkEvents.Count }
+            }
+        } else {
+            Write-Log "[EDR-COLLECT] Submission failed: HTTP $($result.StatusCode) - $($result.Error)" "WARN"
+        }
+    } catch {
+        Write-Log "[EDR-COLLECT] Submission error: $($_.Exception.Message)" "WARN"
+    }
+}
+
+# ============================================
 #  v5.0.14: BACKUP STATUS HANDLER
 #  v5.0.14-fix: MOVED BEFORE main loop (was unreachable after while($true))
 # ============================================
@@ -6121,6 +6634,7 @@ $lastSoftwareCheck = Get-Date
 $lastJobPoll = Get-Date
 $lastDnsSync = Get-Date
 $lastLocalDetection = Get-Date
+$lastEDRCollection = Get-Date
 $consecutiveNetworkFailures = 0
 $consecutiveHeartbeatFailures = 0  # Reset for main loop (also declared before Phase 2)
 # $maxConsecutiveFailures already declared at line ~4790
@@ -6128,6 +6642,10 @@ $consecutiveHeartbeatFailures = 0  # Reset for main loop (also declared before P
 # v5.0.11: Run initial local detection on startup
 Write-Log "[STARTUP] Running initial local security detection..." "INFO"
 Invoke-LocalDetection | Out-Null
+
+# v5.0.14-EDR: Initialize EDR baseline snapshot
+Write-Log "[STARTUP] Initializing EDR telemetry baseline..." "INFO"
+Invoke-EDRTelemetryCollection
 
 while ($true) {
     # v5.0.13-perf: Cache timestamp once per iteration (eliminates repeated Get-Date calls)
@@ -6304,6 +6822,18 @@ while ($true) {
         if (($now - $lastLocalDetection).TotalSeconds -ge $Global:LocalDetectionIntervalSeconds) {
             Invoke-LocalDetection | Out-Null
             $lastLocalDetection = Get-Date
+        }
+        
+        # ============================================
+        # v5.0.14-EDR: EDR TELEMETRY COLLECTION (every 2 min)
+        # ============================================
+        if (($now - $lastEDRCollection).TotalSeconds -ge $Global:EDRCollectionIntervalSeconds -and $networkOk) {
+            try {
+                Invoke-EDRTelemetryCollection
+            } catch {
+                Write-Log "[EDR-COLLECT] Unhandled error: $($_.Exception.Message)" "WARN"
+            }
+            $lastEDRCollection = Get-Date
         }
         
         # ============================================
