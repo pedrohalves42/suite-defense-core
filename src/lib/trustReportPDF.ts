@@ -44,8 +44,8 @@ async function collectTrustData(tenantId: string, startDate: Date, endDate: Date
   ] = await Promise.all([
     supabase.from('tenants').select('id, name, slug').eq('id', tenantId).single(),
     supabase.from('agents').select('id, status, is_isolated').eq('tenant_id', tenantId),
-    supabase.from('detection_rules').select('id, name, severity, mitre_tactic, is_enabled').eq('tenant_id', tenantId),
-    supabase.from('endpoint_detection_events').select('id, rule_name, severity, created_at')
+    supabase.from('detection_rules').select('id, rule_name, severity, mitre_tactic, is_enabled').eq('tenant_id', tenantId),
+    supabase.from('endpoint_detection_events').select('id, detection_name, severity, created_at')
       .eq('tenant_id', tenantId).gte('created_at', start).lte('created_at', end),
     supabase.from('system_alerts').select('id, severity, status, created_at')
       .eq('tenant_id', tenantId).gte('created_at', start).lte('created_at', end),
