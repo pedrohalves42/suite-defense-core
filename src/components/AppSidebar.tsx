@@ -623,25 +623,31 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
         </nav>
 
         {/* ─── Footer ───────────────────────── */}
-        <div className="relative z-20 border-t border-[hsl(var(--neon-cyan)_/_0.08)] p-3">
+        <div className="relative z-20 border-t border-border/20 p-3">
           {!isCollapsed ? (
-            <div className="flex items-center justify-center gap-2">
-              <Zap className="h-3 w-3 text-[hsl(var(--neon-cyan)_/_0.4)] neon-pulse" />
-              <span className="text-[10px] tracking-[0.1em] text-[hsl(var(--neon-cyan)_/_0.3)] font-mono uppercase">
-                CyberShield v5.0.13
-              </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap className="h-3 w-3 text-muted-foreground/40 neon-pulse" />
+                <span className="text-[10px] tracking-[0.1em] text-muted-foreground/50 font-mono uppercase">
+                  CyberShield v5.0.15
+                </span>
+              </div>
+              <ThemeToggle variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/60 hover:text-foreground" />
             </div>
           ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center justify-center">
-                  <Zap className="h-3 w-3 text-[hsl(var(--neon-cyan)_/_0.4)] neon-pulse" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="glass-panel text-[hsl(190_95%_70%)] border-[hsl(190_95%_55%_/_0.2)]">
-                CyberShield v5.0.13
-              </TooltipContent>
-            </Tooltip>
+            <div className="flex flex-col items-center gap-2">
+              <ThemeToggle variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/60 hover:text-foreground" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center justify-center">
+                    <Zap className="h-3 w-3 text-muted-foreground/40 neon-pulse" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  CyberShield v5.0.15
+                </TooltipContent>
+              </Tooltip>
+            </div>
           )}
         </div>
       </motion.aside>
