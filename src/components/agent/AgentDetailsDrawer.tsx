@@ -112,6 +112,21 @@ export function AgentDetailsDrawer({
   const { data: causality, isLoading, isError, refetch } = useAgentCausality(agentId, tenantId);
   const { data: antivirusStatus } = useAntivirusStatus(agentId || '', !!agentId);
   const agentActions = useAgentActions();
+  const [generatingReport, setGeneratingReport] = React.useState(false);
+
+  const handleGenerateForensicReport = async () => {
+    if (!agentId) return;
+    setGeneratingReport(true);
+    try {
+      await generateForensicReportPDF([agentId]);
+      toast.success('Relatório forense gerado com sucesso!');
+    } catch (err) {
+      console.error('Forensic report error:', err);
+      toast.error('Erro ao gerar relatório forense');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
 
   const queryClient = useQueryClient();
   const { activeTenant } = useActiveTenant();
