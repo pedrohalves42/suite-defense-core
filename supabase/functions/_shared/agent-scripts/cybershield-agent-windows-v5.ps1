@@ -1,5 +1,13 @@
 <#
-    CyberShield Agent - Windows v5.0.15 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.16 FULL ENTERPRISE
+
+    v5.0.16: USB WHITELIST + DNS SYNC RESILIENCE + VERSION BUMP FOR HOTFIX RE-DEPLOY
+    - NEW: USB device whitelist - persistent devices (internal HDDs) no longer trigger repeated alerts
+      * Tracks known devices in C:\CyberShield\data\usb_whitelist.json
+      * Devices seen 3+ times are auto-whitelisted (configurable via server policy)
+      * Manual whitelist support for admin-approved devices
+    - FIX: DNS sync now handles 403 (feature disabled) and 404 gracefully without ERROR logging
+    - FIX: Version bump forces re-download of v5.0.15 hotfixes ($PID rename, ECDSA fallback)
 
     v5.0.15: EDR TELEMETRY ACTIVATION + THREAT NETWORK + PROCESS LINEAGE + EDGE EVENT AGGREGATION
     - NEW: Edge Event Aggregation Engine - Local event deduplication before submission
