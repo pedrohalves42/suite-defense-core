@@ -193,6 +193,14 @@ CACHED_EPOCH=0
 # v5.0.13-perf: Performance - Adaptive sleep
 ADAPTIVE_MIN_SLEEP=10
 LAST_CPU_PERCENT=0
+
+# v5.0.15: Local Detection Stats
+LOCAL_DETECTION_INTERVAL=300
+LAST_LOCAL_DETECTION=0
+LOCAL_DETECTION_USB_CHECKS=0
+LOCAL_DETECTION_AV_CHECKS=0
+LOCAL_DETECTION_FW_CHECKS=0
+LOCAL_DETECTION_PROC_CHECKS=0
  # ============================================
  #  ARGUMENT PARSING
  # ============================================
