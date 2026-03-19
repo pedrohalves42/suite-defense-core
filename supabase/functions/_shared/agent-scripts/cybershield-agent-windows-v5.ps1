@@ -1,7 +1,7 @@
 <#
-    CyberShield Agent - Windows v5.0.14 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.15 FULL ENTERPRISE
 
-    v5.0.14: THREAT NETWORK + PROCESS LINEAGE + EDGE EVENT AGGREGATION
+    v5.0.15: EDR TELEMETRY ACTIVATION + THREAT NETWORK + PROCESS LINEAGE + EDGE EVENT AGGREGATION
     - NEW: Edge Event Aggregation Engine - Local event deduplication before submission
       * Configurable time windows (default 3s) for grouping similar events
       * File/Process/Network event type-specific thresholds
@@ -190,7 +190,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.14"
+    [string]$AgentVersion = "v5.0.15"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility

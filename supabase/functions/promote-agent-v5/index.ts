@@ -7,7 +7,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ED25519_PRIVATE_KEY = Deno.env.get('ED25519_PRIVATE_KEY');
 
-const VERSION = 'v5.0.14';
+const VERSION = 'v5.0.15';
 const CHANNEL = 'stable';
 
 function normalizeVersion(version: string | null | undefined): string {
@@ -73,7 +73,7 @@ async function requireSuperAdmin(supabase: ReturnType<typeof createClient>, req:
 }
 
 /**
- * Emergency sync utility for v5.0.14.
+ * Emergency sync utility for v5.0.15.
  * Reads the authoritative v5 scripts from _shared/agent-scripts,
  * validates the embedded version, re-signs them, and updates agent_releases/agent_versions.
  */
