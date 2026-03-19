@@ -143,12 +143,13 @@ export default function Governance() {
             {generatingReport ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
             Trust Report (PDF)
           </Button>
-        <Button asChild>
-          <Link to="/admin/tasks">
-            <ListTodo className="h-4 w-4 mr-2" />
-            Ver Todas as Tasks
-          </Link>
-        </Button>
+          <Button asChild>
+            <Link to="/admin/tasks">
+              <ListTodo className="h-4 w-4 mr-2" />
+              Ver Todas as Tasks
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Health Score Card */}
