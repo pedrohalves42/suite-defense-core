@@ -409,7 +409,7 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
         />
 
         {/* ─── Header ───────────────────────── */}
-        <div className="relative z-20 h-14 flex items-center justify-between px-3 border-b border-[hsl(var(--neon-cyan)_/_0.08)]">
+        <div className="relative z-20 h-14 flex items-center justify-between px-3 border-b border-border/20">
           {!isCollapsed && (
             <motion.div 
               initial={{ opacity: 0 }}
