@@ -6040,10 +6040,10 @@ function Invoke-EDRTelemetryCollection {
         $parentMap = @{}
         foreach ($p in $cimProcs) { $parentMap[$p.ProcessId] = $p.Name }
         
-        # Detect NEW processes
-        foreach ($pid in $currentProcs.Keys) {
-            if (-not $Global:EDRLastProcessSnapshot.ContainsKey($pid)) {
-                $proc = $currentProcs[$pid]
+        # Detect NEW processes (v5.0.15-fix: renamed $pid -> $procId to avoid PS automatic $PID variable conflict)
+        foreach ($procId in $currentProcs.Keys) {
+            if (-not $Global:EDRLastProcessSnapshot.ContainsKey($procId)) {
+                $proc = $currentProcs[$procId]
                 $parentName = if ($parentMap.ContainsKey($proc.ParentProcessId)) { $parentMap[$proc.ParentProcessId] } else { $null }
                 
                 $startTime = $nowStr
@@ -6074,13 +6074,13 @@ function Invoke-EDRTelemetryCollection {
             }
         }
         
-        # Detect TERMINATED processes
-        foreach ($pid in @($Global:EDRLastProcessSnapshot.Keys)) {
-            if (-not $currentProcs.ContainsKey($pid)) {
-                $oldProc = $Global:EDRLastProcessSnapshot[$pid]
+        # Detect TERMINATED processes (v5.0.15-fix: renamed $pid -> $procId)
+        foreach ($procId in @($Global:EDRLastProcessSnapshot.Keys)) {
+            if (-not $currentProcs.ContainsKey($procId)) {
+                $oldProc = $Global:EDRLastProcessSnapshot[$procId]
                 $processEvents += @{
                     event_type    = "process_stop"
-                    pid           = $pid
+                    pid           = $procId
                     parent_pid    = $oldProc.ParentProcessId
                     process_name  = $oldProc.Name
                     command_line  = $null
