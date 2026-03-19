@@ -16,6 +16,8 @@ import { serveAgent } from '../_shared/serve-tenant.ts';
 
 // V-2006: Batch size limit to prevent DoS
 const MAX_EVENTS_PER_BATCH = 1000;
+const INTERNAL_FUNCTION_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 
 // ── MITRE ATT&CK Detection Rules (Local Engine) ──
 
@@ -194,6 +196,29 @@ function runDetections(events: any[], type: string): any[] {
   return detections;
 }
 
+async function triggerBufferFlush() {
+  if (!INTERNAL_FUNCTION_SECRET || !SUPABASE_URL) return;
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/flush-event-buffer`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Secret': INTERNAL_FUNCTION_SECRET,
+      },
+      body: '{}',
+      signal: AbortSignal.timeout(4000),
+    });
+
+    if (!response.ok) {
+      console.warn(`[submit-endpoint-events] flush trigger failed with status ${response.status}`);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[submit-endpoint-events] flush trigger error: ${message}`);
+  }
+}
+
 serveAgent(async (_req, ctx) => {
   const { body, agentId, tenantId, supabase } = ctx;
   
@@ -267,6 +292,11 @@ serveAgent(async (_req, ctx) => {
   stats.registry = preparedRegistry.length;
 
   await Promise.all(insertPromises);
+
+  // V-3010 FIX: trigger internal flush immediately so EDR does not depend solely on cron auth
+  if (stats.buffered > 0) {
+    await triggerBufferFlush();
+  }
 
   // ── Insert Detection Events (still direct — these are low volume, high priority) ──
   if (allDetections.length > 0) {
