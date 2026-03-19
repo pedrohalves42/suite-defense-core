@@ -99,6 +99,9 @@ export function AgentProcessesPanel({ agentId, agentName }: Props) {
 
   const sortedProcesses = [...(snapshot.processes || [])].sort((a, b) => b.cpu_percent - a.cpu_percent);
   const sortedServices = [...(snapshot.services || [])];
+  const suspiciousProcesses = (snapshot.suspicious_processes || []).filter(
+    (proc) => typeof proc?.name === 'string' && proc.name.trim().length > 0
+  );
 
   return (
     <Card>
@@ -114,10 +117,10 @@ export function AgentProcessesPanel({ agentId, agentName }: Props) {
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            {snapshot.suspicious_processes.length > 0 && (
+            {suspiciousProcesses.length > 0 && (
               <Badge variant="destructive" className="gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                {snapshot.suspicious_processes.length} suspeito(s)
+                {suspiciousProcesses.length} suspeito(s)
               </Badge>
             )}
             {snapshot.new_processes.length > 0 && (
@@ -159,7 +162,7 @@ export function AgentProcessesPanel({ agentId, agentName }: Props) {
             <TabsTrigger value="services" className="flex-1">
               <Cog className="h-3.5 w-3.5 mr-1" /> Serviços ({sortedServices.length})
             </TabsTrigger>
-            {snapshot.suspicious_processes.length > 0 && (
+            {suspiciousProcesses.length > 0 && (
               <TabsTrigger value="suspicious" className="flex-1">
                 <AlertTriangle className="h-3.5 w-3.5 mr-1" /> Suspeitos
               </TabsTrigger>
@@ -233,10 +236,10 @@ export function AgentProcessesPanel({ agentId, agentName }: Props) {
             </ScrollArea>
           </TabsContent>
 
-          {snapshot.suspicious_processes.length > 0 && (
+          {suspiciousProcesses.length > 0 && (
             <TabsContent value="suspicious">
               <div className="space-y-2">
-                {snapshot.suspicious_processes.map((proc, i) => (
+                {suspiciousProcesses.map((proc, i) => (
                   <div key={i} className="p-2 rounded border border-destructive/30 bg-destructive/5">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-destructive" />

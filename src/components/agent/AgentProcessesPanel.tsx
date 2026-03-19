@@ -84,29 +84,43 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
       if (error) throw error;
       if (!processData) return null;
 
-      const rawProcesses = (processData.processes as any[]) || [];
+      const rawProcesses = (processData.processes as Array<Record<string, unknown>> | null) ?? [];
       const top_by_cpu = [...rawProcesses]
-        .sort((a, b) => (b.cpu_percent || b.cpu || b.cpu_seconds || 0) - (a.cpu_percent || a.cpu || a.cpu_seconds || 0))
+        .sort((a, b) => (Number(b.cpu_percent || b.cpu || b.cpu_seconds || 0)) - (Number(a.cpu_percent || a.cpu || a.cpu_seconds || 0)))
         .slice(0, 5)
-        .map(p => ({
-          name: p.name,
-          pid: p.pid,
-          cpu_seconds: p.cpu || p.cpu_seconds || 0,
-          cpu_percent: p.cpu_percent || 0,
-          memory_mb: p.memory_mb || 0,
+        .map((p) => ({
+          name: typeof p.name === 'string' ? p.name : 'Processo desconhecido',
+          pid: typeof p.pid === 'number' ? p.pid : undefined,
+          cpu_seconds: Number(p.cpu || p.cpu_seconds || 0),
+          cpu_percent: Number(p.cpu_percent || 0),
+          memory_mb: Number(p.memory_mb || 0),
         }));
       const top_by_memory = [...rawProcesses]
-        .sort((a, b) => (b.memory_mb || 0) - (a.memory_mb || 0))
+        .sort((a, b) => Number(b.memory_mb || 0) - Number(a.memory_mb || 0))
         .slice(0, 5)
-        .map(p => ({
-          name: p.name,
-          pid: p.pid,
-          cpu_seconds: p.cpu || p.cpu_seconds || 0,
-          cpu_percent: p.cpu_percent || 0,
-          memory_mb: p.memory_mb || 0,
+        .map((p) => ({
+          name: typeof p.name === 'string' ? p.name : 'Processo desconhecido',
+          pid: typeof p.pid === 'number' ? p.pid : undefined,
+          cpu_seconds: Number(p.cpu || p.cpu_seconds || 0),
+          cpu_percent: Number(p.cpu_percent || 0),
+          memory_mb: Number(p.memory_mb || 0),
         }));
 
-      const suspicious = (processData.suspicious_processes as any[]) || [];
+      const suspicious = ((processData.suspicious_processes as Array<Record<string, unknown>> | null) ?? [])
+        .map((item) => {
+          const name = [item.name, item.process_name, item.image_name]
+            .find((value): value is string => typeof value === 'string' && value.trim().length > 0)
+            ?.trim();
+
+          const reason = [item.reason, item.command_line, item.path]
+            .find((value): value is string => typeof value === 'string' && value.trim().length > 0)
+            ?.trim() ?? '';
+
+          if (!name) return null;
+
+          return { name, reason };
+        })
+        .filter((item): item is { name: string; reason: string } => item !== null);
 
       return {
         processes: {
@@ -115,7 +129,7 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
           total_processes: processData.total_processes || rawProcesses.length,
           collected_at: processData.collected_at,
         } as ProcessesData,
-        anomalies: suspicious.map((s: any) => ({ name: s.name, reason: s.reason || s.command_line || '' })),
+        anomalies: suspicious,
         autoRepairStats: null as AutoRepairStats | null,
         collectedAt: processData.collected_at,
       };
