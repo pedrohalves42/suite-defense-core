@@ -2462,6 +2462,19 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
         
         last_auto_repair=$now
     fi
+
+    # ============================================
+    # v5.0.15: LOCAL DETECTION (every 5 min)
+    # ============================================
+    if [[ $((now - LAST_LOCAL_DETECTION)) -ge $LOCAL_DETECTION_INTERVAL ]]; then
+        local_det_result=$(run_local_detection)
+        local threats
+        threats=$(echo "$local_det_result" | jq -r '.threats_found' 2>/dev/null || echo 0)
+        if [[ "$threats" -gt 0 ]]; then
+            log "WARN" "[MAIN-LOOP] Local detection found $threats threat(s)"
+        fi
+        LAST_LOCAL_DETECTION=$now
+    fi
      
      # ============================================
      # HEARTBEAT EVERY INTERVAL (v5.0.13: with failure tracking)
