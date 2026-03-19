@@ -24,13 +24,13 @@ const SCRIPT_FILES: Record<string, string> = {
 };
 
 export function RegisterLatestRelease() {
-  const [version, setVersion] = useState("v5.0.14");
+  const [version, setVersion] = useState("v5.0.15");
   const [releaseNotes, setReleaseNotes] = useState(
-    "v5.0.14 — THREAT NETWORK + PROCESS LINEAGE + EDGE EVENT AGGREGATION\n" +
-    "- NEW: Edge Event Aggregation Engine\n" +
-    "- NEW: Threat Network correlation\n" +
-    "- NEW: Process Lineage tracking\n" +
-    "- SECURITY: Ed25519 signed releases\n" +
+    "v5.0.15 — STABILIZATION & BUGFIXES\n" +
+    "- FIX: $PID read-only variable renamed to $procId (EDR process collection)\n" +
+    "- NEW: Persistent USB whitelist (auto-whitelist after 3 detections)\n" +
+    "- FIX: DNS sync 403/404 handled gracefully\n" +
+    "- FIX: RSA-2048 signature fallback confirmed operational\n" +
     "- PARITY: Windows / Linux / macOS support"
   );
   const [platforms, setPlatforms] = useState({
