@@ -4302,16 +4302,24 @@ function Invoke-SyncBlockedWebsites {
         $markerEnd = "# === CyberShield Blocked Websites End ==="
         
         # Get URLs from payload (supports 'blocked_domains', 'urls', or 'domains' keys)
+        # v5.0.15-fix: Use try/catch for PSCustomObject property access to avoid StrictMode errors
         $urls = @()
         $payloadDomains = $null
-        if ($Payload -is [hashtable]) {
-            if ($Payload.ContainsKey("blocked_domains")) { $payloadDomains = $Payload["blocked_domains"] }
-            elseif ($Payload.ContainsKey("urls")) { $payloadDomains = $Payload["urls"] }
-            elseif ($Payload.ContainsKey("domains")) { $payloadDomains = $Payload["domains"] }
-        } elseif ($Payload -ne $null) {
-            if ($Payload.PSObject.Properties["blocked_domains"]) { $payloadDomains = $Payload.blocked_domains }
-            elseif ($Payload.PSObject.Properties["urls"]) { $payloadDomains = $Payload.urls }
-            elseif ($Payload.PSObject.Properties["domains"]) { $payloadDomains = $Payload.domains }
+        if ($null -ne $Payload) {
+            if ($Payload -is [hashtable]) {
+                if ($Payload.ContainsKey("blocked_domains")) { $payloadDomains = $Payload["blocked_domains"] }
+                elseif ($Payload.ContainsKey("urls")) { $payloadDomains = $Payload["urls"] }
+                elseif ($Payload.ContainsKey("domains")) { $payloadDomains = $Payload["domains"] }
+            } else {
+                try {
+                    $props = @($Payload.PSObject.Properties | ForEach-Object { $_.Name })
+                    if ($props -contains "blocked_domains") { $payloadDomains = $Payload.blocked_domains }
+                    elseif ($props -contains "urls") { $payloadDomains = $Payload.urls }
+                    elseif ($props -contains "domains") { $payloadDomains = $Payload.domains }
+                } catch {
+                    Write-Log "[SYNC-BLOCKED] Payload property access error (non-fatal): $($_.Exception.Message)" "DEBUG"
+                }
+            }
         }
         if ($payloadDomains) {
             $urls = @($payloadDomains)
@@ -4325,7 +4333,13 @@ function Invoke-SyncBlockedWebsites {
             
             if ($result.Success) {
                 $response = $result.Content | ConvertFrom-Json
-                if ($response.domains) { $urls = @($response.domains) }
+                try {
+                    $responseProps = @($response.PSObject.Properties | ForEach-Object { $_.Name })
+                    if ($responseProps -contains "domains") { $urls = @($response.domains) }
+                    elseif ($responseProps -contains "blocked_domains") { $urls = @($response.blocked_domains) }
+                } catch {
+                    Write-Log "[SYNC-BLOCKED] Response parse error: $($_.Exception.Message)" "WARN"
+                }
             }
         }
         
