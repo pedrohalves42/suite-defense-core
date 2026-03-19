@@ -138,6 +138,11 @@ export default function Governance() {
             Visão consolidada do trabalho real e conformidade
           </p>
         </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleTrustReport} disabled={generatingReport}>
+            {generatingReport ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
+            Trust Report (PDF)
+          </Button>
         <Button asChild>
           <Link to="/admin/tasks">
             <ListTodo className="h-4 w-4 mr-2" />
