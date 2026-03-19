@@ -551,12 +551,6 @@ export default function AgentManagement() {
                 ? 'Gerando...'
                 : `Relatório Forense (${filteredAgents?.length || 0})`}
             </Button>
-              <SelectContent>
-                <SelectItem value="all">{t('agentManagementPage.allVersions')}</SelectItem>
-                <SelectItem value="outdated">{t('agentManagementPage.outdated')}</SelectItem>
-                <SelectItem value="current">{t('agentManagementPage.current')}</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>
