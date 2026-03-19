@@ -5945,6 +5945,323 @@ function Invoke-CollectProcessLineage {
 }
 
 # ============================================
+#  v5.0.14-EDR: CONTINUOUS EDR TELEMETRY COLLECTOR
+#  Collects processes, network connections, file changes, and registry
+#  and submits to submit-endpoint-events for MITRE ATT&CK detection
+# ============================================
+$Global:EDRCollectionIntervalSeconds = 120
+$Global:EDRLastProcessSnapshot = @{}
+$Global:EDRLastNetConnSnapshot = @{}
+$Global:EDRMonitoredPaths = @(
+    "$env:TEMP",
+    "$env:APPDATA",
+    "$env:USERPROFILE\Downloads",
+    "$env:USERPROFILE\Desktop",
+    "C:\Windows\Temp",
+    "C:\ProgramData"
+)
+$Global:EDRRegistryKeys = @(
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+    "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
+    "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+    "HKLM:\SYSTEM\CurrentControlSet\Services"
+)
+$Global:EDRLastRegistrySnapshot = @{}
+$Global:EDRInitialized = $false
+
+function Invoke-EDRTelemetryCollection {
+    <#
+    .SYNOPSIS
+        Collects EDR telemetry (processes, network, files, registry) and
+        submits to submit-endpoint-events for MITRE ATT&CK detection engine.
+    #>
+    if ($Global:SecurityDegraded) { return }
+    
+    Write-Log "[EDR-COLLECT] Starting telemetry collection cycle..." "DEBUG"
+    
+    $processEvents = @()
+    $networkEvents = @()
+    $fileEvents = @()
+    $registryEvents = @()
+    $nowStr = (Get-Date).ToUniversalTime().ToString("o")
+    
+    # ── 1. PROCESS TELEMETRY ──
+    try {
+        $currentProcs = @{}
+        $cimProcs = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            Select-Object ProcessId, ParentProcessId, Name, CommandLine, ExecutablePath, CreationDate
+        
+        foreach ($p in $cimProcs) {
+            $currentProcs[$p.ProcessId] = $p
+        }
+        
+        $parentMap = @{}
+        foreach ($p in $cimProcs) { $parentMap[$p.ProcessId] = $p.Name }
+        
+        # Detect NEW processes
+        foreach ($pid in $currentProcs.Keys) {
+            if (-not $Global:EDRLastProcessSnapshot.ContainsKey($pid)) {
+                $proc = $currentProcs[$pid]
+                $parentName = if ($parentMap.ContainsKey($proc.ParentProcessId)) { $parentMap[$proc.ParentProcessId] } else { $null }
+                
+                $startTime = $nowStr
+                if ($proc.CreationDate) {
+                    try { $startTime = $proc.CreationDate.ToUniversalTime().ToString("o") } catch { }
+                }
+                
+                $sha256 = $null
+                if ($proc.ExecutablePath -and (Test-Path $proc.ExecutablePath -ErrorAction SilentlyContinue)) {
+                    try { $sha256 = (Get-FileHash -Path $proc.ExecutablePath -Algorithm SHA256 -ErrorAction SilentlyContinue).Hash.ToLower() } catch { }
+                }
+                
+                $processEvents += @{
+                    event_type    = "process_start"
+                    pid           = $proc.ProcessId
+                    parent_pid    = $proc.ParentProcessId
+                    process_name  = $proc.Name
+                    command_line  = if ($proc.CommandLine) { $proc.CommandLine.Substring(0, [Math]::Min($proc.CommandLine.Length, 2048)) } else { $null }
+                    executable_path = $proc.ExecutablePath
+                    parent_process_name = $parentName
+                    parent_command_line = $null
+                    sha256_hash   = $sha256
+                    user_name     = $null
+                    event_time    = $startTime
+                    is_suspicious = $false
+                    detection_tags = @()
+                }
+            }
+        }
+        
+        # Detect TERMINATED processes
+        foreach ($pid in @($Global:EDRLastProcessSnapshot.Keys)) {
+            if (-not $currentProcs.ContainsKey($pid)) {
+                $oldProc = $Global:EDRLastProcessSnapshot[$pid]
+                $processEvents += @{
+                    event_type    = "process_stop"
+                    pid           = $pid
+                    parent_pid    = $oldProc.ParentProcessId
+                    process_name  = $oldProc.Name
+                    command_line  = $null
+                    executable_path = $oldProc.ExecutablePath
+                    parent_process_name = $null
+                    parent_command_line = $null
+                    sha256_hash   = $null
+                    user_name     = $null
+                    event_time    = $nowStr
+                    is_suspicious = $false
+                    detection_tags = @()
+                }
+            }
+        }
+        
+        $Global:EDRLastProcessSnapshot = $currentProcs
+    } catch {
+        Write-Log "[EDR-COLLECT] Process collection error: $($_.Exception.Message)" "WARN"
+    }
+    
+    # ── 2. NETWORK TELEMETRY ──
+    try {
+        $currentConns = @{}
+        $tcpConns = Get-NetTCPConnection -ErrorAction SilentlyContinue |
+            Where-Object { $_.State -eq 'Established' -or $_.State -eq 'Listen' }
+        
+        foreach ($conn in $tcpConns) {
+            # Skip loopback
+            if ($conn.RemoteAddress -eq '127.0.0.1' -or $conn.RemoteAddress -eq '::1') { continue }
+            if ($conn.LocalAddress -eq '127.0.0.1' -and $conn.State -eq 'Listen') { continue }
+            
+            $connKey = "$($conn.LocalAddress):$($conn.LocalPort)->$($conn.RemoteAddress):$($conn.RemotePort):$($conn.State)"
+            $currentConns[$connKey] = $conn
+            
+            if (-not $Global:EDRLastNetConnSnapshot.ContainsKey($connKey)) {
+                $procName = $null
+                try {
+                    $proc = Get-Process -Id $conn.OwningProcess -ErrorAction SilentlyContinue
+                    if ($proc) { $procName = $proc.ProcessName }
+                } catch { }
+                
+                $direction = if ($conn.State -eq 'Listen') { "listen" } else { "outbound" }
+                
+                $networkEvents += @{
+                    event_type     = if ($conn.State -eq 'Listen') { "port_listen" } else { "connection_established" }
+                    protocol       = "TCP"
+                    local_address  = [string]$conn.LocalAddress
+                    local_port     = [int]$conn.LocalPort
+                    remote_address = if ($conn.RemoteAddress) { [string]$conn.RemoteAddress } else { $null }
+                    remote_port    = if ($conn.RemotePort) { [int]$conn.RemotePort } else { $null }
+                    direction      = $direction
+                    process_name   = $procName
+                    process_pid    = [int]$conn.OwningProcess
+                    bytes_sent     = $null
+                    bytes_received = $null
+                    domain         = $null
+                    dns_query_type = $null
+                    dns_response   = $null
+                    is_suspicious  = $false
+                    detection_tags = @()
+                    geo_country    = $null
+                    event_time     = $nowStr
+                }
+            }
+        }
+        
+        $Global:EDRLastNetConnSnapshot = $currentConns
+    } catch {
+        Write-Log "[EDR-COLLECT] Network collection error: $($_.Exception.Message)" "WARN"
+    }
+    
+    # ── 3. FILE TELEMETRY (monitored paths - recently modified) ──
+    try {
+        foreach ($monPath in $Global:EDRMonitoredPaths) {
+            if (-not (Test-Path $monPath -ErrorAction SilentlyContinue)) { continue }
+            
+            $recentFiles = Get-ChildItem -Path $monPath -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.LastWriteTime -gt (Get-Date).AddMinutes(-3) } |
+                Select-Object -First 50
+            
+            foreach ($f in $recentFiles) {
+                $fileEvents += @{
+                    event_type     = "file_modify"
+                    file_path      = $f.FullName
+                    file_name      = $f.Name
+                    file_extension = $f.Extension
+                    file_size      = $f.Length
+                    sha256_hash    = $null
+                    old_path       = $null
+                    process_name   = $null
+                    process_pid    = $null
+                    is_suspicious  = $false
+                    detection_tags = @()
+                    event_time     = $f.LastWriteTimeUtc.ToString("o")
+                }
+            }
+        }
+    } catch {
+        Write-Log "[EDR-COLLECT] File collection error: $($_.Exception.Message)" "WARN"
+    }
+    
+    # ── 4. REGISTRY TELEMETRY (persistence keys) ──
+    try {
+        $currentRegSnapshot = @{}
+        foreach ($regKey in $Global:EDRRegistryKeys) {
+            if (-not (Test-Path $regKey -ErrorAction SilentlyContinue)) { continue }
+            try {
+                $values = Get-ItemProperty -Path $regKey -ErrorAction SilentlyContinue
+                if ($values) {
+                    $props = $values.PSObject.Properties | Where-Object { $_.Name -notmatch '^PS' }
+                    foreach ($prop in $props) {
+                        $snapKey = "$regKey\$($prop.Name)"
+                        $currentRegSnapshot[$snapKey] = @{ key_path = $regKey; value_name = $prop.Name; value_data = [string]$prop.Value }
+                        
+                        if ($Global:EDRInitialized) {
+                            $oldVal = $Global:EDRLastRegistrySnapshot[$snapKey]
+                            if (-not $oldVal) {
+                                $registryEvents += @{
+                                    event_type       = "registry_value_set"
+                                    key_path         = $regKey
+                                    value_name       = $prop.Name
+                                    value_data       = [string]$prop.Value
+                                    value_type       = "REG_SZ"
+                                    old_value_data   = $null
+                                    process_name     = $null
+                                    process_pid      = $null
+                                    is_suspicious    = $false
+                                    detection_tags   = @()
+                                    mitre_technique_id = $null
+                                    event_time       = $nowStr
+                                }
+                            } elseif ($oldVal.value_data -ne [string]$prop.Value) {
+                                $registryEvents += @{
+                                    event_type       = "registry_value_set"
+                                    key_path         = $regKey
+                                    value_name       = $prop.Name
+                                    value_data       = [string]$prop.Value
+                                    value_type       = "REG_SZ"
+                                    old_value_data   = $oldVal.value_data
+                                    process_name     = $null
+                                    process_pid      = $null
+                                    is_suspicious    = $false
+                                    detection_tags   = @()
+                                    mitre_technique_id = $null
+                                    event_time       = $nowStr
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch { }
+        }
+        
+        # Detect deleted registry values
+        if ($Global:EDRInitialized) {
+            foreach ($snapKey in @($Global:EDRLastRegistrySnapshot.Keys)) {
+                if (-not $currentRegSnapshot.ContainsKey($snapKey)) {
+                    $old = $Global:EDRLastRegistrySnapshot[$snapKey]
+                    $registryEvents += @{
+                        event_type       = "registry_value_delete"
+                        key_path         = $old.key_path
+                        value_name       = $old.value_name
+                        value_data       = $null
+                        value_type       = "REG_SZ"
+                        old_value_data   = $old.value_data
+                        process_name     = $null
+                        process_pid      = $null
+                        is_suspicious    = $false
+                        detection_tags   = @()
+                        mitre_technique_id = $null
+                        event_time       = $nowStr
+                    }
+                }
+            }
+        }
+        
+        $Global:EDRLastRegistrySnapshot = $currentRegSnapshot
+        $Global:EDRInitialized = $true
+    } catch {
+        Write-Log "[EDR-COLLECT] Registry collection error: $($_.Exception.Message)" "WARN"
+    }
+    
+    # ── 5. SUBMIT TO BACKEND ──
+    $totalEvents = $processEvents.Count + $networkEvents.Count + $fileEvents.Count + $registryEvents.Count
+    
+    if ($totalEvents -eq 0) {
+        Write-Log "[EDR-COLLECT] No new events to submit" "DEBUG"
+        return
+    }
+    
+    Write-Log "[EDR-COLLECT] Submitting $totalEvents events (proc=$($processEvents.Count) net=$($networkEvents.Count) file=$($fileEvents.Count) reg=$($registryEvents.Count))" "INFO"
+    
+    try {
+        $body = @{}
+        if ($processEvents.Count -gt 0) { $body.process_events = $processEvents }
+        if ($networkEvents.Count -gt 0) { $body.network_events = $networkEvents }
+        if ($fileEvents.Count -gt 0) { $body.file_events = $fileEvents }
+        if ($registryEvents.Count -gt 0) { $body.registry_events = $registryEvents }
+        
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/submit-endpoint-events" `
+            -Method "POST" `
+            -Body $body `
+            -TimeoutSec 30
+        
+        if ($result.Success) {
+            Write-Log "[EDR-COLLECT] Telemetry submitted successfully ($totalEvents events)" "SUCCESS"
+            if ($processEvents.Count -gt 20) {
+                Add-AggregatedEvent -EventType "process_spawn" -Pattern "batch_$($processEvents.Count)" -Metadata @{ count = $processEvents.Count }
+            }
+            if ($networkEvents.Count -gt 30) {
+                Add-AggregatedEvent -EventType "network_connect" -Pattern "batch_$($networkEvents.Count)" -Metadata @{ count = $networkEvents.Count }
+            }
+        } else {
+            Write-Log "[EDR-COLLECT] Submission failed: HTTP $($result.StatusCode) - $($result.Error)" "WARN"
+        }
+    } catch {
+        Write-Log "[EDR-COLLECT] Submission error: $($_.Exception.Message)" "WARN"
+    }
+}
+
+# ============================================
 #  v5.0.14: BACKUP STATUS HANDLER
 #  v5.0.14-fix: MOVED BEFORE main loop (was unreachable after while($true))
 # ============================================
@@ -6153,6 +6470,7 @@ $lastSoftwareCheck = Get-Date
 $lastJobPoll = Get-Date
 $lastDnsSync = Get-Date
 $lastLocalDetection = Get-Date
+$lastEDRCollection = Get-Date
 $consecutiveNetworkFailures = 0
 $consecutiveHeartbeatFailures = 0  # Reset for main loop (also declared before Phase 2)
 # $maxConsecutiveFailures already declared at line ~4790
@@ -6160,6 +6478,10 @@ $consecutiveHeartbeatFailures = 0  # Reset for main loop (also declared before P
 # v5.0.11: Run initial local detection on startup
 Write-Log "[STARTUP] Running initial local security detection..." "INFO"
 Invoke-LocalDetection | Out-Null
+
+# v5.0.14-EDR: Initialize EDR baseline snapshot
+Write-Log "[STARTUP] Initializing EDR telemetry baseline..." "INFO"
+Invoke-EDRTelemetryCollection
 
 while ($true) {
     # v5.0.13-perf: Cache timestamp once per iteration (eliminates repeated Get-Date calls)
@@ -6336,6 +6658,18 @@ while ($true) {
         if (($now - $lastLocalDetection).TotalSeconds -ge $Global:LocalDetectionIntervalSeconds) {
             Invoke-LocalDetection | Out-Null
             $lastLocalDetection = Get-Date
+        }
+        
+        # ============================================
+        # v5.0.14-EDR: EDR TELEMETRY COLLECTION (every 2 min)
+        # ============================================
+        if (($now - $lastEDRCollection).TotalSeconds -ge $Global:EDRCollectionIntervalSeconds -and $networkOk) {
+            try {
+                Invoke-EDRTelemetryCollection
+            } catch {
+                Write-Log "[EDR-COLLECT] Unhandled error: $($_.Exception.Message)" "WARN"
+            }
+            $lastEDRCollection = Get-Date
         }
         
         # ============================================
