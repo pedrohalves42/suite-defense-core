@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useGovernanceStats } from '@/hooks/useGovernanceStats';
 import { useTaskStats } from '@/hooks/useTasks';
+import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -14,19 +16,42 @@ import {
   XCircle,
   AlertOctagon,
   ListTodo,
-  Timer
+  Timer,
+  FileText,
+  Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CoverageGates } from '@/components/governance/CoverageGates';
 import { RiskDebtCard } from '@/components/governance/RiskDebtCard';
 import { KillSwitchControl } from '@/components/governance/KillSwitchControl';
+import { generateTrustReportPDF } from '@/lib/trustReportPDF';
+import { toast } from 'sonner';
 
 export default function Governance() {
   const { data: govStats, isLoading: govLoading } = useGovernanceStats();
   const { data: taskStats, isLoading: taskLoading } = useTaskStats();
+  const { tenant } = useTenant();
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   const isLoading = govLoading || taskLoading;
+
+  const handleTrustReport = async () => {
+    if (!tenant?.id) return;
+    setGeneratingReport(true);
+    try {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+      await generateTrustReportPDF(tenant.id, startDate, endDate);
+      toast.success('Trust Report gerado com sucesso!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao gerar Trust Report');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
 
   // Calculate governance health score (0-100)
   const calculateHealthScore = () => {
@@ -113,12 +138,18 @@ export default function Governance() {
             Visão consolidada do trabalho real e conformidade
           </p>
         </div>
-        <Button asChild>
-          <Link to="/admin/tasks">
-            <ListTodo className="h-4 w-4 mr-2" />
-            Ver Todas as Tasks
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleTrustReport} disabled={generatingReport}>
+            {generatingReport ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
+            Trust Report (PDF)
+          </Button>
+          <Button asChild>
+            <Link to="/admin/tasks">
+              <ListTodo className="h-4 w-4 mr-2" />
+              Ver Todas as Tasks
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Health Score Card */}
