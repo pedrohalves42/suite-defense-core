@@ -35,7 +35,8 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Flame } from 'lucide-react';
+import { Flame, FileText } from 'lucide-react';
+import { generateForensicReportPDF } from '@/lib/forensicReportPDF';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SectionDivider } from '@/components/ui/section-divider';
 import {
