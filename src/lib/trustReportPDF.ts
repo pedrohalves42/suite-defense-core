@@ -86,9 +86,9 @@ async function collectTrustData(tenantId: string, startDate: Date, endDate: Date
   // Aggregate detections
   const bySeverityDet: Record<string, number> = {};
   const ruleCount: Record<string, number> = {};
-  detections.forEach(d => {
+  detections.forEach((d: any) => {
     bySeverityDet[d.severity || 'info'] = (bySeverityDet[d.severity || 'info'] || 0) + 1;
-    ruleCount[d.rule_name || 'unknown'] = (ruleCount[d.rule_name || 'unknown'] || 0) + 1;
+    ruleCount[d.detection_name || 'unknown'] = (ruleCount[d.detection_name || 'unknown'] || 0) + 1;
   });
   const topRules = Object.entries(ruleCount)
     .sort((a, b) => b[1] - a[1])
