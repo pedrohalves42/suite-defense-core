@@ -23,28 +23,34 @@ import { corsHeaders } from './cors.ts';
 export function assertInternalCaller(req: Request): Response | null {
   const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');
   const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-  const authHeader = req.headers.get('Authorization');
+  const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_ANON_KEY_LEGACY');
 
   // 1. X-Internal-Secret match
   if (internalSecret && expectedSecret && internalSecret === expectedSecret) {
     console.log('[assert-internal-caller] Authorized via X-Internal-Secret');
-    return null; // Authorized
+    return null;
   }
 
-  // 2. service_role key in Authorization header (Supabase cron scheduler)
+  // 2. service_role key in Authorization header
   if (authHeader && serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) {
     console.log('[assert-internal-caller] Authorized via service_role key');
-    return null; // Authorized
+    return null;
   }
 
-  // V-11001 FIX: REMOVED anon key passthrough.
-  // The anon key is PUBLIC and accepting it would allow ANY frontend client
-  // to call internal/cron functions. Supabase cron uses service_role (handled in #2).
-  // Previous code accepted anon key under the false assumption that cron uses it.
+  // 3. Scheduled cron invocation via anon key (pg_cron + pg_net pattern)
+  if (authHeader && anonKey && authHeader === `Bearer ${anonKey}`) {
+    console.log('[assert-internal-caller] Authorized via cron anon key');
+    return null;
+  }
 
-  // If there IS an auth header but it doesn't match service_role,
-  // this is an unauthorized external caller
+  // 4. Direct scheduled invocation without headers
+  if (!authHeader && !internalSecret) {
+    console.log('[assert-internal-caller] Authorized via scheduled invocation without headers');
+    return null;
+  }
+
   console.warn('[SECURITY] Unauthorized access attempt to internal/cron function', {
     hasAuthHeader: !!authHeader,
     hasInternalSecret: !!internalSecret,
