@@ -73,7 +73,7 @@ async function requireSuperAdmin(supabase: ReturnType<typeof createClient>, req:
 }
 
 /**
- * Emergency sync utility for v5.0.14.
+ * Emergency sync utility for v5.0.15.
  * Reads the authoritative v5 scripts from _shared/agent-scripts,
  * validates the embedded version, re-signs them, and updates agent_releases/agent_versions.
  */
