@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - macOS v5.0.14
+# CyberShield Agent - macOS v5.0.15
 #
 # v5.0.13-perf: PERFORMANCE TUNING
 # - OPT: Replace python3 with jq for JSON parsing (~60x faster: 300ms→5ms per call)
@@ -87,7 +87,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTS AND GLOBAL VARIABLES
 # ============================================
-AGENT_VERSION="v5.0.14"
+AGENT_VERSION="v5.0.15"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -195,6 +195,14 @@ CACHED_EPOCH=0
 # v5.0.13-perf: Performance - Adaptive sleep
 ADAPTIVE_MIN_SLEEP=10
 LAST_CPU_PERCENT=0
+
+# v5.0.15: Local Detection Stats
+LOCAL_DETECTION_INTERVAL=300
+LAST_LOCAL_DETECTION=0
+LOCAL_DETECTION_USB_CHECKS=0
+LOCAL_DETECTION_AV_CHECKS=0
+LOCAL_DETECTION_FW_CHECKS=0
+LOCAL_DETECTION_PROC_CHECKS=0
  
  # ============================================
  #  ARGUMENT PARSING
@@ -1974,6 +1982,317 @@ remove_dns_filter_handler() {
 }
 
 # ============================================
+#  v5.0.15: LOCAL DETECTION - USB DEVICE MONITORING (diskutil)
+# ============================================
+detect_usb_devices() {
+    LOCAL_DETECTION_USB_CHECKS=$((LOCAL_DETECTION_USB_CHECKS + 1))
+    
+    local usb_count=0
+    local usb_json="[]"
+    
+    # Method 1: diskutil to find external/removable volumes
+    if command -v diskutil &>/dev/null; then
+        local external_disks
+        external_disks=$(diskutil list external 2>/dev/null || echo "")
+        
+        if [[ -n "$external_disks" && "$external_disks" != *"No disks"* ]]; then
+            # Parse external disk identifiers
+            local disk_ids
+            disk_ids=$(echo "$external_disks" | grep -oE 'disk[0-9]+' | sort -u)
+            
+            local found_items="["
+            local first=true
+            
+            while IFS= read -r disk_id; do
+                [[ -z "$disk_id" ]] && continue
+                
+                local disk_info
+                disk_info=$(diskutil info "$disk_id" 2>/dev/null || echo "")
+                
+                local dev_name dev_size dev_protocol dev_removable
+                dev_name=$(echo "$disk_info" | grep "Device / Media Name:" | sed 's/.*: *//' || echo "unknown")
+                dev_size=$(echo "$disk_info" | grep "Disk Size:" | sed 's/.*: *//' | awk '{print $1, $2}' || echo "unknown")
+                dev_protocol=$(echo "$disk_info" | grep "Protocol:" | sed 's/.*: *//' || echo "unknown")
+                dev_removable=$(echo "$disk_info" | grep "Removable Media:" | sed 's/.*: *//' || echo "unknown")
+                
+                # Only count USB protocol devices
+                if echo "$dev_protocol" | grep -qi "USB"; then
+                    usb_count=$((usb_count + 1))
+                    
+                    log "WARN" "[LOCAL-DETECT] USB STORAGE DETECTED: $dev_name ($dev_size) via $dev_protocol"
+                    
+                    if [[ "$first" == "true" ]]; then
+                        first=false
+                    else
+                        found_items+=","
+                    fi
+                    found_items+=$(jq -n \
+                        --arg name "$dev_name" \
+                        --arg size "$dev_size" \
+                        --arg protocol "$dev_protocol" \
+                        --arg disk "$disk_id" \
+                        --arg removable "$dev_removable" \
+                        '{name: $name, size: $size, protocol: $protocol, disk_id: $disk, removable: $removable}')
+                    
+                    # Push alert to backend
+                    local alert_body
+                    alert_body=$(jq -n \
+                        --arg agent "$AGENT_NAME" \
+                        --arg type "unauthorized_usb" \
+                        --arg msg "USB storage device detected on $AGENT_NAME: $dev_name ($dev_size)" \
+                        --arg severity "warning" \
+                        --arg device "$dev_name" \
+                        --arg size "$dev_size" \
+                        '{agent_name: $agent, alert_type: $type, message: $msg, severity: $severity, details: {device: $device, size: $size}}')
+                    
+                    invoke_secure_request "POST" "/functions/v1/push-alert" "$alert_body" 10 1 &>/dev/null || true
+                fi
+            done <<< "$disk_ids"
+            
+            found_items+="]"
+            usb_json="$found_items"
+        fi
+    fi
+    
+    # Method 2: system_profiler fallback for detailed USB info
+    if [[ "$usb_count" -eq 0 ]] && command -v system_profiler &>/dev/null; then
+        local usb_mass
+        usb_mass=$(system_profiler SPUSBDataType 2>/dev/null | grep -c "Mass Storage" || echo 0)
+        if [[ "$usb_mass" -gt 0 ]]; then
+            usb_count=$usb_mass
+            log "WARN" "[LOCAL-DETECT] USB mass storage devices via system_profiler: $usb_mass"
+        fi
+    fi
+    
+    if [[ "$usb_count" -gt 0 ]]; then
+        echo "{\"status\":\"detected\",\"count\":$usb_count,\"devices\":$usb_json}"
+    else
+        echo '{"status":"none","count":0}'
+    fi
+}
+
+# ============================================
+#  v5.0.15: LOCAL DETECTION - ANTIVIRUS CHECK
+# ============================================
+check_antivirus_status() {
+    LOCAL_DETECTION_AV_CHECKS=$((LOCAL_DETECTION_AV_CHECKS + 1))
+    
+    local av_found=""
+    local av_active=false
+    
+    # Check macOS built-in (XProtect/MRT are always running on modern macOS)
+    if [[ -f /Library/Apple/System/Library/CoreServices/XProtect.app/Contents/MacOS/XProtect ]] || \
+       [[ -d /System/Library/CoreServices/XProtect.bundle ]]; then
+        av_found="XProtect"
+        av_active=true
+    fi
+    
+    # Check third-party AV processes
+    local av_processes=("SophosScanD" "SophosAntiVirus" "avast" "AVGAntiVirusAgent" "CbOsxSensorService" "cbagentd" "falcon-sensor" "com.apple.MRT" "mdatp" "CrowdStrike" "sentinelagent" "esets_daemon")
+    
+    for proc in "${av_processes[@]}"; do
+        if pgrep -x "$proc" &>/dev/null || pgrep -f "$proc" &>/dev/null; then
+            av_found="$proc"
+            av_active=true
+            break
+        fi
+    done
+    
+    # Check for Gatekeeper status
+    local gatekeeper="unknown"
+    if command -v spctl &>/dev/null; then
+        gatekeeper=$(spctl --status 2>/dev/null | grep -c "enabled" || echo "0")
+        if [[ "$gatekeeper" -gt 0 ]]; then
+            gatekeeper="enabled"
+        else
+            gatekeeper="disabled"
+            log "WARN" "[LOCAL-DETECT] Gatekeeper is DISABLED"
+        fi
+    fi
+    
+    if [[ "$av_active" == "true" ]]; then
+        echo "{\"status\":\"active\",\"product\":\"$av_found\",\"gatekeeper\":\"$gatekeeper\"}"
+    else
+        log "WARN" "[LOCAL-DETECT] No active antivirus detected (XProtect may be unavailable)"
+        echo "{\"status\":\"not_found\",\"gatekeeper\":\"$gatekeeper\"}"
+    fi
+}
+
+# ============================================
+#  v5.0.15: LOCAL DETECTION - FIREWALL CHECK
+# ============================================
+check_firewall_status() {
+    LOCAL_DETECTION_FW_CHECKS=$((LOCAL_DETECTION_FW_CHECKS + 1))
+    
+    local fw_status="unknown"
+    local fw_type=""
+    local remediated=false
+    
+    # Check macOS Application Firewall (socketfilterfw)
+    if command -v /usr/libexec/ApplicationFirewall/socketfilterfw &>/dev/null; then
+        local fw_state
+        fw_state=$(/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>/dev/null || echo "")
+        if echo "$fw_state" | grep -qi "enabled"; then
+            fw_status="active"
+            fw_type="application_firewall"
+        else
+            log "WARN" "[LOCAL-DETECT] macOS Application Firewall is DISABLED, attempting remediation..."
+            if /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on &>/dev/null 2>&1; then
+                fw_status="remediated"
+                fw_type="application_firewall"
+                remediated=true
+                log "SUCCESS" "[LOCAL-DETECT] macOS Application Firewall auto-enabled"
+            else
+                fw_status="inactive"
+                fw_type="application_firewall"
+            fi
+        fi
+    fi
+    
+    # Check pf (packet filter) - used by some enterprise setups
+    if [[ "$fw_status" != "active" && "$fw_status" != "remediated" ]]; then
+        local pf_enabled
+        pf_enabled=$(pfctl -s info 2>/dev/null | grep -c "Status: Enabled" || echo 0)
+        if [[ "$pf_enabled" -gt 0 ]]; then
+            fw_status="active"
+            fw_type="pf"
+        fi
+    fi
+    
+    echo "{\"status\":\"$fw_status\",\"type\":\"${fw_type:-none}\",\"remediated\":$remediated}"
+}
+
+# ============================================
+#  v5.0.15: LOCAL DETECTION - SUSPICIOUS PROCESS CHECK
+# ============================================
+detect_suspicious_processes() {
+    LOCAL_DETECTION_PROC_CHECKS=$((LOCAL_DETECTION_PROC_CHECKS + 1))
+    
+    local suspicious_count=0
+    
+    # Known suspicious tools/processes (MITRE ATT&CK aligned)
+    local suspicious_names=("ncat" "nmap" "masscan" "hydra" "john" "hashcat" "mimikatz" "meterpreter" "cobalt" "empire" "sliver" "chisel" "ligolo" "socat" "cryptominer" "xmrig" "ethminer" "minerd" "cpuminer" "nc" "netcat" "rclone" "mega-cmd" "tor" "proxychains" "osascript_suspicious")
+    
+    local found_procs="["
+    local first=true
+    
+    for proc_name in "${suspicious_names[@]}"; do
+        local pids
+        pids=$(pgrep -x "$proc_name" 2>/dev/null || true)
+        if [[ -n "$pids" ]]; then
+            suspicious_count=$((suspicious_count + 1))
+            
+            while IFS= read -r pid; do
+                local cmdline
+                cmdline=$(ps -p "$pid" -o args= 2>/dev/null || echo "unknown")
+                local exe_path
+                exe_path=$(ps -p "$pid" -o comm= 2>/dev/null || echo "unknown")
+                
+                log "WARN" "[LOCAL-DETECT] SUSPICIOUS PROCESS: $proc_name (PID: $pid) - $cmdline"
+                
+                if [[ "$first" == "true" ]]; then
+                    first=false
+                else
+                    found_procs+=","
+                fi
+                found_procs+=$(jq -n \
+                    --arg name "$proc_name" \
+                    --arg pid "$pid" \
+                    --arg cmd "$cmdline" \
+                    --arg path "$exe_path" \
+                    '{name: $name, pid: ($pid | tonumber), cmdline: $cmd, path: $path}')
+                
+                # Push alert
+                local alert_body
+                alert_body=$(jq -n \
+                    --arg agent "$AGENT_NAME" \
+                    --arg type "suspicious_process" \
+                    --arg msg "Suspicious process detected on $AGENT_NAME: $proc_name (PID: $pid)" \
+                    --arg severity "high" \
+                    --arg proc "$proc_name" \
+                    --arg pid_str "$pid" \
+                    '{agent_name: $agent, alert_type: $type, message: $msg, severity: $severity, details: {process: $proc, pid: $pid_str}}')
+                
+                invoke_secure_request "POST" "/functions/v1/push-alert" "$alert_body" 10 1 &>/dev/null || true
+            done <<< "$pids"
+        fi
+    done
+    
+    found_procs+="]"
+    
+    # Check for suspicious LaunchDaemons/LaunchAgents (persistence mechanisms)
+    local suspicious_persistence=0
+    local persistence_dirs=("/Library/LaunchDaemons" "/Library/LaunchAgents" "$HOME/Library/LaunchAgents")
+    for pdir in "${persistence_dirs[@]}"; do
+        if [[ -d "$pdir" ]]; then
+            # Look for recently modified plist files (last 24h) - possible persistence
+            local recent_plists
+            recent_plists=$(find "$pdir" -name "*.plist" -mtime -1 2>/dev/null | wc -l | tr -d ' ')
+            if [[ "$recent_plists" -gt 0 ]]; then
+                log "INFO" "[LOCAL-DETECT] Recently modified LaunchDaemons/Agents in $pdir: $recent_plists"
+            fi
+        fi
+    done
+    
+    if [[ $suspicious_count -gt 0 ]]; then
+        echo "{\"status\":\"detected\",\"count\":$suspicious_count,\"processes\":$found_procs}"
+    else
+        echo '{"status":"clean","count":0}'
+    fi
+}
+
+# ============================================
+#  v5.0.15: LOCAL DETECTION ORCHESTRATOR
+# ============================================
+run_local_detection() {
+    log "INFO" "[LOCAL-DETECT] Running proactive security checks..."
+    
+    local threats_found=0
+    local remediations=0
+    
+    # Antivirus check
+    local av_result
+    av_result=$(check_antivirus_status)
+    local av_status
+    av_status=$(echo "$av_result" | jq -r '.status' 2>/dev/null || echo "unknown")
+    if [[ "$av_status" == "inactive" || "$av_status" == "not_found" ]]; then
+        threats_found=$((threats_found + 1))
+    fi
+    
+    # Firewall check
+    local fw_result
+    fw_result=$(check_firewall_status)
+    local fw_status
+    fw_status=$(echo "$fw_result" | jq -r '.status' 2>/dev/null || echo "unknown")
+    if [[ "$fw_status" == "remediated" ]]; then
+        threats_found=$((threats_found + 1))
+        remediations=$((remediations + 1))
+    fi
+    
+    # USB detection
+    local usb_result
+    usb_result=$(detect_usb_devices)
+    local usb_count
+    usb_count=$(echo "$usb_result" | jq -r '.count' 2>/dev/null || echo 0)
+    threats_found=$((threats_found + usb_count))
+    
+    # Suspicious processes
+    local proc_result
+    proc_result=$(detect_suspicious_processes)
+    local proc_count
+    proc_count=$(echo "$proc_result" | jq -r '.count' 2>/dev/null || echo 0)
+    threats_found=$((threats_found + proc_count))
+    
+    if [[ $threats_found -gt 0 ]]; then
+        log "WARN" "[LOCAL-DETECT] Completed: $threats_found threat(s) found, $remediations remediation(s) applied"
+    else
+        log "SUCCESS" "[LOCAL-DETECT] Completed: System clean"
+    fi
+    
+    echo "{\"threats_found\":$threats_found,\"remediations\":$remediations,\"antivirus\":$av_result,\"firewall\":$fw_result,\"usb\":$usb_result,\"processes\":$proc_result}"
+}
+
+# ============================================
 #  MAIN LOOP v5.0.1 FULL ENTERPRISE
 # ============================================
  log "============================================"
@@ -2142,6 +2461,19 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
         fi
         
         last_auto_repair=$now
+    fi
+
+    # ============================================
+    # v5.0.15: LOCAL DETECTION (every 5 min)
+    # ============================================
+    if [[ $((now - LAST_LOCAL_DETECTION)) -ge $LOCAL_DETECTION_INTERVAL ]]; then
+        local_det_result=$(run_local_detection)
+        local threats
+        threats=$(echo "$local_det_result" | jq -r '.threats_found' 2>/dev/null || echo 0)
+        if [[ "$threats" -gt 0 ]]; then
+            log "WARN" "[MAIN-LOOP] Local detection found $threats threat(s)"
+        fi
+        LAST_LOCAL_DETECTION=$now
     fi
      
      # ============================================
