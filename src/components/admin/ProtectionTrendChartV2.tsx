@@ -20,13 +20,12 @@ export function ProtectionTrendChartV2() {
       // Slim select - only needed fields
       const { data, error } = await supabase
         .from('agents')
-        .select('id, status, last_seen')
-        .eq('tenant_id', tenant.id)
-        .eq('is_archived', false);
+        .select('id, status, last_heartbeat')
+        .eq('tenant_id', tenant.id);
 
       if (error) throw error;
 
-      const agentsList = (data || []) as Array<{ id: string; status: string | null; last_seen: string | null }>;
+      const agentsList = data || [];
 
       // Generate daily data points
       const points: MetricDataPoint[] = [];

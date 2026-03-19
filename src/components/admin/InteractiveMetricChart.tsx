@@ -99,9 +99,9 @@ export function InteractiveMetricChart({
     return data.map((point, i) => ({
       ...point,
       ...series.reduce((acc, s) => {
-        acc[`prev_${s.key}`] = previousData[i]?.[s.key] ?? 0;
+        acc[`prev_${s.key}`] = Number(previousData[i]?.[s.key] ?? 0);
         return acc;
-      }, {} as Record<string, number>)
+      }, {} as Record<string, string | number>)
     }));
   }, [data, previousData, showComparison, series]);
 
