@@ -2304,7 +2304,7 @@ function Submit-JobResult {
 function Sync-DnsBlocklist {
     <#
     .SYNOPSIS
-        Syncs DNS blocklist from server
+        Syncs DNS blocklist from server. Handles 403 (feature disabled) and 404 gracefully.
     #>
     try {
         $dnsBody = @{
@@ -2320,6 +2320,17 @@ function Sync-DnsBlocklist {
             -TimeoutSec 15
         
         if (-not $result.Success) {
+            # v5.0.16: Handle 403/404 gracefully - these are expected when feature is disabled
+            $errMsg = if ($result.Error) { $result.Error } else { "Unknown" }
+            if ($errMsg -match '403|Proibido|Forbidden') {
+                Write-Log "[DNS] DNS Filter not enabled for this tenant (403)" "DEBUG"
+                return $false
+            }
+            if ($errMsg -match '404|Not Found') {
+                Write-Log "[DNS] DNS Filter endpoint not available (404)" "DEBUG"
+                return $false
+            }
+            Write-Log "[DNS] DNS sync failed: $errMsg" "WARN"
             return $false
         }
         
@@ -2334,7 +2345,17 @@ function Sync-DnsBlocklist {
         return $false
         
     } catch {
-        Write-Log "[DNS] Error syncing blocklist: $($_.Exception.Message)" "WARN"
+        # v5.0.16: Catch 403/404 from PowerShell HTTP exceptions too
+        $exMsg = $_.Exception.Message
+        if ($exMsg -match '403|Proibido|Forbidden') {
+            Write-Log "[DNS] DNS Filter disabled for tenant (403)" "DEBUG"
+            return $false
+        }
+        if ($exMsg -match '404|Not Found') {
+            Write-Log "[DNS] DNS Filter endpoint unavailable (404)" "DEBUG"
+            return $false
+        }
+        Write-Log "[DNS] Error syncing blocklist: $exMsg" "WARN"
         return $false
     }
 }
