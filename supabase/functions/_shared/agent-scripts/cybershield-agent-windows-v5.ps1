@@ -6657,6 +6657,18 @@ while ($true) {
         }
         
         # ============================================
+        # v5.0.14-EDR: EDR TELEMETRY COLLECTION (every 2 min)
+        # ============================================
+        if (($now - $lastEDRCollection).TotalSeconds -ge $Global:EDRCollectionIntervalSeconds -and $networkOk) {
+            try {
+                Invoke-EDRTelemetryCollection
+            } catch {
+                Write-Log "[EDR-COLLECT] Unhandled error: $($_.Exception.Message)" "WARN"
+            }
+            $lastEDRCollection = Get-Date
+        }
+        
+        # ============================================
         # v5.0.13: RUNTIME INTEGRITY CHECK (TOCTOU DEFENSE, every 5 min)
         # ============================================
         if (($now - $Global:LastIntegrityCheck).TotalSeconds -ge $Global:IntegrityCheckIntervalSeconds) {
