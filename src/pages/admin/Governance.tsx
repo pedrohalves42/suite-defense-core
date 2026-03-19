@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useGovernanceStats } from '@/hooks/useGovernanceStats';
 import { useTaskStats } from '@/hooks/useTasks';
+import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -14,13 +16,17 @@ import {
   XCircle,
   AlertOctagon,
   ListTodo,
-  Timer
+  Timer,
+  FileText,
+  Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CoverageGates } from '@/components/governance/CoverageGates';
 import { RiskDebtCard } from '@/components/governance/RiskDebtCard';
 import { KillSwitchControl } from '@/components/governance/KillSwitchControl';
+import { generateTrustReportPDF } from '@/lib/trustReportPDF';
+import { toast } from 'sonner';
 
 export default function Governance() {
   const { data: govStats, isLoading: govLoading } = useGovernanceStats();
