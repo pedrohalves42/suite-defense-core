@@ -27,6 +27,7 @@ import { SidebarTenantSelector } from '@/components/SidebarTenantSelector';
 import { AppModeBadge } from '@/components/layout/AppModeBadge';
 import { useFavorites } from '@/hooks/useFavorites';
 import logoImage from '@/assets/logo-cybshield-new.png';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface MenuItem {
   icon: any;

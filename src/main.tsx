@@ -40,7 +40,7 @@ createRoot(document.getElementById("root")!).render(
       <ThemeProvider
         attribute="class"
         defaultTheme="dark"
-        enableSystem={false}
+        enableSystem
         storageKey="intelligence-theme"
         disableTransitionOnChange
       >
