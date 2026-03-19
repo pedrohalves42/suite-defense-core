@@ -52,8 +52,8 @@ async function collectTrustData(tenantId: string, startDate: Date, endDate: Date
     supabase.from('threat_indicators').select('id, source, indicator_type').eq('is_active', true),
     supabase.from('threat_matches').select('id, created_at')
       .eq('tenant_id', tenantId).gte('created_at', start).lte('created_at', end),
-    supabase.from('threat_feed_sync_log').select('feed_name, synced_at, status')
-      .order('synced_at', { ascending: false }).limit(10),
+    supabase.from('threat_feed_sync_log').select('feed_source, sync_completed_at, status')
+      .order('sync_completed_at', { ascending: false }).limit(10),
     supabase.rpc('verify_audit_log_chain', { p_tenant_id: tenantId, p_start_date: start, p_end_date: end }),
     supabase.from('compliance_snapshots').select('*')
       .eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(1),
