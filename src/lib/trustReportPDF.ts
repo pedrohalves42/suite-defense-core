@@ -77,7 +77,7 @@ async function collectTrustData(tenantId: string, startDate: Date, endDate: Date
   // Aggregate detection rules
   const bySeverityRules: Record<string, number> = {};
   const byTactic: Record<string, number> = {};
-  rules.forEach(r => {
+  rules.forEach((r: any) => {
     bySeverityRules[r.severity || 'unknown'] = (bySeverityRules[r.severity || 'unknown'] || 0) + 1;
     const tactic = r.mitre_tactic || 'unknown';
     byTactic[tactic] = (byTactic[tactic] || 0) + 1;
