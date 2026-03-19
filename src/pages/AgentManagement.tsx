@@ -26,8 +26,9 @@ import {
   Server, Trash2, Power, PowerOff, XCircle, Clock, Activity, 
   AlertTriangle, Loader2, Trash, Search, Monitor, Cpu, HardDrive,
   RefreshCw, Shield, ShieldAlert, ShieldCheck, ArrowUpCircle, Filter,
-  MemoryStick, Terminal
+  MemoryStick, Terminal, FileText
 } from 'lucide-react';
+import { generateForensicReportPDF } from '@/lib/forensicReportPDF';
 import AgentInstallationGuide from '@/components/AgentInstallationGuide';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -66,6 +67,22 @@ export default function AgentManagement() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [versionFilter, setVersionFilter] = useState<VersionFilter>('all');
   const [processControlOpen, setProcessControlOpen] = useState(false);
+  const [generatingGroupReport, setGeneratingGroupReport] = useState(false);
+
+  const handleGroupForensicReport = async () => {
+    if (!filteredAgents?.length) return;
+    setGeneratingGroupReport(true);
+    try {
+      const ids = filteredAgents.map(a => a.id);
+      await generateForensicReportPDF(ids);
+      toast.success(`Relatório forense gerado para ${ids.length} máquina(s)!`);
+    } catch (err) {
+      console.error('Group forensic report error:', err);
+      toast.error('Erro ao gerar relatório forense em grupo');
+    } finally {
+      setGeneratingGroupReport(false);
+    }
+  };
 
   // Fetch latest versions from database
   const { data: latestVersions } = useQuery<Record<string, string>>({
@@ -519,6 +536,21 @@ export default function AgentManagement() {
                 <SelectItem value="current">{t('agentManagementPage.current')}</SelectItem>
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              onClick={handleGroupForensicReport}
+              disabled={generatingGroupReport || !filteredAgents?.length}
+              className="w-full md:w-auto"
+            >
+              {generatingGroupReport ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4 mr-2" />
+              )}
+              {generatingGroupReport
+                ? 'Gerando...'
+                : `Relatório Forense (${filteredAgents?.length || 0})`}
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -10,6 +10,7 @@
  * - Comando de reinstalação
  */
 
+import { useState } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -35,7 +36,8 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Flame } from 'lucide-react';
+import { Flame, FileText } from 'lucide-react';
+import { generateForensicReportPDF } from '@/lib/forensicReportPDF';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SectionDivider } from '@/components/ui/section-divider';
 import {
@@ -111,6 +113,21 @@ export function AgentDetailsDrawer({
   const { data: causality, isLoading, isError, refetch } = useAgentCausality(agentId, tenantId);
   const { data: antivirusStatus } = useAntivirusStatus(agentId || '', !!agentId);
   const agentActions = useAgentActions();
+  const [generatingReport, setGeneratingReport] = useState(false);
+
+  const handleGenerateForensicReport = async () => {
+    if (!agentId) return;
+    setGeneratingReport(true);
+    try {
+      await generateForensicReportPDF([agentId]);
+      toast.success('Relatório forense gerado com sucesso!');
+    } catch (err) {
+      console.error('Forensic report error:', err);
+      toast.error('Erro ao gerar relatório forense');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
 
   const queryClient = useQueryClient();
   const { activeTenant } = useActiveTenant();
@@ -336,6 +353,21 @@ export function AgentDetailsDrawer({
                   >
                     <Stethoscope className="h-4 w-4 mr-2" />
                     Ver Diagnóstico Completo
+                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={handleGenerateForensicReport}
+                    disabled={generatingReport}
+                  >
+                    {generatingReport ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <FileText className="h-4 w-4 mr-2" />
+                    )}
+                    {generatingReport ? 'Gerando Relatório...' : 'Relatório Forense (PDF)'}
                     <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
                   </Button>
                   
