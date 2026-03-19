@@ -6479,6 +6479,10 @@ $consecutiveHeartbeatFailures = 0  # Reset for main loop (also declared before P
 Write-Log "[STARTUP] Running initial local security detection..." "INFO"
 Invoke-LocalDetection | Out-Null
 
+# v5.0.14-EDR: Initialize EDR baseline snapshot
+Write-Log "[STARTUP] Initializing EDR telemetry baseline..." "INFO"
+Invoke-EDRTelemetryCollection
+
 while ($true) {
     # v5.0.13-perf: Cache timestamp once per iteration (eliminates repeated Get-Date calls)
     $now = Get-Date
