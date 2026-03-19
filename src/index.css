@@ -257,6 +257,97 @@
       4px 0 24px -4px hsl(var(--neon-cyan) / 0.08);
   }
 
+  /* ── Light mode sidebar overrides ── */
+  :root:not(.dark) .sidebar-futuristic {
+    background: linear-gradient(
+      180deg,
+      hsl(220 14% 98%) 0%,
+      hsl(220 14% 96%) 50%,
+      hsl(220 14% 98%) 100%
+    );
+    border-right: 1px solid hsl(var(--border));
+    box-shadow: 1px 0 3px 0 rgb(0 0 0 / 0.04);
+  }
+
+  :root:not(.dark) .sidebar-futuristic::before {
+    background: none;
+  }
+
+  :root:not(.dark) .sidebar-grid-bg::after {
+    background-image: none;
+  }
+
+  :root:not(.dark) .sidebar-item-neon:hover {
+    background: hsl(var(--primary) / 0.04);
+  }
+
+  :root:not(.dark) .sidebar-item-neon-active {
+    background: linear-gradient(90deg, hsl(var(--primary) / 0.08) 0%, hsl(var(--primary) / 0.03) 100%) !important;
+    border-left: 2px solid hsl(var(--primary));
+    box-shadow: inset 3px 0 8px -3px hsl(var(--primary) / 0.12);
+  }
+
+  :root:not(.dark) .sidebar-item-neon-active .sidebar-icon {
+    color: hsl(var(--primary));
+    filter: none;
+  }
+
+  :root:not(.dark) .sidebar-item-neon-active .sidebar-label {
+    color: hsl(var(--primary));
+    text-shadow: none;
+  }
+
+  :root:not(.dark) .sidebar-section-label {
+    color: hsl(var(--muted-foreground));
+    text-shadow: none;
+  }
+
+  :root:not(.dark) .sidebar-badge-neon {
+    background: hsl(var(--primary) / 0.08);
+    color: hsl(var(--primary));
+    border: 1px solid hsl(var(--primary) / 0.15);
+    box-shadow: none;
+  }
+
+  :root:not(.dark) .sidebar-divider-neon {
+    background: hsl(var(--border));
+  }
+
+  :root:not(.dark) .sidebar-item-neon-super:hover {
+    background: hsl(var(--accent) / 0.06);
+  }
+
+  :root:not(.dark) .sidebar-item-neon-super.sidebar-item-neon-active {
+    background: linear-gradient(90deg, hsl(var(--accent) / 0.1) 0%, hsl(var(--accent) / 0.03) 100%) !important;
+    border-left-color: hsl(var(--accent));
+    box-shadow: inset 3px 0 8px -3px hsl(var(--accent) / 0.15);
+  }
+
+  :root:not(.dark) .sidebar-item-neon-super.sidebar-item-neon-active .sidebar-icon {
+    color: hsl(var(--accent));
+    filter: none;
+  }
+
+  :root:not(.dark) .sidebar-item-neon-super.sidebar-item-neon-active .sidebar-label {
+    color: hsl(var(--accent));
+    text-shadow: none;
+  }
+
+  :root:not(.dark) .sidebar-float {
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.06);
+  }
+
+  :root:not(.dark) .glass-panel {
+    background: hsl(0 0% 100% / 0.85);
+    border: 1px solid hsl(var(--border));
+  }
+
+  :root:not(.dark) .neon-pulse {
+    animation: none;
+    opacity: 0.6;
+  }
+
   .sidebar-futuristic::before {
     content: '';
     position: absolute;
