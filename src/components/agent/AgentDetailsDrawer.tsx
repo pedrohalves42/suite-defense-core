@@ -340,6 +340,21 @@ export function AgentDetailsDrawer({
                     <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
                   </Button>
                   
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={handleGenerateForensicReport}
+                    disabled={generatingReport}
+                  >
+                    {generatingReport ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <FileText className="h-4 w-4 mr-2" />
+                    )}
+                    {generatingReport ? 'Gerando Relatório...' : 'Relatório Forense (PDF)'}
+                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                  </Button>
+                  
                   {causality && causality.stateTransitions.length > 0 && (
                     <Button
                       variant="outline"
