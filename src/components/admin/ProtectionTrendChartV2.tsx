@@ -20,11 +20,13 @@ export function ProtectionTrendChartV2() {
       // Slim select - only needed fields
       const { data, error } = await supabase
         .from('agents')
-        .select('id, status, has_antivirus, last_seen')
+        .select('id, status, last_seen')
         .eq('tenant_id', tenant.id)
         .eq('is_archived', false);
 
       if (error) throw error;
+
+      const agentsList = (data || []) as Array<{ id: string; status: string | null; last_seen: string | null }>;
 
       // Generate daily data points
       const points: MetricDataPoint[] = [];
@@ -34,18 +36,15 @@ export function ProtectionTrendChartV2() {
         const dateStr = d.toISOString().split('T')[0];
         const dayLabel = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
-        // Calculate protection metrics as of this day
-        const total = data?.length || 0;
-        const online = data?.filter(a => a.status === 'online').length || 0;
-        const protectedCount = data?.filter(a => a.has_antivirus).length || 0;
+        const total = agentsList.length;
+        const online = agentsList.filter(a => a.status === 'online').length;
 
         points.push({
           date: dateStr,
           label: dayLabel,
           online,
-          protected: protectedCount,
           total,
-          protectionRate: total > 0 ? Math.round((protectedCount / total) * 100) : 0,
+          protectionRate: total > 0 ? Math.round((online / total) * 100) : 0,
         });
       }
       return points;
