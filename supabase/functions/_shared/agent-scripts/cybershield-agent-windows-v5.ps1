@@ -2904,6 +2904,15 @@ function Invoke-CollectWebActivity {
     
     Write-Log "[WEB-ACTIVITY-V5] Starting web activity collection (timeout-safe)..." "INFO"
     
+    # v5.0.15-fix: Safely extract max_domains from payload to avoid StrictMode PSObject errors
+    $maxDomains = 500
+    if ($null -ne $Payload) {
+        try {
+            $payloadProps = @($Payload.PSObject.Properties | ForEach-Object { $_.Name })
+            if ($payloadProps -contains "max_domains") { $maxDomains = [int]$Payload.max_domains }
+        } catch { }
+    }
+    
     try {
         $nowUtc = [DateTime]::UtcNow
         $dnsCache = New-Object System.Collections.ArrayList
