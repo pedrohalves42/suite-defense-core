@@ -112,7 +112,7 @@ export function AgentDetailsDrawer({
   const { data: causality, isLoading, isError, refetch } = useAgentCausality(agentId, tenantId);
   const { data: antivirusStatus } = useAntivirusStatus(agentId || '', !!agentId);
   const agentActions = useAgentActions();
-  const [generatingReport, setGeneratingReport] = React.useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   const handleGenerateForensicReport = async () => {
     if (!agentId) return;
