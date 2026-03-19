@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - macOS v5.0.14
+# CyberShield Agent - macOS v5.0.15
 #
-# v5.0.14: EDGE EVENT AGGREGATION + THREAT NETWORK PARITY
-# - Aligned with Windows v5.0.14 feature set
-# - All v5.0.13 performance tuning retained
+# v5.0.15: EDR TELEMETRY ACTIVATION + EDGE EVENT AGGREGATION + THREAT NETWORK PARITY
+# - Aligned with Windows v5.0.15 feature set
+# - All v5.0.14 performance tuning retained
 #
 # v5.0.13-perf: PERFORMANCE TUNING
 # - OPT: Replace python3 with jq for JSON parsing (~60x faster: 300ms→5ms per call)
