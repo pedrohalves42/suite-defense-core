@@ -61,7 +61,6 @@ export function ProtectionTrendChartV2() {
       return currentData.map(p => ({
         ...p,
         online: Math.max(0, Number(p.online) - Math.floor(Math.random() * 3)),
-        protected: Math.max(0, Number(p.protected) - Math.floor(Math.random() * 2)),
       }));
     },
     enabled: !!currentData?.length,
