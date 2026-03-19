@@ -536,6 +536,27 @@ export default function AgentManagement() {
                 <SelectItem value="current">{t('agentManagementPage.current')}</SelectItem>
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              onClick={handleGroupForensicReport}
+              disabled={generatingGroupReport || !filteredAgents?.length}
+              className="w-full md:w-auto"
+            >
+              {generatingGroupReport ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4 mr-2" />
+              )}
+              {generatingGroupReport
+                ? 'Gerando...'
+                : `Relatório Forense (${filteredAgents?.length || 0})`}
+            </Button>
+              <SelectContent>
+                <SelectItem value="all">{t('agentManagementPage.allVersions')}</SelectItem>
+                <SelectItem value="outdated">{t('agentManagementPage.outdated')}</SelectItem>
+                <SelectItem value="current">{t('agentManagementPage.current')}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
