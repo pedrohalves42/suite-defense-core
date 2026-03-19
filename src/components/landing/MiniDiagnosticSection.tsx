@@ -49,8 +49,9 @@ const questions = [
 ];
 
 function getRiskLevel(score: number) {
-  if (score <= 7) return { level: "Baixo", color: "text-cta-positive", bg: "bg-cta-positive/10 border-cta-positive/20", icon: CheckCircle, message: "Sua empresa parece ter uma boa base. Mas será que está realmente coberta? Faça o diagnóstico completo." };
-  if (score <= 11) return { level: "Médio", color: "text-warning", bg: "bg-warning/10 border-warning/20", icon: AlertTriangle, message: "Existem brechas que precisam de atenção. Um diagnóstico gratuito vai revelar exatamente onde agir." };
+  // Score range: 4 (all best) to 16 (all worst)
+  if (score <= 6) return { level: "Baixo", color: "text-cta-positive", bg: "bg-cta-positive/10 border-cta-positive/20", icon: CheckCircle, message: "Sua empresa parece ter uma boa base. Mas será que está realmente coberta? Faça o diagnóstico completo." };
+  if (score <= 10) return { level: "Médio", color: "text-warning", bg: "bg-warning/10 border-warning/20", icon: AlertTriangle, message: "Existem brechas que precisam de atenção. Um diagnóstico gratuito vai revelar exatamente onde agir." };
   return { level: "Alto", color: "text-destructive", bg: "bg-destructive/10 border-destructive/20", icon: AlertTriangle, message: "Sua empresa está exposta. Cada dia sem proteção é um risco real. Faça o diagnóstico agora — é gratuito." };
 }
 
