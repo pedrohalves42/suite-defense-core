@@ -18,9 +18,36 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // V-1146: Defense-in-depth auth guard for cron function
-  const authError = assertInternalCaller(req);
+  // V-1146: Defense-in-depth auth guard — allow admin users from frontend
+  const authError = assertInternalCaller(req, { allowAuthenticatedUsers: true });
   if (authError) return authError;
+
+  // If called by a user (not cron), verify they are an admin
+  const authHeader = req.headers.get('Authorization') || '';
+  const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  if (authHeader.startsWith('Bearer ') && authHeader !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+    // Verify admin role
+    const { data: roles } = await supabaseAuth
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .in('role', ['admin', 'super_admin']);
+    if (!roles || roles.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Insufficient permissions' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+    logger.info('[process-agent-updates] Triggered by admin user', { userId: user.id });
+  }
 
   const requestId = crypto.randomUUID();
 
