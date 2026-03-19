@@ -15,7 +15,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { toast } from 'sonner';
-import { ProtectionTrendChart } from '@/components/admin/ProtectionTrendChart';
+import { ProtectionTrendChartV2 } from '@/components/admin/ProtectionTrendChartV2';
 import { HealthTrendChart } from '@/components/admin/HealthTrendChart';
 import { SystemCyclesHealthCard } from '@/components/admin/SystemCyclesHealthCard';
 import { ReleaseSignatureStatusCard } from '@/components/admin/ReleaseSignatureStatusCard';
@@ -321,7 +321,7 @@ export default function Dashboard() {
         transition={{ delay: 0.25, duration: 0.4 }}
         className="grid grid-cols-1 md:grid-cols-2 gap-4"
       >
-        <ProtectionTrendChart />
+        <ProtectionTrendChartV2 />
         <HealthTrendChart />
       </motion.div>
 

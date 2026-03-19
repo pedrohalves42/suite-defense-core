@@ -28,7 +28,7 @@ export const useForensicSnapshots = (agentId?: string) => {
 
       let query = supabase
         .from('forensic_snapshots')
-        .select('*')
+        .select('id, agent_id, tenant_id, trigger_reason, created_at, expires_at, metadata')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
         .limit(50);
