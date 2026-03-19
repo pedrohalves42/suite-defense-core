@@ -31,7 +31,7 @@ async function collectTrustData(tenantId: string, startDate: Date, endDate: Date
   const [
     tenantRes,
     agentsRes,
-    rulesRes as any,
+    rulesRes,
     detectionsRes,
     alertsRes,
     threatIndRes,
