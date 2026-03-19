@@ -77,7 +77,7 @@ export function ProtectionTrendChartV2() {
       previousData={previousData}
       series={[
         { key: 'online', label: 'Online', color: 'hsl(var(--success))' },
-        { key: 'protected', label: 'Protegidos', color: 'hsl(var(--primary))' },
+        { key: 'total', label: 'Total', color: 'hsl(var(--primary))' },
       ]}
       selectedRange={days}
       onTimeRangeChange={setDays}
