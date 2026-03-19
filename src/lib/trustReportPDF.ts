@@ -106,18 +106,17 @@ async function collectTrustData(tenantId: string, startDate: Date, endDate: Date
   });
 
   // Threat Intel
-  const sources = [...new Set(threatInd.map(t => t.source).filter(Boolean))];
-  const lastSync = feedSync.length > 0 ? feedSync[0].synced_at : null;
+  const sources = [...new Set(threatInd.map((t: any) => t.source).filter(Boolean))];
+  const lastSync = feedSync.length > 0 ? (feedSync as any[])[0].sync_completed_at : null;
 
   // Compliance categories
   const categories: { name: string; score: number }[] = [];
-  if (compliance?.snapshot_data && typeof compliance.snapshot_data === 'object') {
-    const sd = compliance.snapshot_data as Record<string, unknown>;
-    if (sd.categories && typeof sd.categories === 'object') {
-      Object.entries(sd.categories as Record<string, { score?: number }>).forEach(([name, val]) => {
-        categories.push({ name, score: val?.score ?? 0 });
-      });
-    }
+  if (compliance?.category_scores && typeof compliance.category_scores === 'object') {
+    const sd = compliance.category_scores as Record<string, unknown>;
+    Object.entries(sd).forEach(([name, val]) => {
+      const score = typeof val === 'number' ? val : (val as any)?.score ?? 0;
+      categories.push({ name, score });
+    });
   }
 
   return {
