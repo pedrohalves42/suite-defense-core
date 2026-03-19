@@ -78,6 +78,7 @@ export default function AIInsights() {
           acknowledged: true,
           acknowledged_by: user.id,
           acknowledged_at: new Date().toISOString(),
+          status: 'resolved',
         })
         .eq('id', insightId)
         .eq('tenant_id', tenant!.id);
@@ -104,8 +105,10 @@ export default function AIInsights() {
           acknowledged: true,
           acknowledged_by: user.id,
           acknowledged_at: new Date().toISOString(),
+          status: 'resolved',
         })
-        .in('id', insightIds);
+        .in('id', insightIds)
+        .eq('tenant_id', tenant!.id);
 
       if (error) throw error;
     },
