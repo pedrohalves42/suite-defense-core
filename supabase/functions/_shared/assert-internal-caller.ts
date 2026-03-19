@@ -20,7 +20,7 @@
 
 import { corsHeaders } from './cors.ts';
 
-export function assertInternalCaller(req: Request): Response | null {
+export function assertInternalCaller(req: Request, options?: { allowAuthenticatedUsers?: boolean }): Response | null {
   const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');
   const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
   const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
@@ -48,6 +48,15 @@ export function assertInternalCaller(req: Request): Response | null {
   // 4. Direct scheduled invocation without headers
   if (!authHeader && !internalSecret) {
     console.log('[assert-internal-caller] Authorized via scheduled invocation without headers');
+    return null;
+  }
+
+  // 5. Authenticated user JWT (when explicitly allowed by the caller)
+  if (options?.allowAuthenticatedUsers && authHeader && authHeader.startsWith('Bearer ')) {
+    // The JWT is present but doesn't match service_role or anon key,
+    // so it's likely a user JWT. Let it through — the calling function
+    // is responsible for verifying admin role via Supabase auth.getUser().
+    console.log('[assert-internal-caller] Authorized via user JWT (allowAuthenticatedUsers)');
     return null;
   }
 
