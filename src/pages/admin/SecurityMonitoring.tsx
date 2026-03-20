@@ -128,11 +128,6 @@ export default function SecurityMonitoring() {
 
       evidenceLogs
         .filter(e => e.severity !== 'info' && e.severity !== 'debug')
-        .filter(e => {
-          // Skip events with empty event_data - they carry no useful information
-          const eventData = e.event_data || {};
-          return Object.keys(eventData).length > 0;
-        })
         .forEach(e => {
         const eventData = e.event_data || {};
         const alertType = (eventData as any).alert_type as string || '';
