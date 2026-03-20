@@ -369,6 +369,29 @@ Deno.serve(async (req) => {
       console.log('[ai-system-analyzer] No insights generated');
     }
 
+    // ── AUTO-RESOLVE: Close stale in_progress tasks (>48h without progress) ──
+    try {
+      const { data: resolvedTasks, error: resolveError } = await supabase
+        .from('tasks')
+        .update({
+          status: 'resolved',
+          closed_at: new Date().toISOString(),
+          closure_reason: 'Auto-resolved: condição normalizada ou tarefa sem progresso por 48h',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('status', 'in_progress')
+        .lt('updated_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
+        .select('id');
+
+      if (resolveError) {
+        console.warn('[ai-system-analyzer] Auto-resolve tasks error:', resolveError.message);
+      } else if (resolvedTasks && resolvedTasks.length > 0) {
+        console.log(`[ai-system-analyzer] Auto-resolved ${resolvedTasks.length} stale in_progress tasks`);
+      }
+    } catch (e) {
+      console.warn('[ai-system-analyzer] Auto-resolve tasks failed:', e);
+    }
+
     const result = { 
       success: true, 
       insightsGenerated: insights.length,
