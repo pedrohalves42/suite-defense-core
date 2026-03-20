@@ -1331,5 +1331,71 @@ try {
     }
   }
 
+  // HOTFIX 40: force_update must retarget the Scheduled Task action to the newly installed script.
+  // Without this, legacy tasks can keep pointing to an old v3/v4/v5 path while the new payload is written
+  // to a different filename (cybershield-agent-<agent>.ps1), causing false version sync and the old code to keep running.
+  if (content.includes("[FORCE UPDATE] Detectando Scheduled Task...") && !content.includes('HOTFIX-TASK-RETARGET')) {
+    const taskRetargetBlock = `        # DYNAMIC TASK DETECTION: Find the correct Scheduled Task name
+        Write-Log "[FORCE UPDATE] Detectando Scheduled Task..." "INFO"
+        $taskName = $null
+        $taskPath = "\\"
+        $taskPatterns = @(
+            "CyberShieldAgent-$($Global:AgentName)",
+            "CyberShieldAgent",
+            "CyberShield Agent",
+            "CyberShield*"
+        )
+        
+        foreach ($pattern in $taskPatterns) {
+            $foundTask = Get-ScheduledTask -TaskName $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($foundTask) {
+                $taskName = $foundTask.TaskName
+                $taskPath = if ($foundTask.TaskPath) { $foundTask.TaskPath } else { "\\" }
+                Write-Log "[FORCE UPDATE] Task encontrada: $taskName" "INFO"
+                break
+            }
+        }
+        
+        if ($taskName) {
+            try {
+                $taskExecute = "powershell.exe"
+                try {
+                    $taskDef = Get-ScheduledTask -TaskName $taskName -TaskPath $taskPath -ErrorAction SilentlyContinue
+                    if ($taskDef -and $taskDef.Actions -and $taskDef.Actions.Count -gt 0 -and $taskDef.Actions[0].Execute) {
+                        $taskExecute = $taskDef.Actions[0].Execute
+                    }
+                } catch { }
+
+                $taskArgStr = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $targetScript + '" -ServerUrl "' + $Global:ServerUrl + '" -AgentToken "' + $Global:AgentToken + '" -HmacSecret "' + $Global:HmacSecret + '" -AgentName "' + $Global:AgentName + '"'
+                $taskAction = New-ScheduledTaskAction -Execute $taskExecute -Argument $taskArgStr
+                Set-ScheduledTask -TaskName $taskName -TaskPath $taskPath -Action $taskAction -ErrorAction Stop | Out-Null
+                Write-Log "[FORCE UPDATE] Task '$taskName' atualizada para apontar para $targetScript" "SUCCESS" <# HOTFIX-TASK-RETARGET #>
+            } catch {
+                Write-Log "[FORCE UPDATE] Falha ao atualizar action da task '$taskName': $($_.Exception.Message)" "WARN"
+            }
+
+            try {
+                Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+                Start-Sleep -Seconds 2
+                Start-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+                Write-Log "[FORCE UPDATE] Task '$taskName' reiniciada - nova versao ativa!" "SUCCESS"
+            } catch {
+                Write-Log "[FORCE UPDATE] Restart task falhou, sera ativado no proximo boot: $($_.Exception.Message)" "WARN"
+            }
+        } else {
+            Write-Log "[FORCE UPDATE] Nenhuma Scheduled Task encontrada - nova versao ativa no proximo boot" "WARN"
+        }`;
+
+    const updatedTaskRetarget = content.replace(
+      /# DYNAMIC TASK DETECTION: Find the correct Scheduled Task name[\s\S]*?(?=\r?\n\s*# EXIT para permitir novo script iniciar)/m,
+      taskRetargetBlock
+    );
+
+    if (updatedTaskRetarget !== content) {
+      content = updatedTaskRetarget;
+      reasons.push('force_update_task_retarget');
+    }
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }
