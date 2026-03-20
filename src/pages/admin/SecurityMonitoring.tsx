@@ -77,6 +77,8 @@ export default function SecurityMonitoring() {
       const since = getTimeRangeDate().toISOString();
       const sb = supabase as any;
 
+      console.log('[SecurityMonitoring] Fetching data for tenant:', tenant.id, 'since:', since);
+
       const [rateLimitsRes, failedLoginsRes, blockedIpsRes, securityEventsRes, agentsRes, blockedAttemptsRes, evidenceRes, alertsRes] = await Promise.all([
         sb.from('rate_limits').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('window_start', since).not('blocked_until', 'is', null),
         sb.from('failed_login_attempts').select('ip_address, created_at').eq('tenant_id', tenant.id).gte('created_at', since),
@@ -87,6 +89,10 @@ export default function SecurityMonitoring() {
         sb.from('agent_evidence_logs').select('id, event_type, severity, agent_name, created_at, event_data').eq('tenant_id', tenant.id).gte('created_at', since).order('created_at', { ascending: false }).limit(100),
         sb.from('system_alerts').select('id, title, severity, status, alert_type, created_at').eq('tenant_id', tenant.id).eq('resolved', false).order('created_at', { ascending: false }).limit(20),
       ]);
+
+      console.log('[SecurityMonitoring] Evidence logs:', evidenceRes.data?.length, 'error:', evidenceRes.error?.message);
+      console.log('[SecurityMonitoring] Security logs:', securityEventsRes.data?.length, 'error:', securityEventsRes.error?.message);
+      console.log('[SecurityMonitoring] Agents:', agentsRes.data?.length, 'error:', agentsRes.error?.message);
 
       const secLogEvents = (securityEventsRes.data || []) as Array<{
         id: string; attack_type: string; severity: string; ip_address: string;
