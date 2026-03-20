@@ -253,7 +253,22 @@ Deno.serve(async (req) => {
           break;
 
         case 'registry':
-          registryEvents.push(payload);
+          registryEvents.push({
+            tenant_id: row.tenant_id,
+            agent_id: row.agent_id,
+            event_type: payload.event_type,
+            key_path: payload.key_path,
+            value_name: payload.value_name,
+            value_data: payload.value_data != null ? String(payload.value_data) : null,
+            value_type: payload.value_type,
+            old_value_data: payload.old_value_data != null ? String(payload.old_value_data) : null,
+            process_name: payload.process_name,
+            process_pid: payload.process_pid ? Number(payload.process_pid) : null,
+            is_suspicious: payload.is_suspicious ?? false,
+            detection_tags: payload.detection_tags || [],
+            mitre_technique_id: payload.mitre_technique_id,
+            event_time: payload.event_time,
+          });
           break;
 
         default:
