@@ -188,11 +188,11 @@ Deno.serve(async (req) => {
       }
     }
  
-    // Rate limiting
+    // Rate limiting: aligned with heartbeat/index.ts for post-update resilience
     const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'heartbeat', {
-      maxRequests: 3,
-      windowMinutes: 1,
-      blockMinutes: 5,
+      maxRequests: 6,
+      windowMinutes: 5,
+      blockMinutes: 2,
     })
  
     if (!rateLimitResult.allowed) {
