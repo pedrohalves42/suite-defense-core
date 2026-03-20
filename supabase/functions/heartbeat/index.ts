@@ -499,47 +499,20 @@ Deno.serve(async (req) => {
         .eq('id', agent.id)
       // Fall through to normal heartbeat response (no force update)
     } else if (effectiveForceVersion) {
-      // Guard contra reentrega stale da mesma versão sem bloquear hotfix same-version
+      // Guard contra limpeza prematura da mesma versão: a string de versão sozinha
+      // não prova que o novo payload/script realmente entrou em execução.
       const currentVersion = agentVersion || updateData.agent_version
       const forceTriggeredAt = (forceCheck as any)?.force_update_at
-      const hasExplicitForceTrigger = !!forceTriggeredAt
       const currentNorm = normalizeVersion(currentVersion)
       const targetNorm = normalizeVersion(effectiveForceVersion)
       const lastForcedUpdateApplied = (forceCheck as any)?.last_forced_update_applied
       const forceTriggeredAtMs = forceTriggeredAt ? new Date(forceTriggeredAt).getTime() : null
       const lastAppliedMs = lastForcedUpdateApplied ? new Date(lastForcedUpdateApplied).getTime() : null
-      const sameVersionAlreadyApplied = !!currentNorm && !!targetNorm && currentNorm === targetNorm
-      const staleSameVersionTrigger = sameVersionAlreadyApplied && lastAppliedMs !== null && (forceTriggeredAtMs === null || forceTriggeredAtMs <= lastAppliedMs)
+      const sameVersionReported = !!currentNorm && !!targetNorm && currentNorm === targetNorm
+      const staleSameVersionTrigger = sameVersionReported && lastAppliedMs !== null && (forceTriggeredAtMs === null || forceTriggeredAtMs <= lastAppliedMs)
 
-      if (sameVersionAlreadyApplied) {
-        // BUG-1 FIX: Agent is already running the target version.
-        // Clear force_update flag immediately — regardless of whether the agent
-        // confirmed via confirm-force-update (last_forced_update_applied may be null).
-        // Previously, only cleared when !hasExplicitForceTrigger, causing a loop
-        // where explicit triggers kept re-delivering to agents already at target version.
-        logger.info('Agent already at target version, clearing force_update flag', {
-          agentName: agent.agent_name,
-          version: currentVersion,
-          hadExplicitTrigger: hasExplicitForceTrigger,
-          lastApplied: lastForcedUpdateApplied,
-        })
-        await supabase
-          .from('agents')
-          .update({ 
-            force_update_version: null,
-            force_update_reason: 'auto_cleared_version_matched',
-            force_update_at: null,
-            force_update_delivered_count: 0,
-            force_update_first_delivered_at: null,
-            force_update_override_safe_mode: false,
-            force_update_override_safe_mode_expires_at: null,
-            last_forced_update_applied: new Date().toISOString(),
-          })
-          .eq('id', agent.id)
-
-        // Response normal - agente já está atualizado
-      } else if (staleSameVersionTrigger) {
-        logger.warn('Stale same-version force_update detected after successful apply, clearing flag', {
+      if (staleSameVersionTrigger) {
+        logger.warn('Stale same-version force_update detected after confirmed apply, clearing flag', {
           agentName: agent.agent_name,
           version: currentVersion,
           forceTriggeredAt,
@@ -560,6 +533,15 @@ Deno.serve(async (req) => {
 
         // Response normal - mesmo target já foi aplicado com sucesso
       } else {
+        if (sameVersionReported) {
+          logger.warn('Agent reports target version but force_update remains pending; preserving delivery until real apply is confirmed', {
+            agentName: agent.agent_name,
+            version: currentVersion,
+            targetVersion: effectiveForceVersion,
+            forceTriggeredAt,
+            lastForcedUpdateApplied,
+          })
+        }
         // PARTE 1: Verificar delivered_count - se > 50, limpar flag (agente não suporta)
         const deliveredCount = (forceCheck as any).force_update_delivered_count || 0
         
