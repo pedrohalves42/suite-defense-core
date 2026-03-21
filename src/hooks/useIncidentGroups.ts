@@ -45,7 +45,7 @@ export const useIncidentGroups = (limit = 50) => {
       // V-1038 FIX: Add tenant_id filter to view
       const { data, error } = await supabase
         .from('v_incident_groups')
-        .select('id, fingerprint_hash, source_type, failure_class, normalized_signature, severity_hint, total_occurrences, distinct_agents, first_seen_at, last_seen_at, is_active, is_ongoing')
+        .select('id, fingerprint_hash, source_type, failure_class, normalized_signature, severity_hint, total_occurrences, distinct_agents, distinct_tenants, first_seen_at, last_seen_at, is_active, is_ongoing, is_trending, occurrences_24h')
         .limit(limit);
 
       if (error) throw error;

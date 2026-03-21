@@ -44,7 +44,7 @@ export function TenantClaimAlerts() {
     queryFn: async (): Promise<TenantClaimSummary> => {
       const { data, error } = await supabase
         .from('v_tenant_claim_health')
-        .select('total_valid_24h, total_missing_24h, total_switches_24h, total_cross_tenant_24h, last_period')
+        .select('*')
         .limit(24); // Last 24 hours
 
       if (error) {
@@ -58,7 +58,7 @@ export function TenantClaimAlerts() {
         };
       }
 
-      const rows = data as ClaimHealthData[] || [];
+      const rows = (data || []) as unknown as ClaimHealthData[];
       
       return {
         total_valid_24h: rows.reduce((sum, r) => sum + (r.valid_claims || 0), 0),
