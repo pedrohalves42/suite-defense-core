@@ -70,8 +70,8 @@ export default function InstallationMetrics() {
     queryKey: ['agent-installation-metrics'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('agent_installation_metrics' as any)
-        .select('*');
+        .from('agent_installation_metrics' as 'agents')
+        .select('tenant_id, platform, total_generated, total_downloaded, total_copied, total_installed, successful_events, failed_events, avg_install_time_seconds, with_network, without_network, last_event_at');
 
       if (error) throw error;
       return data as unknown as AgentInstallationMetrics[];
