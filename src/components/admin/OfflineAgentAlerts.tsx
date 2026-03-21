@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Clock, CheckCircle2, Server, Bell, BellOff, Coffee } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import type { RpcAgentRow } from '@/types/rpc';
 import { useTenant } from '@/hooks/useTenant';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';

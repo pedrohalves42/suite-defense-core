@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { RealtimeVirusScan, RealtimeJob } from '@/types/rpc';
 import { toast } from 'sonner';
 import { ShieldAlert, FileWarning, AlertTriangle, Server, ShieldOff, WifiOff } from 'lucide-react';
 import { useTenant } from '@/hooks/useTenant';
