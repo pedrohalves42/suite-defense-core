@@ -1417,8 +1417,9 @@ try {
     }
 
     // Replace the registry telemetry block to include snapshot logic
+    // Match with optional blank line between $currentRegSnapshot assignment and if ($Global:EDRInitialized)
     const registryHotfix = content.replace(
-      /# ── 4\. REGISTRY TELEMETRY \(persistence keys\) ──\s*\r?\n\s*try \{[\s\S]*?\$currentRegSnapshot\[\$snapKey\] = @\{ key_path = \$regKey; value_name = \$prop\.Name; value_data = \[string\]\$prop\.Value \}\s*\r?\n\s*\r?\n\s*if \(\$Global:EDRInitialized\) \{/m,
+      /# ── 4\. REGISTRY TELEMETRY \(persistence keys\) ──\s*\r?\n\s*try \{[\s\S]*?\$currentRegSnapshot\[\$snapKey\] = @\{ key_path = \$regKey; value_name = \$prop\.Name; value_data = \[string\]\$prop\.Value \}\s*\r?\n\s*(?:\r?\n\s*)?if \(\$Global:EDRInitialized\) \{/m,
       `# ── 4. REGISTRY TELEMETRY (persistence keys) ── # HOTFIX-REGISTRY-SNAPSHOT
     try {
         $currentRegSnapshot = @{}
