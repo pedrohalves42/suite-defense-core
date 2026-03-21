@@ -363,7 +363,7 @@ export function ComplianceReportGenerator() {
         },
       });
 
-      yPos = (doc as any).lastAutoTable.finalY + 15;
+      yPos = doc.lastAutoTable.finalY + 15;
 
       // ==================== SECTION 2: STATISTICS ====================
       if (yPos > pageHeight - 70) { doc.addPage(); yPos = 25; }
@@ -398,7 +398,7 @@ export function ComplianceReportGenerator() {
         columnStyles: { 0: { cellWidth: 50 }, 1: { cellWidth: 25, halign: "center" }, 2: { cellWidth: 90 } },
       });
 
-      yPos = (doc as any).lastAutoTable.finalY + 15;
+      yPos = doc.lastAutoTable.finalY + 15;
 
       // ==================== SECTION 3: POLICIES ====================
       if (yPos > pageHeight - 60) { doc.addPage(); yPos = 25; }
@@ -430,7 +430,7 @@ export function ComplianceReportGenerator() {
           margin: { left: 14, right: 14 },
         });
 
-        yPos = (doc as any).lastAutoTable.finalY + 15;
+        yPos = doc.lastAutoTable.finalY + 15;
       } else {
         doc.text("Nenhuma política de bloqueio configurada.", 14, yPos);
         yPos += 15;

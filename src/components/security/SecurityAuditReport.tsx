@@ -158,7 +158,7 @@ export function SecurityAuditReport() {
         margin: { left: 14, right: 14 },
       });
 
-      yPos = (doc as any).lastAutoTable.finalY + 20;
+      yPos = doc.lastAutoTable.finalY + 20;
 
       // ===== PAGE 2: REMEDIATIONS TIMELINE =====
       doc.addPage();
@@ -211,7 +211,7 @@ export function SecurityAuditReport() {
         },
       });
 
-      yPos = (doc as any).lastAutoTable.finalY + 20;
+      yPos = doc.lastAutoTable.finalY + 20;
 
       // ===== PAGE 3: DR. HARMONY VALIDATION =====
       doc.addPage();
@@ -268,7 +268,7 @@ export function SecurityAuditReport() {
         },
       });
 
-      yPos = (doc as any).lastAutoTable.finalY + 20;
+      yPos = doc.lastAutoTable.finalY + 20;
 
       // Confirmation matrix
       doc.setTextColor(15, 23, 42);

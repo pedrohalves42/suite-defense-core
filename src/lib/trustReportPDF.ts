@@ -308,7 +308,7 @@ export async function generateTrustReportPDF(
     headStyles: { fillColor: C.brand, fontSize: 8 },
     bodyStyles: { fontSize: 8 },
   });
-  y = (doc as any).lastAutoTable.finalY + 6;
+  y = doc.lastAutoTable.finalY + 6;
 
   // ─── Section 3: Detection Engine ──────────────────────────────────────────
   sectionTitle('3. MOTOR DE DETECÇÃO');
@@ -329,7 +329,7 @@ export async function generateTrustReportPDF(
       headStyles: { fillColor: C.brand, fontSize: 8 },
       bodyStyles: { fontSize: 8 },
     });
-    y = (doc as any).lastAutoTable.finalY + 4;
+    y = doc.lastAutoTable.finalY + 4;
   }
 
   // Top detections
@@ -350,7 +350,7 @@ export async function generateTrustReportPDF(
       headStyles: { fillColor: C.brand, fontSize: 8 },
       bodyStyles: { fontSize: 8 },
     });
-    y = (doc as any).lastAutoTable.finalY + 6;
+    y = doc.lastAutoTable.finalY + 6;
   }
 
   // ─── Section 4: Threat Intelligence ───────────────────────────────────────
@@ -369,7 +369,7 @@ export async function generateTrustReportPDF(
     headStyles: { fillColor: C.brand, fontSize: 8 },
     bodyStyles: { fontSize: 8 },
   });
-  y = (doc as any).lastAutoTable.finalY + 6;
+  y = doc.lastAutoTable.finalY + 6;
 
   // ─── Section 5: Alerts ────────────────────────────────────────────────────
   sectionTitle('5. ALERTAS DE SEGURANÇA');
@@ -389,7 +389,7 @@ export async function generateTrustReportPDF(
     headStyles: { fillColor: C.brand, fontSize: 8 },
     bodyStyles: { fontSize: 8 },
   });
-  y = (doc as any).lastAutoTable.finalY + 6;
+  y = doc.lastAutoTable.finalY + 6;
 
   // ─── Section 6: Audit Integrity ───────────────────────────────────────────
   sectionTitle('6. INTEGRIDADE DA TRILHA DE AUDITORIA');
@@ -433,7 +433,7 @@ export async function generateTrustReportPDF(
         headStyles: { fillColor: C.brand, fontSize: 8 },
         bodyStyles: { fontSize: 8 },
       });
-      y = (doc as any).lastAutoTable.finalY + 6;
+      y = doc.lastAutoTable.finalY + 6;
     }
   }
 
@@ -465,7 +465,7 @@ export async function generateTrustReportPDF(
         }
       },
     });
-    y = (doc as any).lastAutoTable.finalY + 6;
+    y = doc.lastAutoTable.finalY + 6;
   }
 
   // ─── Section 9: Guarantee Summary ─────────────────────────────────────────
@@ -501,7 +501,7 @@ export async function generateTrustReportPDF(
       }
     },
   });
-  y = (doc as any).lastAutoTable.finalY + 8;
+  y = doc.lastAutoTable.finalY + 8;
 
   // ─── Digital Signature ─────────────────────────────────────────────────────
   checkPage(30);
