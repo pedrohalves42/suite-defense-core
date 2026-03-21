@@ -163,7 +163,7 @@ export default function SystemOperations() {
     },
     onError: (error) => {
       toast.error('Erro na limpeza', { id: 'run-cleanup', description: error.message });
-      logger.error(error);
+      logger.error('System cleanup failed', error);
     }
   });
 
