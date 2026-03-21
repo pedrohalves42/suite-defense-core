@@ -57,7 +57,7 @@ export default function InstallationHealth() {
         p_include_archived: false,
       });
       if (agentsError) {
-        console.error('Error fetching agents:', agentsError);
+        logger.error('Error fetching agents:', agentsError);
         toast.error('Erro ao carregar agentes problematicos');
       }
       // Filter problematic agents client-side
