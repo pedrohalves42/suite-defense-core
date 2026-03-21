@@ -37,7 +37,7 @@ export function useThreatIndicators(options?: { limit?: number; source?: string 
         .limit(limit);
 
       if (options?.source) {
-        query = query.eq('source', options.source as typeof query extends any ? string : never);
+        query = query.eq('source', options.source as "abuse_ch_feodotracker" | "abuse_ch_malwarebazaar" | "abuse_ch_urlhaus" | "alienvault_otx" | "cybershield_network" | "internal" | "manual" | "virustotal");
       }
 
       const { data, error } = await query;
