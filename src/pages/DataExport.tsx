@@ -122,7 +122,7 @@ export default function DataExport() {
         case 'jobs': {
           const query = supabase
             .from('jobs')
-            .select('*')
+            .select('id, agent_name, type, status, created_at, delivered_at, completed_at, approved, scheduled_at, is_recurring, tenant_id')
             .eq('tenant_id', tenant.id)
             .order('created_at', { ascending: false });
 
