@@ -275,7 +275,7 @@ export default function Reports() {
         margin: { left: 14, right: 14 },
       });
 
-      yPos = (doc as any).lastAutoTable.finalY + 15;
+      yPos = doc.lastAutoTable.finalY + 15;
 
       // Software Inventory Section
       if (reportData.data?.software_inventory && reportData.data.software_inventory.length > 0) {
@@ -313,7 +313,7 @@ export default function Reports() {
           margin: { left: 14, right: 14 },
         });
 
-        yPos = (doc as any).lastAutoTable.finalY + 12;
+        yPos = doc.lastAutoTable.finalY + 12;
         
         if (reportData.data.software_inventory.length > 20) {
           doc.setFontSize(8);
@@ -355,7 +355,7 @@ export default function Reports() {
           margin: { left: 14, right: 14 },
         });
 
-        yPos = (doc as any).lastAutoTable.finalY + 12;
+        yPos = doc.lastAutoTable.finalY + 12;
       }
 
       // Antivirus Status Section
@@ -388,7 +388,7 @@ export default function Reports() {
           margin: { left: 14, right: 14 },
         });
 
-        yPos = (doc as any).lastAutoTable.finalY + 12;
+        yPos = doc.lastAutoTable.finalY + 12;
       }
 
       // Web Activity Section (Top 30)
@@ -420,7 +420,7 @@ export default function Reports() {
           margin: { left: 14, right: 14 },
         });
 
-        yPos = (doc as any).lastAutoTable.finalY + 12;
+        yPos = doc.lastAutoTable.finalY + 12;
       }
 
       // Footer on last page
@@ -694,7 +694,7 @@ export default function Reports() {
         columnStyles: { 1: { halign: 'center', fontStyle: 'bold' } },
         margin: { left: 14, right: 14 },
       });
-      yPos = (doc as any).lastAutoTable.finalY + 15;
+      yPos = doc.lastAutoTable.finalY + 15;
 
       // ==================== VULNERABILITY PIE CHART (Visual) ====================
       if (yPos > pageHeight - 80) { doc.addPage(); yPos = 25; }
@@ -949,7 +949,7 @@ export default function Reports() {
           },
           margin: { left: 14, right: 14 },
         });
-        yPos = (doc as any).lastAutoTable.finalY + 12;
+        yPos = doc.lastAutoTable.finalY + 12;
       } else {
         doc.setFontSize(14);
         doc.text('3.1 Vulnerabilidades Detectadas', 14, yPos);
@@ -985,7 +985,7 @@ export default function Reports() {
           styles: { fontSize: 9 },
           margin: { left: 14, right: 14 },
         });
-        yPos = (doc as any).lastAutoTable.finalY + 12;
+        yPos = doc.lastAutoTable.finalY + 12;
       } else {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
@@ -1019,7 +1019,7 @@ export default function Reports() {
           styles: { fontSize: 9 },
           margin: { left: 14, right: 14 },
         });
-        yPos = (doc as any).lastAutoTable.finalY + 12;
+        yPos = doc.lastAutoTable.finalY + 12;
       }
 
       // 3.4 Failed Login Attempts
@@ -1045,7 +1045,7 @@ export default function Reports() {
           styles: { fontSize: 9 },
           margin: { left: 14, right: 14 },
         });
-        yPos = (doc as any).lastAutoTable.finalY + 12;
+        yPos = doc.lastAutoTable.finalY + 12;
       }
 
       // ==================== PAGE: RECOMMENDATIONS ====================

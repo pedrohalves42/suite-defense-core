@@ -34,7 +34,6 @@ const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const CheckoutSuccess = lazy(() => import("./pages/CheckoutSuccess"));
 const CheckoutCancel = lazy(() => import("./pages/CheckoutCancel"));
 const Terms = lazy(() => import("./pages/Terms"));
-const Privacy = lazy(() => import("./pages/Privacy"));
 const Privacidade = lazy(() => import("./pages/Privacidade"));
 const VerificarLaudo = lazy(() => import("./pages/VerificarLaudo"));
 const ApprovePage = lazy(() => import("./pages/ApprovePage"));
@@ -171,7 +170,7 @@ const App = () => (
             <Route path="/checkout/success" element={<CheckoutSuccess />} />
             <Route path="/checkout/cancel" element={<CheckoutCancel />} />
             <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/privacy" element={<Privacidade />} />
             <Route path="/privacidade" element={<Privacidade />} />
             <Route path="/verificar/:laudoId" element={<VerificarLaudo />} />
             <Route path="/verificar-laudo" element={<VerificarLaudo />} />

@@ -81,7 +81,7 @@ export function DashboardPDFReport({
         margin: { left: 14, right: 14 },
       });
 
-      y = (doc as any).lastAutoTable.finalY + 12;
+      y = doc.lastAutoTable.finalY + 12;
 
       // Jobs by status
       doc.setFontSize(14);
@@ -108,7 +108,7 @@ export function DashboardPDFReport({
         margin: { left: 14, right: 14 },
       });
 
-      y = (doc as any).lastAutoTable.finalY + 12;
+      y = doc.lastAutoTable.finalY + 12;
 
       // Top 10 agents by jobs
       if (y > 230) { doc.addPage(); y = 20; }
@@ -137,7 +137,7 @@ export function DashboardPDFReport({
         margin: { left: 14, right: 14 },
       });
 
-      y = (doc as any).lastAutoTable.finalY + 12;
+      y = doc.lastAutoTable.finalY + 12;
 
       // Recommendations
       if (y > 240) { doc.addPage(); y = 20; }

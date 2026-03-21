@@ -90,7 +90,7 @@ function generatePDF(bundleData: Record<string, unknown>, result: ExportResult, 
     margin: { left: 20, right: 20 },
   });
 
-  y = (doc as any).lastAutoTable.finalY + 12;
+  y = doc.lastAutoTable.finalY + 12;
 
   // Integrity section
   doc.setFontSize(12);
@@ -145,7 +145,7 @@ function generatePDF(bundleData: Record<string, unknown>, result: ExportResult, 
       styles: { fontSize: 9 },
       margin: { left: 20, right: 20 },
     });
-    y = (doc as any).lastAutoTable.finalY + 12;
+    y = doc.lastAutoTable.finalY + 12;
   }
 
   // Footer on each page
