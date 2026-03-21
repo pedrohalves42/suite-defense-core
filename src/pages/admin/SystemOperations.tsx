@@ -139,7 +139,7 @@ export default function SystemOperations() {
     },
     onError: (error) => {
       toast.error('Erro ao limpar jobs travados', { id: 'cleanup-stuck', description: error.message });
-      logger.error(error);
+      logger.error('Cleanup stuck jobs failed', error);
     }
   });
 
