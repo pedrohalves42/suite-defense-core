@@ -30,7 +30,7 @@ export function useThreatIndicators(options?: { limit?: number; source?: string 
     queryFn: async () => {
       let query = supabase
         .from('threat_indicators')
-        .select('id, tenant_id, indicator_type, indicator_value, source, severity, description, is_active, first_seen_at, last_seen_at, created_at')
+        .select('id, tenant_id, indicator_type, indicator_value, source, severity, confidence_score, is_active, first_seen_at, last_seen_at, tags, created_at')
         .eq('tenant_id', tenant!.id)
         .eq('is_active', true)
         .order('last_seen_at', { ascending: false })
