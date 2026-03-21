@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { Link } from 'react-router-dom';
+import { logger } from '@/lib/logger';
 
 interface OutdatedAgent {
   agent_name: string;
@@ -69,7 +70,7 @@ export const OutdatedAgentsBanner = () => {
 
         setOutdatedAgents(outdated);
       } catch (error) {
-        console.error('Error checking outdated agents:', error);
+        logger.error('Error checking outdated agents:', error);
       } finally {
         setLoading(false);
       }

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
+import { logger } from '@/lib/logger';
 
 export interface OpenPort {
   port: number;
@@ -49,7 +50,7 @@ async function fetchAgentNetworkInfo(agentId: string): Promise<NetworkInfo | nul
     .maybeSingle();
 
   if (error) {
-    console.error('[useAgentNetworkInfo] Error:', error);
+    logger.error('[useAgentNetworkInfo] Error:', error);
     throw new Error(`Failed to fetch network info: ${error.message}`);
   }
 

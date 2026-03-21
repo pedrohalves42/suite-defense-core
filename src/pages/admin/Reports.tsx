@@ -17,6 +17,7 @@ import { SecurityAuditReport } from "@/components/security/SecurityAuditReport";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { useTenant } from "@/hooks/useTenant";
 import { useActiveTenant } from "@/hooks/useActiveTenant";
+import { logger } from '@/lib/logger';
 // jsPDF and autoTable imported dynamically to avoid test/build issues
 
 interface Agent {
@@ -163,7 +164,7 @@ export default function Reports() {
         toast.success("Relatório de segurança gerado com sucesso!");
       }
     } catch (error: any) {
-      console.error("Error generating report:", error);
+      logger.error("Error generating report:", error);
       const errorMessage = error?.message || "Erro desconhecido";
       
       if (errorMessage.includes('NO_TENANT') || errorMessage.includes('não está associado')) {
@@ -194,7 +195,7 @@ export default function Reports() {
       );
 
       if (error) {
-        console.error("Edge function error:", error);
+        logger.error("Edge function error:", error);
         throw new Error(`Erro ao buscar dados: ${error.message}`);
       }
 
@@ -442,7 +443,7 @@ export default function Reports() {
       
       toast.success("Relatório PDF gerado com sucesso!");
     } catch (error) {
-      console.error("Error exporting PDF:", error);
+      logger.error("Error exporting PDF:", error);
       toast.error("Erro ao exportar PDF: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setIsGenerating(false);
@@ -1198,7 +1199,7 @@ export default function Reports() {
       
       toast.success("Laudo de Segurança gerado com sucesso!");
     } catch (error) {
-      console.error("Error exporting Laudo:", error);
+      logger.error("Error exporting Laudo:", error);
       toast.error("Erro ao gerar laudo: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setIsGenerating(false);
@@ -1286,7 +1287,7 @@ export default function Reports() {
       
       toast.success("Relatório CSV baixado com sucesso!");
     } catch (error) {
-      console.error("Error exporting CSV:", error);
+      logger.error("Error exporting CSV:", error);
       toast.error("Erro ao exportar CSV: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setIsGenerating(false);

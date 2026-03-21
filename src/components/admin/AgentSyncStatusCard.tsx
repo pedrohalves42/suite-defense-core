@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export function AgentSyncStatusCard() {
   const { agents, isLoading, stats, refetch } = useAgentSyncStatus();
@@ -26,7 +27,7 @@ export function AgentSyncStatusCard() {
       // Refresh status after a short delay to show updated data
       setTimeout(() => refetch(), 2000);
     } catch (error: any) {
-      console.error('Sync error:', error);
+      logger.error('Sync error:', error);
       toast.error(error.message || 'Erro ao sincronizar');
     } finally {
       setIsSyncing(false);

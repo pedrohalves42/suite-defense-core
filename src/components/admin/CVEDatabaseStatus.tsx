@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Shield, RefreshCw, Clock, Database, AlertTriangle, CheckCircle, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/date-utils';
+import { logger } from '@/lib/logger';
 
 interface CVESyncStatus {
   id: string;
@@ -104,7 +105,7 @@ export default function CVEDatabaseStatus() {
           newTranslations[cve.cve_id] = data.translated;
         }
       } catch (err) {
-        console.error('Translation error for', cve.cve_id, err);
+        logger.error('Translation error for', cve.cve_id, err);
       }
     }
     

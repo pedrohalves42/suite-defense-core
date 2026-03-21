@@ -41,6 +41,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+import { logger } from '@/lib/logger';
   Table,
   TableBody,
   TableCell,
@@ -248,7 +249,7 @@ export default function NotificationSettings() {
         setScheduledReports(reportsRes.data as ScheduledReport[]);
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      logger.error('Error fetching data:', error);
       toast.error('Erro ao carregar configurações');
     } finally {
       setLoading(false);
@@ -293,7 +294,7 @@ export default function NotificationSettings() {
       setNewChannel({ type: 'email', name: '', config: {} });
       fetchData();
     } catch (error) {
-      console.error('Error adding channel:', error);
+      logger.error('Error adding channel:', error);
       toast.error('Erro ao adicionar canal');
     }
   };
@@ -314,7 +315,7 @@ export default function NotificationSettings() {
       toast.success('Canal removido');
       fetchData();
     } catch (error) {
-      console.error('Error deleting channel:', error);
+      logger.error('Error deleting channel:', error);
       toast.error('Erro ao remover canal');
     }
   };
@@ -333,7 +334,7 @@ export default function NotificationSettings() {
       setChannels(prev => prev.map(c => c.id === id ? { ...c, is_active: isActive } : c));
       toast.success(isActive ? 'Canal ativado' : 'Canal desativado');
     } catch (error) {
-      console.error('Error toggling channel:', error);
+      logger.error('Error toggling channel:', error);
       toast.error('Erro ao atualizar canal');
     }
   };
@@ -366,7 +367,7 @@ export default function NotificationSettings() {
       fetchData();
       toast.success('Preferências salvas');
     } catch (error) {
-      console.error('Error updating preferences:', error);
+      logger.error('Error updating preferences:', error);
       toast.error('Erro ao salvar preferências');
     }
   };
@@ -390,7 +391,7 @@ export default function NotificationSettings() {
       toast.success('Notificação de teste enviada!');
       fetchData();
     } catch (error) {
-      console.error('Error sending test:', error);
+      logger.error('Error sending test:', error);
       toast.error('Erro ao enviar teste');
     }
   };
@@ -446,7 +447,7 @@ export default function NotificationSettings() {
       });
       fetchData();
     } catch (error) {
-      console.error('Error adding report:', error);
+      logger.error('Error adding report:', error);
       toast.error('Erro ao criar relatório');
     }
   };
@@ -467,7 +468,7 @@ export default function NotificationSettings() {
       toast.success('Relatório removido');
       fetchData();
     } catch (error) {
-      console.error('Error deleting report:', error);
+      logger.error('Error deleting report:', error);
       toast.error('Erro ao remover relatório');
     }
   };
@@ -486,7 +487,7 @@ export default function NotificationSettings() {
       setScheduledReports(prev => prev.map(r => r.id === id ? { ...r, is_active: isActive } : r));
       toast.success(isActive ? 'Relatório ativado' : 'Relatório desativado');
     } catch (error) {
-      console.error('Error toggling report:', error);
+      logger.error('Error toggling report:', error);
       toast.error('Erro ao atualizar relatório');
     }
   };
@@ -507,7 +508,7 @@ export default function NotificationSettings() {
       toast.success('Relatório enviado com sucesso!');
       fetchData();
     } catch (error) {
-      console.error('Error sending report:', error);
+      logger.error('Error sending report:', error);
       toast.error('Erro ao enviar relatório');
     } finally {
       setSendingReport(null);

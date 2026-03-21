@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export interface RiskDeltaSnapshot {
   id: string;
@@ -101,7 +102,7 @@ export function useGenerateExecutiveReport() {
       toast.success('Relatório executivo gerado com sucesso!');
     },
     onError: (error) => {
-      console.error('Failed to generate executive report:', error);
+      logger.error('Failed to generate executive report:', error);
       toast.error('Erro ao gerar relatório executivo');
     },
   });

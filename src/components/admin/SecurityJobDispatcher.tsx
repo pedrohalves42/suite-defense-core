@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Shield, Package, AlertTriangle, Activity, Loader2 } from "lucide-react";
 import { prepareJobForInsert } from "@/lib/job-utils";
 import {
+import { logger } from '@/lib/logger';
   Select,
   SelectContent,
   SelectItem,
@@ -71,7 +72,7 @@ export function SecurityJobDispatcher({ agents }: { agents: Agent[] }) {
         description: `O agente ${agent.agent_name} processará o job em breve`
       });
     } catch (error: any) {
-      console.error('Error creating security job:', error);
+      logger.error('Error creating security job:', error);
       toast.error('Erro ao criar job', {
         description: error.message
       });

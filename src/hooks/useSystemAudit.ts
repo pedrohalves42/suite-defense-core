@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { callEdgeFunction } from '@/lib/edge-function-client';
 import { useActiveTenant } from './useActiveTenant';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export interface AuditDimension {
   score: number;
@@ -130,7 +131,7 @@ export function useRunAudit() {
       toast.success('Auditoria concluída com sucesso');
       return result;
     } catch (error) {
-      console.error('Audit error:', error);
+      logger.error('Audit error:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao executar auditoria');
       throw error;
     } finally {

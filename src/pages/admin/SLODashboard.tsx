@@ -13,6 +13,7 @@ import { ForensicSnapshotsCard } from "@/components/slo/ForensicSnapshotsCard";
 import { useCalculatedSLOs } from "@/hooks/useSLOData";
 import { SectionDivider } from "@/components/ui/section-divider";
 import { 
+import { logger } from '@/lib/logger';
   Activity, 
   CheckCircle, 
   XCircle, 
@@ -182,7 +183,7 @@ export default function SLODashboard() {
 
       setLastUpdated(new Date());
     } catch (error) {
-      console.error('Error loading metrics:', error);
+      logger.error('Error loading metrics:', error);
     } finally {
       setLoading(false);
     }

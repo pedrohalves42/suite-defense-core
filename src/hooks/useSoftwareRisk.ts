@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export interface SoftwareRiskSummary {
   risk_level: string;
@@ -196,7 +197,7 @@ export function useCreateKnowledgeRule() {
       toast.success('Regra criada com sucesso');
     },
     onError: (error) => {
-      console.error('Error creating rule:', error);
+      logger.error('Error creating rule:', error);
       toast.error('Erro ao criar regra');
     },
   });
@@ -222,7 +223,7 @@ export function useUpdateKnowledgeRule() {
       toast.success('Regra atualizada');
     },
     onError: (error) => {
-      console.error('Error updating rule:', error);
+      logger.error('Error updating rule:', error);
       toast.error('Erro ao atualizar regra');
     },
   });
@@ -245,7 +246,7 @@ export function useDeleteKnowledgeRule() {
       toast.success('Regra removida');
     },
     onError: (error) => {
-      console.error('Error deleting rule:', error);
+      logger.error('Error deleting rule:', error);
       toast.error('Erro ao remover regra');
     },
   });
@@ -274,7 +275,7 @@ export function useReclassifySoftware() {
       toast.success('Reclassificação iniciada');
     },
     onError: (error) => {
-      console.error('Error reclassifying:', error);
+      logger.error('Error reclassifying:', error);
       toast.error('Erro ao reclassificar');
     },
   });

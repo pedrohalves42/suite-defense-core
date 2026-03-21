@@ -20,6 +20,7 @@ import { StateDiffViewer } from '@/components/admin/audit/StateDiffViewer';
 import { IntegrityBadge } from '@/components/admin/audit/IntegrityBadge';
 import { ChainHealthPanel } from '@/components/admin/audit/ChainHealthPanel';
 import { exportAuditLogsWithIntegrity, generateExportCertificate } from '@/lib/audit-integrity';
+import { logger } from '@/lib/logger';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -152,7 +153,7 @@ export default function AuditLogs() {
       
       toast.success(`Exportado ${data?.length || 0} registros`);
     } catch (error) {
-      console.error('Export error:', error);
+      logger.error('Export error:', error);
       toast.error('Erro ao exportar logs');
     } finally {
       setIsExporting(false);

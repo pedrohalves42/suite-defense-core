@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { AutoApprovalPanel } from '@/components/admin/AutoApprovalPanel';
 import { RollbackTestPanel } from '@/components/admin/RollbackTestPanel';
 import { useTenant } from '@/hooks/useTenant';
+import { logger } from '@/lib/logger';
 
 interface AIAction {
   id: string;
@@ -170,7 +171,7 @@ export default function AIActionApproval() {
           return;
         }
       } catch (error) {
-        console.error('Blast radius check failed:', error);
+        logger.error('Blast radius check failed:', error);
         // Continue with normal flow if check fails
       }
     }

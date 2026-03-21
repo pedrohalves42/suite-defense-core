@@ -33,7 +33,7 @@ export const usePushNotifications = () => {
       setPermission(result);
       return result === 'granted';
     } catch (error) {
-      console.error('[PushNotifications] Permission request failed:', error);
+      logger.error('[PushNotifications] Permission request failed:', error);
       return false;
     }
   }, []);

@@ -26,6 +26,7 @@ import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { loadLogoForPDF, addLogoToPDF } from '@/lib/pdfLogoHelper';
+import { logger } from '@/lib/logger';
 
 interface MonthlyReportData {
   period: string;
@@ -284,7 +285,7 @@ export function LGPDMonthlyReport() {
 
       toast.success('Relatório LGPD exportado!', { description: filename });
     } catch (error) {
-      console.error('Error exporting LGPD PDF:', error);
+      logger.error('Error exporting LGPD PDF:', error);
       toast.error('Erro ao exportar PDF');
     } finally {
       setIsExporting(false);

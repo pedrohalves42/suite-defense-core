@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTenant } from './useTenant';
+import { logger } from '@/lib/logger';
 
 export interface DNSFilterStatus {
   agentId: string;
@@ -54,7 +55,7 @@ export function useDNSFilter() {
     });
 
     if (error) {
-      console.error('[useDNSFilter] Error fetching tenant agents via RPC:', error);
+      logger.error('[useDNSFilter] Error fetching tenant agents via RPC:', error);
       throw error;
     }
 
@@ -86,7 +87,7 @@ export function useDNSFilter() {
         .maybeSingle();
 
       if (error) {
-        console.error('[useDNSFilter] Error checking feature flag:', error);
+        logger.error('[useDNSFilter] Error checking feature flag:', error);
         return false;
       }
 

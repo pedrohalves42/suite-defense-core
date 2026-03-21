@@ -7,6 +7,7 @@ import { CheckCircle2, Loader2, PlayCircle, AlertCircle, RefreshCw } from "lucid
 import { Badge } from "@/components/ui/badge";
 import { prepareJobsForInsert } from "@/lib/job-utils";
 import { useTenant } from "@/hooks/useTenant";
+import { logger } from '@/lib/logger';
 
 interface AgentStatus {
   id: string;
@@ -48,13 +49,13 @@ export function DynamicValidationSystem() {
         .maybeSingle();
 
       if (error) {
-        console.error('Error loading active version:', error);
+        logger.error('Error loading active version:', error);
         return null;
       }
 
       return data?.version || null;
     } catch (error) {
-      console.error('Error loading active version:', error);
+      logger.error('Error loading active version:', error);
       return null;
     }
   }, []);
@@ -166,7 +167,7 @@ export function DynamicValidationSystem() {
 
       setValidationJobs(jobs);
     } catch (error: any) {
-      console.error('Error loading agents status:', error);
+      logger.error('Error loading agents status:', error);
       toast.error('Erro ao carregar status dos agentes', {
         description: error.message
       });
@@ -248,7 +249,7 @@ export function DynamicValidationSystem() {
       // Reload status after a delay
       setTimeout(loadAgentsStatus, 3000);
     } catch (error: any) {
-      console.error('Error creating validation jobs:', error);
+      logger.error('Error creating validation jobs:', error);
       toast.error('Erro ao criar jobs de validação', {
         description: error.message
       });

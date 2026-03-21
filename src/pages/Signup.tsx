@@ -128,7 +128,7 @@ export default function Signup() {
     }
 
     if (error) {
-      console.error('[Signup Error]', {
+      logger.error('[Signup Error]', {
         message: error.message,
         status: (error as any).status,
         code: (error as any).code,

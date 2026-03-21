@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
+import { logger } from '@/lib/logger';
 
 export interface JobSLOState {
   id: string;
@@ -71,7 +72,7 @@ export const useJobsSLO = () => {
         .maybeSingle();
       
       if (error) {
-        console.error('[useJobsSLO] Error fetching SLO state:', error);
+        logger.error('[useJobsSLO] Error fetching SLO state:', error);
         throw error;
       }
       

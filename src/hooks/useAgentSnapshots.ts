@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
 import type { AgentSnapshot } from './useAgentSnapshot';
+import { logger } from '@/lib/logger';
 
 /**
  * Hook para lista canônica de snapshots (todos os agentes do tenant)
@@ -26,7 +27,7 @@ export function useAgentSnapshots() {
       });
       
       if (error) {
-        console.error('[useAgentSnapshots] Error:', error);
+        logger.error('[useAgentSnapshots] Error:', error);
         throw new Error(error.message || 'Failed to fetch agent snapshots list');
       }
       

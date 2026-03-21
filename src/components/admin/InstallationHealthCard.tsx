@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from '@/lib/logger';
 
 type HealthRow = {
   os_type: "windows" | "linux" | "macos" | string;
@@ -40,7 +41,7 @@ export function InstallationHealthCard() {
         };
 
       if (fetchError) {
-        console.error('[InstallationHealthCard] Error fetching health:', fetchError);
+        logger.error('[InstallationHealthCard] Error fetching health:', fetchError);
         setError(fetchError.message);
         toast.error('Erro ao carregar metricas de instalacao', {
           description: fetchError.message
@@ -51,7 +52,7 @@ export function InstallationHealthCard() {
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Erro desconhecido';
-      console.error('[InstallationHealthCard] Exception:', err);
+      logger.error('[InstallationHealthCard] Exception:', err);
       setError(errorMsg);
       toast.error('Erro ao carregar metricas', { description: errorMsg });
     } finally {

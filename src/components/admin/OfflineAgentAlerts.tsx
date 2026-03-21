@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/date-utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface OfflineAgent {
   agent_id: string;
@@ -121,7 +122,7 @@ function isWithinBusinessHours(businessHours: BusinessHours): boolean {
     
     return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
   } catch (error) {
-    console.error('Error checking business hours:', error);
+    logger.error('Error checking business hours:', error);
     return true; // Em caso de erro, considera como expediente
   }
 }

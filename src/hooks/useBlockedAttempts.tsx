@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from './useActiveTenant';
+import { logger } from '@/lib/logger';
 
 export interface BlockedAttempt {
   id: string;
@@ -53,7 +54,7 @@ export function useBlockedAttempts(options: UseBlockedAttemptsOptions = {}) {
       const { data, error } = await query;
 
       if (error) {
-        console.error('[useBlockedAttempts] Error fetching attempts:', error);
+        logger.error('[useBlockedAttempts] Error fetching attempts:', error);
         throw error;
       }
 

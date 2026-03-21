@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Shield, Lock, Eye, EyeOff, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { SecurityFooter, BrandSignature } from '@/components/auth/SecurityFooter';
+import { logger } from '@/lib/logger';
 
 const passwordSchema = z.object({
   newPassword: z.string()
@@ -88,7 +89,7 @@ export default function ForcePasswordChange() {
       }, 1000);
 
     } catch (error) {
-      console.error('Password change error:', error);
+      logger.error('Password change error:', error);
       toast({
         title: 'Erro inesperado',
         description: 'Não foi possível atualizar a senha. Tente novamente.',

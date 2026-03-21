@@ -36,6 +36,7 @@ import type {
 } from "@/types/compliance-report";
 import { TEMPLATE_DEFINITIONS, SECURITY_INVARIANTS_DEFINITIONS } from "@/types/compliance-report";
 import { useActiveTenant } from "@/hooks/useActiveTenant";
+import { logger } from '@/lib/logger';
 
 const TEMPLATE_ICONS: Record<ComplianceTemplate, typeof Shield> = {
   LGPD: Scale,
@@ -75,7 +76,7 @@ export function ComplianceReportGenerator() {
     });
 
     if (error) {
-      console.error("Edge function error:", error);
+      logger.error("Edge function error:", error);
       throw new Error(error.message || "Erro ao gerar relatório");
     }
 
@@ -93,7 +94,7 @@ export function ComplianceReportGenerator() {
       setReportPayload(payload);
       toast.success(`Relatório ${selectedTemplate} gerado com sucesso!`);
     } catch (error: any) {
-      console.error("Error generating compliance report:", error);
+      logger.error("Error generating compliance report:", error);
       const errorMessage = error?.message || "Erro desconhecido";
       
       if (errorMessage.includes('NO_TENANT') || errorMessage.includes('não está associado') || errorMessage.includes('User not associated')) {
@@ -570,7 +571,7 @@ export function ComplianceReportGenerator() {
         description: `Arquivo: ${filename}`,
       });
     } catch (error) {
-      console.error("Error exporting PDF:", error);
+      logger.error("Error exporting PDF:", error);
       toast.error("Erro ao exportar PDF");
     } finally {
       setIsGenerating(false);

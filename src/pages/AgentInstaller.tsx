@@ -654,7 +654,7 @@ const AgentInstaller = () => {
           );
 
           if (validationError || !validationResult?.valid) {
-            console.error('[HMAC Validation] Failed:', { validationResult, validationError });
+            logger.error('[HMAC Validation] Failed:', { validationResult, validationError });
             toast.warning(
               "[WARN] ? Aviso de seguranca", 
               { 
@@ -667,7 +667,7 @@ const AgentInstaller = () => {
             toast.success("[OK]  Validacao de seguranca OK", { duration: 3000 });
           }
         } catch (validationException) {
-          console.error('[HMAC Validation] Exception:', validationException);
+          logger.error('[HMAC Validation] Exception:', validationException);
           // Nao bloqueia em caso de erro de rede
         }
       }

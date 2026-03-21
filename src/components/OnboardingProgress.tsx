@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger';
 
 interface OnboardingStep {
   id: string;
@@ -57,7 +58,7 @@ export const OnboardingProgress = () => {
       
       setHasSecurityData((count || 0) > 0);
     } catch (error) {
-      console.error('Error fetching progress:', error);
+      logger.error('Error fetching progress:', error);
     }
   };
 

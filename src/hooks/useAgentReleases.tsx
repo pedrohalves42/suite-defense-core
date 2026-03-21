@@ -108,7 +108,7 @@ export const useAgentReleases = () => {
       toast.success(`Release registrada com sucesso ${signatureStatus}`);
     },
     onError: (error) => {
-      console.error('Error registering release:', error);
+      logger.error('Error registering release:', error);
       toast.error(`Erro ao registrar release: ${error.message || 'Unknown error'}`);
     },
   });

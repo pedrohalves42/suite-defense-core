@@ -92,7 +92,7 @@ export default function InstallationHealth() {
         .limit(20);
 
       if (jobsError) {
-        console.error('Error fetching jobs:', jobsError);
+        logger.error('Error fetching jobs:', jobsError);
         toast.error('Erro ao carregar jobs travados');
       } else {
         const formatted: StuckJob[] = (jobs || []).map(j => ({
@@ -117,7 +117,7 @@ export default function InstallationHealth() {
         .limit(10);
 
       if (errorsError) {
-        console.error('Error fetching errors:', errorsError);
+        logger.error('Error fetching errors:', errorsError);
         toast.error('Erro ao carregar erros de instalacao');
       } else {
         setRecentErrors(errors || []);
@@ -125,7 +125,7 @@ export default function InstallationHealth() {
 
       setLastUpdate(new Date());
     } catch (err) {
-      console.error('Exception fetching data:', err);
+      logger.error('Exception fetching data:', err);
       toast.error('Erro ao carregar dados');
     } finally {
       setLoading(false);

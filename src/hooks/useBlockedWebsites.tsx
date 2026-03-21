@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useActiveTenant } from './useActiveTenant';
+import { logger } from '@/lib/logger';
 
 export interface BlockedWebsite {
   id: string;
@@ -29,7 +30,7 @@ async function syncWithAgents(): Promise<{ jobsCreated: number; agentNames: stri
   });
   
   if (error) {
-    console.error('Failed to sync blocked websites:', error);
+    logger.error('Failed to sync blocked websites:', error);
     throw error;
   }
   
@@ -142,7 +143,7 @@ export function useBlockedWebsites() {
           const syncResult = await syncWithAgents();
           return { ...result, syncResult };
         } catch (syncError) {
-          console.warn('Auto-sync failed, site blocked but agents not synced:', syncError);
+          logger.warn('Auto-sync failed, site blocked but agents not synced:', syncError);
           return { ...result, syncResult: null };
         }
       }

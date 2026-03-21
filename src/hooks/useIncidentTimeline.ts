@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export interface TimelineEvent {
   event_type: 'security_event' | 'job' | 'risk_decision' | 'playbook_execution' | 'system_alert';
@@ -126,7 +127,7 @@ export function useReconstructTimeline() {
       queryClient.invalidateQueries({ queryKey: ['incident-timelines'] });
     },
     onError: (error) => {
-      console.error('Failed to reconstruct timeline:', error);
+      logger.error('Failed to reconstruct timeline:', error);
       toast.error('Erro ao reconstruir timeline');
     },
   });
@@ -177,7 +178,7 @@ export function useUpdateIncidentStatus() {
       toast.success('Status do incidente atualizado');
     },
     onError: (error) => {
-      console.error('Failed to update incident status:', error);
+      logger.error('Failed to update incident status:', error);
       toast.error('Erro ao atualizar status');
     },
   });

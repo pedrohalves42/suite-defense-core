@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
+import { logger } from '@/lib/logger';
   Table,
   TableBody,
   TableCell,
@@ -138,7 +139,7 @@ export default function SystemOperations() {
     },
     onError: (error) => {
       toast.error('Erro ao limpar jobs travados', { id: 'cleanup-stuck', description: error.message });
-      console.error(error);
+      logger.error(error);
     }
   });
 
@@ -162,7 +163,7 @@ export default function SystemOperations() {
     },
     onError: (error) => {
       toast.error('Erro na limpeza', { id: 'run-cleanup', description: error.message });
-      console.error(error);
+      logger.error(error);
     }
   });
 

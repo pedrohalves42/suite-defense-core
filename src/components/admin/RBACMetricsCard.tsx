@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Users, ShieldCheck, Eye, UserCog, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { logger } from '@/lib/logger';
 
 interface RBACMetrics {
   role: string;
@@ -32,7 +33,7 @@ export function RBACMetricsCard() {
         .eq('tenant_id', tenant.id);
 
       if (error) {
-        console.error('Error fetching RBAC metrics:', error);
+        logger.error('Error fetching RBAC metrics:', error);
         return [];
       }
 

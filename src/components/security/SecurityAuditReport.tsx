@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useQuery } from '@tanstack/react-query';
+import { logger } from '@/lib/logger';
 
 interface AuditMetrics {
   rls_tables: { total: number; with_rls: number };
@@ -324,7 +325,7 @@ export function SecurityAuditReport() {
 
       toast.success('Relatório Executivo de Auditoria gerado com sucesso!');
     } catch (error) {
-      console.error('Error generating audit report PDF:', error);
+      logger.error('Error generating audit report PDF:', error);
       toast.error('Erro ao gerar relatório: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsGenerating(false);

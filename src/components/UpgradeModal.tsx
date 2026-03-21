@@ -6,6 +6,7 @@ import { CheckCircle, Lock, Crown, ArrowRight, Loader2, AlertTriangle } from "lu
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PLAN_CONFIG, LEGACY_PLANS, isLegacyPlan } from "@/constants/plans";
+import { logger } from '@/lib/logger';
 
 interface UpgradeModalProps {
   open: boolean;
@@ -84,7 +85,7 @@ export function UpgradeModal({
         onOpenChange(false);
       }
     } catch (error) {
-      console.error("Erro ao criar checkout:", error);
+      logger.error("Erro ao criar checkout:", error);
       toast.error("Erro ao processar upgrade. Tente novamente.");
     } finally {
       setLoading(false);
@@ -110,7 +111,7 @@ export function UpgradeModal({
         toast.success("Redirecionando para checkout de migração...");
       }
     } catch (error) {
-      console.error("Erro ao criar checkout de migração:", error);
+      logger.error("Erro ao criar checkout de migração:", error);
       toast.error("Erro ao processar migração. Tente novamente.");
     } finally {
       setLoading(false);

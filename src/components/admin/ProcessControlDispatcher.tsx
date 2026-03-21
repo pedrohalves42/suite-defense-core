@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { isProcessProtected, isServiceProtected, PROTECTED_PROCESSES, PROTECTED_SERVICES } from "@/lib/job-labels";
+import { logger } from '@/lib/logger';
 
 interface Agent {
   id: string;
@@ -204,7 +205,7 @@ export function ProcessControlDispatcher({ agents }: { agents: Agent[] }) {
       setTargetName("");
       setShowConfirmDialog(false);
     } catch (error: any) {
-      console.error('Error creating process control job:', error);
+      logger.error('Error creating process control job:', error);
       toast.error('Erro ao criar job', { description: error.message });
     } finally {
       setIsCreatingJob(false);

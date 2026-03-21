@@ -13,6 +13,7 @@ import { formatBrazil } from '@/lib/date-utils';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { logger } from '@/lib/logger';
 
 interface AIAnomaly {
   id: string;
@@ -96,7 +97,7 @@ export default function AIAnomalies() {
       if (error) throw error;
       setAnomalies((data as AIAnomaly[]) || []);
     } catch (error) {
-      console.error('Error fetching anomalies:', error);
+      logger.error('Error fetching anomalies:', error);
       toast({
         title: 'Erro',
         description: 'Não foi possível carregar as anomalias.',
@@ -133,7 +134,7 @@ export default function AIAnomalies() {
       setResolution('');
       fetchAnomalies();
     } catch (error) {
-      console.error('Error reviewing anomaly:', error);
+      logger.error('Error reviewing anomaly:', error);
       toast({
         title: 'Erro',
         description: 'Não foi possível salvar a revisão.',

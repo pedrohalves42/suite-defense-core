@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { prepareJobForInsert } from "@/lib/job-utils";
 import { 
+import { logger } from '@/lib/logger';
   FlaskConical, 
   Play, 
   CheckCircle2, 
@@ -132,7 +133,7 @@ export default function JobTestRunner() {
       .single();
 
     if (error) {
-      console.error("Poll error:", error);
+      logger.error("Poll error:", error);
       return;
     }
 

@@ -61,6 +61,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { getStateColorClasses, type AgentState } from '@/lib/agent-state-machine';
+import { logger } from '@/lib/logger';
 
 interface AgentDetailsDrawerProps {
   agentId: string | null;
@@ -122,7 +123,7 @@ export function AgentDetailsDrawer({
       await generateForensicReportPDF([agentId]);
       toast.success('Relatório forense gerado com sucesso!');
     } catch (err) {
-      console.error('Forensic report error:', err);
+      logger.error('Forensic report error:', err);
       toast.error('Erro ao gerar relatório forense');
     } finally {
       setGeneratingReport(false);
