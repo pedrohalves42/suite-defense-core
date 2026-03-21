@@ -83,8 +83,8 @@ export default function InstallationMetrics() {
     queryKey: ['installation-error-summary'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('installation_error_summary' as any)
-        .select('*')
+        .from('installation_error_summary' as 'agents')
+        .select('tenant_id, platform, event_type, error_message, error_count, last_occurrence')
         .limit(20);
 
       if (error) throw error;
