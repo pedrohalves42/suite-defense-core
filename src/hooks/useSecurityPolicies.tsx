@@ -16,7 +16,7 @@ export const useSecurityPolicies = () => {
       if (!tenant?.id) return [];
       
       const { data, error } = await tenantQuery('security_policies', tenant.id)
-        .select('*')
+        .select('id, tenant_id, name, description, enabled, is_active, priority, created_at, updated_at, created_by, approved_by, approved_at')
         .order('priority', { ascending: false });
       
       if (error) throw error;
