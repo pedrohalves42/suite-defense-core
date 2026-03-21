@@ -117,7 +117,7 @@ export function useRejectAiAction() {
       if (!tenant?.id) throw new Error('Tenant not selected');
       const { data: action, error: actionError } = await supabase
         .from('ai_actions')
-        .select('id, tenant_id, action_type, action_payload, status, insight_id, created_at')
+        .select('id, tenant_id, action_type, action_payload, status, insight_id, risk_level, created_at')
         .eq('id', actionId)
         .eq('tenant_id', tenant.id)
         .maybeSingle();
