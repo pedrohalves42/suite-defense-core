@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import type { RpcAgentRow } from '@/types/rpc';
 import { toast } from "sonner";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { logger } from "@/lib/logger";
