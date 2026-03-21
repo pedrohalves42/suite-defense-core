@@ -39,7 +39,7 @@ export function PolicyApprovalWorkflow() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('compliance_policies')
-        .select('*')
+        .select('id, tenant_id, policy_code, title, description, status, version, approved_by, approved_at, created_at, updated_at')
         .eq('tenant_id', tenant!.id)
         .order('policy_code');
       

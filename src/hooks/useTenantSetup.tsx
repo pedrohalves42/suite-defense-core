@@ -69,7 +69,7 @@ export const useTenantSetup = () => {
       // Get tenant data
       const { data: tenant, error: tenantError } = await supabase
         .from('tenants')
-        .select('*')
+        .select('id, name, slug, industry, company_size, contact_email, timezone, created_at')
         .eq('id', activeTenant.id)
         .maybeSingle();
 

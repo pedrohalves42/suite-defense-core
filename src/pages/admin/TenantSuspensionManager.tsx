@@ -72,7 +72,7 @@ export default function TenantSuspensionManager() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tenant_suspension_events')
-        .select('*')
+        .select('id, tenant_id, event_type, reason, actor_id, created_at')
         .order('created_at', { ascending: false })
         .limit(50);
       if (error) throw error;

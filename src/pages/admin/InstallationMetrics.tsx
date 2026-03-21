@@ -97,8 +97,8 @@ export default function InstallationMetrics() {
     queryKey: ['installation-health-status'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('installation_health_status' as any)
-        .select('*');
+        .from('installation_health_status' as 'agents')
+        .select('tenant_id, total_agents, active_agents, pending_agents, stuck_agents, activation_rate_pct, window_interval');
 
       if (error) throw error;
       return data as unknown as InstallationHealthStatus[];

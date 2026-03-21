@@ -41,7 +41,7 @@ export default function AIMetrics() {
       
       const { data, error } = await supabase
         .from('ai_inference_metrics')
-        .select('*')
+        .select('id, model_name, prompt_tokens, completion_tokens, total_tokens, latency_ms, status, error_message, created_at')
         .gte('created_at', cutoffDate.toISOString())
         .order('created_at', { ascending: false })
         .limit(1000);

@@ -61,7 +61,7 @@ export default function AuthDebug() {
     await testEndpoint('Tenant', async () => {
       const { data, error } = await supabase
         .from('tenants')
-        .select('*')
+        .select('id, name, slug')
         .limit(1)
         .maybeSingle();
       

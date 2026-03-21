@@ -31,7 +31,7 @@ export function useMitreAttackTechniques() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('mitre_attack_techniques')
-        .select('*')
+        .select('id, technique_id, name, tactic, description, is_subtechnique, parent_technique_id')
         .order('technique_id');
       if (error) throw error;
       return data || [];

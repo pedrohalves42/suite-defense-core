@@ -150,7 +150,7 @@ export function useSoftwarePolicy() {
 
       const { data, error } = await supabase
         .from('tenant_software_policy')
-        .select('*')
+        .select('id, tenant_id, auto_approve_patches, block_unsigned, max_install_age_days, created_at, updated_at')
         .eq('tenant_id', activeTenant.id)
         .maybeSingle();
 
