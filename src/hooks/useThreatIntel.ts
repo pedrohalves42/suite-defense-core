@@ -37,7 +37,7 @@ export function useThreatIndicators(options?: { limit?: number; source?: string 
         .limit(limit);
 
       if (options?.source) {
-        query = query.eq('source', options.source as any);
+        query = query.eq('source', options.source);
       }
 
       const { data, error } = await query;
