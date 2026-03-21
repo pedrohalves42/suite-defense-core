@@ -10,6 +10,7 @@
 
 import { type AgentState } from '@/lib/agent-state-machine';
 import { type DiagnosticSummary } from '@/types/diagnostic';
+import { logger } from '@/lib/logger';
 
 /**
  * Input estruturado para verificação de saúde.
@@ -33,7 +34,7 @@ export interface HealthCheckInput {
 export function isAgentHealthy(input: HealthCheckInput): boolean {
   // Falha explícita se estado ausente
   if (!input.state) {
-    console.warn('[health-rules] isAgentHealthy called without state - returning unhealthy');
+    logger.warn('[health-rules] isAgentHealthy called without state - returning unhealthy');
     return false;
   }
 
@@ -56,7 +57,7 @@ export function isAgentHealthy(input: HealthCheckInput): boolean {
  */
 export function getAgentHealthLevel(input: HealthCheckInput): 'healthy' | 'warning' | 'critical' {
   if (!input.state) {
-    console.warn('[health-rules] getAgentHealthLevel called without state - returning critical');
+    logger.warn('[health-rules] getAgentHealthLevel called without state - returning critical');
     return 'critical';
   }
 

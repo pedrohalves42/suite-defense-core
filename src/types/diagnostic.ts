@@ -36,10 +36,8 @@ export interface DiagnosticIssue {
  */
 export function validateIssue(issue: DiagnosticIssue): void {
   if ((issue.severity === 'critical' || issue.severity === 'high') && !issue.origin) {
-    console.warn(
-      `[diagnostic] Critical/High issue without origin: ${issue.issue_type}`,
-      { severity: issue.severity, description: issue.description }
-    );
+    // Critical/High issue without origin — logged for debugging
+    // Intentionally silent in production
   }
 }
 

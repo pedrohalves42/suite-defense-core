@@ -31,7 +31,7 @@ export const useTenantBranding = () => {
       if (!tenant?.id) return null;
       const { data, error } = await supabase
         .from('tenant_branding')
-        .select('*')
+        .select('id, tenant_id, company_name, company_cnpj, company_email, company_phone, company_website, company_address, logo_url, primary_color, secondary_color, accent_color, report_header_text, report_footer_text, custom_sections, created_at, updated_at')
         .eq('tenant_id', tenant.id)
         .maybeSingle();
       if (error) throw error;

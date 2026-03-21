@@ -10,7 +10,7 @@ export function useAgentLifecycle(tenantId: string | undefined, loading?: boolea
 
       const { data, error } = await supabase
         .from('v_agent_lifecycle_state')
-        .select('*')
+        .select('id, agent_id, agent_name, display_name, status, agent_state, lifecycle_status, enrolled_at, last_heartbeat, archived_at, archived_reason, is_stuck, tenant_id')
         .eq('tenant_id', tenantId)
         .order('enrolled_at', { ascending: false });
 
@@ -162,7 +162,7 @@ export function useInstallationLogs(filters?: {
     queryFn: async () => {
       let query = supabase
         .from('installation_analytics')
-        .select('*')
+        .select('id, tenant_id, agent_id, agent_name, event_type, platform, success, installation_method, installation_time_seconds, error_message, network_connectivity, metadata, created_at')
         .order('created_at', { ascending: false });
 
       // V-4001 FIX: Always filter by tenant to prevent cross-tenant data access

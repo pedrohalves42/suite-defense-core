@@ -23,7 +23,7 @@ export async function loadLogoForPDF(): Promise<string | null> {
       reader.readAsDataURL(blob);
     });
   } catch {
-    console.warn('Could not load CyberShield logo for PDF');
+    // Could not load CyberShield logo for PDF — non-critical
     return null;
   }
 }

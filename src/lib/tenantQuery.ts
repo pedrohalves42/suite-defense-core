@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { logger } from '@/lib/logger';
 
 /**
  * List of tables that require tenant isolation.
@@ -137,7 +138,7 @@ export function validateTenantId(
   tableName: string
 ): tenantId is string {
   if (!tenantId) {
-    console.warn(`[tenantQuery] Skipping query to "${tableName}" - no tenant selected`);
+    logger.debug(`[tenantQuery] Skipping query to "${tableName}" - no tenant selected`);
     return false;
   }
   return true;

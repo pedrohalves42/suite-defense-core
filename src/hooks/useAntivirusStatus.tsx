@@ -5,7 +5,7 @@ import type { AntivirusStatus } from '@/types/security';
 async function fetchAntivirusStatus(agentId: string): Promise<AntivirusStatus[]> {
   const { data, error } = await supabase
     .from('antivirus_status')
-    .select('*')
+    .select('id, agent_id, tenant_id, engine_name, engine_version, status, threats_found, last_scan_at, last_update_at, collected_at')
     .eq('agent_id', agentId)
     .order('collected_at', { ascending: false })
     .limit(10);

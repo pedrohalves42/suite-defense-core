@@ -167,7 +167,7 @@ export function useSoftwareKnowledgeBase() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('software_knowledge_base')
-        .select('*')
+        .select('id, software_pattern, match_type, category, default_risk_level, description, vendor_patterns, is_active')
         .order('category', { ascending: true })
         .order('software_pattern', { ascending: true });
 

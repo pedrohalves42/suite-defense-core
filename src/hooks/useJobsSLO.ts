@@ -65,7 +65,7 @@ export const useJobsSLO = () => {
       // Direct query since job_slo_state is a new table not yet in types
       const { data, error } = await supabase
         .from('job_slo_state')
-        .select('*')
+        .select('id, tenant_id, time_window, total_jobs, error_jobs, error_rate, burn_rate, evaluated_at')
         .eq('tenant_id', activeTenant.id)
         .eq('time_window', '1h')
         .maybeSingle();

@@ -13,7 +13,7 @@ export const usePlatformConfigs = () => {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('platform_configs')
-        .select('*')
+        .select('id, tenant_id, platform, is_enabled, default_install_path, service_name, agent_binary_url, install_command_template, created_at, updated_at')
         .eq('tenant_id', tenant.id)
         .order('platform');
       if (error) throw error;

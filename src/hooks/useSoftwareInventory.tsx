@@ -18,7 +18,7 @@ export function useSoftwareInventory(agentId: string, enabled = true) {
 
       const { data, error } = await supabase
         .from('software_inventory')
-        .select('*')
+        .select('id, agent_id, tenant_id, name, version, vendor, install_location, risk_level, first_seen_at, last_seen_at')
         .eq('agent_id', agentId)
         .eq('tenant_id', activeTenant.id) // ADR-030 CRIT-03: Explicit tenant filter
         .order('name', { ascending: true });

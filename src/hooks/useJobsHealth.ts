@@ -64,7 +64,7 @@ export const useJobsHealth = () => {
       // v_job_metrics_by_type is a view - use supabase.from() directly with tenant filter
       const { data, error } = await supabase
         .from('v_job_metrics_by_type')
-        .select('*')
+        .select('type, tenant_id, total_count, completed_count, failed_count, avg_duration_seconds')
         .eq('tenant_id', tenantId);
       
       if (error) throw error;
@@ -90,7 +90,7 @@ export const useJobsHealth = () => {
       // v_job_hourly_trends is a view - use supabase.from() directly with tenant filter
       const { data, error } = await supabase
         .from('v_job_hourly_trends')
-        .select('*')
+        .select('hour, tenant_id, total, completed, failed, success_rate_pct')
         .eq('tenant_id', tenantId)
         .order('hour', { ascending: true });
       

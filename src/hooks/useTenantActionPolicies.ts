@@ -24,7 +24,7 @@ export function useTenantActionPolicies() {
       if (!activeTenant?.id) return [];
       
       const { data, error } = await tenantQuery('tenant_action_policies', activeTenant.id)
-        .select('*')
+        .select('id, tenant_id, insight_type, execution_mode, created_by, last_applied_at, created_at, updated_at')
         .order('insight_type');
       
       if (error) throw error;

@@ -1,5 +1,6 @@
 import type { DomainEventDispatcher } from '@/application/ports/output/DomainEventDispatcher';
 import type { DomainEvent } from '@/domain/shared/DomainEvent';
+import { logger } from '@/lib/logger';
 
 /**
  * Logs domain events to console. In production, this could be replaced
@@ -7,7 +8,7 @@ import type { DomainEvent } from '@/domain/shared/DomainEvent';
  */
 export class LoggingEventDispatcher implements DomainEventDispatcher {
   async dispatch(event: DomainEvent): Promise<void> {
-    console.log(`[DomainEvent] ${event.eventType}`, {
+    logger.debug(`[DomainEvent] ${event.eventType}`, {
       aggregateId: event.aggregateId,
       occurredOn: event.occurredOn.toISOString(),
     });
