@@ -188,7 +188,7 @@ export const NotificationSystem = () => {
           filter: `tenant_id=eq.${tenant.id}`
         },
         (payload) => {
-          const job = payload.new as any;
+          const job = payload.new as RealtimeJob;
           
           if (job.status === 'failed') {
             toast.error(

@@ -30,10 +30,10 @@ export function ScanFileDialog() {
       });
       
       if (error) throw error;
-      return ((data || []) as any[])
-        .filter((a: any) => a.status === 'active')
-        .map((a: any) => ({ agent_name: a.agent_name, status: a.status }))
-        .sort((a: any, b: any) => a.agent_name.localeCompare(b.agent_name));
+      return ((data || []) as RpcAgentRow[])
+        .filter((a) => a.status === 'active')
+        .map((a) => ({ agent_name: a.agent_name, status: a.status }))
+        .sort((a, b) => a.agent_name.localeCompare(b.agent_name));
     },
     enabled: !tenantLoading && !!activeTenant?.id,
   });

@@ -40,7 +40,7 @@ export const ClientReports = () => {
   });
 
   // Prepare chart data (last 30 days of risk scores)
-  const chartData = reports?.slice(0, 30).reverse().map((report: any, index: number) => ({
+  const chartData = reports?.slice(0, 30).reverse().map((report, index: number) => ({
     name: formatBrazilDateTime(report.created_at, 'day-month'),
     score: report.risk_score || 0
   })) || [];

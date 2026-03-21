@@ -61,9 +61,9 @@ export function AgentVersionSync({ latestVersions }: AgentVersionSyncProps) {
       });
       
       if (error) throw error;
-      return ((data || []) as any[])
-        .filter((a: any) => a.status === 'active')
-        .map((a: any): Agent => ({
+      return ((data || []) as RpcAgentRow[])
+        .filter((a) => a.status === 'active')
+        .map((a): Agent => ({
           id: a.id,
           agent_name: a.agent_name,
           agent_version: a.agent_version,
