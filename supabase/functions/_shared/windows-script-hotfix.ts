@@ -1397,5 +1397,67 @@ try {
     }
   }
 
+  // HOTFIX 35: Registry snapshot — send initial baseline + periodic snapshots
+  // The original code only sends registry events when EDRInitialized=true AND values change.
+  // On stable machines, registry keys rarely change → ~0 events/day.
+  // Fix: (a) On first cycle, send all values as 'registry_snapshot' events.
+  //      (b) Every 15 cycles (~30min), resend full snapshot for visibility.
+  if (
+    content.includes('if ($Global:EDRInitialized)') &&
+    content.includes('$currentRegSnapshot[$snapKey]') &&
+    !content.includes('HOTFIX-REGISTRY-SNAPSHOT')
+  ) {
+    // Add a cycle counter global
+    if (!content.includes('$Global:EDRRegistryCycleCount')) {
+      const counterDecl = '\n$Global:EDRRegistryCycleCount = 0 # HOTFIX-REGISTRY-SNAPSHOT cycle counter';
+      content = content.replace(
+        /(\$Global:EDRLastRegistrySnapshot = @\{\})/,
+        '$1' + counterDecl
+      );
+    }
+
+    // Replace the registry telemetry block to include snapshot logic
+    const registryHotfix = content.replace(
+      /# ── 4\. REGISTRY TELEMETRY \(persistence keys\) ──\s*\r?\n\s*try \{[\s\S]*?\$currentRegSnapshot\[\$snapKey\] = @\{ key_path = \$regKey; value_name = \$prop\.Name; value_data = \[string\]\$prop\.Value \}\s*\r?\n\s*\r?\n\s*if \(\$Global:EDRInitialized\) \{/m,
+      `# ── 4. REGISTRY TELEMETRY (persistence keys) ── # HOTFIX-REGISTRY-SNAPSHOT
+    try {
+        $currentRegSnapshot = @{}
+        $Global:EDRRegistryCycleCount++
+        $isSnapshotCycle = (-not $Global:EDRInitialized) -or ($Global:EDRRegistryCycleCount % 15 -eq 0)
+        foreach ($regKey in $Global:EDRRegistryKeys) {
+            if (-not (Test-Path $regKey -ErrorAction SilentlyContinue)) { continue }
+            try {
+                $values = Get-ItemProperty -Path $regKey -ErrorAction SilentlyContinue
+                if ($values) {
+                    $props = $values.PSObject.Properties | Where-Object { $_.Name -notmatch '^PS' }
+                    foreach ($prop in $props) {
+                        $snapKey = "$regKey\\$($prop.Name)"
+                        $currentRegSnapshot[$snapKey] = @{ key_path = $regKey; value_name = $prop.Name; value_data = [string]$prop.Value }
+                        
+                        if ($isSnapshotCycle) {
+                            # Send snapshot event for every value (baseline or periodic refresh)
+                            $registryEvents += @{
+                                event_type       = "registry_snapshot"
+                                key_path         = $regKey
+                                value_name       = $prop.Name
+                                value_data       = [string]$prop.Value
+                                value_type       = "REG_SZ"
+                                old_value_data   = $null
+                                process_name     = $null
+                                process_pid      = $null
+                                is_suspicious    = $false
+                                detection_tags   = @()
+                                mitre_technique_id = $null
+                                event_time       = $nowStr
+                            }
+                        } elseif ($Global:EDRInitialized) {`
+    );
+
+    if (registryHotfix !== content) {
+      content = registryHotfix;
+      reasons.push('registry_snapshot_hotfix');
+    }
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }
