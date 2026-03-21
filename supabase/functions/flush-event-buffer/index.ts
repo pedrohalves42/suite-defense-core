@@ -256,7 +256,8 @@ Deno.serve(async (req) => {
           registryEvents.push({
             tenant_id: row.tenant_id,
             agent_id: row.agent_id,
-            event_type: payload.event_type,
+            // Normalize registry_snapshot → registry_value_set for storage
+            event_type: (payload.event_type === 'registry_snapshot') ? 'registry_value_set' : payload.event_type,
             key_path: payload.key_path,
             value_name: payload.value_name,
             value_data: payload.value_data != null ? String(payload.value_data) : null,
