@@ -96,7 +96,7 @@ export default function DataExport() {
         case 'scans': {
           const query = supabase
             .from('virus_scans')
-            .select('*')
+            .select('id, agent_name, file_path, file_hash, is_malicious, positives, total_scans, scanned_at, virustotal_permalink, tenant_id')
             .eq('tenant_id', tenant.id)
             .order('scanned_at', { ascending: false });
 
