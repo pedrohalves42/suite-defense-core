@@ -6,8 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Shield, Package, AlertTriangle, Activity, Loader2 } from "lucide-react";
 import { prepareJobForInsert } from "@/lib/job-utils";
-import {
 import { logger } from '@/lib/logger';
+import {
   Select,
   SelectContent,
   SelectItem,

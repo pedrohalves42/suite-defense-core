@@ -20,8 +20,8 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import {
 import { logger } from '@/lib/logger';
+import {
   Table,
   TableBody,
   TableCell,
