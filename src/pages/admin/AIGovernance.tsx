@@ -63,7 +63,7 @@ export default function AIGovernance() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ai_inference_metrics')
-        .select('id, function_name, model, provider, success, latency_ms, tokens_total, tokens_prompt, tokens_completion, cost_usd, error, used_fallback, circuit_breaker_state, created_at')
+        .select('id, function_name, model, provider, success, latency_ms, tokens_total, tokens_prompt, tokens_completion, cost_usd, error, used_fallback, circuit_breaker_state, tenant_id, created_at')
         .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
         .order('created_at', { ascending: false });
       

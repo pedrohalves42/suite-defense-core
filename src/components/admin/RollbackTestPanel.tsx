@@ -73,7 +73,7 @@ export function RollbackTestPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('rollback_test_results')
-        .select('id, tenant_id, test_type, test_status, dry_run, from_version, to_version, duration_ms, error_message, steps_total, agent_id, created_at, completed_at')
+        .select('id, tenant_id, test_type, test_status, dry_run, from_version, to_version, duration_ms, error_message, steps_total, steps_executed, agent_id, created_at, completed_at')
         .eq('tenant_id', tenant!.id)
         .order('created_at', { ascending: false })
         .limit(5);

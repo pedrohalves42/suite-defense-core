@@ -71,7 +71,7 @@ export default function SystemLogs() {
     queryFn: async () => {
       let query = supabase
         .from('security_logs')
-        .select('id, tenant_id, attack_type, severity, ip_address, endpoint, blocked, created_at');
+        .select('id, tenant_id, attack_type, severity, ip_address, endpoint, blocked, user_agent, details, created_at');
       
       // Filter by tenant if not super admin
       if (!isSuperAdmin && tenant?.id) {
