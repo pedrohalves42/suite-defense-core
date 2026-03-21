@@ -14,7 +14,7 @@ export function useDetectionRules() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('detection_rules')
-        .select('*')
+        .select('id, tenant_id, name, description, severity, event_category, event_type, is_enabled, mitre_technique_id, mitre_tactic, created_at, updated_at')
         .or(`tenant_id.is.null,tenant_id.eq.${activeTenant!.id}`)
         .eq('is_enabled', true)
         .order('severity', { ascending: false });
