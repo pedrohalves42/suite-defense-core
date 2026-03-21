@@ -162,7 +162,7 @@ export function useInstallationLogs(filters?: {
     queryFn: async () => {
       let query = supabase
         .from('installation_analytics')
-        .select('*')
+        .select('id, tenant_id, agent_id, agent_name, event_type, platform, success, installation_method, installation_time_seconds, error_message, created_at')
         .order('created_at', { ascending: false });
 
       // V-4001 FIX: Always filter by tenant to prevent cross-tenant data access

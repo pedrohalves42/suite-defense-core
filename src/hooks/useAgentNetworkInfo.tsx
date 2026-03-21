@@ -42,7 +42,7 @@ export interface NetworkInfo {
 async function fetchAgentNetworkInfo(agentId: string): Promise<NetworkInfo | null> {
   const { data, error } = await supabase
     .from('agent_network_info')
-    .select('*')
+    .select('id, agent_id, tenant_id, public_ip, gateway_ip, dns_servers, firewall_public, firewall_private, firewall_domain, dns_test_success, https_test_success, open_ports, collected_at')
     .eq('agent_id', agentId)
     .order('collected_at', { ascending: false })
     .limit(1)

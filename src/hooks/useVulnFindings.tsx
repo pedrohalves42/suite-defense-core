@@ -7,7 +7,7 @@ async function fetchVulnFindings(agentId: string, tenantId: string): Promise<Vul
   // Use supabase.from() directly to avoid tenantQuery chaining issues
   const { data, error } = await supabase
     .from('vuln_findings')
-    .select('*')
+    .select('id, agent_id, tenant_id, check_key, title, description, severity, remediation, first_seen_at, last_seen_at, acknowledged_at')
     .eq('tenant_id', tenantId)
     .eq('agent_id', agentId)
     .order('severity', { ascending: false })

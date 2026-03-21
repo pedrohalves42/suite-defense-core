@@ -110,7 +110,7 @@ export const usePolicyRules = (policyId: string | null) => {
       
       const { data, error } = await supabase
         .from('security_policy_rules')
-        .select('*')
+        .select('id, policy_id, tenant_id, rule_type, target, action, conditions, is_enabled, created_at')
         .eq('policy_id', policyId)
         .order('created_at', { ascending: true });
       

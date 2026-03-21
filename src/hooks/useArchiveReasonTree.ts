@@ -20,7 +20,7 @@ export function useArchiveReasonTree(agentId: string | null) {
     queryFn: async (): Promise<ArchiveReason | null> => {
       const { data, error } = await supabase
         .from('v_agent_archive_reason_tree')
-        .select('*')
+        .select('agent_id, agent_name, archived_at, reason, actor_type, actor_id, notes, reactivated_at, reactivation_reason')
         .eq('agent_id', agentId!)
         .order('archived_at', { ascending: false })
         .limit(1)

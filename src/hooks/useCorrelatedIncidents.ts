@@ -73,7 +73,7 @@ export function useIncidentEvents(incidentId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('correlated_incident_events')
-        .select('*')
+        .select('id, incident_id, agent_id, event_type, event_summary, event_time, severity, event_data, created_at')
         .eq('incident_id', incidentId)
         .eq('tenant_id', activeTenant!.id)
         .order('event_time', { ascending: true });

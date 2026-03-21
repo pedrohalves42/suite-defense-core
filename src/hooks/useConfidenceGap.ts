@@ -74,7 +74,7 @@ export function useConfidenceGapTrend() {
       
       const { data, error } = await supabase
         .from('v_confidence_gap_trend')
-        .select('*')
+        .select('id, tenant_id, audit_id, red_team_id, ana_score, red_score, confidence_gap, health_status, previous_gap, gap_delta, alert_triggered, alert_reason, dimension_gaps, created_at, prev_gap, avg_gap_30d, avg_gap_90d, is_improving')
         .eq('tenant_id', activeTenant.id)
         .order('created_at', { ascending: false })
         .limit(30);

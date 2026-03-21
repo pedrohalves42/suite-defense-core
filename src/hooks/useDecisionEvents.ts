@@ -87,7 +87,7 @@ export function useDecisionRules() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('decision_rules')
-        .select('*')
+        .select('id, code, description, scope, definition, auto_execute, is_enabled, created_at')
         .order('code');
 
       if (error) throw error;
