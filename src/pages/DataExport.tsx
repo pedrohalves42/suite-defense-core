@@ -156,7 +156,7 @@ export default function DataExport() {
         case 'quarantine': {
           const query = supabase
             .from('quarantined_files')
-            .select('*')
+            .select('id, agent_name, file_path, file_hash, quarantine_reason, status, quarantined_at, restored_at, tenant_id')
             .eq('tenant_id', tenant.id)
             .order('quarantined_at', { ascending: false });
 
