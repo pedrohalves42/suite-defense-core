@@ -10,7 +10,7 @@ export function useAgentLifecycle(tenantId: string | undefined, loading?: boolea
 
       const { data, error } = await supabase
         .from('v_agent_lifecycle_state')
-        .select('*')
+        .select('id, agent_id, agent_name, display_name, status, agent_state, lifecycle_status, enrolled_at, last_heartbeat, archived_at, archived_reason, is_stuck, tenant_id')
         .eq('tenant_id', tenantId)
         .order('enrolled_at', { ascending: false });
 
