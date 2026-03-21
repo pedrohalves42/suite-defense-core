@@ -49,7 +49,7 @@ export default function AuthDebug() {
     await testEndpoint('Roles', async () => {
       const { data, error } = await supabase
         .from('user_roles')
-        .select('*')
+        .select('id, user_id, role')
         .eq('user_id', user?.id);
       
       if (error) throw error;
