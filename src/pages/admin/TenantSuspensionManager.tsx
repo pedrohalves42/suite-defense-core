@@ -45,7 +45,7 @@ export default function TenantSuspensionManager() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tenant_suspension_config')
-        .select('*')
+        .select('id, inactivity_days_warn, inactivity_days_suspend, inactivity_days_delete, is_enabled, created_at, updated_at')
         .limit(1)
         .single();
       if (error) throw error;
