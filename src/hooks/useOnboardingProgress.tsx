@@ -38,7 +38,7 @@ export const useOnboardingProgress = () => {
     try {
       const { data, error } = await supabase
         .from('onboarding_progress')
-        .select('id, user_id, current_step, steps_completed, skipped, completed_at, started_at, created_at, updated_at')
+        .select('id, user_id, tenant_id, current_step, steps_completed, skipped, completed_at, started_at, created_at, updated_at')
         .eq('user_id', user.id)
         .maybeSingle();
 

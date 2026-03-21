@@ -178,7 +178,7 @@ export function useTaskDetail(taskId: string | null) {
 
       const { data, error } = await supabase
         .from('tasks')
-        .select('id, tenant_id, title, description, status, severity, source_type, source_id, assigned_to, created_at, updated_at, closed_at, due_at, sla_breached_at, metadata')
+        .select('*')
         .eq('id', taskId)
         .eq('tenant_id', tenant.id)
         .maybeSingle();

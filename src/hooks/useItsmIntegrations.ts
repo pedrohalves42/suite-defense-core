@@ -28,7 +28,7 @@ export const useItsmIntegrations = () => {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('itsm_tickets')
-        .select('id, tenant_id, integration_id, external_id, title, status, priority, created_at, updated_at, resolved_at')
+        .select('id, tenant_id, integration_id, provider, external_ticket_id, external_ticket_key, external_ticket_url, summary, description, status, external_status, priority, source_type, source_id, agent_id, agent_name, created_at, updated_at')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
         .limit(50);
