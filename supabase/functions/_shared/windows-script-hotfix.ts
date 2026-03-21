@@ -1474,5 +1474,24 @@ try {
     }
   }
 
+  // HOTFIX 41: USB whitelisted devices should NOT count as threats
+  // When Test-UsbDevices detects a USB but it's already whitelisted, status is still "detected"
+  // but the count includes whitelisted devices, inflating threats_found
+  if (
+    content.includes('$results.usb.count') &&
+    content.includes('threats_found') &&
+    !content.includes('HOTFIX-USB-WHITELIST-NOISE')
+  ) {
+    content = content.replace(
+      /if \(\$results\.usb -is \[hashtable\] -and \$results\.usb\.status -eq "detected"\)\s*(?:<#[^#]*#>\s*)?\{\s*\$results\.threats_found \+= \$results\.usb\.count\s*\}/g,
+      `if ($results.usb -is [hashtable] -and $results.usb.status -eq "detected") {
+        # HOTFIX-USB-WHITELIST-NOISE: Only count non-whitelisted USBs as threats
+        $usbThreatCount = if ($results.usb.unauthorized_count) { $results.usb.unauthorized_count } elseif ($results.usb.non_whitelisted) { $results.usb.non_whitelisted } else { 0 }
+        if ($usbThreatCount -gt 0) { $results.threats_found += $usbThreatCount }
+    }`
+    );
+    reasons.push('usb_whitelist_noise_reduction');
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }
