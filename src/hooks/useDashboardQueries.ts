@@ -18,9 +18,9 @@ async function fetchAgents(tenantId: string): Promise<DashboardAgent[]> {
     p_tenant_id: tenantId, p_include_archived: false,
   });
   if (error) throw error;
-  return ((data || []) as any[]).map(a => ({
-    id: a.id, agent_name: a.agent_name, status: a.status,
-    enrolled_at: a.enrolled_at, last_heartbeat: a.last_heartbeat, tenant_id: a.tenant_id,
+  return ((data || []) as Array<Record<string, unknown>>).map(a => ({
+    id: a.id as string, agent_name: a.agent_name as string, status: a.status as string,
+    enrolled_at: a.enrolled_at as string, last_heartbeat: a.last_heartbeat as string, tenant_id: a.tenant_id as string,
   }));
 }
 

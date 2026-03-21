@@ -32,7 +32,7 @@ export function useDismissInsight() {
       if (!tenant?.id) throw new Error('Tenant not selected');
       const { data: insight, error: insightError } = await supabase
         .from('ai_insights')
-        .select('*')
+        .select('id, tenant_id, category, description, severity, status, dismissed_at')
         .eq('id', insightId)
         .eq('tenant_id', tenant.id)
         .maybeSingle();

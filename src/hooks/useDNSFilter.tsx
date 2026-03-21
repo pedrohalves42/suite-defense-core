@@ -58,7 +58,7 @@ export function useDNSFilter() {
       throw error;
     }
 
-    const agents = ((data ?? []) as any[])
+    const agents = ((data ?? []) as Array<Record<string, unknown>>)
       .filter((agent) => agent?.id && agent?.agent_name)
       .map((agent) => ({
         id: agent.id as string,
