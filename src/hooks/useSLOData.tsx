@@ -44,7 +44,7 @@ export const useSLOData = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('slo_definitions')
-        .select('*')
+        .select('id, name, display_name, description, category, target_percent, measurement_window, is_active, created_at')
         .eq('is_active', true)
         .order('name');
 
@@ -61,7 +61,7 @@ export const useSLOData = () => {
 
       const { data, error } = await supabase
         .from('slo_measurements')
-        .select('*')
+        .select('id, tenant_id, slo_id, current_value, target_value, is_breached, error_budget_used, sample_size, measured_at')
         .eq('tenant_id', tenant.id)
         .order('measured_at', { ascending: false })
         .limit(100);
@@ -80,7 +80,7 @@ export const useSLOData = () => {
 
       const { data, error } = await supabase
         .from('slo_alerts')
-        .select('*')
+        .select('id, tenant_id, slo_id, measurement_id, message, severity, acknowledged, created_at')
         .eq('tenant_id', tenant.id)
         .eq('acknowledged', false)
         .order('created_at', { ascending: false });

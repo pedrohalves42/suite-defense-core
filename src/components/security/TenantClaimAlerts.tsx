@@ -48,7 +48,7 @@ export function TenantClaimAlerts() {
         .limit(24); // Last 24 hours
 
       if (error) {
-        console.warn('Error fetching claim health:', error);
+        // Claim health view not accessible — return empty defaults
         return {
           total_valid_24h: 0,
           total_missing_24h: 0,
@@ -58,7 +58,7 @@ export function TenantClaimAlerts() {
         };
       }
 
-      const rows = data as ClaimHealthData[] || [];
+      const rows = (data || []) as unknown as ClaimHealthData[];
       
       return {
         total_valid_24h: rows.reduce((sum, r) => sum + (r.valid_claims || 0), 0),

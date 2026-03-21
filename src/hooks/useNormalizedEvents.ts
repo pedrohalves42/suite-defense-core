@@ -87,7 +87,7 @@ export function useRetentionConfig() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('telemetry_retention_config')
-        .select('*')
+        .select('id, tenant_id, event_category, retention_days, is_enabled, updated_at')
         .eq('tenant_id', activeTenant!.id)
         .order('event_category');
       if (error) throw error;
@@ -105,7 +105,7 @@ export function useEventSummaries(options?: { agentId?: string; category?: strin
     queryFn: async () => {
       let query = supabase
         .from('telemetry_event_summaries')
-        .select('*')
+        .select('id, tenant_id, agent_id, event_category, summary_period, period_start, period_end, event_count, unique_sources, top_events')
         .eq('tenant_id', activeTenant!.id)
         .order('period_start', { ascending: false })
         .limit(200);

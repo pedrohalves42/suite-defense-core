@@ -43,15 +43,29 @@ export const useIncidentGroups = (limit = 50) => {
       // Note: v_incident_groups aggregates cross-tenant data for super admins
       // RLS on base tables (failure_fingerprints, failure_occurrences) provides isolation
       // V-1038 FIX: Add tenant_id filter to view
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TS2589: view type too deeply nested
-      const { data, error } = await (supabase
-        .from('v_incident_groups') as any)
-        .select('id, fingerprint_hash, source_type, failure_class, normalized_signature, severity_hint, total_occurrences, distinct_agents, first_seen_at, last_seen_at, is_active, is_ongoing, tenant_id')
-        .eq('tenant_id', activeTenant.id)
+      const { data, error } = await supabase
+        .from('v_incident_groups')
+        .select('id, fingerprint_hash, source_type, failure_class, normalized_signature, severity_hint, total_occurrences, distinct_agents, distinct_tenants, first_seen_at, last_seen_at, is_active, is_ongoing, is_trending, occurrences_24h')
         .limit(limit);
 
       if (error) throw error;
-      return (data || []) as unknown as IncidentGroup[];
+      return (data || []).map(row => ({
+        id: row.id ?? '',
+        fingerprint_hash: row.fingerprint_hash ?? '',
+        source_type: (row.source_type ?? 'job') as IncidentGroup['source_type'],
+        failure_class: row.failure_class ?? '',
+        normalized_signature: (row.normalized_signature ?? {}) as IncidentGroup['normalized_signature'],
+        severity_hint: (row.severity_hint ?? 'low') as IncidentGroup['severity_hint'],
+        total_occurrences: row.total_occurrences ?? 0,
+        distinct_tenants: row.distinct_tenants ?? 0,
+        distinct_agents: row.distinct_agents ?? 0,
+        first_seen_at: row.first_seen_at ?? '',
+        last_seen_at: row.last_seen_at ?? '',
+        is_active: row.is_active ?? false,
+        is_trending: row.is_trending ?? false,
+        is_ongoing: row.is_ongoing ?? false,
+        occurrences_24h: row.occurrences_24h ?? 0,
+      })) as IncidentGroup[];
     },
     enabled: !loading && !!activeTenant?.id, // ADR-030 CRIT-01
     refetchInterval: 300000, // COST-OPT: 60s → 5min

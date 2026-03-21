@@ -89,7 +89,7 @@ export default function TestComplianceGenerator() {
       return;
     }
     
-    console.log("Generating reports for tenant:", tenant.id, tenant.name);
+    // Generating reports for tenant
     setIsGenerating(true);
     
     // Initialize all reports as pending
