@@ -69,7 +69,7 @@ export function useTasks(filters?: TaskFilters) {
     queryKey: ['tasks', tenant?.id, filters],
     queryFn: async () => {
       let query = tenantQuery('tasks', tenant!.id)
-        .select('id, tenant_id, title, description, status, severity, source_type, source_id, assigned_to, created_at, updated_at, resolved_at, sla_deadline')
+        .select('id, tenant_id, title, description, status, severity, source_type, source_id, assigned_to, created_at, updated_at, closed_at, due_at, sla_breached_at')
         .order('severity', { ascending: true })
         .order('created_at', { ascending: false });
 
