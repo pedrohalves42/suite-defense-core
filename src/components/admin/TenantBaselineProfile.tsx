@@ -93,7 +93,7 @@ export function TenantBaselineProfile() {
       if (error || !data) return null;
 
       const hourCounts = new Array(24).fill(0);
-      (data as any[]).forEach((m: any) => {
+      (data as Array<{ collected_at: string }>).forEach((m) => {
         const hour = new Date(m.collected_at).getHours();
         hourCounts[hour]++;
       });

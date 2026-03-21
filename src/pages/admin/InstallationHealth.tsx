@@ -68,7 +68,7 @@ export default function InstallationHealth() {
       ).sort((a, b) => ((b.enrolled_at as string) || '').localeCompare((a.enrolled_at as string) || ''));
 
       if (!agentsError) {
-        const formatted: ProblematicAgent[] = (agents || []).map((a: any) => ({
+        const formatted: ProblematicAgent[] = (agents || []).map((a) => ({
           id: a.id,
           agent_name: a.agent_name,
           status: a.status,

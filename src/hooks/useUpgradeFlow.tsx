@@ -72,7 +72,7 @@ export const useUpgradeFlow = () => {
   });
 
   const { currentPlan, isLegacy } = useMemo(() => {
-    const planName = (subscriptionData?.subscription_plans as any)?.name || "starter_compliance";
+    const planName = (subscriptionData?.subscription_plans as Record<string, string> | null)?.name || "starter_compliance";
     // Map plan names to PlanType categories
     const planMapping: Record<string, PlanType> = {
       starter_compliance: "starter_compliance",

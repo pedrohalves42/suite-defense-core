@@ -244,7 +244,7 @@ export function useDNSFilter() {
       queryClient.invalidateQueries({ queryKey: ['dns-filter-status'] });
       toast.success(data.message || `Sincronização agendada para ${data.jobs_created} computador(es)`);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao sincronizar: ${error.message}`);
     },
   });
