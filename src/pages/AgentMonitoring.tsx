@@ -90,7 +90,7 @@ const AgentMonitoring = () => {
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('jobs')
-        .select('*')
+        .select('id, agent_id, agent_name, type, status, created_at, delivered_at, completed_at, approved, tenant_id')
         .eq('tenant_id', tenant.id)
         .gte('created_at', twentyFourHoursAgo)
         .order('created_at', { ascending: false })

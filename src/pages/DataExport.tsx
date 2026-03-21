@@ -184,7 +184,7 @@ export default function DataExport() {
         case 'audit_logs': {
           const query = supabase
             .from('audit_logs')
-            .select('*')
+            .select('id, action, resource_type, resource_id, success, ip_address, user_agent, created_at, tenant_id')
             .eq('tenant_id', tenant.id)
             .order('created_at', { ascending: false });
 
