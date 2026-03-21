@@ -19,6 +19,11 @@ export interface RpcAgentRow {
   force_update_version: string | null;
   force_update_delivered_count: number | null;
   is_archived: boolean | null;
+  display_name: string | null;
+  is_isolated: boolean | null;
+  is_throttled: boolean | null;
+  safe_mode_entered_at: string | null;
+  [key: string]: unknown; // Allow additional RPC-returned fields
 }
 
 /** Realtime payload for virus_scans INSERT */
