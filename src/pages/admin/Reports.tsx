@@ -1174,7 +1174,7 @@ export default function Reports() {
         doc.setTextColor(100, 100, 100);
         doc.text('Verifique online', pageWidth - 37.5, yPos + 45, { align: 'center' });
       } catch (qrError) {
-        console.warn('Failed to add QR code:', qrError);
+        // QR code generation failed — non-critical
       }
 
       // Add page numbers to all pages

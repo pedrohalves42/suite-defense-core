@@ -56,7 +56,7 @@ export function isAgentHealthy(input: HealthCheckInput): boolean {
  */
 export function getAgentHealthLevel(input: HealthCheckInput): 'healthy' | 'warning' | 'critical' {
   if (!input.state) {
-    console.warn('[health-rules] getAgentHealthLevel called without state - returning critical');
+    logger.warn('[health-rules] getAgentHealthLevel called without state - returning critical');
     return 'critical';
   }
 

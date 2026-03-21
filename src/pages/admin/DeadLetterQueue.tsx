@@ -180,7 +180,7 @@ export default function DeadLetterQueue() {
           
           successCount++;
         } catch (err) {
-          console.warn('[DLQ] Bulk retry failed for entry:', entry.id, err);
+          logger.warn('[DLQ] Bulk retry failed for entry', { entryId: entry.id });
         }
       }
       
