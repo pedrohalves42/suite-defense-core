@@ -213,9 +213,9 @@ export function useDNSFilter() {
         },
       }));
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from('jobs')
-        .insert(jobs as unknown as Parameters<typeof supabase.from<'jobs'>>[0] extends infer T ? T : never)
+        .insert(jobs as any) as any)
         .select('id');
 
       if (error) throw error;

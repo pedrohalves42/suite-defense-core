@@ -62,7 +62,7 @@ export default function InstallationHealth() {
       }
       // Filter problematic agents client-side
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const agents = ((rpcData || []) as Array<Record<string, unknown>>).filter((a) =>
+      const agents = ((rpcData || []) as Array<Record<string, string | boolean | null>>).filter((a) =>
         (a.status === 'pending' || !a.last_heartbeat) &&
         a.enrolled_at && (a.enrolled_at as string) >= twentyFourHoursAgo
       ).sort((a, b) => ((b.enrolled_at as string) || '').localeCompare((a.enrolled_at as string) || ''));

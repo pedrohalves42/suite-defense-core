@@ -98,9 +98,10 @@ export function useAgentActions() {
     mutationFn: async ({ ruleId, isEnabled }: { ruleId: string; isEnabled: boolean }) => {
       if (!tenantId) throw new Error('Tenant not found');
       // V-5002 FIX: Add tenant_id filter to prevent cross-tenant rule toggle
-      const { error } = await supabase
+      // V-5002 FIX: Chain .eq calls directly — the `as any` avoids TS2589 (excessive type depth)
+      const { error } = await (supabase
         .from('decision_rules')
-        .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() })
+        .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() }) as any)
         .eq('id', ruleId)
         .eq('tenant_id', tenantId);
       if (error) throw error;
