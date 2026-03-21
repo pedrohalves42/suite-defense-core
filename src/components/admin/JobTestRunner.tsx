@@ -69,7 +69,7 @@ export default function JobTestRunner() {
       });
       
       if (error) throw error;
-      return ((data || []) as RpcAgentRow[])
+      return ((data || []) as unknown as RpcAgentRow[])
         .filter((a) => a.status === 'active' && a.last_heartbeat && a.last_heartbeat >= fiveMinutesAgo)
         .map((a): Agent => ({ id: a.id, agent_name: a.agent_name, hostname: a.hostname, last_heartbeat: a.last_heartbeat, status: a.status }))
         .sort((a: Agent, b: Agent) => a.agent_name.localeCompare(b.agent_name));

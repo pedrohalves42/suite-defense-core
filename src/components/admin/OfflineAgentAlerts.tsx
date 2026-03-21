@@ -180,7 +180,7 @@ export function OfflineAgentAlerts() {
 
       if (error) throw error;
 
-      const data = ((agentsRaw || []) as RpcAgentRow[])
+      const data = ((agentsRaw || []) as unknown as RpcAgentRow[])
         .filter((a) => a.status === 'active' && a.last_heartbeat && a.last_heartbeat < oneHourAgo)
         .map((a) => ({ id: a.id, agent_name: a.agent_name, last_heartbeat: a.last_heartbeat!, hostname: a.hostname, os_type: a.os_type }))
         .sort((a, b) => a.last_heartbeat.localeCompare(b.last_heartbeat));
