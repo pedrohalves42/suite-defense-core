@@ -225,7 +225,7 @@ export function useDNSFilter() {
       queryClient.invalidateQueries({ queryKey: ['dns-filter-status'] });
       toast.success(`Instalação do DNS Filter agendada para ${result.jobsCreated} computador(es)`);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao agendar instalação: ${error.message}`);
     },
   });
