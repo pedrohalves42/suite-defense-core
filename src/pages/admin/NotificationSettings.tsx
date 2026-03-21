@@ -207,18 +207,18 @@ export default function NotificationSettings() {
       const [channelsRes, logsRes, reportsRes] = await Promise.all([
         supabase
           .from('notification_channels')
-          .select('id, tenant_id, channel_type, name, is_active, config, created_at, updated_at')
+          .select('*')
           .eq('tenant_id', tenantId)
           .order('created_at', { ascending: false }),
         supabase
           .from('notification_log')
-          .select('id, tenant_id, channel_id, channel_type, status, error_message, recipient, sent_at, created_at')
+          .select('*')
           .eq('tenant_id', tenantId)
           .order('created_at', { ascending: false })
           .limit(50),
         supabase
           .from('scheduled_reports')
-          .select('id, tenant_id, name, report_type, schedule, is_active, last_sent_at, next_send_at, created_at')
+          .select('*')
           .eq('tenant_id', tenantId)
           .order('created_at', { ascending: false })
       ]);
