@@ -58,7 +58,7 @@ export default function DeadLetterQueue() {
     queryFn: async () => {
       let query = supabase
         .from('failed_jobs_dlq')
-        .select('*')
+        .select('id, original_job_id, agent_name, agent_id, job_type, error_message, error_count, failure_class, classification, status, first_failure_at, last_failure_at, next_retry_at, max_retries, flagged_suspicious, auto_flagged_reason, created_at')
         .order('last_failure_at', { ascending: false })
         .limit(100);
 

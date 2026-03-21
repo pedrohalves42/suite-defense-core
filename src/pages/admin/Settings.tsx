@@ -83,7 +83,7 @@ export default function Settings() {
       
       const { data, error } = await supabase
         .from('tenant_settings')
-        .select('*')
+        .select('id, tenant_id, alert_email, alert_webhook_url, enable_email_alerts, enable_webhook_alerts, enable_auto_quarantine, enable_dry_run_mode, virustotal_enabled, dns_local_filter_enabled, alert_threshold_failed_jobs, alert_threshold_offline_agents, alert_threshold_virus_positive, force_human_review_critical, stripe_enabled, business_hours, created_at, updated_at')
         .eq('tenant_id', tenant.id)
         .maybeSingle();
       

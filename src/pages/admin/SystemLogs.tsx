@@ -57,7 +57,7 @@ export default function SystemLogs() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: { acknowledged_count: number }) => {
       toast.success(`${data.acknowledged_count} alertas reconhecidos com sucesso`);
       queryClient.invalidateQueries({ queryKey: ['system-alerts'] });
     },

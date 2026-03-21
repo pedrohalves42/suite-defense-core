@@ -34,7 +34,7 @@ export function AutoApprovalPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ai_action_configs')
-        .select('*')
+        .select('id, action_type, description, risk_level, requires_approval, is_enabled, max_executions_per_day, failure_threshold, circuit_breaker_enabled, circuit_state, created_at, updated_at')
         .order('risk_level', { ascending: true });
       if (error) throw error;
       return data as ActionConfig[];

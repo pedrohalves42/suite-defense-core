@@ -14,7 +14,7 @@ export function RecentAuditActivity({ tenantId, loading }: RecentAuditActivityPr
       if (!tenantId) return [];
       const { data, error } = await supabase
         .from('audit_logs')
-        .select('*')
+        .select('id, action, resource_type, created_at')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
         .limit(10);

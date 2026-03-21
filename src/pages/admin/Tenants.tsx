@@ -44,7 +44,7 @@ export default function Tenants() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tenants')
-        .select('*')
+        .select('id, name, slug, plan, status, created_at, subscription_status, max_agents, max_users')
         .order('created_at', { ascending: false });
       
       if (error) throw error;

@@ -28,7 +28,7 @@ export default function Invites() {
       // Use invites_safe view to avoid exposing token field
       const { data, error } = await supabase
         .from('invites_safe')
-        .select('*')
+        .select('id, email, role, status, tenant_id, invited_by, created_at, expires_at, accepted_at')
         .order('created_at', { ascending: false });
       
       if (error) throw error;

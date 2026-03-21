@@ -34,7 +34,7 @@ export function VendorRiskRegistry() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendor_risk_registry')
-        .select('*')
+        .select('id, tenant_id, vendor_name, vendor_type, criticality, status, risk_score, services_provided, data_shared, compliance_certifications, contract_start_date, contract_end_date, last_review_date, next_review_date, risk_notes, created_at, updated_at')
         .eq('tenant_id', tenant!.id)
         .order('criticality', { ascending: false });
       

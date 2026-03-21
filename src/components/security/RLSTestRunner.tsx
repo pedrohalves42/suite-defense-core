@@ -29,7 +29,7 @@ export function RLSTestRunner() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('rls_test_results')
-        .select('*')
+        .select('id, test_name, test_run_id, table_name, passed, failure_reason, tested_at')
         .order('tested_at', { ascending: false })
         .limit(10);
       

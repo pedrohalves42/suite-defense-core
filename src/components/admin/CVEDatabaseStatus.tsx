@@ -41,7 +41,7 @@ export default function CVEDatabaseStatus() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cve_sync_status')
-        .select('*')
+        .select('id, sync_status, last_sync_at, total_cves_synced, error_message, last_modified_date, created_at, updated_at')
         .order('last_sync_at', { ascending: false })
         .limit(1)
         .maybeSingle();

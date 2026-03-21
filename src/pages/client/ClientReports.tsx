@@ -28,7 +28,7 @@ export const ClientReports = () => {
 
       const { data, error } = await supabase
         .from('generated_reports')
-        .select('*')
+        .select('id, tenant_id, report_type, risk_level, risk_score, created_at, expires_at, file_url, agent_name, commercial_priority')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
         .limit(50);
