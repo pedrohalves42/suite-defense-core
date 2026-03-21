@@ -48,7 +48,7 @@ export default function Automations() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('scheduled_jobs')
-        .select('*')
+        .select('id, tenant_id, name, description, cron_expression, is_enabled, last_run_at, next_run_at, status, created_at')
         .eq('tenant_id', tenant!.id)
         .order('name');
       if (error) throw error;
