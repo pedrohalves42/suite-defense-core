@@ -33,7 +33,7 @@ export interface HealthCheckInput {
 export function isAgentHealthy(input: HealthCheckInput): boolean {
   // Falha explícita se estado ausente
   if (!input.state) {
-    console.warn('[health-rules] isAgentHealthy called without state - returning unhealthy');
+    logger.warn('[health-rules] isAgentHealthy called without state - returning unhealthy');
     return false;
   }
 
