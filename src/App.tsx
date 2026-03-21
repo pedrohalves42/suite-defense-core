@@ -170,7 +170,7 @@ const App = () => (
             <Route path="/checkout/success" element={<CheckoutSuccess />} />
             <Route path="/checkout/cancel" element={<CheckoutCancel />} />
             <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/privacy" element={<Privacidade />} />
             <Route path="/privacidade" element={<Privacidade />} />
             <Route path="/verificar/:laudoId" element={<VerificarLaudo />} />
             <Route path="/verificar-laudo" element={<VerificarLaudo />} />
