@@ -80,7 +80,7 @@ export const useSLOData = () => {
 
       const { data, error } = await supabase
         .from('slo_alerts')
-        .select('id, tenant_id, slo_id, alert_type, message, severity, acknowledged, created_at')
+        .select('id, tenant_id, slo_id, measurement_id, message, severity, acknowledged, created_at')
         .eq('tenant_id', tenant.id)
         .eq('acknowledged', false)
         .order('created_at', { ascending: false });

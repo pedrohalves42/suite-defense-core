@@ -81,7 +81,7 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
       // Buscar últimos decision_events
       const { data: decisionEvents } = await supabase
         .from('decision_events')
-        .select('id, agent_id, decision_type, reason, created_at, metadata')
+        .select('id, agent_id, decision_type, rule_code, action, evidence, created_at')
         .eq('agent_id', agentId)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -97,7 +97,7 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
       // Buscar últimos safe_mode_events
       const { data: safeModeEvents } = await supabase
         .from('agent_safe_mode_events')
-        .select('id, agent_id, trigger_reason, entered_at, exited_at, created_at')
+        .select('id, agent_id, reason, entered_at, resolved_at, resolved_by, created_at')
         .eq('agent_id', agentId)
         .order('created_at', { ascending: false })
         .limit(5);
