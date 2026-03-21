@@ -44,7 +44,7 @@ export const useSLOData = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('slo_definitions')
-        .select('*')
+        .select('id, name, description, metric_type, target_value, warning_threshold, critical_threshold, measurement_window, is_active, created_at')
         .eq('is_active', true)
         .order('name');
 
