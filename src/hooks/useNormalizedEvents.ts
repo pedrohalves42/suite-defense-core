@@ -87,7 +87,7 @@ export function useRetentionConfig() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('telemetry_retention_config')
-        .select('*')
+        .select('id, tenant_id, event_category, retention_days, is_enabled, updated_at')
         .eq('tenant_id', activeTenant!.id)
         .order('event_category');
       if (error) throw error;
