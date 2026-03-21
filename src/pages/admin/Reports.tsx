@@ -98,9 +98,9 @@ export default function Reports() {
       });
 
       if (error) throw error;
-      return ((data || []) as any[])
-        .filter((a: any) => a.status === 'active')
-        .map((a: any) => ({ id: a.id, agent_name: a.agent_name, status: a.status } as Agent))
+      return ((data || []) as unknown as RpcAgentRow[])
+        .filter((a) => a.status === 'active')
+        .map((a) => ({ id: a.id, agent_name: a.agent_name, status: a.status } as Agent))
         .sort((a, b) => a.agent_name.localeCompare(b.agent_name));
     },
     enabled: !tenantLoading && !!activeTenant?.id,

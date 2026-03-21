@@ -109,8 +109,8 @@ export default function DiagnosticsCenter() {
       });
 
       if (error) throw error;
-      return ((data || []) as any[])
-        .sort((a: any, b: any) => {
+      return ((data || []) as unknown as RpcAgentRow[])
+        .sort((a, b) => {
           if (!a.last_heartbeat && !b.last_heartbeat) return 0;
           if (!a.last_heartbeat) return 1;
           if (!b.last_heartbeat) return -1;

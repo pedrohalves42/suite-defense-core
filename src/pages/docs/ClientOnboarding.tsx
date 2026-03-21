@@ -71,7 +71,7 @@ const ClientOnboarding = () => {
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       setHasOnlineAgent(agentsList.some((a) => a.last_heartbeat && a.last_heartbeat > fiveMinutesAgo));
     } catch (error) {
-      console.error('Error fetching agent stats:', error);
+      logger.error('Error fetching agent stats:', error);
     }
   };
 
