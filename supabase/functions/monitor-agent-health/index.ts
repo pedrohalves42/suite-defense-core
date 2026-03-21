@@ -204,17 +204,21 @@ Deno.serve(async (req) => {
           .limit(1)
           .maybeSingle();
 
-        // Send email alert if enabled
+        // Send email alert via notification-dispatcher (consolidated from send-alert-email)
         if (settings?.enable_email_alerts && settings?.alert_email) {
-          await supabase.functions.invoke('send-alert-email', {
+          await supabase.functions.invoke('notification-dispatcher', {
             headers: {
               'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
             },
             body: {
-              tenantId,
-              alertType: 'jobs_failed',
+              channel: 'email',
+              type: 'alert',
+              severity: 'critical',
+              tenant_id: tenantId,
+              recipients: [settings.alert_email],
               subject: `[ERROR] ${jobs.length} Job(s) Falharam`,
-              data: {
+              message: `${jobs.length} job(s) falharam e precisam de atenção.`,
+              metadata: {
                 failedCount: jobs.length,
                 jobs: jobs.map((j: any) => ({
                   id: j.id,
