@@ -52,7 +52,7 @@ export function useConfidenceGapHistory() {
       
       const { data, error } = await supabase
         .from('audit_confidence_gaps')
-        .select('*')
+        .select('id, tenant_id, audit_id, red_team_id, ana_score, red_score, confidence_gap, health_status, previous_gap, gap_delta, alert_triggered, alert_reason, created_at')
         .eq('tenant_id', activeTenant.id)
         .order('created_at', { ascending: false })
         .limit(30);
