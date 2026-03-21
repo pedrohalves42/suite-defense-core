@@ -30,7 +30,7 @@ export default function SystemLogs() {
     queryFn: async () => {
       let query = supabase
         .from('system_alerts')
-        .select('id, tenant_id, title, message, severity, alert_type, source, status, acknowledged, acknowledged_at, resolved_at, created_at');
+        .select('id, tenant_id, title, message, severity, alert_type, source, status, acknowledged, acknowledged_at, resolved, resolved_at, email_sent, email_sent_at, details, created_at');
       
       // Filter by tenant if not super admin
       if (!isSuperAdmin && tenant?.id) {
