@@ -23,7 +23,7 @@ export function useTaskEvents(taskId: string | null) {
 
       const { data, error } = await supabase
         .from('task_events')
-        .select('id, task_id, event_type, actor_id, actor_name, old_value, new_value, comment, created_at')
+        .select('id, task_id, tenant_id, action, actor_id, actor_type, metadata, created_at')
         .eq('task_id', taskId)
         .order('created_at', { ascending: true });
 

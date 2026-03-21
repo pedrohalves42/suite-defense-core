@@ -63,7 +63,7 @@ export default function Automations() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('playbooks')
-        .select('id, tenant_id, name, description, trigger_type, is_enabled, last_triggered_at, execution_count, created_at')
+        .select('id, tenant_id, name, description, trigger_type, execution_mode, is_enabled, severity, require_approval, cooldown_minutes, version, created_at, updated_at')
         .eq('tenant_id', tenant!.id)
         .order('name');
       if (error) throw error;

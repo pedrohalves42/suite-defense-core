@@ -28,7 +28,7 @@ export function useInsightFeedback(insightId?: string) {
       
       const { data, error } = await supabase
         .from('ai_insight_feedback')
-        .select('id, insight_id, tenant_id, feedback_type, comment, created_by, created_at')
+        .select('id, insight_id, tenant_id, user_id, feedback_type, comment, created_at')
         .eq('insight_id', insightId)
         .maybeSingle();
       

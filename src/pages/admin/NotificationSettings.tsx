@@ -231,7 +231,7 @@ export default function NotificationSettings() {
         if (channelIds.length > 0) {
           const { data: prefsData } = await supabase
             .from('notification_preferences')
-            .select('id, channel_id, event_type, is_enabled, created_at')
+            .select('id, channel_id, tenant_id, alert_types, severity_filter, enabled, created_at')
             .in('channel_id', channelIds);
           
           if (prefsData) {

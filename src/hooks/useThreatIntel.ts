@@ -81,7 +81,7 @@ export function useThreatFeedSyncLog() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('threat_feed_sync_log')
-        .select('id, tenant_id, feed_name, status, records_fetched, records_added, error_message, created_at')
+        .select('id, tenant_id, feed_source, status, indicators_fetched, indicators_new, indicators_updated, error_message, sync_started_at, sync_completed_at, created_at')
         .eq('tenant_id', tenant!.id)
         .order('created_at', { ascending: false })
         .limit(20);
