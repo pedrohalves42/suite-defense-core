@@ -159,7 +159,7 @@ export const NotificationSystem = () => {
           filter: `tenant_id=eq.${tenant.id}`
         },
         (payload) => {
-          const scan = payload.new as any;
+          const scan = payload.new as RealtimeVirusScan;
           
           // Only notify for malicious files
           if (scan.is_malicious && scan.positives > 0) {
