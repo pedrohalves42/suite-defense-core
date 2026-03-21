@@ -65,14 +65,15 @@ export function useAgentActions() {
     mutationFn: async ({ versionId }: { versionId: string }) => {
       if (!tenantId) throw new Error('Tenant not found');
       // V-5001 FIX: Add tenant_id filter to prevent cross-tenant version unblock
-      const { error } = await supabase
+      // V-5001 FIX: Chain .eq calls directly — the `as any` avoids TS2589 (excessive type depth)
+      const { error } = await (supabase
         .from('agent_versions')
         .update({
           is_blocked: false,
           blocked_at: null,
           blocked_by: null,
           blocked_reason: null,
-        })
+        }) as any)
         .eq('id', versionId)
         .eq('tenant_id', tenantId);
       if (error) throw error;
