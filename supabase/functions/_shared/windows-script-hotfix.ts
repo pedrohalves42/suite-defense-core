@@ -550,24 +550,38 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
     }
   }
 
-  // HOTFIX 22: CNG key creation "Object already exists" — delete existing container before creating
-  // The current code uses $null name (ephemeral) but some Windows versions still persist it
+  // HOTFIX 22: CNG key creation "Object already exists" — use OverwriteExistingKey flag
+  // The original code uses $null name (ephemeral) but some Windows versions still persist it.
+  // Adding OverwriteExistingKey eliminates the 3 failed attempts on every boot.
   if (content.includes('CngKey]::Create(') && !content.includes('HOTFIX-CNG-CLEANUP')) {
-    content = content.replace(
-      /\$cngKey = \[System\.Security\.Cryptography\.CngKey\]::Create\(\s*\n\s*\[System\.Security\.Cryptography\.CngAlgorithm\]::ECDsaP256,\s*\n\s*\$null,\s*# No name = ephemeral, no conflict\s*\n\s*\$creationParams\s*\)/g,
-      `# HOTFIX-CNG-CLEANUP: Delete any leftover CNG containers before creating
-                try {
-                    $existingKey = [System.Security.Cryptography.CngKey]::Open("CyberShieldECDSA_$env:COMPUTERNAME", [System.Security.Cryptography.CngProvider]::MicrosoftSoftwareKeyStorageProvider)
-                    if ($existingKey) { $existingKey.Delete(); $existingKey.Dispose() }
-                    Write-Log "[KEYS] Cleaned up existing CNG container" "DEBUG"
-                } catch { <# Container doesn't exist, that's fine #> }
+    // First try: match the original pattern with $null name and comment
+    let updatedCng = content.replace(
+      /\$cngKey = \[System\.Security\.Cryptography\.CngKey\]::Create\(\s*\n\s*\[System\.Security\.Cryptography\.CngAlgorithm\]::ECDsaP256,\s*\n\s*\$null,\s*(?:# No name = ephemeral, no conflict|# Ephemeral key \(HOTFIX-CNG-CLEANUP\))\s*\n\s*\$creationParams\s*\)/g,
+      `# HOTFIX-CNG-CLEANUP: OverwriteExistingKey prevents "Object already exists" errors
+                $creationParams.KeyCreationOptions = [System.Security.Cryptography.CngKeyCreationOptions]::OverwriteExistingKey
                 $cngKey = [System.Security.Cryptography.CngKey]::Create(
                     [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
                     $null,  # Ephemeral key (HOTFIX-CNG-CLEANUP)
                     $creationParams
                 )`
     );
-    reasons.push('cng_cleanup_fix');
+    // Also match scripts that already have the old cleanup try/catch block
+    if (updatedCng === content) {
+      updatedCng = content.replace(
+        /# HOTFIX-CNG-CLEANUP: Delete any leftover CNG containers before creating[\s\S]*?\$cngKey = \[System\.Security\.Cryptography\.CngKey\]::Create\(\s*\n\s*\[System\.Security\.Cryptography\.CngAlgorithm\]::ECDsaP256,\s*\n\s*\$null,\s*# Ephemeral key \(HOTFIX-CNG-CLEANUP\)\s*\n\s*\$creationParams\s*\)/g,
+        `# HOTFIX-CNG-CLEANUP: OverwriteExistingKey prevents "Object already exists" errors
+                $creationParams.KeyCreationOptions = [System.Security.Cryptography.CngKeyCreationOptions]::OverwriteExistingKey
+                $cngKey = [System.Security.Cryptography.CngKey]::Create(
+                    [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
+                    $null,  # Ephemeral key (HOTFIX-CNG-CLEANUP)
+                    $creationParams
+                )`
+      );
+    }
+    if (updatedCng !== content) {
+      content = updatedCng;
+      reasons.push('cng_cleanup_fix');
+    }
   }
 
   // HOTFIX 23: ConvertTo-Json body serialization mismatch between HMAC signing and HTTP body
@@ -1417,8 +1431,9 @@ try {
     }
 
     // Replace the registry telemetry block to include snapshot logic
+    // Match with optional blank line between $currentRegSnapshot assignment and if ($Global:EDRInitialized)
     const registryHotfix = content.replace(
-      /# ── 4\. REGISTRY TELEMETRY \(persistence keys\) ──\s*\r?\n\s*try \{[\s\S]*?\$currentRegSnapshot\[\$snapKey\] = @\{ key_path = \$regKey; value_name = \$prop\.Name; value_data = \[string\]\$prop\.Value \}\s*\r?\n\s*\r?\n\s*if \(\$Global:EDRInitialized\) \{/m,
+      /# ── 4\. REGISTRY TELEMETRY \(persistence keys\) ──\s*\r?\n\s*try \{[\s\S]*?\$currentRegSnapshot\[\$snapKey\] = @\{ key_path = \$regKey; value_name = \$prop\.Name; value_data = \[string\]\$prop\.Value \}\s*\r?\n\s*(?:\r?\n\s*)?if \(\$Global:EDRInitialized\) \{/m,
       `# ── 4. REGISTRY TELEMETRY (persistence keys) ── # HOTFIX-REGISTRY-SNAPSHOT
     try {
         $currentRegSnapshot = @{}
@@ -1457,6 +1472,46 @@ try {
       content = registryHotfix;
       reasons.push('registry_snapshot_hotfix');
     }
+  }
+
+  // HOTFIX 41: USB whitelisted devices should NOT count as threats
+  // The return of Test-UsbDevices includes ALL USB drives in count (including whitelisted).
+  // Fix: (a) Modify the return to track unauthorized_count separately
+  //      (b) Modify the caller to use unauthorized_count instead of count
+  if (
+    content.includes('Test-UsbDevices') &&
+    !content.includes('HOTFIX-USB-WHITELIST-NOISE')
+  ) {
+    // Part A: Add unauthorized_count tracking inside Test-UsbDevices
+    // Insert a counter variable after whitelist initialization
+    if (content.includes('$whitelistChanged = $false') && !content.includes('$usbUnauthorizedCount')) {
+      content = content.replace(
+        /\$whitelistChanged = \$false/,
+        '$whitelistChanged = $false\n            $usbUnauthorizedCount = 0 # HOTFIX-USB-WHITELIST-NOISE'
+      );
+    }
+    
+    // Part B: Increment counter for non-whitelisted devices (before the Show-SecurityToast call)
+    if (content.includes('Show-SecurityToast') && content.includes('USB conectado:')) {
+      content = content.replace(
+        /(\s+)Show-SecurityToast\s*`\s*\n\s*-Title "CyberShield - Dispositivo USB Detectado"/,
+        '$1$usbUnauthorizedCount++ # HOTFIX-USB-WHITELIST-NOISE\n$1Show-SecurityToast `\n                    -Title "CyberShield - Dispositivo USB Detectado"'
+      );
+    }
+    
+    // Part C: Add unauthorized_count to the return value
+    content = content.replace(
+      /return @\{ status = "detected"; count = @\(\$usbDrives\)\.Count; devices = @\(\$usbDrives\)/g,
+      'return @{ status = "detected"; count = @($usbDrives).Count; unauthorized_count = $usbUnauthorizedCount; devices = @($usbDrives)'
+    );
+    
+    // Part D: Modify the caller to use unauthorized_count instead of count
+    content = content.replace(
+      /if \(\$results\.usb -is \[hashtable\] -and \$results\.usb\.status -eq "detected"\)\s*(?:<#[^#]*#>\s*)?\{\s*\$results\.threats_found \+= \$results\.usb\.count\s*\}/g,
+      `if ($results.usb -is [hashtable] -and $results.usb.status -eq "detected" -and $results.usb.unauthorized_count -gt 0) { $results.threats_found += $results.usb.unauthorized_count } <# HOTFIX-USB-WHITELIST-NOISE #>`
+    );
+    
+    reasons.push('usb_whitelist_noise_reduction');
   }
 
   return { content, changed: reasons.length > 0, reasons };
