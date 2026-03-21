@@ -51,7 +51,7 @@ export function InsightActionPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ai_insights')
-        .select('*')
+        .select('id, tenant_id, insight_type, title, description, severity, recommendation, category, confidence_score, acknowledged, status, created_at')
         .eq('tenant_id', tenantId)
         .eq('acknowledged', false)
         .order('severity', { ascending: true })

@@ -45,6 +45,7 @@ export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
       if (error) throw error;
       
       // Map RPC jsonb response to Agent interface
+      // RPC returns untyped JSON — cast is required
       return ((data || []) as any[]).map((agent): Agent => ({
         id: agent.id,
         agent_name: agent.agent_name,

@@ -98,7 +98,7 @@ export const useAutoRemediation = () => {
       if (!tenant?.id) throw new Error('Tenant not found');
       const { data: action, error: fetchErr } = await supabase
         .from('auto_remediation_actions')
-        .select('*')
+        .select('id, tenant_id, agent_id, agent_name, action_type, status, trigger_source, trigger_details, requires_approval, approved_by, approved_at, executed_at, created_at')
         .eq('id', actionId)
         .eq('tenant_id', tenant.id)
         .maybeSingle();

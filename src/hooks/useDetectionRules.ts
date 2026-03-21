@@ -14,7 +14,7 @@ export function useDetectionRules() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('detection_rules')
-        .select('*')
+        .select('id, tenant_id, rule_name, description, severity, event_type, is_enabled, mitre_technique_id, mitre_tactic, mitre_technique_name, confidence_base, tags, created_at, updated_at')
         .or(`tenant_id.is.null,tenant_id.eq.${activeTenant!.id}`)
         .eq('is_enabled', true)
         .order('severity', { ascending: false });
@@ -31,7 +31,7 @@ export function useMitreAttackTechniques() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('mitre_attack_techniques')
-        .select('*')
+        .select('technique_id, technique_name, tactic, description, sub_technique_of, platforms, url')
         .order('technique_id');
       if (error) throw error;
       return data || [];

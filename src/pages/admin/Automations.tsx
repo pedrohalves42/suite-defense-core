@@ -48,7 +48,7 @@ export default function Automations() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('scheduled_jobs')
-        .select('*')
+        .select('id, tenant_id, name, description, cron_expr, job_type, enabled, last_run_at, next_run_at, created_at, updated_at')
         .eq('tenant_id', tenant!.id)
         .order('name');
       if (error) throw error;
@@ -63,7 +63,7 @@ export default function Automations() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('playbooks')
-        .select('*')
+        .select('id, tenant_id, name, description, trigger_type, execution_mode, is_enabled, severity, require_approval, cooldown_minutes, version, created_at, updated_at')
         .eq('tenant_id', tenant!.id)
         .order('name');
       if (error) throw error;

@@ -65,16 +65,17 @@ export function useAgentActions() {
     mutationFn: async ({ versionId }: { versionId: string }) => {
       if (!tenantId) throw new Error('Tenant not found');
       // V-5001 FIX: Add tenant_id filter to prevent cross-tenant version unblock
-      const query = supabase
+      // V-5001 FIX: Chain .eq calls directly — the `as any` avoids TS2589 (excessive type depth)
+      const { error } = await (supabase
         .from('agent_versions')
         .update({
           is_blocked: false,
           blocked_at: null,
           blocked_by: null,
           blocked_reason: null,
-        })
-        .eq('id', versionId);
-      const { error } = await (query as any).eq('tenant_id', tenantId);
+        }) as any)
+        .eq('id', versionId)
+        .eq('tenant_id', tenantId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -97,11 +98,12 @@ export function useAgentActions() {
     mutationFn: async ({ ruleId, isEnabled }: { ruleId: string; isEnabled: boolean }) => {
       if (!tenantId) throw new Error('Tenant not found');
       // V-5002 FIX: Add tenant_id filter to prevent cross-tenant rule toggle
-      const query = supabase
+      // V-5002 FIX: Chain .eq calls directly — the `as any` avoids TS2589 (excessive type depth)
+      const { error } = await (supabase
         .from('decision_rules')
-        .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() })
-        .eq('id', ruleId);
-      const { error } = await (query as any).eq('tenant_id', tenantId);
+        .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() }) as any)
+        .eq('id', ruleId)
+        .eq('tenant_id', tenantId);
       if (error) throw error;
     },
     onSuccess: (_, { isEnabled }) => {

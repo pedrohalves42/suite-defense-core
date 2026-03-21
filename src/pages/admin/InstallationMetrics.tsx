@@ -70,8 +70,8 @@ export default function InstallationMetrics() {
     queryKey: ['agent-installation-metrics'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('agent_installation_metrics' as any)
-        .select('*');
+        .from('agent_installation_metrics' as 'agents')
+        .select('tenant_id, platform, total_generated, total_downloaded, total_copied, total_installed, successful_events, failed_events, avg_install_time_seconds, with_network, without_network, last_event_at');
 
       if (error) throw error;
       return data as unknown as AgentInstallationMetrics[];
@@ -83,8 +83,8 @@ export default function InstallationMetrics() {
     queryKey: ['installation-error-summary'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('installation_error_summary' as any)
-        .select('*')
+        .from('installation_error_summary' as 'agents')
+        .select('tenant_id, platform, event_type, error_message, error_count, last_occurrence')
         .limit(20);
 
       if (error) throw error;
@@ -97,8 +97,8 @@ export default function InstallationMetrics() {
     queryKey: ['installation-health-status'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('installation_health_status' as any)
-        .select('*');
+        .from('installation_health_status' as 'agents')
+        .select('tenant_id, total_agents, active_agents, pending_agents, stuck_agents, activation_rate_pct, window_interval');
 
       if (error) throw error;
       return data as unknown as InstallationHealthStatus[];

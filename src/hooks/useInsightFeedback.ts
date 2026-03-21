@@ -28,7 +28,7 @@ export function useInsightFeedback(insightId?: string) {
       
       const { data, error } = await supabase
         .from('ai_insight_feedback')
-        .select('*')
+        .select('id, insight_id, tenant_id, user_id, feedback_type, comment, created_at')
         .eq('insight_id', insightId)
         .maybeSingle();
       
@@ -135,7 +135,7 @@ export function useFeedbackQualityMetrics() {
       // Query the aggregated view — uses manual type since view is not in generated schema
       const { data, error } = await supabase
         .from('insight_feedback_quality' as 'ai_insight_feedback')
-        .select('*')
+        .select('tenant_id, insight_type, total_feedback, useful_count, noise_count, false_positive_count, quality_score, last_feedback_at')
         .eq('tenant_id', activeTenant.id);
 
       if (error) {

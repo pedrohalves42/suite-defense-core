@@ -30,14 +30,14 @@ export function useThreatIndicators(options?: { limit?: number; source?: string 
     queryFn: async () => {
       let query = supabase
         .from('threat_indicators')
-        .select('*')
+        .select('id, tenant_id, indicator_type, indicator_value, source, severity, confidence_score, is_active, first_seen_at, last_seen_at, tags, created_at')
         .eq('tenant_id', tenant!.id)
         .eq('is_active', true)
         .order('last_seen_at', { ascending: false })
         .limit(limit);
 
       if (options?.source) {
-        query = query.eq('source', options.source as any);
+        query = query.eq('source', options.source as "abuse_ch_feodotracker" | "abuse_ch_malwarebazaar" | "abuse_ch_urlhaus" | "alienvault_otx" | "cybershield_network" | "internal" | "manual" | "virustotal");
       }
 
       const { data, error } = await query;
@@ -81,7 +81,7 @@ export function useThreatFeedSyncLog() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('threat_feed_sync_log')
-        .select('*')
+        .select('id, tenant_id, feed_source, status, indicators_fetched, indicators_new, indicators_updated, error_message, sync_started_at, sync_completed_at, created_at')
         .eq('tenant_id', tenant!.id)
         .order('created_at', { ascending: false })
         .limit(20);

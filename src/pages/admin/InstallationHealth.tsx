@@ -62,6 +62,7 @@ export default function InstallationHealth() {
       }
       // Filter problematic agents client-side
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      // RPC returns untyped JSON — cast is required
       const agents = ((rpcData || []) as any[]).filter((a: any) =>
         (a.status === 'pending' || !a.last_heartbeat) &&
         a.enrolled_at && a.enrolled_at >= twentyFourHoursAgo

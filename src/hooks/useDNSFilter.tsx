@@ -213,9 +213,9 @@ export function useDNSFilter() {
         },
       }));
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from('jobs')
-        .insert(jobs as any)
+        .insert(jobs as any) as any)
         .select('id');
 
       if (error) throw error;
@@ -225,7 +225,7 @@ export function useDNSFilter() {
       queryClient.invalidateQueries({ queryKey: ['dns-filter-status'] });
       toast.success(`Instalação do DNS Filter agendada para ${result.jobsCreated} computador(es)`);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao agendar instalação: ${error.message}`);
     },
   });
@@ -244,7 +244,7 @@ export function useDNSFilter() {
       queryClient.invalidateQueries({ queryKey: ['dns-filter-status'] });
       toast.success(data.message || `Sincronização agendada para ${data.jobs_created} computador(es)`);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao sincronizar: ${error.message}`);
     },
   });

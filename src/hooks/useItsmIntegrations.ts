@@ -13,7 +13,7 @@ export const useItsmIntegrations = () => {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('itsm_integrations')
-        .select('*')
+        .select('id, tenant_id, provider, display_name, base_url, is_active, project_key, default_issue_type, default_priority, auto_create_on_alert, auto_create_severity_threshold, created_at, updated_at')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -28,7 +28,7 @@ export const useItsmIntegrations = () => {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('itsm_tickets')
-        .select('*')
+        .select('id, tenant_id, integration_id, provider, external_ticket_id, external_ticket_key, external_ticket_url, summary, description, status, external_status, priority, source_type, source_id, agent_id, agent_name, created_at, updated_at')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
         .limit(50);
