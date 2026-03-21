@@ -97,16 +97,17 @@ Deno.serve(async (req) => {
             : 'Atencao: Voce esta proximo do limite de quota.',
         };
 
-        // Call send-system-alert edge function
-        const { data: alertData, error: alertError } = await supabase.functions.invoke('send-system-alert', {
+        // Call notification-dispatcher (consolidated from send-system-alert)
+        const { data: alertData, error: alertError } = await supabase.functions.invoke('notification-dispatcher', {
           headers: {
             'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
           },
           body: {
-            event_type: 'quota_warning',
-            severity: alert.usage_percentage >= 100 ? 'critical' : 'medium',
+            channel: 'email',
+            type: 'system',
+            severity: alert.usage_percentage >= 100 ? 'critical' : 'warning',
             message,
-            details,
+            metadata: details,
             tenant_id: alert.tenant_id
           }
         });

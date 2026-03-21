@@ -117,17 +117,22 @@ Deno.serve(async (req) => {
           .limit(1)
           .maybeSingle();
 
-        // Send email alert if enabled
+        // Send email alert via notification-dispatcher (consolidated from send-alert-email)
         if (settings?.enable_email_alerts && settings?.alert_email) {
-          await supabase.functions.invoke('send-alert-email', {
+          await supabase.functions.invoke('notification-dispatcher', {
             headers: {
               'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
             },
             body: {
-              tenantId: agent.tenant_id,
-              alertType: 'agent_offline',
+              channel: 'email',
+              type: 'health',
+              severity: 'warning',
+              tenant_id: agent.tenant_id,
+              recipients: [settings.alert_email],
               subject: `[WARN] Agente Offline: ${agent.agent_name}`,
-              data: {
+              message: `Agente ${agent.agent_name} está offline há ${agent.minutesOffline} minutos.`,
+              agent_name: agent.agent_name,
+              metadata: {
                 agentName: agent.agent_name,
                 minutesOffline: agent.minutesOffline,
                 lastHeartbeat: agent.last_heartbeat
