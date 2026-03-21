@@ -10,6 +10,7 @@
 
 import { type AgentState } from '@/lib/agent-state-machine';
 import { type DiagnosticSummary } from '@/types/diagnostic';
+import { logger } from '@/lib/logger';
 
 /**
  * Input estruturado para verificação de saúde.
