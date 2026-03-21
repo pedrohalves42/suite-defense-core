@@ -61,7 +61,7 @@ export default function RateLimitingStats() {
       
       // Garantir que sempre retornamos um objeto válido
       if (!stats || !stats.totals) {
-        console.warn('Rate limit stats response is empty or invalid:', data);
+        // Rate limit stats response is empty or invalid — return defaults
         return {
           summary: [],
           top_blocked: [],

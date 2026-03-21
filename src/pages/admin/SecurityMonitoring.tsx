@@ -77,22 +77,16 @@ export default function SecurityMonitoring() {
       const since = getTimeRangeDate().toISOString();
       const sb = supabase as any;
 
-      console.log('[SecurityMonitoring] Fetching data for tenant:', tenant.id, 'since:', since);
-
       const [rateLimitsRes, failedLoginsRes, blockedIpsRes, securityEventsRes, agentsRes, blockedAttemptsRes, evidenceRes, alertsRes] = await Promise.all([
-        sb.from('rate_limits').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('window_start', since).not('blocked_until', 'is', null),
+        sb.from('rate_limits').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('window_start', since).not('blocked_until', 'is', null),
         sb.from('failed_login_attempts').select('ip_address, created_at').eq('tenant_id', tenant.id).gte('created_at', since),
-        sb.from('ip_blocklist').select('*').eq('tenant_id', tenant.id).gte('blocked_until', new Date().toISOString()).order('created_at', { ascending: false }).limit(20),
-        sb.from('security_logs').select('*').eq('tenant_id', tenant.id).gte('created_at', since).order('created_at', { ascending: false }).limit(50),
+        sb.from('ip_blocklist').select('id, ip_address, reason, blocked_until, created_at').eq('tenant_id', tenant.id).gte('blocked_until', new Date().toISOString()).order('created_at', { ascending: false }).limit(20),
+        sb.from('security_logs').select('id, attack_type, severity, ip_address, endpoint, details, created_at, blocked').eq('tenant_id', tenant.id).gte('created_at', since).order('created_at', { ascending: false }).limit(50),
         supabase.rpc('get_agents_list', { p_tenant_id: tenant.id, p_include_archived: false }),
         sb.from('blocked_access_attempts').select('id, agent_name, domain, attempted_at, blocked_by').eq('tenant_id', tenant.id).gte('attempted_at', since).order('attempted_at', { ascending: false }).limit(50),
         sb.from('agent_evidence_logs').select('id, event_type, severity, agent_name, created_at, event_data').eq('tenant_id', tenant.id).gte('created_at', since).order('created_at', { ascending: false }).limit(100),
         sb.from('system_alerts').select('id, title, severity, status, alert_type, created_at').eq('tenant_id', tenant.id).eq('resolved', false).order('created_at', { ascending: false }).limit(20),
       ]);
-
-      console.log('[SecurityMonitoring] Evidence logs:', evidenceRes.data?.length, 'error:', evidenceRes.error?.message);
-      console.log('[SecurityMonitoring] Security logs:', securityEventsRes.data?.length, 'error:', securityEventsRes.error?.message);
-      console.log('[SecurityMonitoring] Agents:', agentsRes.data?.length, 'error:', agentsRes.error?.message);
 
       const secLogEvents = (securityEventsRes.data || []) as Array<{
         id: string; attack_type: string; severity: string; ip_address: string;

@@ -132,18 +132,18 @@ export function useFeedbackQualityMetrics() {
     queryFn: async () => {
       if (!activeTenant?.id) return [];
       
-      // Query the aggregated view
+      // Query the aggregated view — uses manual type since view is not in generated schema
       const { data, error } = await supabase
-        .from('insight_feedback_quality' as any)
+        .from('insight_feedback_quality' as 'ai_insight_feedback')
         .select('*')
         .eq('tenant_id', activeTenant.id);
 
       if (error) {
-        logger.debug('insight_feedback_quality view not accessible:', error);
-        return [];
+        logger.debug('insight_feedback_quality view not accessible:', { error: error.message });
+        return [] as import('@/types/views').InsightFeedbackQualityRow[];
       }
 
-      return data || [];
+      return (data || []) as unknown as import('@/types/views').InsightFeedbackQualityRow[];
     },
     enabled: !loading && !!activeTenant?.id,
     staleTime: 120000, // 2 minutes

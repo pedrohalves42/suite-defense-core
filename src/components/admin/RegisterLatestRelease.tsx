@@ -59,12 +59,11 @@ export function RegisterLatestRelease() {
       if (!storageError && fileData) {
         const content = await fileData.text();
         if (content && content.length > 1000 && !content.trimStart().startsWith('<!DOCTYPE')) {
-          console.log(`[RegisterRelease] Loaded ${platform} from storage: ${content.length} chars`);
           return content;
         }
       }
-    } catch (e) {
-      console.warn(`[RegisterRelease] Storage fallback for ${platform}:`, e);
+    } catch {
+      // Storage fallback failed — continue to next strategy
     }
 
     // Strategy 2: Public URL (local dev only)
