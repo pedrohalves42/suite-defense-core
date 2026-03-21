@@ -1475,21 +1475,42 @@ try {
   }
 
   // HOTFIX 41: USB whitelisted devices should NOT count as threats
-  // When Test-UsbDevices detects a USB but it's already whitelisted, status is still "detected"
-  // but the count includes whitelisted devices, inflating threats_found
+  // The return of Test-UsbDevices includes ALL USB drives in count (including whitelisted).
+  // Fix: (a) Modify the return to track unauthorized_count separately
+  //      (b) Modify the caller to use unauthorized_count instead of count
   if (
-    content.includes('$results.usb.count') &&
-    content.includes('threats_found') &&
+    content.includes('Test-UsbDevices') &&
     !content.includes('HOTFIX-USB-WHITELIST-NOISE')
   ) {
+    // Part A: Add unauthorized_count tracking inside Test-UsbDevices
+    // Insert a counter variable after whitelist initialization
+    if (content.includes('$whitelistChanged = $false') && !content.includes('$usbUnauthorizedCount')) {
+      content = content.replace(
+        /\$whitelistChanged = \$false/,
+        '$whitelistChanged = $false\n            $usbUnauthorizedCount = 0 # HOTFIX-USB-WHITELIST-NOISE'
+      );
+    }
+    
+    // Part B: Increment counter for non-whitelisted devices (before the Show-SecurityToast call)
+    if (content.includes('Show-SecurityToast') && content.includes('USB conectado:')) {
+      content = content.replace(
+        /(\s+)Show-SecurityToast\s*`\s*\n\s*-Title "CyberShield - Dispositivo USB Detectado"/,
+        '$1$usbUnauthorizedCount++ # HOTFIX-USB-WHITELIST-NOISE\n$1Show-SecurityToast `\n                    -Title "CyberShield - Dispositivo USB Detectado"'
+      );
+    }
+    
+    // Part C: Add unauthorized_count to the return value
+    content = content.replace(
+      /return @\{ status = "detected"; count = @\(\$usbDrives\)\.Count; devices = @\(\$usbDrives\)/g,
+      'return @{ status = "detected"; count = @($usbDrives).Count; unauthorized_count = $usbUnauthorizedCount; devices = @($usbDrives)'
+    );
+    
+    // Part D: Modify the caller to use unauthorized_count instead of count
     content = content.replace(
       /if \(\$results\.usb -is \[hashtable\] -and \$results\.usb\.status -eq "detected"\)\s*(?:<#[^#]*#>\s*)?\{\s*\$results\.threats_found \+= \$results\.usb\.count\s*\}/g,
-      `if ($results.usb -is [hashtable] -and $results.usb.status -eq "detected") {
-        # HOTFIX-USB-WHITELIST-NOISE: Only count non-whitelisted USBs as threats
-        $usbThreatCount = if ($results.usb.unauthorized_count) { $results.usb.unauthorized_count } elseif ($results.usb.non_whitelisted) { $results.usb.non_whitelisted } else { 0 }
-        if ($usbThreatCount -gt 0) { $results.threats_found += $usbThreatCount }
-    }`
+      `if ($results.usb -is [hashtable] -and $results.usb.status -eq "detected" -and $results.usb.unauthorized_count -gt 0) { $results.threats_found += $results.usb.unauthorized_count } <# HOTFIX-USB-WHITELIST-NOISE #>`
     );
+    
     reasons.push('usb_whitelist_noise_reduction');
   }
 
