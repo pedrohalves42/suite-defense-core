@@ -63,10 +63,10 @@ export default function InstallationHealth() {
       // Filter problematic agents client-side
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       // RPC returns untyped JSON — cast is required
-      const agents = ((rpcData || []) as any[]).filter((a: any) =>
+      const agents = ((rpcData || []) as unknown as RpcAgentRow[]).filter((a) =>
         (a.status === 'pending' || !a.last_heartbeat) &&
         a.enrolled_at && a.enrolled_at >= twentyFourHoursAgo
-      ).sort((a: any, b: any) => (b.enrolled_at || '').localeCompare(a.enrolled_at || ''));
+      ).sort((a, b) => (b.enrolled_at || '').localeCompare(a.enrolled_at || ''));
 
       if (!agentsError) {
         const formatted: ProblematicAgent[] = (agents || []).map((a: any) => ({
