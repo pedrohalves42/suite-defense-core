@@ -50,7 +50,7 @@ export default function AlertResolutionCenter() {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('system_alerts')
-        .select('*')
+        .select('id, tenant_id, title, message, severity, alert_type, source, status, acknowledged, created_at, resolved_at, resolution_notes, agent_id')
         .eq('tenant_id', tenant.id)
         .is('resolved_at', null)
         .order('created_at', { ascending: false });

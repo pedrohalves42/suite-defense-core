@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import type { RpcAgentRow } from '@/types/rpc';
 import { toast } from "sonner";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { logger } from "@/lib/logger";
@@ -72,7 +73,7 @@ const JobCreator = () => {
       });
 
       if (error) throw error;
-      const mapped = ((data || []) as any[]).map((agent): Agent => ({
+      const mapped = ((data || []) as unknown as RpcAgentRow[]).map((agent): Agent => ({
         id: agent.id,
         agent_name: agent.agent_name,
         hostname: agent.hostname,

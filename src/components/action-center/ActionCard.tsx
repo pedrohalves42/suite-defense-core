@@ -40,6 +40,7 @@ import { getSuggestedActions } from '@/lib/insight-action-mapping';
 import { executeInsightAction } from '@/lib/insight-actions';
 import { useTenant } from '@/hooks/useTenant';
 import { EffectivenessBadge } from './EffectivenessBadge';
+import { logger } from '@/lib/logger';
 
 interface ActionCardProps {
   item: ActionItem;
@@ -98,7 +99,7 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
         });
         onExecuted?.();
       } catch (error) {
-        console.error('[ActionCard] Error acknowledging system insight:', error);
+        logger.error('[ActionCard] Error acknowledging system insight:', error);
         hToast.error('Erro ao marcar como revisado');
       }
       return;
@@ -123,7 +124,7 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
         hToast.error(result.message);
       }
     } catch (error) {
-      console.error('Error executing suggested action:', error);
+      logger.error('Error executing suggested action:', error);
       hToast.error('Erro ao executar ação');
     } finally {
       setExecutingAction(null);

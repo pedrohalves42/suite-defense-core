@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export type SystemMode = 'normal' | 'restricted' | 'emergency_stop';
 
@@ -100,7 +101,7 @@ export function useActivateKillSwitch() {
       toast.success(`Sistema alterado para modo: ${modeLabels[variables.mode]}`);
     },
     onError: (error) => {
-      console.error('Error activating kill switch:', error);
+      logger.error('Error activating kill switch:', error);
       toast.error('Erro ao alterar estado do sistema');
     },
   });
@@ -134,7 +135,7 @@ export function useDeactivateKillSwitch() {
       toast.success('Sistema restaurado para operação normal');
     },
     onError: (error) => {
-      console.error('Error deactivating kill switch:', error);
+      logger.error('Error deactivating kill switch:', error);
       toast.error('Erro ao restaurar sistema');
     },
   });

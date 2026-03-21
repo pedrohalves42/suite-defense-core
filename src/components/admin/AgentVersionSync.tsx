@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Check, AlertTriangle, Clock, Copy, Bomb } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { RpcAgentRow } from '@/types/rpc';
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -61,9 +62,9 @@ export function AgentVersionSync({ latestVersions }: AgentVersionSyncProps) {
       });
       
       if (error) throw error;
-      return ((data || []) as any[])
-        .filter((a: any) => a.status === 'active')
-        .map((a: any): Agent => ({
+      return ((data || []) as unknown as RpcAgentRow[])
+        .filter((a) => a.status === 'active')
+        .map((a): Agent => ({
           id: a.id,
           agent_name: a.agent_name,
           agent_version: a.agent_version,

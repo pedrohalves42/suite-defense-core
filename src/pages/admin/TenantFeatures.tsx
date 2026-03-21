@@ -107,7 +107,7 @@ export default function TenantFeatures() {
 
       const { data, error } = await supabase
         .from('tenant_features')
-        .select('*')
+        .select('id, tenant_id, feature_key, enabled, metadata, quota_limit, quota_used, quota_warning_threshold, created_at, updated_at')
         .eq('tenant_id', tenant.id)
         .order('feature_key');
 

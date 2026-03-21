@@ -6,6 +6,7 @@ import { AlertTriangle, Trash2, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { formatBrazilDateTime } from '@/lib/date-utils';
+import { logger } from '@/lib/logger';
 
 interface OrphanedJob {
   id: string;
@@ -59,7 +60,7 @@ export function OrphanedJobsAlert({ tenantId, onRefresh }: OrphanedJobsAlertProp
 
         setOrphanedJobs(jobs || []);
       } catch (error) {
-        console.error('Error fetching orphaned jobs:', error);
+        logger.error('Error fetching orphaned jobs:', error);
       } finally {
         setLoading(false);
       }

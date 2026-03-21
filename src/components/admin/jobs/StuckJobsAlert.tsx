@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
+import { logger } from '@/lib/logger';
 
 interface StuckJob {
   id: string;
@@ -54,7 +55,7 @@ export function StuckJobsAlert({ stuckJobs, onRefresh }: StuckJobsAlertProps) {
       toast.success('Job cancelado com sucesso');
       onRefresh();
     } catch (error) {
-      console.error('Error cancelling job:', error);
+      logger.error('Error cancelling job:', error);
       toast.error('Erro ao cancelar job');
     } finally {
       setCancellingIds(prev => {
@@ -83,7 +84,7 @@ export function StuckJobsAlert({ stuckJobs, onRefresh }: StuckJobsAlertProps) {
       toast.success(`${jobIds.length} jobs cancelados`);
       onRefresh();
     } catch (error) {
-      console.error('Error cancelling jobs:', error);
+      logger.error('Error cancelling jobs:', error);
       toast.error('Erro ao cancelar jobs');
     } finally {
       setCancellingIds(new Set());

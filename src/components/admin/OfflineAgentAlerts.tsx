@@ -4,12 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Clock, CheckCircle2, Server, Bell, BellOff, Coffee } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import type { RpcAgentRow } from '@/types/rpc';
 import { useTenant } from '@/hooks/useTenant';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/date-utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface OfflineAgent {
   agent_id: string;
@@ -120,7 +122,7 @@ function isWithinBusinessHours(businessHours: BusinessHours): boolean {
     
     return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
   } catch (error) {
-    console.error('Error checking business hours:', error);
+    logger.error('Error checking business hours:', error);
     return true; // Em caso de erro, considera como expediente
   }
 }
@@ -179,10 +181,10 @@ export function OfflineAgentAlerts() {
 
       if (error) throw error;
 
-      const data = ((agentsRaw || []) as any[])
-        .filter((a: any) => a.status === 'active' && a.last_heartbeat && a.last_heartbeat < oneHourAgo)
-        .map((a: any) => ({ id: a.id, agent_name: a.agent_name, last_heartbeat: a.last_heartbeat, hostname: a.hostname, os_type: a.os_type }))
-        .sort((a: any, b: any) => a.last_heartbeat.localeCompare(b.last_heartbeat));
+      const data = ((agentsRaw || []) as unknown as RpcAgentRow[])
+        .filter((a) => a.status === 'active' && a.last_heartbeat && a.last_heartbeat < oneHourAgo)
+        .map((a) => ({ id: a.id, agent_name: a.agent_name, last_heartbeat: a.last_heartbeat!, hostname: a.hostname, os_type: a.os_type }))
+        .sort((a, b) => a.last_heartbeat.localeCompare(b.last_heartbeat));
 
       if (error) throw error;
 

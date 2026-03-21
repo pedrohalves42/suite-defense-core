@@ -98,7 +98,7 @@ export default function SuperAdminTenants() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('subscription_plans')
-        .select('*')
+        .select('id, name, max_users, max_agents, max_devices, max_scans_per_month, price_per_device, stripe_price_id, billing_period, discount_pct, is_active, is_public, is_sales_only, trial_days, created_at')
         .order('max_users', { ascending: true });
       
       if (error) throw error;

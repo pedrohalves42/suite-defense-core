@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { RpcAgentRow } from '@/types/rpc';
 import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -59,7 +60,7 @@ export function SystemCyclesHealthCard() {
             p_include_archived: false
           });
           const threshold = new Date(Date.now() - 86400000).toISOString();
-          const count = ((data || []) as any[]).filter((a: any) => a.last_heartbeat && a.last_heartbeat < threshold).length;
+          const count = ((data || []) as unknown as RpcAgentRow[]).filter((a) => a.last_heartbeat && a.last_heartbeat < threshold).length;
           return { count, error: null };
         })(),
         

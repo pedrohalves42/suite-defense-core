@@ -7,6 +7,7 @@ import { callEdgeFunction } from "@/lib/edge-function-client";
 import { Link } from "react-router-dom";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from '@/lib/logger';
 
 interface GeneratedReport {
   name: string;
@@ -75,7 +76,7 @@ export default function TestComplianceGenerator() {
           totalVulns: vulnCount || 0,
         });
       } catch (err) {
-        console.error("Error loading agents:", err);
+        logger.error("Error loading agents:", err);
       } finally {
         setLoadingAgents(false);
       }
@@ -85,7 +86,7 @@ export default function TestComplianceGenerator() {
 
   const generateAllReports = async () => {
     if (!tenant?.id) {
-      console.error("No tenant found for current user");
+      logger.error("No tenant found for current user");
       return;
     }
     
@@ -123,7 +124,7 @@ export default function TestComplianceGenerator() {
           } : r
         ));
       } catch (error: any) {
-        console.error(`Error generating ${reportConfig.name}:`, error);
+        logger.error(`Error generating ${reportConfig.name}:`, error);
         setReports(prev => prev.map((r, idx) => 
           idx === i ? { ...r, status: "error", error: error.message } : r
         ));

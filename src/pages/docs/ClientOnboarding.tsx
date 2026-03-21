@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import type { RpcAgentRow } from '@/types/rpc';
+import { logger } from '@/lib/logger';
 import { useAuth } from '@/hooks/useAuth';
 
 const ClientOnboarding = () => {
@@ -66,12 +68,12 @@ const ClientOnboarding = () => {
         p_include_archived: false
       });
       
-      const agentsList = (agents || []) as any[];
+      const agentsList = (agents || []) as unknown as RpcAgentRow[];
       setAgentCount(agentsList.length);
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      setHasOnlineAgent(agentsList.some((a: any) => a.last_heartbeat && a.last_heartbeat > fiveMinutesAgo));
+      setHasOnlineAgent(agentsList.some((a) => a.last_heartbeat && a.last_heartbeat > fiveMinutesAgo));
     } catch (error) {
-      console.error('Error fetching agent stats:', error);
+      logger.error('Error fetching agent stats:', error);
     }
   };
 

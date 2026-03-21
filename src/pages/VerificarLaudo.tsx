@@ -16,6 +16,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { UI_LABELS, getComplianceRiskInfo } from '@/lib/ui-dictionary';
+import { logger } from '@/lib/logger';
 
 interface IntegrityResult {
   valid: boolean;
@@ -156,7 +157,7 @@ const VerificarLaudo: React.FC = () => {
             });
 
             if (funcError) {
-              console.error('Verification function error:', funcError);
+              logger.error('Verification function error:', funcError);
               setError('Erro na verificação de integridade');
               setLoading(false);
               return;
@@ -203,7 +204,7 @@ const VerificarLaudo: React.FC = () => {
           });
 
           if (funcError) {
-            console.error('Verification function error:', funcError);
+            logger.error('Verification function error:', funcError);
             setError('Erro na verificação de integridade');
             setLoading(false);
             return;
@@ -219,7 +220,7 @@ const VerificarLaudo: React.FC = () => {
           setVerificationResult(result);
         }
       } catch (err) {
-        console.error('Error:', err);
+        logger.error('Error:', err);
         setError('Erro ao verificar laudo');
       } finally {
         setLoading(false);

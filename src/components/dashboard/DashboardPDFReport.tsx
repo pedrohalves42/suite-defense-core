@@ -3,6 +3,7 @@ import { FileDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { DashboardAgent, DashboardJob } from "@/types/dashboard";
+import { logger } from '@/lib/logger';
 
 interface DashboardPDFReportProps {
   agents: DashboardAgent[];
@@ -171,7 +172,7 @@ export function DashboardPDFReport({
       doc.save(`relatorio-executivo-${now.toISOString().split('T')[0]}.pdf`);
       toast.success('Relatório PDF gerado com sucesso!');
     } catch (err) {
-      console.error('Erro ao gerar PDF:', err);
+      logger.error('Erro ao gerar PDF:', err);
       toast.error('Erro ao gerar relatório PDF');
     } finally {
       setGenerating(false);

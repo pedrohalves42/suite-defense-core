@@ -18,6 +18,7 @@ import { subDays, startOfDay, endOfDay } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 // jsPDF and autoTable imported dynamically to avoid test/build issues
 
 interface EvidenceLog {
@@ -248,7 +249,7 @@ const ComplianceTimeline: React.FC = () => {
       doc.save(`compliance-timeline-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
       toast.success('PDF exportado com sucesso');
     } catch (error) {
-      console.error('Failed to load PDF library:', error);
+      logger.error('Failed to load PDF library:', error);
       toast.error('Erro ao carregar biblioteca de PDF');
     }
   };

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { logger } from '@/lib/logger';
 
 interface IntegrityMetrics {
   supply_chain_score: number;
@@ -65,7 +66,7 @@ export const IntegrityScoreCard = () => {
       }
       setLastChecked(new Date());
     } catch (error) {
-      console.error('[IntegrityScoreCard] Error loading metrics:', error);
+      logger.error('[IntegrityScoreCard] Error loading metrics:', error);
       setMetrics({
         supply_chain_score: 100,
         job_integrity_score: 100,

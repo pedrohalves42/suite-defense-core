@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useTenant } from './useTenant';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 interface OnboardingProgress {
   id: string;
@@ -43,7 +44,7 @@ export const useOnboardingProgress = () => {
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching onboarding progress:', error);
+        logger.error('Error fetching onboarding progress:', error);
       }
 
       if (data) {
@@ -55,7 +56,7 @@ export const useOnboardingProgress = () => {
         });
       }
     } catch (err) {
-      console.error('Error:', err);
+      logger.error('Error:', err);
     } finally {
       setLoading(false);
     }
@@ -81,7 +82,7 @@ export const useOnboardingProgress = () => {
         .single();
 
       if (error) {
-        console.error('Error initializing onboarding:', error);
+        logger.error('Error initializing onboarding:', error);
         return;
       }
 
@@ -92,7 +93,7 @@ export const useOnboardingProgress = () => {
         });
       }
     } catch (err) {
-      console.error('Error:', err);
+      logger.error('Error:', err);
     }
   }, [user, tenant, progress]);
 
@@ -120,7 +121,7 @@ export const useOnboardingProgress = () => {
         .eq('id', progress.id);
 
       if (error) {
-        console.error('Error updating progress:', error);
+        logger.error('Error updating progress:', error);
         return;
       }
 
@@ -131,7 +132,7 @@ export const useOnboardingProgress = () => {
         completed_at: isCompleted ? new Date().toISOString() : null
       } : null);
     } catch (err) {
-      console.error('Error:', err);
+      logger.error('Error:', err);
     }
   }, [user, progress]);
 
@@ -148,13 +149,13 @@ export const useOnboardingProgress = () => {
         .eq('id', progress.id);
 
       if (error) {
-        console.error('Error skipping onboarding:', error);
+        logger.error('Error skipping onboarding:', error);
         return;
       }
 
       setProgress(prev => prev ? { ...prev, skipped: true } : null);
     } catch (err) {
-      console.error('Error:', err);
+      logger.error('Error:', err);
     }
   }, [user, progress]);
 
@@ -174,7 +175,7 @@ export const useOnboardingProgress = () => {
         .eq('id', progress.id);
 
       if (error) {
-        console.error('Error resetting onboarding:', error);
+        logger.error('Error resetting onboarding:', error);
         return;
       }
 
@@ -186,7 +187,7 @@ export const useOnboardingProgress = () => {
         skipped: false
       } : null);
     } catch (err) {
-      console.error('Error:', err);
+      logger.error('Error:', err);
     }
   }, [user, progress]);
 

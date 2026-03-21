@@ -16,6 +16,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { hToast } from '@/lib/humanized-toast';
 import { useTenant } from '@/hooks/useTenant';
+import { logger } from '@/lib/logger';
 
 interface RejectInsightDialogProps {
   open: boolean;
@@ -102,7 +103,7 @@ export function RejectInsightDialog({
       onRejected?.();
     },
     onError: (error) => {
-      console.error('[RejectInsightDialog] Error:', error);
+      logger.error('[RejectInsightDialog] Error:', error);
       hToast.error(error instanceof Error ? error.message : 'Erro ao rejeitar insight');
     },
   });

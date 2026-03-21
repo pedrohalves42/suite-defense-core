@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { RealtimeVirusScan, RealtimeJob } from '@/types/rpc';
 import { toast } from 'sonner';
 import { ShieldAlert, FileWarning, AlertTriangle, Server, ShieldOff, WifiOff } from 'lucide-react';
 import { useTenant } from '@/hooks/useTenant';
@@ -159,7 +160,7 @@ export const NotificationSystem = () => {
           filter: `tenant_id=eq.${tenant.id}`
         },
         (payload) => {
-          const scan = payload.new as any;
+          const scan = payload.new as RealtimeVirusScan;
           
           // Only notify for malicious files
           if (scan.is_malicious && scan.positives > 0) {
@@ -188,7 +189,7 @@ export const NotificationSystem = () => {
           filter: `tenant_id=eq.${tenant.id}`
         },
         (payload) => {
-          const job = payload.new as any;
+          const job = payload.new as RealtimeJob;
           
           if (job.status === 'failed') {
             toast.error(

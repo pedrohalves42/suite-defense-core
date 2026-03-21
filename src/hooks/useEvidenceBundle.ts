@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export interface EvidenceBundle {
   id: string;
@@ -90,7 +91,7 @@ export function useExportEvidenceBundle() {
       toast.success(`Bundle exportado! ID: ${data.auditId}`);
     },
     onError: (error) => {
-      console.error('Failed to export bundle:', error);
+      logger.error('Failed to export bundle:', error);
       toast.error('Erro ao exportar bundle de evidências');
     },
   });

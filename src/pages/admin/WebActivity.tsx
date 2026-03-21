@@ -58,6 +58,7 @@ import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { exportToCSV } from '@/lib/csv-export';
 import { loadLogoForPDF, addLogoToPDF } from '@/lib/pdfLogoHelper';
+import { logger } from '@/lib/logger';
 
 type SortField = 'domain' | 'category' | 'hits' | 'last_seen_at';
 type SortDir = 'asc' | 'desc';
@@ -144,7 +145,7 @@ export default function WebActivity() {
         description: 'Os dados serão atualizados em alguns minutos',
       });
     } catch (err: any) {
-      console.error('Bulk collect error:', err);
+      logger.error('Bulk collect error:', err);
       toast.error('Erro ao disparar coleta', { description: err.message });
     } finally {
       setIsCollectingAll(false);
@@ -382,7 +383,7 @@ export default function WebActivity() {
       doc.save(`relatorio-web-activity-${new Date().toISOString().split('T')[0]}.pdf`);
       toast.success('Relatório PDF exportado com sucesso');
     } catch (err) {
-      console.error('PDF export error:', err);
+      logger.error('PDF export error:', err);
       toast.error('Erro ao exportar PDF');
     }
   };
@@ -452,7 +453,7 @@ export default function WebActivity() {
       doc.save(`relatorio-site-${domain.replace(/[^a-zA-Z0-9.-]/g, '_')}-${new Date().toISOString().split('T')[0]}.pdf`);
       toast.success(`PDF do site ${domain} exportado`);
     } catch (err) {
-      console.error('Site PDF export error:', err);
+      logger.error('Site PDF export error:', err);
       toast.error('Erro ao exportar PDF do site');
     }
   };

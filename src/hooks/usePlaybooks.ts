@@ -205,7 +205,7 @@ export function useExecutePlaybook() {
       queryClient.invalidateQueries({ queryKey: ['playbook-executions-history'] });
     },
     onError: (error) => {
-      console.error('Execute playbook error:', error);
+      logger.error('Execute playbook error:', error);
       toast.error('Erro ao executar playbook');
     },
   });
@@ -243,7 +243,7 @@ export function useIgnorePlaybookExecution() {
       queryClient.invalidateQueries({ queryKey: ['playbook-executions-history'] });
     },
     onError: (error) => {
-      console.error('Ignore playbook error:', error);
+      logger.error('Ignore playbook error:', error);
       toast.error('Erro ao ignorar recomendação');
     },
   });
@@ -291,7 +291,7 @@ export function useTriggerManualPlaybook() {
       queryClient.invalidateQueries({ queryKey: ['playbook-executions-pending'] });
     },
     onError: (error: any) => {
-      console.error('Trigger manual playbook error:', error);
+      logger.error('Trigger manual playbook error:', error);
       toast.error(error.message || 'Erro ao acionar playbook');
     },
   });
@@ -325,7 +325,7 @@ export function useTogglePlaybook() {
       queryClient.invalidateQueries({ queryKey: ['playbooks'] });
     },
     onError: (error) => {
-      console.error('Toggle playbook error:', error);
+      logger.error('Toggle playbook error:', error);
       toast.error('Erro ao alterar status do playbook');
     },
   });

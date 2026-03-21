@@ -15,6 +15,7 @@ import { Progress } from '@/components/ui/progress';
 import { Brain, ThumbsUp, ThumbsDown, AlertTriangle, CheckCircle, MessageSquare, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { logger } from '@/lib/logger';
 
 export interface ApprovalMetrics {
   total_actions: number;
@@ -52,7 +53,7 @@ export function useApprovalMetrics() {
         .eq('tenant_id', tenant.id);
 
       if (insightsError) {
-        console.error('Error fetching AI approval metrics:', insightsError);
+        logger.error('Error fetching AI approval metrics:', insightsError);
         return {
           total_actions: 0,
           approved: 0,

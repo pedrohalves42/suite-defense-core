@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { RpcAgentRow } from '@/types/rpc';
+import { logger } from '@/lib/logger';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,19 +59,19 @@ export default function InstallationHealth() {
         p_include_archived: false,
       });
       if (agentsError) {
-        console.error('Error fetching agents:', agentsError);
+        logger.error('Error fetching agents:', agentsError);
         toast.error('Erro ao carregar agentes problematicos');
       }
       // Filter problematic agents client-side
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       // RPC returns untyped JSON — cast is required
-      const agents = ((rpcData || []) as any[]).filter((a: any) =>
+      const agents = ((rpcData || []) as unknown as RpcAgentRow[]).filter((a) =>
         (a.status === 'pending' || !a.last_heartbeat) &&
         a.enrolled_at && a.enrolled_at >= twentyFourHoursAgo
-      ).sort((a: any, b: any) => (b.enrolled_at || '').localeCompare(a.enrolled_at || ''));
+      ).sort((a, b) => (b.enrolled_at || '').localeCompare(a.enrolled_at || ''));
 
       if (!agentsError) {
-        const formatted: ProblematicAgent[] = (agents || []).map((a: any) => ({
+        const formatted: ProblematicAgent[] = (agents || []).map((a) => ({
           id: a.id,
           agent_name: a.agent_name,
           status: a.status,
@@ -90,7 +92,7 @@ export default function InstallationHealth() {
         .limit(20);
 
       if (jobsError) {
-        console.error('Error fetching jobs:', jobsError);
+        logger.error('Error fetching jobs:', jobsError);
         toast.error('Erro ao carregar jobs travados');
       } else {
         const formatted: StuckJob[] = (jobs || []).map(j => ({
@@ -115,7 +117,7 @@ export default function InstallationHealth() {
         .limit(10);
 
       if (errorsError) {
-        console.error('Error fetching errors:', errorsError);
+        logger.error('Error fetching errors:', errorsError);
         toast.error('Erro ao carregar erros de instalacao');
       } else {
         setRecentErrors(errors || []);
@@ -123,7 +125,7 @@ export default function InstallationHealth() {
 
       setLastUpdate(new Date());
     } catch (err) {
-      console.error('Exception fetching data:', err);
+      logger.error('Exception fetching data:', err);
       toast.error('Erro ao carregar dados');
     } finally {
       setLoading(false);

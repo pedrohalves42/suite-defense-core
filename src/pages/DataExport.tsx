@@ -96,7 +96,7 @@ export default function DataExport() {
         case 'scans': {
           const query = supabase
             .from('virus_scans')
-            .select('*')
+            .select('id, agent_name, file_path, file_hash, is_malicious, positives, total_scans, scanned_at, virustotal_permalink, tenant_id')
             .eq('tenant_id', tenant.id)
             .order('scanned_at', { ascending: false });
 
@@ -122,7 +122,7 @@ export default function DataExport() {
         case 'jobs': {
           const query = supabase
             .from('jobs')
-            .select('*')
+            .select('id, agent_name, type, status, created_at, delivered_at, completed_at, approved, scheduled_at, is_recurring, tenant_id')
             .eq('tenant_id', tenant.id)
             .order('created_at', { ascending: false });
 
@@ -156,7 +156,7 @@ export default function DataExport() {
         case 'quarantine': {
           const query = supabase
             .from('quarantined_files')
-            .select('*')
+            .select('id, agent_name, file_path, file_hash, quarantine_reason, status, quarantined_at, restored_at, tenant_id')
             .eq('tenant_id', tenant.id)
             .order('quarantined_at', { ascending: false });
 
@@ -184,7 +184,7 @@ export default function DataExport() {
         case 'audit_logs': {
           const query = supabase
             .from('audit_logs')
-            .select('*')
+            .select('id, action, resource_type, resource_id, success, ip_address, user_agent, created_at, tenant_id')
             .eq('tenant_id', tenant.id)
             .order('created_at', { ascending: false });
 

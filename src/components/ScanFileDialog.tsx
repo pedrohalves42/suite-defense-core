@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { RpcAgentRow } from '@/types/rpc';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -30,10 +31,10 @@ export function ScanFileDialog() {
       });
       
       if (error) throw error;
-      return ((data || []) as any[])
-        .filter((a: any) => a.status === 'active')
-        .map((a: any) => ({ agent_name: a.agent_name, status: a.status }))
-        .sort((a: any, b: any) => a.agent_name.localeCompare(b.agent_name));
+      return ((data || []) as unknown as RpcAgentRow[])
+        .filter((a) => a.status === 'active')
+        .map((a) => ({ agent_name: a.agent_name, status: a.status }))
+        .sort((a, b) => a.agent_name.localeCompare(b.agent_name));
     },
     enabled: !tenantLoading && !!activeTenant?.id,
   });

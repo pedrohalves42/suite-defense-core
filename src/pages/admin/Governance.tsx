@@ -27,6 +27,7 @@ import { RiskDebtCard } from '@/components/governance/RiskDebtCard';
 import { KillSwitchControl } from '@/components/governance/KillSwitchControl';
 import { generateTrustReportPDF } from '@/lib/trustReportPDF';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export default function Governance() {
   const { data: govStats, isLoading: govLoading } = useGovernanceStats();
@@ -46,7 +47,7 @@ export default function Governance() {
       await generateTrustReportPDF(tenant.id, startDate, endDate);
       toast.success('Trust Report gerado com sucesso!');
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       toast.error('Erro ao gerar Trust Report');
     } finally {
       setGeneratingReport(false);

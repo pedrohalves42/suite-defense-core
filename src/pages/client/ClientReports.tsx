@@ -28,7 +28,7 @@ export const ClientReports = () => {
 
       const { data, error } = await supabase
         .from('generated_reports')
-        .select('*')
+        .select('id, tenant_id, report_type, risk_level, risk_score, created_at, expires_at, file_url, agent_name, commercial_priority')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -40,7 +40,7 @@ export const ClientReports = () => {
   });
 
   // Prepare chart data (last 30 days of risk scores)
-  const chartData = reports?.slice(0, 30).reverse().map((report: any, index: number) => ({
+  const chartData = reports?.slice(0, 30).reverse().map((report, index: number) => ({
     name: formatBrazilDateTime(report.created_at, 'day-month'),
     score: report.risk_score || 0
   })) || [];

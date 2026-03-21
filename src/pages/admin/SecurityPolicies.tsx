@@ -76,7 +76,7 @@ export default function SecurityPolicies() {
       if (!tenant?.id) return [];
       const { data: groups, error } = await supabase
         .from('agent_groups')
-        .select('*')
+        .select('id, name, description, tenant_id, created_at, updated_at')
         .eq('tenant_id', tenant.id);
       if (error) throw error;
       

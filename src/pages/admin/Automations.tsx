@@ -15,6 +15,7 @@ import { format, formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { callEdgeFunction } from '@/lib/edge-function-client';
+import { logger } from '@/lib/logger';
 
 interface ScheduledJob {
   id: string;
@@ -137,7 +138,7 @@ export default function Automations() {
       toast.success(`Job "${job.name}" executado com sucesso`);
       refetchJobs();
     } catch (error) {
-      console.error('Error executing job:', error);
+      logger.error('Error executing job:', error);
       toast.error('Erro ao executar job');
     } finally {
       setExecutingJob(null);

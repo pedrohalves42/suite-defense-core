@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { formatBrazilDateTime, formatRelativeTime } from "@/lib/date-utils";
 import { ScheduleConversationModal } from "./ScheduleConversationModal";
 import { useActiveTenant } from "@/hooks/useActiveTenant";
+import { logger } from '@/lib/logger';
 
 interface GeneratedReport {
   id: string;
@@ -248,7 +249,7 @@ export function GeneratedReportsList() {
       toast.success("Laudo excluído com sucesso!");
       refetch();
     } catch (error) {
-      console.error("Error deleting report:", error);
+      logger.error("Error deleting report:", error);
       toast.error("Erro ao excluir laudo");
     }
   };

@@ -2,6 +2,7 @@ import { Component, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { logger } from '@/lib/logger';
 
 interface Props {
   children: ReactNode;
@@ -27,7 +28,7 @@ export class TenantErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[TenantErrorBoundary] Caught error:', error, errorInfo);
+    logger.error('[TenantErrorBoundary] Caught error:', error, errorInfo);
     
     // Log to console for debugging
     const logEntry = {

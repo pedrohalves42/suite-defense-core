@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Package, Shield, AlertTriangle, Activity, Loader2, CheckCircle, Rocket } from "lucide-react";
 import { prepareJobForInsert } from "@/lib/job-utils";
+import { logger } from '@/lib/logger';
 
 const ALL_JOB_TYPES = [
   {
@@ -114,7 +115,7 @@ export function ValidationJobDispatcher() {
         });
       }
     } catch (error: any) {
-      console.error('Error creating validation jobs:', error);
+      logger.error('Error creating validation jobs:', error);
       toast.error('Erro ao criar jobs', { description: error.message });
     } finally {
       setIsCreatingJobs(false);

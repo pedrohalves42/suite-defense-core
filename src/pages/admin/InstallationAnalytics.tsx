@@ -31,7 +31,7 @@ export default function InstallationAnalytics() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('installation_analytics')
-        .select('*')
+        .select('id, agent_name, event_type, platform, success, installation_method, installation_time_seconds, error_message, created_at, tenant_id')
         .order('created_at', { ascending: false });
 
       if (error) {

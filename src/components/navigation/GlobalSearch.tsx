@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
+import { logger } from '@/lib/logger';
 
 interface SearchResult {
   id: string;
@@ -137,7 +138,7 @@ export function GlobalSearch() {
 
         setAgentResults(results);
       } catch (e) {
-        console.error('Error searching agents:', e);
+        logger.error('Error searching agents:', e);
       } finally {
         setIsSearchingAgents(false);
       }

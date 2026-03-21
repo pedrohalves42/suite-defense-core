@@ -31,7 +31,7 @@ async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebA
     .limit(5000);
 
   if (error) {
-    console.error('[useWebActivity] Error fetching activity:', error);
+    logger.error('[useWebActivity] Error fetching activity:', error);
     throw new Error(`Failed to fetch web activity: ${error.message}`);
   }
 

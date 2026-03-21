@@ -30,7 +30,7 @@ export default function SystemLogs() {
     queryFn: async () => {
       let query = supabase
         .from('system_alerts')
-        .select('*');
+        .select('id, tenant_id, title, message, severity, alert_type, source, status, acknowledged, acknowledged_at, resolved, resolved_at, email_sent, email_sent_at, details, created_at');
       
       // Filter by tenant if not super admin
       if (!isSuperAdmin && tenant?.id) {
@@ -57,7 +57,7 @@ export default function SystemLogs() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: { acknowledged_count: number }) => {
       toast.success(`${data.acknowledged_count} alertas reconhecidos com sucesso`);
       queryClient.invalidateQueries({ queryKey: ['system-alerts'] });
     },
@@ -71,7 +71,7 @@ export default function SystemLogs() {
     queryFn: async () => {
       let query = supabase
         .from('security_logs')
-        .select('*');
+        .select('id, tenant_id, attack_type, severity, ip_address, endpoint, blocked, user_agent, details, created_at');
       
       // Filter by tenant if not super admin
       if (!isSuperAdmin && tenant?.id) {

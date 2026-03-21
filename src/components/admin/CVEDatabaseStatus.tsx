@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Shield, RefreshCw, Clock, Database, AlertTriangle, CheckCircle, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/date-utils';
+import { logger } from '@/lib/logger';
 
 interface CVESyncStatus {
   id: string;
@@ -41,7 +42,7 @@ export default function CVEDatabaseStatus() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cve_sync_status')
-        .select('*')
+        .select('id, sync_status, last_sync_at, total_cves_synced, error_message, last_modified_date, created_at, updated_at')
         .order('last_sync_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -104,7 +105,7 @@ export default function CVEDatabaseStatus() {
           newTranslations[cve.cve_id] = data.translated;
         }
       } catch (err) {
-        console.error('Translation error for', cve.cve_id, err);
+        logger.error('Translation error for', cve.cve_id, err);
       }
     }
     

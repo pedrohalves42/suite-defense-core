@@ -34,7 +34,7 @@ export default function JobHealthDashboard() {
       
       const { data, error } = await supabase
         .from('job_executions')
-        .select('*')
+        .select('id, status, created_at, agent_name, job_id')
         .eq('tenant_id', tenant.id)
         .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
       
@@ -42,8 +42,8 @@ export default function JobHealthDashboard() {
       
       const statsMap: Record<string, JobHealthStats> = {};
       
-      (data || []).forEach((job: any) => {
-        const type = job.job_type || 'unknown';
+      (data || []).forEach((job) => {
+        const type = job.agent_name || 'unknown';
         if (!statsMap[type]) {
           statsMap[type] = { job_type: type, total: 0, success: 0, failed: 0, pending: 0, failure_rate: 0 };
         }

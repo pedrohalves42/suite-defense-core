@@ -17,6 +17,7 @@ import {
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { callEdgeFunction } from '@/lib/edge-function-client';
+import { logger } from '@/lib/logger';
 
 interface NotificationChannel {
   id: string;
@@ -190,7 +191,7 @@ export default function NotificationChannels() {
       });
       
       if (fnError) {
-        console.error('Function error:', fnError);
+        logger.error('Function error:', fnError);
         throw new Error(fnError.message || 'Erro ao chamar função');
       }
       
@@ -211,7 +212,7 @@ export default function NotificationChannels() {
       toast.success('Teste enviado com sucesso! Canal verificado.');
       refetch();
     } catch (error) {
-      console.error('Test error:', error);
+      logger.error('Test error:', error);
       toast.error('Erro ao testar canal');
     } finally {
       setTestingChannel(null);

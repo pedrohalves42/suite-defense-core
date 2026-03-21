@@ -3,6 +3,7 @@ import { useTenant } from "@/hooks/useTenant";
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { RpcAgentRow } from '@/types/rpc';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { prepareJobForInsert } from "@/lib/job-utils";
+import { logger } from '@/lib/logger';
 import { 
   FlaskConical, 
   Play, 
@@ -68,9 +70,9 @@ export default function JobTestRunner() {
       });
       
       if (error) throw error;
-      return ((data || []) as any[])
-        .filter((a: any) => a.status === 'active' && a.last_heartbeat && a.last_heartbeat >= fiveMinutesAgo)
-        .map((a: any): Agent => ({ id: a.id, agent_name: a.agent_name, hostname: a.hostname, last_heartbeat: a.last_heartbeat, status: a.status }))
+      return ((data || []) as unknown as RpcAgentRow[])
+        .filter((a) => a.status === 'active' && a.last_heartbeat && a.last_heartbeat >= fiveMinutesAgo)
+        .map((a): Agent => ({ id: a.id, agent_name: a.agent_name, hostname: a.hostname, last_heartbeat: a.last_heartbeat, status: a.status }))
         .sort((a: Agent, b: Agent) => a.agent_name.localeCompare(b.agent_name));
     },
     enabled: !!tenant?.id,
@@ -131,7 +133,7 @@ export default function JobTestRunner() {
       .single();
 
     if (error) {
-      console.error("Poll error:", error);
+      logger.error("Poll error:", error);
       return;
     }
 

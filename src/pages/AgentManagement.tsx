@@ -77,7 +77,7 @@ export default function AgentManagement() {
       await generateForensicReportPDF(ids);
       toast.success(`Relatório forense gerado para ${ids.length} máquina(s)!`);
     } catch (err) {
-      console.error('Group forensic report error:', err);
+      logger.error('Group forensic report error:', err);
       toast.error('Erro ao gerar relatório forense em grupo');
     } finally {
       setGeneratingGroupReport(false);
