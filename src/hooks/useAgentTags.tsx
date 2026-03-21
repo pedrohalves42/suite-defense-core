@@ -31,7 +31,7 @@ export const useAgentTags = () => {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('agent_tags')
-        .select('*')
+        .select('id, tenant_id, name, color, description, created_at')
         .eq('tenant_id', tenant.id)
         .order('name');
       if (error) throw error;

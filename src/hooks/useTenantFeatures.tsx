@@ -22,7 +22,7 @@ export const useTenantFeatures = () => {
 
       const { data, error } = await supabase
         .from('tenant_features')
-        .select('*')
+        .select('id, tenant_id, feature_key, is_enabled, config, updated_at')
         .eq('tenant_id', tenant.id);
 
       if (error) throw error;

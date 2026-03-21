@@ -151,7 +151,7 @@ export function useLatestAudit() {
     queryFn: async () => {
       let query = supabase
         .from('system_audits')
-        .select('*')
+        .select('id, tenant_id, created_at, created_by, overall_score, score_system_identity, score_control_vs_monitor, score_evidence_proof, score_maturity, score_failure_handling, score_limitations, score_operational_trust, score_market_value, score_simplicity, executive_summary, final_sentence, recommendation, ai_model')
         .order('created_at', { ascending: false })
         .limit(1);
 
