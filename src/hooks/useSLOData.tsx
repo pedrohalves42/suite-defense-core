@@ -61,7 +61,7 @@ export const useSLOData = () => {
 
       const { data, error } = await supabase
         .from('slo_measurements')
-        .select('id, tenant_id, slo_id, measured_value, status, measured_at')
+        .select('id, tenant_id, slo_id, current_value, target_value, is_breached, error_budget_used, sample_size, measured_at')
         .eq('tenant_id', tenant.id)
         .order('measured_at', { ascending: false })
         .limit(100);
