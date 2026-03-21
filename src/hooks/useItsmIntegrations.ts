@@ -13,7 +13,7 @@ export const useItsmIntegrations = () => {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('itsm_integrations')
-        .select('id, tenant_id, provider, display_name, base_url, is_active, created_at, updated_at')
+        .select('id, tenant_id, provider, display_name, base_url, is_active, project_key, default_issue_type, default_priority, auto_create_on_alert, auto_create_severity_threshold, created_at, updated_at')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
