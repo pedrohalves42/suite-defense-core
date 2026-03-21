@@ -550,24 +550,38 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
     }
   }
 
-  // HOTFIX 22: CNG key creation "Object already exists" — delete existing container before creating
-  // The current code uses $null name (ephemeral) but some Windows versions still persist it
+  // HOTFIX 22: CNG key creation "Object already exists" — use OverwriteExistingKey flag
+  // The original code uses $null name (ephemeral) but some Windows versions still persist it.
+  // Adding OverwriteExistingKey eliminates the 3 failed attempts on every boot.
   if (content.includes('CngKey]::Create(') && !content.includes('HOTFIX-CNG-CLEANUP')) {
-    content = content.replace(
-      /\$cngKey = \[System\.Security\.Cryptography\.CngKey\]::Create\(\s*\n\s*\[System\.Security\.Cryptography\.CngAlgorithm\]::ECDsaP256,\s*\n\s*\$null,\s*# No name = ephemeral, no conflict\s*\n\s*\$creationParams\s*\)/g,
-      `# HOTFIX-CNG-CLEANUP: Delete any leftover CNG containers before creating
-                try {
-                    $existingKey = [System.Security.Cryptography.CngKey]::Open("CyberShieldECDSA_$env:COMPUTERNAME", [System.Security.Cryptography.CngProvider]::MicrosoftSoftwareKeyStorageProvider)
-                    if ($existingKey) { $existingKey.Delete(); $existingKey.Dispose() }
-                    Write-Log "[KEYS] Cleaned up existing CNG container" "DEBUG"
-                } catch { <# Container doesn't exist, that's fine #> }
+    // First try: match the original pattern with $null name and comment
+    let updatedCng = content.replace(
+      /\$cngKey = \[System\.Security\.Cryptography\.CngKey\]::Create\(\s*\n\s*\[System\.Security\.Cryptography\.CngAlgorithm\]::ECDsaP256,\s*\n\s*\$null,\s*(?:# No name = ephemeral, no conflict|# Ephemeral key \(HOTFIX-CNG-CLEANUP\))\s*\n\s*\$creationParams\s*\)/g,
+      `# HOTFIX-CNG-CLEANUP: OverwriteExistingKey prevents "Object already exists" errors
+                $creationParams.KeyCreationOptions = [System.Security.Cryptography.CngKeyCreationOptions]::OverwriteExistingKey
                 $cngKey = [System.Security.Cryptography.CngKey]::Create(
                     [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
                     $null,  # Ephemeral key (HOTFIX-CNG-CLEANUP)
                     $creationParams
                 )`
     );
-    reasons.push('cng_cleanup_fix');
+    // Also match scripts that already have the old cleanup try/catch block
+    if (updatedCng === content) {
+      updatedCng = content.replace(
+        /# HOTFIX-CNG-CLEANUP: Delete any leftover CNG containers before creating[\s\S]*?\$cngKey = \[System\.Security\.Cryptography\.CngKey\]::Create\(\s*\n\s*\[System\.Security\.Cryptography\.CngAlgorithm\]::ECDsaP256,\s*\n\s*\$null,\s*# Ephemeral key \(HOTFIX-CNG-CLEANUP\)\s*\n\s*\$creationParams\s*\)/g,
+        `# HOTFIX-CNG-CLEANUP: OverwriteExistingKey prevents "Object already exists" errors
+                $creationParams.KeyCreationOptions = [System.Security.Cryptography.CngKeyCreationOptions]::OverwriteExistingKey
+                $cngKey = [System.Security.Cryptography.CngKey]::Create(
+                    [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
+                    $null,  # Ephemeral key (HOTFIX-CNG-CLEANUP)
+                    $creationParams
+                )`
+      );
+    }
+    if (updatedCng !== content) {
+      content = updatedCng;
+      reasons.push('cng_cleanup_fix');
+    }
   }
 
   // HOTFIX 23: ConvertTo-Json body serialization mismatch between HMAC signing and HTTP body
