@@ -1,77 +1,112 @@
 
 
-## Análise do Log do pcteste1 — Bug de Inicialização de Chaves
+## Plan: Critical Security & Performance Hardening (Audit Response)
 
-### Problema Identificado
+Addressing the 6 highest-impact findings from the repository audit, ordered by severity.
 
-O log mostra **dois boots** do agente em sequência (15:12:36 e 15:13:27):
+---
 
-**1º boot — DEGRADED** (falhou):
-- `CngKey.Create` **SUCEDEU** na tentativa 1 (ECDSA keypair gerado)
-- Mas `ExportPkcs8PrivateKey()` falhou (.NET Framework 4.x não tem este método)
-- A exceção foi capturada pelo `catch` EXTERNO da função (linha 1649), pulando TODOS os fallbacks (RSA.Create, RSACryptoServiceProvider)
-- Resultado: `SecurityDegraded=TRUE`, jobs bloqueados
+### 1. 🔴 CRITICAL — Eliminate Unverified Telemetry Persistence
 
-**2º boot — ENFORCING** (sucedeu):
-- `CngKey.Create` **FALHOU** 3x ("O objeto já existe" — chave órfã do 1º boot)
-- O código entrou na cadeia de fallback corretamente
-- `ECDsaCng(256)` → ExportPkcs8 falhou → `RSA.Create(2048)` → ExportPkcs8 falhou → **RSACryptoServiceProvider SUCEDEU**
-- Resultado: Agent operacional
+**File**: `supabase/functions/post-installation-telemetry/index.ts`
 
-### Bug Root Cause
+**Problem**: When auth fails (missing token, invalid token, inactive token, expired token, HMAC failure), the function persists data into `installation_analytics` as "unverified" — same table as verified data. This contaminates SOC metrics and enables data poisoning.
 
-No script fonte (`cybershield-agent-windows-v5.ps1`, linhas 1596-1602), quando o loop `for` termina com `$ecdsa` válido (CngKey criou com sucesso), o código tenta:
+**Fix**:
+- Remove the `recordUnverifiedTelemetry()` function entirely
+- Replace all 4 fallback paths (lines 117-193) with proper 401/403 error responses that **reject** the request
+- For HMAC failures on otherwise-authenticated agents (lines 207-212): reject with 401 instead of recording unverified
+- Log the rejection attempts for forensics but **never persist** unverified data
 
-```powershell
-$privateKeyBytes = $ecdsa.ExportPkcs8PrivateKey()  # ← FALHA no .NET 4.x
+**Result**: Zero unverified data enters `installation_analytics`. Agents must authenticate or get rejected.
+
+---
+
+### 2. 🟠 HIGH — Add `expires_at` Validation to `authenticateAgent()`
+
+**File**: `supabase/functions/_shared/agent-auth.ts`
+
+**Problem**: The shared middleware checks `is_active` but not `expires_at`. All `serveAgent()` endpoints inherit this gap — expired tokens are accepted.
+
+**Fix**:
+- Add `expires_at` to the select query (line 50)
+- After the token lookup succeeds, check `expires_at`:
+  ```
+  if (token.expires_at && new Date(token.expires_at) < new Date()) {
+    return { success: false, response: 401 "Token expired" };
+  }
+  ```
+- This fix propagates automatically to all `serveAgent()` endpoints
+
+---
+
+### 3. 🟡 MEDIUM — Return Proper HTTP Error Codes from `validate-hmac-signature`
+
+**File**: `supabase/functions/validate-hmac-signature/index.ts`
+
+**Problem**: Returns HTTP 200 for validation failures and unexpected errors. Clients checking only status codes see "success" on failures.
+
+**Fix**:
+- Invalid payload → **400** (not 200)
+- HEX conversion failed → **422** (not 200)
+- Unexpected error → **500** (not 200)
+- Only successful validation returns 200
+
+---
+
+### 4. 🟡 MEDIUM — Server-Side Vulnerability Count Aggregation
+
+**File**: `src/hooks/useUnifiedMetrics.ts` (line 123-125)
+
+**Problem**: `select('severity')` fetches ALL vuln_findings rows to count in browser memory. With 10K+ vulns this wastes bandwidth and CPU.
+
+**Fix**: Replace the raw select with a count query:
+```typescript
+// Before:
+sb.from('vuln_findings').select('severity').eq('tenant_id', tenant.id)
+
+// After (two parallel head-count queries):
+sb.from('vuln_findings').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+sb.from('vuln_findings').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).in('severity', ['critical', 'high']),
 ```
 
-Esta exceção vai direto para o `catch` externo (linha 1649) e retorna `$false`, **sem nunca tentar RSACryptoServiceProvider**. Os fallbacks RSA só são acionados quando `CngKey.Create` falha 3x.
+Zero rows transferred, counts come from headers. Lines 143, 197-199 updated accordingly.
 
-### Fix
+---
 
-Envolver as linhas 1596-1602 em um try/catch que, em caso de falha no export ECDSA, redirecione para o RSACryptoServiceProvider (mesmo fallback já existente nas linhas 1550-1582).
+### 5. 🟡 MEDIUM — Restrict CORS on Telemetry Endpoint
 
-**Arquivo**: `supabase/functions/_shared/agent-scripts/cybershield-agent-windows-v5.ps1` (linhas 1594-1648)
+**File**: `supabase/functions/post-installation-telemetry/index.ts` (line 8)
 
-Substituir o bloco de export direto por:
+**Problem**: `Access-Control-Allow-Origin: '*'` on a sensitive telemetry endpoint allows browser-based abuse from any origin.
 
-```powershell
-# After loop: export ECDSA keys, with RSA-CSP fallback for .NET 4.x
-if ($null -ne $ecdsa) {
-    try {
-        $privateKeyBytes = $ecdsa.ExportPkcs8PrivateKey()
-        $publicKeyBytes  = $ecdsa.ExportSubjectPublicKeyInfo()
-        # ... (existing ECDSA save logic)
-    } catch {
-        Write-Log "[KEYS] ECDSA export failed ($($_.Exception.Message)) - falling to RSACryptoServiceProvider" "WARN"
-        $ecdsa.Dispose()
-        $ecdsa = $null
-        # RSACryptoServiceProvider fallback (same code as line 1550-1582)
-    }
-}
-if ($null -eq $ecdsa) {
-    # RSACryptoServiceProvider fallback
-}
+**Fix**: Since this endpoint is called by PowerShell agents (not browsers), remove CORS entirely or restrict to the app domain:
+```typescript
+"Access-Control-Allow-Origin": Deno.env.get('ALLOWED_ORIGIN') || "https://cybershield-audit.lovable.app"
 ```
 
-**Also applies to**: `public/agent-scripts/cybershield-agent-windows-v5.ps1` (mirror copy)
+---
 
-### Outros Problemas Menores no Log
+### 6. ⚪ LOW — Security Gate Hard-Fail When DATABASE_URL Missing
 
-| Issue | Severidade | Ação |
-|-------|-----------|------|
-| Baseline "duplicate key: name" | Auto-healed | Nenhuma — o agente reconstrói sozinho |
-| USB SanDisk (sighting #1, #2) | Esperado | Auto-whitelist no sighting #3 |
-| ECDSA CngKey "Objeto já existe" 3x | Ruído | Fix já reduz: OverwriteExistingKey no hotfix existente não aplicou neste script |
+**File**: `.github/workflows/security-gate.yml` (lines 32-36)
 
-### Hotfix System
+**Problem**: When `DATABASE_URL` is absent, the gate exits 0 (success) — giving false confidence in forks/new repos.
 
-Também adicionar um **novo hotfix** em `windows-script-hotfix.ts` para capturar scripts já deployed que têm o export desprotegido — garantindo que o fix atinja agentes que não atualizarem imediatamente o script fonte.
+**Fix**: Exit with a warning code (exit 78 = neutral in GitHub Actions) and add a clear step summary indicating the gate was **skipped**, not passed.
 
-### Resumo de Mudanças
+---
 
-1. **`supabase/functions/_shared/agent-scripts/cybershield-agent-windows-v5.ps1`** — Wrap ECDSA export em try/catch com fallback RSACryptoServiceProvider
-2. **`public/agent-scripts/cybershield-agent-windows-v5.ps1`** — Mirror da mesma correção
-3. **`supabase/functions/_shared/windows-script-hotfix.ts`** — Novo hotfix para scripts em campo
+### Summary of Changes
+
+| File | Change | Severity |
+|------|--------|----------|
+| `post-installation-telemetry/index.ts` | Remove unverified fallback, reject unauthenticated requests | 🔴 Critical |
+| `_shared/agent-auth.ts` | Add `expires_at` check | 🟠 High |
+| `validate-hmac-signature/index.ts` | Return 400/422/500 instead of 200 | 🟡 Medium |
+| `useUnifiedMetrics.ts` | Server-side count aggregation | 🟡 Medium |
+| `post-installation-telemetry/index.ts` | Restrict CORS origin | 🟡 Medium |
+| `security-gate.yml` | Hard-fail on missing DATABASE_URL | ⚪ Low |
+
+**6 files modified. No new tables or migrations needed.**
 
