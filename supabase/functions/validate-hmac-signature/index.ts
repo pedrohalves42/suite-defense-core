@@ -84,7 +84,7 @@ serve(async (req) => {
         details: validationError.message,
         request_id: requestId
       }), { 
-        status: 200, 
+        status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       });
     }
