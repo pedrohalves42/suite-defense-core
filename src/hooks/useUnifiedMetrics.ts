@@ -202,8 +202,8 @@ export function useUnifiedMetrics() {
           mediumPrevented,
         },
         vulnerabilities: {
-          total: vulns.length,
-          critical: vulns.filter(v => v.severity === 'critical' || v.severity === 'high').length,
+          total: vulnTotal,
+          critical: vulnCritical,
         },
         insights: {
           pending: insightsRes.count || 0,
