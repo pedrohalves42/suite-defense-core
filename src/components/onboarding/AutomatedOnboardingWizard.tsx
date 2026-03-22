@@ -131,7 +131,7 @@ export const AutomatedOnboardingWizard = ({
       icon: Key,
       action: () => {
         completeStep('generate_key');
-        navigate('/admin/enrollment-keys');
+        navigate('/super-admin/enrollment-keys');
         onComplete();
       },
       actionLabel: hasEnrollmentKey ? 'Já tenho chave ✓' : 'Ir para Chaves',
@@ -144,7 +144,7 @@ export const AutomatedOnboardingWizard = ({
       icon: Download,
       action: () => {
         completeStep('install_agent');
-        navigate('/admin/enrollment-keys');
+        navigate('/super-admin/enrollment-keys');
         onComplete();
       },
       actionLabel: hasAgent ? 'Agente instalado ✓' : 'Ver instruções',

@@ -296,7 +296,7 @@ Get-ScheduledTask -TaskName "CyberShield*" -EA 0 | Unregister-ScheduledTask -Con
                 className="font-mono"
               />
             </div>
-            <Link to="/admin/enrollment-keys">
+            <Link to="/super-admin/enrollment-keys">
               <Button variant="outline">
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Gerar Nova Key
@@ -438,7 +438,7 @@ Get-ScheduledTask -TaskName "CyberShield*" -EA 0 | Unregister-ScheduledTask -Con
           <ol className="list-decimal list-inside space-y-3 text-sm">
             <li className="text-foreground">
               <strong>Gere uma Enrollment Key</strong> (limite de uso: {offlineAgents?.length || 11} ou mais)
-              <Link to="/admin/enrollment-keys" className="text-primary ml-2 underline">
+              <Link to="/super-admin/enrollment-keys" className="text-primary ml-2 underline">
                 Ir para Enrollment Keys →
               </Link>
             </li>

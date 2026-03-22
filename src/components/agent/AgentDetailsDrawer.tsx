@@ -550,7 +550,7 @@ export function AgentDetailsDrawer({
                         <Button
                           variant="outline"
                           className="w-full justify-start h-auto py-3 px-4"
-                          onClick={() => navigate('/admin/enrollment-keys')}
+                          onClick={() => navigate('/super-admin/enrollment-keys')}
                         >
                           <Key className="h-4 w-4 mr-3 text-muted-foreground" />
                           <div className="text-left">
@@ -607,7 +607,7 @@ export function AgentDetailsDrawer({
                             variant="ghost"
                             size="sm"
                             className="w-full justify-start gap-3 h-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => navigate('/admin/enrollment-keys')}
+                            onClick={() => navigate('/super-admin/enrollment-keys')}
                           >
                             <Key className="h-4 w-4" />
                             <span className="text-sm">Nova Chave de Instalação</span>
