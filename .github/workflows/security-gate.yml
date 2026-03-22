@@ -25,9 +25,10 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           if [ -z "$DATABASE_URL" ]; then
-            echo "⚠️ DATABASE_URL secret not configured - skipping security gate"
-            echo "To enable this check, add the DATABASE_URL secret to your repository"
-            exit 0
+            echo "## ⚠️ Security Gate SKIPPED" >> $GITHUB_STEP_SUMMARY
+            echo "DATABASE_URL secret not configured. Security invariants were NOT validated." >> $GITHUB_STEP_SUMMARY
+            echo "::warning::Security gate SKIPPED — DATABASE_URL not configured. Invariants NOT validated."
+            exit 1
           fi
           ./ci/security_gate.sh
 

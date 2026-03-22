@@ -84,7 +84,7 @@ serve(async (req) => {
         details: validationError.message,
         request_id: requestId
       }), { 
-        status: 200, 
+        status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       });
     }
@@ -107,7 +107,7 @@ serve(async (req) => {
         details: conversionError.message,
         request_id: requestId
       }), { 
-        status: 200, 
+        status: 422, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       });
     }
@@ -157,7 +157,7 @@ serve(async (req) => {
       details: error.message,
       request_id: requestId
     }), { 
-      status: 200, 
+      status: 500, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     });
   }

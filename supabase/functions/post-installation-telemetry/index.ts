@@ -4,82 +4,14 @@ import { verifyHmacSignature } from "../_shared/hmac.ts";
 import { hashToken } from "../_shared/token-hash.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
+// HARDENED: Restrict CORS — this endpoint is called by PowerShell agents, not browsers
+const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || "https://cybershield-audit.lovable.app";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-agent-token, x-hmac-signature, x-timestamp, x-nonce",
 };
 
 const AgentTokenSchema = z.string().regex(/^[A-Za-z0-9]{64}$/, "Invalid agent token format");
-
-// Helper function to record unverified telemetry (best-effort fallback)
-async function recordUnverifiedTelemetry(
-  supabaseClient: any,
-  body: any,
-  requestId: string
-): Promise<void> {
-  try {
-    console.log(`[${requestId}] Recording unverified telemetry (fallback mode)`);
-    
-    // Try to match tenant by partial token if provided
-    let tenantId = null;
-    const partialToken = body.agent_token;
-    
-    if (partialToken && typeof partialToken === 'string' && partialToken.length >= 8) {
-      // Use token_prefix for partial matching (first 8 chars)
-      const tokenPrefix = partialToken.substring(0, 8);
-      const { data: tokenMatch } = await supabaseClient
-        .from("agent_tokens")
-        .select("agents!inner(tenant_id)")
-        .eq("token_prefix", tokenPrefix)
-        .limit(1)
-        .maybeSingle();
-      
-      if (tokenMatch?.agents) {
-        tenantId = (tokenMatch.agents as any).tenant_id;
-        console.log(`[${requestId}] Matched tenant from partial token: ${tenantId}`);
-      }
-    }
-    
-    // Build unverified telemetry record
-    const telemetryRecord = {
-      tenant_id: tenantId,
-      agent_id: null,
-      agent_name: "unknown",
-      event_type: "post_installation_unverified",
-      platform: "windows",
-      success: body.success ?? null,
-      network_connectivity: body.network_tests?.health_check_passed ?? null,
-      installation_time_seconds: body.installation_time_seconds || null,
-      error_message: null,
-      metadata: {
-        ...body,
-        verified: false,
-        unverified_reason: "authentication_failed",
-        request_id: requestId,
-        recorded_at: new Date().toISOString()
-      }
-    };
-    
-    // Insert with error handling for duplicates
-    const { error: insertError } = await supabaseClient
-      .from("installation_analytics")
-      .insert(telemetryRecord);
-    
-    if (insertError) {
-      // Ignore duplicate key violations (23505) - idempotent
-      if (insertError.code === "23505") {
-        console.log(`[${requestId}] Duplicate unverified telemetry detected (idempotent), ignoring`);
-        return;
-      }
-      throw insertError;
-    }
-    
-    console.log(`[${requestId}] Unverified telemetry recorded successfully`);
-  } catch (error) {
-    console.error(`[${requestId}] Failed to record unverified telemetry:`, error);
-    // Don't throw - this is best-effort fallback
-  }
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -112,36 +44,31 @@ serve(async (req) => {
       );
     }
 
-    // Extract X-Agent-Token (required for verified mode)
+    // HARDENED: X-Agent-Token is REQUIRED — no fallback mode
     const agentTokenHeader = req.headers.get("X-Agent-Token");
     if (!agentTokenHeader) {
-      console.warn(`[${requestId}] Missing X-Agent-Token header, using fallback mode`);
-      
-      // FALLBACK MODE: Record telemetry as unverified
-      await recordUnverifiedTelemetry(supabaseClient, body, requestId);
-      
+      console.warn(`[${requestId}] REJECTED: Missing X-Agent-Token header`);
       return new Response(
         JSON.stringify({ 
-          status: "recorded_unverified", 
-          request_id: requestId,
-          message: "Telemetry recorded without authentication" 
+          error: "Authentication required", 
+          error_code: "MISSING_TOKEN",
+          request_id: requestId 
         }),
-        { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Validate token format
     const tokenValidation = AgentTokenSchema.safeParse(agentTokenHeader);
     if (!tokenValidation.success) {
-      console.warn(`[${requestId}] Invalid token format, using fallback mode`, tokenValidation.error);
-      await recordUnverifiedTelemetry(supabaseClient, body, requestId);
+      console.warn(`[${requestId}] REJECTED: Invalid token format`);
       return new Response(
         JSON.stringify({ 
-          status: "recorded_unverified", 
-          request_id: requestId,
-          message: "Invalid token format - telemetry recorded as unverified"
+          error: "Invalid token format",
+          error_code: "INVALID_TOKEN_FORMAT",
+          request_id: requestId 
         }),
-        { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -154,47 +81,44 @@ serve(async (req) => {
       .maybeSingle();
 
     if (tokenError || !agentToken) {
-      console.warn(`[${requestId}] Agent token not found, using fallback mode`, tokenError);
-      await recordUnverifiedTelemetry(supabaseClient, body, requestId);
+      console.warn(`[${requestId}] REJECTED: Token not found, prefix: ${agentTokenHeader.substring(0, 8)}`);
       return new Response(
         JSON.stringify({ 
-          status: "recorded_unverified", 
-          request_id: requestId,
-          message: "Token not found - telemetry recorded as unverified"
+          error: "Invalid or unknown token",
+          error_code: "TOKEN_NOT_FOUND",
+          request_id: requestId 
         }),
-        { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (!agentToken.is_active) {
-      console.warn(`[${requestId}] Agent token is inactive, using fallback mode`);
-      await recordUnverifiedTelemetry(supabaseClient, body, requestId);
+      console.warn(`[${requestId}] REJECTED: Token inactive`);
       return new Response(
         JSON.stringify({ 
-          status: "recorded_unverified", 
-          request_id: requestId,
-          message: "Token inactive - telemetry recorded as unverified"
+          error: "Token is inactive",
+          error_code: "TOKEN_INACTIVE",
+          request_id: requestId 
         }),
-        { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (agentToken.expires_at && new Date(agentToken.expires_at) < new Date()) {
-      console.warn(`[${requestId}] Agent token expired, using fallback mode`);
-      await recordUnverifiedTelemetry(supabaseClient, body, requestId);
+      console.warn(`[${requestId}] REJECTED: Token expired at ${agentToken.expires_at}`);
       return new Response(
         JSON.stringify({ 
-          status: "recorded_unverified", 
-          request_id: requestId,
-          message: "Token expired - telemetry recorded as unverified"
+          error: "Token has expired",
+          error_code: "TOKEN_EXPIRED",
+          request_id: requestId 
         }),
-        { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const agent = agentToken.agents as any;
     
-    // Verify HMAC signature (preferred, but not blocking)
+    // Verify HMAC signature — REQUIRED for data integrity
     const hmacResult = await verifyHmacSignature(
       supabaseClient,
       req,
@@ -205,14 +129,23 @@ serve(async (req) => {
     const isVerified = hmacResult.valid;
     
     if (!isVerified) {
-      console.warn(`[${requestId}] HMAC verification failed:`, {
+      console.warn(`[${requestId}] REJECTED: HMAC verification failed:`, {
         errorCode: hmacResult.errorCode,
-        errorMessage: hmacResult.errorMessage
+        errorMessage: hmacResult.errorMessage,
+        agentName: agent.agent_name
       });
-      console.warn(`[${requestId}] Recording telemetry as unverified but linked to agent`);
-    } else {
-      console.log(`[${requestId}] HMAC verified successfully for agent: ${agent.agent_name}`);
+      // HARDENED: Reject unverified telemetry instead of persisting it
+      return new Response(
+        JSON.stringify({ 
+          error: "HMAC signature verification failed",
+          error_code: "HMAC_INVALID",
+          request_id: requestId 
+        }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+    
+    console.log(`[${requestId}] HMAC verified successfully for agent: ${agent.agent_name}`);
 
     // Parse telemetry data from body
     const {
@@ -236,10 +169,10 @@ serve(async (req) => {
       success, 
       task_created, 
       task_running,
-      verified: isVerified
+      verified: true
     });
 
-    // Build telemetry record with comprehensive data
+    // Build telemetry record — always verified at this point
     const telemetryData = {
       agent_id: agent.id,
       tenant_id: agent.tenant_id,
@@ -265,8 +198,7 @@ serve(async (req) => {
         task_running: task_running,
         script_exists: script_exists,
         script_size_bytes: script_size_bytes,
-        verified: isVerified,
-        hmac_error: isVerified ? null : hmacResult.errorMessage,
+        verified: true,
         request_id: requestId
       },
       timestamp: installation_time || new Date().toISOString(),
@@ -280,10 +212,10 @@ serve(async (req) => {
     if (!insertError) {
       console.log(`[${requestId}] [OK]  Telemetry inserted successfully`, {
         agent_id: agent.id,
-        agent_name: body.agent_name,
+        agent_name: agent.agent_name,
         event_type: 'post_installation',
         tenant_id: agent.tenant_id,
-        verified: isVerified
+        verified: true
       });
     }
 
@@ -294,7 +226,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             status: "already_recorded", 
-            verified: isVerified,
+            verified: true,
             request_id: requestId,
             message: "Telemetry already recorded (idempotent)"
           }),
@@ -309,11 +241,11 @@ serve(async (req) => {
     console.log(`[${requestId}] Telemetry recorded successfully`, {
       agent_id: agent.id,
       agent_name: agent.agent_name,
-      verified: isVerified,
+      verified: true,
       success: success
     });
 
-    // FASE 1: Rastrear first_heartbeat esperado apos instalacao
+    // Track expected first_heartbeat after installation
     if (success && metadata?.installation_complete) {
       await supabaseClient
         .from('installation_analytics')
@@ -337,7 +269,6 @@ serve(async (req) => {
         errors,
       });
 
-      // Fetch admin of the tenant for notification (non-blocking)
       const { data: adminRole } = await supabaseClient
         .from("user_roles")
         .select(`
@@ -356,14 +287,13 @@ serve(async (req) => {
         console.log(`[${requestId}] Admin found for notification`, {
           adminEmail: profiles?.email,
         });
-        // TODO: Trigger email notification or in-app alert
       }
     }
 
     return new Response(
       JSON.stringify({
         status: "success",
-        verified: isVerified,
+        verified: true,
         request_id: requestId,
         message: "Telemetry recorded successfully",
         agent_id: agent.id,

@@ -47,7 +47,7 @@ export async function authenticateAgent(
   const tokenHash = await hashToken(agentToken);
   const { data: token, error: tokenError } = await supabase
     .from('agent_tokens')
-    .select('agent_id, agents!inner(id, agent_name, tenant_id, hmac_secret)')
+    .select('agent_id, expires_at, agents!inner(id, agent_name, tenant_id, hmac_secret)')
     .eq('token_hash', tokenHash)
     .eq('is_active', true)
     .maybeSingle();
@@ -58,6 +58,19 @@ export async function authenticateAgent(
       success: false,
       response: new Response(
         JSON.stringify({ error: 'Invalid or inactive token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      ),
+    };
+  }
+
+  // HARDENED: Check token expiration (propagates to all serveAgent endpoints)
+  const expiresAt = (token as any).expires_at;
+  if (expiresAt && new Date(expiresAt) < new Date()) {
+    console.warn(`[${endpoint}] Expired agent token, prefix: ${agentToken.substring(0, 8)}, expired: ${expiresAt}`);
+    return {
+      success: false,
+      response: new Response(
+        JSON.stringify({ error: 'Token has expired' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       ),
     };
