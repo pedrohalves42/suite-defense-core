@@ -120,8 +120,9 @@ export function useUnifiedMetrics() {
           .gte('attempted_at', sevenDaysAgo),
         // Use server-side RPC for accurate, deduplicated evidence counts
         sb.rpc('get_evidence_summary', { p_tenant_id: tenant.id }),
+        // PERF: Server-side count — zero rows transferred
         sb.from('vuln_findings')
-          .select('severity')
+          .select('*', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id),
         sb.from('ai_insights')
           .select('id', { count: 'exact', head: true })

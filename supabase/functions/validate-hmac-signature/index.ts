@@ -157,7 +157,7 @@ serve(async (req) => {
       details: error.message,
       request_id: requestId
     }), { 
-      status: 200, 
+      status: 500, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     });
   }
