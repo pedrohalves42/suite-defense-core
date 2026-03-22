@@ -97,7 +97,7 @@ export function OnboardingRequiredBanner() {
       description: 'Gere uma chave para instalar agentes',
       icon: Key,
       completed: progress.hasKey,
-      link: '/admin/enrollment-keys',
+      link: '/super-admin/enrollment-keys',
     },
     {
       id: 'install',
