@@ -1593,30 +1593,94 @@ function Initialize-AgentKeys {
             }
         }
         
-        # Export private key (PKCS#8)
-        $privateKeyBytes = $ecdsa.ExportPkcs8PrivateKey()
-        $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
+        # v5.0.16-fix: Wrap ECDSA export in try/catch with RSACryptoServiceProvider fallback
+        # On .NET Framework 4.x, ExportPkcs8PrivateKey() does not exist, causing a fatal
+        # exception that skips all RSA fallbacks and leaves the agent in DEGRADED mode.
+        $exportSuccess = $false
         
-        # Export public key (SubjectPublicKeyInfo)
-        $publicKeyBytes = $ecdsa.ExportSubjectPublicKeyInfo()
-        $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
+        if ($null -ne $ecdsa) {
+            try {
+                # Export private key (PKCS#8) - requires .NET Core 3.0+
+                $privateKeyBytes = $ecdsa.ExportPkcs8PrivateKey()
+                $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
+                
+                # Export public key (SubjectPublicKeyInfo)
+                $publicKeyBytes = $ecdsa.ExportSubjectPublicKeyInfo()
+                $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
 
-        # Calculate fingerprint (SHA256 of public key)
-        $sha256 = [System.Security.Cryptography.SHA256]::Create()
-        $fingerprintBytes = $sha256.ComputeHash($publicKeyBytes)
-        $fingerprint = [BitConverter]::ToString($fingerprintBytes).Replace("-", "").ToLower()
-        
-        # Save keys locally
-        $keyData = @{
-            private_key = $privateKeyBase64
-            public_key = $publicKeyBase64
-            fingerprint = $fingerprint
-            algorithm = "ECDSA-P256-SHA256"
-            version = 1
-            created_at = (Get-Date).ToString("o")
+                # Calculate fingerprint (SHA256 of public key)
+                $sha256 = [System.Security.Cryptography.SHA256]::Create()
+                $fingerprintBytes = $sha256.ComputeHash($publicKeyBytes)
+                $fingerprint = [BitConverter]::ToString($fingerprintBytes).Replace("-", "").ToLower()
+                
+                # Save keys locally
+                $keyData = @{
+                    private_key = $privateKeyBase64
+                    public_key = $publicKeyBase64
+                    fingerprint = $fingerprint
+                    algorithm = "ECDSA-P256-SHA256"
+                    version = 1
+                    created_at = (Get-Date).ToString("o")
+                }
+                
+                $keyData | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
+                
+                $Global:AgentPrivateKey = $privateKeyBase64
+                $Global:AgentPublicKey = $publicKeyBase64
+                $Global:KeyFingerprint = $fingerprint
+                $Global:KeyVersion = 1
+                $Global:AgentSigningAlgorithm = "ECDSA-P256-SHA256"
+                
+                Write-Log "[KEYS] Generated new ECDSA keypair. Fingerprint: $($fingerprint.Substring(0, 16))..." "SUCCESS"
+                $exportSuccess = $true
+            } catch {
+                Write-Log "[KEYS] ECDSA export failed ($($_.Exception.Message)) - falling back to RSACryptoServiceProvider" "WARN"
+                try { $ecdsa.Dispose() } catch {}
+                $ecdsa = $null
+            }
         }
         
-        $keyData | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
+        # RSACryptoServiceProvider fallback for .NET Framework 4.x
+        if (-not $exportSuccess) {
+            try {
+                $rsaCsp = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
+                $pubXml = $rsaCsp.ToXmlString($false)
+                $privXml = $rsaCsp.ToXmlString($true)
+                
+                $pubBytes = [System.Text.Encoding]::UTF8.GetBytes($pubXml)
+                $privB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($privXml))
+                $pubB64 = [Convert]::ToBase64String($pubBytes)
+                
+                $sha256Hash2 = [System.Security.Cryptography.SHA256]::Create()
+                $fpBytes2 = $sha256Hash2.ComputeHash($pubBytes)
+                $fp2 = [BitConverter]::ToString($fpBytes2).Replace("-", "").ToLower()
+                $sha256Hash2.Dispose()
+                
+                $keyData2 = @{
+                    private_key = $privB64
+                    public_key = $pubB64
+                    fingerprint = $fp2
+                    algorithm = "RSA-2048-XML"
+                    version = 1
+                    created_at = (Get-Date).ToString("o")
+                }
+                $keyData2 | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
+                
+                $Global:AgentPrivateKey = $privB64
+                $Global:AgentPublicKey = $pubB64
+                $Global:KeyFingerprint = $fp2
+                $Global:KeyVersion = 1
+                $Global:AgentSigningAlgorithm = "RSA-2048-XML"
+                
+                Write-Log "[KEYS] RSACryptoServiceProvider fallback generated (post-ECDSA). Fingerprint: $($fp2.Substring(0, 16))..." "SUCCESS"
+                $rsaCsp.Dispose()
+                $exportSuccess = $true
+            } catch {
+                Write-Log "[KEYS] RSACryptoServiceProvider fallback failed: $($_.Exception.Message)" "ERROR"
+                Write-Log "[KEYS] All crypto attempts exhausted - signing DISABLED" "ERROR"
+                return $false
+            }
+        }
         
         # Protect key file (SYSTEM and Administrators only)
         try {
@@ -1635,15 +1699,7 @@ function Initialize-AgentKeys {
             Write-Log "[KEYS] Warning: Could not restrict key file permissions" "WARN"
         }
         
-        $Global:AgentPrivateKey = $privateKeyBase64
-        $Global:AgentPublicKey = $publicKeyBase64
-        $Global:KeyFingerprint = $fingerprint
-        $Global:KeyVersion = 1
-        $Global:AgentSigningAlgorithm = "ECDSA-P256-SHA256"
-        
-        Write-Log "[KEYS] Generated new ECDSA keypair. Fingerprint: $($fingerprint.Substring(0, 16))..." "SUCCESS"
-        
-        if ($null -ne $ecdsa) { $ecdsa.Dispose() } <# HOTFIX-NULL-ECDSA-GUARD #>
+        if ($null -ne $ecdsa) { try { $ecdsa.Dispose() } catch {} }
         return $true
         
     } catch {
