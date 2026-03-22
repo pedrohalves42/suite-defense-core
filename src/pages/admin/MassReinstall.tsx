@@ -296,7 +296,7 @@ Get-ScheduledTask -TaskName "CyberShield*" -EA 0 | Unregister-ScheduledTask -Con
                 className="font-mono"
               />
             </div>
-            <Link to="/admin/enrollment-keys">
+            <Link to="/super-admin/enrollment-keys">
               <Button variant="outline">
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Gerar Nova Key
