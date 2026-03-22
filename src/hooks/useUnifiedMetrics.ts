@@ -108,7 +108,7 @@ export function useUnifiedMetrics() {
       const sevenDaysAgo = subDays(now, 7).toISOString();
       const thirtyDaysAgo = subDays(now, 30).toISOString();
 
-      const [alertsRes, blockedRes, evidenceSummaryRes, vulnRes, insightsRes, blockedItemsRes] = await Promise.all([
+      const [alertsRes, blockedRes, evidenceSummaryRes, vulnTotalRes, vulnCriticalRes, insightsRes, blockedItemsRes] = await Promise.all([
         sb.from('system_alerts')
           .select('id, severity, message, alert_type, status, title, created_at')
           .eq('tenant_id', tenant.id)
@@ -124,6 +124,10 @@ export function useUnifiedMetrics() {
         sb.from('vuln_findings')
           .select('*', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id),
+        sb.from('vuln_findings')
+          .select('*', { count: 'exact', head: true })
+          .eq('tenant_id', tenant.id)
+          .in('severity', ['critical', 'high']),
         sb.from('ai_insights')
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id)
@@ -141,7 +145,9 @@ export function useUnifiedMetrics() {
       const activeAlerts = allAlerts.filter(a => unresolvedStatuses.includes(a.status));
       const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical' || a.severity === 'high');
 
-      const vulns: Array<{ severity: string }> = vulnRes.data || [];
+      const vulnTotal = vulnTotalRes.count || 0;
+      const vulnCritical = vulnCriticalRes.count || 0;
+
 
       // Evidence summary from server-side RPC (deduplicated, no truncation)
       const evidenceSummary = (evidenceSummaryRes.data || {
