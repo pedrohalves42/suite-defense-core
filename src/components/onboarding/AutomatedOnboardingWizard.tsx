@@ -144,7 +144,7 @@ export const AutomatedOnboardingWizard = ({
       icon: Download,
       action: () => {
         completeStep('install_agent');
-        navigate('/admin/enrollment-keys');
+        navigate('/super-admin/enrollment-keys');
         onComplete();
       },
       actionLabel: hasAgent ? 'Agente instalado ✓' : 'Ver instruções',

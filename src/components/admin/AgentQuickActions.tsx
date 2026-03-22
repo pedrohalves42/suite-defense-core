@@ -267,7 +267,7 @@ export function AgentQuickActions({
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/admin/enrollment-keys')}>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/super-admin/enrollment-keys')}>
                   <Key className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>

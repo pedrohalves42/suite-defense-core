@@ -105,7 +105,7 @@ export function OnboardingRequiredBanner() {
       description: 'Execute o comando no computador',
       icon: Download,
       completed: progress.hasAgent,
-      link: '/admin/enrollment-keys',
+      link: '/super-admin/enrollment-keys',
     },
     {
       id: 'online',
