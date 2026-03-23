@@ -4109,24 +4109,37 @@ function Get-UnauthorizedSoftware {
 # v5.0.13-perf: Global HashSet for O(1) baseline lookups
 $Global:ProcessBaselineSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
+function Get-SafeBaselineProp {
+    <#
+    .SYNOPSIS
+        v5.0.15-hotfix-baseline: Safely extracts a property from a baseline entry.
+        Uses PSObject.Properties to avoid PS 5.1 "O item já foi adicionado" crash
+        when a PSCustomObject has duplicate NoteProperties from corrupted JSON.
+    #>
+    param($Entry, [string]$PropName)
+    if ($null -eq $Entry) { return $null }
+    if ($Entry -is [hashtable] -or $Entry -is [System.Collections.Specialized.OrderedDictionary]) {
+        return $Entry[$PropName]
+    }
+    # Safe access via PSObject.Properties — never throws on duplicate keys
+    $prop = $Entry.PSObject.Properties.Match($PropName)
+    if ($prop.Count -gt 0) { return $prop[0].Value }
+    return $null
+}
+
 function ConvertTo-SafePSO {
     <#
     .SYNOPSIS
-        v5.0.14-fix3: Safely converts any baseline entry (hashtable, [ordered], or PSCustomObject)
-        to a clean [PSCustomObject] via [ordered]@{} to eliminate duplicate key warnings in PS 5.1.
-        Always extracts canonical properties by name, never re-casts an existing PSCustomObject.
+        v5.0.15-hotfix-baseline: Safely converts any baseline entry to a clean [PSCustomObject].
+        Uses Get-SafeBaselineProp to avoid PS 5.1 duplicate key crashes.
     #>
     param([Parameter(ValueFromPipeline)]$Entry)
     process {
-        $n = if ($Entry -is [hashtable]) { $Entry["name"] } else { $Entry.name }
-        $c = if ($Entry -is [hashtable]) { $Entry["company"] } else { $Entry.company }
-        $d = if ($Entry -is [hashtable]) { $Entry["description"] } else { $Entry.description }
-        $f = if ($Entry -is [hashtable]) { $Entry["first_seen"] } else { $Entry.first_seen }
         [PSCustomObject]([ordered]@{
-            name        = $n
-            company     = $c
-            description = $d
-            first_seen  = $f
+            name        = Get-SafeBaselineProp $Entry 'name'
+            company     = Get-SafeBaselineProp $Entry 'company'
+            description = Get-SafeBaselineProp $Entry 'description'
+            first_seen  = Get-SafeBaselineProp $Entry 'first_seen'
         })
     }
 }
@@ -4155,31 +4168,28 @@ function Initialize-ProcessBaseline {
             }
 
             if ($loadedBaseline) {
-                # HOTFIX-BASELINE-NORMALIZE-SAVE: Normalize all entries to hashtables to avoid PS 5.1 mixed-type serialization issues
-                # v5.0.14-fix2: Dedup by name during load to prevent duplicate key errors
+                # v5.0.15-hotfix-baseline: Use Get-SafeBaselineProp for all property access
                 $normalizedBaseline = @()
                 $loadSeenNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
                 foreach ($be in $loadedBaseline) {
-                    $beName = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
+                    $beName = Get-SafeBaselineProp $be 'name'
                     if (-not $beName -or $loadSeenNames.Contains($beName)) { continue }
                     [void]$loadSeenNames.Add($beName)
                     $normalizedBaseline += [ordered]@{
                         name        = $beName
-                        company     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
-                        description = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
-                        first_seen  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
+                        company     = Get-SafeBaselineProp $be 'company'
+                        description = Get-SafeBaselineProp $be 'description'
+                        first_seen  = Get-SafeBaselineProp $be 'first_seen'
                     }
                 }
                 $Global:ProcessBaseline = $normalizedBaseline
                 $dupsRemoved = ([array]$loadedBaseline).Count - $normalizedBaseline.Count
                 if ($dupsRemoved -gt 0) {
                     Write-Log "[BASELINE] Load dedup: removed $dupsRemoved duplicate entries" "WARN"
-                    # v5.0.14-fix3: Use ConvertTo-SafePSO to prevent PS 5.1 duplicate key errors
                     $normalizedBaseline | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
                 }
                 Write-Log "[BASELINE] Loaded and normalized baseline with $($normalizedBaseline.Count) processes" "INFO"
             } else {
-                # File missing or corrupted — create fresh
                 $Global:ProcessBaseline = $null
             }
         }
@@ -4211,7 +4221,7 @@ function Initialize-ProcessBaseline {
         # v5.0.13-perf: Build HashSet index for O(1) lookups
         $Global:ProcessBaselineSet.Clear()
         foreach ($entry in $Global:ProcessBaseline) {
-            $n = if ($entry -is [hashtable]) { $entry["name"] } else { $entry.name }
+            $n = Get-SafeBaselineProp $entry 'name'
             if ($n) { [void]$Global:ProcessBaselineSet.Add($n) }
         }
         Write-Log "[BASELINE] Built O(1) HashSet index with $($Global:ProcessBaselineSet.Count) entries" "DEBUG"
@@ -4252,7 +4262,7 @@ function Get-ProcessAnomalies {
                 $seenNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
                 $cleanBaseline = @()
                 foreach ($entry in $Global:ProcessBaseline) {
-                    $entryName = if ($entry -is [hashtable]) { $entry["name"] } else { $entry.name }
+                    $entryName = Get-SafeBaselineProp $entry 'name'
                     if ($entryName -and -not $seenNames.Contains($entryName)) {
                         [void]$seenNames.Add($entryName)
                         $cleanBaseline += $entry
@@ -4263,7 +4273,7 @@ function Get-ProcessAnomalies {
                     $Global:ProcessBaseline = $cleanBaseline
                     $Global:ProcessBaselineSet.Clear()
                     foreach ($e in $cleanBaseline) {
-                        $n = if ($e -is [hashtable]) { $e["name"] } else { $e.name }
+                        $n = Get-SafeBaselineProp $e 'name'
                         if ($n) { [void]$Global:ProcessBaselineSet.Add($n) }
                     }
                     $cleanBaseline | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
@@ -4304,10 +4314,10 @@ function Get-ProcessAnomalies {
                 $normalizedForSave = @()
                 foreach ($be in $Global:ProcessBaseline) {
                     $normalizedForSave += [ordered]@{
-                        name        = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
-                        company     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
-                        description = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
-                        first_seen  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
+                        name        = Get-SafeBaselineProp $be 'name'
+                        company     = Get-SafeBaselineProp $be 'company'
+                        description = Get-SafeBaselineProp $be 'description'
+                        first_seen  = Get-SafeBaselineProp $be 'first_seen'
                     }
                 }
                 # v5.0.14-fix3: Use ConvertTo-SafePSO to prevent PS 5.1 duplicate key errors
