@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from './useActiveTenant';
 import { logger } from '@/lib/logger';
