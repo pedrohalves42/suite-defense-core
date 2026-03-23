@@ -142,10 +142,12 @@ export default function SOC2Dashboard() {
       </div>
 
       {/* Abas */}
-      <Tabs defaultValue="criteria" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+      <Tabs defaultValue="wizard" className="space-y-4">
+        <TabsList className="flex w-full overflow-x-auto">
+          <TabsTrigger value="wizard">🧙 Assistente</TabsTrigger>
           <TabsTrigger value="criteria">Critérios CC1-CC9</TabsTrigger>
           <TabsTrigger value="policies">Políticas</TabsTrigger>
+          <TabsTrigger value="sla">📊 SLA/SLO</TabsTrigger>
           <TabsTrigger value="alerts">Alertas</TabsTrigger>
           <TabsTrigger value="vendors">Fornecedores</TabsTrigger>
           <TabsTrigger value="matrix">Matriz</TabsTrigger>
