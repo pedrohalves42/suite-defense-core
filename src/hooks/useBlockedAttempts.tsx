@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from './useActiveTenant';
 import { logger } from '@/lib/logger';
@@ -64,89 +65,95 @@ export function useBlockedAttempts(options: UseBlockedAttemptsOptions = {}) {
     enabled: !tenantLoading && !!activeTenant?.id, // P0 CRIT-02: Race condition fix
   });
 
-  // Enhanced stats calculation
-  const stats: BlockedAttemptsStats = {
-    totalAttempts: 0,
-    uniqueDomains: 0,
-    uniqueAgents: 0,
-    todayAttempts: 0,
-    weekAttempts: 0,
-    topBlockedDomains: [],
-    attemptsByHour: [],
-    agentBreakdown: [],
-  };
+  // TUNING: Memoize stats calculation to avoid recomputing on every render
+  const { stats, todayStats } = useMemo(() => {
+    const s: BlockedAttemptsStats = {
+      totalAttempts: 0,
+      uniqueDomains: 0,
+      uniqueAgents: 0,
+      todayAttempts: 0,
+      weekAttempts: 0,
+      topBlockedDomains: [],
+      attemptsByHour: [],
+      agentBreakdown: [],
+    };
 
-  const todayStats = {
-    totalAttempts: 0,
-    uniqueDomains: 0,
-    uniqueAgents: 0,
-  };
+    const ts = {
+      totalAttempts: 0,
+      uniqueDomains: 0,
+      uniqueAgents: 0,
+    };
 
-  if (attempts && attempts.length > 0) {
-    const now = new Date();
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-    
-    const weekAgo = new Date(now);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    
-    const todayAttempts = attempts.filter(a => new Date(a.attempted_at) >= today);
-    const weekAttempts = attempts.filter(a => new Date(a.attempted_at) >= weekAgo);
-    
-    // Basic stats
-    stats.totalAttempts = attempts.length;
-    stats.uniqueDomains = new Set(attempts.map(a => a.domain)).size;
-    stats.uniqueAgents = new Set(attempts.map(a => a.agent_id)).size;
-    stats.todayAttempts = todayAttempts.length;
-    stats.weekAttempts = weekAttempts.length;
-    
-    // Today stats (for backward compatibility)
-    todayStats.totalAttempts = todayAttempts.length;
-    todayStats.uniqueDomains = new Set(todayAttempts.map(a => a.domain)).size;
-    todayStats.uniqueAgents = new Set(todayAttempts.map(a => a.agent_id)).size;
-    
-    // Top blocked domains
+    if (!attempts || attempts.length === 0) return { stats: s, todayStats: ts };
+
+    const now = Date.now();
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayMs = todayStart.getTime();
+    const weekMs = now - 7 * 24 * 60 * 60 * 1000;
+    const last24hMs = now - 24 * 60 * 60 * 1000;
+
+    // Single-pass aggregation
     const domainCounts = new Map<string, number>();
-    for (const attempt of attempts) {
-      domainCounts.set(attempt.domain, (domainCounts.get(attempt.domain) || 0) + 1);
-    }
-    stats.topBlockedDomains = Array.from(domainCounts.entries())
-      .map(([domain, count]) => ({ domain, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-    
-    // Attempts by hour (last 24 hours)
+    const agentCounts = new Map<string, { agentId: string; agentName: string; count: number }>();
     const hourCounts = new Map<number, number>();
-    const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    for (const attempt of attempts) {
-      const attemptDate = new Date(attempt.attempted_at);
-      if (attemptDate >= last24h) {
-        const hour = attemptDate.getHours();
+    const uniqueDomains = new Set<string>();
+    const uniqueAgents = new Set<string>();
+    const todayDomains = new Set<string>();
+    const todayAgents = new Set<string>();
+    let todayCount = 0;
+    let weekCount = 0;
+
+    for (const a of attempts) {
+      const attemptMs = new Date(a.attempted_at).getTime();
+
+      // Domain and agent tracking
+      uniqueDomains.add(a.domain);
+      uniqueAgents.add(a.agent_id);
+      domainCounts.set(a.domain, (domainCounts.get(a.domain) || 0) + 1);
+
+      const existing = agentCounts.get(a.agent_id);
+      if (existing) existing.count++;
+      else agentCounts.set(a.agent_id, { agentId: a.agent_id, agentName: a.agent_name, count: 1 });
+
+      // Time-based stats
+      if (attemptMs >= todayMs) {
+        todayCount++;
+        todayDomains.add(a.domain);
+        todayAgents.add(a.agent_id);
+      }
+      if (attemptMs >= weekMs) weekCount++;
+      if (attemptMs >= last24hMs) {
+        const hour = new Date(a.attempted_at).getHours();
         hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
       }
     }
-    stats.attemptsByHour = Array.from({ length: 24 }, (_, i) => ({
+
+    s.totalAttempts = attempts.length;
+    s.uniqueDomains = uniqueDomains.size;
+    s.uniqueAgents = uniqueAgents.size;
+    s.todayAttempts = todayCount;
+    s.weekAttempts = weekCount;
+
+    s.topBlockedDomains = Array.from(domainCounts.entries())
+      .map(([domain, count]) => ({ domain, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    s.attemptsByHour = Array.from({ length: 24 }, (_, i) => ({
       hour: i,
       count: hourCounts.get(i) || 0,
     }));
-    
-    // Agent breakdown
-    const agentCounts = new Map<string, { agentId: string; agentName: string; count: number }>();
-    for (const attempt of attempts) {
-      const existing = agentCounts.get(attempt.agent_id);
-      if (existing) {
-        existing.count++;
-      } else {
-        agentCounts.set(attempt.agent_id, {
-          agentId: attempt.agent_id,
-          agentName: attempt.agent_name,
-          count: 1,
-        });
-      }
-    }
-    stats.agentBreakdown = Array.from(agentCounts.values())
+
+    s.agentBreakdown = Array.from(agentCounts.values())
       .sort((a, b) => b.count - a.count);
-  }
+
+    ts.totalAttempts = todayCount;
+    ts.uniqueDomains = todayDomains.size;
+    ts.uniqueAgents = todayAgents.size;
+
+    return { stats: s, todayStats: ts };
+  }, [attempts]);
 
   return {
     attempts: attempts || [],

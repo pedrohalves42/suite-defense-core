@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface LogContext {
   [key: string]: any;
 }

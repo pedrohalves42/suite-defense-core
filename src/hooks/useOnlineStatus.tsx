@@ -9,13 +9,12 @@ export function useOnlineStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [wasOffline, setWasOffline] = useState(false);
 
+  // TUNING: Remove wasOffline from deps - was causing unnecessary re-subscriptions
   useEffect(() => {
     const handleOnline = () => {
       logger.info('[useOnlineStatus] Conexao restaurada');
       setIsOnline(true);
-      if (wasOffline) {
-        setWasOffline(false);
-      }
+      setWasOffline(false);
     };
 
     const handleOffline = () => {
@@ -27,14 +26,11 @@ export function useOnlineStatus() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Check initial status
-    setIsOnline(navigator.onLine);
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [wasOffline]);
+  }, []);
 
   return { isOnline, wasOffline };
 }

@@ -65,11 +65,13 @@ export function useWebVitals(): WebVitalsMetrics {
       observers.push(fidObserver);
 
       // CLS
+      // TUNING: Proper LayoutShift type instead of `as any[]`
       let clsValue = 0;
       const clsObserver = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries() as any[]) {
-          if (!entry.hadRecentInput) {
-            clsValue += entry.value;
+        for (const entry of list.getEntries()) {
+          const layoutEntry = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number };
+          if (!layoutEntry.hadRecentInput && layoutEntry.value) {
+            clsValue += layoutEntry.value;
             updateMetric("cls", clsValue);
           }
         }

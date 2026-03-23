@@ -190,7 +190,7 @@ export function useTelemetryStats() {
           .gte('event_time', since),
       ]);
 
-      const uniqueTechniques = new Set((mitre.data || []).map((r: any) => r.mitre_technique_id));
+      const uniqueTechniques = new Set((mitre.data || []).map((r: { mitre_technique_id: string }) => r.mitre_technique_id));
 
       return {
         processEvents24h: proc.count || 0,

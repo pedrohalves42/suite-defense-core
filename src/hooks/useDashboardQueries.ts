@@ -162,7 +162,8 @@ export function useDashboardQueries() {
         event: '*', schema: 'public', table: 'agents',
         filter: `tenant_id=eq.${tenantId}`,
       }, () => {
-        logger.info('[DashboardQueries] Agents changed, invalidating...');
+        // TUNING: Downgrade from info to debug - fires too frequently
+        logger.debug('[DashboardQueries] Agents changed, invalidating...');
         queryClient.invalidateQueries({ queryKey: ["dashboard", "agents", tenantId] });
       })
       .subscribe();
@@ -173,7 +174,7 @@ export function useDashboardQueries() {
         event: '*', schema: 'public', table: 'jobs',
         filter: `tenant_id=eq.${tenantId}`,
       }, () => {
-        logger.info('[DashboardQueries] Jobs changed, invalidating...');
+        logger.debug('[DashboardQueries] Jobs changed, invalidating...');
         queryClient.invalidateQueries({ queryKey: ["dashboard", "jobs", tenantId] });
       })
       .subscribe();
