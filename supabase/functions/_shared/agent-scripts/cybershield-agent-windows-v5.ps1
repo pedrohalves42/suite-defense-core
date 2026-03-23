@@ -3329,13 +3329,17 @@ function Invoke-UpdateAgent {
         
         $data = $updateResult.Content | ConvertFrom-Json
         
-        # Check if already up to date
-        if ($data.message -eq "Already up to date" -or $data.message -match "No update available") {
-            Write-Log "[UPDATE] Already at latest version ($($data.current_version))" "INFO"
+        # Check if already up to date (safe property access to avoid strict-mode errors)
+        $dataMsg = $null
+        if ($data.PSObject.Properties.Match('message').Count -gt 0) { $dataMsg = $data.message }
+        if ($dataMsg -eq "Already up to date" -or $dataMsg -match "No update available") {
+            $curVer = $null
+            if ($data.PSObject.Properties.Match('current_version').Count -gt 0) { $curVer = $data.current_version }
+            Write-Log "[UPDATE] Already at latest version ($curVer)" "INFO"
             return @{
                 status = "up_to_date"
                 current_version = $Global:AgentVersion
-                latest_version = $data.current_version
+                latest_version = $curVer
             }
         }
         
