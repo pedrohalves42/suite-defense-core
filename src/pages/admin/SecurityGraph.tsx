@@ -377,7 +377,14 @@ export default function SecurityGraph() {
                                     {node.label || node.node_value}
                                   </p>
                                   <p className="text-[11px] text-muted-foreground">
-                                    {getTypeLabel(node.node_type)}
+                                    {(() => {
+                                      const meta = node.metadata as any;
+                                      const src = meta?.source;
+                                      if (src && sourceExplanations[src]) {
+                                        return sourceExplanations[src].name;
+                                      }
+                                      return getTypeLabel(node.node_type);
+                                    })()}
                                   </p>
                                 </div>
                                 <Badge variant="outline" className={`text-[10px] shrink-0 ${risk.badgeClass}`}>
