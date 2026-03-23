@@ -24,6 +24,46 @@ const typeLabels: Record<string, { label: string; description: string; icon: typ
   cve: { label: "Vulnerabilidades", description: "Falhas de segurança conhecidas", icon: AlertTriangle },
 };
 
+/* ─── Source explanations for non-technical users ─── */
+const sourceExplanations: Record<string, { name: string; reason: string }> = {
+  abuse_ch_urlhaus: {
+    name: "URLhaus (Abuse.ch)",
+    reason: "Este endereço foi reportado como distribuidor de malware (vírus) por pesquisadores de segurança do mundo todo.",
+  },
+  abuse_ch_feodotracker: {
+    name: "Feodo Tracker (Abuse.ch)",
+    reason: "Este IP é usado por criminosos para controlar computadores infectados (servidor de comando e controle).",
+  },
+  abuse_ch_malwarebazaar: {
+    name: "MalwareBazaar (Abuse.ch)",
+    reason: "Este arquivo foi identificado como malware (software malicioso) por múltiplos laboratórios de segurança.",
+  },
+  alienvault_otx: {
+    name: "AlienVault OTX",
+    reason: "Identificado como ameaça pela comunidade global de inteligência de ameaças AlienVault.",
+  },
+  virustotal: {
+    name: "VirusTotal",
+    reason: "Detectado como malicioso por múltiplos antivírus no VirusTotal.",
+  },
+  cybershield_network: {
+    name: "Rede CyberShield",
+    reason: "Detectado pela análise de comportamento da rede CyberShield.",
+  },
+  internal: {
+    name: "Detecção Interna",
+    reason: "Identificado pela análise comportamental do agente instalado na máquina.",
+  },
+  edr_detection: {
+    name: "Detecção EDR",
+    reason: "O sistema de proteção detectou comportamento suspeito neste item.",
+  },
+  network_telemetry: {
+    name: "Análise de Rede",
+    reason: "Detectado pela análise do tráfego de rede dos computadores monitorados.",
+  },
+};
+
 function getRiskInfo(score: number) {
   if (score >= 80) return {
     level: "danger" as const,
@@ -91,7 +131,7 @@ export default function SecurityGraph() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("security_graph_nodes")
-        .select("id, tenant_id, node_type, node_value, label, risk_score, first_seen_at, last_seen_at")
+        .select("id, tenant_id, node_type, node_value, label, risk_score, first_seen_at, last_seen_at, metadata")
         .eq("tenant_id", tenant!.id)
         .order("risk_score", { ascending: false })
         .limit(500);
@@ -337,7 +377,14 @@ export default function SecurityGraph() {
                                     {node.label || node.node_value}
                                   </p>
                                   <p className="text-[11px] text-muted-foreground">
-                                    {getTypeLabel(node.node_type)}
+                                    {(() => {
+                                      const meta = node.metadata as any;
+                                      const src = meta?.source;
+                                      if (src && sourceExplanations[src]) {
+                                        return sourceExplanations[src].name;
+                                      }
+                                      return getTypeLabel(node.node_type);
+                                    })()}
                                   </p>
                                 </div>
                                 <Badge variant="outline" className={`text-[10px] shrink-0 ${risk.badgeClass}`}>
@@ -402,6 +449,30 @@ export default function SecurityGraph() {
                       />
                     </div>
                   </div>
+
+                  {/* WHY it's dangerous — the key missing info */}
+                  {(() => {
+                    const meta = selectedNode.metadata as any;
+                    const src = meta?.source;
+                    const sourceInfo = src ? sourceExplanations[src] : null;
+                    if (!sourceInfo && selectedNode.risk_score < 60) return null;
+                    return (
+                      <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+                        <p className="text-[11px] uppercase tracking-wider text-destructive/80 mb-1.5 font-semibold">
+                          ⚠️ Por que é perigoso?
+                        </p>
+                        <p className="text-sm text-foreground leading-relaxed">
+                          {sourceInfo?.reason || "Este item apresentou comportamento suspeito detectado pela análise automática de segurança."}
+                        </p>
+                        {sourceInfo && (
+                          <p className="text-[11px] text-muted-foreground mt-2">
+                            Fonte: <span className="font-medium">{sourceInfo.name}</span>
+                            {meta?.confidence && <> · Confiança: {meta.confidence}%</>}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* When */}
                   <div>
