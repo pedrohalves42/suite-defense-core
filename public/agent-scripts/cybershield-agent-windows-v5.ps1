@@ -1439,7 +1439,7 @@ function Initialize-AgentKeys {
                 # v5.0.12: Always use explicit ephemeral key to avoid CNG naming conflicts
                 $creationParams = New-Object System.Security.Cryptography.CngKeyCreationParameters
                 $creationParams.ExportPolicy = [System.Security.Cryptography.CngExportPolicies]::AllowPlaintextExport
-                # v5.0.17-fix: OverwriteExistingKey prevents "O objeto já existe" on .NET 4.x
+                # v5.0.15-hotfix-cng: OverwriteExistingKey prevents "O objeto já existe" on .NET 4.x
                 # where CNG may internally persist named containers even with $null name
                 $creationParams.KeyCreationOptions = [System.Security.Cryptography.CngKeyCreationOptions]::OverwriteExistingKey
                 
@@ -1595,7 +1595,7 @@ function Initialize-AgentKeys {
             }
         }
         
-        # v5.0.16-fix: Wrap ECDSA export in try/catch with RSACryptoServiceProvider fallback
+        # v5.0.15-hotfix-ecdsa: Wrap ECDSA export in try/catch with RSACryptoServiceProvider fallback
         # On .NET Framework 4.x, ExportPkcs8PrivateKey() does not exist, causing a fatal
         # exception that skips all RSA fallbacks and leaves the agent in DEGRADED mode.
         $exportSuccess = $false
@@ -2379,7 +2379,7 @@ function Sync-DnsBlocklist {
             -TimeoutSec 15
         
         if (-not $result.Success) {
-            # v5.0.16: Handle 403/404 gracefully - these are expected when feature is disabled
+            # v5.0.15: Handle 403/404 gracefully - these are expected when feature is disabled
             $errMsg = if ($result.Error) { $result.Error } else { "Unknown" }
             if ($errMsg -match '403|Proibido|Forbidden') {
                 Write-Log "[DNS] DNS Filter not enabled for this tenant (403)" "DEBUG"
@@ -2404,7 +2404,7 @@ function Sync-DnsBlocklist {
         return $false
         
     } catch {
-        # v5.0.16: Catch 403/404 from PowerShell HTTP exceptions too
+        # v5.0.15: Catch 403/404 from PowerShell HTTP exceptions too
         $exMsg = $_.Exception.Message
         if ($exMsg -match '403|Proibido|Forbidden') {
             Write-Log "[DNS] DNS Filter disabled for tenant (403)" "DEBUG"
@@ -5761,7 +5761,7 @@ function Test-FirewallStatus {
 }
 
 # ============================================
-#  v5.0.16: LOCAL DETECTION - USB DEVICE MONITORING WITH WHITELIST
+#  v5.0.15: LOCAL DETECTION - USB DEVICE MONITORING WITH WHITELIST
 # ============================================
 function Get-UsbWhitelist {
     <#
