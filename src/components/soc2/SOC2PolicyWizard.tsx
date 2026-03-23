@@ -114,7 +114,7 @@ export function SOC2PolicyWizard() {
             updated_at: new Date().toISOString(),
           }, { onConflict: 'tenant_id,criteria_code' });
 
-        if (error) console.error(`Error saving criteria ${criteria.code}:`, error);
+        if (error) logger.error(`Error saving criteria ${criteria.code}`, { error: error.message });
       }
 
       // Save policy statuses
