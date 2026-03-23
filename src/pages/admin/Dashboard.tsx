@@ -26,6 +26,7 @@ import { OnboardingRequiredBanner } from '@/components/admin/OnboardingRequiredB
 import { SimpleDashboard } from '@/components/dashboard/SimpleDashboard';
 import { GuidedTour } from '@/components/admin/GuidedTour';
 import { SecurityAchievements } from '@/components/admin/SecurityAchievements';
+import { FleetHealthDashboard } from '@/components/fleet/FleetHealthDashboard';
 import { useProactiveAlerts } from '@/hooks/useProactiveAlerts';
 import { useSimpleModeContext } from '@/hooks/useSimpleMode';
 import { useTranslation } from 'react-i18next';
