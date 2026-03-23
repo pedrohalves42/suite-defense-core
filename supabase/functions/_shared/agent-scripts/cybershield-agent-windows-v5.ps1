@@ -4833,24 +4833,42 @@ function Get-SystemMetrics {
             return $Global:CachedSystemMetrics
         }
 
-        # v5.0.14-fix: Use Get-Counter with 2s interval + 3 samples averaged for accurate CPU reading
-        # Single samples can still return 0-1% on idle machines
+        # v5.0.15-fix: Accurate CPU measurement using dual-snapshot PercentProcessorTime delta
+        # LoadPercentage and single Get-Counter samples are unreliable (return 0-1% on active machines)
         $cpuPercent = 0
         try {
-            $samples = Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 2 -MaxSamples 3 -ErrorAction Stop
-            $values = $samples.CounterSamples | ForEach-Object { $_.CookedValue } | Where-Object { $_ -ge 0 -and $_ -le 100 }
-            if ($values.Count -gt 0) {
-                $cpuPercent = [math]::Round(($values | Measure-Object -Average).Average, 2)
+            # Method 1: Manual delta calculation using raw PercentProcessorTime (most accurate)
+            $snap1 = Get-CimInstance Win32_PerfRawData_PerfOS_Processor -Filter "Name='_Total'" -ErrorAction Stop
+            Start-Sleep -Milliseconds 1500
+            $snap2 = Get-CimInstance Win32_PerfRawData_PerfOS_Processor -Filter "Name='_Total'" -ErrorAction Stop
+            
+            $deltaProc = [double]($snap2.PercentProcessorTime - $snap1.PercentProcessorTime)
+            $deltaTime = [double]($snap2.TimeStamp_Sys100NS - $snap1.TimeStamp_Sys100NS)
+            
+            if ($deltaTime -gt 0) {
+                # PercentProcessorTime counts IDLE time, so we invert
+                $cpuPercent = [math]::Round((1.0 - ($deltaProc / $deltaTime)) * 100, 2)
+                if ($cpuPercent -lt 0) { $cpuPercent = 0 }
+                if ($cpuPercent -gt 100) { $cpuPercent = 100 }
             }
         } catch {
-            # Fallback: try CIM LoadPercentage if Get-Counter fails (e.g., on Server Core)
+            # Fallback 1: Get-Counter (may fail on Server Core or localized OS)
             try {
-                $cpuPercent = Get-CimInstance Win32_Processor | 
-                    Measure-Object -Property LoadPercentage -Average | 
-                    Select-Object -ExpandProperty Average
-                $cpuPercent = [math]::Round($cpuPercent, 2)
+                $sample = Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 2 -MaxSamples 2 -ErrorAction Stop
+                $values = $sample.CounterSamples | ForEach-Object { $_.CookedValue } | Where-Object { $_ -ge 0 -and $_ -le 100 }
+                if ($values.Count -gt 0) {
+                    $cpuPercent = [math]::Round(($values | Measure-Object -Average).Average, 2)
+                }
             } catch {
-                Write-Log "[METRICS] CPU collection failed: $($_.Exception.Message)" "WARN"
+                # Fallback 2: CIM LoadPercentage (least accurate, but always available)
+                try {
+                    $cpuPercent = Get-CimInstance Win32_Processor | 
+                        Measure-Object -Property LoadPercentage -Average | 
+                        Select-Object -ExpandProperty Average
+                    $cpuPercent = [math]::Round($cpuPercent, 2)
+                } catch {
+                    Write-Log "[METRICS] CPU collection failed: $($_.Exception.Message)" "WARN"
+                }
             }
         }
 
