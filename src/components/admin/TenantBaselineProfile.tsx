@@ -56,24 +56,46 @@ export function TenantBaselineProfile() {
       if (!tenant?.id) return null;
       
       // Get latest system metrics across all agents
-      const { data, error } = await supabase
-        .from('agent_system_metrics_partitioned')
-        .select('cpu_usage_percent, memory_usage_percent, collected_at')
-        .eq('tenant_id', tenant.id)
-        .gte('collected_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
-        .order('collected_at', { ascending: false })
-        .limit(100);
+      const [metricsRes, procRes] = await Promise.all([
+        supabase
+          .from('agent_system_metrics_partitioned')
+          .select('agent_id, cpu_usage_percent, memory_usage_percent, collected_at')
+          .eq('tenant_id', tenant.id)
+          .gte('collected_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+          .order('collected_at', { ascending: false })
+          .limit(200),
+        supabase
+          .from('agent_processes')
+          .select('agent_id', { count: 'exact', head: false })
+          .eq('tenant_id', tenant.id)
+          .gte('collected_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+          .limit(1000),
+      ]);
       
-      if (error) throw error;
+      const data = metricsRes.data;
       if (!data || data.length === 0) return null;
 
       const avgCpu = data.reduce((s: number, m: any) => s + (m.cpu_usage_percent || 0), 0) / data.length;
       const avgMem = data.reduce((s: number, m: any) => s + (m.memory_usage_percent || 0), 0) / data.length;
 
-      return { avgCpu: Math.round(avgCpu * 10) / 10, avgMem: Math.round(avgMem * 10) / 10 };
+      // Calculate avg processes per agent
+      const procData = procRes.data || [];
+      const agentProcCounts = new Map<string, number>();
+      procData.forEach((p: any) => {
+        agentProcCounts.set(p.agent_id, (agentProcCounts.get(p.agent_id) || 0) + 1);
+      });
+      const avgProcs = agentProcCounts.size > 0
+        ? Math.round(Array.from(agentProcCounts.values()).reduce((s, c) => s + c, 0) / agentProcCounts.size)
+        : null;
+
+      return {
+        avgCpu: Math.round(avgCpu * 10) / 10,
+        avgMem: Math.round(avgMem * 10) / 10,
+        avgProcs,
+      };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
   });
 
   // Fetch active hours pattern
@@ -122,19 +144,23 @@ export function TenantBaselineProfile() {
 
     const result: BaselineProfile[] = [];
 
+    // For CPU/RAM (percentage metrics), use absolute difference in percentage points
+    // This avoids misleading +1380% when baseline is 1% and current is 15%
     if (cpuBaselines.length > 0) {
       const avgMean = cpuBaselines.reduce((s, b) => s + (b.mean_value || 0), 0) / cpuBaselines.length;
       const avgStd = cpuBaselines.reduce((s, b) => s + (b.std_deviation || 0), 0) / cpuBaselines.length;
-      const currentVal = currentMetrics?.avgCpu || null;
-      const drift = currentVal !== null ? ((currentVal - avgMean) / Math.max(avgMean, 1)) * 100 : 0;
+      const currentVal = currentMetrics?.avgCpu ?? null;
+      // Use absolute difference in percentage points for CPU/RAM
+      const absDiff = currentVal !== null ? currentVal - avgMean : 0;
+      const drift = Math.round(absDiff);
       
       result.push({
         type: 'cpu',
         mean: Math.round(avgMean * 10) / 10,
         stdDev: Math.round(avgStd * 10) / 10,
         currentAvg: currentVal,
-        driftPercent: Math.round(drift),
-        status: Math.abs(drift) > 50 ? 'critical' : Math.abs(drift) > 25 ? 'warning' : 'normal',
+        driftPercent: drift,
+        status: Math.abs(absDiff) > 20 ? 'critical' : Math.abs(absDiff) > 10 ? 'warning' : 'normal',
         unit: '%',
         label: 'CPU Médio por Empresa',
       });
@@ -143,16 +169,17 @@ export function TenantBaselineProfile() {
     if (memBaselines.length > 0) {
       const avgMean = memBaselines.reduce((s, b) => s + (b.mean_value || 0), 0) / memBaselines.length;
       const avgStd = memBaselines.reduce((s, b) => s + (b.std_deviation || 0), 0) / memBaselines.length;
-      const currentVal = currentMetrics?.avgMem || null;
-      const drift = currentVal !== null ? ((currentVal - avgMean) / Math.max(avgMean, 1)) * 100 : 0;
+      const currentVal = currentMetrics?.avgMem ?? null;
+      const absDiff = currentVal !== null ? currentVal - avgMean : 0;
+      const drift = Math.round(absDiff);
 
       result.push({
         type: 'memory',
         mean: Math.round(avgMean * 10) / 10,
         stdDev: Math.round(avgStd * 10) / 10,
         currentAvg: currentVal,
-        driftPercent: Math.round(drift),
-        status: Math.abs(drift) > 50 ? 'critical' : Math.abs(drift) > 25 ? 'warning' : 'normal',
+        driftPercent: drift,
+        status: Math.abs(absDiff) > 20 ? 'critical' : Math.abs(absDiff) > 10 ? 'warning' : 'normal',
         unit: '%',
         label: 'Memória Média por Empresa',
       });
@@ -160,13 +187,15 @@ export function TenantBaselineProfile() {
 
     if (procBaselines.length > 0) {
       const avgMean = procBaselines.reduce((s, b) => s + (b.mean_value || 0), 0) / procBaselines.length;
+      const currentVal = currentMetrics?.avgProcs ?? null;
+      const absDiff = currentVal !== null ? currentVal - Math.round(avgMean) : 0;
       result.push({
         type: 'processes',
         mean: Math.round(avgMean),
         stdDev: 0,
-        currentAvg: null,
-        driftPercent: 0,
-        status: 'normal',
+        currentAvg: currentVal,
+        driftPercent: absDiff,
+        status: Math.abs(absDiff) > 50 ? 'warning' : 'normal',
         unit: '',
         label: 'Processos Médios por Agente',
       });
@@ -253,7 +282,7 @@ export function TenantBaselineProfile() {
                         profile.driftPercent > 0 ? 'text-red-500' : 
                         profile.driftPercent < 0 ? 'text-blue-500' : 'text-green-500'
                       )}>
-                        {profile.driftPercent > 0 ? '+' : ''}{profile.driftPercent}%
+                        {profile.driftPercent > 0 ? '+' : ''}{profile.driftPercent}{profile.unit ? 'pp' : ''}
                       </p>
                       <p className="text-[10px] text-muted-foreground">Variação</p>
                     </div>

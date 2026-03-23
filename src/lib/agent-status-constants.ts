@@ -18,7 +18,7 @@ export const AGENT_STATUS_THRESHOLDS = {
   // ========================================
 
   /** Até X minutos desde o último heartbeat = Online (verde) */
-  ONLINE_MAX_MINUTES: 12,
+  ONLINE_MAX_MINUTES: 15,
 
   /** Entre ONLINE e OFFLINE = Intermitente/Atenção (amarelo) */
   WARNING_MAX_MINUTES: 30,
