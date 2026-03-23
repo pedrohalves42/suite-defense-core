@@ -36,6 +36,7 @@ export function BatchActionBar({ selectedIds, selectedNames, onClearSelection }:
         status: 'pending' as const,
         priority: type === 'update_agent' ? 10 : 5,
         payload: {},
+        payload_hash: '',
       }));
 
       const { error } = await supabase.from('jobs').insert(jobs);
