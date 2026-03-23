@@ -14,10 +14,10 @@ interface WebActivityRow {
 }
 
 async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebActivityItem[]> {
-  // Fetch raw data and aggregate manually - expanded to 7 days for better visibility
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  // Fetch raw data and aggregate manually - expanded to 30 days for better visibility
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   
-  logger.debug('[useWebActivity] Starting fetch:', { agentId, tenantId, since: sevenDaysAgo });
+  logger.debug('[useWebActivity] Starting fetch:', { agentId, tenantId, since: thirtyDaysAgo });
   
   // ADR-026 FIX: Use direct supabase query to avoid RLS issues with JWT sync delay
   // The RLS policy tenant_web_activity_select uses user_roles subquery which should work
@@ -26,7 +26,7 @@ async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebA
     .select('domain, visited_at, category, is_blocked, visit_count')
     .eq('agent_id', agentId)
     .eq('tenant_id', tenantId)
-    .gte('visited_at', sevenDaysAgo)
+    .gte('visited_at', thirtyDaysAgo)
     .order('visited_at', { ascending: false })
     .limit(5000);
 
