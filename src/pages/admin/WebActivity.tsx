@@ -120,6 +120,16 @@ export default function WebActivity() {
       const tenantId = onlineAgents[0]?.tenant_id;
       if (!tenantId) throw new Error('Tenant não identificado');
 
+      // Cancel-then-create: cancel existing active collect_web_activity jobs to avoid dedup constraint
+      const agentIds = onlineAgents.map(a => a.agent_id);
+      await (supabase as any)
+        .from('jobs')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .eq('tenant_id', tenantId)
+        .eq('type', 'collect_web_activity')
+        .in('status', ['queued', 'pending'])
+        .in('agent_id', agentIds);
+
       const jobs = await Promise.all(
         onlineAgents.map(agent =>
           prepareJobForInsert({
@@ -129,7 +139,7 @@ export default function WebActivity() {
             type: 'collect_web_activity',
             status: 'queued',
             priority: 8,
-            payload: { max_domains: 500, browsers: ['chrome', 'firefox', 'edge', 'brave', 'opera', 'vivaldi'], days_back: 7, source: 'manual-bulk' },
+            payload: { max_domains: 500, browsers: ['chrome', 'firefox', 'edge', 'brave', 'opera', 'vivaldi'], days_back: 30, source: 'manual-bulk' },
             approved: true,
           })
         )
