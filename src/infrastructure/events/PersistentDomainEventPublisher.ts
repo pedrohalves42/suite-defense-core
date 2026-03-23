@@ -23,10 +23,10 @@ export class PersistentDomainEventPublisher implements DomainEventDispatcher {
         });
 
       if (error) {
-        console.error('[PersistentDomainEventPublisher] Failed to persist event:', error.message);
+        logger.error('[PersistentDomainEventPublisher] Failed to persist event', { error: error.message });
       }
     } catch (err) {
-      console.error('[PersistentDomainEventPublisher] Unexpected error:', err);
+      logger.error('[PersistentDomainEventPublisher] Unexpected error', err instanceof Error ? err : undefined);
       // Don't throw — event publishing should not fail the business operation
     }
   }
