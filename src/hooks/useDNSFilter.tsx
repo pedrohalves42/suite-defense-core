@@ -265,7 +265,7 @@ export function useDNSFilter() {
         const cutoff = new Date(Date.now() - 30 * 60 * 1000); // 30min - matches AGENT_STATUS_THRESHOLDS
         agents = allTenantAgents.filter((agent) => {
           if (!agent.last_heartbeat) return false;
-          return new Date(agent.last_heartbeat) > fiveMinutesAgo;
+          return new Date(agent.last_heartbeat) > cutoff;
         });
       }
 
