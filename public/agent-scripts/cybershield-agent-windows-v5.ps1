@@ -4310,10 +4310,10 @@ function Get-ProcessAnomalies {
                 $normalizedForSave = @()
                 foreach ($be in $Global:ProcessBaseline) {
                     $normalizedForSave += [ordered]@{
-                        name        = if ($be -is [hashtable]) { $be["name"] } else { $be.name }
-                        company     = if ($be -is [hashtable]) { $be["company"] } else { $be.company }
-                        description = if ($be -is [hashtable]) { $be["description"] } else { $be.description }
-                        first_seen  = if ($be -is [hashtable]) { $be["first_seen"] } else { $be.first_seen }
+                        name        = Get-SafeBaselineProp $be 'name'
+                        company     = Get-SafeBaselineProp $be 'company'
+                        description = Get-SafeBaselineProp $be 'description'
+                        first_seen  = Get-SafeBaselineProp $be 'first_seen'
                     }
                 }
                 # v5.0.14-fix3: Use ConvertTo-SafePSO to prevent PS 5.1 duplicate key errors
