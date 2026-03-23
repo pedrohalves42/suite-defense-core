@@ -4,6 +4,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
+import { isAgentOnline } from '@/lib/agent-status-constants';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -138,8 +139,7 @@ export function AgentSystemInfo({ agentId, tenantId }: AgentSystemInfoProps) {
     }
   };
 
-  const isOnline = info.last_heartbeat && 
-    (Date.now() - new Date(info.last_heartbeat).getTime()) < 10 * 60 * 1000;
+  const isOnline = isAgentOnline(info.last_heartbeat);
 
   return (
     <div className="rounded-lg border bg-card divide-y divide-border">

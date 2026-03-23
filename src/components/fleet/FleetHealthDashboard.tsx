@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { isAgentOnline } from '@/lib/agent-status-constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -78,9 +79,6 @@ export function FleetHealthDashboard() {
 
   // Compute fleet stats
   const stats = useMemo(() => {
-    const now = new Date();
-    const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000);
-    
     let online = 0, offline = 0, outdated = 0, withJobs = 0;
     const versions = new Map<string, number>();
     
@@ -92,8 +90,7 @@ export function FleetHealthDashboard() {
     });
     
     agents.forEach(a => {
-      const isOnline = a.last_heartbeat && new Date(a.last_heartbeat) > fiveMinAgo;
-      if (isOnline) online++; else offline++;
+      if (isAgentOnline(a.last_heartbeat)) online++; else offline++;
       if (a.agent_version && a.agent_version !== latestVersion) outdated++;
       if (a.pending_jobs > 0) withJobs++;
       
@@ -119,7 +116,6 @@ export function FleetHealthDashboard() {
   }
 
   const now = new Date();
-  const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000);
 
   return (
     <div className="space-y-4">
@@ -217,7 +213,7 @@ export function FleetHealthDashboard() {
         <CardContent className="px-4 pb-4">
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {agents.map((agent, i) => {
-              const isOnline = agent.last_heartbeat && new Date(agent.last_heartbeat) > fiveMinAgo;
+              const online = isAgentOnline(agent.last_heartbeat);
               const isOutdated = agent.agent_version && agent.agent_version !== stats.latestVersion;
               const hasIssue = agent.is_isolated || agent.is_throttled || agent.is_in_safe_mode;
 
@@ -234,13 +230,13 @@ export function FleetHealthDashboard() {
                       "w-full text-left p-3 rounded-lg border transition-all hover:shadow-md",
                       "bg-card hover:bg-accent/5",
                       hasIssue && "border-destructive/30",
-                      !isOnline && "opacity-60"
+                      !online && "opacity-60"
                     )}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <div className={cn(
                         "h-2 w-2 rounded-full shrink-0",
-                        isOnline ? "bg-success animate-pulse" : "bg-muted-foreground"
+                        online ? "bg-success animate-pulse" : "bg-muted-foreground"
                       )} />
                       <span className="text-sm font-medium truncate">{agent.agent_name}</span>
                     </div>
@@ -266,7 +262,7 @@ export function FleetHealthDashboard() {
                       )}
                     </div>
 
-                    {!isOnline && agent.last_heartbeat && (
+                    {!online && agent.last_heartbeat && (
                       <p className="text-[10px] text-muted-foreground mt-1.5">
                         Visto {formatDistanceToNow(new Date(agent.last_heartbeat), { addSuffix: true, locale: ptBR })}
                       </p>
