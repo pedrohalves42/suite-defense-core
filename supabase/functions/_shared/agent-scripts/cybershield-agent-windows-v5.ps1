@@ -5143,6 +5143,16 @@ function Apply-ForcedUpdate {
             return @{ success = $false; error = "Move-Item failed: $($_.Exception.Message)" }
         }
         Write-Log "[FORCE UPDATE] Script instalado (atomic move): $targetScript" "SUCCESS"
+
+        # HOTFIX: update expected hash cache immediately after force update install.
+        # This prevents stale-cache TOCTOU loops when the agent keeps running the old
+        # process for a few seconds/minutes before the restarted scheduled task takes over.
+        try {
+            Save-SignedHashCache -Hash $actualHash -Signature $updateSignature -Timestamp (Get-Date -Format "o")
+            Write-Log "[FORCE UPDATE] Expected hash cache atualizado para o novo payload" "SUCCESS"
+        } catch {
+            Write-Log "[FORCE UPDATE] Falha ao atualizar expected hash cache: $($_.Exception.Message)" "WARN"
+        }
         
         # Registrar evidencia
         Add-EvidenceEntry -Type "force_update" -Data @{
