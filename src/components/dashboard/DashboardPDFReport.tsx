@@ -121,7 +121,7 @@ export function DashboardPDFReport({
         .map(a => ({
           name: a.agent_name,
           jobs: jobs.filter(j => j.agent_name === a.agent_name).length,
-          online: a.last_heartbeat && (now.getTime() - new Date(a.last_heartbeat).getTime()) < 5 * 60 * 1000,
+          online: a.last_heartbeat && (now.getTime() - new Date(a.last_heartbeat).getTime()) < 30 * 60 * 1000, // 30min threshold
         }))
         .sort((a, b) => b.jobs - a.jobs)
         .slice(0, 10);

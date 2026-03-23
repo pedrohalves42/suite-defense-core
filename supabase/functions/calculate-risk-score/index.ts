@@ -91,8 +91,8 @@ serve(async (req) => {
       score -= 30;
     }
 
-    // 3️⃣ Offline agents (last_heartbeat > 5 minutes ago)
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    // 3️⃣ Offline agents (last_heartbeat > 30 minutes ago - unified threshold)
+    const fiveMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
     const { data: offlineAgentsData } = await supabase
       .from('agents')
       .select('id')

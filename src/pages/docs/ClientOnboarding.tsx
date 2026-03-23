@@ -70,8 +70,8 @@ const ClientOnboarding = () => {
       
       const agentsList = (agents || []) as unknown as RpcAgentRow[];
       setAgentCount(agentsList.length);
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      setHasOnlineAgent(agentsList.some((a) => a.last_heartbeat && a.last_heartbeat > fiveMinutesAgo));
+      const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString(); // 30min threshold
+      setHasOnlineAgent(agentsList.some((a) => a.last_heartbeat && a.last_heartbeat > cutoff));
     } catch (error) {
       logger.error('Error fetching agent stats:', error);
     }

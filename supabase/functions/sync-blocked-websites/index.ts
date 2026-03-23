@@ -84,8 +84,8 @@ serve(async (req) => {
     const blockedDomains = blockedSites?.map(s => s.domain_pattern) || [];
     console.log(`[sync-blocked-websites] Found ${blockedDomains.length} blocked domains for tenant ${tenantId}`);
 
-    // Fetch all online agents (last heartbeat within 5 minutes)
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    // Fetch all online agents (last heartbeat within 30 minutes - unified threshold)
+    const fiveMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
     const { data: agents, error: agentsError } = await supabase
       .from('agents')
       .select('id, agent_name')

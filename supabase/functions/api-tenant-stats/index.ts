@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
     ]);
 
     const now = new Date();
-    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    const fiveMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000); // 30min - unified threshold
 
     const activeAgents = agents.data?.filter(a => 
       a.status === 'active' && 

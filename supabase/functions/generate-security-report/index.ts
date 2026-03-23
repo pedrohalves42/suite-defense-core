@@ -420,7 +420,7 @@ serve(async (req) => {
     // Calculate unprotected PCs
     const agentIds = new Set((agents || []).map(a => a.id));
     const agentsWithAV = new Set((antivirus || []).map(av => av.agent_id));
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const fiveMinutesAgo = new Date(Date.now() - 30 * 60 * 1000); // 30min - unified threshold
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     
     const unprotectedPCs = {

@@ -61,7 +61,7 @@ export default function JobTestRunner() {
     queryKey: ["job-test-agents", tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const fiveMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString(); // 30min - matches AGENT_STATUS_THRESHOLDS
       
       // ADR-026 Zero-Gap: Use RPC with explicit tenant_id
       const { data, error } = await supabase.rpc('get_agents_list', {

@@ -375,7 +375,7 @@ const JobCreator = () => {
   const activeAgents = agents.filter(a => {
     if (!a.last_heartbeat) return false;
     const lastHeartbeat = new Date(a.last_heartbeat);
-    return (new Date().getTime() - lastHeartbeat.getTime()) < 5 * 60 * 1000;
+    return (new Date().getTime() - lastHeartbeat.getTime()) < 30 * 60 * 1000; // 30min - matches AGENT_STATUS_THRESHOLDS
   });
 
   return (

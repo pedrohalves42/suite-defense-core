@@ -106,7 +106,7 @@ const OnboardingWizard = () => {
     setCheckingHeartbeat(true);
     const interval = setInterval(async () => {
       try {
-        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const fiveMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString(); // 30min threshold
         const { data } = await supabase
           .from('agents' as any)
           .select('id')

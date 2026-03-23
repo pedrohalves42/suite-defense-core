@@ -167,7 +167,7 @@ async function checkAgentOnline(
 
   const agent = data as { status: string; agent_state: string; last_heartbeat: string };
   const lastHeartbeat = new Date(agent.last_heartbeat);
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  const fiveMinutesAgo = new Date(Date.now() - 30 * 60 * 1000); // 30min unified threshold
 
   if (agent.agent_state === 'online' && lastHeartbeat > fiveMinutesAgo) {
     return {

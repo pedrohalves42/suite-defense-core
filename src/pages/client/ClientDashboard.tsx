@@ -123,10 +123,11 @@ export const ClientDashboard = () => {
         .eq('tenant_id', tenant.id);
 
       const now = new Date();
-      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+      const thresholdMs = 30 * 60 * 1000; // 30min - matches AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES
+      const cutoff = new Date(now.getTime() - thresholdMs);
       
       const onlineAgents = agents?.filter(a => 
-        a.last_heartbeat && new Date(a.last_heartbeat) > fiveMinutesAgo
+        a.last_heartbeat && new Date(a.last_heartbeat) > cutoff
       ).length || 0;
 
       const offlineAgents = (agents?.length || 0) - onlineAgents;

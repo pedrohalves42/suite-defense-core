@@ -129,7 +129,7 @@ serve(async (req) => {
       };
 
       // Agents
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const fiveMinutesAgo = new Date(Date.now() - 30 * 60 * 1000); // 30min unified threshold
       const { data: agents } = await supabase
         .from('agents')
         .select('id, status, last_heartbeat, is_isolated')
