@@ -329,9 +329,11 @@ export default function SecurityGraph() {
       {nodes.length > 0 && dangerCount > 0 && (
         <Alert className="border-destructive/30 bg-destructive/5">
           <ShieldAlert className="h-4 w-4 text-destructive" />
-          <AlertDescription className="text-sm">
-            <strong>{dangerCount} {dangerCount === 1 ? 'item perigoso foi encontrado' : 'itens perigosos foram encontrados'}</strong> na sua rede.
-            São sites ou endereços que podem ser maliciosos. Clique em cada item para ver mais detalhes.
+          <AlertDescription className="text-sm flex items-center justify-between">
+            <span>
+              <strong>{dangerCount} {dangerCount === 1 ? 'item perigoso foi encontrado' : 'itens perigosos foram encontrados'}</strong> na sua rede.
+              Use o botão <strong>"Bloquear Perigosos"</strong> acima para bloquear automaticamente o acesso a esses sites/IPs em todos os computadores.
+            </span>
           </AlertDescription>
         </Alert>
       )}
