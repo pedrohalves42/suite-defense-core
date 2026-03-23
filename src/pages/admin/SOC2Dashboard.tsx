@@ -16,6 +16,8 @@ import { SOC2_TRUST_CRITERIA, COMPLIANCE_POLICIES } from '@/types/soc2-complianc
 import { PolicyApprovalWorkflow } from '@/components/soc2/PolicyApprovalWorkflow';
 import { VendorRiskRegistry } from '@/components/soc2/VendorRiskRegistry';
 import { AlertResolutionPanel } from '@/components/soc2/AlertResolutionPanel';
+import { SOC2PolicyWizard } from '@/components/soc2/SOC2PolicyWizard';
+import { SLAMonitoringPanel } from '@/components/soc2/SLAMonitoringPanel';
 import { useExportEvidenceBundle, useEvidenceBundles, formatBytes, BUNDLE_TYPE_LABELS } from '@/hooks/useEvidenceBundle';
 import { toast } from 'sonner';
 
