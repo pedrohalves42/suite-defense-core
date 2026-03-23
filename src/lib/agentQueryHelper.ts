@@ -45,7 +45,7 @@ export async function fetchAgentsByTenant(
   });
 
   if (error) {
-    console.error('[fetchAgentsByTenant] RPC error:', error);
+    logger.error('[fetchAgentsByTenant] RPC error', { error: error.message });
     throw error;
   }
 

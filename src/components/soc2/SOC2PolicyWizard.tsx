@@ -135,7 +135,7 @@ export function SOC2PolicyWizard() {
             updated_at: new Date().toISOString(),
           }, { onConflict: 'tenant_id,policy_code' });
 
-        if (error) console.error(`Error saving policy ${policy.code}:`, error);
+        if (error) logger.error(`Error saving policy ${policy.code}`, { error: error.message });
       }
 
       queryClient.invalidateQueries({ queryKey: ['soc2-readiness'] });

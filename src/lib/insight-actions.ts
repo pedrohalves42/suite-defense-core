@@ -213,7 +213,7 @@ export async function executeInsightAction(
         };
     }
   } catch (error) {
-    console.error('Error executing insight action:', error);
+    logger.error('Error executing insight action', error instanceof Error ? error : undefined);
     return { 
       success: false, 
       message: error instanceof Error ? error.message : 'Erro ao executar ação' 
