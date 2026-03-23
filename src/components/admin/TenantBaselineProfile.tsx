@@ -187,13 +187,15 @@ export function TenantBaselineProfile() {
 
     if (procBaselines.length > 0) {
       const avgMean = procBaselines.reduce((s, b) => s + (b.mean_value || 0), 0) / procBaselines.length;
+      const currentVal = currentMetrics?.avgProcs ?? null;
+      const absDiff = currentVal !== null ? currentVal - Math.round(avgMean) : 0;
       result.push({
         type: 'processes',
         mean: Math.round(avgMean),
         stdDev: 0,
-        currentAvg: null,
-        driftPercent: 0,
-        status: 'normal',
+        currentAvg: currentVal,
+        driftPercent: absDiff,
+        status: Math.abs(absDiff) > 50 ? 'warning' : 'normal',
         unit: '',
         label: 'Processos Médios por Agente',
       });
