@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Loader2, Search, AlertTriangle, Globe, Monitor, Shield, ShieldAlert, ShieldCheck, ChevronDown, ChevronUp, ExternalLink, Info } from "lucide-react";
+import { RefreshCw, Loader2, Search, AlertTriangle, Globe, Monitor, Shield, ShieldAlert, ShieldCheck, ChevronDown, ChevronUp, ExternalLink, Info, Ban, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
