@@ -5761,7 +5761,7 @@ function Test-FirewallStatus {
 }
 
 # ============================================
-#  v5.0.16: LOCAL DETECTION - USB DEVICE MONITORING WITH WHITELIST
+#  v5.0.15: LOCAL DETECTION - USB DEVICE MONITORING WITH WHITELIST
 # ============================================
 function Get-UsbWhitelist {
     <#
