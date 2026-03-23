@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 import { prepareJobForInsert } from '@/lib/job-utils';
 
 export interface ActionResult {
@@ -213,7 +214,7 @@ export async function executeInsightAction(
         };
     }
   } catch (error) {
-    console.error('Error executing insight action:', error);
+    logger.error('Error executing insight action', error instanceof Error ? error : undefined);
     return { 
       success: false, 
       message: error instanceof Error ? error.message : 'Erro ao executar ação' 

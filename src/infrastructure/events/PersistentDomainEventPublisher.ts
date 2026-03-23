@@ -2,6 +2,7 @@ import type { DomainEvent } from '@/domain/shared/DomainEvent';
 import type { DomainEventDispatcher } from '@/application/ports/output/DomainEventDispatcher';
 import type { Json } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 /**
  * Infrastructure adapter: Persists domain events to the domain_events table.
@@ -22,10 +23,10 @@ export class PersistentDomainEventPublisher implements DomainEventDispatcher {
         });
 
       if (error) {
-        console.error('[PersistentDomainEventPublisher] Failed to persist event:', error.message);
+        logger.error('[PersistentDomainEventPublisher] Failed to persist event', { error: error.message });
       }
     } catch (err) {
-      console.error('[PersistentDomainEventPublisher] Unexpected error:', err);
+      logger.error('[PersistentDomainEventPublisher] Unexpected error', err instanceof Error ? err : undefined);
       // Don't throw — event publishing should not fail the business operation
     }
   }
@@ -48,10 +49,10 @@ export class PersistentDomainEventPublisher implements DomainEventDispatcher {
         .insert(rows);
 
       if (error) {
-        console.error('[PersistentDomainEventPublisher] Failed to persist events:', error.message);
+        logger.error('[PersistentDomainEventPublisher] Failed to persist events', { error: error.message });
       }
     } catch (err) {
-      console.error('[PersistentDomainEventPublisher] Unexpected error:', err);
+      logger.error('[PersistentDomainEventPublisher] Unexpected error', err instanceof Error ? err : undefined);
     }
   }
 

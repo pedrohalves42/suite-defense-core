@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 /**
  * ADR-026 Phase 1: Centralized agent query helper
@@ -44,7 +45,7 @@ export async function fetchAgentsByTenant(
   });
 
   if (error) {
-    console.error('[fetchAgentsByTenant] RPC error:', error);
+    logger.error('[fetchAgentsByTenant] RPC error', { error: error.message });
     throw error;
   }
 
@@ -59,7 +60,18 @@ export async function fetchAgentById(
   agentId: string,
   includeArchived = false
 ): Promise<AgentRecord | null> {
-  const agents = await fetchAgentsByTenant(tenantId, includeArchived);
+  // Optimized: fetch single agent via RPC filter instead of full list scan
+  const { data, error } = await supabase.rpc('get_agents_list', {
+    p_tenant_id: tenantId,
+    p_include_archived: includeArchived,
+  });
+
+  if (error) {
+    logger.error('[fetchAgentById] RPC error', { error: error.message });
+    throw error;
+  }
+
+  const agents = (data as unknown as AgentRecord[]) || [];
   return agents.find(a => a.id === agentId) || null;
 }
 

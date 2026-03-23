@@ -17,6 +17,7 @@ import { SOC2_TRUST_CRITERIA, COMPLIANCE_POLICIES, type CriteriaCode, type Polic
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface WizardStep {
@@ -114,7 +115,7 @@ export function SOC2PolicyWizard() {
             updated_at: new Date().toISOString(),
           }, { onConflict: 'tenant_id,criteria_code' });
 
-        if (error) console.error(`Error saving criteria ${criteria.code}:`, error);
+        if (error) logger.error(`Error saving criteria ${criteria.code}`, { error: error.message });
       }
 
       // Save policy statuses
@@ -135,7 +136,7 @@ export function SOC2PolicyWizard() {
             updated_at: new Date().toISOString(),
           }, { onConflict: 'tenant_id,policy_code' });
 
-        if (error) console.error(`Error saving policy ${policy.code}:`, error);
+        if (error) logger.error(`Error saving policy ${policy.code}`, { error: error.message });
       }
 
       queryClient.invalidateQueries({ queryKey: ['soc2-readiness'] });
