@@ -26,7 +26,7 @@ async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebA
     .select('domain, visited_at, category, is_blocked, visit_count')
     .eq('agent_id', agentId)
     .eq('tenant_id', tenantId)
-    .gte('visited_at', sevenDaysAgo)
+    .gte('visited_at', thirtyDaysAgo)
     .order('visited_at', { ascending: false })
     .limit(5000);
 
