@@ -13,7 +13,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findById(id: string): Promise<Job | null> {
     const { data, error } = await supabase
       .from('jobs')
-      .select('*')
+      .select('id, tenant_id, agent_name, agent_id, type, status, priority, payload, payload_hash, result, error_message, created_at, updated_at, started_at, completed_at, expires_at, retry_count, max_retries, idempotency_key')
       .eq('id', id)
       .maybeSingle();
 
@@ -24,7 +24,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findPendingByAgent(agentId: AgentId): Promise<Job[]> {
     const { data, error } = await supabase
       .from('jobs')
-      .select('*')
+      .select('id, tenant_id, agent_name, agent_id, type, status, priority, payload, payload_hash, created_at, expires_at, retry_count, max_retries, idempotency_key')
       .eq('agent_id', agentId.value)
       .eq('status', 'pending')
       .order('priority', { ascending: false })
@@ -38,7 +38,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findByTenantAndStatus(tenantId: TenantId, status: JobStatus): Promise<Job[]> {
     const { data, error } = await supabase
       .from('jobs')
-      .select('*')
+      .select('id, tenant_id, agent_name, agent_id, type, status, priority, payload, payload_hash, created_at, updated_at, expires_at')
       .eq('tenant_id', tenantId.value)
       .eq('status', status)
       .limit(500);
@@ -50,7 +50,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findExpiredJobs(now: Date): Promise<Job[]> {
     const { data, error } = await supabase
       .from('jobs')
-      .select('*')
+      .select('id, tenant_id, agent_name, agent_id, type, status, priority, created_at, expires_at, retry_count, max_retries')
       .in('status', ['pending', 'queued', 'delivered', 'running'])
       .lt('expires_at', now.toISOString())
       .limit(500);
@@ -84,7 +84,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findExecutionsByJobId(jobId: string): Promise<JobExecution[]> {
     const { data, error } = await supabase
       .from('job_executions')
-      .select('*')
+      .select('id, job_id, execution_index, execution_hash, previous_hash, status, started_at, completed_at, output, error_message')
       .eq('job_id', jobId)
       .order('execution_index', { ascending: true });
 

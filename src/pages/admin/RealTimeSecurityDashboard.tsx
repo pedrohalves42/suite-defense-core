@@ -211,7 +211,7 @@ export default function RealTimeSecurityDashboard() {
     queryKey: ['realtime-security-logs', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-      const { data } = await supabase.from('security_logs').select('*')
+      const { data } = await supabase.from('security_logs').select('id, attack_type, severity, details, created_at')
         .eq('tenant_id', tenant.id).order('created_at', { ascending: false }).limit(50);
       return data || [];
     },
