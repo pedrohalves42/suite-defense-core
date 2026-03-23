@@ -131,7 +131,7 @@ export default function SecurityGraph() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("security_graph_nodes")
-        .select("id, tenant_id, node_type, node_value, label, risk_score, first_seen_at, last_seen_at")
+        .select("id, tenant_id, node_type, node_value, label, risk_score, first_seen_at, last_seen_at, metadata")
         .eq("tenant_id", tenant!.id)
         .order("risk_score", { ascending: false })
         .limit(500);
