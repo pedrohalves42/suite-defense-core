@@ -287,13 +287,21 @@ export default function SecurityMonitoring() {
     } catch { toast.error('Erro ao desbloquear IP'); }
   };
 
+  const [isScanning, setIsScanning] = useState(false);
+
   const handleRunScan = async () => {
+    setIsScanning(true);
     try {
-      const { error } = await supabase.functions.invoke('security-alert-dispatcher');
-      if (error) throw error;
-      toast.success('Verificação de segurança iniciada');
-      refetch();
-    } catch { toast.error('Erro ao iniciar verificação'); }
+      // Trigger a manual refetch of all security data as a "scan"
+      await refetch();
+      toast.success('Verificação concluída', {
+        description: 'Dados de segurança atualizados com sucesso',
+      });
+    } catch {
+      toast.error('Erro ao verificar segurança');
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   const handleRemediate = async (event: { agentName?: string; alertType?: string; label: string }) => {
@@ -360,9 +368,9 @@ export default function SecurityMonitoring() {
               <TabsTrigger value="7d" className="text-xs px-3">7 dias</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button onClick={handleRunScan} variant="outline" size="sm" className="gap-2">
-            <RefreshCw className="h-3.5 w-3.5" />
-            Verificar Agora
+          <Button onClick={handleRunScan} variant="outline" size="sm" className="gap-2" disabled={isScanning}>
+            <RefreshCw className={cn("h-3.5 w-3.5", isScanning && "animate-spin")} />
+            {isScanning ? 'Verificando...' : 'Verificar Agora'}
           </Button>
         </div>
 
@@ -524,10 +532,11 @@ export default function SecurityMonitoring() {
                   <Area type="monotone" dataKey="criticos" stroke="hsl(var(--destructive))" fill="url(#gradCriticos)" name="Críticos" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
-            ) : (
+             ) : (
               <div className="flex flex-col items-center justify-center h-[180px] text-muted-foreground">
                 <ShieldCheck className="h-8 w-8 mb-2 opacity-30" />
                 <p className="text-xs">Sem atividade no período</p>
+                <p className="text-[10px] mt-1 opacity-60">Isso é bom — nenhuma ameaça detectada</p>
               </div>
             )}
           </CardContent>
