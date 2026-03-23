@@ -213,7 +213,7 @@ export function FleetHealthDashboard() {
         <CardContent className="px-4 pb-4">
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {agents.map((agent, i) => {
-              const isOnline = agent.last_heartbeat && new Date(agent.last_heartbeat) > fiveMinAgo;
+              const online = isAgentOnline(agent.last_heartbeat);
               const isOutdated = agent.agent_version && agent.agent_version !== stats.latestVersion;
               const hasIssue = agent.is_isolated || agent.is_throttled || agent.is_in_safe_mode;
 

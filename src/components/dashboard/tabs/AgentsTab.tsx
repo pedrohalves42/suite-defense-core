@@ -34,7 +34,7 @@ function AgentsTabComponent({ agents, jobs, reports, loading, tenantNames }: Age
 
       if (statusFilter === "all") return true;
       const isOnline = agent.last_heartbeat && 
-        (new Date().getTime() - new Date(agent.last_heartbeat).getTime()) < 5 * 60 * 1000;
+        isAgentOnline(agent.last_heartbeat);
       return statusFilter === "online" ? isOnline : !isOnline;
     });
   }, [agents, search, statusFilter, tenantNames]);
