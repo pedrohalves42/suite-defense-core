@@ -88,7 +88,7 @@ export default function ExecutiveDashboard() {
         body: { tenant_id: tenantId }
       }).then(() => {
         setTimeout(() => refetchExec(), 3000);
-      }).catch(console.error);
+      }).catch((err: unknown) => logger.error('Compliance calc failed', err instanceof Error ? err : undefined));
     }
   }, [tenantId, execData, complianceTriggered, refetchExec]);
 
