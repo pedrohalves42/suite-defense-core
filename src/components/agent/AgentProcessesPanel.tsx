@@ -75,7 +75,7 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
     queryFn: async () => {
       const { data: processData, error } = await supabase
         .from('agent_processes')
-        .select('id, agent_id, processes, collected_at, total_processes, total_threads')
+        .select('id, agent_id, processes, collected_at, total_processes, suspicious_processes')
         .eq('agent_id', agentId)
         .order('collected_at', { ascending: false })
         .limit(1)
