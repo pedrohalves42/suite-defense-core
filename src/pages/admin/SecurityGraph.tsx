@@ -272,14 +272,26 @@ export default function SecurityGraph() {
             Visão geral de tudo que foi detectado na sua rede
           </p>
         </div>
-        <Button
-          onClick={() => buildGraph.mutate()}
-          disabled={buildGraph.isPending || !tenant?.id}
-          size="sm"
-        >
-          {buildGraph.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-          {buildGraph.isPending ? "Analisando..." : "Analisar Rede"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => autoBlock.mutate()}
+            disabled={autoBlock.isPending || !tenant?.id || dangerCount === 0}
+            size="sm"
+            variant="destructive"
+          >
+            {autoBlock.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Ban className="h-4 w-4 mr-2" />}
+            {autoBlock.isPending ? "Bloqueando..." : `Bloquear Perigosos (${dangerCount})`}
+          </Button>
+          <Button
+            onClick={() => buildGraph.mutate()}
+            disabled={buildGraph.isPending || !tenant?.id}
+            size="sm"
+            variant="outline"
+          >
+            {buildGraph.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            {buildGraph.isPending ? "Analisando..." : "Analisar Rede"}
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards — plain language */}
