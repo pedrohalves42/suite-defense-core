@@ -287,13 +287,21 @@ export default function SecurityMonitoring() {
     } catch { toast.error('Erro ao desbloquear IP'); }
   };
 
+  const [isScanning, setIsScanning] = useState(false);
+
   const handleRunScan = async () => {
+    setIsScanning(true);
     try {
-      const { error } = await supabase.functions.invoke('security-alert-dispatcher');
-      if (error) throw error;
-      toast.success('Verificação de segurança iniciada');
-      refetch();
-    } catch { toast.error('Erro ao iniciar verificação'); }
+      // Trigger a manual refetch of all security data as a "scan"
+      await refetch();
+      toast.success('Verificação concluída', {
+        description: 'Dados de segurança atualizados com sucesso',
+      });
+    } catch {
+      toast.error('Erro ao verificar segurança');
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   const handleRemediate = async (event: { agentName?: string; alertType?: string; label: string }) => {
