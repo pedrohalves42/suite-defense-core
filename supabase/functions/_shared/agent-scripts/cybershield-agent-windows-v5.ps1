@@ -1439,7 +1439,9 @@ function Initialize-AgentKeys {
                 # v5.0.12: Always use explicit ephemeral key to avoid CNG naming conflicts
                 $creationParams = New-Object System.Security.Cryptography.CngKeyCreationParameters
                 $creationParams.ExportPolicy = [System.Security.Cryptography.CngExportPolicies]::AllowPlaintextExport
-                $creationParams.KeyCreationOptions = [System.Security.Cryptography.CngKeyCreationOptions]::None
+                # v5.0.17-fix: OverwriteExistingKey prevents "O objeto já existe" on .NET 4.x
+                # where CNG may internally persist named containers even with $null name
+                $creationParams.KeyCreationOptions = [System.Security.Cryptography.CngKeyCreationOptions]::OverwriteExistingKey
                 
                 $cngKey = [System.Security.Cryptography.CngKey]::Create(
                     [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
