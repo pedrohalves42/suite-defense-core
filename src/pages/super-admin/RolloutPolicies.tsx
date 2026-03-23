@@ -59,7 +59,7 @@ export default function RolloutPolicies() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agent_update_policies')
-        .select('*')
+        .select('id, platform, strategy, max_parallel_percent, rollback_threshold, is_active, created_at, updated_at, canary_percent, canary_duration_hours, auto_promote, min_version, max_version, target_version, schedule_window_start, schedule_window_end, schedule_days, maintenance_window_only, tenant_id')
         .order('platform');
       
       if (error) throw error;
