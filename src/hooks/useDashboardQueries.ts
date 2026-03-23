@@ -162,7 +162,8 @@ export function useDashboardQueries() {
         event: '*', schema: 'public', table: 'agents',
         filter: `tenant_id=eq.${tenantId}`,
       }, () => {
-        logger.info('[DashboardQueries] Agents changed, invalidating...');
+        // TUNING: Downgrade from info to debug - fires too frequently
+        logger.debug('[DashboardQueries] Agents changed, invalidating...');
         queryClient.invalidateQueries({ queryKey: ["dashboard", "agents", tenantId] });
       })
       .subscribe();
