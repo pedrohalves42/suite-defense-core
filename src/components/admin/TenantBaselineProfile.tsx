@@ -122,19 +122,23 @@ export function TenantBaselineProfile() {
 
     const result: BaselineProfile[] = [];
 
+    // For CPU/RAM (percentage metrics), use absolute difference in percentage points
+    // This avoids misleading +1380% when baseline is 1% and current is 15%
     if (cpuBaselines.length > 0) {
       const avgMean = cpuBaselines.reduce((s, b) => s + (b.mean_value || 0), 0) / cpuBaselines.length;
       const avgStd = cpuBaselines.reduce((s, b) => s + (b.std_deviation || 0), 0) / cpuBaselines.length;
-      const currentVal = currentMetrics?.avgCpu || null;
-      const drift = currentVal !== null ? ((currentVal - avgMean) / Math.max(avgMean, 1)) * 100 : 0;
+      const currentVal = currentMetrics?.avgCpu ?? null;
+      // Use absolute difference in percentage points for CPU/RAM
+      const absDiff = currentVal !== null ? currentVal - avgMean : 0;
+      const drift = Math.round(absDiff);
       
       result.push({
         type: 'cpu',
         mean: Math.round(avgMean * 10) / 10,
         stdDev: Math.round(avgStd * 10) / 10,
         currentAvg: currentVal,
-        driftPercent: Math.round(drift),
-        status: Math.abs(drift) > 50 ? 'critical' : Math.abs(drift) > 25 ? 'warning' : 'normal',
+        driftPercent: drift,
+        status: Math.abs(absDiff) > 20 ? 'critical' : Math.abs(absDiff) > 10 ? 'warning' : 'normal',
         unit: '%',
         label: 'CPU Médio por Empresa',
       });
@@ -143,16 +147,17 @@ export function TenantBaselineProfile() {
     if (memBaselines.length > 0) {
       const avgMean = memBaselines.reduce((s, b) => s + (b.mean_value || 0), 0) / memBaselines.length;
       const avgStd = memBaselines.reduce((s, b) => s + (b.std_deviation || 0), 0) / memBaselines.length;
-      const currentVal = currentMetrics?.avgMem || null;
-      const drift = currentVal !== null ? ((currentVal - avgMean) / Math.max(avgMean, 1)) * 100 : 0;
+      const currentVal = currentMetrics?.avgMem ?? null;
+      const absDiff = currentVal !== null ? currentVal - avgMean : 0;
+      const drift = Math.round(absDiff);
 
       result.push({
         type: 'memory',
         mean: Math.round(avgMean * 10) / 10,
         stdDev: Math.round(avgStd * 10) / 10,
         currentAvg: currentVal,
-        driftPercent: Math.round(drift),
-        status: Math.abs(drift) > 50 ? 'critical' : Math.abs(drift) > 25 ? 'warning' : 'normal',
+        driftPercent: drift,
+        status: Math.abs(absDiff) > 20 ? 'critical' : Math.abs(absDiff) > 10 ? 'warning' : 'normal',
         unit: '%',
         label: 'Memória Média por Empresa',
       });
