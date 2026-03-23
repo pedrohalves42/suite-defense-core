@@ -46,7 +46,7 @@ export default function AgentHealthMonitor() {
   const [recentHeartbeats, setRecentHeartbeats] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedAgent, setSelectedAgent] = useState<SelectedAgent | null>(null);
-  
+  const [selectedBatch, setSelectedBatch] = useState<Set<string>>(new Set());
   // Simple Mode - visualização simplificada
   const { isSimple } = useSimpleModeContext();
   const queryClient = useQueryClient();
