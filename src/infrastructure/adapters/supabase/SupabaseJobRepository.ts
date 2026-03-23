@@ -38,7 +38,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findByTenantAndStatus(tenantId: TenantId, status: JobStatus): Promise<Job[]> {
     const { data, error } = await supabase
       .from('jobs')
-      .select('*')
+      .select('id, tenant_id, agent_name, agent_id, type, status, priority, payload, payload_hash, created_at, updated_at, expires_at')
       .eq('tenant_id', tenantId.value)
       .eq('status', status)
       .limit(500);
