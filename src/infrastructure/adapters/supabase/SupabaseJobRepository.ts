@@ -13,7 +13,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findById(id: string): Promise<Job | null> {
     const { data, error } = await supabase
       .from('jobs')
-      .select('*')
+      .select('id, tenant_id, agent_name, agent_id, type, status, priority, payload, payload_hash, result, error_message, created_at, updated_at, started_at, completed_at, expires_at, retry_count, max_retries, idempotency_key')
       .eq('id', id)
       .maybeSingle();
 
