@@ -25,6 +25,8 @@ import { useAgentsDiskMetrics } from '@/hooks/useAgentsDiskMetrics';
 import { Link } from 'react-router-dom';
 import { SimpleAgentList } from '@/components/dashboard/SimpleAgentList';
 import { useSimpleModeContext } from '@/hooks/useSimpleMode';
+import { BatchActionBar } from '@/components/fleet/BatchActionBar';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type StatusFilter = 'all' | 'problems' | 'protected' | 'offline';
 
