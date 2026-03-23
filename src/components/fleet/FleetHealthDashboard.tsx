@@ -236,7 +236,7 @@ export function FleetHealthDashboard() {
                     <div className="flex items-center gap-2 mb-2">
                       <div className={cn(
                         "h-2 w-2 rounded-full shrink-0",
-                        isOnline ? "bg-success animate-pulse" : "bg-muted-foreground"
+                        online ? "bg-success animate-pulse" : "bg-muted-foreground"
                       )} />
                       <span className="text-sm font-medium truncate">{agent.agent_name}</span>
                     </div>
