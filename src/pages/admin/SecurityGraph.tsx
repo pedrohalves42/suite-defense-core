@@ -450,6 +450,30 @@ export default function SecurityGraph() {
                     </div>
                   </div>
 
+                  {/* WHY it's dangerous — the key missing info */}
+                  {(() => {
+                    const meta = selectedNode.metadata as any;
+                    const src = meta?.source;
+                    const sourceInfo = src ? sourceExplanations[src] : null;
+                    if (!sourceInfo && selectedNode.risk_score < 60) return null;
+                    return (
+                      <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+                        <p className="text-[11px] uppercase tracking-wider text-destructive/80 mb-1.5 font-semibold">
+                          ⚠️ Por que é perigoso?
+                        </p>
+                        <p className="text-sm text-foreground leading-relaxed">
+                          {sourceInfo?.reason || "Este item apresentou comportamento suspeito detectado pela análise automática de segurança."}
+                        </p>
+                        {sourceInfo && (
+                          <p className="text-[11px] text-muted-foreground mt-2">
+                            Fonte: <span className="font-medium">{sourceInfo.name}</span>
+                            {meta?.confidence && <> · Confiança: {meta.confidence}%</>}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {/* When */}
                   <div>
                     <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Quando foi detectado</p>
