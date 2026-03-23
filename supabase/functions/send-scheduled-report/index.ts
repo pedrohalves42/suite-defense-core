@@ -289,7 +289,7 @@ function generateReportHtml(data: ReportData, report: ScheduledReport, tenantNam
   const onlineAgents = data.agents.filter(a => {
     if (!a.last_heartbeat) return false;
     const diff = Date.now() - new Date(a.last_heartbeat).getTime();
-    return diff < 5 * 60 * 1000; // 5 minutes
+    return diff < 30 * 60 * 1000; // 30 minutes - unified threshold
   }).length;
 
   const criticalVulns = data.vulnerabilities.filter(v => v.severity === 'critical').length;
