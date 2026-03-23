@@ -25,6 +25,8 @@ import { useAgentsDiskMetrics } from '@/hooks/useAgentsDiskMetrics';
 import { Link } from 'react-router-dom';
 import { SimpleAgentList } from '@/components/dashboard/SimpleAgentList';
 import { useSimpleModeContext } from '@/hooks/useSimpleMode';
+import { BatchActionBar } from '@/components/fleet/BatchActionBar';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type StatusFilter = 'all' | 'problems' | 'protected' | 'offline';
 
@@ -44,7 +46,7 @@ export default function AgentHealthMonitor() {
   const [recentHeartbeats, setRecentHeartbeats] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedAgent, setSelectedAgent] = useState<SelectedAgent | null>(null);
-  
+  const [selectedBatch, setSelectedBatch] = useState<Set<string>>(new Set());
   // Simple Mode - visualização simplificada
   const { isSimple } = useSimpleModeContext();
   const queryClient = useQueryClient();
@@ -408,6 +410,7 @@ export default function AgentHealthMonitor() {
                 const hasSpecialStatus = agent.is_throttled || agent.is_isolated || agent.is_in_safe_mode;
                 const agentMetrics = agent.id ? systemMetrics[agent.id] : undefined;
                 const agentDisks = agent.id ? diskMetrics[agent.id] : undefined;
+                const isSelected = agent.id ? selectedBatch.has(agent.id) : false;
 
                 // Determine health status for the card
                 const healthStatus: 'healthy' | 'warning' | 'critical' | undefined = 
@@ -416,7 +419,24 @@ export default function AgentHealthMonitor() {
                   agent.health_status === 'healthy' ? 'healthy' : undefined;
 
                 return (
-                  <div key={agent.agent_name + idx} className="space-y-2">
+                  <div key={agent.agent_name + idx} className="space-y-2 relative">
+                    {/* Batch selection checkbox */}
+                    {agent.id && (
+                      <div className="absolute top-2 right-2 z-10">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            setSelectedBatch(prev => {
+                              const next = new Set(prev);
+                              if (checked) next.add(agent.id!);
+                              else next.delete(agent.id!);
+                              return next;
+                            });
+                          }}
+                          className="h-4 w-4"
+                        />
+                      </div>
+                    )}
                     <AgentCard
                       id={agent.id || ''}
                       name={agent.agent_name}
@@ -485,6 +505,15 @@ export default function AgentHealthMonitor() {
           )}
         </CardContent>
       </Card>
+
+      {/* Batch Action Bar */}
+      <BatchActionBar
+        selectedIds={Array.from(selectedBatch)}
+        selectedNames={filteredAgents
+          .filter(a => a.id && selectedBatch.has(a.id))
+          .map(a => a.agent_name)}
+        onClearSelection={() => setSelectedBatch(new Set())}
+      />
 
       {/* Agent Details Drawer */}
       <AgentDetailsDrawer

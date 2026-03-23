@@ -26,6 +26,7 @@ import { OnboardingRequiredBanner } from '@/components/admin/OnboardingRequiredB
 import { SimpleDashboard } from '@/components/dashboard/SimpleDashboard';
 import { GuidedTour } from '@/components/admin/GuidedTour';
 import { SecurityAchievements } from '@/components/admin/SecurityAchievements';
+import { FleetHealthDashboard } from '@/components/fleet/FleetHealthDashboard';
 import { useProactiveAlerts } from '@/hooks/useProactiveAlerts';
 import { useSimpleModeContext } from '@/hooks/useSimpleMode';
 import { useTranslation } from 'react-i18next';
@@ -323,6 +324,15 @@ export default function Dashboard() {
       >
         <ProtectionTrendChartV2 />
         <HealthTrendChart />
+      </motion.div>
+
+      {/* ═══ SEÇÃO 4.3: Fleet Health ═══ */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.27, duration: 0.4 }}
+      >
+        <FleetHealthDashboard />
       </motion.div>
 
       {/* ═══ SEÇÃO 4.5: Assistente de Segurança + Conquistas ═══ */}

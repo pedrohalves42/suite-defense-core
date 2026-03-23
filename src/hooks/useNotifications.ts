@@ -89,6 +89,19 @@ export function useNotifications() {
         }
       })
       .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'jobs',
+        filter: `tenant_id=eq.${tenant.id}`,
+      }, (payload) => {
+        const job = payload.new as Record<string, unknown>;
+        if (job.status === "failed") {
+          addNotification({
+            title: "⚠️ Job falhou",
+            message: `${job.type} falhou no agente ${job.agent_name}`,
+            type: "warning",
+          });
+        }
+      })
+      .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'virus_scans',
         filter: `tenant_id=eq.${tenant.id}`,
       }, (payload) => {
@@ -97,6 +110,32 @@ export function useNotifications() {
           addNotification({
             title: "⚠️ Malware detectado",
             message: `Arquivo malicioso encontrado em ${scan.agent_name}: ${scan.file_path}`,
+            type: "critical",
+          });
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'agents',
+        filter: `tenant_id=eq.${tenant.id}`,
+      }, (payload) => {
+        const oldAgent = payload.old as Record<string, unknown>;
+        const newAgent = payload.new as Record<string, unknown>;
+        
+        // Detect agent going offline (last_heartbeat stopped updating for >5 min is handled by proactive alerts)
+        // Detect version change
+        if (oldAgent.agent_version && newAgent.agent_version && oldAgent.agent_version !== newAgent.agent_version) {
+          addNotification({
+            title: "🔄 Agente atualizado",
+            message: `${newAgent.agent_name} atualizado de ${oldAgent.agent_version} para ${newAgent.agent_version}`,
+            type: "info",
+          });
+        }
+        
+        // Detect isolation
+        if (!oldAgent.is_isolated && newAgent.is_isolated) {
+          addNotification({
+            title: "🔒 Agente isolado",
+            message: `${newAgent.agent_name} foi isolado da rede`,
             type: "critical",
           });
         }
