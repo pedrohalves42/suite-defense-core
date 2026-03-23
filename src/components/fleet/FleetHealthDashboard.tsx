@@ -79,9 +79,6 @@ export function FleetHealthDashboard() {
 
   // Compute fleet stats
   const stats = useMemo(() => {
-    const now = new Date();
-    const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000);
-    
     let online = 0, offline = 0, outdated = 0, withJobs = 0;
     const versions = new Map<string, number>();
     
@@ -93,8 +90,7 @@ export function FleetHealthDashboard() {
     });
     
     agents.forEach(a => {
-      const isOnline = a.last_heartbeat && new Date(a.last_heartbeat) > fiveMinAgo;
-      if (isOnline) online++; else offline++;
+      if (isAgentOnline(a.last_heartbeat)) online++; else offline++;
       if (a.agent_version && a.agent_version !== latestVersion) outdated++;
       if (a.pending_jobs > 0) withJobs++;
       
