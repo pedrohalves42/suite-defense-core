@@ -139,11 +139,10 @@ Deno.serve(async (req) => {
       .select('id, agent_name, hmac_secret, tenant_id')
       .eq('agent_name', agentName);
 
+    // Super admin can recover agents from ANY tenant
+    // Non-super_admin users are scoped to their effective tenant
     if (userRole.role !== 'super_admin') {
       query = query.eq('tenant_id', effectiveTenantId);
-    } else if (activeTenantId) {
-      // Super admin with active tenant selected - scope to that tenant
-      query = query.eq('tenant_id', activeTenantId);
     }
 
     const { data: agent, error: agentError } = await query.maybeSingle();
