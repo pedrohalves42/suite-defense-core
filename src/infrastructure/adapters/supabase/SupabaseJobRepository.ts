@@ -50,7 +50,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findExpiredJobs(now: Date): Promise<Job[]> {
     const { data, error } = await supabase
       .from('jobs')
-      .select('*')
+      .select('id, tenant_id, agent_name, agent_id, type, status, priority, created_at, expires_at, retry_count, max_retries')
       .in('status', ['pending', 'queued', 'delivered', 'running'])
       .lt('expires_at', now.toISOString())
       .limit(500);
