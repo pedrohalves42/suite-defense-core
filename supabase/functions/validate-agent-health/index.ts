@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     // Check heartbeat (should be < 5 minutes old)
     const lastHeartbeat = agent.last_heartbeat ? new Date(agent.last_heartbeat) : null
     const heartbeatHealthy = lastHeartbeat 
-      ? (Date.now() - lastHeartbeat.getTime()) < 5 * 60 * 1000 
+      ? (Date.now() - lastHeartbeat.getTime()) < 30 * 60 * 1000 // 30min unified threshold 
       : false
 
     // Get latest metrics (should be < 10 minutes old)

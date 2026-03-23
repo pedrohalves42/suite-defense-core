@@ -390,7 +390,7 @@ function generateReportHtml(data: ReportData, report: ScheduledReport, tenantNam
             <th style="padding: 12px; text-align: left; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Versão</th>
           </tr>
           ${data.agents.slice(0, 10).map(a => {
-            const isOnline = a.last_heartbeat && (Date.now() - new Date(a.last_heartbeat).getTime()) < 5 * 60 * 1000;
+            const isOnline = a.last_heartbeat && (Date.now() - new Date(a.last_heartbeat).getTime()) < 30 * 60 * 1000;
             return `
           <tr>
             <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #374151;">${a.agent_name || a.hostname}</td>
