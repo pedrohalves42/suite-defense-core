@@ -116,7 +116,6 @@ export function FleetHealthDashboard() {
   }
 
   const now = new Date();
-  const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000);
 
   return (
     <div className="space-y-4">
