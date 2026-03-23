@@ -56,24 +56,46 @@ export function TenantBaselineProfile() {
       if (!tenant?.id) return null;
       
       // Get latest system metrics across all agents
-      const { data, error } = await supabase
-        .from('agent_system_metrics_partitioned')
-        .select('cpu_usage_percent, memory_usage_percent, collected_at')
-        .eq('tenant_id', tenant.id)
-        .gte('collected_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
-        .order('collected_at', { ascending: false })
-        .limit(100);
+      const [metricsRes, procRes] = await Promise.all([
+        supabase
+          .from('agent_system_metrics_partitioned')
+          .select('agent_id, cpu_usage_percent, memory_usage_percent, collected_at')
+          .eq('tenant_id', tenant.id)
+          .gte('collected_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+          .order('collected_at', { ascending: false })
+          .limit(200),
+        supabase
+          .from('agent_processes')
+          .select('agent_id', { count: 'exact', head: false })
+          .eq('tenant_id', tenant.id)
+          .gte('collected_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+          .limit(1000),
+      ]);
       
-      if (error) throw error;
+      const data = metricsRes.data;
       if (!data || data.length === 0) return null;
 
       const avgCpu = data.reduce((s: number, m: any) => s + (m.cpu_usage_percent || 0), 0) / data.length;
       const avgMem = data.reduce((s: number, m: any) => s + (m.memory_usage_percent || 0), 0) / data.length;
 
-      return { avgCpu: Math.round(avgCpu * 10) / 10, avgMem: Math.round(avgMem * 10) / 10 };
+      // Calculate avg processes per agent
+      const procData = procRes.data || [];
+      const agentProcCounts = new Map<string, number>();
+      procData.forEach((p: any) => {
+        agentProcCounts.set(p.agent_id, (agentProcCounts.get(p.agent_id) || 0) + 1);
+      });
+      const avgProcs = agentProcCounts.size > 0
+        ? Math.round(Array.from(agentProcCounts.values()).reduce((s, c) => s + c, 0) / agentProcCounts.size)
+        : null;
+
+      return {
+        avgCpu: Math.round(avgCpu * 10) / 10,
+        avgMem: Math.round(avgMem * 10) / 10,
+        avgProcs,
+      };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
   });
 
   // Fetch active hours pattern
