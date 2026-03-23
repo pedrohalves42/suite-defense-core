@@ -4221,7 +4221,7 @@ function Initialize-ProcessBaseline {
         # v5.0.13-perf: Build HashSet index for O(1) lookups
         $Global:ProcessBaselineSet.Clear()
         foreach ($entry in $Global:ProcessBaseline) {
-            $n = if ($entry -is [hashtable]) { $entry["name"] } else { $entry.name }
+            $n = Get-SafeBaselineProp $entry 'name'
             if ($n) { [void]$Global:ProcessBaselineSet.Add($n) }
         }
         Write-Log "[BASELINE] Built O(1) HashSet index with $($Global:ProcessBaselineSet.Count) entries" "DEBUG"
