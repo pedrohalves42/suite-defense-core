@@ -1,4 +1,5 @@
 import { useState, useMemo, memo } from "react";
+import { isAgentOnline } from '@/lib/agent-status-constants';
 import { Users, Search, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

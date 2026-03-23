@@ -262,7 +262,7 @@ export function FleetHealthDashboard() {
                       )}
                     </div>
 
-                    {!isOnline && agent.last_heartbeat && (
+                    {!online && agent.last_heartbeat && (
                       <p className="text-[10px] text-muted-foreground mt-1.5">
                         Visto {formatDistanceToNow(new Date(agent.last_heartbeat), { addSuffix: true, locale: ptBR })}
                       </p>
