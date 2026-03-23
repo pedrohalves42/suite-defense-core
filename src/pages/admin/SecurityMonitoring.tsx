@@ -368,9 +368,9 @@ export default function SecurityMonitoring() {
               <TabsTrigger value="7d" className="text-xs px-3">7 dias</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button onClick={handleRunScan} variant="outline" size="sm" className="gap-2">
-            <RefreshCw className="h-3.5 w-3.5" />
-            Verificar Agora
+          <Button onClick={handleRunScan} variant="outline" size="sm" className="gap-2" disabled={isScanning}>
+            <RefreshCw className={cn("h-3.5 w-3.5", isScanning && "animate-spin")} />
+            {isScanning ? 'Verificando...' : 'Verificar Agora'}
           </Button>
         </div>
 
