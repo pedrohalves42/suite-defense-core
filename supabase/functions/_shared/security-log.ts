@@ -58,16 +58,20 @@ export async function logSecurityEvent(params: SecurityLogParams): Promise<void>
         const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
         
         if (INTERNAL_SECRET && SUPABASE_URL) {
-          await fetch(`${SUPABASE_URL}/functions/v1/send-alert-email`, {
+          await fetch(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'X-Internal-Secret': INTERNAL_SECRET,
             },
             body: JSON.stringify({
-              alertType: `${severity.toUpperCase()}: ${attackType}`,
+              channel: 'in_app',
+              type: 'security_alert',
+              tenant_id: tenantId,
+              subject: `${severity.toUpperCase()}: ${attackType}`,
               message: `Tentativa de ataque detectada no endpoint ${endpoint}`,
-              details: {
+              severity: severity === 'critical' ? 'critical' : 'warning',
+              metadata: {
                 ip_address: ipAddress,
                 endpoint,
                 attack_type: attackType,
