@@ -62,7 +62,7 @@ export function OnboardingRequiredBanner() {
       const agents = ((agentResult.data as unknown as Array<{ id: string; last_heartbeat: string | null }>) || []);
       const hasAgent = agents.length > 0;
       const hasOnlineAgent = agents.some(a => a.last_heartbeat && 
-        new Date(a.last_heartbeat) > new Date(Date.now() - 5 * 60 * 1000));
+        new Date(a.last_heartbeat) > new Date(Date.now() - 30 * 60 * 1000)); // 30min threshold
       const hasNotifications = (channelResult.count || 0) > 0;
 
       return {

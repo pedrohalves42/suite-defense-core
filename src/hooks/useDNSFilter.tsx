@@ -262,7 +262,7 @@ export function useDNSFilter() {
         agents = allTenantAgents.filter((agent) => agentIds.includes(agent.id));
       } else {
         // Get all online agents
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const cutoff = new Date(Date.now() - 30 * 60 * 1000); // 30min - matches AGENT_STATUS_THRESHOLDS
         agents = allTenantAgents.filter((agent) => {
           if (!agent.last_heartbeat) return false;
           return new Date(agent.last_heartbeat) > fiveMinutesAgo;

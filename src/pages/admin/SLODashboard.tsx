@@ -99,14 +99,14 @@ export default function SLODashboard() {
       const agents = (agentsRaw as unknown as Array<{ id: string; status: string; last_heartbeat: string | null }>) || [];
 
       const now = new Date();
-      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+      const cutoff = new Date(now.getTime() - 30 * 60 * 1000); // 30min - matches AGENT_STATUS_THRESHOLDS
       
       const agentData = agents || [];
       const online = agentData.filter(a => 
-        a.last_heartbeat && new Date(a.last_heartbeat) > fiveMinutesAgo
+        a.last_heartbeat && new Date(a.last_heartbeat) > cutoff
       ).length;
       const offline = agentData.filter(a => 
-        a.last_heartbeat && new Date(a.last_heartbeat) <= fiveMinutesAgo
+        a.last_heartbeat && new Date(a.last_heartbeat) <= cutoff
       ).length;
       const pending = agentData.filter(a => !a.last_heartbeat).length;
       
