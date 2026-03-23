@@ -84,7 +84,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findExecutionsByJobId(jobId: string): Promise<JobExecution[]> {
     const { data, error } = await supabase
       .from('job_executions')
-      .select('*')
+      .select('id, job_id, execution_index, execution_hash, previous_hash, status, started_at, completed_at, output, error_message')
       .eq('job_id', jobId)
       .order('execution_index', { ascending: true });
 
