@@ -2,6 +2,7 @@ import type { DomainEvent } from '@/domain/shared/DomainEvent';
 import type { DomainEventDispatcher } from '@/application/ports/output/DomainEventDispatcher';
 import type { Json } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 /**
  * Infrastructure adapter: Persists domain events to the domain_events table.
