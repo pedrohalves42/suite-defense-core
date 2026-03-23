@@ -17,6 +17,7 @@ import { SOC2_TRUST_CRITERIA, COMPLIANCE_POLICIES, type CriteriaCode, type Polic
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface WizardStep {
