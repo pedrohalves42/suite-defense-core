@@ -16,6 +16,8 @@ import { SOC2_TRUST_CRITERIA, COMPLIANCE_POLICIES } from '@/types/soc2-complianc
 import { PolicyApprovalWorkflow } from '@/components/soc2/PolicyApprovalWorkflow';
 import { VendorRiskRegistry } from '@/components/soc2/VendorRiskRegistry';
 import { AlertResolutionPanel } from '@/components/soc2/AlertResolutionPanel';
+import { SOC2PolicyWizard } from '@/components/soc2/SOC2PolicyWizard';
+import { SLAMonitoringPanel } from '@/components/soc2/SLAMonitoringPanel';
 import { useExportEvidenceBundle, useEvidenceBundles, formatBytes, BUNDLE_TYPE_LABELS } from '@/hooks/useEvidenceBundle';
 import { toast } from 'sonner';
 
@@ -140,15 +142,22 @@ export default function SOC2Dashboard() {
       </div>
 
       {/* Abas */}
-      <Tabs defaultValue="criteria" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+      <Tabs defaultValue="wizard" className="space-y-4">
+        <TabsList className="flex w-full overflow-x-auto">
+          <TabsTrigger value="wizard">🧙 Assistente</TabsTrigger>
           <TabsTrigger value="criteria">Critérios CC1-CC9</TabsTrigger>
           <TabsTrigger value="policies">Políticas</TabsTrigger>
+          <TabsTrigger value="sla">📊 SLA/SLO</TabsTrigger>
           <TabsTrigger value="alerts">Alertas</TabsTrigger>
           <TabsTrigger value="vendors">Fornecedores</TabsTrigger>
           <TabsTrigger value="matrix">Matriz</TabsTrigger>
           <TabsTrigger value="controls">Controles</TabsTrigger>
         </TabsList>
+
+        {/* Wizard Tab */}
+        <TabsContent value="wizard" className="space-y-4">
+          <SOC2PolicyWizard />
+        </TabsContent>
 
         {/* Criteria Tab */}
         <TabsContent value="criteria" className="space-y-4">
@@ -180,6 +189,11 @@ export default function SOC2Dashboard() {
         {/* Policies Tab - Using real workflow */}
         <TabsContent value="policies" className="space-y-4">
           <PolicyApprovalWorkflow />
+        </TabsContent>
+
+        {/* SLA/SLO Tab */}
+        <TabsContent value="sla" className="space-y-4">
+          <SLAMonitoringPanel />
         </TabsContent>
 
         {/* Alerts Tab */}

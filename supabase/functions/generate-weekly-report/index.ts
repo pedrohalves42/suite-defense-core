@@ -216,19 +216,20 @@ serve(async (req) => {
         const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
         const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
         
-        await fetch(`${SUPABASE_URL}/functions/v1/send-security-notification`, {
+        await fetch(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-Internal-Secret': INTERNAL_SECRET || '',
           },
           body: JSON.stringify({
-            channel: 'email',
-            alertType: 'weekly_security_report',
-            severity: 'info',
-            title: `Relatório Semanal de Segurança - ${tenant.name}`,
+            channel: 'in_app',
+            type: 'report',
+            tenant_id: tenant.id,
+            subject: `Relatório Semanal de Segurança - ${tenant.name}`,
             message: executiveSummary,
-            details: {
+            severity: 'info',
+            metadata: {
               week_start: weekStart.toISOString(),
               week_end: weekEnd.toISOString(),
               metrics_summary: {
@@ -238,7 +239,6 @@ serve(async (req) => {
                 agents_protected: metrics.agents.active,
               },
             },
-            tenantId: tenant.id,
           }),
         });
         

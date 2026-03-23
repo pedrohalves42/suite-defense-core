@@ -51,3 +51,105 @@ export interface VTenantClaimHealthRow {
   total_cross_tenant_24h: number;
   last_period: string | null;
 }
+
+// ─── v_agent_lifecycle_state ───────────────────────────────
+
+export interface VAgentLifecycleStateRow {
+  id: string;
+  agent_id: string;
+  agent_name: string;
+  hostname: string | null;
+  os_type: string | null;
+  status: string;
+  agent_version: string | null;
+  last_heartbeat: string | null;
+  enrolled_at: string | null;
+  tenant_id: string;
+  is_archived: boolean | null;
+  display_name: string | null;
+  is_isolated: boolean | null;
+  lifecycle_state: string | null;
+  days_since_heartbeat: number | null;
+  days_since_enrolled: number | null;
+}
+
+// ─── v_agent_state ─────────────────────────────────────────
+
+export interface VAgentStateRow {
+  id: string;
+  agent_id: string;
+  agent_name: string;
+  hostname: string | null;
+  os_type: string | null;
+  status: string;
+  agent_version: string | null;
+  last_heartbeat: string | null;
+  enrolled_at: string | null;
+  tenant_id: string;
+  is_archived: boolean | null;
+  display_name: string | null;
+  is_isolated: boolean | null;
+}
+
+// ─── v_problematic_agents ──────────────────────────────────
+
+export interface VProblematicAgentRow {
+  id: string;
+  agent_name: string;
+  hostname: string | null;
+  status: string;
+  agent_version: string | null;
+  last_heartbeat: string | null;
+  tenant_id: string;
+  problem_type: string | null;
+  problem_severity: string | null;
+}
+
+// ─── v_system_operations_summary ───────────────────────────
+
+export interface VSystemOperationsSummaryRow {
+  tenant_id: string;
+  total_agents: number | null;
+  online_agents: number | null;
+  total_jobs_24h: number | null;
+  failed_jobs_24h: number | null;
+  completed_jobs_24h: number | null;
+}
+
+// ─── v_job_metrics_by_type ─────────────────────────────────
+
+export interface VJobMetricsByTypeRow {
+  job_type: string;
+  total_count: number | null;
+  success_count: number | null;
+  failure_count: number | null;
+  avg_duration_ms: number | null;
+  success_rate: number | null;
+}
+
+// ─── SecurityEvent (for typed event_data access) ───────────
+
+export interface SecurityEventData {
+  alert_type?: string;
+  alert_message?: string;
+  severity?: string;
+  state_before?: string;
+  state_after?: string;
+  details?: Record<string, unknown>;
+  skip_remediation?: boolean;
+  [key: string]: unknown;
+}
+
+// ─── AI Insight with status ────────────────────────────────
+
+export interface AIInsightRow {
+  id: string;
+  tenant_id: string;
+  insight_type: string;
+  title: string;
+  description: string | null;
+  severity: string | null;
+  status: 'open' | 'resolved' | 'rejected';
+  created_at: string;
+  metadata: Record<string, unknown> | null;
+}
