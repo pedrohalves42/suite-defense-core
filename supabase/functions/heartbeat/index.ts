@@ -730,16 +730,62 @@ Deno.serve(async (req) => {
     // Event is dispatched but we don't wait for it
 
     // Response normal (sem force update)
+    // HOTFIX: send the hash of the currently installed script content so agents can
+    // self-heal stale expected_script_hash caches after force updates / runtime hotfixes.
+    let currentScriptSha256: string | null = null
+    let currentScriptHashSignedAt: string | null = null
+
+    try {
+      const currentVersion = agentVersion || updateData.agent_version
+      if (currentVersion) {
+        const { data: currentRelease } = await supabase
+          .from('agent_releases')
+          .select('script_content, signed_at')
+          .eq('version', currentVersion)
+          .eq('platform', platform)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (currentRelease?.script_content) {
+          let currentScript = currentRelease.script_content
+
+          if (platform === 'windows' || platform === 'Windows') {
+            const hotfixResult = applyWindowsScriptHotfix(currentScript)
+            if (hotfixResult.changed) {
+              currentScript = hotfixResult.content
+            }
+          }
+
+          const normalizedCurrentScript = normalizeForWindows(currentScript)
+          const currentBytes = new TextEncoder().encode(normalizedCurrentScript)
+          const currentHashBuffer = await crypto.subtle.digest('SHA-256', currentBytes)
+          currentScriptSha256 = Array.from(new Uint8Array(currentHashBuffer))
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('')
+          currentScriptHashSignedAt = currentRelease.signed_at || null
+        }
+      }
+    } catch (hashHealError) {
+      logger.warn('Failed to compute current script hash for heartbeat self-heal', {
+        agentName: agent.agent_name,
+        error: (hashHealError as Error).message,
+      })
+    }
+
     // COST-OPT: Send poll_interval to agents to reduce call frequency
     return new Response(
       JSON.stringify({ 
         ok: true,
         agent: agent.agent_name,
         timestamp: new Date().toISOString(),
-        script_sha256: null, // Compatibility field for legacy/v5.0.13 parsing
+        script_sha256: currentScriptSha256,
+        script_hash_signature: null,
+        script_hash_signed_at: currentScriptHashSignedAt,
         // COST-OPT v6: Unified intervals (heartbeat=600s, poll=600s) — BUG 5 fix: eliminates ping-pong
-        heartbeat_interval_seconds: 600,   // Heartbeat every 10min
-        poll_interval_seconds: 600,        // Poll jobs every 10min (aligned with agent-heartbeat)
+        heartbeat_interval_seconds: 600,
+        poll_interval_seconds: 600,
         // Agent config flags
         skip_firewall_remediation: agent.skip_firewall_remediation || false,
         // v5.0.14: Aggregation config (safe default so agents don't crash on missing property)
