@@ -1388,9 +1388,10 @@ function Get-SystemInfo {
 function Initialize-AgentKeys {
     <#
     .SYNOPSIS
-        Generates or loads ECDSA P-256 keypair for result signing
-    .DESCRIPTION
-        P0 Critical: Resolves gap V-001 (result signatures)
+        Generates or loads ECDSA P-256 keypair for result signing.
+        v5.0.15-hotfix-keygen: Detects .NET capability BEFORE attempting ECDSA.
+        On .NET Framework 4.x (PS 5.1), ExportPkcs8PrivateKey() does not exist,
+        so we skip directly to RSACryptoServiceProvider — zero wasted attempts.
     #>
     try {
         if (Test-Path $Global:KeyStorePath) {
@@ -1409,13 +1410,27 @@ function Initialize-AgentKeys {
             }
         }
         
-        Write-Log "[KEYS] Generating new ECDSA P-256 keypair..." "INFO"
+        # v5.0.15-hotfix-keygen: Check if ExportPkcs8PrivateKey is available (.NET Core 3.0+ / .NET 5+)
+        # On .NET Framework 4.x (PowerShell 5.1), this method does NOT exist.
+        $canExportPkcs8 = $false
+        try {
+            $testMethod = [System.Security.Cryptography.ECDsa].GetMethod('ExportPkcs8PrivateKey')
+            $canExportPkcs8 = ($null -ne $testMethod)
+        } catch {
+            $canExportPkcs8 = $false
+        }
+        
+        if (-not $canExportPkcs8) {
+            Write-Log "[KEYS] .NET Framework detected (no ExportPkcs8PrivateKey) - using RSACryptoServiceProvider directly" "INFO"
+            return Initialize-RSACspKeys
+        }
+        
+        Write-Log "[KEYS] .NET Core/.NET 5+ detected - generating ECDSA P-256 keypair..." "INFO"
         
         # Generate new keypair using .NET Crypto
         Add-Type -AssemblyName System.Security
         
-        # v5.0.12 FIX: Pre-clean ALL orphaned CNG ECDSA containers before generation
-        # This prevents "O objeto ja existe" / "The object already exists" errors
+        # Pre-clean orphaned CNG ECDSA containers
         try {
             $knownKeyNames = @("ECDSA_P256", "CyberShield-ECDSA", "Microsoft Software Key Storage Provider")
             foreach ($keyName in $knownKeyNames) {
@@ -1436,186 +1451,42 @@ function Initialize-AgentKeys {
         $maxKeyAttempts = 3
         for ($attempt = 1; $attempt -le $maxKeyAttempts; $attempt++) {
             try {
-                # v5.0.12: Always use explicit ephemeral key to avoid CNG naming conflicts
                 $creationParams = New-Object System.Security.Cryptography.CngKeyCreationParameters
                 $creationParams.ExportPolicy = [System.Security.Cryptography.CngExportPolicies]::AllowPlaintextExport
-                # v5.0.15-hotfix-cng: OverwriteExistingKey prevents "O objeto já existe" on .NET 4.x
-                # where CNG may internally persist named containers even with $null name
                 $creationParams.KeyCreationOptions = [System.Security.Cryptography.CngKeyCreationOptions]::OverwriteExistingKey
                 
                 $cngKey = [System.Security.Cryptography.CngKey]::Create(
                     [System.Security.Cryptography.CngAlgorithm]::ECDsaP256,
-                    $null,  # No name = ephemeral, no conflict
+                    $null,
                     $creationParams
                 )
                 $ecdsa = [System.Security.Cryptography.ECDsaCng]::new($cngKey)
                 Write-Log "[KEYS] ECDSA keypair generated (attempt $attempt, ephemeral)" "INFO"
-                break  # Success
+                break
             } catch {
-                $errMsg = $_.Exception.Message
-                Write-Log "[KEYS] ECDSA attempt $attempt/$maxKeyAttempts failed: $errMsg" "WARN"
+                Write-Log "[KEYS] ECDSA attempt $attempt/$maxKeyAttempts failed: $($_.Exception.Message)" "WARN"
                 
                 if ($attempt -eq $maxKeyAttempts) {
-                    # v5.0.13 HOTFIX: fallback for legacy Windows/.NET where CNG container creation is unstable
-                    $ecdsaFallbackUsed = $false
-                    try {
-                        $ecdsa = [System.Security.Cryptography.ECDsaCng]::new(256)
-                        if ($null -ne $ecdsa) {
-                            Write-Log "[KEYS] Fallback ECDSA keypair generated via ECDsaCng(256)" "WARN"
-                            $ecdsaFallbackUsed = $true
-                            # v5.0.15-fix: Try export, if fails go to RSA fallback
-                            try {
-                                $testExport = $ecdsa.ExportPkcs8PrivateKey()
-                                if ($testExport) {
-                                    Write-Log "[KEYS] ECDsaCng export succeeded, using ECDSA" "INFO"
-                                    break
-                                }
-                            } catch {
-                                Write-Log "[KEYS] ExportPkcs8/SPKI not available ($($_.Exception.Message)), falling through to RSA-2048" "WARN"
-                                $ecdsa.Dispose()
-                                $ecdsa = $null
-                                $ecdsaFallbackUsed = $false
-                            }
-                        }
-                    } catch {
-                        Write-Log "[KEYS] ECDsaCng fallback failed: $($_.Exception.Message)" "WARN"
-                    }
-
-                    if (-not $ecdsaFallbackUsed) {
-                        try {
-                            $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
-                            if ($null -ne $ecdsa) {
-                                try {
-                                    if ($ecdsa.KeySize -ne 256) { $ecdsa.KeySize = 256 }
-                                } catch {
-                                    Write-Log "[KEYS] Managed ECDSA fallback created key with KeySize=$($ecdsa.KeySize)" "WARN"
-                                }
-                                try {
-                                    $testExport2 = $ecdsa.ExportPkcs8PrivateKey()
-                                    if ($testExport2) {
-                                        Write-Log "[KEYS] Managed ECDSA export succeeded" "INFO"
-                                        break
-                                    }
-                                } catch {
-                                    Write-Log "[KEYS] Managed ECDSA export failed, falling through to RSA" "WARN"
-                                    $ecdsa.Dispose()
-                                    $ecdsa = $null
-                                }
-                            }
-                        } catch {
-                            Write-Log "[KEYS] Managed ECDSA fallback failed: $($_.Exception.Message)" "WARN"
-                        }
-                    }
-
-                    if ($null -eq $ecdsa) {
-                        Write-Log "[KEYS] All ECDSA attempts failed - trying RSA-2048 fallback" "WARN"
-                    
-                        # v5.0.13-fix: RSA-2048 fallback for legacy Windows without ECDSA support
-                        try {
-                            $rsa = [System.Security.Cryptography.RSA]::Create(2048)
-                            if ($null -ne $rsa) {
-                                $privateKeyBytes = $rsa.ExportPkcs8PrivateKey()
-                                $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
-                                $publicKeyBytes = $rsa.ExportSubjectPublicKeyInfo()
-                                $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
-                                
-                                $sha256Hash = [System.Security.Cryptography.SHA256]::Create()
-                                $fpBytes = $sha256Hash.ComputeHash($publicKeyBytes)
-                                $fp = [BitConverter]::ToString($fpBytes).Replace("-", "").ToLower()
-                                $sha256Hash.Dispose()
-                                
-                                $keyData = @{
-                                    private_key = $privateKeyBase64
-                                    public_key = $publicKeyBase64
-                                    fingerprint = $fp
-                                    algorithm = "RSA-2048-SHA256"
-                                    version = 1
-                                    created_at = (Get-Date).ToString("o")
-                                }
-                                $keyData | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
-                                
-                                $Global:AgentPrivateKey = $privateKeyBase64
-                                $Global:AgentPublicKey = $publicKeyBase64
-                                $Global:KeyFingerprint = $fp
-                                $Global:KeyVersion = 1
-                                $Global:AgentSigningAlgorithm = "RSA-2048-SHA256"
-                                
-                                Write-Log "[KEYS] RSA-2048 fallback keypair generated. Fingerprint: $($fp.Substring(0, 16))..." "SUCCESS"
-                                $rsa.Dispose()
-                                return $true
-                            }
-                        } catch {
-                            Write-Log "[KEYS] RSA fallback also failed: $($_.Exception.Message)" "WARN"
-                        }
-                        
-                        # v5.0.13-fix: Last resort - RSACryptoServiceProvider (works on .NET 2.0+)
-                        try {
-                            $rsaCsp = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
-                            $pubXml = $rsaCsp.ToXmlString($false)
-                            $privXml = $rsaCsp.ToXmlString($true)
-                            
-                            $pubBytes = [System.Text.Encoding]::UTF8.GetBytes($pubXml)
-                            $privB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($privXml))
-                            $pubB64 = [Convert]::ToBase64String($pubBytes)
-                            
-                            $sha256Hash2 = [System.Security.Cryptography.SHA256]::Create()
-                            $fpBytes2 = $sha256Hash2.ComputeHash($pubBytes)
-                            $fp2 = [BitConverter]::ToString($fpBytes2).Replace("-", "").ToLower()
-                            $sha256Hash2.Dispose()
-                            
-                            $keyData2 = @{
-                                private_key = $privB64
-                                public_key = $pubB64
-                                fingerprint = $fp2
-                                algorithm = "RSA-2048-XML"
-                                version = 1
-                                created_at = (Get-Date).ToString("o")
-                            }
-                            $keyData2 | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
-                            
-                            $Global:AgentPrivateKey = $privB64
-                            $Global:AgentPublicKey = $pubB64
-                            $Global:KeyFingerprint = $fp2
-                            $Global:KeyVersion = 1
-                            $Global:AgentSigningAlgorithm = "RSA-2048-XML"
-                            
-                            Write-Log "[KEYS] RSACryptoServiceProvider fallback generated. Fingerprint: $($fp2.Substring(0, 16))..." "SUCCESS"
-                            $rsaCsp.Dispose()
-                            return $true
-                        } catch {
-                            Write-Log "[KEYS] RSACryptoServiceProvider fallback failed: $($_.Exception.Message)" "ERROR"
-                        }
-                        
-                        Write-Log "[KEYS] All crypto attempts exhausted - signing DISABLED" "ERROR"
-                        return $false
-                    }
+                    Write-Log "[KEYS] All ECDSA CNG attempts failed - falling back to RSACryptoServiceProvider" "WARN"
+                    return Initialize-RSACspKeys
                 }
                 
                 Start-Sleep -Seconds 2
             }
         }
         
-        # v5.0.15-hotfix-ecdsa: Wrap ECDSA export in try/catch with RSACryptoServiceProvider fallback
-        # On .NET Framework 4.x, ExportPkcs8PrivateKey() does not exist, causing a fatal
-        # exception that skips all RSA fallbacks and leaves the agent in DEGRADED mode.
-        $exportSuccess = $false
-        
+        # ECDSA export (we already verified ExportPkcs8PrivateKey exists above)
         if ($null -ne $ecdsa) {
             try {
-                # Export private key (PKCS#8) - requires .NET Core 3.0+
                 $privateKeyBytes = $ecdsa.ExportPkcs8PrivateKey()
                 $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
-                
-                # Export public key (SubjectPublicKeyInfo)
                 $publicKeyBytes = $ecdsa.ExportSubjectPublicKeyInfo()
                 $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
 
-                # Calculate fingerprint (SHA256 of public key)
                 $sha256 = [System.Security.Cryptography.SHA256]::Create()
                 $fingerprintBytes = $sha256.ComputeHash($publicKeyBytes)
                 $fingerprint = [BitConverter]::ToString($fingerprintBytes).Replace("-", "").ToLower()
                 
-                # Save keys locally
                 $keyData = @{
                     private_key = $privateKeyBase64
                     public_key = $publicKeyBase64
@@ -1634,54 +1505,13 @@ function Initialize-AgentKeys {
                 $Global:AgentSigningAlgorithm = "ECDSA-P256-SHA256"
                 
                 Write-Log "[KEYS] Generated new ECDSA keypair. Fingerprint: $($fingerprint.Substring(0, 16))..." "SUCCESS"
-                $exportSuccess = $true
             } catch {
-                Write-Log "[KEYS] ECDSA export failed ($($_.Exception.Message)) - falling back to RSACryptoServiceProvider" "WARN"
+                Write-Log "[KEYS] ECDSA export failed unexpectedly ($($_.Exception.Message)) - falling back to RSA" "WARN"
                 try { $ecdsa.Dispose() } catch {}
-                $ecdsa = $null
+                return Initialize-RSACspKeys
             }
-        }
-        
-        # RSACryptoServiceProvider fallback for .NET Framework 4.x
-        if (-not $exportSuccess) {
-            try {
-                $rsaCsp = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
-                $pubXml = $rsaCsp.ToXmlString($false)
-                $privXml = $rsaCsp.ToXmlString($true)
-                
-                $pubBytes = [System.Text.Encoding]::UTF8.GetBytes($pubXml)
-                $privB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($privXml))
-                $pubB64 = [Convert]::ToBase64String($pubBytes)
-                
-                $sha256Hash2 = [System.Security.Cryptography.SHA256]::Create()
-                $fpBytes2 = $sha256Hash2.ComputeHash($pubBytes)
-                $fp2 = [BitConverter]::ToString($fpBytes2).Replace("-", "").ToLower()
-                $sha256Hash2.Dispose()
-                
-                $keyData2 = @{
-                    private_key = $privB64
-                    public_key = $pubB64
-                    fingerprint = $fp2
-                    algorithm = "RSA-2048-XML"
-                    version = 1
-                    created_at = (Get-Date).ToString("o")
-                }
-                $keyData2 | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
-                
-                $Global:AgentPrivateKey = $privB64
-                $Global:AgentPublicKey = $pubB64
-                $Global:KeyFingerprint = $fp2
-                $Global:KeyVersion = 1
-                $Global:AgentSigningAlgorithm = "RSA-2048-XML"
-                
-                Write-Log "[KEYS] RSACryptoServiceProvider fallback generated (post-ECDSA). Fingerprint: $($fp2.Substring(0, 16))..." "SUCCESS"
-                $rsaCsp.Dispose()
-                $exportSuccess = $true
-            } catch {
-                Write-Log "[KEYS] RSACryptoServiceProvider fallback failed: $($_.Exception.Message)" "ERROR"
-                Write-Log "[KEYS] All crypto attempts exhausted - signing DISABLED" "ERROR"
-                return $false
-            }
+        } else {
+            return Initialize-RSACspKeys
         }
         
         # Protect key file (SYSTEM and Administrators only)
@@ -1706,6 +1536,70 @@ function Initialize-AgentKeys {
         
     } catch {
         Write-Log "[KEYS] Failed to initialize keys: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+
+function Initialize-RSACspKeys {
+    <#
+    .SYNOPSIS
+        v5.0.15-hotfix-keygen: Generates RSA-2048 keys using RSACryptoServiceProvider.
+        This is the universal fallback that works on ALL Windows versions (.NET 2.0+).
+        Extracted to a standalone function to eliminate code duplication.
+    #>
+    try {
+        Write-Log "[KEYS] Generating RSA-2048 keypair via RSACryptoServiceProvider..." "INFO"
+        $rsaCsp = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
+        $pubXml = $rsaCsp.ToXmlString($false)
+        $privXml = $rsaCsp.ToXmlString($true)
+        
+        $pubBytes = [System.Text.Encoding]::UTF8.GetBytes($pubXml)
+        $privB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($privXml))
+        $pubB64 = [Convert]::ToBase64String($pubBytes)
+        
+        $sha256Hash = [System.Security.Cryptography.SHA256]::Create()
+        $fpBytes = $sha256Hash.ComputeHash($pubBytes)
+        $fp = [BitConverter]::ToString($fpBytes).Replace("-", "").ToLower()
+        $sha256Hash.Dispose()
+        
+        $keyData = @{
+            private_key = $privB64
+            public_key = $pubB64
+            fingerprint = $fp
+            algorithm = "RSA-2048-XML"
+            version = 1
+            created_at = (Get-Date).ToString("o")
+        }
+        $keyData | ConvertTo-Json | Out-File $Global:KeyStorePath -Encoding UTF8
+        
+        $Global:AgentPrivateKey = $privB64
+        $Global:AgentPublicKey = $pubB64
+        $Global:KeyFingerprint = $fp
+        $Global:KeyVersion = 1
+        $Global:AgentSigningAlgorithm = "RSA-2048-XML"
+        
+        Write-Log "[KEYS] RSA-2048-XML keypair generated. Fingerprint: $($fp.Substring(0, 16))..." "SUCCESS"
+        $rsaCsp.Dispose()
+        
+        # Protect key file
+        try {
+            $acl = Get-Acl $Global:KeyStorePath
+            $acl.SetAccessRuleProtection($true, $false)
+            $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]), "FullControl", "Allow")
+            $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")).Translate([System.Security.Principal.NTAccount]), "FullControl", "Allow")
+            $acl.AddAccessRule($adminRule)
+            $acl.AddAccessRule($systemRule)
+            Set-Acl $Global:KeyStorePath $acl
+        } catch {
+            Write-Log "[KEYS] Warning: Could not restrict key file permissions" "WARN"
+        }
+        
+        return $true
+    } catch {
+        Write-Log "[KEYS] RSACryptoServiceProvider failed: $($_.Exception.Message)" "ERROR"
+        Write-Log "[KEYS] All crypto attempts exhausted - signing DISABLED" "ERROR"
         return $false
     }
 }
