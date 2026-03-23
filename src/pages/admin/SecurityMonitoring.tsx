@@ -532,10 +532,11 @@ export default function SecurityMonitoring() {
                   <Area type="monotone" dataKey="criticos" stroke="hsl(var(--destructive))" fill="url(#gradCriticos)" name="Críticos" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
-            ) : (
+             ) : (
               <div className="flex flex-col items-center justify-center h-[180px] text-muted-foreground">
                 <ShieldCheck className="h-8 w-8 mb-2 opacity-30" />
                 <p className="text-xs">Sem atividade no período</p>
+                <p className="text-[10px] mt-1 opacity-60">Isso é bom — nenhuma ameaça detectada</p>
               </div>
             )}
           </CardContent>
