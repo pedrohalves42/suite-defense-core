@@ -154,6 +154,11 @@ export default function SOC2Dashboard() {
           <TabsTrigger value="controls">Controles</TabsTrigger>
         </TabsList>
 
+        {/* Wizard Tab */}
+        <TabsContent value="wizard" className="space-y-4">
+          <SOC2PolicyWizard />
+        </TabsContent>
+
         {/* Criteria Tab */}
         <TabsContent value="criteria" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
