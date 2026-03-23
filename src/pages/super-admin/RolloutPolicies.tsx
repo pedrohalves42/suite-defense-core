@@ -682,7 +682,7 @@ function RollbackEventsDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agent_rollback_events')
-        .select('id, agent_id, agent_name, from_version, to_version, rollback_reason, safe_mode_triggered, created_at, tenant_id')
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
       if (error) throw error;
