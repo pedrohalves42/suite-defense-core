@@ -126,6 +126,27 @@ export default function SecurityGraph() {
     onError: (err: any) => toast.error("Erro ao analisar: " + err.message),
   });
 
+  const autoBlock = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("auto-block-threats");
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["blocked-websites"] });
+      if (data.blocked === 0 && data.already_blocked > 0) {
+        toast.info(`Todos os ${data.already_blocked} itens perigosos já estão bloqueados.`);
+      } else if (data.blocked > 0) {
+        toast.success(
+          `${data.blocked} domínio(s) bloqueado(s) e sincronizado(s) com ${data.synced_agents} computador(es).`
+        );
+      } else {
+        toast.info("Nenhum domínio/IP perigoso encontrado para bloquear.");
+      }
+    },
+    onError: (err: any) => toast.error("Erro ao bloquear: " + err.message),
+  });
+
   const { data: nodes = [], isLoading: nodesLoading } = useQuery({
     queryKey: ["security-graph-nodes", tenant?.id],
     queryFn: async () => {
