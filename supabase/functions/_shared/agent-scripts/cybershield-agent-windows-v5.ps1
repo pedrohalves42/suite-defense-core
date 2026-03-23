@@ -5548,8 +5548,11 @@ function Test-AntivirusStatus {
             if ($avProducts) {
                 foreach ($av in $avProducts) {
                     $productState = $av.productState
-                    $isEnabled = (($productState -shr 12) -band 1) -eq 1
-                    $isUpToDate = (($productState -shr 4) -band 1) -eq 0
+                    # Fix: Use Microsoft's documented hex-digit parsing for productState
+                    # Byte layout: 0xXYZZZZ where Y=scanner status (1=active, 0=inactive, 3=active+outdated)
+                    $hex = '{0:x6}' -f [int]$productState
+                    $isEnabled = $hex.Substring(1,1) -in @('1','3')
+                    $isUpToDate = $hex.Substring(2,2) -eq '00'
                     
                     if (-not $isEnabled) {
                         $avInactive = $true
