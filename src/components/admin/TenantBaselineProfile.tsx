@@ -258,7 +258,7 @@ export function TenantBaselineProfile() {
                         profile.driftPercent > 0 ? 'text-red-500' : 
                         profile.driftPercent < 0 ? 'text-blue-500' : 'text-green-500'
                       )}>
-                        {profile.driftPercent > 0 ? '+' : ''}{profile.driftPercent}%
+                        {profile.driftPercent > 0 ? '+' : ''}{profile.driftPercent}{profile.unit ? 'pp' : ''}
                       </p>
                       <p className="text-[10px] text-muted-foreground">Variação</p>
                     </div>
