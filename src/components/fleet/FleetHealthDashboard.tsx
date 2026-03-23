@@ -230,7 +230,7 @@ export function FleetHealthDashboard() {
                       "w-full text-left p-3 rounded-lg border transition-all hover:shadow-md",
                       "bg-card hover:bg-accent/5",
                       hasIssue && "border-destructive/30",
-                      !isOnline && "opacity-60"
+                      !online && "opacity-60"
                     )}
                   >
                     <div className="flex items-center gap-2 mb-2">
