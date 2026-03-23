@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Loader2, Search, AlertTriangle, Globe, Monitor, Shield, ShieldAlert, ShieldCheck, ChevronDown, ChevronUp, ExternalLink, Info } from "lucide-react";
+import { RefreshCw, Loader2, Search, AlertTriangle, Globe, Monitor, Shield, ShieldAlert, ShieldCheck, ChevronDown, ChevronUp, ExternalLink, Info, Ban, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -124,6 +124,27 @@ export default function SecurityGraph() {
       toast.success(`Análise concluída: ${data.nodes_created} itens encontrados`);
     },
     onError: (err: any) => toast.error("Erro ao analisar: " + err.message),
+  });
+
+  const autoBlock = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("auto-block-threats");
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["blocked-websites"] });
+      if (data.blocked === 0 && data.already_blocked > 0) {
+        toast.info(`Todos os ${data.already_blocked} itens perigosos já estão bloqueados.`);
+      } else if (data.blocked > 0) {
+        toast.success(
+          `${data.blocked} domínio(s) bloqueado(s) e sincronizado(s) com ${data.synced_agents} computador(es).`
+        );
+      } else {
+        toast.info("Nenhum domínio/IP perigoso encontrado para bloquear.");
+      }
+    },
+    onError: (err: any) => toast.error("Erro ao bloquear: " + err.message),
   });
 
   const { data: nodes = [], isLoading: nodesLoading } = useQuery({
@@ -251,14 +272,26 @@ export default function SecurityGraph() {
             Visão geral de tudo que foi detectado na sua rede
           </p>
         </div>
-        <Button
-          onClick={() => buildGraph.mutate()}
-          disabled={buildGraph.isPending || !tenant?.id}
-          size="sm"
-        >
-          {buildGraph.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-          {buildGraph.isPending ? "Analisando..." : "Analisar Rede"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => autoBlock.mutate()}
+            disabled={autoBlock.isPending || !tenant?.id || dangerCount === 0}
+            size="sm"
+            variant="destructive"
+          >
+            {autoBlock.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Ban className="h-4 w-4 mr-2" />}
+            {autoBlock.isPending ? "Bloqueando..." : `Bloquear Perigosos (${dangerCount})`}
+          </Button>
+          <Button
+            onClick={() => buildGraph.mutate()}
+            disabled={buildGraph.isPending || !tenant?.id}
+            size="sm"
+            variant="outline"
+          >
+            {buildGraph.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            {buildGraph.isPending ? "Analisando..." : "Analisar Rede"}
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards — plain language */}
@@ -296,9 +329,11 @@ export default function SecurityGraph() {
       {nodes.length > 0 && dangerCount > 0 && (
         <Alert className="border-destructive/30 bg-destructive/5">
           <ShieldAlert className="h-4 w-4 text-destructive" />
-          <AlertDescription className="text-sm">
-            <strong>{dangerCount} {dangerCount === 1 ? 'item perigoso foi encontrado' : 'itens perigosos foram encontrados'}</strong> na sua rede.
-            São sites ou endereços que podem ser maliciosos. Clique em cada item para ver mais detalhes.
+          <AlertDescription className="text-sm flex items-center justify-between">
+            <span>
+              <strong>{dangerCount} {dangerCount === 1 ? 'item perigoso foi encontrado' : 'itens perigosos foram encontrados'}</strong> na sua rede.
+              Use o botão <strong>"Bloquear Perigosos"</strong> acima para bloquear automaticamente o acesso a esses sites/IPs em todos os computadores.
+            </span>
           </AlertDescription>
         </Alert>
       )}
