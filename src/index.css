@@ -313,6 +313,23 @@
     background: hsl(var(--border));
   }
 
+  /* Fix: ensure inactive sidebar text is readable in light mode */
+  :root:not(.dark) .sidebar-item-neon {
+    color: hsl(220 14% 35%);
+  }
+
+  :root:not(.dark) .sidebar-item-neon .sidebar-icon {
+    color: hsl(220 14% 45%);
+  }
+
+  :root:not(.dark) .sidebar-item-neon:hover {
+    color: hsl(220 14% 20%);
+  }
+
+  :root:not(.dark) .sidebar-item-neon:hover .sidebar-icon {
+    color: hsl(var(--primary));
+  }
+
   :root:not(.dark) .sidebar-item-neon-super:hover {
     background: hsl(var(--accent) / 0.06);
   }
