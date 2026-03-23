@@ -506,6 +506,15 @@ export default function AgentHealthMonitor() {
         </CardContent>
       </Card>
 
+      {/* Batch Action Bar */}
+      <BatchActionBar
+        selectedIds={Array.from(selectedBatch)}
+        selectedNames={filteredAgents
+          .filter(a => a.id && selectedBatch.has(a.id))
+          .map(a => a.agent_name)}
+        onClearSelection={() => setSelectedBatch(new Set())}
+      />
+
       {/* Agent Details Drawer */}
       <AgentDetailsDrawer
         agentId={selectedAgent?.id || null}
