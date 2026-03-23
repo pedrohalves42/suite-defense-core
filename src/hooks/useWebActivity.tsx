@@ -14,8 +14,8 @@ interface WebActivityRow {
 }
 
 async function fetchWebActivity(agentId: string, tenantId: string): Promise<WebActivityItem[]> {
-  // Fetch raw data and aggregate manually - expanded to 7 days for better visibility
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  // Fetch raw data and aggregate manually - expanded to 30 days for better visibility
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   
   logger.debug('[useWebActivity] Starting fetch:', { agentId, tenantId, since: sevenDaysAgo });
   
