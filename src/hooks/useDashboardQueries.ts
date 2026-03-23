@@ -174,7 +174,7 @@ export function useDashboardQueries() {
         event: '*', schema: 'public', table: 'jobs',
         filter: `tenant_id=eq.${tenantId}`,
       }, () => {
-        logger.info('[DashboardQueries] Jobs changed, invalidating...');
+        logger.debug('[DashboardQueries] Jobs changed, invalidating...');
         queryClient.invalidateQueries({ queryKey: ["dashboard", "jobs", tenantId] });
       })
       .subscribe();
