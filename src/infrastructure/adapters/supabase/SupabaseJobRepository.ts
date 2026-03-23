@@ -24,7 +24,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findPendingByAgent(agentId: AgentId): Promise<Job[]> {
     const { data, error } = await supabase
       .from('jobs')
-      .select('*')
+      .select('id, tenant_id, agent_name, agent_id, type, status, priority, payload, payload_hash, created_at, expires_at, retry_count, max_retries, idempotency_key')
       .eq('agent_id', agentId.value)
       .eq('status', 'pending')
       .order('priority', { ascending: false })
