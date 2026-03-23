@@ -6,9 +6,9 @@ import { supabase } from '@/integrations/supabase/client';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-// TUNING: Proper typed context instead of `any`
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface LogContext {
-  [key: string]: string | number | boolean | null | undefined | Error | Record<string, unknown>;
+  [key: string]: any;
 }
 
 // Buffer to batch log entries and avoid excessive network calls
