@@ -410,6 +410,7 @@ export default function AgentHealthMonitor() {
                 const hasSpecialStatus = agent.is_throttled || agent.is_isolated || agent.is_in_safe_mode;
                 const agentMetrics = agent.id ? systemMetrics[agent.id] : undefined;
                 const agentDisks = agent.id ? diskMetrics[agent.id] : undefined;
+                const isSelected = agent.id ? selectedBatch.has(agent.id) : false;
 
                 // Determine health status for the card
                 const healthStatus: 'healthy' | 'warning' | 'critical' | undefined = 
@@ -418,7 +419,24 @@ export default function AgentHealthMonitor() {
                   agent.health_status === 'healthy' ? 'healthy' : undefined;
 
                 return (
-                  <div key={agent.agent_name + idx} className="space-y-2">
+                  <div key={agent.agent_name + idx} className="space-y-2 relative">
+                    {/* Batch selection checkbox */}
+                    {agent.id && (
+                      <div className="absolute top-2 right-2 z-10">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            setSelectedBatch(prev => {
+                              const next = new Set(prev);
+                              if (checked) next.add(agent.id!);
+                              else next.delete(agent.id!);
+                              return next;
+                            });
+                          }}
+                          className="h-4 w-4"
+                        />
+                      </div>
+                    )}
                     <AgentCard
                       id={agent.id || ''}
                       name={agent.agent_name}
