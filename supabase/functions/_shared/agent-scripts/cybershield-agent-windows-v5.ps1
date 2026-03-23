@@ -4262,7 +4262,7 @@ function Get-ProcessAnomalies {
                 $seenNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
                 $cleanBaseline = @()
                 foreach ($entry in $Global:ProcessBaseline) {
-                    $entryName = if ($entry -is [hashtable]) { $entry["name"] } else { $entry.name }
+                    $entryName = Get-SafeBaselineProp $entry 'name'
                     if ($entryName -and -not $seenNames.Contains($entryName)) {
                         [void]$seenNames.Add($entryName)
                         $cleanBaseline += $entry
@@ -4273,7 +4273,7 @@ function Get-ProcessAnomalies {
                     $Global:ProcessBaseline = $cleanBaseline
                     $Global:ProcessBaselineSet.Clear()
                     foreach ($e in $cleanBaseline) {
-                        $n = if ($e -is [hashtable]) { $e["name"] } else { $e.name }
+                        $n = Get-SafeBaselineProp $e 'name'
                         if ($n) { [void]$Global:ProcessBaselineSet.Add($n) }
                     }
                     $cleanBaseline | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
