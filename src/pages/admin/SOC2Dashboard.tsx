@@ -191,6 +191,11 @@ export default function SOC2Dashboard() {
           <PolicyApprovalWorkflow />
         </TabsContent>
 
+        {/* SLA/SLO Tab */}
+        <TabsContent value="sla" className="space-y-4">
+          <SLAMonitoringPanel />
+        </TabsContent>
+
         {/* Alerts Tab */}
         <TabsContent value="alerts" className="space-y-4">
           <AlertResolutionPanel />
