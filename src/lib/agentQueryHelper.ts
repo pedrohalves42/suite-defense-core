@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 /**
  * ADR-026 Phase 1: Centralized agent query helper
