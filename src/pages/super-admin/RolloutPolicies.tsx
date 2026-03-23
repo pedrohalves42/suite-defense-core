@@ -549,7 +549,7 @@ function RolloutTelemetryDashboard() {
     queryFn: async () => {
       let query = supabase
         .from('agent_update_decisions')
-        .select('id, agent_id, agent_name, current_version, target_version, decision, reason, policy_id, created_at, tenant_id')
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
       
