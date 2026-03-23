@@ -24,6 +24,46 @@ const typeLabels: Record<string, { label: string; description: string; icon: typ
   cve: { label: "Vulnerabilidades", description: "Falhas de segurança conhecidas", icon: AlertTriangle },
 };
 
+/* ─── Source explanations for non-technical users ─── */
+const sourceExplanations: Record<string, { name: string; reason: string }> = {
+  abuse_ch_urlhaus: {
+    name: "URLhaus (Abuse.ch)",
+    reason: "Este endereço foi reportado como distribuidor de malware (vírus) por pesquisadores de segurança do mundo todo.",
+  },
+  abuse_ch_feodotracker: {
+    name: "Feodo Tracker (Abuse.ch)",
+    reason: "Este IP é usado por criminosos para controlar computadores infectados (servidor de comando e controle).",
+  },
+  abuse_ch_malwarebazaar: {
+    name: "MalwareBazaar (Abuse.ch)",
+    reason: "Este arquivo foi identificado como malware (software malicioso) por múltiplos laboratórios de segurança.",
+  },
+  alienvault_otx: {
+    name: "AlienVault OTX",
+    reason: "Identificado como ameaça pela comunidade global de inteligência de ameaças AlienVault.",
+  },
+  virustotal: {
+    name: "VirusTotal",
+    reason: "Detectado como malicioso por múltiplos antivírus no VirusTotal.",
+  },
+  cybershield_network: {
+    name: "Rede CyberShield",
+    reason: "Detectado pela análise de comportamento da rede CyberShield.",
+  },
+  internal: {
+    name: "Detecção Interna",
+    reason: "Identificado pela análise comportamental do agente instalado na máquina.",
+  },
+  edr_detection: {
+    name: "Detecção EDR",
+    reason: "O sistema de proteção detectou comportamento suspeito neste item.",
+  },
+  network_telemetry: {
+    name: "Análise de Rede",
+    reason: "Detectado pela análise do tráfego de rede dos computadores monitorados.",
+  },
+};
+
 function getRiskInfo(score: number) {
   if (score >= 80) return {
     level: "danger" as const,
