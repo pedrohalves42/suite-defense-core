@@ -144,7 +144,7 @@ export function useDashboardQueries() {
   const auditLogs = useQuery({
     queryKey: ["dashboard", "auditLogs", tenantId],
     queryFn: () => fetchAuditLogs(tenantId!),
-    ...queryOpts, refetchInterval: 30_000,
+    ...queryOpts, refetchInterval: 300_000, // COST-OPT v8: audit logs don't need 30s polling
   });
 
   const tenantNames = useQuery({
