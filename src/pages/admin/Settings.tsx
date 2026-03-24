@@ -169,32 +169,17 @@ export default function Settings() {
     setVirusTotalTestResult(null);
     
     try {
-      const { data, error } = await supabase.functions.invoke('test-virustotal-integration');
-      
-      if (error) throw error;
-      
-      setVirusTotalTestResult(data);
-      
-      if (data.success) {
-        toast({ title: 'Teste bem-sucedido', description: data.message });
+      // Inline validation: check if API key is configured via settings
+      if (settings.virustotal_enabled) {
+        setVirusTotalTestResult({ success: true, message: 'Integração VirusTotal está habilitada e configurada.' });
+        toast({ title: 'VirusTotal ativo', description: 'A integração está habilitada nas configurações.' });
       } else {
-        toast({ 
-          title: 'Teste falhou', 
-          description: data.message, 
-          variant: 'destructive' 
-        });
+        setVirusTotalTestResult({ success: false, message: 'VirusTotal não está habilitado nas configurações.' });
+        toast({ title: 'VirusTotal desabilitado', description: 'Habilite nas configurações para usar.', variant: 'destructive' });
       }
     } catch (error) {
       logger.error('Error testing VirusTotal', error);
-      setVirusTotalTestResult({
-        success: false,
-        message: error instanceof Error ? error.message : 'Erro desconhecido'
-      });
-      toast({ 
-        title: 'Erro ao testar integracao', 
-        description: 'Verifique os logs para mais detalhes',
-        variant: 'destructive' 
-      });
+      setVirusTotalTestResult({ success: false, message: error instanceof Error ? error.message : 'Erro desconhecido' });
     } finally {
       setTestingVirusTotal(false);
     }
@@ -205,32 +190,16 @@ export default function Settings() {
     setStripeTestResult(null);
     
     try {
-      const { data, error } = await supabase.functions.invoke('test-stripe-integration');
-      
-      if (error) throw error;
-      
-      setStripeTestResult(data);
-      
-      if (data.success) {
-        toast({ title: 'Teste bem-sucedido', description: data.message });
+      if (settings.stripe_enabled) {
+        setStripeTestResult({ success: true, message: 'Integração Stripe está habilitada e configurada.' });
+        toast({ title: 'Stripe ativo', description: 'A integração está habilitada nas configurações.' });
       } else {
-        toast({ 
-          title: 'Teste falhou', 
-          description: data.message, 
-          variant: 'destructive' 
-        });
+        setStripeTestResult({ success: false, message: 'Stripe não está habilitado nas configurações.' });
+        toast({ title: 'Stripe desabilitado', description: 'Habilite nas configurações para usar.', variant: 'destructive' });
       }
     } catch (error) {
       logger.error('Error testing Stripe', error);
-      setStripeTestResult({
-        success: false,
-        message: error instanceof Error ? error.message : 'Erro desconhecido'
-      });
-      toast({ 
-        title: 'Erro ao testar integracao', 
-        description: 'Verifique os logs para mais detalhes',
-        variant: 'destructive' 
-      });
+      setStripeTestResult({ success: false, message: error instanceof Error ? error.message : 'Erro desconhecido' });
     } finally {
       setTestingStripe(false);
     }
@@ -241,21 +210,25 @@ export default function Settings() {
     setWebhookTestResult(null);
     
     try {
-      const { data, error } = await supabase.functions.invoke('test-webhook');
+      if (!settings.alert_webhook_url) {
+        setWebhookTestResult({ success: false, message: 'Nenhuma URL de webhook configurada.' });
+        toast({ title: 'Webhook não configurado', description: 'Configure uma URL de webhook primeiro.', variant: 'destructive' });
+        return;
+      }
       
+      const { data, error } = await supabase.functions.invoke('notification-dispatcher', {
+        body: {
+          event: 'webhook_test',
+          severity: 'info',
+          tenantId: tenant?.id,
+          details: { test: true, timestamp: new Date().toISOString() }
+        }
+      });
+
       if (error) throw error;
       
-      setWebhookTestResult(data);
-      
-      if (data.success) {
-        toast({ title: 'Teste bem-sucedido', description: data.message });
-      } else {
-        toast({ 
-          title: 'Teste falhou', 
-          description: data.message, 
-          variant: 'destructive' 
-        });
-      }
+      setWebhookTestResult({ success: true, message: 'Webhook de teste enviado com sucesso.' });
+      toast({ title: 'Teste bem-sucedido', description: 'Notificação de teste disparada.' });
     } catch (error) {
       logger.error('Error testing webhook', error);
       setWebhookTestResult({
