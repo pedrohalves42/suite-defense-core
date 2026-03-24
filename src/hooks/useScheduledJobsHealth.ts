@@ -114,9 +114,10 @@ export function useScheduledJobsHealth() {
     },
     onSuccess: (data) => {
       toast.success(`Monitor executado: ${data.jobs_checked} jobs verificados, ${data.alerts_created} alertas criados`);
-      queryClient.invalidateQueries({ queryKey: ['scheduled-jobs-health'] });
-      queryClient.invalidateQueries({ queryKey: ['scheduled-job-runs'] });
-      queryClient.invalidateQueries({ queryKey: ['scheduled-jobs-health-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['scheduled-jobs-health', tenant?.id] });
+      queryClient.invalidateQueries({ queryKey: ['scheduled-job-runs', tenant?.id] });
+      queryClient.invalidateQueries({ queryKey: ['scheduled-jobs-health-summary', tenant?.id] });
+      queryClient.invalidateQueries({ queryKey: ['cron-health', tenant?.id] });
     },
     onError: (error) => {
       toast.error('Erro ao executar monitor: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
