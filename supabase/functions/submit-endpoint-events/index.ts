@@ -318,8 +318,8 @@ serveAgent(async (_req, ctx) => {
         alert_type: 'edr_detection',
         severity: d.severity,
         title: `[EDR] ${d.detection_name}`,
-        description: d.description,
-        status: 'active',
+        message: d.description || `EDR detection: ${d.detection_name}`,
+        resolved: false,
         metadata: {
           agent_id: agentId,
           mitre_technique_id: d.mitre_technique_id,
