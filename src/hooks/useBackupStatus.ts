@@ -68,6 +68,8 @@ export function useBackupStatus() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 60_000,
+    refetchInterval: 300_000, // COST-OPT v8: 60s → 5min (backup status is slow-changing)
+    staleTime: 120_000,
+    refetchIntervalInBackground: false,
   });
 }

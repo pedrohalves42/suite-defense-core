@@ -69,8 +69,9 @@ export default function ExecutiveDashboard() {
       };
     },
     enabled: !!tenantId,
-    refetchInterval: 60000,
-    staleTime: 15000,
+    refetchInterval: 300_000, // COST-OPT v8: 60s → 5min (executive dashboard is not real-time)
+    staleTime: 120_000,
+    refetchIntervalInBackground: false,
   });
 
   // Auto-trigger compliance calculation when no data exists OR data is stale (>1h)
