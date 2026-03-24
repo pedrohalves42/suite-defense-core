@@ -1,7 +1,3 @@
-/**
- * GamificationHub — Painel completo de gamificação
- * Combina XP, conquistas, desafios e leaderboard em um único widget
- */
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,8 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Trophy, Target, Users, Zap, Flame, Star, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { useGamification, getLevelFromXP, LEVELS } from '@/hooks/useGamification';
+import { useGamification } from '@/hooks/useGamification';
 import { SecurityAchievements } from '@/components/admin/SecurityAchievements';
 import { WeeklyChallenges } from '@/components/gamification/WeeklyChallenges';
 import { Leaderboard } from '@/components/gamification/Leaderboard';
@@ -36,11 +31,10 @@ export function GamificationHub() {
           )}
         </div>
 
-        {/* XP bar inline */}
         {profile && (
           <div className="mt-2">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <span className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
                 <Zap className="h-3 w-3 text-yellow-500" />
                 {profile.xp.toLocaleString()} XP — {levelInfo.title}
               </span>
@@ -52,8 +46,7 @@ export function GamificationHub() {
             </div>
             <Progress value={levelInfo.progressPercent} className="h-1.5" />
 
-            {/* Stats row */}
-            <div className="flex items-center gap-4 mt-2">
+            <div className="mt-2 flex items-center gap-4">
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                 <Flame className="h-3 w-3 text-orange-500" />
                 Streak: <span className="font-bold text-foreground">{profile.current_streak || 0}d</span>
@@ -72,20 +65,24 @@ export function GamificationHub() {
 
       <CardContent className="pt-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full h-8 mb-3">
-            <TabsTrigger value="overview" className="text-[11px] flex-1 gap-1">
+          <TabsList className="mb-2 grid h-auto w-full grid-cols-4 gap-1 bg-muted/40 p-1">
+            <TabsTrigger value="overview" className="h-8 cursor-pointer gap-1 rounded-md text-[11px] data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Trophy className="h-3 w-3" /> Conquistas
             </TabsTrigger>
-            <TabsTrigger value="challenges" className="text-[11px] flex-1 gap-1">
+            <TabsTrigger value="challenges" className="h-8 cursor-pointer gap-1 rounded-md text-[11px] data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Target className="h-3 w-3" /> Desafios
             </TabsTrigger>
-            <TabsTrigger value="ranking" className="text-[11px] flex-1 gap-1">
+            <TabsTrigger value="ranking" className="h-8 cursor-pointer gap-1 rounded-md text-[11px] data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Users className="h-3 w-3" /> Ranking
             </TabsTrigger>
-            <TabsTrigger value="history" className="text-[11px] flex-1 gap-1">
+            <TabsTrigger value="history" className="h-8 cursor-pointer gap-1 rounded-md text-[11px] data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Clock className="h-3 w-3" /> Histórico
             </TabsTrigger>
           </TabsList>
+
+          <p className="mb-3 text-[10px] text-muted-foreground">
+            Clique em qualquer conquista, desafio ou posição do ranking para abrir a área correspondente.
+          </p>
 
           <AnimatePresence mode="wait">
             <TabsContent value="overview" className="mt-0">
@@ -131,20 +128,20 @@ function XPHistoryList({ history }: { history: Array<{ id: string; action: strin
           initial={{ opacity: 0, x: -6 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: i * 0.03 }}
-          className="flex items-center gap-3 p-2 rounded-lg border border-border/40"
+          className="flex items-center gap-3 rounded-lg border border-border/40 p-2"
         >
-          <div className="p-1.5 rounded-md bg-yellow-500/10 shrink-0">
+          <div className="shrink-0 rounded-md bg-yellow-500/10 p-1.5">
             <Zap className="h-3 w-3 text-yellow-500" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium truncate">{event.description || event.action}</p>
+            <p className="truncate text-xs font-medium">{event.description || event.action}</p>
             <p className="text-[10px] text-muted-foreground">
               {new Date(event.created_at).toLocaleDateString('pt-BR', {
                 day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
               })}
             </p>
           </div>
-          <span className="text-xs font-bold text-yellow-500 tabular-nums shrink-0">
+          <span className="shrink-0 text-xs font-bold tabular-nums text-yellow-500">
             +{event.xp_earned}
           </span>
         </motion.div>

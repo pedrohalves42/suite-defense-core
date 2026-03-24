@@ -1,12 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Target, CheckCircle, Clock, Flame, Shield, Server, Eye, Zap } from 'lucide-react';
+import { Target, CheckCircle, Flame, Shield, Server, Eye, Zap, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useGamification } from '@/hooks/useGamification';
 import { useUnifiedMetrics } from '@/hooks/useUnifiedMetrics';
 import { useMemo, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   target: Target,
@@ -27,23 +28,23 @@ interface LocalChallenge {
   xpReward: number;
   completed: boolean;
   type: 'daily' | 'weekly';
-  action: string; // maps to XP_REWARDS key
+  href: string;
+  actionLabel: string;
 }
 
 export function WeeklyChallenges() {
   const { metrics } = useUnifiedMetrics();
-  const { profile, awardXP, updateStreak } = useGamification();
-  const awardedRef = useRef<Set<string>>(new Set());
+  const { profile, updateStreak } = useGamification();
+  const navigate = useNavigate();
+  const hasTriggeredStreakRef = useRef(false);
 
-  // Trigger streak update on mount (daily login)
   useEffect(() => {
-    if (profile && !awardedRef.current.has('streak_update')) {
-      awardedRef.current.add('streak_update');
+    if (profile && !hasTriggeredStreakRef.current) {
+      hasTriggeredStreakRef.current = true;
       updateStreak.mutate();
     }
-  }, [profile]);
+  }, [profile, updateStreak]);
 
-  // Generate dynamic challenges based on current metrics
   const challenges = useMemo<LocalChallenge[]>(() => {
     const total = metrics?.agents.total || 0;
     const online = metrics?.agents.online || 0;
@@ -61,7 +62,8 @@ export function WeeklyChallenges() {
         xpReward: 10,
         completed: true,
         type: 'daily',
-        action: 'daily_login',
+        href: '/admin/dashboard',
+        actionLabel: 'Abrir dashboard',
       },
       {
         id: 'weekly-all-online',
@@ -73,7 +75,8 @@ export function WeeklyChallenges() {
         xpReward: 100,
         completed: total > 0 && online === total,
         type: 'weekly',
-        action: 'enroll_agent',
+        href: '/admin/agent-health',
+        actionLabel: 'Ver saúde da frota',
       },
       {
         id: 'weekly-zero-alerts',
@@ -85,7 +88,8 @@ export function WeeklyChallenges() {
         xpReward: 150,
         completed: activeAlerts === 0,
         type: 'weekly',
-        action: 'resolve_alert',
+        href: '/admin/alert-resolution',
+        actionLabel: 'Resolver alertas',
       },
       {
         id: 'weekly-high-score',
@@ -97,7 +101,8 @@ export function WeeklyChallenges() {
         xpReward: 200,
         completed: score >= 90,
         type: 'weekly',
-        action: 'perfect_score',
+        href: '/admin/security-graph',
+        actionLabel: 'Melhorar score',
       },
       {
         id: 'streak-7',
@@ -109,31 +114,11 @@ export function WeeklyChallenges() {
         xpReward: 300,
         completed: (profile?.current_streak || 0) >= 7,
         type: 'weekly',
-        action: 'streak_7',
+        href: '/admin/dashboard',
+        actionLabel: 'Continuar sequência',
       },
     ];
   }, [metrics, profile]);
-
-  // Auto-award XP for newly completed challenges
-  useEffect(() => {
-    if (!profile || awardXP.isPending) return;
-
-    for (const challenge of challenges) {
-      if (challenge.completed && !awardedRef.current.has(challenge.id)) {
-        awardedRef.current.add(challenge.id);
-        // Only award daily_login once per session to avoid spam
-        if (challenge.action === 'daily_login') {
-          awardXP.mutate({
-            action: challenge.action,
-            customXP: challenge.xpReward,
-            customLabel: challenge.title,
-          });
-        }
-        // Weekly challenges are awarded via their natural actions (resolve_alert, etc.)
-        // so we don't double-award here — they get XP when the action actually happens
-      }
-    }
-  }, [challenges, profile]);
 
   const completedCount = challenges.filter(c => c.completed).length;
 
@@ -158,55 +143,66 @@ export function WeeklyChallenges() {
             : 0;
 
           return (
-            <motion.div
+            <motion.button
               key={challenge.id}
+              type="button"
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.06 }}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.995 }}
+              onClick={() => navigate(challenge.href)}
+              className={cn(
+                'group flex w-full items-center gap-3 rounded-lg border p-2.5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                challenge.completed
+                  ? 'border-success/30 bg-success/5 hover:border-primary/30'
+                  : 'border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40'
+              )}
             >
               <div className={cn(
-                "flex items-center gap-3 p-2.5 rounded-lg border transition-all",
-                challenge.completed
-                  ? "border-success/30 bg-success/5"
-                  : "border-border/50 bg-muted/20"
+                'p-2 rounded-lg shrink-0',
+                challenge.completed ? 'bg-success/10' : 'bg-muted/50'
               )}>
-                <div className={cn(
-                  "p-2 rounded-lg shrink-0",
-                  challenge.completed ? "bg-success/10" : "bg-muted/50"
-                )}>
-                  {challenge.completed ? (
-                    <CheckCircle className="h-4 w-4 text-success" />
-                  ) : (
-                    <Icon className="h-4 w-4 text-muted-foreground" />
-                  )}
+                {challenge.completed ? (
+                  <CheckCircle className="h-4 w-4 text-success" />
+                ) : (
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    'text-xs font-semibold truncate',
+                    challenge.completed ? 'text-success' : 'text-foreground'
+                  )}>
+                    {challenge.title}
+                  </span>
+                  <Badge variant={challenge.type === 'daily' ? 'secondary' : 'outline'} className="text-[9px] px-1.5">
+                    {challenge.type === 'daily' ? 'Diário' : 'Semanal'}
+                  </Badge>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "text-xs font-semibold truncate",
-                      challenge.completed ? "text-success" : "text-foreground"
-                    )}>
-                      {challenge.title}
-                    </span>
-                    <Badge variant={challenge.type === 'daily' ? 'secondary' : 'outline'} className="text-[9px] px-1.5">
-                      {challenge.type === 'daily' ? 'Diário' : 'Semanal'}
-                    </Badge>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground truncate">
-                    {challenge.description}
-                  </p>
-                  {!challenge.completed && (
-                    <Progress value={progress} className="h-1 mt-1.5" />
-                  )}
-                </div>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {challenge.description}
+                </p>
+                {!challenge.completed && (
+                  <Progress value={progress} className="h-1 mt-1.5" />
+                )}
+              </div>
+
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <span className={cn(
-                  "text-[10px] font-bold tabular-nums shrink-0",
-                  challenge.completed ? "text-success" : "text-yellow-500"
+                  'text-[10px] font-bold tabular-nums',
+                  challenge.completed ? 'text-success' : 'text-primary'
                 )}>
                   +{challenge.xpReward} XP
                 </span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground transition-colors group-hover:text-foreground">
+                  {challenge.actionLabel}
+                  <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                </span>
               </div>
-            </motion.div>
+            </motion.button>
           );
         })}
       </CardContent>
