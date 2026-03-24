@@ -36,19 +36,17 @@ export function FleetHealthDashboard() {
   const queryClient = useQueryClient();
   const [selectedAgent, setSelectedAgent] = useState<{ id: string; name: string } | null>(null);
 
-  // Fetch fleet data with pending jobs count
+  // ADR-026: Use RPC to bypass agents_deny_direct_select RLS policy
   const { data: agents = [], isLoading } = useQuery({
     queryKey: ['fleet-health', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
       
-      // Get agents
-      const { data: agentsData, error } = await supabase
-        .from('agents')
-        .select('id, agent_name, agent_version, status, last_heartbeat, os_type, os_version, is_isolated, is_throttled, safe_mode_reason')
-        .eq('tenant_id', tenant.id)
-        .eq('status', 'active')
-        .order('agent_name');
+      // Get agents via SECURITY DEFINER RPC (direct SELECT is blocked by RLS)
+      const { data: agentsRaw, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
       
       if (error) throw error;
       
@@ -60,12 +58,20 @@ export function FleetHealthDashboard() {
         .in('status', ['pending', 'in_progress']);
       
       const pendingMap = new Map<string, number>();
-      jobCounts?.forEach(j => {
+      jobCounts?.forEach((j: any) => {
         pendingMap.set(j.agent_name, (pendingMap.get(j.agent_name) || 0) + 1);
       });
       
-      return (agentsData || []).map(a => ({
-        ...a,
+      return ((agentsRaw || []) as any[]).map(a => ({
+        id: a.id,
+        agent_name: a.agent_name,
+        agent_version: a.agent_version,
+        status: a.status,
+        last_heartbeat: a.last_heartbeat,
+        os_type: a.os_type,
+        os_version: a.os_version,
+        is_isolated: a.is_isolated ?? false,
+        is_throttled: a.is_throttled ?? false,
         is_in_safe_mode: !!a.safe_mode_reason,
         pending_jobs: pendingMap.get(a.agent_name) || 0,
       })) as FleetAgent[];
