@@ -94,14 +94,12 @@ describe('useUnhealthyAgents', () => {
 describe('useNonExecutionAlerts', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('returns unresolved alerts', async () => {
-    const mockAlerts = [
-      { id: '1', tenant_id: 'tenant-abc', agent_id: 'a1', alert_type: 'non_execution', severity: 'high', message: 'Agent offline', resolved: false, created_at: '2026-01-01' },
-    ];
-    mockLimit.mockResolvedValueOnce({ data: mockAlerts, error: null });
-    const { result } = renderHook(() => useNonExecutionAlerts(), { wrapper: createWrapper() });
-    await waitFor(() => expect(result.current.data).toBeDefined());
-    expect(result.current.data?.length).toBeGreaterThanOrEqual(0);
+  it('queries system_alerts with correct filters', async () => {
+    renderHook(() => useNonExecutionAlerts(), { wrapper: createWrapper() });
+    await waitFor(() => {
+      expect(mockEq).toHaveBeenCalledWith('alert_type', 'non_execution_detected');
+      expect(mockEq).toHaveBeenCalledWith('resolved', false);
+    });
   });
 
   it('filters by tenant and unresolved', async () => {
