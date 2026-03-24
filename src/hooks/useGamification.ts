@@ -216,6 +216,7 @@ export function useGamification() {
     })();
   }, [profile, userId, tenantId]);
 
+  const { data: xpHistory } = useQuery({
     queryKey: ['xp-history', userId, tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
