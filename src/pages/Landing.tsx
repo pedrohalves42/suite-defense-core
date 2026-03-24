@@ -8,6 +8,7 @@ import { HeroSection } from "@/components/landing/HeroSection";
 const PainPointsSection = lazy(() => import("@/components/landing/PainPointsSection").then(m => ({ default: m.PainPointsSection })));
 const MiniDiagnosticSection = lazy(() => import("@/components/landing/MiniDiagnosticSection").then(m => ({ default: m.MiniDiagnosticSection })));
 const ProductPreviewSection = lazy(() => import("@/components/landing/ProductPreviewSection").then(m => ({ default: m.ProductPreviewSection })));
+const UnifiedPlatformSection = lazy(() => import("@/components/landing/UnifiedPlatformSection").then(m => ({ default: m.UnifiedPlatformSection })));
 const BenefitsSection = lazy(() => import("@/components/landing/BenefitsSection").then(m => ({ default: m.BenefitsSection })));
 const HowItWorksSection = lazy(() => import("@/components/landing/HowItWorksSection").then(m => ({ default: m.HowItWorksSection })));
 const PricingSection = lazy(() => import("@/components/landing/PricingSection").then(m => ({ default: m.PricingSection })));
@@ -70,6 +71,7 @@ const Landing = () => {
           <HeroSection />
           <Suspense fallback={<SectionFallback />}>
             <PainPointsSection />
+            <UnifiedPlatformSection />
             <MiniDiagnosticSection />
             <ProductPreviewSection />
             <BenefitsSection />
