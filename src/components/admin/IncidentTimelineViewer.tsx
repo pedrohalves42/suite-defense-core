@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { IncidentTimeline, TimelineEvent, INCIDENT_STATUS_LABELS, INCIDENT_STATUS_COLORS, EVENT_TYPE_LABELS, EVENT_TYPE_ICONS } from '@/hooks/useIncidentTimeline';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
