@@ -405,6 +405,26 @@ async function executeAction(
 
     } else if (rule.action_type === 'create_job') {
       const agent = agents.find((a: any) => a.id === agentId);
+      
+      // V-OFFLINE: Block job creation for offline agents (no heartbeat in 2h)
+      if (agent) {
+        const { data: agentDetail } = await supabase
+          .from('agents')
+          .select('last_heartbeat, scheduling_paused')
+          .eq('id', agentId)
+          .maybeSingle();
+        
+        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+        const isOffline = !agentDetail?.last_heartbeat || 
+          new Date(agentDetail.last_heartbeat) < twoHoursAgo ||
+          agentDetail.scheduling_paused;
+        
+        if (isOffline) {
+          console.log(`[evaluate-automation-rules] Skipping job creation for offline agent ${agent.agent_name}`);
+          return { status: 'skipped', result: { reason: 'agent_offline', agent_name: agent.agent_name } };
+        }
+      }
+      
       const { data: jobData, error: jobError } = await supabase
         .from('jobs')
         .insert({
