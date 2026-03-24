@@ -208,18 +208,18 @@ export default function NotificationSettings() {
       const [channelsRes, logsRes, reportsRes] = await Promise.all([
         supabase
           .from('notification_channels')
-          .select('id, tenant_id, channel_type, name, config, is_active, created_at, updated_at')
+          .select('id, tenant_id, channel_type, name, config, is_active, is_verified, verified_at, created_at, updated_at')
           .eq('tenant_id', tenantId)
           .order('created_at', { ascending: false }),
         supabase
           .from('notification_log')
-          .select('id, tenant_id, channel_id, event_type, severity, status, error_message, created_at')
+          .select('id, tenant_id, channel_id, channel_type, recipient, message_preview, status, error_message, sent_at, created_at')
           .eq('tenant_id', tenantId)
           .order('created_at', { ascending: false })
           .limit(50),
         supabase
           .from('scheduled_reports')
-          .select('id, tenant_id, report_type, schedule_cron, is_active, last_run_at, next_run_at, created_at')
+          .select('id, tenant_id, name, report_type, schedule, recipients, is_active, last_sent_at, next_send_at, created_at, created_by, hour, day_of_week, timezone, include_agents_summary, include_antivirus, include_software_inventory, include_vulnerabilities, include_web_activity')
           .eq('tenant_id', tenantId)
           .order('created_at', { ascending: false })
       ]);
