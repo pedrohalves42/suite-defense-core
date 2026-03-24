@@ -29,7 +29,7 @@ export enum ErrorCode {
 export function createStandardError(
   code: string,
   message: string,
-  details?: any,
+  details?: unknown,
   requestId?: string
 ): StandardError {
   return {
