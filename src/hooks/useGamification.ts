@@ -151,7 +151,7 @@ export function useGamification() {
         let totalXP = 0;
         const events: Array<{ user_id: string; tenant_id: string; action: string; xp_earned: number; description: string }> = [];
 
-        const numAgents = agentCount || 0;
+        const numAgents = agentCount;
         if (numAgents > 0) {
           const xp = Math.min(numAgents, 10) * XP_REWARDS.enroll_agent.xp;
           totalXP += xp;
