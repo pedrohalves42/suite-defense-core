@@ -11,6 +11,7 @@ import { AppLayout } from "./components/AppLayout";
 import { ClientLayout } from "./components/client/ClientLayout";
 import { CookieConsent } from "./components/CookieConsent";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { RouteErrorBoundary } from "./components/RouteErrorBoundary";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 import { Server } from "lucide-react";
 
@@ -189,15 +190,15 @@ const App = () => (
             
             {/* Protected Routes with AppLayout */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-              <Route path="/dashboard" element={<ServerDashboard />} />
-              <Route path="/jobs" element={<JobCreator />} />
-              <Route path="/installer" element={<AgentInstaller />} />
-              <Route path="/virus-scans" element={<VirusScans />} />
-              <Route path="/quarantine" element={<Quarantine />} />
-              <Route path="/agent-test" element={<AgentTest />} />
-              <Route path="/monitoring" element={<AgentMonitoring />} />
-              <Route path="/agents" element={<AgentManagement />} />
-              <Route path="/export" element={<DataExport />} />
+              <Route path="/dashboard" element={<RouteErrorBoundary route="Dashboard"><ServerDashboard /></RouteErrorBoundary>} />
+              <Route path="/jobs" element={<RouteErrorBoundary route="Jobs"><JobCreator /></RouteErrorBoundary>} />
+              <Route path="/installer" element={<RouteErrorBoundary route="Installer"><AgentInstaller /></RouteErrorBoundary>} />
+              <Route path="/virus-scans" element={<RouteErrorBoundary route="Virus Scans"><VirusScans /></RouteErrorBoundary>} />
+              <Route path="/quarantine" element={<RouteErrorBoundary route="Quarantine"><Quarantine /></RouteErrorBoundary>} />
+              <Route path="/agent-test" element={<RouteErrorBoundary route="Agent Test"><AgentTest /></RouteErrorBoundary>} />
+              <Route path="/monitoring" element={<RouteErrorBoundary route="Monitoring"><AgentMonitoring /></RouteErrorBoundary>} />
+              <Route path="/agents" element={<RouteErrorBoundary route="Agents"><AgentManagement /></RouteErrorBoundary>} />
+              <Route path="/export" element={<RouteErrorBoundary route="Export"><DataExport /></RouteErrorBoundary>} />
               
               {/* MFA Setup Required Route - Outside Guard */}
               <Route path="/admin/setup-mfa-required" element={<MFASetupRequired />} />
