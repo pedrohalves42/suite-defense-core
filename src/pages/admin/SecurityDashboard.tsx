@@ -91,7 +91,8 @@ export default function SecurityDashboard() {
         uniqueIps,
       };
     },
-    refetchInterval: 120000, // COST-OPT: 10s → 2min
+    refetchInterval: 300_000, // COST-OPT v8
+    refetchIntervalInBackground: false,
   });
 
   const { data: blockedIPs } = useQuery({
