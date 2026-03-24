@@ -16,9 +16,11 @@ Allow: /
 
 User-agent: *
 Allow: /
-Disallow: /admin
+Disallow: /admin/
+Disallow: /client/
+Disallow: /super-admin/
 Disallow: /api/
 Disallow: /debug
 Disallow: /internal
 
-Sitemap: https://cybshield.com.br/sitemap.xml
+Sitemap: https://cybershield.com.br/sitemap.xml
