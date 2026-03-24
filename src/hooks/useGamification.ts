@@ -82,7 +82,6 @@ export function useGamification() {
   const tenantId = tenant?.id;
   const userId = user?.id;
 
-  // Fetch user profile
   const { data: profile, isLoading } = useQuery({
     queryKey: ['gamification-profile', userId, tenantId],
     queryFn: async () => {
@@ -97,7 +96,6 @@ export function useGamification() {
 
       if (error) throw error;
 
-      // Auto-create profile if not exists
       if (!data) {
         const { data: newProfile, error: insertError } = await supabase
           .from('user_gamification')
@@ -113,7 +111,6 @@ export function useGamification() {
     enabled: !!userId && !!tenantId,
   });
 
-  // Fetch XP history (last 20)
   const { data: xpHistory } = useQuery({
     queryKey: ['xp-history', userId, tenantId],
     queryFn: async () => {
@@ -130,7 +127,6 @@ export function useGamification() {
     enabled: !!userId && !!tenantId,
   });
 
-  // Fetch leaderboard
   const { data: leaderboard } = useQuery({
     queryKey: ['leaderboard', tenantId],
     queryFn: async () => {
@@ -142,7 +138,6 @@ export function useGamification() {
         .limit(10);
       if (error) throw error;
 
-      // Fetch profiles for names
       const userIds = (data || []).map(d => d.user_id);
       const { data: profiles } = await supabase
         .from('profiles')
@@ -159,7 +154,6 @@ export function useGamification() {
     enabled: !!tenantId,
   });
 
-  // Fetch active challenges
   const { data: challenges } = useQuery({
     queryKey: ['challenges', tenantId],
     queryFn: async () => {
@@ -175,7 +169,6 @@ export function useGamification() {
     enabled: !!tenantId,
   });
 
-  // Award XP mutation
   const awardXP = useMutation({
     mutationFn: async ({ action, customXP, customLabel }: { action: string; customXP?: number; customLabel?: string }) => {
       if (!userId || !tenantId || !profile) throw new Error('Not ready');
@@ -184,7 +177,6 @@ export function useGamification() {
       const xpAmount = customXP || reward?.xp || 10;
       const label = customLabel || reward?.label || action;
 
-      // Log XP event
       await supabase.from('xp_events').insert({
         user_id: userId,
         tenant_id: tenantId,
@@ -193,7 +185,6 @@ export function useGamification() {
         description: label,
       });
 
-      // Update total XP
       const newXP = (profile.xp || 0) + xpAmount;
       const newLevel = getLevelFromXP(newXP);
 
@@ -230,15 +221,14 @@ export function useGamification() {
     },
   });
 
-  // Update streak mutation  
   const updateStreak = useMutation({
     mutationFn: async () => {
-      if (!userId || !tenantId || !profile) return;
+      if (!userId || !tenantId || !profile) return null;
 
       const today = new Date().toISOString().split('T')[0];
       const lastDate = profile.last_streak_date;
-      
-      if (lastDate === today) return; // Already counted today
+
+      if (lastDate === today) return null;
 
       const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
       const newStreak = lastDate === yesterday ? (profile.current_streak || 0) + 1 : 1;
@@ -255,11 +245,16 @@ export function useGamification() {
         .eq('user_id', userId)
         .eq('tenant_id', tenantId);
 
-      return { newStreak, newBest };
+      return { newStreak, newBest, awardedDailyLogin: true };
     },
     onSuccess: (result) => {
       if (!result) return;
+
       queryClient.invalidateQueries({ queryKey: ['gamification-profile'] });
+
+      if (result.awardedDailyLogin) {
+        awardXP.mutate({ action: 'daily_login' });
+      }
 
       if (result.newStreak === 7) {
         awardXP.mutate({ action: 'streak_7' });
