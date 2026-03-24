@@ -8,7 +8,7 @@ export interface StandardError {
   error: {
     code: string;
     message: string;
-    details?: any;
+    details?: unknown;
     timestamp: string;
     requestId?: string;
   };
