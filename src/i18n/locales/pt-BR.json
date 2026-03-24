@@ -1078,24 +1078,24 @@
       "priceNote": "3 computadores"
     },
     "starter": {
-      "name": "Starter",
-      "description": "Para empresas que querem saber se está tudo bem",
-      "price": "R$ 149",
-      "priceNote": "/mês • 5 computadores",
-      "priceExtra": "+R$ 19 por computador adicional",
-      "maxDevices": "Até 30 computadores"
+      "name": "Starter Compliance",
+      "description": "Compliance básico para PMEs em crescimento",
+      "price": "R$ 499",
+      "priceNote": "/mês • 10 computadores",
+      "priceExtra": "+R$ 39 por computador adicional",
+      "maxDevices": "Até 50 computadores"
     },
     "business": {
       "name": "Business",
-      "description": "Para empresas que não podem ser surpreendidas por falhas invisíveis",
-      "price": "R$ 399",
-      "priceNote": "/mês • 25 computadores",
-      "priceExtra": "+R$ 17 por computador adicional",
+      "description": "Para empresas que não podem parar nem errar",
+      "price": "R$ 899",
+      "priceNote": "/mês • 20 computadores",
+      "priceExtra": "+R$ 24 por computador adicional",
       "maxDevices": "Até 200 computadores"
     },
     "enterprise": {
       "name": "Enterprise",
-      "description": "Para empresas onde um incidente vira problema jurídico",
+      "description": "Para empresas +200 dispositivos ou MSPs",
       "price": "A partir de R$ 2.000"
     },
     "features": {

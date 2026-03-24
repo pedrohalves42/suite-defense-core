@@ -30,8 +30,8 @@ const LANDING_JSON_LD = {
   "offers": {
     "@type": "AggregateOffer",
     "priceCurrency": "BRL",
-    "lowPrice": "149",
-    "highPrice": "499",
+    "lowPrice": "499",
+    "highPrice": "2000",
     "offerCount": "3"
   },
   "provider": {
