@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { Activity, CheckCircle2, XCircle, Clock, AlertTriangle, RefreshCw, Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Activity, CheckCircle2, XCircle, Clock, AlertTriangle, RefreshCw, Zap, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTenant } from "@/hooks/useTenant";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   BarChart,
   Bar,
@@ -69,7 +72,6 @@ function formatDuration(ms: number | null) {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-/** Mini sparkline-style bar for duration */
 function DurationBar({ current, avg }: { current: number | null; avg: number | null }) {
   const max = Math.max(current || 0, avg || 0, 1);
   const currentPct = current ? Math.round((current / max) * 100) : 0;
@@ -94,49 +96,59 @@ function DurationBar({ current, avg }: { current: number | null; avg: number | n
   );
 }
 
-/** Generate mock execution history for chart (will be replaced with real data when available) */
-function generateExecutionHistory(record: CronHealthRecord) {
-  const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-  const totalPerDay = Math.max(1, Math.round(record.total_runs / 7));
-  const failPerDay = Math.max(0, Math.round(record.total_failures / 7));
-
-  return days.map((day, i) => {
-    const variation = Math.round((Math.random() - 0.5) * 2);
-    const success = Math.max(0, totalPerDay + variation - failPerDay);
-    const failures = i === days.length - 1 ? record.consecutive_failures : Math.max(0, failPerDay + Math.round((Math.random() - 0.5)));
-    return { day, success, failures };
-  });
-}
-
 export default function CronHealthDashboard() {
-  const [records, setRecords] = useState<CronHealthRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { tenant } = useTenant();
   const [expandedCron, setExpandedCron] = useState<string | null>(null);
 
-  const loadData = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('cron_health')
-      .select('*')
-      .order('consecutive_failures', { ascending: false });
+  const { data: records = [], isLoading: loading, refetch } = useQuery({
+    queryKey: ['cron-health', tenant?.id],
+    queryFn: async (): Promise<CronHealthRecord[]> => {
+      const { data, error } = await supabase
+        .from('cron_health')
+        .select('*')
+        .order('consecutive_failures', { ascending: false });
 
-    if (error) {
-      toast.error('Erro ao carregar saúde dos crons');
-    } else {
-      setRecords((data || []) as unknown as CronHealthRecord[]);
-    }
-    setLoading(false);
-  };
+      if (error) {
+        toast.error('Erro ao carregar saúde dos crons');
+        return [];
+      }
+      return (data || []) as unknown as CronHealthRecord[];
+    },
+    enabled: !!tenant?.id,
+    refetchInterval: 300_000,
+    staleTime: 120_000,
+    refetchIntervalInBackground: false,
+  });
 
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  // Tenant-scoped job stats for cross-reference
+  const { data: tenantJobStats } = useQuery({
+    queryKey: ['cron-tenant-job-stats', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return null;
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('id, status', { count: 'exact', head: false })
+        .eq('tenant_id', tenant.id)
+        .gte('created_at', twentyFourHoursAgo);
+
+      if (error) return null;
+
+      const total = data?.length || 0;
+      const completed = data?.filter(j => j.status === 'completed').length || 0;
+      const failed = data?.filter(j => j.status === 'failed').length || 0;
+
+      return { total, completed, failed, successRate: total > 0 ? Math.round((completed / total) * 100) : 100 };
+    },
+    enabled: !!tenant?.id,
+    refetchInterval: 300_000,
+    staleTime: 120_000,
+    refetchIntervalInBackground: false,
+  });
 
   const healthyCrons = records.filter(r => getStatusInfo(r).status === 'healthy').length;
   const totalCrons = records.length;
-  const overallHealth = totalCrons > 0 ? Math.round((healthyCrons / totalCrons) * 100) : 0;
   const totalRuns = records.reduce((s, r) => s + r.total_runs, 0);
   const totalFailures = records.reduce((s, r) => s + r.total_failures, 0);
   const globalSuccessRate = totalRuns > 0 ? Math.round(((totalRuns - totalFailures) / totalRuns) * 100) : 100;
@@ -148,14 +160,28 @@ export default function CronHealthDashboard() {
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-foreground">Saúde dos Cron Jobs</h1>
           <p className="text-xs md:text-sm text-muted-foreground mt-1">
-            Monitoramento em tempo real dos processos agendados
+            Monitoramento dos processos agendados da plataforma
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={loading}>
           <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
           Atualizar
         </Button>
       </div>
+
+      {/* Context banner */}
+      <Alert className="border-info/30 bg-info/5">
+        <Info className="h-4 w-4 text-info" />
+        <AlertDescription className="text-xs text-muted-foreground">
+          Crons são processos globais da plataforma que servem todos os tenants.
+          {tenantJobStats && (
+            <span className="ml-1 font-medium text-foreground">
+              Seu tenant processou {tenantJobStats.total} jobs nas últimas 24h
+              (taxa de sucesso: {tenantJobStats.successRate}%).
+            </span>
+          )}
+        </AlertDescription>
+      </Alert>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -204,7 +230,7 @@ export default function CronHealthDashboard() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Execuções por Cron (últimos 7 dias)
+                Execuções por Cron (acumulado)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -292,11 +318,9 @@ export default function CronHealthDashboard() {
                   <CardContent className="py-4">
                     {/* Main row */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                      {/* Icon + Name */}
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0 relative", info.bg)}>
                           <Icon className={cn("h-4 w-4", info.color)} />
-                          {/* Pulsating indicator for attention */}
                           {needsAttention && (
                             <span className={cn(
                               "absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full animate-pulse",
@@ -319,7 +343,6 @@ export default function CronHealthDashboard() {
                         </div>
                       </div>
 
-                      {/* Stats row */}
                       <div className="flex items-center gap-4 sm:gap-6 shrink-0 overflow-x-auto">
                         <div className="text-center min-w-[60px]">
                           <p className="text-[10px] text-muted-foreground">Último</p>
@@ -350,12 +373,10 @@ export default function CronHealthDashboard() {
                       </div>
                     </div>
 
-                    {/* Success rate bar */}
                     <div className="mt-3">
                       <Progress value={successRate} className="h-1" />
                     </div>
 
-                    {/* Expanded details */}
                     <AnimatePresence>
                       {isExpanded && (
                         <motion.div
@@ -366,7 +387,6 @@ export default function CronHealthDashboard() {
                           className="overflow-hidden"
                         >
                           <div className="mt-4 pt-4 border-t border-border space-y-4">
-                            {/* Duration details */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                               <div className="p-2.5 rounded-lg bg-muted/40">
                                 <p className="text-[10px] text-muted-foreground">Última duração</p>
@@ -394,31 +414,6 @@ export default function CronHealthDashboard() {
                               </div>
                             </div>
 
-                            {/* Execution history mini chart */}
-                            <div>
-                              <p className="text-[10px] text-muted-foreground mb-2 uppercase tracking-wide">Histórico semanal</p>
-                              <div className="h-24">
-                                <ResponsiveContainer width="100%" height="100%">
-                                  <BarChart data={generateExecutionHistory(record)} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                                    <Tooltip
-                                      contentStyle={{
-                                        backgroundColor: 'hsl(var(--card))',
-                                        border: '1px solid hsl(var(--border))',
-                                        borderRadius: '6px',
-                                        fontSize: '11px',
-                                        color: 'hsl(var(--card-foreground))',
-                                      }}
-                                    />
-                                    <Bar dataKey="success" stackId="a" fill="hsl(var(--success))" radius={[0, 0, 0, 0]} />
-                                    <Bar dataKey="failures" stackId="a" fill="hsl(var(--destructive))" radius={[1, 1, 0, 0]} />
-                                  </BarChart>
-                                </ResponsiveContainer>
-                              </div>
-                            </div>
-
-                            {/* Error message */}
                             {record.last_error && (
                               <div className="p-3 rounded-lg bg-destructive/5 border border-destructive/15">
                                 <p className="text-[10px] text-destructive font-medium mb-1">Último erro:</p>
