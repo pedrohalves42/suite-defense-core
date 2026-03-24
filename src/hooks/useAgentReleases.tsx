@@ -18,9 +18,10 @@ export const useAgentReleases = () => {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 120000, // Every 2 minutes (was 10s — excessive for release data)
+    refetchInterval: 600_000, // COST-OPT v8: 2min → 10min (releases rarely change)
     refetchOnWindowFocus: true,
-    staleTime: 60000, // 1 minute
+    staleTime: 300_000,
+    refetchIntervalInBackground: false,
   });
 
   const registerRelease = useMutation({

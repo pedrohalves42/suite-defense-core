@@ -77,8 +77,9 @@ export function useScheduledJobsHealth() {
       return (data || []) as unknown as ScheduledJobRun[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 120000,
-    staleTime: 10000,
+    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
+    staleTime: 120_000,
+    refetchIntervalInBackground: false,
   });
 
   // Fetch health summary

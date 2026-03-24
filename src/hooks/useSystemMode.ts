@@ -53,8 +53,9 @@ export function useSystemMode() {
         expires_at: null,
       } as SystemState;
     },
-    refetchInterval: 120000, // COST-OPT: 30s → 2min
-    staleTime: 10000,
+    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min (system mode rarely changes)
+    staleTime: 120_000,
+    refetchIntervalInBackground: false,
   });
 }
 

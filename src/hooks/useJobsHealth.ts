@@ -181,8 +181,9 @@ export const useJobsHealth = () => {
         .sort((a, b) => b.count - a.count);
     },
     enabled: !loading && !!tenantId,
-    refetchInterval: 120000,
-    staleTime: 60000,
+    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
+    staleTime: 120_000,
+    refetchIntervalInBackground: false,
   });
 
   // Compute operational metrics

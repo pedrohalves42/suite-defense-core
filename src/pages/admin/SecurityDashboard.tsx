@@ -64,7 +64,8 @@ export default function SecurityDashboard() {
       return data as SecurityLog[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 120000, // COST-OPT: 10s → 2min
+    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
+    refetchIntervalInBackground: false,
   });
 
   const { data: stats } = useQuery({
@@ -90,7 +91,8 @@ export default function SecurityDashboard() {
         uniqueIps,
       };
     },
-    refetchInterval: 120000, // COST-OPT: 10s → 2min
+    refetchInterval: 300_000, // COST-OPT v8
+    refetchIntervalInBackground: false,
   });
 
   const { data: blockedIPs } = useQuery({
@@ -105,7 +107,8 @@ export default function SecurityDashboard() {
       if (error) throw error;
       return data as BlockedIP[];
     },
-    refetchInterval: 120000, // COST-OPT: 10s → 2min
+    refetchInterval: 300_000, // COST-OPT v8
+    refetchIntervalInBackground: false,
     enabled: isSuperAdmin,
   });
 
@@ -123,7 +126,8 @@ export default function SecurityDashboard() {
       if (error) throw error;
       return data as FailedAttempt[];
     },
-    refetchInterval: 120000, // COST-OPT: 10s → 2min
+    refetchInterval: 300_000, // COST-OPT v8
+    refetchIntervalInBackground: false,
     enabled: isSuperAdmin,
   });
 

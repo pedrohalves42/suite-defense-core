@@ -34,8 +34,9 @@ export function useAgentSnapshots() {
       return (data || []) as unknown as AgentSnapshot[];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    staleTime: 30_000,
-    refetchInterval: 30_000, // Auto-refresh a cada 30s para dashboards
+    staleTime: 60_000,
+    refetchInterval: 120_000, // COST-OPT v8: 30s → 2min (snapshots via view, not critical path)
+    refetchIntervalInBackground: false,
   });
 }
 
