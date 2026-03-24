@@ -113,7 +113,7 @@ export function handleException(
 
 export function createValidationError(
   message: string | ZodError,
-  details?: any,
+  details?: unknown,
   requestId?: string
 ): Response {
   let errorMessage: string;
