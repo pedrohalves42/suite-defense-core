@@ -133,7 +133,7 @@ Deno.serve(async (req: Request) => {
     });
 
     // Send alert to admins
-    await supabase.functions.invoke('send-system-alert', {
+    await supabase.functions.invoke('notification-dispatcher', {
       headers: {
         'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
       },
