@@ -1,11 +1,18 @@
 {
   "nav": {
+    "dashboard": "Painel Principal",
+    "computers": "Computadores",
+    "monitoring": "Monitoramento",
+    "agents": "Computadores",
+    "jobs": "Verificações",
+    "installer": "Instalador",
+    "virusScans": "Verificação de Vírus",
+    "quarantine": "Quarentena",
+    "export": "Exportar Dados",
     "home": "Início",
     "features": "Recursos",
     "pricing": "Preços",
-    "contact": "Contato",
-    "login": "Entrar",
-    "whatsapp": "WhatsApp"
+    "contact": "Contato"
   },
   "contactForm": {
     "talkToSales": "Fale com vendas",
@@ -66,21 +73,6 @@
     "error": "Ocorreu um erro",
     "success": "Sucesso",
     "language": "Idioma"
-  },
-  "nav": {
-    "dashboard": "Painel Principal",
-    "computers": "Computadores",
-    "monitoring": "Monitoramento",
-    "agents": "Computadores",
-    "jobs": "Verificações",
-    "installer": "Instalador",
-    "virusScans": "Verificação de Vírus",
-    "quarantine": "Quarentena",
-    "export": "Exportar Dados",
-    "home": "Início",
-    "features": "Recursos",
-    "pricing": "Preços",
-    "contact": "Contato"
   },
   "sidebar": {
     "operations": "Operações",
@@ -187,17 +179,26 @@
   "landing": {
     "hero": {
       "badge": "🇧🇷 Empresa 100% Brasileira • Suporte em Português",
-      "title1": "Sua empresa pode parar amanhã",
-      "title2": "por um ataque que R$25/mês poderia evitar.",
-      "description": "73% das PMEs brasileiras já sofreram algum incidente de segurança digital.",
-      "descriptionBold": " Descubra se a sua está vulnerável — diagnóstico gratuito em 48h.",
-      "ctaButton": "Descobrir se minha empresa está vulnerável",
-      "ctaSecondary": "Agendar diagnóstico gratuito de 15 min",
-      "reassurance": "Sem cartão de crédito • Resultado em até 48h • 100% em português",
+      "title1": "Enquanto você lê isto, hackers já testaram sua empresa",
+      "title2": "— proteja-se por menos de R$1/dia.",
+      "description": "4 em cada 5 PMEs brasileiras atacadas fecham em menos de 1 ano. ",
+      "descriptionBold": "Descubra suas brechas antes que criminosos descubram — diagnóstico gratuito em 48h.",
+      "ctaButton": "Testar minha segurança agora (grátis)",
+      "ctaSecondary": "Quero falar com um especialista",
+      "reassurance": "Zero risco • Sem cartão de crédito • Resultado em 48h • 100% em português",
       "stats": {
-        "0": { "value": "até 48h", "label": "Diagnóstico gratuito" },
-        "1": { "value": "24/7", "label": "Monitoramento contínuo" },
-        "2": { "value": "100%", "label": "Empresa brasileira" }
+        "0": {
+          "value": "até 48h",
+          "label": "Diagnóstico gratuito"
+        },
+        "1": {
+          "value": "24/7",
+          "label": "Monitoramento contínuo"
+        },
+        "2": {
+          "value": "100%",
+          "label": "Empresa brasileira"
+        }
       },
       "benefits": {
         "0": "Compliance com LGPD automaticamente",
@@ -210,11 +211,26 @@
       "title": "Feito para empresas que não podem parar",
       "subtitle": "Se você precisa de visibilidade, controle e prova de segurança, o CyberShield é para você",
       "segments": {
-        "0": { "title": "PMEs", "description": "10 a 200 computadores" },
-        "1": { "title": "Escritórios", "description": "Contábeis e advocacias" },
-        "2": { "title": "Clínicas", "description": "Dados sensíveis (LGPD)" },
-        "3": { "title": "Sem TI Interno", "description": "Empresas sem equipe técnica" },
-        "4": { "title": "MSPs", "description": "TI terceirizada" }
+        "0": {
+          "title": "PMEs",
+          "description": "10 a 200 computadores"
+        },
+        "1": {
+          "title": "Escritórios",
+          "description": "Contábeis e advocacias"
+        },
+        "2": {
+          "title": "Clínicas",
+          "description": "Dados sensíveis (LGPD)"
+        },
+        "3": {
+          "title": "Sem TI Interno",
+          "description": "Empresas sem equipe técnica"
+        },
+        "4": {
+          "title": "MSPs",
+          "description": "TI terceirizada"
+        }
       }
     },
     "painPoints": {
@@ -227,40 +243,95 @@
       },
       "conclusion": "Essa é a realidade de quem não tem visibilidade.",
       "stats": {
-        "0": { "emoji": "💸", "title": "R$ 50 a 200 mil", "description": "Custo médio de ataque para PMEs. Quanto seu caixa aguenta?" },
-        "1": { "emoji": "⏱️", "title": "7 a 27 dias parado", "description": "Tempo de recuperação sem backup. Seus clientes esperariam?" },
-        "2": { "emoji": "📋", "title": "Multa de até 2%", "description": "Do faturamento anual por vazamento de dados (LGPD)" },
-        "3": { "emoji": "☠️", "title": "60% fecham", "description": "Das PMEs brasileiras atacadas não sobrevivem 12 meses" }
+        "0": {
+          "emoji": "💸",
+          "title": "R$ 50 a 200 mil",
+          "description": "Custo médio de ataque para PMEs. Quanto seu caixa aguenta?"
+        },
+        "1": {
+          "emoji": "⏱️",
+          "title": "7 a 27 dias parado",
+          "description": "Tempo de recuperação sem backup. Seus clientes esperariam?"
+        },
+        "2": {
+          "emoji": "📋",
+          "title": "Multa de até 2%",
+          "description": "Do faturamento anual por vazamento de dados (LGPD)"
+        },
+        "3": {
+          "emoji": "☠️",
+          "title": "60% fecham",
+          "description": "Das PMEs brasileiras atacadas não sobrevivem 12 meses"
+        }
       },
       "cta": "Ver riscos reais da minha empresa (grátis)"
     },
     "socialProof": {
       "stats": {
-        "0": { "value": "+5.000", "label": "Computadores empresariais monitorados" },
-        "1": { "value": "+100.000", "label": "Riscos detectados antes de virar incidente" },
-        "2": { "value": "99,9%", "label": "De disponibilidade" },
-        "3": { "value": "🇧🇷", "label": "Empresa 100% Brasileira" }
+        "0": {
+          "value": "+5.000",
+          "label": "Computadores empresariais monitorados"
+        },
+        "1": {
+          "value": "+100.000",
+          "label": "Riscos detectados antes de virar incidente"
+        },
+        "2": {
+          "value": "99,9%",
+          "label": "De disponibilidade"
+        },
+        "3": {
+          "value": "🇧🇷",
+          "label": "Empresa 100% Brasileira"
+        }
       }
     },
     "diagnostic": {
       "title": "O que você vai ver no diagnóstico",
       "subtitle": "Sem compromisso, sem cartão de crédito",
       "items": {
-        "0": { "title": "Máquinas Vulneráveis", "description": "Quais computadores estão expostos" },
-        "1": { "title": "Softwares Desatualizados", "description": "Programas que precisam de update" },
-        "2": { "title": "Riscos Críticos", "description": "O que precisa de ação urgente" },
-        "3": { "title": "Nível de Exposição", "description": "Sua pontuação de risco atual" },
-        "4": { "title": "Relatório Inicial", "description": "PDF completo para você" }
+        "0": {
+          "title": "Máquinas Vulneráveis",
+          "description": "Quais computadores estão expostos"
+        },
+        "1": {
+          "title": "Softwares Desatualizados",
+          "description": "Programas que precisam de update"
+        },
+        "2": {
+          "title": "Riscos Críticos",
+          "description": "O que precisa de ação urgente"
+        },
+        "3": {
+          "title": "Nível de Exposição",
+          "description": "Sua pontuação de risco atual"
+        },
+        "4": {
+          "title": "Relatório Inicial",
+          "description": "PDF completo para você"
+        }
       }
     },
     "benefits": {
       "title": "O que o CyberShield entrega",
       "subtitle": "Você passa a ter controle, visibilidade e prova — não só software",
       "cards": {
-        "0": { "title": "Visibilidade Total", "description": "Veja todos os computadores da empresa em um único painel — sem precisar de TI." },
-        "1": { "title": "Evidência Auditável", "description": "Histórico técnico de tudo que acontece, pronto para auditoria ou incidente." },
-        "2": { "title": "Alertas de Risco Real", "description": "Só o que importa: riscos reais com ações claras, sem ruído técnico." },
-        "3": { "title": "Controle Centralizado", "description": "Gerencie tudo sem depender de equipe de TI interna." }
+        "0": {
+          "title": "Visibilidade Total",
+          "description": "Veja todos os computadores da empresa em um único painel — sem precisar de TI."
+        },
+        "1": {
+          "title": "Evidência Auditável",
+          "description": "Histórico técnico de tudo que acontece, pronto para auditoria ou incidente."
+        },
+        "2": {
+          "title": "Alertas de Risco Real",
+          "description": "Só o que importa: riscos reais com ações claras, sem ruído técnico."
+        },
+        "3": {
+          "title": "Controle Centralizado",
+          "description": "Gerencie tudo sem depender de equipe de TI interna."
+        }
       }
     },
     "technology": {
@@ -268,10 +339,22 @@
       "title": "Atualização Segura Sem Downtime",
       "subtitle": "Mantenha todos os seus computadores protegidos e atualizados automaticamente, sem interrupções",
       "features": {
-        "0": { "title": "Zero Interrupção", "description": "Updates em background, ativados no próximo boot natural" },
-        "1": { "title": "Validação SHA256", "description": "Integridade verificada criptograficamente antes de aplicar" },
-        "2": { "title": "Rollback Automático", "description": "Se algo der errado, versão anterior é preservada" },
-        "3": { "title": "Escala Empresarial", "description": "Funciona com 3 ou 3.000 computadores simultaneamente" }
+        "0": {
+          "title": "Zero Interrupção",
+          "description": "Updates em background, ativados no próximo boot natural"
+        },
+        "1": {
+          "title": "Validação SHA256",
+          "description": "Integridade verificada criptograficamente antes de aplicar"
+        },
+        "2": {
+          "title": "Rollback Automático",
+          "description": "Se algo der errado, versão anterior é preservada"
+        },
+        "3": {
+          "title": "Escala Empresarial",
+          "description": "Funciona com 3 ou 3.000 computadores simultaneamente"
+        }
       },
       "comparison": {
         "0": "Update sem restart forçado",
@@ -284,36 +367,81 @@
       "title": "Casos de Uso Específicos",
       "subtitle": "Soluções para diferentes setores e necessidades empresariais",
       "cases": {
-        "0": { "title": "TI Corporativa", "description": "Monitoramento e resposta para redes empresariais complexas." },
-        "1": { "title": "Pequenas e Médias Empresas", "description": "Soluções acessíveis para proteger seus ativos digitais." },
-        "2": { "title": "Compliance e Segurança", "description": "Atenda requisitos regulatórios com relatórios detalhados." }
+        "0": {
+          "title": "TI Corporativa",
+          "description": "Monitoramento e resposta para redes empresariais complexas."
+        },
+        "1": {
+          "title": "Pequenas e Médias Empresas",
+          "description": "Soluções acessíveis para proteger seus ativos digitais."
+        },
+        "2": {
+          "title": "Compliance e Segurança",
+          "description": "Atenda requisitos regulatórios com relatórios detalhados."
+        }
       }
     },
     "howItWorks": {
       "title": "Como Funciona",
       "subtitle": "Comece em minutos, sem complicação",
       "steps": {
-        "0": { "number": "1", "title": "Instalamos o agente", "description": "Instalação rápida em até 3 computadores para iniciar o diagnóstico." },
-        "1": { "number": "2", "title": "Encontramos riscos invisíveis", "description": "Softwares desatualizados, vulnerabilidades e comportamentos suspeitos." },
-        "2": { "number": "3", "title": "Você recebe um laudo claro", "description": "O que corrigir, o que priorizar — ou deixar a CyberShield monitorando." }
+        "0": {
+          "number": "1",
+          "title": "Instalamos o agente",
+          "description": "Instalação rápida em até 3 computadores para iniciar o diagnóstico."
+        },
+        "1": {
+          "number": "2",
+          "title": "Encontramos riscos invisíveis",
+          "description": "Softwares desatualizados, vulnerabilidades e comportamentos suspeitos."
+        },
+        "2": {
+          "number": "3",
+          "title": "Você recebe um laudo claro",
+          "description": "O que corrigir, o que priorizar — ou deixar a CyberShield monitorando."
+        }
       }
     },
     "features": {
       "title": "Recursos Completos para Sua Empresa",
       "subtitle": "Monitoramento avançado com interface simples",
       "items": {
-        "0": { "title": "Detecção de Ameaças", "description": "Integração com VirusTotal e Hybrid Analysis para detecção de ameaças em tempo real." },
-        "1": { "title": "Quarentena Automática", "description": "Arquivos maliciosos são automaticamente isolados para proteger sua rede." },
-        "2": { "title": "Relatórios de Compliance", "description": "Exportação de dados e relatórios customizados para compliance e auditoria." },
-        "3": { "title": "API Completa", "description": "Integre com seus sistemas existentes através de nossa API RESTful." }
+        "0": {
+          "title": "Detecção de Ameaças",
+          "description": "Integração com VirusTotal e Hybrid Analysis para detecção de ameaças em tempo real."
+        },
+        "1": {
+          "title": "Quarentena Automática",
+          "description": "Arquivos maliciosos são automaticamente isolados para proteger sua rede."
+        },
+        "2": {
+          "title": "Relatórios de Compliance",
+          "description": "Exportação de dados e relatórios customizados para compliance e auditoria."
+        },
+        "3": {
+          "title": "API Completa",
+          "description": "Integre com seus sistemas existentes através de nossa API RESTful."
+        }
       },
       "dashboard": {
         "stats": {
-          "0": { "label": "Dispositivos Ativos", "value": "248" },
-          "1": { "label": "Ameaças Bloqueadas Hoje", "value": "17" },
-          "2": { "label": "Scans Realizados", "value": "1.2k" }
+          "0": {
+            "label": "Dispositivos Ativos",
+            "value": "248"
+          },
+          "1": {
+            "label": "Ameaças Bloqueadas Hoje",
+            "value": "17"
+          },
+          "2": {
+            "label": "Scans Realizados",
+            "value": "1.2k"
+          }
         },
-        "status": { "label": "Status Geral", "value": "✓ Protegido" }
+        "status": {
+          "label": "Status Geral",
+          "value": "✓ Protegido"
+        }
       }
     },
     "pricing": {
@@ -398,15 +526,42 @@
       "title": "Perguntas Frequentes",
       "subtitle": "Tire suas dúvidas antes de começar",
       "items": {
-        "0": { "question": "Preciso instalar em todos os computadores?", "answer": "Não. O diagnóstico inicial funciona com poucos dispositivos para mapear riscos reais." },
-        "1": { "question": "Funciona sem equipe de TI?", "answer": "Sim. O laudo já vem com prioridades claras e ações recomendadas." },
-        "2": { "question": "Funciona com Mac e Linux?", "answer": "Sim! O CyberShield funciona em Windows, Mac e Linux." },
-        "3": { "question": "E se eu não gostar? Posso cancelar?", "answer": "Claro! Teste gratuitamente por 14 dias, sem compromisso." },
-        "4": { "question": "Meus dados ficam seguros com vocês?", "answer": "Sim. Dados criptografados e acesso controlado." },
-        "5": { "question": "Vocês são empresa brasileira?", "answer": "Sim! Empresa 100% brasileira, com CNPJ e nota fiscal." },
-        "6": { "question": "Como funciona o período de teste?", "answer": "14 dias com acesso completo. Não pedimos cartão de crédito para começar." },
-        "7": { "question": "Vocês emitem nota fiscal?", "answer": "Sim, emitimos nota fiscal para todas as assinaturas." },
-        "8": { "question": "Ajuda com LGPD?", "answer": "Sim! Nossos relatórios ajudam a demonstrar conformidade com a LGPD." }
+        "0": {
+          "question": "Preciso instalar em todos os computadores?",
+          "answer": "Não. O diagnóstico inicial funciona com poucos dispositivos para mapear riscos reais."
+        },
+        "1": {
+          "question": "Funciona sem equipe de TI?",
+          "answer": "Sim. O laudo já vem com prioridades claras e ações recomendadas."
+        },
+        "2": {
+          "question": "Funciona com Mac e Linux?",
+          "answer": "Sim! O CyberShield funciona em Windows, Mac e Linux."
+        },
+        "3": {
+          "question": "E se eu não gostar? Posso cancelar?",
+          "answer": "Claro! Teste gratuitamente por 14 dias, sem compromisso."
+        },
+        "4": {
+          "question": "Meus dados ficam seguros com vocês?",
+          "answer": "Sim. Dados criptografados e acesso controlado."
+        },
+        "5": {
+          "question": "Vocês são empresa brasileira?",
+          "answer": "Sim! Empresa 100% brasileira, com CNPJ e nota fiscal."
+        },
+        "6": {
+          "question": "Como funciona o período de teste?",
+          "answer": "14 dias com acesso completo. Não pedimos cartão de crédito para começar."
+        },
+        "7": {
+          "question": "Vocês emitem nota fiscal?",
+          "answer": "Sim, emitimos nota fiscal para todas as assinaturas."
+        },
+        "8": {
+          "question": "Ajuda com LGPD?",
+          "answer": "Sim! Nossos relatórios ajudam a demonstrar conformidade com a LGPD."
+        }
       }
     },
     "calculator": {
@@ -869,17 +1024,75 @@
     "login": "Entrar",
     "createAccount": "Criar Conta",
     "recommended": "Recomendado",
-    "free": { "name": "Free", "description": "Para conhecer o sistema", "price": "Grátis", "priceNote": "3 computadores" },
-    "starter": { "name": "Starter", "description": "Para empresas que querem saber se está tudo bem", "price": "R$ 149", "priceNote": "/mês • 5 computadores", "priceExtra": "+R$ 19 por computador adicional", "maxDevices": "Até 30 computadores" },
-    "business": { "name": "Business", "description": "Para empresas que não podem ser surpreendidas por falhas invisíveis", "price": "R$ 399", "priceNote": "/mês • 25 computadores", "priceExtra": "+R$ 17 por computador adicional", "maxDevices": "Até 200 computadores" },
-    "enterprise": { "name": "Enterprise", "description": "Para empresas onde um incidente vira problema jurídico", "price": "A partir de R$ 2.000" },
-    "features": {
-      "free": ["Até 3 computadores", "Visibilidade básica de riscos", "Inventário de software", "Status do antivírus"],
-      "starter": ["5 computadores inclusos", "+R$ 19/computador adicional", "Verificações automáticas de segurança", "Alertas por email", "Relatórios de risco mensais", "Suporte por email", "14 dias de trial grátis"],
-      "business": ["25 computadores inclusos", "+R$ 17/computador adicional", "Tudo do Starter, mais:", "Verificações em tempo real", "Relatórios de risco para gestão", "Bloqueio de sites perigosos", "Suporte prioritário", "API para integrações"],
-      "enterprise": ["Computadores ilimitados", "Tudo do Business, mais:", "Suporte 24/7", "SLA personalizado", "Integração customizada", "Gerente de conta dedicado", "Relatórios de compliance"]
+    "free": {
+      "name": "Free",
+      "description": "Para conhecer o sistema",
+      "price": "Grátis",
+      "priceNote": "3 computadores"
     },
-    "cta": { "free": "Começar Grátis", "starter": "Começar diagnóstico gratuito", "business": "Começar diagnóstico gratuito", "enterprise": "Falar com Especialista" },
+    "starter": {
+      "name": "Starter",
+      "description": "Para empresas que querem saber se está tudo bem",
+      "price": "R$ 149",
+      "priceNote": "/mês • 5 computadores",
+      "priceExtra": "+R$ 19 por computador adicional",
+      "maxDevices": "Até 30 computadores"
+    },
+    "business": {
+      "name": "Business",
+      "description": "Para empresas que não podem ser surpreendidas por falhas invisíveis",
+      "price": "R$ 399",
+      "priceNote": "/mês • 25 computadores",
+      "priceExtra": "+R$ 17 por computador adicional",
+      "maxDevices": "Até 200 computadores"
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "description": "Para empresas onde um incidente vira problema jurídico",
+      "price": "A partir de R$ 2.000"
+    },
+    "features": {
+      "free": [
+        "Até 3 computadores",
+        "Visibilidade básica de riscos",
+        "Inventário de software",
+        "Status do antivírus"
+      ],
+      "starter": [
+        "5 computadores inclusos",
+        "+R$ 19/computador adicional",
+        "Verificações automáticas de segurança",
+        "Alertas por email",
+        "Relatórios de risco mensais",
+        "Suporte por email",
+        "14 dias de trial grátis"
+      ],
+      "business": [
+        "25 computadores inclusos",
+        "+R$ 17/computador adicional",
+        "Tudo do Starter, mais:",
+        "Verificações em tempo real",
+        "Relatórios de risco para gestão",
+        "Bloqueio de sites perigosos",
+        "Suporte prioritário",
+        "API para integrações"
+      ],
+      "enterprise": [
+        "Computadores ilimitados",
+        "Tudo do Business, mais:",
+        "Suporte 24/7",
+        "SLA personalizado",
+        "Integração customizada",
+        "Gerente de conta dedicado",
+        "Relatórios de compliance"
+      ]
+    },
+    "cta": {
+      "free": "Começar Grátis",
+      "starter": "Começar diagnóstico gratuito",
+      "business": "Começar diagnóstico gratuito",
+      "enterprise": "Falar com Especialista"
+    },
     "investmentExamples": "Exemplos de Investimento",
     "computers": "computadores",
     "annualDiscount": "Economize com pagamento anual",
@@ -887,11 +1100,26 @@
     "startDiagnostic": "Começar diagnóstico gratuito",
     "faq": "Perguntas Frequentes",
     "faqItems": {
-      "trial": { "q": "Como funciona o diagnóstico gratuito de 14 dias?", "a": "Você pode testar todas as funcionalidades do plano escolhido por 14 dias. Coletamos os dados do cartão no início, mas só cobramos após o período de teste." },
-      "changePlan": { "q": "Posso mudar de plano depois?", "a": "Sim! Você pode fazer upgrade ou downgrade a qualquer momento através do portal do cliente." },
-      "extraDevice": { "q": "Como funciona o preço por computador adicional?", "a": "Cada plano inclui uma quantidade base de computadores. Se precisar de mais, você paga um valor fixo por computador adicional." },
-      "support": { "q": "Como funciona o suporte?", "a": "Todos os planos pagos incluem suporte por email. Planos Business e superiores têm suporte prioritário." },
-      "performance": { "q": "O sistema deixa o computador lento?", "a": "Não! O agente CyberShield é extremamente leve e otimizado para rodar em segundo plano." }
+      "trial": {
+        "q": "Como funciona o diagnóstico gratuito de 14 dias?",
+        "a": "Você pode testar todas as funcionalidades do plano escolhido por 14 dias. Coletamos os dados do cartão no início, mas só cobramos após o período de teste."
+      },
+      "changePlan": {
+        "q": "Posso mudar de plano depois?",
+        "a": "Sim! Você pode fazer upgrade ou downgrade a qualquer momento através do portal do cliente."
+      },
+      "extraDevice": {
+        "q": "Como funciona o preço por computador adicional?",
+        "a": "Cada plano inclui uma quantidade base de computadores. Se precisar de mais, você paga um valor fixo por computador adicional."
+      },
+      "support": {
+        "q": "Como funciona o suporte?",
+        "a": "Todos os planos pagos incluem suporte por email. Planos Business e superiores têm suporte prioritário."
+      },
+      "performance": {
+        "q": "O sistema deixa o computador lento?",
+        "a": "Não! O agente CyberShield é extremamente leve e otimizado para rodar em segundo plano."
+      }
     },
     "footer": "Todos os direitos reservados."
   },
