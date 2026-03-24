@@ -320,7 +320,7 @@ serveAgent(async (_req, ctx) => {
         title: `[EDR] ${d.detection_name}`,
         message: d.description || `EDR detection: ${d.detection_name}`,
         resolved: false,
-        metadata: {
+        details: {
           agent_id: agentId,
           mitre_technique_id: d.mitre_technique_id,
           mitre_tactic: d.mitre_tactic,
