@@ -26,6 +26,10 @@ export default function SOC2Dashboard() {
   const overallScore = readinessData ? calculateOverallScore(readinessData) : 0;
   const exportBundle = useExportEvidenceBundle();
   const { data: bundles } = useEvidenceBundles();
+  
+  const implementedCriteria = readinessData?.filter(d => d.readinessScore >= 75).length ?? 0;
+  const totalCriteria = readinessData?.length ?? 9;
+  const documentedPolicies = readinessData?.filter(d => d.implementedControls > 0).length ?? 0;
 
   const handleExportBundle = () => {
     const now = new Date();
@@ -106,7 +110,7 @@ export default function SOC2Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {readinessData?.filter(d => d.readinessScore >= 75).length || 0}/9
+              {implementedCriteria}/{totalCriteria}
             </div>
             <p className="text-xs text-muted-foreground">CC1-CC9</p>
           </CardContent>
@@ -120,8 +124,10 @@ export default function SOC2Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">9/9</div>
-            <p className="text-xs text-muted-foreground">Prontas para auditor</p>
+            <div className="text-3xl font-bold">{documentedPolicies}/{totalCriteria}</div>
+            <p className="text-xs text-muted-foreground">
+              {documentedPolicies > 0 ? 'Com controles implementados' : 'Nenhuma política configurada'}
+            </p>
           </CardContent>
         </Card>
 
@@ -164,7 +170,7 @@ export default function SOC2Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {SOC2_TRUST_CRITERIA.map((criteria) => {
               const data = readinessData?.find(d => d.criteriaCode === criteria.code);
-              const score = data?.readinessScore || 85;
+              const score = data?.readinessScore ?? 0;
               return (
                 <Card key={criteria.code}>
                   <CardHeader className="pb-2">
