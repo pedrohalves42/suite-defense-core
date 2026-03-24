@@ -1,11 +1,18 @@
 {
   "nav": {
+    "dashboard": "Dashboard",
+    "computers": "Computers",
+    "monitoring": "Monitoring",
+    "agents": "Computers",
+    "jobs": "Scans",
+    "installer": "Installer",
+    "virusScans": "Virus Scans",
+    "quarantine": "Quarantine",
+    "export": "Export Data",
     "home": "Home",
     "features": "Features",
     "pricing": "Pricing",
-    "contact": "Contact",
-    "login": "Sign In",
-    "whatsapp": "WhatsApp"
+    "contact": "Contact"
   },
   "contactForm": {
     "talkToSales": "Talk to Sales",
@@ -66,21 +73,6 @@
     "error": "An error occurred",
     "success": "Success",
     "language": "Language"
-  },
-  "nav": {
-    "dashboard": "Dashboard",
-    "computers": "Computers",
-    "monitoring": "Monitoring",
-    "agents": "Computers",
-    "jobs": "Scans",
-    "installer": "Installer",
-    "virusScans": "Virus Scans",
-    "quarantine": "Quarantine",
-    "export": "Export Data",
-    "home": "Home",
-    "features": "Features",
-    "pricing": "Pricing",
-    "contact": "Contact"
   },
   "sidebar": {
     "operations": "Operations",
@@ -187,17 +179,26 @@
   "landing": {
     "hero": {
       "badge": "🛡️ Enterprise-Grade Cybersecurity • Made Simple",
-      "title1": "Intelligent Cyber Protection",
-      "title2": "for Small & Medium Businesses",
-      "description": "Antivirus, 24/7 monitoring and regulatory compliance in one place.",
-      "descriptionBold": " Free 14-day trial - no credit card required.",
-      "ctaButton": "Find out if my company is vulnerable",
-      "ctaSecondary": "Schedule free 15-min diagnostic",
-      "reassurance": "No credit card • Results within 48h • Full support",
+      "title1": "While you read this, hackers already tested your company",
+      "title2": "— protect yourself for less than $1/day.",
+      "description": "4 out of 5 attacked SMBs close within a year. ",
+      "descriptionBold": "Find your vulnerabilities before criminals do — free diagnostic in 48h.",
+      "ctaButton": "Test my security now (free)",
+      "ctaSecondary": "Talk to a specialist",
+      "reassurance": "Zero risk • No credit card • Results in 48h • Full support",
       "stats": {
-        "0": { "value": "within 48h", "label": "Free diagnostic" },
-        "1": { "value": "24/7", "label": "Continuous monitoring" },
-        "2": { "value": "100%", "label": "Dedicated support" }
+        "0": {
+          "value": "within 48h",
+          "label": "Free diagnostic"
+        },
+        "1": {
+          "value": "24/7",
+          "label": "Continuous monitoring"
+        },
+        "2": {
+          "value": "100%",
+          "label": "Dedicated support"
+        }
       },
       "benefits": {
         "0": "Automatic regulatory compliance",
@@ -210,11 +211,26 @@
       "title": "Built for businesses that can't afford downtime",
       "subtitle": "If you need visibility, control and proof of security, CyberShield is for you",
       "segments": {
-        "0": { "title": "SMBs", "description": "10 to 200 computers" },
-        "1": { "title": "Professional Offices", "description": "Law firms & accountants" },
-        "2": { "title": "Healthcare", "description": "Sensitive data (HIPAA/GDPR)" },
-        "3": { "title": "No Internal IT", "description": "Companies without tech teams" },
-        "4": { "title": "MSPs", "description": "Managed IT services" }
+        "0": {
+          "title": "SMBs",
+          "description": "10 to 200 computers"
+        },
+        "1": {
+          "title": "Professional Offices",
+          "description": "Law firms & accountants"
+        },
+        "2": {
+          "title": "Healthcare",
+          "description": "Sensitive data (HIPAA/GDPR)"
+        },
+        "3": {
+          "title": "No Internal IT",
+          "description": "Companies without tech teams"
+        },
+        "4": {
+          "title": "MSPs",
+          "description": "Managed IT services"
+        }
       }
     },
     "painPoints": {
@@ -227,40 +243,95 @@
       },
       "conclusion": "This is the reality of those without visibility.",
       "stats": {
-        "0": { "emoji": "💸", "title": "$50K to $200K", "description": "Average cost of a cyberattack for SMBs. Can your business absorb that?" },
-        "1": { "emoji": "⏱️", "title": "7 to 27 days down", "description": "Recovery time without backup. Would your clients wait?" },
-        "2": { "emoji": "📋", "title": "Up to 4% fine", "description": "Of annual revenue for data breaches (GDPR)" },
-        "3": { "emoji": "☠️", "title": "60% shut down", "description": "Of attacked SMBs don't survive 12 months" }
+        "0": {
+          "emoji": "💸",
+          "title": "$50K to $200K",
+          "description": "Average cost of a cyberattack for SMBs. Can your business absorb that?"
+        },
+        "1": {
+          "emoji": "⏱️",
+          "title": "7 to 27 days down",
+          "description": "Recovery time without backup. Would your clients wait?"
+        },
+        "2": {
+          "emoji": "📋",
+          "title": "Up to 4% fine",
+          "description": "Of annual revenue for data breaches (GDPR)"
+        },
+        "3": {
+          "emoji": "☠️",
+          "title": "60% shut down",
+          "description": "Of attacked SMBs don't survive 12 months"
+        }
       },
       "cta": "See my company's real risks (free)"
     },
     "socialProof": {
       "stats": {
-        "0": { "value": "+5,000", "label": "Business computers monitored" },
-        "1": { "value": "+100,000", "label": "Risks detected before becoming incidents" },
-        "2": { "value": "99.9%", "label": "Uptime" },
-        "3": { "value": "🛡️", "label": "Enterprise-grade security" }
+        "0": {
+          "value": "+5,000",
+          "label": "Business computers monitored"
+        },
+        "1": {
+          "value": "+100,000",
+          "label": "Risks detected before becoming incidents"
+        },
+        "2": {
+          "value": "99.9%",
+          "label": "Uptime"
+        },
+        "3": {
+          "value": "🛡️",
+          "label": "Enterprise-grade security"
+        }
       }
     },
     "diagnostic": {
       "title": "What you'll see in the diagnostic",
       "subtitle": "No commitment, no credit card",
       "items": {
-        "0": { "title": "Vulnerable Machines", "description": "Which computers are exposed" },
-        "1": { "title": "Outdated Software", "description": "Programs that need updating" },
-        "2": { "title": "Critical Risks", "description": "What needs urgent action" },
-        "3": { "title": "Exposure Level", "description": "Your current risk score" },
-        "4": { "title": "Initial Report", "description": "Complete PDF report for you" }
+        "0": {
+          "title": "Vulnerable Machines",
+          "description": "Which computers are exposed"
+        },
+        "1": {
+          "title": "Outdated Software",
+          "description": "Programs that need updating"
+        },
+        "2": {
+          "title": "Critical Risks",
+          "description": "What needs urgent action"
+        },
+        "3": {
+          "title": "Exposure Level",
+          "description": "Your current risk score"
+        },
+        "4": {
+          "title": "Initial Report",
+          "description": "Complete PDF report for you"
+        }
       }
     },
     "benefits": {
       "title": "What CyberShield delivers",
       "subtitle": "You get control, visibility and proof — not just software",
       "cards": {
-        "0": { "title": "Total Visibility", "description": "See all company computers in a single dashboard — no IT team needed." },
-        "1": { "title": "Auditable Evidence", "description": "Technical history of everything, ready for audits or incidents." },
-        "2": { "title": "Real Risk Alerts", "description": "Only what matters: real risks with clear actions, no technical noise." },
-        "3": { "title": "Centralized Control", "description": "Manage everything without relying on internal IT." }
+        "0": {
+          "title": "Total Visibility",
+          "description": "See all company computers in a single dashboard — no IT team needed."
+        },
+        "1": {
+          "title": "Auditable Evidence",
+          "description": "Technical history of everything, ready for audits or incidents."
+        },
+        "2": {
+          "title": "Real Risk Alerts",
+          "description": "Only what matters: real risks with clear actions, no technical noise."
+        },
+        "3": {
+          "title": "Centralized Control",
+          "description": "Manage everything without relying on internal IT."
+        }
       }
     },
     "technology": {
@@ -268,10 +339,22 @@
       "title": "Secure Updates With Zero Downtime",
       "subtitle": "Keep all computers protected and automatically updated, without interruptions",
       "features": {
-        "0": { "title": "Zero Interruption", "description": "Background updates, activated on next natural reboot" },
-        "1": { "title": "SHA256 Validation", "description": "Cryptographically verified integrity before applying" },
-        "2": { "title": "Automatic Rollback", "description": "If something goes wrong, previous version is preserved" },
-        "3": { "title": "Enterprise Scale", "description": "Works with 3 or 3,000 computers simultaneously" }
+        "0": {
+          "title": "Zero Interruption",
+          "description": "Background updates, activated on next natural reboot"
+        },
+        "1": {
+          "title": "SHA256 Validation",
+          "description": "Cryptographically verified integrity before applying"
+        },
+        "2": {
+          "title": "Automatic Rollback",
+          "description": "If something goes wrong, previous version is preserved"
+        },
+        "3": {
+          "title": "Enterprise Scale",
+          "description": "Works with 3 or 3,000 computers simultaneously"
+        }
       },
       "comparison": {
         "0": "Update without forced restart",
@@ -284,36 +367,81 @@
       "title": "Specific Use Cases",
       "subtitle": "Solutions for different sectors and business needs",
       "cases": {
-        "0": { "title": "Corporate IT", "description": "Monitoring and response for complex enterprise networks." },
-        "1": { "title": "Small & Medium Business", "description": "Affordable solutions to protect your digital assets." },
-        "2": { "title": "Compliance & Security", "description": "Meet regulatory requirements with detailed reports." }
+        "0": {
+          "title": "Corporate IT",
+          "description": "Monitoring and response for complex enterprise networks."
+        },
+        "1": {
+          "title": "Small & Medium Business",
+          "description": "Affordable solutions to protect your digital assets."
+        },
+        "2": {
+          "title": "Compliance & Security",
+          "description": "Meet regulatory requirements with detailed reports."
+        }
       }
     },
     "howItWorks": {
       "title": "How It Works",
       "subtitle": "Get started in minutes, no hassle",
       "steps": {
-        "0": { "number": "1", "title": "We install the agent", "description": "Quick installation on up to 3 computers to start the diagnostic." },
-        "1": { "number": "2", "title": "We find invisible risks", "description": "Outdated software, vulnerabilities and suspicious behavior." },
-        "2": { "number": "3", "title": "You get a clear report", "description": "What to fix, what to prioritize — or let CyberShield keep monitoring." }
+        "0": {
+          "number": "1",
+          "title": "We install the agent",
+          "description": "Quick installation on up to 3 computers to start the diagnostic."
+        },
+        "1": {
+          "number": "2",
+          "title": "We find invisible risks",
+          "description": "Outdated software, vulnerabilities and suspicious behavior."
+        },
+        "2": {
+          "number": "3",
+          "title": "You get a clear report",
+          "description": "What to fix, what to prioritize — or let CyberShield keep monitoring."
+        }
       }
     },
     "features": {
       "title": "Complete Features for Your Business",
       "subtitle": "Advanced monitoring with a simple interface",
       "items": {
-        "0": { "title": "Threat Detection", "description": "Integration with VirusTotal and Hybrid Analysis for real-time threat detection." },
-        "1": { "title": "Automatic Quarantine", "description": "Malicious files are automatically isolated to protect your network." },
-        "2": { "title": "Compliance Reports", "description": "Custom data exports and reports for compliance and auditing." },
-        "3": { "title": "Complete API", "description": "Integrate with your existing systems through our RESTful API." }
+        "0": {
+          "title": "Threat Detection",
+          "description": "Integration with VirusTotal and Hybrid Analysis for real-time threat detection."
+        },
+        "1": {
+          "title": "Automatic Quarantine",
+          "description": "Malicious files are automatically isolated to protect your network."
+        },
+        "2": {
+          "title": "Compliance Reports",
+          "description": "Custom data exports and reports for compliance and auditing."
+        },
+        "3": {
+          "title": "Complete API",
+          "description": "Integrate with your existing systems through our RESTful API."
+        }
       },
       "dashboard": {
         "stats": {
-          "0": { "label": "Active Devices", "value": "248" },
-          "1": { "label": "Threats Blocked Today", "value": "17" },
-          "2": { "label": "Scans Completed", "value": "1.2k" }
+          "0": {
+            "label": "Active Devices",
+            "value": "248"
+          },
+          "1": {
+            "label": "Threats Blocked Today",
+            "value": "17"
+          },
+          "2": {
+            "label": "Scans Completed",
+            "value": "1.2k"
+          }
         },
-        "status": { "label": "Overall Status", "value": "✓ Protected" }
+        "status": {
+          "label": "Overall Status",
+          "value": "✓ Protected"
+        }
       }
     },
     "pricing": {
@@ -398,15 +526,42 @@
       "title": "Frequently Asked Questions",
       "subtitle": "Clear your doubts before getting started",
       "items": {
-        "0": { "question": "Do I need to install on all computers?", "answer": "No. The initial diagnostic works with just a few devices to map real risks." },
-        "1": { "question": "Does it work without an IT team?", "answer": "Yes. The report comes with clear priorities and recommended actions." },
-        "2": { "question": "Does it work with Mac and Linux?", "answer": "Yes! CyberShield works on Windows, Mac and Linux." },
-        "3": { "question": "What if I don't like it? Can I cancel?", "answer": "Of course! Try free for 14 days, no commitment." },
-        "4": { "question": "Is my data safe with you?", "answer": "Yes. Encrypted data and controlled access." },
-        "5": { "question": "Are you a registered company?", "answer": "Yes! We're a fully registered company with proper certifications." },
-        "6": { "question": "How does the trial period work?", "answer": "14 days with full access. No credit card required to start." },
-        "7": { "question": "Do you issue invoices?", "answer": "Yes, we issue invoices for all subscriptions." },
-        "8": { "question": "Help with compliance?", "answer": "Yes! Our reports help demonstrate compliance with regulations." }
+        "0": {
+          "question": "Do I need to install on all computers?",
+          "answer": "No. The initial diagnostic works with just a few devices to map real risks."
+        },
+        "1": {
+          "question": "Does it work without an IT team?",
+          "answer": "Yes. The report comes with clear priorities and recommended actions."
+        },
+        "2": {
+          "question": "Does it work with Mac and Linux?",
+          "answer": "Yes! CyberShield works on Windows, Mac and Linux."
+        },
+        "3": {
+          "question": "What if I don't like it? Can I cancel?",
+          "answer": "Of course! Try free for 14 days, no commitment."
+        },
+        "4": {
+          "question": "Is my data safe with you?",
+          "answer": "Yes. Encrypted data and controlled access."
+        },
+        "5": {
+          "question": "Are you a registered company?",
+          "answer": "Yes! We're a fully registered company with proper certifications."
+        },
+        "6": {
+          "question": "How does the trial period work?",
+          "answer": "14 days with full access. No credit card required to start."
+        },
+        "7": {
+          "question": "Do you issue invoices?",
+          "answer": "Yes, we issue invoices for all subscriptions."
+        },
+        "8": {
+          "question": "Help with compliance?",
+          "answer": "Yes! Our reports help demonstrate compliance with regulations."
+        }
       }
     },
     "calculator": {
@@ -869,17 +1024,75 @@
     "login": "Sign In",
     "createAccount": "Create Account",
     "recommended": "Recommended",
-    "free": { "name": "Free", "description": "To explore the system", "price": "Free", "priceNote": "3 computers" },
-    "starter": { "name": "Starter", "description": "For companies that want peace of mind", "price": "$15", "priceNote": "/month • 5 computers", "priceExtra": "+$2 per additional computer", "maxDevices": "Up to 30 computers" },
-    "business": { "name": "Business", "description": "For companies that can't afford invisible failures", "price": "$40", "priceNote": "/month • 25 computers", "priceExtra": "+$1.70 per additional computer", "maxDevices": "Up to 200 computers" },
-    "enterprise": { "name": "Enterprise", "description": "For companies where incidents become legal issues", "price": "Contact us" },
-    "features": {
-      "free": ["Up to 3 computers", "Basic risk visibility", "Software inventory", "Antivirus status"],
-      "starter": ["5 computers included", "+$2/additional computer", "Automatic security checks", "Email alerts", "Monthly risk reports", "Email support", "14-day free trial"],
-      "business": ["25 computers included", "+$1.70/additional computer", "Everything in Starter, plus:", "Real-time checks", "Management risk reports", "Dangerous site blocking", "Priority support", "API for integrations"],
-      "enterprise": ["Unlimited computers", "Everything in Business, plus:", "24/7 support", "Custom SLA", "Custom integration", "Dedicated account manager", "Compliance reports"]
+    "free": {
+      "name": "Free",
+      "description": "To explore the system",
+      "price": "Free",
+      "priceNote": "3 computers"
     },
-    "cta": { "free": "Start Free", "starter": "Start free diagnostic", "business": "Start free diagnostic", "enterprise": "Talk to a Specialist" },
+    "starter": {
+      "name": "Starter",
+      "description": "For companies that want peace of mind",
+      "price": "$15",
+      "priceNote": "/month • 5 computers",
+      "priceExtra": "+$2 per additional computer",
+      "maxDevices": "Up to 30 computers"
+    },
+    "business": {
+      "name": "Business",
+      "description": "For companies that can't afford invisible failures",
+      "price": "$40",
+      "priceNote": "/month • 25 computers",
+      "priceExtra": "+$1.70 per additional computer",
+      "maxDevices": "Up to 200 computers"
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "description": "For companies where incidents become legal issues",
+      "price": "Contact us"
+    },
+    "features": {
+      "free": [
+        "Up to 3 computers",
+        "Basic risk visibility",
+        "Software inventory",
+        "Antivirus status"
+      ],
+      "starter": [
+        "5 computers included",
+        "+$2/additional computer",
+        "Automatic security checks",
+        "Email alerts",
+        "Monthly risk reports",
+        "Email support",
+        "14-day free trial"
+      ],
+      "business": [
+        "25 computers included",
+        "+$1.70/additional computer",
+        "Everything in Starter, plus:",
+        "Real-time checks",
+        "Management risk reports",
+        "Dangerous site blocking",
+        "Priority support",
+        "API for integrations"
+      ],
+      "enterprise": [
+        "Unlimited computers",
+        "Everything in Business, plus:",
+        "24/7 support",
+        "Custom SLA",
+        "Custom integration",
+        "Dedicated account manager",
+        "Compliance reports"
+      ]
+    },
+    "cta": {
+      "free": "Start Free",
+      "starter": "Start free diagnostic",
+      "business": "Start free diagnostic",
+      "enterprise": "Talk to a Specialist"
+    },
     "investmentExamples": "Investment Examples",
     "computers": "computers",
     "annualDiscount": "Save with annual payment",
@@ -887,11 +1100,26 @@
     "startDiagnostic": "Start free diagnostic",
     "faq": "Frequently Asked Questions",
     "faqItems": {
-      "trial": { "q": "How does the 14-day free trial work?", "a": "You can test all features of the chosen plan for 14 days. We collect card data at the start but only charge after the trial period." },
-      "changePlan": { "q": "Can I change plans later?", "a": "Yes! You can upgrade or downgrade at any time through the client portal." },
-      "extraDevice": { "q": "How does per-computer pricing work?", "a": "Each plan includes a base number of computers. If you need more, you pay a fixed amount per additional computer." },
-      "support": { "q": "How does support work?", "a": "All paid plans include email support. Business and higher plans have priority support." },
-      "performance": { "q": "Does it slow down computers?", "a": "No! The CyberShield agent is extremely lightweight and optimized to run in the background." }
+      "trial": {
+        "q": "How does the 14-day free trial work?",
+        "a": "You can test all features of the chosen plan for 14 days. We collect card data at the start but only charge after the trial period."
+      },
+      "changePlan": {
+        "q": "Can I change plans later?",
+        "a": "Yes! You can upgrade or downgrade at any time through the client portal."
+      },
+      "extraDevice": {
+        "q": "How does per-computer pricing work?",
+        "a": "Each plan includes a base number of computers. If you need more, you pay a fixed amount per additional computer."
+      },
+      "support": {
+        "q": "How does support work?",
+        "a": "All paid plans include email support. Business and higher plans have priority support."
+      },
+      "performance": {
+        "q": "Does it slow down computers?",
+        "a": "No! The CyberShield agent is extremely lightweight and optimized to run in the background."
+      }
     },
     "footer": "All rights reserved."
   },
