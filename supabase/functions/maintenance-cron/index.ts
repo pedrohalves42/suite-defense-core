@@ -111,13 +111,34 @@ Deno.serve(async (req) => {
 
         if (!failError) result.stuck_jobs.failed = allIds.length;
 
-        // Recreate retryable jobs
+        // Recreate retryable jobs — only for agents that are still online
         const retryable = stuckDelivered.filter(j =>
           (j.delivery_attempts || 0) < MAX_DELIVERY_ATTEMPTS - 1 &&
           !(j.expires_at && new Date(j.expires_at) < new Date(now))
         );
 
+        // V-OFFLINE: Check agent online status before recreating jobs
+        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+        
         for (const job of retryable) {
+          // Verify agent is still online before recreating
+          const { data: agentCheck } = await supabase
+            .from('agents')
+            .select('last_heartbeat, status, scheduling_paused')
+            .eq('id', job.agent_id)
+            .maybeSingle();
+          
+          const isOnline = agentCheck && 
+            agentCheck.status === 'active' && 
+            !agentCheck.scheduling_paused &&
+            agentCheck.last_heartbeat && 
+            agentCheck.last_heartbeat > twoHoursAgo;
+          
+          if (!isOnline) {
+            console.log(`[maintenance-cron] Skipping job recreation for offline agent ${job.agent_name}`);
+            continue;
+          }
+          
           const { error: insertError } = await supabase.from('jobs').insert({
             tenant_id: job.tenant_id,
             agent_id: job.agent_id,
