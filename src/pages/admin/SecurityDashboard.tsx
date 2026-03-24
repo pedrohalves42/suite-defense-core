@@ -64,7 +64,8 @@ export default function SecurityDashboard() {
       return data as SecurityLog[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 120000, // COST-OPT: 10s → 2min
+    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
+    refetchIntervalInBackground: false,
   });
 
   const { data: stats } = useQuery({
