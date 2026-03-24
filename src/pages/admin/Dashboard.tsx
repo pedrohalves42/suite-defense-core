@@ -5,12 +5,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Shield, Server, AlertTriangle, WifiOff, 
-  Brain, Bug, ShieldAlert, ChevronRight,
-  Lightbulb, Activity, Wrench, BarChart3
+  Brain, Bug, ShieldAlert, ChevronRight, ChevronDown,
+  Lightbulb, Activity, Wrench, BarChart3, Trophy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
@@ -50,6 +52,7 @@ export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const { isSimple } = useSimpleModeContext();
+  const [extrasOpen, setExtrasOpen] = useState(false);
 
   // Proactive real-time alerts
   useProactiveAlerts();
@@ -127,14 +130,6 @@ export default function Dashboard() {
     );
   }
 
-  // Quick nav items
-  const quickNav = [
-    { icon: Activity, label: t('adminPages.dashboard.realTime'), to: '/admin/monitoring-advanced', color: 'text-info' },
-    { icon: Brain, label: t('adminPages.dashboard.insightsAI'), to: '/admin/ai-insights', color: 'text-accent', badge: insightsCount },
-    { icon: BarChart3, label: t('adminPages.dashboard.reports'), to: '/admin/reports', color: 'text-success' },
-    { icon: Wrench, label: t('adminPages.dashboard.actionCenter'), to: '/admin/action-center', color: 'text-warning' },
-  ];
-
   // Stat cards data
   const statCards = [
     {
@@ -174,19 +169,23 @@ export default function Dashboard() {
     },
   ];
 
+  // Quick nav items
+  const quickNav = [
+    { icon: Activity, label: t('adminPages.dashboard.realTime'), to: '/admin/monitoring-advanced', color: 'text-info' },
+    { icon: Brain, label: t('adminPages.dashboard.insightsAI'), to: '/admin/ai-insights', color: 'text-accent', badge: insightsCount },
+    { icon: BarChart3, label: t('adminPages.dashboard.reports'), to: '/admin/reports', color: 'text-success' },
+    { icon: Wrench, label: t('adminPages.dashboard.actionCenter'), to: '/admin/action-center', color: 'text-warning' },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Banners */}
+    <div className="space-y-5">
+      {/* Banners — contextuais, somem quando resolvidos */}
       <OnboardingRequiredBanner />
       <NotificationSetupBanner />
       <GovernanceHealthBanner />
 
-      {/* ═══ SEÇÃO 1: Status global + Score ═══ */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
+      {/* ═══ BLOCO 1: Status + KPIs (sempre visível) ═══ */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <Card className={cn(
           "border-l-4 overflow-hidden backdrop-blur-sm",
           globalStatus.variant === 'success' && "border-l-success bg-gradient-to-r from-success/8 to-transparent",
@@ -236,18 +235,12 @@ export default function Dashboard() {
         </Card>
       </motion.div>
 
-      {/* ═══ SEÇÃO 2: Métricas principais - 4 cards animados ═══ */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {statCards.map((card, i) => {
           const Icon = card.icon;
           return (
-            <motion.div
-              key={card.label}
-              custom={i}
-              initial="hidden"
-              animate="visible"
-              variants={fadeUp}
-            >
+            <motion.div key={card.label} custom={i} initial="hidden" animate="visible" variants={fadeUp}>
               <Link to={card.to}>
                 <Card className={cn(
                   "card-enterprise-hover cursor-pointer h-full transition-all duration-200 hover:scale-[1.02] backdrop-blur-sm",
@@ -284,7 +277,7 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* ═══ SEÇÃO 3: Alertas críticos inline ═══ */}
+      {/* Alertas críticos */}
       {criticalAlerts > 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
           <Card className="bg-destructive/5 border-destructive/20">
@@ -316,31 +309,51 @@ export default function Dashboard() {
         </motion.div>
       )}
 
-      {/* ═══ SEÇÃO 4: Gráficos lado a lado ═══ */}
+      {/* ═══ BLOCO 2: Visão Operacional (Tabs para reduzir scroll) ═══ */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25, duration: 0.4 }}
-        className="grid grid-cols-1 md:grid-cols-2 gap-4"
+        transition={{ delay: 0.2, duration: 0.4 }}
       >
-        <ProtectionTrendChartV2 />
-        <HealthTrendChart />
+        <Tabs defaultValue="fleet" className="w-full">
+          <TabsList className="w-full justify-start bg-muted/30 h-9">
+            <TabsTrigger value="fleet" className="text-xs gap-1.5">
+              <Server className="h-3.5 w-3.5" />
+              Frota
+            </TabsTrigger>
+            <TabsTrigger value="trends" className="text-xs gap-1.5">
+              <BarChart3 className="h-3.5 w-3.5" />
+              Tendências
+            </TabsTrigger>
+            <TabsTrigger value="operations" className="text-xs gap-1.5">
+              <Activity className="h-3.5 w-3.5" />
+              Operações
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="fleet" className="mt-3">
+            <FleetHealthDashboard />
+          </TabsContent>
+
+          <TabsContent value="trends" className="mt-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <ProtectionTrendChartV2 />
+              <HealthTrendChart />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="operations" className="mt-3 space-y-4">
+            <SystemCyclesHealthCard />
+            <ReleaseSignatureStatusCard />
+          </TabsContent>
+        </Tabs>
       </motion.div>
 
-      {/* ═══ SEÇÃO 4.3: Fleet Health ═══ */}
+      {/* ═══ BLOCO 3: Assistente + Gamificação (lado a lado, compacto) ═══ */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.27, duration: 0.4 }}
-      >
-        <FleetHealthDashboard />
-      </motion.div>
-
-      {/* ═══ SEÇÃO 4.5: XP Bar + Assistente + Gamificação ═══ */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.28, duration: 0.4 }}
+        transition={{ delay: 0.3, duration: 0.4 }}
       >
         <XPLevelBar />
       </motion.div>
@@ -348,74 +361,50 @@ export default function Dashboard() {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.4 }}
+        transition={{ delay: 0.35, duration: 0.4 }}
         className="grid grid-cols-1 md:grid-cols-2 gap-4"
       >
         <SecurityAdvisorCard />
         <GamificationHub />
       </motion.div>
 
-      {/* ═══ SEÇÃO 4.6: Status Ed25519 (super_admin only) ═══ */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35, duration: 0.4 }}
-      >
-        <ReleaseSignatureStatusCard />
-      </motion.div>
-
-      {/* ═══ SEÇÃO 5: Saúde dos Ciclos ═══ */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35, duration: 0.4 }}
-      >
-        <SystemCyclesHealthCard />
-      </motion.div>
-
-      {/* ═══ SEÇÃO 6: Navegação rápida ═══ */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.45, duration: 0.4 }}
-      >
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {quickNav.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link key={item.label} to={item.to}>
-                <Card className="card-enterprise-hover transition-all hover:scale-[1.02] cursor-pointer backdrop-blur-sm">
-                  <CardContent className="py-3 px-4 flex items-center gap-3">
-                    <div className="p-1.5 rounded-md bg-muted/60">
-                      <Icon className={cn("h-4 w-4", item.color)} />
-                    </div>
-                    <span className="text-sm font-medium flex-1 truncate">{item.label}</span>
-                    {item.badge && item.badge > 0 && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{item.badge}</Badge>
-                    )}
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      </motion.div>
-
-      {/* Reassurance */}
-      <Card className="bg-muted/20 border-dashed">
-        <CardContent className="py-3 flex items-center justify-center gap-2 text-center">
-          <Lightbulb className="h-4 w-4 text-muted-foreground shrink-0" />
-          <p className="text-xs text-muted-foreground">
-            {t('adminPages.dashboard.reassurance')}
-            <span className="font-medium text-foreground"> {t('adminPages.dashboard.reassuranceBold')}</span>
-          </p>
-        </CardContent>
-      </Card>
+      {/* ═══ BLOCO 4: Atalhos rápidos (colapsável) ═══ */}
+      <Collapsible open={extrasOpen} onOpenChange={setExtrasOpen}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" className="w-full justify-between text-muted-foreground hover:text-foreground h-9 text-xs">
+            <span className="flex items-center gap-2">
+              <Lightbulb className="h-3.5 w-3.5" />
+              Acesso Rápido
+            </span>
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", extrasOpen && "rotate-180")} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {quickNav.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.label} to={item.to}>
+                  <Card className="card-enterprise-hover transition-all hover:scale-[1.02] cursor-pointer backdrop-blur-sm">
+                    <CardContent className="py-3 px-4 flex items-center gap-3">
+                      <div className="p-1.5 rounded-md bg-muted/60">
+                        <Icon className={cn("h-4 w-4", item.color)} />
+                      </div>
+                      <span className="text-sm font-medium flex-1 truncate">{item.label}</span>
+                      {item.badge && item.badge > 0 && (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{item.badge}</Badge>
+                      )}
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       <OnboardingWizard open={showOnboarding} onComplete={() => setShowOnboarding(false)} />
-
-      {/* Guided Tour - shows on first visit */}
       <GuidedTour />
     </div>
   );
