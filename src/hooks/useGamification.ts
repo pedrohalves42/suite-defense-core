@@ -82,6 +82,9 @@ export function useGamification() {
   const tenantId = tenant?.id;
   const userId = user?.id;
 
+  // Retroactive XP sync — awards XP for things already done when profile is new (0 XP)
+  const retroSyncDone = useRef(false);
+
   const { data: profile, isLoading } = useQuery({
     queryKey: ['gamification-profile', userId, tenantId],
     queryFn: async () => {
