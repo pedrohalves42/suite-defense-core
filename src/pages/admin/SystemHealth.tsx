@@ -148,7 +148,8 @@ export default function SystemHealth() {
       return Object.values(hourlyData).slice(-12);
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 60000,
+    refetchInterval: 300_000, // TUNING v11: 60s → 5min
+    staleTime: 120_000,
     refetchIntervalInBackground: false,
   });
 
@@ -174,7 +175,8 @@ export default function SystemHealth() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 60000,
+    refetchInterval: 300_000, // TUNING v11: 60s → 5min
+    staleTime: 120_000,
     refetchIntervalInBackground: false,
   });
 
@@ -217,7 +219,8 @@ export default function SystemHealth() {
         .sort((a, b) => b.avgDuration - a.avgDuration)
         .slice(0, 5);
     },
-    refetchInterval: 60000,
+    refetchInterval: 300_000, // TUNING v11: 60s → 5min
+    staleTime: 120_000,
     refetchIntervalInBackground: false,
   });
 

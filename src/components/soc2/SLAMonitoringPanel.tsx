@@ -157,8 +157,9 @@ export function SLAMonitoringPanel() {
       ];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 60000,
-    refetchIntervalInBackground: false, // Refresh every minute
+    refetchInterval: 300_000, // TUNING v11: 60s → 5min (SLA checks don't need 1min polling)
+    staleTime: 120_000,
+    refetchIntervalInBackground: false,
   });
 
   const statusConfig = {

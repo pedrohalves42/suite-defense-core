@@ -11,9 +11,10 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export class SupabaseAgentRepository implements AgentRepository {
   async findById(id: AgentId): Promise<Agent | null> {
+    // TUNING v11: slim select — exclude heavy JSON columns
     const { data, error } = await supabase
       .from('agents')
-      .select('*')
+      .select('id, tenant_id, agent_name, status, enrolled_at, last_heartbeat, last_seen, agent_version, os_type, os_version, platform, ip_address, hostname, scheduling_paused, scheduling_paused_reason, is_isolated, is_throttled, safe_mode_reason, force_update, hmac_secret, created_at, updated_at')
       .eq('id', id.value)
       .maybeSingle();
 
@@ -24,7 +25,7 @@ export class SupabaseAgentRepository implements AgentRepository {
   async findByNameAndTenant(name: string, tenantId: TenantId): Promise<Agent | null> {
     const { data, error } = await supabase
       .from('agents')
-      .select('*')
+      .select('id, tenant_id, agent_name, status, enrolled_at, last_heartbeat, last_seen, agent_version, os_type, os_version, platform, ip_address, hostname, scheduling_paused, scheduling_paused_reason, is_isolated, is_throttled, safe_mode_reason, force_update, hmac_secret, created_at, updated_at')
       .eq('agent_name', name)
       .eq('tenant_id', tenantId.value)
       .maybeSingle();
@@ -36,7 +37,7 @@ export class SupabaseAgentRepository implements AgentRepository {
   async findActiveByTenant(tenantId: TenantId): Promise<Agent[]> {
     const { data, error } = await supabase
       .from('agents')
-      .select('*')
+      .select('id, tenant_id, agent_name, status, enrolled_at, last_heartbeat, last_seen, agent_version, os_type, os_version, platform, ip_address, hostname, scheduling_paused, scheduling_paused_reason, is_isolated, is_throttled, safe_mode_reason, force_update, created_at, updated_at')
       .eq('tenant_id', tenantId.value)
       .eq('status', 'active')
       .limit(1000);
@@ -48,7 +49,7 @@ export class SupabaseAgentRepository implements AgentRepository {
   async findOfflineAgents(thresholdDate: Date): Promise<Agent[]> {
     const { data, error } = await supabase
       .from('agents')
-      .select('*')
+      .select('id, tenant_id, agent_name, status, last_heartbeat, last_seen, agent_version, platform, scheduling_paused, is_isolated, created_at, updated_at')
       .eq('status', 'active')
       .lt('last_seen', thresholdDate.toISOString())
       .limit(500);
