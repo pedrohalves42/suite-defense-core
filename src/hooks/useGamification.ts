@@ -1,0 +1,284 @@
+/**
+ * useGamification — Hook central de gamificação
+ * Gerencia XP, níveis, streaks, desafios e leaderboard
+ */
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from '@/hooks/useTenant';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+
+// === XP Rewards por ação ===
+export const XP_REWARDS: Record<string, { xp: number; label: string }> = {
+  enroll_agent: { xp: 100, label: 'Agente instalado' },
+  resolve_alert: { xp: 50, label: 'Alerta resolvido' },
+  resolve_critical: { xp: 150, label: 'Alerta crítico resolvido' },
+  run_scan: { xp: 30, label: 'Scan executado' },
+  configure_backup: { xp: 80, label: 'Backup configurado' },
+  update_agent: { xp: 40, label: 'Agente atualizado' },
+  fix_vulnerability: { xp: 120, label: 'Vulnerabilidade corrigida' },
+  acknowledge_alert: { xp: 20, label: 'Alerta reconhecido' },
+  daily_login: { xp: 10, label: 'Login diário' },
+  perfect_score: { xp: 200, label: 'Score 100% alcançado' },
+  streak_7: { xp: 300, label: 'Streak de 7 dias' },
+  streak_30: { xp: 1000, label: 'Streak de 30 dias' },
+};
+
+// === Níveis e títulos ===
+export const LEVELS = [
+  { level: 1, title: 'Recruta', xpRequired: 0, emoji: '🛡️' },
+  { level: 2, title: 'Sentinela', xpRequired: 200, emoji: '⚔️' },
+  { level: 3, title: 'Guardião', xpRequired: 500, emoji: '🏰' },
+  { level: 4, title: 'Protetor', xpRequired: 1000, emoji: '🔰' },
+  { level: 5, title: 'Defensor', xpRequired: 2000, emoji: '🦾' },
+  { level: 6, title: 'Estrategista', xpRequired: 3500, emoji: '🧠' },
+  { level: 7, title: 'Comandante', xpRequired: 5000, emoji: '⭐' },
+  { level: 8, title: 'Especialista', xpRequired: 7500, emoji: '💎' },
+  { level: 9, title: 'Mestre', xpRequired: 10000, emoji: '👑' },
+  { level: 10, title: 'Lenda da Segurança', xpRequired: 15000, emoji: '🏆' },
+];
+
+export function getLevelFromXP(xp: number) {
+  let current = LEVELS[0];
+  for (const lvl of LEVELS) {
+    if (xp >= lvl.xpRequired) current = lvl;
+    else break;
+  }
+  const nextIdx = LEVELS.findIndex(l => l.level === current.level) + 1;
+  const next = nextIdx < LEVELS.length ? LEVELS[nextIdx] : null;
+  const xpInLevel = xp - current.xpRequired;
+  const xpToNext = next ? next.xpRequired - current.xpRequired : 0;
+  const progressPercent = next ? Math.min(100, Math.round((xpInLevel / xpToNext) * 100)) : 100;
+
+  return { ...current, xpInLevel, xpToNext, progressPercent, nextLevel: next };
+}
+
+export interface GamificationProfile {
+  id: string;
+  user_id: string;
+  tenant_id: string;
+  xp: number;
+  level: number;
+  level_title: string;
+  current_streak: number;
+  best_streak: number;
+  last_streak_date: string | null;
+  badges_unlocked: string[];
+}
+
+export interface LeaderboardEntry {
+  user_id: string;
+  xp: number;
+  level: number;
+  level_title: string;
+  current_streak: number;
+  full_name: string | null;
+}
+
+export function useGamification() {
+  const { tenant } = useTenant();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const tenantId = tenant?.id;
+  const userId = user?.id;
+
+  // Fetch user profile
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ['gamification-profile', userId, tenantId],
+    queryFn: async () => {
+      if (!userId || !tenantId) return null;
+
+      const { data, error } = await supabase
+        .from('user_gamification')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      // Auto-create profile if not exists
+      if (!data) {
+        const { data: newProfile, error: insertError } = await supabase
+          .from('user_gamification')
+          .insert({ user_id: userId, tenant_id: tenantId })
+          .select()
+          .single();
+        if (insertError) throw insertError;
+        return newProfile as GamificationProfile;
+      }
+
+      return data as GamificationProfile;
+    },
+    enabled: !!userId && !!tenantId,
+  });
+
+  // Fetch XP history (last 20)
+  const { data: xpHistory } = useQuery({
+    queryKey: ['xp-history', userId, tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('xp_events')
+        .select('*')
+        .eq('user_id', userId!)
+        .eq('tenant_id', tenantId!)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId && !!tenantId,
+  });
+
+  // Fetch leaderboard
+  const { data: leaderboard } = useQuery({
+    queryKey: ['leaderboard', tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_gamification')
+        .select('user_id, xp, level, level_title, current_streak')
+        .eq('tenant_id', tenantId!)
+        .order('xp', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+
+      // Fetch profiles for names
+      const userIds = (data || []).map(d => d.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', userIds);
+
+      const profileMap = new Map((profiles || []).map(p => [p.user_id, p.full_name]));
+
+      return (data || []).map(entry => ({
+        ...entry,
+        full_name: profileMap.get(entry.user_id) || 'Usuário',
+      })) as LeaderboardEntry[];
+    },
+    enabled: !!tenantId,
+  });
+
+  // Fetch active challenges
+  const { data: challenges } = useQuery({
+    queryKey: ['challenges', tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('gamification_challenges')
+        .select('*, challenge_progress(*)')
+        .eq('tenant_id', tenantId!)
+        .eq('is_active', true)
+        .gte('ends_at', new Date().toISOString());
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenantId,
+  });
+
+  // Award XP mutation
+  const awardXP = useMutation({
+    mutationFn: async ({ action, customXP, customLabel }: { action: string; customXP?: number; customLabel?: string }) => {
+      if (!userId || !tenantId || !profile) throw new Error('Not ready');
+
+      const reward = XP_REWARDS[action];
+      const xpAmount = customXP || reward?.xp || 10;
+      const label = customLabel || reward?.label || action;
+
+      // Log XP event
+      await supabase.from('xp_events').insert({
+        user_id: userId,
+        tenant_id: tenantId,
+        action,
+        xp_earned: xpAmount,
+        description: label,
+      });
+
+      // Update total XP
+      const newXP = (profile.xp || 0) + xpAmount;
+      const newLevel = getLevelFromXP(newXP);
+
+      await supabase
+        .from('user_gamification')
+        .update({
+          xp: newXP,
+          level: newLevel.level,
+          level_title: newLevel.title,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId)
+        .eq('tenant_id', tenantId);
+
+      return { xpAmount, label, newXP, newLevel, leveledUp: newLevel.level > (profile.level || 1) };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['gamification-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['xp-history'] });
+      queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+
+      toast.success(`+${result.xpAmount} XP — ${result.label}`, {
+        duration: 3000,
+        icon: '⚡',
+      });
+
+      if (result.leveledUp) {
+        setTimeout(() => {
+          toast.success(`🎉 Nível ${result.newLevel.level}! Agora você é ${result.newLevel.emoji} ${result.newLevel.title}`, {
+            duration: 6000,
+          });
+        }, 500);
+      }
+    },
+  });
+
+  // Update streak mutation  
+  const updateStreak = useMutation({
+    mutationFn: async () => {
+      if (!userId || !tenantId || !profile) return;
+
+      const today = new Date().toISOString().split('T')[0];
+      const lastDate = profile.last_streak_date;
+      
+      if (lastDate === today) return; // Already counted today
+
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const newStreak = lastDate === yesterday ? (profile.current_streak || 0) + 1 : 1;
+      const newBest = Math.max(newStreak, profile.best_streak || 0);
+
+      await supabase
+        .from('user_gamification')
+        .update({
+          current_streak: newStreak,
+          best_streak: newBest,
+          last_streak_date: today,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId)
+        .eq('tenant_id', tenantId);
+
+      return { newStreak, newBest };
+    },
+    onSuccess: (result) => {
+      if (!result) return;
+      queryClient.invalidateQueries({ queryKey: ['gamification-profile'] });
+
+      if (result.newStreak === 7) {
+        awardXP.mutate({ action: 'streak_7' });
+      } else if (result.newStreak === 30) {
+        awardXP.mutate({ action: 'streak_30' });
+      }
+    },
+  });
+
+  const levelInfo = getLevelFromXP(profile?.xp || 0);
+
+  return {
+    profile,
+    isLoading,
+    levelInfo,
+    xpHistory: xpHistory || [],
+    leaderboard: leaderboard || [],
+    challenges: challenges || [],
+    awardXP,
+    updateStreak,
+  };
+}
