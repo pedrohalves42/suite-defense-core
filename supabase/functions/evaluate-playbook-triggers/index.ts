@@ -488,7 +488,7 @@ serve(async (req) => {
           const APP_URL = Deno.env.get('APP_URL') || 'https://cybershield.com.br';
           const approvalUrl = `${SUPABASE_URL}/functions/v1/approve-via-token?token=${approvalRequest?.approval_token}`;
           
-          await fetch(`${SUPABASE_URL}/functions/v1/send-security-notification`, {
+          await fetch(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
         console.log(`[check-production-health] Sending notifications for ${criticalAlerts.length} critical alert(s)`);
         
         try {
-          const { error: notifyError } = await supabase.functions.invoke('send-system-alert', {
+          const { error: notifyError } = await supabase.functions.invoke('notification-dispatcher', {
             body: {
               event: 'production_health_check',
               severity: 'critical',

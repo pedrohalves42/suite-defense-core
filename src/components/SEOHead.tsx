@@ -8,13 +8,34 @@ interface SEOHeadProps {
   ogImage?: string;
   ogType?: "website" | "article" | "product";
   noIndex?: boolean;
+  jsonLd?: Record<string, unknown>;
 }
 
-const DEFAULT_TITLE = "CyberShield - Seguranca Cibernetica Inteligente para PMEs Brasileiras";
-const DEFAULT_DESCRIPTION = "Protecao completa para sua empresa: antivirus, monitoramento 24/7 e compliance LGPD em um so lugar. Empresa 100% brasileira com suporte em portugues. Trial gratuito de 14 dias.";
-const DEFAULT_KEYWORDS = "seguranca cibernetica, antivirus empresarial, PME Brasil, protecao de dados, compliance LGPD, monitoramento de rede, seguranca da informacao";
+const DEFAULT_TITLE = "CyberShield - Segurança Cibernética Inteligente para PMEs Brasileiras";
+const DEFAULT_DESCRIPTION = "Proteção completa para sua empresa: antivírus, monitoramento 24/7 e compliance LGPD em um só lugar. Empresa 100% brasileira com suporte em português. Trial gratuito de 14 dias.";
+const DEFAULT_KEYWORDS = "segurança cibernética, antivírus empresarial, PME Brasil, proteção de dados, compliance LGPD, monitoramento de rede, segurança da informação, EDR, endpoint protection";
 const DEFAULT_OG_IMAGE = "https://cybershield.com.br/og-image.png";
 const BASE_URL = "https://cybershield.com.br";
+
+const DEFAULT_ORG_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "CyberShield",
+  "url": BASE_URL,
+  "logo": `${BASE_URL}/logo.png`,
+  "description": DEFAULT_DESCRIPTION,
+  "foundingDate": "2025",
+  "areaServed": {
+    "@type": "Country",
+    "name": "Brazil"
+  },
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "sales",
+    "availableLanguage": ["Portuguese"]
+  },
+  "sameAs": []
+};
 
 export function SEOHead({
   title = DEFAULT_TITLE,
@@ -24,8 +45,10 @@ export function SEOHead({
   ogImage = DEFAULT_OG_IMAGE,
   ogType = "website",
   noIndex = false,
+  jsonLd,
 }: SEOHeadProps) {
   const fullCanonicalUrl = canonicalUrl ? `${BASE_URL}${canonicalUrl}` : BASE_URL;
+  const structuredData = jsonLd || DEFAULT_ORG_JSON_LD;
 
   return (
     <Helmet>
@@ -39,7 +62,7 @@ export function SEOHead({
       {noIndex ? (
         <meta name="robots" content="noindex, nofollow" />
       ) : (
-        <meta name="robots" content="index, follow" />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
       )}
       
       {/* Canonical */}
@@ -60,6 +83,11 @@ export function SEOHead({
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={ogImage} />
+
+      {/* JSON-LD Structured Data */}
+      <script type="application/ld+json">
+        {JSON.stringify(structuredData)}
+      </script>
     </Helmet>
   );
 }

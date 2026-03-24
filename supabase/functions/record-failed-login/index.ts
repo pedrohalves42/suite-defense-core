@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       if (blockData.block_level >= 2) {
         // Enviar alerta em tempo real para admins
         try {
-          await supabaseAdmin.functions.invoke('send-brute-force-alert', {
+          await supabaseAdmin.functions.invoke('notification-dispatcher', {
             headers: {
               'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
             },

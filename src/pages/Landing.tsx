@@ -18,14 +18,49 @@ const ContactSection = lazy(() => import("@/components/landing/ContactSection").
 
 const SectionFallback = () => <div className="h-32" />;
 
+const LANDING_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "CyberShield",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Windows",
+  "description": "Plataforma de segurança cibernética inteligente para PMEs brasileiras. Proteção EDR, monitoramento 24/7 e compliance LGPD integrados.",
+  "url": "https://cybershield.com.br",
+  "offers": {
+    "@type": "AggregateOffer",
+    "priceCurrency": "BRL",
+    "lowPrice": "149",
+    "highPrice": "499",
+    "offerCount": "3"
+  },
+  "provider": {
+    "@type": "Organization",
+    "name": "CyberShield",
+    "url": "https://cybershield.com.br",
+    "areaServed": {
+      "@type": "Country",
+      "name": "Brazil"
+    }
+  },
+  "featureList": [
+    "Proteção EDR em tempo real",
+    "Monitoramento 24/7",
+    "Compliance LGPD automático",
+    "Relatórios executivos com IA",
+    "Inventário de software",
+    "Detecção de ameaças"
+  ]
+};
+
 const Landing = () => {
   return (
     <>
       <SEOHead 
-        title="CyberShield - Seguranca Cibernetica Inteligente para PMEs Brasileiras"
-        description="Protecao completa para sua empresa: antivirus, monitoramento 24/7 e compliance LGPD em um so lugar. Empresa 100% brasileira com suporte em portugues. Trial gratuito de 14 dias."
-        keywords="seguranca cibernetica, antivirus empresarial, PME Brasil, protecao de dados, compliance LGPD, monitoramento de rede"
+        title="CyberShield - Segurança Cibernética Inteligente para PMEs Brasileiras"
+        description="Proteção completa para sua empresa: antivírus, monitoramento 24/7 e compliance LGPD em um só lugar. Empresa 100% brasileira com suporte em português. Trial gratuito de 14 dias."
+        keywords="segurança cibernética, antivírus empresarial, PME Brasil, proteção de dados, compliance LGPD, monitoramento de rede, EDR, endpoint protection"
         canonicalUrl="/"
+        jsonLd={LANDING_JSON_LD}
       />
       <div className="min-h-screen bg-background">
         <Navbar />
