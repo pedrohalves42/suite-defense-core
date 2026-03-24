@@ -395,9 +395,9 @@ export default function PitchDeck() {
               <div className="space-y-6">
                 <h3 className="text-xl font-bold">Planos de Preço</h3>
                 {[
-                  { name: 'Starter', price: 'R$ 59,90/dispositivo', devices: '5-10 PCs', features: 'Inventário, Vulnerabilidades, Antivírus' },
-                  { name: 'Professional', price: 'R$ 149,90/dispositivo', devices: '10-50 PCs', features: '+ IA, Relatórios, Prioridade' },
-                  { name: 'Enterprise', price: 'A partir de R$ 2.000/mês', devices: '50+ PCs', features: '+ SLA, API, Customização' },
+                  { name: 'Starter Compliance', price: 'R$ 499/mês', devices: '10 PCs base (+R$39/extra)', features: 'RMM + EDR + Compliance básico' },
+                  { name: 'Business', price: 'R$ 899/mês', devices: '20 PCs base (+R$24/extra)', features: '+ Scans ilimitados, Relatórios, Analytics' },
+                  { name: 'Enterprise / MSP', price: 'A partir de R$ 2.000/mês', devices: '+200 PCs / Ilimitado', features: '+ SLA, Multi-tenant, API, White label' },
                 ].map((plan, i) => (
                   <Card key={i} className="p-4">
                     <div className="flex items-center justify-between mb-2">

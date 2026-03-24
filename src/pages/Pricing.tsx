@@ -49,7 +49,7 @@ export default function Pricing() {
     <>
       <SEOHead 
         title="Precos e Planos - CyberShield | Seguranca Cibernetica para PMEs"
-        description="Planos de seguranca cibernetica a partir de R$149/mes. Proteja sua empresa com antivirus, monitoramento 24/7 e compliance LGPD. Trial gratuito de 14 dias."
+        description="Planos de seguranca cibernetica a partir de R$499/mes. RMM + EDR + Compliance unificados. Proteja sua empresa com monitoramento 24/7 e conformidade LGPD. Avaliação gratuita em 48h."
         keywords="preco antivirus empresarial, planos seguranca cibernetica, cybershield precos, protecao PME Brasil"
         canonicalUrl="/pricing"
       />

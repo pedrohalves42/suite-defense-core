@@ -1078,25 +1078,25 @@
       "priceNote": "3 computers"
     },
     "starter": {
-      "name": "Starter",
+      "name": "Starter Compliance",
       "description": "For companies that want peace of mind",
-      "price": "$15",
-      "priceNote": "/month • 5 computers",
-      "priceExtra": "+$2 per additional computer",
-      "maxDevices": "Up to 30 computers"
+      "price": "R$ 499",
+      "priceNote": "/month • 10 devices",
+      "priceExtra": "+R$ 39 per additional device",
+      "maxDevices": "Up to 50 devices"
     },
     "business": {
       "name": "Business",
       "description": "For companies that can't afford invisible failures",
-      "price": "$40",
-      "priceNote": "/month • 25 computers",
-      "priceExtra": "+$1.70 per additional computer",
-      "maxDevices": "Up to 200 computers"
+      "price": "R$ 899",
+      "priceNote": "/month • 20 devices",
+      "priceExtra": "+R$ 24 per additional device",
+      "maxDevices": "Up to 200 devices"
     },
     "enterprise": {
       "name": "Enterprise",
       "description": "For companies where incidents become legal issues",
-      "price": "Contact us"
+      "price": "Starting at R$ 2,000"
     },
     "features": {
       "free": [
