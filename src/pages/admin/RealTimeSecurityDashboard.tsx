@@ -207,7 +207,8 @@ export default function RealTimeSecurityDashboard() {
       return { total, protected: protectedCount, isolated, offline };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 60000,
+    refetchInterval: 120_000, // TUNING v11: 60s → 2min (realtime uses channels, polling is backup)
+    staleTime: 60_000,
     refetchIntervalInBackground: false,
   });
 

@@ -77,7 +77,8 @@ export function FleetHealthDashboard() {
       })) as FleetAgent[];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 60000,
+    refetchInterval: 120_000, // TUNING v11: 60s → 2min (fleet view not critical path)
+    staleTime: 60_000,
     refetchIntervalInBackground: false,
   });
 

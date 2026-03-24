@@ -148,7 +148,8 @@ export default function SystemHealth() {
       return Object.values(hourlyData).slice(-12);
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 60000,
+    refetchInterval: 300_000, // TUNING v11: 60s → 5min
+    staleTime: 120_000,
     refetchIntervalInBackground: false,
   });
 
