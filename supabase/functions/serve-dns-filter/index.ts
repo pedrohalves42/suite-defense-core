@@ -120,14 +120,13 @@ Deno.serve(async (req) => {
     try {
       const { data: blockedSites } = await supabase
         .from('blocked_websites')
-        .select('url, domain')
+        .select('domain_pattern')
         .eq('tenant_id', agentInfo.tenant_id)
         .eq('is_active', true);
 
       if (blockedSites && blockedSites.length > 0) {
         for (const site of blockedSites) {
-          const domain = (site as { url?: string; domain?: string }).domain || 
-            (site as { url?: string }).url?.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+          const domain = (site as { domain_pattern?: string }).domain_pattern;
           if (domain && !blockedDomains.includes(domain)) {
             blockedDomains.push(domain);
           }

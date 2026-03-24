@@ -328,12 +328,20 @@ verify_jwt = true
 [functions.health]
 verify_jwt = false
 
+# Consolidated health monitor (every 12 hours) COST-OPT-V10
+[functions.health-monitor]
+verify_jwt = false
+schedule = "0 */12 * * *"
+
+# Consolidated security monitor (every 12 hours) COST-OPT-V10
+[functions.security-monitor]
+verify_jwt = false
+schedule = "0 */12 * * *"
+
 # Health check (every 12 hours) COST-OPT-V5
 [functions.check-installation-health]
 verify_jwt = false
 schedule = "0 */12 * * *"
-
-# REMOVED: monitor-stuck-agents (consolidated into health-monitor)
 
 # === FASE 3+4: Agent Release Management ===
 [functions.register-agent-release]
