@@ -178,18 +178,18 @@
   },
   "landing": {
     "hero": {
-      "badge": "🇧🇷 Empresa 100% Brasileira • Suporte em Português",
-      "title1": "Enquanto você lê isto, hackers já testaram sua empresa",
-      "title2": "— proteja cada dispositivo por menos de R$2/dia.",
-      "description": "4 em cada 5 PMEs brasileiras atacadas fecham em menos de 1 ano. ",
-      "descriptionBold": "Descubra suas brechas antes que criminosos descubram — diagnóstico gratuito em 48h.",
-      "ctaButton": "Testar minha segurança agora (grátis)",
-      "ctaSecondary": "Quero falar com um especialista",
-      "reassurance": "Zero risco • Sem cartão de crédito • Resultado em 48h • 100% em português",
+      "badge": "🇧🇷 Plataforma Brasileira de Cibersegurança Corporativa",
+      "title1": "Visibilidade total sobre riscos cibernéticos da sua operação",
+      "title2": "— proteção contínua a partir de R$1,66/dia por dispositivo.",
+      "description": "82% das PMEs brasileiras que sofrem ataques encerram operações em até 12 meses.",
+      "descriptionBold": "Identifique vulnerabilidades antes que se tornem incidentes — avaliação inicial sem custo em até 48h.",
+      "ctaButton": "Solicitar avaliação gratuita",
+      "ctaSecondary": "Falar com um especialista",
+      "reassurance": "Sem compromisso • Sem cartão de crédito • Resultado em até 48h • Atendimento em português",
       "stats": {
         "0": {
           "value": "até 48h",
-          "label": "Diagnóstico gratuito"
+          "label": "Avaliação inicial gratuita"
         },
         "1": {
           "value": "24/7",
@@ -197,140 +197,140 @@
         },
         "2": {
           "value": "100%",
-          "label": "Empresa brasileira"
+          "label": "Operação nacional"
         }
       },
       "benefits": {
-        "0": "Compliance com LGPD automaticamente",
-        "1": "Suporte em português",
-        "2": "Preços em reais, sem taxas internacionais",
-        "3": "Certificações brasileiras reconhecidas"
+        "0": "Conformidade LGPD automatizada",
+        "1": "Suporte técnico em português",
+        "2": "Faturamento em reais com nota fiscal",
+        "3": "Padrões ISO 27001 e NIST"
       }
     },
     "targetAudience": {
-      "title": "Feito para empresas que não podem parar",
-      "subtitle": "Se você precisa de visibilidade, controle e prova de segurança, o CyberShield é para você",
+      "title": "Projetado para operações que exigem continuidade",
+      "subtitle": "Para organizações que precisam de visibilidade, governança e evidências de segurança",
       "segments": {
         "0": {
           "title": "PMEs",
-          "description": "10 a 200 computadores"
+          "description": "10 a 200 estações"
         },
         "1": {
-          "title": "Escritórios",
-          "description": "Contábeis e advocacias"
+          "title": "Serviços Profissionais",
+          "description": "Escritórios e consultorias"
         },
         "2": {
-          "title": "Clínicas",
-          "description": "Dados sensíveis (LGPD)"
+          "title": "Saúde",
+          "description": "Dados sensíveis e LGPD"
         },
         "3": {
-          "title": "Sem TI Interno",
-          "description": "Empresas sem equipe técnica"
+          "title": "Sem TI Dedicado",
+          "description": "Gestão simplificada"
         },
         "4": {
           "title": "MSPs",
-          "description": "TI terceirizada"
+          "description": "Multi-tenant gerenciado"
         }
       }
     },
     "painPoints": {
-      "badge": "Pergunte a si mesmo agora",
+      "badge": "Avalie a maturidade da sua segurança",
       "questions": {
-        "0": "Quem responde se houver vazamento de dados?",
-        "1": "Você conseguiria provar que tomou medidas de segurança?",
-        "2": "Você sabe hoje quais máquinas estão vulneráveis?",
-        "3": "Quanto tempo sua empresa sobreviveria parada?"
+        "0": "Quem é o responsável formal em caso de vazamento de dados?",
+        "1": "Sua empresa possui evidências documentadas de medidas de segurança?",
+        "2": "Você tem visibilidade sobre quais estações estão vulneráveis agora?",
+        "3": "Qual o impacto financeiro de uma paralisação operacional?"
       },
-      "conclusion": "Essa é a realidade de quem não tem visibilidade.",
+      "conclusion": "Sem visibilidade, não há governança. Sem governança, não há proteção.",
       "stats": {
         "0": {
           "emoji": "💸",
           "title": "R$ 50 a 200 mil",
-          "description": "Custo médio de ataque para PMEs. Quanto seu caixa aguenta?"
+          "description": "Custo médio de um incidente cibernético para PMEs brasileiras"
         },
         "1": {
           "emoji": "⏱️",
-          "title": "7 a 27 dias parado",
-          "description": "Tempo de recuperação sem backup. Seus clientes esperariam?"
+          "title": "7 a 27 dias",
+          "description": "Tempo médio de recuperação operacional após ataque"
         },
         "2": {
           "emoji": "📋",
           "title": "Multa de até 2%",
-          "description": "Do faturamento anual por vazamento de dados (LGPD)"
+          "description": "Do faturamento anual por descumprimento da LGPD"
         },
         "3": {
-          "emoji": "☠️",
-          "title": "60% fecham",
+          "emoji": "📊",
+          "title": "60% encerram",
           "description": "Das PMEs brasileiras atacadas não sobrevivem 12 meses"
         }
       },
-      "cta": "Ver riscos reais da minha empresa (grátis)"
+      "cta": "Solicitar avaliação de riscos gratuita"
     },
     "socialProof": {
       "stats": {
         "0": {
           "value": "+5.000",
-          "label": "Computadores empresariais monitorados"
+          "label": "Endpoints corporativos monitorados"
         },
         "1": {
           "value": "+100.000",
-          "label": "Riscos detectados antes de virar incidente"
+          "label": "Riscos identificados proativamente"
         },
         "2": {
           "value": "99,9%",
-          "label": "De disponibilidade"
+          "label": "Disponibilidade da plataforma"
         },
         "3": {
           "value": "🇧🇷",
-          "label": "Empresa 100% Brasileira"
+          "label": "Operação 100% nacional"
         }
       }
     },
     "diagnostic": {
-      "title": "O que você vai ver no diagnóstico",
-      "subtitle": "Sem compromisso, sem cartão de crédito",
+      "title": "O que a avaliação inicial revela",
+      "subtitle": "Sem compromisso, sem necessidade de cartão de crédito",
       "items": {
         "0": {
-          "title": "Máquinas Vulneráveis",
-          "description": "Quais computadores estão expostos"
+          "title": "Superfície de Ataque",
+          "description": "Mapeamento de estações expostas"
         },
         "1": {
-          "title": "Softwares Desatualizados",
-          "description": "Programas que precisam de update"
+          "title": "Software Desatualizado",
+          "description": "Aplicações com patches pendentes"
         },
         "2": {
-          "title": "Riscos Críticos",
-          "description": "O que precisa de ação urgente"
+          "title": "Vulnerabilidades Críticas",
+          "description": "Riscos que demandam ação imediata"
         },
         "3": {
-          "title": "Nível de Exposição",
-          "description": "Sua pontuação de risco atual"
+          "title": "Score de Risco",
+          "description": "Classificação do nível de exposição"
         },
         "4": {
-          "title": "Relatório Inicial",
-          "description": "PDF completo para você"
+          "title": "Laudo Técnico",
+          "description": "Relatório PDF com recomendações"
         }
       }
     },
     "benefits": {
-      "title": "O que o CyberShield entrega",
-      "subtitle": "Você passa a ter controle, visibilidade e prova — não só software",
+      "title": "O que o CyberShield entrega para sua operação",
+      "subtitle": "Controle, visibilidade e evidências auditáveis — não apenas software",
       "cards": {
         "0": {
-          "title": "Visibilidade Total",
-          "description": "Veja todos os computadores da empresa em um único painel — sem precisar de TI."
+          "title": "Visibilidade Centralizada",
+          "description": "Painel unificado com status de todos os dispositivos da organização em tempo real."
         },
         "1": {
-          "title": "Evidência Auditável",
-          "description": "Histórico técnico de tudo que acontece, pronto para auditoria ou incidente."
+          "title": "Evidências Auditáveis",
+          "description": "Registro completo de eventos de segurança, pronto para auditorias e conformidade regulatória."
         },
         "2": {
-          "title": "Alertas de Risco Real",
-          "description": "Só o que importa: riscos reais com ações claras, sem ruído técnico."
+          "title": "Alertas Contextualizados",
+          "description": "Notificações priorizadas por criticidade com ações recomendadas — sem ruído operacional."
         },
         "3": {
-          "title": "Controle Centralizado",
-          "description": "Gerencie tudo sem depender de equipe de TI interna."
+          "title": "Gestão Simplificada",
+          "description": "Administração centralizada sem necessidade de equipe de segurança dedicada."
         }
       }
     },
@@ -382,23 +382,23 @@
       }
     },
     "howItWorks": {
-      "title": "Como Funciona",
-      "subtitle": "Comece em minutos, sem complicação",
+      "title": "Implementação em 3 Etapas",
+      "subtitle": "Operacional em minutos, sem complexidade técnica",
       "steps": {
         "0": {
           "number": "1",
-          "title": "Instalamos o agente",
-          "description": "Instalação rápida em até 3 computadores para iniciar o diagnóstico."
+          "title": "Deploy do agente",
+          "description": "Instalação silenciosa nas estações — sem impacto na produtividade dos colaboradores."
         },
         "1": {
           "number": "2",
-          "title": "Encontramos riscos invisíveis",
-          "description": "Softwares desatualizados, vulnerabilidades e comportamentos suspeitos."
+          "title": "Análise automatizada",
+          "description": "Identificação de vulnerabilidades, software desatualizado e comportamentos anômalos."
         },
         "2": {
           "number": "3",
-          "title": "Você recebe um laudo claro",
-          "description": "O que corrigir, o que priorizar — ou deixar a CyberShield monitorando."
+          "title": "Laudo com recomendações",
+          "description": "Relatório priorizado com ações corretivas ou monitoramento contínuo pela plataforma."
         }
       }
     },
@@ -445,9 +445,9 @@
       }
     },
     "pricing": {
-      "badge": "🎉 Iniciar teste grátis – 14 dias (cartão requerido)",
-      "title": "Proteção completa sem equipe de TI",
-      "subtitle": "Inventário, antivírus, vulnerabilidades, web, desempenho — tudo em um painel. Agente leve que não deixa o computador lento.",
+      "badge": "Teste gratuito por 14 dias",
+      "title": "Segurança corporativa acessível para qualquer porte",
+      "subtitle": "Inventário, antivírus, vulnerabilidades, atividade web e desempenho — gestão unificada com agente de baixo impacto.",
       "plans": {
         "starter": {
           "name": "Starter Compliance",
@@ -496,29 +496,29 @@
       "extraDevice": "por dispositivo extra"
     },
     "testimonials": {
-      "title": "Resultados Comprovados por PMEs Brasileiras",
-      "subtitle": "Veja o que gestores como você descobriram nos primeiros 7 dias de uso",
+      "title": "Resultados comprovados em operações reais",
+      "subtitle": "Como organizações brasileiras reduziram riscos nos primeiros 7 dias",
       "items": {
         "0": {
-          "quote": "No segundo dia o diagnóstico achou 12 vulnerabilidades críticas que nosso antivírus não pegava. Duas estavam em máquinas do financeiro. Se um ransomware entrasse ali, a fábrica parava. Hoje recebo alerta antes do problema virar prejuízo.",
+          "quote": "Na primeira avaliação, identificamos 12 vulnerabilidades críticas que nosso antivírus corporativo não detectava — duas em estações do setor financeiro. Com o monitoramento contínuo, recebemos alertas antes que riscos se tornem incidentes.",
           "name": "Roberto Costa",
           "role": "Diretor de TI • Indústria Metalúrgica (SP)",
           "devices": "65 endpoints • Plano Business",
-          "metric": "12 ameaças bloqueadas na 1ª semana"
+          "metric": "12 vulnerabilidades críticas identificadas em 48h"
         },
         "1": {
-          "quote": "Nosso ERP roda em 3 máquinas que nunca tinham sido auditadas. O CyberShield mostrou que estavam com RDP aberto pra internet. Fechamos a brecha em 20 minutos pelo painel. Se não fosse isso, era questão de tempo até invadirem.",
+          "quote": "As estações que executam nosso ERP nunca haviam sido auditadas. O CyberShield identificou portas RDP expostas à internet. Corrigimos em 20 minutos pelo painel, eliminando um vetor de ataque de alto risco.",
           "name": "Ana Carolina Souza",
-          "role": "Gerente de TI • Rede de Farmácias (MG) — 14 lojas",
+          "role": "Gerente de TI • Rede de Farmácias (MG) — 14 unidades",
           "devices": "120 endpoints • Plano Enterprise",
-          "metric": "3 brechas críticas fechadas em 20min"
+          "metric": "3 vetores de ataque eliminados em 20min"
         },
         "2": {
-          "quote": "Precisava provar pro investidor que estávamos em conformidade com a LGPD. Em 48h o CyberShield gerou um relatório completo com score de 97%. O investidor ficou impressionado. Fechamos a rodada uma semana depois.",
+          "quote": "Precisávamos demonstrar conformidade com a LGPD para uma rodada de investimento. Em 48h, o CyberShield gerou um laudo completo com score de 97%. O relatório foi determinante para fechar a captação.",
           "name": "Marcos Ferreira Lima",
           "role": "CTO • Fintech (RJ) — Série Seed",
           "devices": "28 endpoints • Plano Starter",
-          "metric": "Relatório LGPD gerado em 48h"
+          "metric": "Laudo LGPD gerado em 48h"
         }
       }
     },
@@ -569,10 +569,10 @@
       "label": "Quantos dispositivos sua empresa possui?"
     },
     "ctaFinal": {
-      "title": "Cada dia sem proteção é um dia que sua empresa corre risco",
-      "cta": "Descobrir se minha empresa está vulnerável",
-      "ctaSecondary": "Agendar diagnóstico gratuito de 15 min",
-      "subtitle": "Sem cartão de crédito • Resultado em até 48h • Mais de 500 empresas já fizeram"
+      "title": "Cada dia sem visibilidade é um dia de exposição desnecessária",
+      "cta": "Solicitar avaliação de segurança gratuita",
+      "ctaSecondary": "Agendar reunião com especialista (15 min)",
+      "subtitle": "Sem compromisso • Resultado em até 48h • Mais de 500 organizações avaliadas"
     },
     "contact": {
       "title": "Fale Conosco"
