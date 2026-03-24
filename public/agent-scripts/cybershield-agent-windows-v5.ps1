@@ -6727,7 +6727,7 @@ while ($true) {
                 Write-Log "[AUTO-REPAIR] Killed $($cpuResult.killed_count) high-CPU processes" "SUCCESS"
             }
             
-            $lastAutoRepair = Get-Date
+            $lastAutoRepair = $now  # v5.0.15-perf: Reuse cached $now
         }
         
         # ============================================
