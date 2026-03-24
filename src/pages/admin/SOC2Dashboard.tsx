@@ -26,6 +26,10 @@ export default function SOC2Dashboard() {
   const overallScore = readinessData ? calculateOverallScore(readinessData) : 0;
   const exportBundle = useExportEvidenceBundle();
   const { data: bundles } = useEvidenceBundles();
+  
+  const implementedCriteria = readinessData?.filter(d => d.readinessScore >= 75).length ?? 0;
+  const totalCriteria = readinessData?.length ?? 9;
+  const documentedPolicies = readinessData?.filter(d => d.implementedControls > 0).length ?? 0;
 
   const handleExportBundle = () => {
     const now = new Date();
