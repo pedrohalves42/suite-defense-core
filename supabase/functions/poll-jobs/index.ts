@@ -193,18 +193,18 @@ Deno.serve(async (req) => {
       })
     }
 
-    // VALIDACAO CRITICA: Não entregar jobs para agentes que estavam offline >24h
-    // (exceto se este poll está "ressuscitando" o agente)
+    // VALIDACAO CRITICA: Não entregar jobs para agentes que estavam offline >2h
+    // Alinhado com o guard de criação de jobs (create-job, seed-collection-jobs)
     const now = new Date()
     const lastHeartbeat = agentData.last_heartbeat ? new Date(agentData.last_heartbeat) : null
     const hoursSinceHeartbeat = lastHeartbeat 
       ? (now.getTime() - lastHeartbeat.getTime()) / (1000 * 60 * 60)
       : Infinity
 
-    // Se estava offline >24h, primeiro apenas atualizar heartbeat e retornar vazio
+    // Se estava offline >2h, primeiro apenas atualizar heartbeat e retornar vazio
     // Na próxima poll (após heartbeat atualizado), jobs serão entregues normalmente
-    if (hoursSinceHeartbeat > 24) {
-      logger.warn('Agent was offline >24h, updating heartbeat but not delivering jobs yet', {
+    if (hoursSinceHeartbeat > 2) {
+      logger.warn('Agent was offline >2h, updating heartbeat but not delivering jobs yet', {
         agentName: agent.agent_name,
         hoursSinceHeartbeat: hoursSinceHeartbeat.toFixed(2),
         lastHeartbeat: agentData.last_heartbeat
