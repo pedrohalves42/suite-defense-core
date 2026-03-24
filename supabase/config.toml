@@ -46,8 +46,7 @@ verify_jwt = true
 [functions.promote-agent-v5]
 verify_jwt = false
 
-[functions.sync-agent-script]
-verify_jwt = false
+# REMOVED: sync-agent-script (consolidated into release-sync)
 
 [functions.enroll-agent]
 verify_jwt = false
@@ -77,11 +76,7 @@ verify_jwt = false
 [functions.scan-virus]
 verify_jwt = false
 
-[functions.validate-agent-health]
-verify_jwt = true
-
-[functions.agent-health-check]
-verify_jwt = false
+# REMOVED: validate-agent-health, agent-health-check (consolidated into health-monitor)
 
 [functions.check-agent-updates]
 verify_jwt = false
@@ -133,8 +128,7 @@ verify_jwt = false
 verify_jwt = false
 
 # === Admin Functions ===
-[functions.upload-agent-script]
-verify_jwt = true
+# REMOVED: upload-agent-script (consolidated into release-sync)
 
 [functions.create-job]
 verify_jwt = true
@@ -174,8 +168,7 @@ verify_jwt = true
 [functions.cleanup-jobs]
 verify_jwt = true
 
-[functions.check-expiring-enrollment-keys]
-verify_jwt = false
+# REMOVED: check-expiring-enrollment-keys (consolidated into security-monitor)
 
 [functions.check-agent-name-availability]
 verify_jwt = true
@@ -212,10 +205,7 @@ verify_jwt = true
 [functions.api-tenant-stats]
 verify_jwt = true
 
-# === Monitoring Functions (every 12 hours) COST-OPT-V6 ===
-[functions.monitor-agent-health]
-verify_jwt = false
-schedule = "0 */12 * * *"
+# REMOVED: monitor-agent-health (consolidated into health-monitor)
 
 [functions.monitor-thresholds]
 verify_jwt = false
@@ -308,10 +298,7 @@ verify_jwt = false
 [functions.submit-contact]
 verify_jwt = false
 
-# === Monitoring Functions (every 12 hours) COST-OPT-V5 ===
-[functions.monitor-slow-operations]
-verify_jwt = false
-schedule = "0 */12 * * *"
+# REMOVED: monitor-slow-operations (consolidated into health-monitor)
 
 # === Test Functions ===
 [functions.test-virustotal-integration]
@@ -346,9 +333,7 @@ verify_jwt = false
 verify_jwt = false
 schedule = "0 */12 * * *"
 
-# Monitor stuck agents - DISABLED COST-OPT-V6 (visible in dashboard for 1 agent)
-[functions.monitor-stuck-agents]
-verify_jwt = false
+# REMOVED: monitor-stuck-agents (consolidated into health-monitor)
 
 # === FASE 3+4: Agent Release Management ===
 [functions.register-agent-release]
@@ -485,12 +470,7 @@ schedule = "0 4 * * *"
 [functions.generate-compliance-report]
 verify_jwt = true
 
-# === Agent Release Sync ===
-[functions.sync-release-from-repo]
-verify_jwt = false
-
-[functions.sync-agent-release-content]
-verify_jwt = false
+# REMOVED: sync-release-from-repo, sync-agent-release-content (consolidated into release-sync)
 
 # === Zero Trust Integrity Sentinel - DISABLED schedule COST-OPT-V5 ===
 [functions.integrity-sentinel]
@@ -611,9 +591,7 @@ schedule = "0 */12 * * *"
 [functions.cleanup-stale-reports]
 verify_jwt = false
 
-# === P1: Job Health Monitor - DISABLED COST-OPT-V6 (unnecessary for small fleet) ===
-[functions.job-health-monitor]
-verify_jwt = false
+# REMOVED: job-health-monitor (consolidated into health-monitor)
 
 # === AI Execute Solution ===
 [functions.ai-execute-solution]
@@ -635,10 +613,7 @@ verify_jwt = false
 [functions.admin-create-user]
 verify_jwt = true
 
-# === Credential Rotation Check (weekly Sunday at 4:00 UTC) COST-OPT-V5 ===
-[functions.check-credential-rotation]
-verify_jwt = false
-schedule = "0 4 * * 0"
+# REMOVED: check-credential-rotation (consolidated into security-monitor)
 
 # === Agent Integrity Check (every 12 hours) COST-OPT-V5 ===
 [functions.check-agent-integrity]
@@ -771,9 +746,7 @@ verify_jwt = false
 [functions.generate-deploy-package]
 verify_jwt = false
 
-# === Script Sync ===
-[functions.sync-scripts-direct]
-verify_jwt = false
+# REMOVED: sync-scripts-direct (consolidated into release-sync)
 
 # === Threat Intelligence: Sync feeds daily at 4 AM UTC ===
 [functions.sync-threat-feeds]
