@@ -264,52 +264,52 @@ const App = () => (
                 <Route path="jobs-v3-migration" element={<Navigate to="/admin/operations-hub?tab=tools" replace />} />
                 
                 {/* Remaining standalone routes */}
-                <Route path="ai-metrics" element={<AIMetrics />} />
-                <Route path="ai-governance" element={<AIGovernance />} />
-                <Route path="tenant" element={<Tenant />} />
+                <Route path="ai-metrics" element={<RouteErrorBoundary route="AI Metrics"><AIMetrics /></RouteErrorBoundary>} />
+                <Route path="ai-governance" element={<RouteErrorBoundary route="AI Governance"><AIGovernance /></RouteErrorBoundary>} />
+                <Route path="tenant" element={<RouteErrorBoundary route="Tenant"><Tenant /></RouteErrorBoundary>} />
                 <Route path="software-inventory" element={<Navigate to="/admin/asset-security?tab=inventory" replace />} />
                 <Route path="vulnerabilities" element={<Navigate to="/admin/vulnerability-center?tab=vulnerabilities" replace />} />
                 <Route path="web-activity" element={<Navigate to="/admin/network-security?tab=web-activity" replace />} />
                 <Route path="dns-filter" element={<Navigate to="/admin/network-security?tab=dns-filter" replace />} />
-                <Route path="vulnerability-center" element={<VulnerabilityCenter />} />
-                <Route path="network-security" element={<NetworkSecurityCenter />} />
-                <Route path="asset-security" element={<AssetSecurityCenter />} />
-                <Route path="threat-center" element={<ThreatCenter />} />
-                <Route path="threat-hunting" element={<ThreatHunting />} />
-                <Route path="mitre-attack" element={<MitreAttackDashboard />} />
+                <Route path="vulnerability-center" element={<RouteErrorBoundary route="Vulnerabilities"><VulnerabilityCenter /></RouteErrorBoundary>} />
+                <Route path="network-security" element={<RouteErrorBoundary route="Network Security"><NetworkSecurityCenter /></RouteErrorBoundary>} />
+                <Route path="asset-security" element={<RouteErrorBoundary route="Asset Security"><AssetSecurityCenter /></RouteErrorBoundary>} />
+                <Route path="threat-center" element={<RouteErrorBoundary route="Threat Center"><ThreatCenter /></RouteErrorBoundary>} />
+                <Route path="threat-hunting" element={<RouteErrorBoundary route="Threat Hunting"><ThreatHunting /></RouteErrorBoundary>} />
+                <Route path="mitre-attack" element={<RouteErrorBoundary route="MITRE ATT&CK"><MitreAttackDashboard /></RouteErrorBoundary>} />
                 <Route path="agent-timeline" element={<Navigate to="/admin/agent-center?tab=timeline" replace />} />
-                <Route path="agent-releases" element={<AgentReleases />} />
+                <Route path="agent-releases" element={<RouteErrorBoundary route="Agent Releases"><AgentReleases /></RouteErrorBoundary>} />
                 <Route path="agent-versions" element={<Navigate to="/admin/agent-center?tab=versions" replace />} />
-                <Route path="reports" element={<Reports />} />
-                <Route path="security-policies" element={<SecurityPolicies />} />
-                <Route path="security-policies/auto-actions" element={<SecurityPoliciesAutoActions />} />
+                <Route path="reports" element={<RouteErrorBoundary route="Reports"><Reports /></RouteErrorBoundary>} />
+                <Route path="security-policies" element={<RouteErrorBoundary route="Security Policies"><SecurityPolicies /></RouteErrorBoundary>} />
+                <Route path="security-policies/auto-actions" element={<RouteErrorBoundary route="Auto Actions"><SecurityPoliciesAutoActions /></RouteErrorBoundary>} />
                 <Route path="agent-groups" element={<Navigate to="/admin/agent-center?tab=groups" replace />} />
                 <Route path="agent-tags" element={<Navigate to="/admin/agent-center?tab=tags" replace />} />
-                <Route path="notification-settings" element={<NotificationSettings />} />
+                <Route path="notification-settings" element={<RouteErrorBoundary route="Notifications"><NotificationSettings /></RouteErrorBoundary>} />
                 <Route path="security-monitoring" element={<Navigate to="/admin/threat-center?tab=alerts" replace />} />
-                <Route path="invites" element={<Invites />} />
-                <Route path="api-docs" element={<ApiDocumentation />} />
-                <Route path="my-account" element={<MyAccount />} />
-                <Route path="automations" element={<Automations />} />
+                <Route path="invites" element={<RouteErrorBoundary route="Invites"><Invites /></RouteErrorBoundary>} />
+                <Route path="api-docs" element={<RouteErrorBoundary route="API Docs"><ApiDocumentation /></RouteErrorBoundary>} />
+                <Route path="my-account" element={<RouteErrorBoundary route="My Account"><MyAccount /></RouteErrorBoundary>} />
+                <Route path="automations" element={<RouteErrorBoundary route="Automations"><Automations /></RouteErrorBoundary>} />
                 <Route path="archived-agents" element={<Navigate to="/admin/agent-center?tab=archived" replace />} />
-                <Route path="alert-resolution" element={<AlertResolutionCenter />} />
-                <Route path="auto-remediation" element={<AutoRemediation />} />
-                <Route path="siem-export" element={<SiemExport />} />
-                <Route path="white-label" element={<WhiteLabelSettings />} />
-                <Route path="itsm" element={<ItsmSettings />} />
-                <Route path="platforms" element={<PlatformManagement />} />
-                <Route path="threat-intelligence" element={<ThreatIntelligence />} />
-                <Route path="shadow-it" element={<ShadowITDiscovery />} />
-                <Route path="attack-simulation" element={<AttackSimulation />} />
-                <Route path="identity-security" element={<IdentitySecurity />} />
-                <Route path="security-graph" element={<SecurityGraph />} />
+                <Route path="alert-resolution" element={<RouteErrorBoundary route="Alert Resolution"><AlertResolutionCenter /></RouteErrorBoundary>} />
+                <Route path="auto-remediation" element={<RouteErrorBoundary route="Auto Remediation"><AutoRemediation /></RouteErrorBoundary>} />
+                <Route path="siem-export" element={<RouteErrorBoundary route="SIEM Export"><SiemExport /></RouteErrorBoundary>} />
+                <Route path="white-label" element={<RouteErrorBoundary route="White Label"><WhiteLabelSettings /></RouteErrorBoundary>} />
+                <Route path="itsm" element={<RouteErrorBoundary route="ITSM"><ItsmSettings /></RouteErrorBoundary>} />
+                <Route path="platforms" element={<RouteErrorBoundary route="Platforms"><PlatformManagement /></RouteErrorBoundary>} />
+                <Route path="threat-intelligence" element={<RouteErrorBoundary route="Threat Intelligence"><ThreatIntelligence /></RouteErrorBoundary>} />
+                <Route path="shadow-it" element={<RouteErrorBoundary route="Shadow IT"><ShadowITDiscovery /></RouteErrorBoundary>} />
+                <Route path="attack-simulation" element={<RouteErrorBoundary route="Attack Simulation"><AttackSimulation /></RouteErrorBoundary>} />
+                <Route path="identity-security" element={<RouteErrorBoundary route="Identity Security"><IdentitySecurity /></RouteErrorBoundary>} />
+                <Route path="security-graph" element={<RouteErrorBoundary route="Security Graph"><SecurityGraph /></RouteErrorBoundary>} />
                 <Route path="software-risk" element={<Navigate to="/admin/vulnerability-center?tab=software-risk" replace />} />
                 <Route path="data-exposure" element={<Navigate to="/admin/asset-security?tab=data-exposure" replace />} />
-                <Route path="notification-channels" element={<NotificationChannels />} />
-                <Route path="realtime-security" element={<RealTimeSecurityDashboard />} />
-                <Route path="ai-autonomy" element={<AutonomyDashboard />} />
-                <Route path="tasks" element={<Tasks />} />
-                <Route path="onboarding" element={<OnboardingWizard />} />
+                <Route path="notification-channels" element={<RouteErrorBoundary route="Notification Channels"><NotificationChannels /></RouteErrorBoundary>} />
+                <Route path="realtime-security" element={<RouteErrorBoundary route="Realtime Security"><RealTimeSecurityDashboard /></RouteErrorBoundary>} />
+                <Route path="ai-autonomy" element={<RouteErrorBoundary route="AI Autonomy"><AutonomyDashboard /></RouteErrorBoundary>} />
+                <Route path="tasks" element={<RouteErrorBoundary route="Tasks"><Tasks /></RouteErrorBoundary>} />
+                <Route path="onboarding" element={<RouteErrorBoundary route="Onboarding"><OnboardingWizard /></RouteErrorBoundary>} />
               </Route>
 
               {/* Super Admin Routes (System-wide) - Protected by MFA Guard */}
