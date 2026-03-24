@@ -269,12 +269,12 @@
     "socialProof": {
       "stats": {
         "0": {
-          "value": "+5.000",
-          "label": "Endpoints corporativos monitorados"
+          "value": "51",
+          "label": "Regras MITRE ATT&CK ativas"
         },
         "1": {
-          "value": "+100.000",
-          "label": "Riscos identificados proativamente"
+          "value": "SHA-256",
+          "label": "Cadeia de evidências criptográfica"
         },
         "2": {
           "value": "99,9%",
@@ -313,24 +313,24 @@
       }
     },
     "benefits": {
-      "title": "O que o CyberShield entrega para sua operação",
-      "subtitle": "Controle, visibilidade e evidências auditáveis — não apenas software",
+      "title": "O que o agente CyberShield faz nas suas estações",
+      "subtitle": "Coleta contínua de telemetria com impacto zero na performance — cada dado gera evidência auditável",
       "cards": {
         "0": {
-          "title": "Visibilidade Centralizada",
-          "description": "Painel unificado com status de todos os dispositivos da organização em tempo real."
+          "title": "Inventário de Software",
+          "description": "Catálogo automático de todos os programas instalados, versões e patches pendentes em cada estação."
         },
         "1": {
-          "title": "Evidências Auditáveis",
-          "description": "Registro completo de eventos de segurança, pronto para auditorias e conformidade regulatória."
+          "title": "Monitoramento de Processos",
+          "description": "Detecção de processos suspeitos via 51 regras MITRE ATT&CK com cadeia de evidências SHA-256."
         },
         "2": {
-          "title": "Alertas Contextualizados",
-          "description": "Notificações priorizadas por criticidade com ações recomendadas — sem ruído operacional."
+          "title": "Saúde do Endpoint",
+          "description": "Status de antivírus, espaço em disco, certificados expirados e métricas de performance em tempo real."
         },
         "3": {
-          "title": "Gestão Simplificada",
-          "description": "Administração centralizada sem necessidade de equipe de segurança dedicada."
+          "title": "Filtro DNS Corporativo",
+          "description": "Bloqueio centralizado de sites maliciosos e monitoramento de atividade web por estação."
         }
       }
     },
@@ -407,20 +407,20 @@
       "subtitle": "Monitoramento avançado com interface simples",
       "items": {
         "0": {
-          "title": "Detecção de Ameaças",
-          "description": "Integração com VirusTotal e Hybrid Analysis para detecção de ameaças em tempo real."
+          "title": "Detecção de Ameaças (EDR)",
+          "description": "51 regras MITRE ATT&CK monitorando processos, registro e rede em tempo real com cadeia de evidências criptográfica."
         },
         "1": {
-          "title": "Quarentena Automática",
-          "description": "Arquivos maliciosos são automaticamente isolados para proteger sua rede."
+          "title": "Inventário e Vulnerabilidades",
+          "description": "Catálogo completo de software instalado com detecção automática de versões desatualizadas e patches pendentes."
         },
         "2": {
-          "title": "Relatórios de Compliance",
-          "description": "Exportação de dados e relatórios customizados para compliance e auditoria."
+          "title": "Integridade de Arquivos",
+          "description": "Verificação SHA-256 de arquivos críticos do sistema com alertas de modificações não autorizadas."
         },
         "3": {
-          "title": "API Completa",
-          "description": "Integre com seus sistemas existentes através de nossa API RESTful."
+          "title": "Filtro DNS e Atividade Web",
+          "description": "Bloqueio centralizado de domínios maliciosos e visibilidade sobre navegação corporativa."
         }
       },
       "dashboard": {
@@ -535,8 +535,8 @@
           "answer": "Sim. O laudo já vem com prioridades claras e ações recomendadas."
         },
         "2": {
-          "question": "Funciona com Mac e Linux?",
-          "answer": "Sim! O CyberShield funciona em Windows, Mac e Linux."
+          "question": "Em quais sistemas operacionais funciona?",
+          "answer": "Atualmente o agente CyberShield é compatível com Windows (10, 11 e Server). Suporte para macOS está no roadmap."
         },
         "3": {
           "question": "E se eu não gostar? Posso cancelar?",

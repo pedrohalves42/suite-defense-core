@@ -3,7 +3,8 @@ import { useMemo } from 'react';
 import {
   Shield, Building2, Scale, Stethoscope, Laptop, Globe,
   BarChart, FileText, AlertTriangle, CheckCircle, RefreshCw,
-  FileCheck, Undo2, Server, ShieldCheck, Lock, Activity
+  FileCheck, Undo2, Server, ShieldCheck, Lock, Activity,
+  Package, Cpu, HardDrive, Globe2
 } from "lucide-react";
 
 /**
@@ -86,10 +87,10 @@ export function useLandingContent() {
       title: t('landing.benefits.title'),
       subtitle: t('landing.benefits.subtitle'),
       cards: [
-        { icon: BarChart, title: t('landing.benefits.cards.0.title'), description: t('landing.benefits.cards.0.description') },
-        { icon: FileText, title: t('landing.benefits.cards.1.title'), description: t('landing.benefits.cards.1.description') },
-        { icon: AlertTriangle, title: t('landing.benefits.cards.2.title'), description: t('landing.benefits.cards.2.description') },
-        { icon: Shield, title: t('landing.benefits.cards.3.title'), description: t('landing.benefits.cards.3.description') },
+        { icon: Package, title: t('landing.benefits.cards.0.title'), description: t('landing.benefits.cards.0.description') },
+        { icon: Cpu, title: t('landing.benefits.cards.1.title'), description: t('landing.benefits.cards.1.description') },
+        { icon: HardDrive, title: t('landing.benefits.cards.2.title'), description: t('landing.benefits.cards.2.description') },
+        { icon: Globe2, title: t('landing.benefits.cards.3.title'), description: t('landing.benefits.cards.3.description') },
       ],
     },
     technology: {
@@ -131,10 +132,10 @@ export function useLandingContent() {
       title: t('landing.features.title'),
       subtitle: t('landing.features.subtitle'),
       items: [
-        { icon: Shield, title: t('landing.features.items.0.title'), description: t('landing.features.items.0.description') },
-        { icon: Lock, title: t('landing.features.items.1.title'), description: t('landing.features.items.1.description') },
-        { icon: BarChart, title: t('landing.features.items.2.title'), description: t('landing.features.items.2.description') },
-        { icon: Activity, title: t('landing.features.items.3.title'), description: t('landing.features.items.3.description') },
+        { icon: ShieldCheck, title: t('landing.features.items.0.title'), description: t('landing.features.items.0.description') },
+        { icon: Package, title: t('landing.features.items.1.title'), description: t('landing.features.items.1.description') },
+        { icon: FileCheck, title: t('landing.features.items.2.title'), description: t('landing.features.items.2.description') },
+        { icon: Globe2, title: t('landing.features.items.3.title'), description: t('landing.features.items.3.description') },
       ],
       dashboard: {
         stats: [
