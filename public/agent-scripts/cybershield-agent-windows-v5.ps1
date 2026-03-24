@@ -6699,7 +6699,7 @@ while ($true) {
                 }
             }
             
-            $lastJobPoll = Get-Date
+            $lastJobPoll = $now  # v5.0.15-perf: Reuse cached $now instead of Get-Date
         }
         
         # ============================================
