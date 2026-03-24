@@ -178,18 +178,18 @@
   },
   "landing": {
     "hero": {
-      "badge": "🛡️ Enterprise-Grade Cybersecurity • Made Simple",
-      "title1": "While you read this, hackers already tested your company",
-      "title2": "— protect each device for less than $2/day.",
-      "description": "4 out of 5 attacked SMBs close within a year. ",
-      "descriptionBold": "Find your vulnerabilities before criminals do — free diagnostic in 48h.",
-      "ctaButton": "Test my security now (free)",
+      "badge": "🛡️ Enterprise-Grade Cybersecurity Platform",
+      "title1": "Complete visibility over your organization's cyber risks",
+      "title2": "— continuous protection starting at $1.66/day per device.",
+      "description": "82% of attacked SMBs cease operations within 12 months.",
+      "descriptionBold": "Identify vulnerabilities before they become incidents — free assessment within 48h.",
+      "ctaButton": "Request free assessment",
       "ctaSecondary": "Talk to a specialist",
-      "reassurance": "Zero risk • No credit card • Results in 48h • Full support",
+      "reassurance": "No commitment • No credit card • Results in 48h • Full support",
       "stats": {
         "0": {
           "value": "within 48h",
-          "label": "Free diagnostic"
+          "label": "Free initial assessment"
         },
         "1": {
           "value": "24/7",
@@ -201,10 +201,10 @@
         }
       },
       "benefits": {
-        "0": "Automatic regulatory compliance",
+        "0": "Automated regulatory compliance",
         "1": "Dedicated support team",
-        "2": "Transparent pricing, no hidden fees",
-        "3": "Industry-recognized certifications"
+        "2": "Transparent pricing with invoicing",
+        "3": "ISO 27001 & NIST standards"
       }
     },
     "targetAudience": {
