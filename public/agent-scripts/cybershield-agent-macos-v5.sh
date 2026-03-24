@@ -2519,10 +2519,15 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
          last_dns_sync=$now
      fi
       
-     # v5.0.13-perf: Adaptive sleep - protect CPU under load
+     # v5.0.15-perf: Adaptive sleep with cached CPU sampling
+     # Cache CPU result for 30s to avoid expensive 'top -l 1' every 2s loop
      sleep_time=2
-     current_cpu=$(top -l 1 -n 0 2>/dev/null | awk '/CPU usage/ {gsub(/%/,"",$3); print int($3)}' || echo 0)
-     LAST_CPU_PERCENT=${current_cpu:-0}
+     local cpu_cache_age=$((now - ${LAST_CPU_SAMPLE_TIME:-0}))
+     if [[ $cpu_cache_age -gt 30 ]]; then
+         current_cpu=$(ps -A -o %cpu | awk '{s+=$1} END {printf "%.0f", s/NR}' 2>/dev/null || echo 0)
+         LAST_CPU_PERCENT=${current_cpu:-0}
+         LAST_CPU_SAMPLE_TIME=$now
+     fi
      if [[ $LAST_CPU_PERCENT -gt 80 ]]; then
          sleep_time=$ADAPTIVE_MIN_SLEEP
          log "DEBUG" "[PERF] CPU at ${LAST_CPU_PERCENT}% - adaptive sleep ${sleep_time}s"

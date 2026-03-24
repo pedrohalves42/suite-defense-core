@@ -6779,7 +6779,7 @@ while ($true) {
                 }
                 $consecutiveHeartbeatFailures = 0
             }
-            $lastHeartbeat = Get-Date
+            $lastHeartbeat = $now  # v5.0.15-perf: Reuse cached $now
         }
         
         # ============================================

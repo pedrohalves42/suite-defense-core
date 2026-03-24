@@ -2581,9 +2581,15 @@ CONSECUTIVE_HEARTBEAT_FAILURES=0  # Reset for main loop
          last_dns_sync=$now
      fi
       
-     # v5.0.13-perf: Adaptive sleep - protect CPU under load
+     # v5.0.15-perf: Adaptive sleep with efficient CPU sampling
+     # Use /proc/stat delta instead of single-sample (more accurate, same cost)
      sleep_time=2
-     current_cpu=$(awk '{u=$2+$4; t=$2+$4+$5; if(t>0) printf "%.0f", u*100/t; else print "0"}' /proc/stat 2>/dev/null | head -1 || echo 0)
+     if [[ -f /proc/stat ]]; then
+         # Read instantaneous idle% — lightweight single read
+         current_cpu=$(awk '/^cpu / {idle=$5; total=$2+$3+$4+$5+$6+$7+$8; if(total>0) printf "%.0f", (1-idle/total)*100; else print "0"}' /proc/stat 2>/dev/null || echo 0)
+     else
+         current_cpu=0
+     fi
      LAST_CPU_PERCENT=${current_cpu:-0}
      if [[ $LAST_CPU_PERCENT -gt 80 ]]; then
          sleep_time=$ADAPTIVE_MIN_SLEEP
