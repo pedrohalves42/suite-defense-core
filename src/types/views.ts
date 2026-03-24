@@ -10,12 +10,19 @@ import type { Json } from '@/integrations/supabase/types';
 
 // ─── v_incident_groups ─────────────────────────────────────
 
+export interface NormalizedSignature {
+  pattern?: string;
+  source?: string;
+  keywords?: string[];
+  [key: string]: Json | undefined;
+}
+
 export interface VIncidentGroupRow {
   id: string | null;
   fingerprint_hash: string | null;
   source_type: string | null;
   failure_class: string | null;
-  normalized_signature: Json | null;
+  normalized_signature: NormalizedSignature | null;
   severity_hint: string | null;
   total_occurrences: number | null;
   distinct_agents: number | null;
@@ -93,6 +100,9 @@ export interface VAgentStateRow {
 
 // ─── v_problematic_agents ──────────────────────────────────
 
+export type ProblemType = 'offline' | 'outdated' | 'high_failure_rate' | 'no_heartbeat' | 'isolated' | string;
+export type ProblemSeverity = 'low' | 'medium' | 'high' | 'critical' | string;
+
 export interface VProblematicAgentRow {
   id: string;
   agent_name: string;
@@ -101,8 +111,8 @@ export interface VProblematicAgentRow {
   agent_version: string | null;
   last_heartbeat: string | null;
   tenant_id: string;
-  problem_type: string | null;
-  problem_severity: string | null;
+  problem_type: ProblemType | null;
+  problem_severity: ProblemSeverity | null;
 }
 
 // ─── v_system_operations_summary ───────────────────────────
@@ -142,14 +152,17 @@ export interface SecurityEventData {
 
 // ─── AI Insight with status ────────────────────────────────
 
+export type InsightStatus = 'open' | 'resolved' | 'rejected';
+export type InsightSeverity = 'info' | 'low' | 'medium' | 'high' | 'critical';
+
 export interface AIInsightRow {
   id: string;
   tenant_id: string;
   insight_type: string;
   title: string;
   description: string | null;
-  severity: string | null;
-  status: 'open' | 'resolved' | 'rejected';
+  severity: InsightSeverity | null;
+  status: InsightStatus;
   created_at: string;
   metadata: Record<string, unknown> | null;
 }
