@@ -269,12 +269,12 @@
     "socialProof": {
       "stats": {
         "0": {
-          "value": "+5,000",
-          "label": "Business computers monitored"
+          "value": "51",
+          "label": "Active MITRE ATT&CK rules"
         },
         "1": {
-          "value": "+100,000",
-          "label": "Risks detected before becoming incidents"
+          "value": "SHA-256",
+          "label": "Cryptographic evidence chain"
         },
         "2": {
           "value": "99.9%",
@@ -313,24 +313,24 @@
       }
     },
     "benefits": {
-      "title": "What CyberShield delivers",
-      "subtitle": "You get control, visibility and proof — not just software",
+      "title": "What the CyberShield agent does on your endpoints",
+      "subtitle": "Continuous telemetry collection with zero performance impact — every data point generates auditable evidence",
       "cards": {
         "0": {
-          "title": "Total Visibility",
-          "description": "See all company computers in a single dashboard — no IT team needed."
+          "title": "Software Inventory",
+          "description": "Automatic catalog of all installed programs, versions and pending patches on each endpoint."
         },
         "1": {
-          "title": "Auditable Evidence",
-          "description": "Technical history of everything, ready for audits or incidents."
+          "title": "Process Monitoring",
+          "description": "Detection of suspicious processes via 51 MITRE ATT&CK rules with SHA-256 evidence chain."
         },
         "2": {
-          "title": "Real Risk Alerts",
-          "description": "Only what matters: real risks with clear actions, no technical noise."
+          "title": "Endpoint Health",
+          "description": "Antivirus status, disk space, expired certificates and real-time performance metrics."
         },
         "3": {
-          "title": "Centralized Control",
-          "description": "Manage everything without relying on internal IT."
+          "title": "Corporate DNS Filter",
+          "description": "Centralized blocking of malicious sites and web activity monitoring per endpoint."
         }
       }
     },
@@ -407,20 +407,20 @@
       "subtitle": "Advanced monitoring with a simple interface",
       "items": {
         "0": {
-          "title": "Threat Detection",
-          "description": "Integration with VirusTotal and Hybrid Analysis for real-time threat detection."
+          "title": "Threat Detection (EDR)",
+          "description": "51 MITRE ATT&CK rules monitoring processes, registry and network in real-time with cryptographic evidence chain."
         },
         "1": {
-          "title": "Automatic Quarantine",
-          "description": "Malicious files are automatically isolated to protect your network."
+          "title": "Inventory & Vulnerabilities",
+          "description": "Complete catalog of installed software with automatic detection of outdated versions and pending patches."
         },
         "2": {
-          "title": "Compliance Reports",
-          "description": "Custom data exports and reports for compliance and auditing."
+          "title": "File Integrity Monitoring",
+          "description": "SHA-256 verification of critical system files with alerts on unauthorized modifications."
         },
         "3": {
-          "title": "Complete API",
-          "description": "Integrate with your existing systems through our RESTful API."
+          "title": "DNS Filter & Web Activity",
+          "description": "Centralized blocking of malicious domains and visibility into corporate web browsing."
         }
       },
       "dashboard": {
@@ -535,8 +535,8 @@
           "answer": "Yes. The report comes with clear priorities and recommended actions."
         },
         "2": {
-          "question": "Does it work with Mac and Linux?",
-          "answer": "Yes! CyberShield works on Windows, Mac and Linux."
+          "question": "Which operating systems are supported?",
+          "answer": "The CyberShield agent currently supports Windows (10, 11 and Server). macOS support is on the roadmap."
         },
         "3": {
           "question": "What if I don't like it? Can I cancel?",
