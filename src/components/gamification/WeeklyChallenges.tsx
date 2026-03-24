@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useGamification } from '@/hooks/useGamification';
 import { useUnifiedMetrics } from '@/hooks/useUnifiedMetrics';
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   target: Target,
@@ -27,11 +27,21 @@ interface LocalChallenge {
   xpReward: number;
   completed: boolean;
   type: 'daily' | 'weekly';
+  action: string; // maps to XP_REWARDS key
 }
 
 export function WeeklyChallenges() {
   const { metrics } = useUnifiedMetrics();
-  const { profile } = useGamification();
+  const { profile, awardXP, updateStreak } = useGamification();
+  const awardedRef = useRef<Set<string>>(new Set());
+
+  // Trigger streak update on mount (daily login)
+  useEffect(() => {
+    if (profile && !awardedRef.current.has('streak_update')) {
+      awardedRef.current.add('streak_update');
+      updateStreak.mutate();
+    }
+  }, [profile]);
 
   // Generate dynamic challenges based on current metrics
   const challenges = useMemo<LocalChallenge[]>(() => {
@@ -47,10 +57,11 @@ export function WeeklyChallenges() {
         description: 'Acesse o dashboard hoje',
         icon: 'eye',
         target: 1,
-        current: 1, // User is here, so completed
+        current: 1,
         xpReward: 10,
         completed: true,
         type: 'daily',
+        action: 'daily_login',
       },
       {
         id: 'weekly-all-online',
@@ -62,6 +73,7 @@ export function WeeklyChallenges() {
         xpReward: 100,
         completed: total > 0 && online === total,
         type: 'weekly',
+        action: 'enroll_agent',
       },
       {
         id: 'weekly-zero-alerts',
@@ -73,6 +85,7 @@ export function WeeklyChallenges() {
         xpReward: 150,
         completed: activeAlerts === 0,
         type: 'weekly',
+        action: 'resolve_alert',
       },
       {
         id: 'weekly-high-score',
@@ -84,6 +97,7 @@ export function WeeklyChallenges() {
         xpReward: 200,
         completed: score >= 90,
         type: 'weekly',
+        action: 'perfect_score',
       },
       {
         id: 'streak-7',
@@ -95,9 +109,31 @@ export function WeeklyChallenges() {
         xpReward: 300,
         completed: (profile?.current_streak || 0) >= 7,
         type: 'weekly',
+        action: 'streak_7',
       },
     ];
   }, [metrics, profile]);
+
+  // Auto-award XP for newly completed challenges
+  useEffect(() => {
+    if (!profile || awardXP.isPending) return;
+
+    for (const challenge of challenges) {
+      if (challenge.completed && !awardedRef.current.has(challenge.id)) {
+        awardedRef.current.add(challenge.id);
+        // Only award daily_login once per session to avoid spam
+        if (challenge.action === 'daily_login') {
+          awardXP.mutate({
+            action: challenge.action,
+            customXP: challenge.xpReward,
+            customLabel: challenge.title,
+          });
+        }
+        // Weekly challenges are awarded via their natural actions (resolve_alert, etc.)
+        // so we don't double-award here — they get XP when the action actually happens
+      }
+    }
+  }, [challenges, profile]);
 
   const completedCount = challenges.filter(c => c.completed).length;
 
