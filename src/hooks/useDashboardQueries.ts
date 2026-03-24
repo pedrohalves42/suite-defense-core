@@ -10,8 +10,9 @@ import type {
 } from "@/types/dashboard";
 
 // PERF-FIX: Increase polling intervals to reduce DB pressure (10s → 30s for primary, 5s → 15s stale)
-const REFETCH_INTERVAL = 30_000;
-const STALE_TIME = 15_000;
+// COST-OPT v8: 30s → 120s primary polling, 15s → 60s stale
+const REFETCH_INTERVAL = 120_000;
+const STALE_TIME = 60_000;
 
 async function fetchAgents(tenantId: string): Promise<DashboardAgent[]> {
   const { data, error } = await supabase.rpc('get_agents_list', {
