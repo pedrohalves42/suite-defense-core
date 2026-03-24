@@ -49,7 +49,7 @@ export default function PerformanceMetrics() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('performance_metrics')
-        .select('*')
+        .select('id, function_name, operation_type, duration_ms, status_code, error_message, created_at')
         .order('created_at', { ascending: false })
         .limit(100);
 

@@ -54,32 +54,21 @@ export const NotificationSystem = () => {
   useEffect(() => {
     if (!tenant?.id || loading) return;
 
-    // Subscribe to quarantined files
-    const quarantineChannel = supabase
-      .channel('quarantine-notifications')
+    // COST-OPT v10: Consolidate 4 realtime channels → 2 to reduce subscription overhead
+    // Channel 1: Security events (quarantine + virus scans)
+    const securityChannel = supabase
+      .channel(`security-notifications-${tenant.id}`)
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'quarantined_files',
-          filter: `tenant_id=eq.${tenant.id}`
-        },
+        { event: 'INSERT', schema: 'public', table: 'quarantined_files', filter: `tenant_id=eq.${tenant.id}` },
         (payload) => {
           const file = payload.new as QuarantinedFile;
-          toast.error(
-            `Arquivo Malicioso Detectado`,
-            {
-              description: `${file.file_path} no agente ${file.agent_name}`,
-              icon: <ShieldAlert className="h-5 w-5" />,
-              duration: 10000,
-              action: {
-                label: 'Ver Quarentena',
-                onClick: () => window.location.href = '/quarantine'
-              }
-            }
-          );
-          // Push notification for background alerts
+          toast.error(`Arquivo Malicioso Detectado`, {
+            description: `${file.file_path} no agente ${file.agent_name}`,
+            icon: <ShieldAlert className="h-5 w-5" />,
+            duration: 10000,
+            action: { label: 'Ver Quarentena', onClick: () => window.location.href = '/quarantine' }
+          });
           if (isGranted) {
             showNotification({
               title: '🛡️ Arquivo Malicioso Detectado',
@@ -90,53 +79,51 @@ export const NotificationSystem = () => {
           setQuarantineCount(prev => prev + 1);
         }
       )
-      .subscribe();
-
-    // Subscribe to agent status changes - use formal state machine
-    const agentsChannel = supabase
-      .channel('agents-notifications')
       .on(
         'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'agents',
-          filter: `tenant_id=eq.${tenant.id}`
-        },
+        { event: 'INSERT', schema: 'public', table: 'virus_scans', filter: `tenant_id=eq.${tenant.id}` },
+        (payload) => {
+          const scan = payload.new as RealtimeVirusScan;
+          if (scan.is_malicious && scan.positives > 0) {
+            toast.warning(`Ameaca Detectada`, {
+              description: `${scan.file_path} - ${scan.positives}/${scan.total_scans} deteccoes`,
+              icon: <FileWarning className="h-5 w-5" />,
+              duration: 8000
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    // Channel 2: Operations (agent state changes + failed jobs)
+    const opsChannel = supabase
+      .channel(`ops-notifications-${tenant.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'agents', filter: `tenant_id=eq.${tenant.id}` },
         (payload) => {
           const oldAgent = payload.old as Agent;
           const newAgent = payload.new as Agent;
-          
-          // Derive formal states
           const oldState = deriveAgentState(oldAgent);
           const newState = deriveAgentState(newAgent);
-          
-          // Only notify if state actually changed
           if (oldState === newState) return;
           
           const stateDesc = getStateDescription(newState);
           const notification = STATE_NOTIFICATIONS[newState];
-          
           if (!notification) return;
           
           const Icon = notification.icon;
-          
-          // Use appropriate toast type
           const toastFn = notification.type === 'success' ? toast.success
             : notification.type === 'error' ? toast.error
             : notification.type === 'warning' ? toast.warning
             : toast.info;
           
-          toastFn(
-            `${newAgent.agent_name}: ${stateDesc.label}`,
-            {
-              description: stateDesc.description,
-              icon: <Icon className="h-5 w-5" />,
-              duration: notification.type === 'error' ? 10000 : 6000
-            }
-          );
+          toastFn(`${newAgent.agent_name}: ${stateDesc.label}`, {
+            description: stateDesc.description,
+            icon: <Icon className="h-5 w-5" />,
+            duration: notification.type === 'error' ? 10000 : 6000
+          });
           
-          // Push notification for critical/error states
           if (isGranted && (notification.type === 'error' || notification.type === 'warning')) {
             showNotification({
               title: `⚠️ ${newAgent.agent_name}`,
@@ -146,70 +133,25 @@ export const NotificationSystem = () => {
           }
         }
       )
-      .subscribe();
-
-    // Subscribe to virus scans
-    const scansChannel = supabase
-      .channel('scans-notifications')
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'virus_scans',
-          filter: `tenant_id=eq.${tenant.id}`
-        },
-        (payload) => {
-          const scan = payload.new as RealtimeVirusScan;
-          
-          // Only notify for malicious files
-          if (scan.is_malicious && scan.positives > 0) {
-            toast.warning(
-              `Ameaca Detectada`,
-              {
-                description: `${scan.file_path} - ${scan.positives}/${scan.total_scans} deteccoes`,
-                icon: <FileWarning className="h-5 w-5" />,
-                duration: 8000
-              }
-            );
-          }
-        }
-      )
-      .subscribe();
-
-    // Subscribe to failed jobs
-    const jobsChannel = supabase
-      .channel('jobs-notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'jobs',
-          filter: `tenant_id=eq.${tenant.id}`
-        },
+        { event: 'UPDATE', schema: 'public', table: 'jobs', filter: `tenant_id=eq.${tenant.id}` },
         (payload) => {
           const job = payload.new as RealtimeJob;
-          
           if (job.status === 'failed') {
-            toast.error(
-              `Job Falhou`,
-              {
-                description: `${getJobTypeLabelNoEmoji(job.type)} no agente ${job.agent_name}`,
-                icon: <AlertTriangle className="h-5 w-5" />,
-                duration: 6000
-              }
-            );
+            toast.error(`Job Falhou`, {
+              description: `${getJobTypeLabelNoEmoji(job.type)} no agente ${job.agent_name}`,
+              icon: <AlertTriangle className="h-5 w-5" />,
+              duration: 6000
+            });
           }
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(quarantineChannel);
-      supabase.removeChannel(agentsChannel);
-      supabase.removeChannel(scansChannel);
-      supabase.removeChannel(jobsChannel);
+      supabase.removeChannel(securityChannel);
+      supabase.removeChannel(opsChannel);
     };
   }, [tenant?.id, loading, isGranted, showNotification]);
 
