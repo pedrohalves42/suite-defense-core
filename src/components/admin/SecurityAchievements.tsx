@@ -1,10 +1,8 @@
 import { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import {
-  Trophy, Shield, Server, Bell, Eye, FileCheck,
-  Brain, Lock, Zap, Star
+  Trophy, Shield, Server, Eye, Lock, Zap, Star
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -100,25 +98,23 @@ export function SecurityAchievements() {
   const overallProgress = Math.round((unlockedCount / achievements.length) * 100);
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-yellow-500" />
-            Conquistas de Segurança
-          </CardTitle>
-          <Badge variant="outline" className="text-[10px] gap-1 tabular-nums">
-            {unlockedCount}/{achievements.length} desbloqueadas
-          </Badge>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-2">
+          <Trophy className="h-4 w-4 text-yellow-500" />
+          <span className="text-xs font-semibold">Conquistas</span>
         </div>
-        <div className="flex items-center gap-3 mt-2">
-          <Progress value={overallProgress} className="h-1.5 flex-1" />
-          <span className="text-xs font-bold tabular-nums text-muted-foreground">
-            {overallProgress}%
-          </span>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2 pt-0">
+        <Badge variant="outline" className="text-[10px] gap-1 tabular-nums">
+          {unlockedCount}/{achievements.length}
+        </Badge>
+      </div>
+      <div className="flex items-center gap-3">
+        <Progress value={overallProgress} className="h-1.5 flex-1" />
+        <span className="text-xs font-bold tabular-nums text-muted-foreground">
+          {overallProgress}%
+        </span>
+      </div>
+      <div className="space-y-1.5">
         {achievements.map((achievement, i) => {
           const Icon = achievement.icon;
           const catStyle = CATEGORY_STYLES[achievement.category];
@@ -128,6 +124,7 @@ export function SecurityAchievements() {
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.06 }}
+              whileHover={{ scale: 1.01 }}
             >
               <div className={cn(
                 "flex items-center gap-3 p-2.5 rounded-lg border transition-all",
@@ -135,15 +132,22 @@ export function SecurityAchievements() {
                   ? cn(catStyle.border, catStyle.bg)
                   : "border-border/50 bg-muted/30 opacity-60"
               )}>
-                <div className={cn(
-                  "p-2 rounded-lg shrink-0",
-                  achievement.unlocked ? catStyle.bg : "bg-muted/50"
-                )}>
+                <motion.div
+                  className={cn(
+                    "p-2 rounded-lg shrink-0",
+                    achievement.unlocked ? catStyle.bg : "bg-muted/50"
+                  )}
+                  animate={achievement.unlocked ? {
+                    scale: [1, 1.15, 1],
+                    rotate: [0, 5, -5, 0],
+                  } : {}}
+                  transition={{ duration: 0.6, delay: i * 0.1 }}
+                >
                   <Icon className={cn(
                     "h-4 w-4",
                     achievement.unlocked ? catStyle.text : "text-muted-foreground"
                   )} />
-                </div>
+                </motion.div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className={cn(
@@ -153,7 +157,14 @@ export function SecurityAchievements() {
                       {achievement.title}
                     </span>
                     {achievement.unlocked && (
-                      <span className="text-[10px]">{catStyle.label}</span>
+                      <motion.span
+                        className="text-[10px]"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', delay: i * 0.1 + 0.3 }}
+                      >
+                        {catStyle.label}
+                      </motion.span>
                     )}
                   </div>
                   <p className="text-[11px] text-muted-foreground truncate">
@@ -167,7 +178,7 @@ export function SecurityAchievements() {
             </motion.div>
           );
         })}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -25,7 +25,8 @@ import { NotificationSetupBanner } from '@/components/admin/NotificationSetupBan
 import { OnboardingRequiredBanner } from '@/components/admin/OnboardingRequiredBanner';
 import { SimpleDashboard } from '@/components/dashboard/SimpleDashboard';
 import { GuidedTour } from '@/components/admin/GuidedTour';
-import { SecurityAchievements } from '@/components/admin/SecurityAchievements';
+import { GamificationHub } from '@/components/gamification/GamificationHub';
+import { XPLevelBar } from '@/components/gamification/XPLevelBar';
 import { FleetHealthDashboard } from '@/components/fleet/FleetHealthDashboard';
 import { useProactiveAlerts } from '@/hooks/useProactiveAlerts';
 import { useSimpleModeContext } from '@/hooks/useSimpleMode';
@@ -335,7 +336,15 @@ export default function Dashboard() {
         <FleetHealthDashboard />
       </motion.div>
 
-      {/* ═══ SEÇÃO 4.5: Assistente de Segurança + Conquistas ═══ */}
+      {/* ═══ SEÇÃO 4.5: XP Bar + Assistente + Gamificação ═══ */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.28, duration: 0.4 }}
+      >
+        <XPLevelBar />
+      </motion.div>
+
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -343,7 +352,7 @@ export default function Dashboard() {
         className="grid grid-cols-1 md:grid-cols-2 gap-4"
       >
         <SecurityAdvisorCard />
-        <SecurityAchievements />
+        <GamificationHub />
       </motion.div>
 
       {/* ═══ SEÇÃO 4.6: Status Ed25519 (super_admin only) ═══ */}
