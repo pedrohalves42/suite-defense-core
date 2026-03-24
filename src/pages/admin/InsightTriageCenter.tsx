@@ -57,7 +57,7 @@ export default function InsightTriageCenter() {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('ai_insights')
-        .select('*')
+        .select('id, insight_type, severity, title, description, evidence, suggested_action, created_at, acknowledged, dismissed_at')
         .eq('tenant_id', tenant.id)
         .eq('acknowledged', false)
         .is('dismissed_at', null)

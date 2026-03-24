@@ -16,7 +16,7 @@ export default function BuildHealthDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agent_builds')
-        .select('*')
+        .select('id, agent_id, tenant_id, build_status, build_started_at, build_completed_at, build_duration_seconds, error_message, exe_version, ps1_version, created_at')
         .order('created_at', { ascending: false })
         .limit(10);
 

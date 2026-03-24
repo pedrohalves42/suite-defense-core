@@ -70,7 +70,7 @@ export default function PlanUpgradeNew() {
       logger.debug('Fetching subscription plans');
       const { data, error } = await supabase
         .from('subscription_plans')
-        .select('*')
+        .select('id, name, max_users, max_agents, max_scans_per_month, price_per_device, features')
         .order('price_per_device', { ascending: true });
 
       if (error) {

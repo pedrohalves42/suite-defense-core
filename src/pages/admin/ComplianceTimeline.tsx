@@ -70,7 +70,7 @@ const ComplianceTimeline: React.FC = () => {
       
       const { data, error } = await supabase
         .from('agent_evidence_logs')
-        .select('*')
+        .select('id, agent_id, agent_name, agent_version, event_type, event_data, evidence_hash, severity, state_before, state_after, created_at, tenant_id')
         .eq('tenant_id', tenant.id)
         .gte('created_at', startDate.toISOString())
         .order('created_at', { ascending: false })

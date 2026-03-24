@@ -62,7 +62,7 @@ export default function ProblematicAgentsManager() {
       
       const { data, error } = await supabase
         .from('v_problematic_agents')
-        .select('*')
+        .select('id, agent_name, status, tenant_id, enrolled_at, last_heartbeat, agent_version, os_name, problems')
         .eq('tenant_id', tenant.id)
         .order('enrolled_at', { ascending: false });
       

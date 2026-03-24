@@ -68,7 +68,7 @@ export default function NotificationChannels() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('notification_channels')
-        .select('*')
+        .select('id, tenant_id, channel_type, name, config, is_active, is_verified, created_at')
         .eq('tenant_id', tenant!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
