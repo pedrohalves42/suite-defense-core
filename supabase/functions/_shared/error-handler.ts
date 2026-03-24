@@ -8,7 +8,7 @@ export interface StandardError {
   error: {
     code: string;
     message: string;
-    details?: any;
+    details?: unknown;
     timestamp: string;
     requestId?: string;
   };
@@ -29,7 +29,7 @@ export enum ErrorCode {
 export function createStandardError(
   code: string,
   message: string,
-  details?: any,
+  details?: unknown,
   requestId?: string
 ): StandardError {
   return {
@@ -113,7 +113,7 @@ export function handleException(
 
 export function createValidationError(
   message: string | ZodError,
-  details?: any,
+  details?: unknown,
   requestId?: string
 ): Response {
   let errorMessage: string;
