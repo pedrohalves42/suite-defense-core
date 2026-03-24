@@ -73,7 +73,7 @@ export default function AIAnomalies() {
     try {
       let query = supabase
         .from('ai_anomalies')
-        .select('*')
+        .select('id, tenant_id, anomaly_type, severity, description, detected_at, reviewed_at, reviewed_by, agent_id, agent_name, confidence_score, status')
         .eq('tenant_id', tenant.id)
         .order('detected_at', { ascending: false })
         .limit(100);

@@ -232,7 +232,7 @@ export default function NotificationSettings() {
         if (channelIds.length > 0) {
           const { data: prefsData } = await supabase
             .from('notification_preferences')
-            .select('*')
+            .select('id, channel_id, event_type, is_enabled, severity_filter, created_at')
             .in('channel_id', channelIds);
           
           if (prefsData) {

@@ -129,7 +129,7 @@ export default function DiagnosticsCenter() {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('v_problematic_agents')
-        .select('*')
+        .select('id, agent_name, hostname, os_type, status, agent_version, last_heartbeat, enrolled_at, issue_type, issue_details')
         .order('enrolled_at', { ascending: false });
 
       if (error) throw error;
