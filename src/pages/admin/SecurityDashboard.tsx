@@ -126,7 +126,8 @@ export default function SecurityDashboard() {
       if (error) throw error;
       return data as FailedAttempt[];
     },
-    refetchInterval: 120000, // COST-OPT: 10s → 2min
+    refetchInterval: 300_000, // COST-OPT v8
+    refetchIntervalInBackground: false,
     enabled: isSuperAdmin,
   });
 
