@@ -1,10 +1,8 @@
 import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import {
-  Trophy, Shield, Server, Bell, Eye, FileCheck,
-  Brain, Lock, Zap, Star
+  Trophy, Shield, Server, Eye, Lock, Zap, Star
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
