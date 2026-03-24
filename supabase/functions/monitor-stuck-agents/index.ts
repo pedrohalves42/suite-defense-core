@@ -33,12 +33,8 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // V-1128: Defense-in-depth auth guard for cron function
   const authError = assertInternalCaller(req);
   if (authError) return authError;
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
 
   try {
     logger.info(`[${requestId}] Starting stuck agents monitoring`);
