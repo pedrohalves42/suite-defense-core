@@ -43,7 +43,8 @@ export function JobsMonitor() {
           : 0
       })) as StuckJob[];
     },
-    refetchInterval: 120000, // COST-OPT: 30s → 2min
+    refetchInterval: 120000,
+    refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
   });
 
   const cancelJob = useMutation({

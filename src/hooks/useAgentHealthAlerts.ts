@@ -65,6 +65,7 @@ export function useAgentExecutionHealth() {
     },
     enabled: !loading && !!tenant?.id,
     refetchInterval: 300000,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -88,6 +89,7 @@ export function useUnhealthyAgents() {
     },
     enabled: !loading && !!tenant?.id,
     refetchInterval: 300000,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -113,6 +115,7 @@ export function useNonExecutionAlerts() {
     },
     enabled: !loading && !!tenant?.id,
     refetchInterval: 300000,
+    refetchIntervalInBackground: false,
   });
 }
 

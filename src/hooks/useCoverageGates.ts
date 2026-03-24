@@ -31,6 +31,7 @@ export function useCoverageGates() {
       return data as unknown as CoverageResult;
     },
     enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
   });
 }

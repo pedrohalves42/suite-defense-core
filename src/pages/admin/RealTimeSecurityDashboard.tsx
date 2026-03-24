@@ -149,6 +149,7 @@ export default function RealTimeSecurityDashboard() {
       };
     },
     enabled: !!tenant?.id, refetchInterval: 120000,
+    refetchIntervalInBackground: false,
   });
 
   const { data: blockedStats, refetch: refetchBlocked } = useQuery({
@@ -161,6 +162,7 @@ export default function RealTimeSecurityDashboard() {
       return { today: count || 0 };
     },
     enabled: !!tenant?.id, refetchInterval: 120000,
+    refetchIntervalInBackground: false,
   });
 
   const { data: approvalStats, refetch: refetchApprovals } = useQuery({
@@ -178,6 +180,7 @@ export default function RealTimeSecurityDashboard() {
       };
     },
     enabled: !!tenant?.id, refetchInterval: 120000,
+    refetchIntervalInBackground: false,
   });
 
   const { data: agentStats, refetch: refetchAgents } = useQuery({
@@ -205,6 +208,7 @@ export default function RealTimeSecurityDashboard() {
     },
     enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   const { data: recentLogs } = useQuery({
@@ -216,6 +220,7 @@ export default function RealTimeSecurityDashboard() {
       return data || [];
     },
     enabled: !!tenant?.id, refetchInterval: 120000,
+    refetchIntervalInBackground: false,
   });
 
   // Transform logs

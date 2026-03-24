@@ -63,7 +63,8 @@ export default function AgentHealthMonitor() {
       return data;
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300000, // COST-OPT: 30s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
   });
 
   // Realtime subscription for heartbeats

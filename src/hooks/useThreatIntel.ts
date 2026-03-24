@@ -16,7 +16,8 @@ export function useThreatIntelStats() {
       return data as unknown as ThreatIntelStats;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000, // COST-OPT: 60s → 5min (threat intel feeds sync hourly)
+    refetchInterval: 300_000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min (threat intel feeds sync hourly)
     staleTime: 60_000,
   });
 }

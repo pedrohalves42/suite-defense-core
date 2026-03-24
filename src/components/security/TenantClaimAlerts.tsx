@@ -68,7 +68,8 @@ export function TenantClaimAlerts() {
         last_period: rows[0]?.period || null
       };
     },
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
   });
 
   const hasCriticalIssues = (claimHealth?.total_missing_24h || 0) > 0 || 

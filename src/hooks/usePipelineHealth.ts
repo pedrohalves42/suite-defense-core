@@ -74,6 +74,7 @@ export function usePipelineHealth(
     queryKey: ['pipeline-health', tenantId],
     enabled: enabled && !!tenantId,
     refetchInterval: refetchIntervalMs,
+    refetchIntervalInBackground: false,
     staleTime: 30000,
     queryFn: async (): Promise<PipelineHealth> => {
       if (!tenantId) throw new Error('tenantId is required');

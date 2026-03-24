@@ -52,7 +52,8 @@ function usePendingCriticalApprovals() {
       return (data || []) as unknown as PendingApproval[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000, // COST-OPT: 15s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 15s → 5min
   });
 }
 

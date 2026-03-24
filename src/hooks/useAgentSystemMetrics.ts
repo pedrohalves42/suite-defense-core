@@ -36,7 +36,8 @@ export function useAgentSystemMetrics(agentId: string | undefined) {
     },
     enabled: !tenantLoading && !!activeTenant?.id && !!agentId, // P0 CRIT-02: Race condition fix
     staleTime: 30000,
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
   });
 }
 
@@ -80,6 +81,7 @@ export function useAgentsSystemMetrics(agentIds: string[]) {
     },
     enabled: !tenantLoading && !!activeTenant?.id && agentIds.length > 0, // P0 CRIT-02: Race condition fix
     staleTime: 30000,
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
   });
 }

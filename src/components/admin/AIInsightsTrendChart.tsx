@@ -39,6 +39,7 @@ export function AIInsightsTrendChart() {
     },
     enabled: !!tenant?.id,
     refetchInterval: 120000,
+    refetchIntervalInBackground: false,
   });
 
   const chartData = useMemo(() => {

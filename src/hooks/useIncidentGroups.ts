@@ -68,7 +68,8 @@ export const useIncidentGroups = (limit = 50) => {
       })) as IncidentGroup[];
     },
     enabled: !loading && !!activeTenant?.id, // ADR-030 CRIT-01
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
     staleTime: 30000,
   });
 };

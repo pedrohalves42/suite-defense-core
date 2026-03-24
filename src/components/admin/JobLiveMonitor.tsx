@@ -143,7 +143,8 @@ export function JobLiveMonitor({
       return (data || []) as LiveJob[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000, // COST-OPT: 60s → 5min (fallback)
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min (fallback)
   });
   
   // Merge initial jobs with realtime updates

@@ -112,7 +112,8 @@ export const useJobAnomalies = () => {
       }));
     },
     enabled: !loading && !!activeTenant?.id,  // ADR-029 CRIT-04: Guard with loading state
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
     staleTime: 30000,
   });
 

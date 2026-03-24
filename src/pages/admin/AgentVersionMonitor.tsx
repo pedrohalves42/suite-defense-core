@@ -46,7 +46,8 @@ export default function AgentVersionMonitor() {
       );
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000, // COST-OPT: 30s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
   });
 
   const { data: latestRelease } = useQuery({

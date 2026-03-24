@@ -220,7 +220,8 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
       };
     },
     enabled: !!agentId && !tenantLoading && !!effectiveTenantId,
-    refetchInterval: 300000, // COST-OPT: 30s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });

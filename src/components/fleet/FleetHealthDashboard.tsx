@@ -72,6 +72,7 @@ export function FleetHealthDashboard() {
     },
     enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   // Realtime subscription
