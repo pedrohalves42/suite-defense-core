@@ -103,7 +103,7 @@ export const useForensicSnapshotById = (snapshotId: string) => {
       
       const { data, error } = await supabase
         .from('forensic_snapshots')
-        .select('*')
+        .select('id, tenant_id, agent_id, snapshot_type, snapshot_data, trigger_event, created_at')
         .eq('id', snapshotId)
         .maybeSingle();
 

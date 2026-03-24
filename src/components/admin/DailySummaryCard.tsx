@@ -57,14 +57,15 @@ export function DailySummaryCard() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayISO = today.toISOString();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tables not in generated types
       const sb = supabase as any;
 
       // Parallel fetches for today's data
       const [jobsRes, blockedRes, actionsRes, alertsRes] = await Promise.all([
         sb.from('jobs').select('status').eq('tenant_id', tenant.id).gte('created_at', todayISO),
-        sb.from('blocked_access_attempts').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('attempted_at', todayISO),
+        sb.from('blocked_access_attempts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('attempted_at', todayISO),
         sb.from('autonomy_actions').select('action_type, status').eq('tenant_id', tenant.id).gte('created_at', todayISO),
-        sb.from('system_alerts').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('created_at', todayISO),
+        sb.from('system_alerts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('created_at', todayISO),
       ]);
 
       const jobs: Array<{ status: string }> = jobsRes.data || [];

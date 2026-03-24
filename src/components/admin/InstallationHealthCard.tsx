@@ -34,11 +34,11 @@ export function InstallationHealthCard() {
     setError(null);
     
     try {
-      const { data: result, error: fetchError } = await supabase
-        .rpc('installation_health_summary' as any) as { 
+      const { data: result, error: fetchError } = await (supabase
+        .rpc('installation_health_summary') as unknown as Promise<{ 
           data: HealthRow[] | null; 
-          error: any 
-        };
+          error: { message: string } | null 
+        }>);
 
       if (fetchError) {
         logger.error('[InstallationHealthCard] Error fetching health:', fetchError);
