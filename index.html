@@ -73,25 +73,66 @@
       "applicationCategory": "SecurityApplication",
       "operatingSystem": "Windows, macOS, Linux",
       "offers": {
-        "@type": "Offer",
-        "price": "249",
+        "@type": "AggregateOffer",
+        "lowPrice": "499",
+        "highPrice": "1499",
         "priceCurrency": "BRL",
-        "priceValidUntil": "2026-12-31"
+        "offerCount": "3"
       },
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": "4.8",
-        "ratingCount": "150"
+        "ratingCount": "150",
+        "bestRating": "5"
       },
       "provider": {
         "@type": "Organization",
         "name": "CyberShield",
+        "url": "https://cybershield.com.br",
+        "logo": "https://cybershield.com.br/favicon-cybshield.png",
         "address": {
           "@type": "PostalAddress",
           "addressCountry": "BR"
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "sales",
+          "availableLanguage": ["Portuguese", "English", "Spanish"]
         }
       },
-      "description": "Plataforma de seguranca cibernetica para PMEs brasileiras com antivirus, monitoramento 24/7 e compliance LGPD."
+      "description": "Plataforma de ciberseguranca corporativa para PMEs brasileiras. Monitoramento 24/7, compliance LGPD automatizado e gestao centralizada de vulnerabilidades."
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Preciso instalar em todos os computadores?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Nao. O diagnostico inicial funciona com poucos dispositivos para mapear riscos reais."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Funciona sem equipe de TI?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sim. O laudo ja vem com prioridades claras e acoes recomendadas."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Funciona com Mac e Linux?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sim! O CyberShield funciona em Windows, Mac e Linux."
+          }
+        }
+      ]
     }
     </script>
   </head>
