@@ -137,9 +137,9 @@ export function useGamification() {
         if ((existingEvents || 0) > 0) return;
 
         // Count agents enrolled by this tenant
-        const { count: agentCount } = await supabase
-          .rpc('get_agents_list', { p_tenant_id: tenantId })
-          .select('*', { count: 'exact', head: true } as any);
+        const agentsRes = await supabase
+          .rpc('get_agents_list', { p_tenant_id: tenantId });
+        const agentCount = (agentsRes.data as any[] || []).length;
 
         // Count resolved alerts
         const { count: resolvedAlerts } = await supabase
