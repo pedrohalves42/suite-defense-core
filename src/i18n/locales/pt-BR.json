@@ -177,23 +177,70 @@
     "encryption": "Criptografia"
   },
   "landing": {
+    "unifiedPlatform": {
+      "title": "Pare de pagar por 3 ferramentas que não se conversam",
+      "subtitle": "RMM + EDR + Compliance em uma única plataforma — sem integrações, sem duplicidade, sem surpresas na fatura",
+      "before": "❌ ANTES: 3 ferramentas separadas",
+      "after": "✅ AGORA: CyberShield tudo-em-um",
+      "oldTools": {
+        "0": "RMM — Gestão remota de endpoints",
+        "1": "Antivírus/EDR — Detecção de ameaças",
+        "2": "Compliance — Relatórios e evidências"
+      },
+      "oldCosts": {
+        "0": "~R$30/mês por PC",
+        "1": "~R$25/mês por PC",
+        "2": "~R$20/mês por PC"
+      },
+      "totalLabel": "Custo por endpoint/mês",
+      "totalOld": "~R$75/mês",
+      "painPoints": {
+        "0": "3 consoles diferentes para gerenciar",
+        "1": "Dados isolados sem correlação",
+        "2": "Integrações quebram a cada atualização"
+      },
+      "productName": "CyberShield",
+      "productTagline": "RMM + EDR + MDR unificado",
+      "fromLabel": "A partir de",
+      "price": "R$49,90/endpoint/mês",
+      "advantages": {
+        "0": "Um painel único para tudo",
+        "1": "Dados correlacionados automaticamente",
+        "2": "Zero integrações para manter",
+        "3": "Economia de até 35% vs ferramentas separadas"
+      },
+      "capabilities": {
+        "0": {
+          "title": "Gestão Remota (RMM)",
+          "description": "Inventário de software, métricas de hardware, execução remota de tarefas, auto-update silencioso e rollback automático em todos os endpoints."
+        },
+        "1": {
+          "title": "Detecção de Ameaças (EDR)",
+          "description": "51 regras MITRE ATT&CK monitorando processos, registro e rede em tempo real. Cadeia de evidências SHA-256 imutável para cada detecção."
+        },
+        "2": {
+          "title": "Resposta Gerenciada (MDR)",
+          "description": "Quarentena automática, remediação com Blast Radius controlado, filtro DNS corporativo e governança de automação com Circuit Breaker."
+        }
+      }
+    },
     "hero": {
-      "badge": "🇧🇷 Plataforma Brasileira de Cibersegurança Corporativa",
-      "title1": "Visibilidade total sobre riscos cibernéticos da sua operação",
-      "title2": "— proteção contínua a partir de R$1,66/dia por dispositivo.",
-      "description": "82% das PMEs brasileiras que sofrem ataques encerram operações em até 12 meses.",
-      "descriptionBold": "Identifique vulnerabilidades antes que se tornem incidentes — avaliação inicial sem custo em até 48h.",
+      "badge": "🇧🇷 RMM + EDR + Compliance — Plataforma Unificada",
+      "title1": "Chega de pagar 3 ferramentas para proteger sua empresa",
+      "title2": "— gestão, detecção e compliance em um único agente.",
+      "description": "PMEs brasileiras gastam em média R$75/mês por endpoint com ferramentas fragmentadas que não se integram. ",
+      "descriptionBold": "CyberShield unifica tudo a partir de R$49,90 — com avaliação gratuita em 48h.",
       "ctaButton": "Solicitar avaliação gratuita",
       "ctaSecondary": "Falar com um especialista",
       "reassurance": "Sem compromisso • Sem cartão de crédito • Resultado em até 48h • Atendimento em português",
       "stats": {
         "0": {
-          "value": "até 48h",
-          "label": "Avaliação inicial gratuita"
+          "value": "3-em-1",
+          "label": "RMM + EDR + MDR unificado"
         },
         "1": {
-          "value": "24/7",
-          "label": "Monitoramento contínuo"
+          "value": "até 35%",
+          "label": "Economia vs ferramentas separadas"
         },
         "2": {
           "value": "100%",
@@ -201,10 +248,10 @@
         }
       },
       "benefits": {
-        "0": "Conformidade LGPD automatizada",
-        "1": "Suporte técnico em português",
-        "2": "Faturamento em reais com nota fiscal",
-        "3": "Padrões ISO 27001 e NIST"
+        "0": "Um painel único — sem alternar entre ferramentas",
+        "1": "Conformidade LGPD automatizada com evidências",
+        "2": "Suporte técnico em português",
+        "3": "Faturamento em reais com nota fiscal"
       }
     },
     "targetAudience": {
@@ -446,8 +493,8 @@
     },
     "pricing": {
       "badge": "Teste gratuito por 14 dias",
-      "title": "Segurança corporativa acessível para qualquer porte",
-      "subtitle": "Inventário, antivírus, vulnerabilidades, atividade web e desempenho — gestão unificada com agente de baixo impacto.",
+      "title": "Uma plataforma, um preço — RMM + EDR + Compliance incluídos",
+      "subtitle": "Pare de pagar separado por inventário, antivírus e relatórios. CyberShield entrega tudo com um único agente leve.",
       "plans": {
         "starter": {
           "name": "Starter Compliance",
@@ -569,10 +616,10 @@
       "label": "Quantos dispositivos sua empresa possui?"
     },
     "ctaFinal": {
-      "title": "Cada dia sem visibilidade é um dia de exposição desnecessária",
-      "cta": "Solicitar avaliação de segurança gratuita",
+      "title": "Cada dia usando 3 ferramentas separadas é dinheiro desperdiçado e risco acumulado",
+      "cta": "Unificar minha segurança agora",
       "ctaSecondary": "Agendar reunião com especialista (15 min)",
-      "subtitle": "Sem compromisso • Resultado em até 48h • Mais de 500 organizações avaliadas"
+      "subtitle": "Sem compromisso • RMM + EDR + Compliance em um só lugar • Resultado em até 48h"
     },
     "contact": {
       "title": "Fale Conosco"

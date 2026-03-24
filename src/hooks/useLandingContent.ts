@@ -15,6 +15,44 @@ export function useLandingContent() {
   const { t } = useTranslation();
 
   return useMemo(() => ({
+    unifiedPlatform: {
+      title: t('landing.unifiedPlatform.title'),
+      subtitle: t('landing.unifiedPlatform.subtitle'),
+      before: t('landing.unifiedPlatform.before'),
+      after: t('landing.unifiedPlatform.after'),
+      oldTools: [
+        t('landing.unifiedPlatform.oldTools.0'),
+        t('landing.unifiedPlatform.oldTools.1'),
+        t('landing.unifiedPlatform.oldTools.2'),
+      ],
+      oldCosts: [
+        t('landing.unifiedPlatform.oldCosts.0'),
+        t('landing.unifiedPlatform.oldCosts.1'),
+        t('landing.unifiedPlatform.oldCosts.2'),
+      ],
+      totalLabel: t('landing.unifiedPlatform.totalLabel'),
+      totalOld: t('landing.unifiedPlatform.totalOld'),
+      painPoints: [
+        t('landing.unifiedPlatform.painPoints.0'),
+        t('landing.unifiedPlatform.painPoints.1'),
+        t('landing.unifiedPlatform.painPoints.2'),
+      ],
+      productName: t('landing.unifiedPlatform.productName'),
+      productTagline: t('landing.unifiedPlatform.productTagline'),
+      fromLabel: t('landing.unifiedPlatform.fromLabel'),
+      price: t('landing.unifiedPlatform.price'),
+      advantages: [
+        t('landing.unifiedPlatform.advantages.0'),
+        t('landing.unifiedPlatform.advantages.1'),
+        t('landing.unifiedPlatform.advantages.2'),
+        t('landing.unifiedPlatform.advantages.3'),
+      ],
+      capabilities: [
+        { emoji: "🖥️", badge: "RMM", title: t('landing.unifiedPlatform.capabilities.0.title'), description: t('landing.unifiedPlatform.capabilities.0.description') },
+        { emoji: "🛡️", badge: "EDR", title: t('landing.unifiedPlatform.capabilities.1.title'), description: t('landing.unifiedPlatform.capabilities.1.description') },
+        { emoji: "⚡", badge: "MDR", title: t('landing.unifiedPlatform.capabilities.2.title'), description: t('landing.unifiedPlatform.capabilities.2.description') },
+      ],
+    },
     hero: {
       badge: t('landing.hero.badge'),
       title1: t('landing.hero.title1'),

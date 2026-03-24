@@ -177,23 +177,70 @@
     "encryption": "Encryption"
   },
   "landing": {
+    "unifiedPlatform": {
+      "title": "Stop paying for 3 tools that don't talk to each other",
+      "subtitle": "RMM + EDR + Compliance in a single platform — no integrations, no duplication, no billing surprises",
+      "before": "❌ BEFORE: 3 separate tools",
+      "after": "✅ NOW: CyberShield all-in-one",
+      "oldTools": {
+        "0": "RMM — Remote endpoint management",
+        "1": "Antivirus/EDR — Threat detection",
+        "2": "Compliance — Reports & evidence"
+      },
+      "oldCosts": {
+        "0": "~$8/mo per PC",
+        "1": "~$6/mo per PC",
+        "2": "~$5/mo per PC"
+      },
+      "totalLabel": "Cost per endpoint/month",
+      "totalOld": "~$19/mo",
+      "painPoints": {
+        "0": "3 different consoles to manage",
+        "1": "Isolated data with no correlation",
+        "2": "Integrations break with every update"
+      },
+      "productName": "CyberShield",
+      "productTagline": "Unified RMM + EDR + MDR",
+      "fromLabel": "Starting at",
+      "price": "$9.90/endpoint/mo",
+      "advantages": {
+        "0": "One single dashboard for everything",
+        "1": "Data automatically correlated",
+        "2": "Zero integrations to maintain",
+        "3": "Save up to 35% vs separate tools"
+      },
+      "capabilities": {
+        "0": {
+          "title": "Remote Management (RMM)",
+          "description": "Software inventory, hardware metrics, remote task execution, silent auto-update and automatic rollback across all endpoints."
+        },
+        "1": {
+          "title": "Threat Detection (EDR)",
+          "description": "51 MITRE ATT&CK rules monitoring processes, registry and network in real-time. Immutable SHA-256 evidence chain for every detection."
+        },
+        "2": {
+          "title": "Managed Response (MDR)",
+          "description": "Automatic quarantine, remediation with controlled Blast Radius, corporate DNS filter and automation governance with Circuit Breaker."
+        }
+      }
+    },
     "hero": {
-      "badge": "🛡️ Enterprise-Grade Cybersecurity Platform",
-      "title1": "Complete visibility over your organization's cyber risks",
-      "title2": "— continuous protection starting at $1.66/day per device.",
-      "description": "82% of attacked SMBs cease operations within 12 months.",
-      "descriptionBold": "Identify vulnerabilities before they become incidents — free assessment within 48h.",
+      "badge": "🛡️ Unified RMM + EDR + Compliance Platform",
+      "title1": "Stop paying for 3 tools to protect your business",
+      "title2": "— management, detection and compliance in a single agent.",
+      "description": "SMBs spend on average $19/month per endpoint on fragmented tools that don't integrate. ",
+      "descriptionBold": "CyberShield unifies everything starting at $9.90 — with a free assessment in 48h.",
       "ctaButton": "Request free assessment",
       "ctaSecondary": "Talk to a specialist",
       "reassurance": "No commitment • No credit card • Results in 48h • Full support",
       "stats": {
         "0": {
-          "value": "within 48h",
-          "label": "Free initial assessment"
+          "value": "3-in-1",
+          "label": "Unified RMM + EDR + MDR"
         },
         "1": {
-          "value": "24/7",
-          "label": "Continuous monitoring"
+          "value": "up to 35%",
+          "label": "Savings vs separate tools"
         },
         "2": {
           "value": "100%",
@@ -201,10 +248,10 @@
         }
       },
       "benefits": {
-        "0": "Automated regulatory compliance",
-        "1": "Dedicated support team",
-        "2": "Transparent pricing with invoicing",
-        "3": "ISO 27001 & NIST standards"
+        "0": "One dashboard — no switching between tools",
+        "1": "Automated compliance with evidence",
+        "2": "Dedicated support team",
+        "3": "Transparent pricing with invoicing"
       }
     },
     "targetAudience": {
