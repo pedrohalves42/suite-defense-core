@@ -126,13 +126,13 @@ export function useDashboardQueries() {
   const agentTokens = useQuery({
     queryKey: ["dashboard", "tokens", tenantId],
     queryFn: () => fetchTokens(tenantId!),
-    ...queryOpts, refetchInterval: 30_000,
+    ...queryOpts, refetchInterval: 300_000, // COST-OPT v8: tokens rarely change
   });
 
   const rateLimits = useQuery({
     queryKey: ["dashboard", "rateLimits", tenantId],
     queryFn: () => fetchRateLimits(tenantId!),
-    ...queryOpts, refetchInterval: 30_000,
+    ...queryOpts, refetchInterval: 300_000, // COST-OPT v8: rate limits rarely change
   });
 
   const virusScans = useQuery({
