@@ -108,7 +108,7 @@ export function useScheduledJobsHealth() {
   // Trigger health monitor manually
   const triggerMonitor = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('job-health-monitor');
+      const { data, error } = await supabase.functions.invoke('health-monitor');
       if (error) throw error;
       return data;
     },
