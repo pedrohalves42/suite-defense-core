@@ -80,7 +80,7 @@ export function useRedTeamById(id: string | null) {
       if (!id) return null;
       const { data, error } = await supabase
         .from('red_team_assessments')
-        .select('*')
+        .select('id, tenant_id, assessment_type, status, overall_score, findings, recommendations, attack_vectors_tested, vulnerabilities_found, created_at, completed_at, created_by, ai_model')
         .eq('id', id)
         .maybeSingle();
 

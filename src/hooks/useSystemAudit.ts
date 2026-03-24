@@ -100,7 +100,7 @@ export function useAuditById(auditId: string | null) {
       
       const { data, error } = await supabase
         .from('system_audits')
-        .select('*')
+        .select('id, tenant_id, created_at, created_by, overall_score, score_system_identity, score_control_vs_monitor, score_evidence_proof, score_maturity, score_failure_handling, score_limitations, score_operational_trust, score_market_value, score_simplicity, analysis_system_identity, analysis_control_vs_monitor, analysis_evidence_proof, analysis_maturity, analysis_failure_handling, analysis_limitations, analysis_operational_trust, analysis_market_value, analysis_simplicity, executive_summary, final_sentence, recommendation, metrics_snapshot, ai_model, prompt_hash, tokens_used')
         .eq('id', auditId)
         .maybeSingle();
 

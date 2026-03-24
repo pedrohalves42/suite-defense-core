@@ -70,7 +70,7 @@ export function useDecisionEventDetail(eventId: string | null) {
       // V-1037 FIX: Add tenant_id filter
       const { data, error } = await supabase
         .from('decision_events')
-        .select('*')
+        .select('id, tenant_id, rule_code, agent_id, agent_name, action, evidence, actions_executed, decision_source, decision_type, created_at')
         .eq('id', eventId)
         .eq('tenant_id', tenant.id)
         .maybeSingle();
