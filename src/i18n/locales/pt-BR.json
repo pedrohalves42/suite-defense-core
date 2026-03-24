@@ -493,8 +493,8 @@
     },
     "pricing": {
       "badge": "Teste gratuito por 14 dias",
-      "title": "Segurança corporativa acessível para qualquer porte",
-      "subtitle": "Inventário, antivírus, vulnerabilidades, atividade web e desempenho — gestão unificada com agente de baixo impacto.",
+      "title": "Uma plataforma, um preço — RMM + EDR + Compliance incluídos",
+      "subtitle": "Pare de pagar separado por inventário, antivírus e relatórios. CyberShield entrega tudo com um único agente leve.",
       "plans": {
         "starter": {
           "name": "Starter Compliance",
@@ -616,10 +616,10 @@
       "label": "Quantos dispositivos sua empresa possui?"
     },
     "ctaFinal": {
-      "title": "Cada dia sem visibilidade é um dia de exposição desnecessária",
-      "cta": "Solicitar avaliação de segurança gratuita",
+      "title": "Cada dia usando 3 ferramentas separadas é dinheiro desperdiçado e risco acumulado",
+      "cta": "Unificar minha segurança agora",
       "ctaSecondary": "Agendar reunião com especialista (15 min)",
-      "subtitle": "Sem compromisso • Resultado em até 48h • Mais de 500 organizações avaliadas"
+      "subtitle": "Sem compromisso • RMM + EDR + Compliance em um só lugar • Resultado em até 48h"
     },
     "contact": {
       "title": "Fale Conosco"
