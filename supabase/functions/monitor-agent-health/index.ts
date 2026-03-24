@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     // Get all agents and their last heartbeat
     const { data: agents, error: agentsError } = await supabase
       .from('agents')
-      .select('*')
+      .select('id, agent_name, status, tenant_id, last_heartbeat, is_isolated, safe_mode_reason')
       .eq('status', 'active');
 
     if (agentsError) throw agentsError;

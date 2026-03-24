@@ -347,7 +347,20 @@ export function serveAgent(handler: AgentHandler) {
 
       let body: any = {};
       if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-        try { body = await req.json(); } catch { body = {}; }
+        try {
+          const contentEncoding = req.headers.get('Content-Encoding');
+          if (contentEncoding === 'gzip') {
+            // COST-OPT v10: Decompress gzip payloads from agents (~30% bandwidth savings)
+            const compressed = await req.arrayBuffer();
+            const ds = new DecompressionStream('gzip');
+            const decompressed = new Response(
+              new Blob([compressed]).stream().pipeThrough(ds)
+            );
+            body = await decompressed.json();
+          } else {
+            body = await req.json();
+          }
+        } catch { body = {}; }
       }
 
       const ctx: AgentContext = {
