@@ -11,6 +11,7 @@ import { AppLayout } from "./components/AppLayout";
 import { ClientLayout } from "./components/client/ClientLayout";
 import { CookieConsent } from "./components/CookieConsent";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { RouteErrorBoundary } from "./components/RouteErrorBoundary";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 import { Server } from "lucide-react";
 
