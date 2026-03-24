@@ -55,7 +55,7 @@ export default function PlanUpgrade() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('subscription_plans')
-        .select('id, name, max_users, max_agents, max_scans_per_month, price_per_device, features')
+        .select('id, name, max_users, max_agents, max_scans_per_month, price_per_device')
         .order('max_users', { ascending: true });
 
       if (error) throw error;
