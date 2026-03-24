@@ -10,6 +10,17 @@ vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     rpc: (...args: unknown[]) => mockRpc(...args),
     functions: { invoke: (...args: unknown[]) => mockInvoke(...args) },
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          order: vi.fn(() => ({
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+          })),
+        })),
+      })),
+    })),
+    channel: vi.fn(() => ({ on: vi.fn().mockReturnThis(), subscribe: vi.fn().mockReturnThis() })),
+    removeChannel: vi.fn(),
   },
 }));
 
@@ -19,6 +30,17 @@ vi.mock('sonner', () => ({
 
 vi.mock('@/lib/logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock('@/hooks/useTenant', () => ({
+  useTenant: () => ({
+    tenant: { id: 'tenant-abc', name: 'Test' },
+    loading: false,
+  }),
+}));
+
+vi.mock('@/hooks/useOnlineStatus', () => ({
+  useOnlineStatus: () => ({ isOnline: true }),
 }));
 
 import { useScheduledJobsHealth } from '../useScheduledJobsHealth';
