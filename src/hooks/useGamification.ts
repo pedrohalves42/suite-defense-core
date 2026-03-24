@@ -3,6 +3,7 @@
  * Gerencia XP, níveis, streaks, desafios e leaderboard
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useAuth } from '@/hooks/useAuth';
@@ -82,6 +83,9 @@ export function useGamification() {
   const tenantId = tenant?.id;
   const userId = user?.id;
 
+  // Retroactive XP sync — awards XP for things already done when profile is new (0 XP)
+  const retroSyncDone = useRef(false);
+
   const { data: profile, isLoading } = useQuery({
     queryKey: ['gamification-profile', userId, tenantId],
     queryFn: async () => {
@@ -110,6 +114,107 @@ export function useGamification() {
     },
     enabled: !!userId && !!tenantId,
   });
+
+  // Retroactive sync: award XP for actions already completed when profile is fresh (0 XP)
+  useEffect(() => {
+    if (retroSyncDone.current || !profile || !userId || !tenantId) return;
+    if (profile.xp > 0) {
+      retroSyncDone.current = true;
+      return;
+    }
+
+    retroSyncDone.current = true;
+
+    (async () => {
+      try {
+        // Check existing XP events — if any exist, skip (profile was reset, not new)
+        const { count: existingEvents } = await supabase
+          .from('xp_events')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('tenant_id', tenantId);
+
+        if ((existingEvents || 0) > 0) return;
+
+        // Count agents enrolled by this tenant
+        const agentsRes = await supabase
+          .rpc('get_agents_list', { p_tenant_id: tenantId });
+        const agentCount = (agentsRes.data as any[] || []).length;
+
+        // Count resolved alerts
+        const { count: resolvedAlerts } = await supabase
+          .from('system_alerts')
+          .select('*', { count: 'exact', head: true })
+          .eq('tenant_id', tenantId)
+          .in('status', ['resolved', 'closed']);
+
+        let totalXP = 0;
+        const events: Array<{ user_id: string; tenant_id: string; action: string; xp_earned: number; description: string }> = [];
+
+        const numAgents = agentCount;
+        if (numAgents > 0) {
+          const xp = Math.min(numAgents, 10) * XP_REWARDS.enroll_agent.xp;
+          totalXP += xp;
+          events.push({
+            user_id: userId,
+            tenant_id: tenantId,
+            action: 'retro_agents',
+            xp_earned: xp,
+            description: `Retroativo: ${numAgents} agente(s) já instalado(s)`,
+          });
+        }
+
+        const numResolved = resolvedAlerts || 0;
+        if (numResolved > 0) {
+          const xp = Math.min(numResolved, 20) * XP_REWARDS.resolve_alert.xp;
+          totalXP += xp;
+          events.push({
+            user_id: userId,
+            tenant_id: tenantId,
+            action: 'retro_alerts',
+            xp_earned: xp,
+            description: `Retroativo: ${numResolved} alerta(s) já resolvido(s)`,
+          });
+        }
+
+        // Daily login bonus
+        totalXP += XP_REWARDS.daily_login.xp;
+        events.push({
+          user_id: userId,
+          tenant_id: tenantId,
+          action: 'daily_login',
+          xp_earned: XP_REWARDS.daily_login.xp,
+          description: XP_REWARDS.daily_login.label,
+        });
+
+        if (events.length > 0) {
+          await supabase.from('xp_events').insert(events);
+
+          const newLevel = getLevelFromXP(totalXP);
+          await supabase
+            .from('user_gamification')
+            .update({
+              xp: totalXP,
+              level: newLevel.level,
+              level_title: newLevel.title,
+              current_streak: 1,
+              last_streak_date: new Date().toISOString().split('T')[0],
+              updated_at: new Date().toISOString(),
+            })
+            .eq('user_id', userId)
+            .eq('tenant_id', tenantId);
+
+          queryClient.invalidateQueries({ queryKey: ['gamification-profile'] });
+          queryClient.invalidateQueries({ queryKey: ['xp-history'] });
+          queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+
+          toast.success(`🎮 +${totalXP} XP retroativo concedido!`, { duration: 5000, icon: '⚡' });
+        }
+      } catch (err) {
+        console.error('[Gamification] Retro sync failed:', err);
+      }
+    })();
+  }, [profile, userId, tenantId]);
 
   const { data: xpHistory } = useQuery({
     queryKey: ['xp-history', userId, tenantId],
