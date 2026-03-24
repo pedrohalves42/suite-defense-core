@@ -164,7 +164,7 @@ export default function SOC2Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {SOC2_TRUST_CRITERIA.map((criteria) => {
               const data = readinessData?.find(d => d.criteriaCode === criteria.code);
-              const score = data?.readinessScore || 85;
+              const score = data?.readinessScore ?? 0;
               return (
                 <Card key={criteria.code}>
                   <CardHeader className="pb-2">
