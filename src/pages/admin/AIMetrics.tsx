@@ -49,7 +49,8 @@ export default function AIMetrics() {
       if (error) throw error;
       return data as AIMetric[];
     },
-    refetchInterval: 300000, // COST-OPT: 30s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
   });
   
   // Calculate summary stats

@@ -28,6 +28,7 @@ export function useCriticalInsights() {
     },
     enabled: !loading && !!activeTenant?.id,
     refetchInterval: 300000,
+    refetchIntervalInBackground: false,
     staleTime: 30000,
   });
 }

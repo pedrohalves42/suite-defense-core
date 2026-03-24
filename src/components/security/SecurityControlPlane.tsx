@@ -109,7 +109,8 @@ export function SecurityControlPlane() {
         current_system_mode: (systemModeResult.data as any)?.mode || 'normal'
       };
     },
-    refetchInterval: 300000, // COST-OPT: 30s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
   });
 
   // Run RLS tests manually

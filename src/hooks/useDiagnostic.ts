@@ -113,6 +113,7 @@ export function useDiagnostic(
     },
     enabled: !!agentName && !!tenantId,
     staleTime: 30000, // 30 seconds
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
   });
 }

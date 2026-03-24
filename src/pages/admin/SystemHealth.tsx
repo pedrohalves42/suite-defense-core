@@ -65,7 +65,8 @@ export default function SystemHealth() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300000, // COST-OPT: 30s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
   });
 
   const { data: jobStats, isLoading: loadingJobs } = useQuery({
@@ -112,7 +113,8 @@ export default function SystemHealth() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300000, // COST-OPT: 30s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
   });
 
   const { data: jobsOverTime, isLoading: loadingTimeline } = useQuery({
@@ -147,6 +149,7 @@ export default function SystemHealth() {
     },
     enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   const { data: aiInsightsStats, isLoading: loadingInsights } = useQuery({
@@ -172,6 +175,7 @@ export default function SystemHealth() {
     },
     enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   const { data: performanceMetrics, isLoading: loadingPerformance } = useQuery({
@@ -214,6 +218,7 @@ export default function SystemHealth() {
         .slice(0, 5);
     },
     refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   const isLoading = loadingAgents || loadingJobs || loadingPerformance || loadingTimeline || loadingInsights;

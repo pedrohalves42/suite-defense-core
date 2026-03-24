@@ -104,6 +104,7 @@ export function useTasks(filters?: TaskFilters) {
     },
     enabled: !loading && !!tenant?.id,
     refetchInterval: 120000,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -164,6 +165,7 @@ export function useTaskStats() {
     },
     enabled: !loading && !!tenant?.id,
     refetchInterval: 120000,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -294,6 +296,7 @@ export function useOpenTasksCount() {
     },
     enabled: !loading && !!tenant?.id,
     refetchInterval: 300000,
+    refetchIntervalInBackground: false,
     staleTime: 30000,
   });
 }

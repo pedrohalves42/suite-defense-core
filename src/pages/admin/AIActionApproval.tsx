@@ -106,6 +106,7 @@ export default function AIActionApproval() {
     },
     enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: 120000,
+    refetchIntervalInBackground: false,
   });
 
   // Buscar insights recentes (últimos 30 dias) - FIX: add tenant_id filter

@@ -40,7 +40,8 @@ export const useSubscription = () => {
     },
     enabled: !!user,
     staleTime: 2 * 60 * 1000, // 2 minutes - subscription data doesn't change frequently
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes (reduced from 30s - APEX optimization)
+    refetchInterval: 5 * 60 * 1000,
+    refetchIntervalInBackground: false, // Refetch every 5 minutes (reduced from 30s - APEX optimization)
   });
 
   return {

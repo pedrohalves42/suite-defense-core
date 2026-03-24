@@ -73,6 +73,7 @@ export function useDataExposure() {
     },
     enabled: !!tenant?.id,
     refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   });
 
   const updateStatus = useMutation({

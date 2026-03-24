@@ -33,6 +33,7 @@ export function useRiskDebt() {
     },
     enabled: !loading && !!tenant?.id,
     refetchInterval: 300000,
+    refetchIntervalInBackground: false,
     staleTime: 60_000,
   });
 }

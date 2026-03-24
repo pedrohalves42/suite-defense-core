@@ -67,7 +67,8 @@ export function InsightActionPanel() {
     },
     // V-302: Guard with !loading to prevent queries before JWT sync completes
     enabled: !loading && !!tenantId,
-    refetchInterval: 300000, // COST-OPT: 30s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
   });
 
   const acknowledgeMutation = useMutation({

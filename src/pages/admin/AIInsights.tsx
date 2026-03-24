@@ -63,7 +63,8 @@ export default function AIInsights() {
       if (error) throw error;
       return data as { insights: AIInsight[]; statistics: Statistics };
     },
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
   });
 
   const acknowledgeMutation = useMutation({

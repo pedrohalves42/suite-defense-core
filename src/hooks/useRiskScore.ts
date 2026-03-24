@@ -51,7 +51,8 @@ export const useRiskScore = () => {
     },
     enabled: !!tenant?.id,
     staleTime: 60000, // 1 minute
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
   });
 
   // Fetch risk score history (last 30 days)

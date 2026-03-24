@@ -26,6 +26,7 @@ const StatusPage = () => {
     },
     enabled: !!tenant,
     refetchInterval: 30000,
+    refetchIntervalInBackground: false,
   });
 
   const onlineCount = agents?.filter((a: any) => a.status === 'online').length || 0;

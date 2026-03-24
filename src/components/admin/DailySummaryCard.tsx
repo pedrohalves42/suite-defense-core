@@ -129,6 +129,7 @@ export function DailySummaryCard() {
     },
     enabled: !!tenant?.id,
     refetchInterval: 300000,
+    refetchIntervalInBackground: false,
   });
 
   if (isLoading) {

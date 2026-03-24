@@ -86,7 +86,8 @@ export default function SystemOperations() {
       return data as OperationsSummary;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000, // COST-OPT: 30s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
   });
 
   // Fetch stuck jobs
@@ -102,7 +103,8 @@ export default function SystemOperations() {
       return data as StuckJob[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
   });
 
   // Fetch Edge Function stats
@@ -117,7 +119,8 @@ export default function SystemOperations() {
       if (error) throw error;
       return data as EdgeFunctionStat[];
     },
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
   });
 
   // Cleanup stuck jobs mutation

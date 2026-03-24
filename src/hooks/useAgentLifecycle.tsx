@@ -114,7 +114,8 @@ export function usePipelineMetrics(tenantId: string | undefined, hoursBack: numb
       return data.metrics;
     },
     enabled: !loading && !!tenantId,  // V-503b: Guard para sincronização
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
     staleTime: 30000, // Cache por 30s
     retry: 2, // Tentar 2 vezes antes de falhar
     retryDelay: 1000, // Esperar 1s entre tentativas
@@ -138,7 +139,8 @@ export function useFailureRate(tenantId: string | undefined, hoursBack: number =
       return data && data.length > 0 ? data[0] : null;
     },
     enabled: !loading && !!tenantId,  // V-503c: Guard para sincronização
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
     staleTime: 30000,
     retry: 2,
     retryDelay: 1000,

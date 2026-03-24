@@ -22,7 +22,8 @@ export const useAdminAgentReleases = () => {
       if (error) throw error;
       return data?.releases || [];
     },
-    refetchInterval: 300000, // COST-OPT: 30s → 5min
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
     refetchOnWindowFocus: true,
   });
 

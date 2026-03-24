@@ -276,6 +276,7 @@ export default function SecurityMonitoring() {
     },
     enabled: !!tenant?.id,
     refetchInterval: 120000,
+    refetchIntervalInBackground: false,
   });
 
   const handleUnblockIP = async (id: string, ip: string) => {

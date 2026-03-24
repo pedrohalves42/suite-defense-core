@@ -63,7 +63,8 @@ export function useInstallationTrend(days: number = 7) {
       
       return result.sort((a, b) => a.date.localeCompare(b.date));
     },
-    refetchInterval: 300000, // COST-OPT: 1min → 5min (trend data is not real-time critical)
+    refetchInterval: 300000,
+    refetchIntervalInBackground: false, // COST-OPT: 1min → 5min (trend data is not real-time critical)
     staleTime: 120000, // 2 minutes
   });
 }
