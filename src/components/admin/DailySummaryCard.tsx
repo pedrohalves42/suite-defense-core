@@ -57,12 +57,14 @@ export function DailySummaryCard() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayISO = today.toISOString();
+      const sb = supabase as unknown as { from: (t: string) => ReturnType<typeof supabase.from> };
+
       // Parallel fetches for today's data
       const [jobsRes, blockedRes, actionsRes, alertsRes] = await Promise.all([
         supabase.from('jobs').select('status').eq('tenant_id', tenant.id).gte('created_at', todayISO),
-        supabase.from('blocked_access_attempts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('attempted_at', todayISO),
-        supabase.from('autonomy_actions').select('action_type, status').eq('tenant_id', tenant.id).gte('created_at', todayISO),
-        supabase.from('system_alerts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('created_at', todayISO),
+        sb.from('blocked_access_attempts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('attempted_at', todayISO),
+        sb.from('autonomy_actions').select('action_type, status').eq('tenant_id', tenant.id).gte('created_at', todayISO),
+        sb.from('system_alerts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('created_at', todayISO),
       ]);
 
       const jobs: Array<{ status: string }> = jobsRes.data || [];
