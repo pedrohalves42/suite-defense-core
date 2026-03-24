@@ -80,7 +80,7 @@ export function IncidentTimelineViewer({ incident, onClose }: IncidentTimelineVi
   };
 
   const handleExportPDF = async () => {
-    // TODO: Implement PDF export
+    toast.info('Exportação PDF será implementada em versão futura');
   };
 
   return (
