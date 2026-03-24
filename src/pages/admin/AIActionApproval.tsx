@@ -135,7 +135,7 @@ export default function AIActionApproval() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ai_action_configs')
-        .select('*')
+        .select('id, action_type, description, risk_level, requires_approval, is_enabled, max_executions_per_day, circuit_breaker_enabled, current_failures, failure_threshold, failure_window_minutes, circuit_open_until, created_at, updated_at')
         .eq('is_enabled', true);
 
       if (error) throw error;

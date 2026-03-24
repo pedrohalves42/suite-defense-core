@@ -208,18 +208,18 @@ export default function NotificationSettings() {
       const [channelsRes, logsRes, reportsRes] = await Promise.all([
         supabase
           .from('notification_channels')
-          .select('*')
+          .select('id, tenant_id, channel_type, name, config, is_active, is_verified, verified_at, created_at, updated_at')
           .eq('tenant_id', tenantId)
           .order('created_at', { ascending: false }),
         supabase
           .from('notification_log')
-          .select('*')
+          .select('id, tenant_id, channel_id, channel_type, recipient, message_preview, status, error_message, sent_at, created_at')
           .eq('tenant_id', tenantId)
           .order('created_at', { ascending: false })
           .limit(50),
         supabase
           .from('scheduled_reports')
-          .select('*')
+          .select('id, tenant_id, name, report_type, schedule, recipients, is_active, last_sent_at, next_send_at, created_at, created_by, hour, day_of_week, timezone, include_agents_summary, include_antivirus, include_software_inventory, include_vulnerabilities, include_web_activity')
           .eq('tenant_id', tenantId)
           .order('created_at', { ascending: false })
       ]);
@@ -232,7 +232,7 @@ export default function NotificationSettings() {
         if (channelIds.length > 0) {
           const { data: prefsData } = await supabase
             .from('notification_preferences')
-            .select('*')
+            .select('id, channel_id, alert_types, severity_filter, enabled, quiet_hours_start, quiet_hours_end, quiet_hours_timezone, tenant_id, created_at, updated_at')
             .in('channel_id', channelIds);
           
           if (prefsData) {

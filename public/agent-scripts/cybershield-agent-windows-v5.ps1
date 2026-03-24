@@ -6699,7 +6699,7 @@ while ($true) {
                 }
             }
             
-            $lastJobPoll = Get-Date
+            $lastJobPoll = $now  # v5.0.15-perf: Reuse cached $now instead of Get-Date
         }
         
         # ============================================
@@ -6727,7 +6727,7 @@ while ($true) {
                 Write-Log "[AUTO-REPAIR] Killed $($cpuResult.killed_count) high-CPU processes" "SUCCESS"
             }
             
-            $lastAutoRepair = Get-Date
+            $lastAutoRepair = $now  # v5.0.15-perf: Reuse cached $now
         }
         
         # ============================================
@@ -6779,7 +6779,7 @@ while ($true) {
                 }
                 $consecutiveHeartbeatFailures = 0
             }
-            $lastHeartbeat = Get-Date
+            $lastHeartbeat = $now  # v5.0.15-perf: Reuse cached $now
         }
         
         # ============================================
