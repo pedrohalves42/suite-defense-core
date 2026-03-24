@@ -55,8 +55,9 @@ export function useSOC2Readiness() {
         const dbCriteria = criteria?.find(c => c.criteria_code === criteriaDef.code);
         const criteriaControls = controls?.filter(c => c.criteria_id === dbCriteria?.id) || [];
         
-        const totalControls = criteriaControls.length || criteriaDef.controls.length;
-        // V-4005 FIX: Don't inflate scores with fake 85% when no DB data exists
+        // Use DB controls count; fallback to definition only for display
+        const hasDbData = criteriaControls.length > 0;
+        const totalControls = hasDbData ? criteriaControls.length : criteriaDef.controls.length;
         const implementedControls = criteriaControls.filter(c => 
           c.status === 'implemented' || c.status === 'verified'
         ).length;
@@ -79,9 +80,10 @@ export function useSOC2Readiness() {
           bonus = -Math.min(15, Math.floor((openAlerts || 0) / 20));
         }
 
-        const baseScore = totalControls > 0 
+        // V-4005: No DB controls = 0% (not fake 85%)
+        const baseScore = hasDbData && totalControls > 0 
           ? Math.round((implementedControls / totalControls) * 100)
-          : 85;
+          : 0;
         
         const readinessScore = Math.min(100, Math.max(0, baseScore + bonus));
 
