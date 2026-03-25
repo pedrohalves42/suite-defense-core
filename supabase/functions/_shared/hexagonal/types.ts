@@ -1,9 +1,12 @@
 /**
  * Deno-compatible domain types for the Hexagonal Architecture.
- * Mirrors src/domain/ types without Vite path aliases.
+ *
+ * AUTO-GENERATED — DO NOT EDIT MANUALLY.
+ * Source of truth: src/domain/shared-kernel/shared-enums.ts
+ * Regenerate with: npx tsx scripts/sync-shared-types.ts
  */
 
-// ─── Enums ──────────────────────────────────────────────
+// ─── Platform Enums ─────────────────────────────────────
 export enum Platform {
   WINDOWS = 'windows',
   LINUX = 'linux',
@@ -25,7 +28,7 @@ export enum UpdateStatus {
   ROLLED_BACK = 'rolled_back',
 }
 
-// ─── Port interfaces ────────────────────────────────────
+// --- Port interfaces (Deno-only) -------------------------
 export interface CheckForUpdateCommand {
   agentId: string;
   currentVersion: string;
@@ -65,7 +68,7 @@ export interface ProcessUpdateStatusResult {
   currentStatus: string;
 }
 
-// ─── Domain Event ───────────────────────────────────────
+// --- Domain Event ----------------------------------------
 export interface DomainEvent {
   readonly eventType: string;
   readonly occurredOn: Date;
