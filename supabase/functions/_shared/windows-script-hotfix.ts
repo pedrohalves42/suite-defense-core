@@ -364,9 +364,14 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
 # Prevents permanent TOCTOU crash loop caused by encoding differences between
 # Base64-decoded bytes (WriteAllBytes) and PowerShell's Get-Content re-read
 try {
-    $toctouScriptPath = "C:\\CyberShield\\cybershield-agent.ps1"
+    # Resolve script path dynamically — the file is named cybershield-agent-<AgentName>.ps1
+    $toctouScriptPath = $null
+    $toctouCandidates = @(Get-ChildItem "C:\\CyberShield\\cybershield-agent-*.ps1" -ErrorAction SilentlyContinue)
+    if ($toctouCandidates.Count -gt 0) { $toctouScriptPath = $toctouCandidates[0].FullName }
+    # Fallback for legacy naming
+    if (-not $toctouScriptPath -and (Test-Path "C:\\CyberShield\\cybershield-agent.ps1")) { $toctouScriptPath = "C:\\CyberShield\\cybershield-agent.ps1" }
     $toctouHashCachePath = "C:\\CyberShield\\data\\expected_script_hash.json"
-    if ((Test-Path $toctouScriptPath) -and (Test-Path $toctouHashCachePath)) {
+    if ($toctouScriptPath -and (Test-Path $toctouScriptPath) -and (Test-Path $toctouHashCachePath)) {
         $toctouCacheContent = Get-Content $toctouHashCachePath -Raw -ErrorAction SilentlyContinue
         if ($toctouCacheContent) {
             $toctouCache = $toctouCacheContent | ConvertFrom-Json -ErrorAction SilentlyContinue

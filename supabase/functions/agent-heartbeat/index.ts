@@ -517,13 +517,33 @@ Deno.serve(async (req) => {
       logger.warn('[PROXY] Failed to claim jobs in heartbeat (non-fatal)', { error: (jobErr as Error).message });
     }
 
+    // TOCTOU-FIX: Fetch the expected SHA256 from the active release so agents
+    // can self-heal their hash cache instead of crash-looping
+    let expectedScriptSha256: string | null = null;
+    try {
+      const agentPlatform = (updateData.os_type || 'windows').toLowerCase();
+      const { data: activeRelease } = await supabase
+        .from('agent_releases')
+        .select('sha256')
+        .eq('platform', agentPlatform)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (activeRelease?.sha256) {
+        expectedScriptSha256 = activeRelease.sha256;
+      }
+    } catch (shaErr) {
+      logger.warn('[PROXY] Failed to fetch release SHA256 (non-fatal)', { error: (shaErr as Error).message });
+    }
+
     // Standard response (no force_update) - include key rotation signal + jobs if available
     const response: Record<string, unknown> = { 
       ok: true,
       agent: agent.agent_name,
       timestamp: new Date().toISOString(),
       proxy: true,
-      script_sha256: null,
+      script_sha256: expectedScriptSha256,
       skip_firewall_remediation: (agent as any).skip_firewall_remediation || false,
       aggregation: null,
       // COST-OPT-V6: Heartbeat = 600s, poll = 600s (same interval, jobs come via heartbeat)
