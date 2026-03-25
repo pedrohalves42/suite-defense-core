@@ -645,7 +645,7 @@ assert_service_health() {
      signature=$(echo "$job" | jq -r '.payload_signature // empty' 2>/dev/null)
      
      if [[ -z "$signature" ]]; then
-         log "ERROR" "[VERIFY] Job has no signature - REJECTED"
+         log "ERROR" "[VERIFY] Job has no signature - REJECTED (SEC-010 fail-closed)"
          return 1
      fi
      
@@ -654,12 +654,48 @@ assert_service_health() {
      sig_bytes=$(echo -n "$signature" | base64 -d 2>/dev/null | wc -c)
      
      if [[ "$sig_bytes" -ne 64 ]]; then
-         log "ERROR" "[VERIFY] Invalid Ed25519 signature length"
+         log "ERROR" "[VERIFY] Invalid Ed25519 signature length: $sig_bytes (expected 64)"
          return 1
      fi
      
-     log "DEBUG" "[VERIFY] Job signature format valid"
-     return 0
+     # Full Ed25519 cryptographic verification using openssl pkeyutl
+     local ed25519_pubkey_path="${INSTALL_DIR}/cybershield-ed25519.pub"
+     
+     if [[ -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
+         # Extract canonical payload for verification: job_id:job_type:payload
+         local job_id job_type payload_json canonical_payload
+         job_id=$(echo "$job" | jq -r '.id // .job_id // empty' 2>/dev/null)
+         job_type=$(echo "$job" | jq -r '.job_type // .type // empty' 2>/dev/null)
+         payload_json=$(echo "$job" | jq -cS '.payload // {}' 2>/dev/null)
+         canonical_payload="${job_id}:${job_type}:${payload_json}"
+         
+         # Write payload and signature to temp files for openssl
+         local tmp_payload tmp_sig
+         tmp_payload=$(mktemp)
+         tmp_sig=$(mktemp)
+         
+         echo -n "$canonical_payload" > "$tmp_payload"
+         echo -n "$signature" | base64 -d > "$tmp_sig" 2>/dev/null
+         
+         if openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
+             -sigfile "$tmp_sig" -in "$tmp_payload" -rawin 2>/dev/null; then
+             log "INFO" "[VERIFY] Ed25519 job signature cryptographically verified ✓"
+             rm -f "$tmp_payload" "$tmp_sig"
+             return 0
+         else
+             log "ERROR" "[VERIFY] Ed25519 job signature INVALID - REJECTED"
+             rm -f "$tmp_payload" "$tmp_sig"
+             return 1
+         fi
+     else
+         # Fail-closed: if no public key or openssl, reject the job
+         if [[ ! -f "$ed25519_pubkey_path" ]]; then
+             log "ERROR" "[VERIFY] Ed25519 public key not found at $ed25519_pubkey_path - job REJECTED (SEC-010 fail-closed)"
+         else
+             log "ERROR" "[VERIFY] openssl not available - job REJECTED (SEC-010 fail-closed)"
+         fi
+         return 1
+     fi
  }
  
  # ============================================
