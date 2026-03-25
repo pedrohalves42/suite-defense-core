@@ -126,7 +126,7 @@ export function SecurityKeysManager() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs border-green-500/30 text-green-600">
+                    <Badge variant="outline" className="text-xs border-cta-positive/30 text-cta-positive">
                       Ativo
                     </Badge>
                     <Button
