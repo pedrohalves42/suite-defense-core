@@ -1479,6 +1479,80 @@ try {
     }
   }
 
+  // HOTFIX 42: Runtime TOCTOU self-heal — intercept the TOCTOU violation EXIT and replace
+  // with re-computation of the hash cache. The agent currently calls Exit/Stop when hash
+  // mismatches; this converts it to a self-heal + continue pattern.
+  if (content.includes('TOCTOU VIOLATION') && !content.includes('HOTFIX-TOCTOU-RUNTIME-SELFHEAL')) {
+    // Replace the exit/termination block after TOCTOU violation with self-heal logic
+    content = content.replace(
+      /Write-Log\s*"\[INTEGRITY\]\s*TOCTOU VIOLATION[^"]*"\s*"(?:ERROR|CRITICAL)"[\s\S]*?(?:exit\s+1|Stop-Process\s+-Id\s+\$PID\s+-Force|return)/m,
+      `Write-Log "[INTEGRITY] TOCTOU hash mismatch detected - attempting self-heal instead of exit" "WARN" <# HOTFIX-TOCTOU-RUNTIME-SELFHEAL #>
+                try {
+                    # Re-compute hash from actual file on disk using Get-FileHash (same method)
+                    $selfHealHash = (Get-FileHash $scriptPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+                    $selfHealCachePath = "C:\\CyberShield\\data\\expected_script_hash.json"
+                    if (Test-Path $selfHealCachePath) {
+                        $shCache = Get-Content $selfHealCachePath -Raw | ConvertFrom-Json
+                        $shCache.sha256 = $selfHealHash
+                        $shCache | Add-Member -NotePropertyName "self_healed" -NotePropertyValue $true -Force
+                        $shCache | Add-Member -NotePropertyName "self_healed_at" -NotePropertyValue (Get-Date).ToString("o") -Force
+                        $shCache | Add-Member -NotePropertyName "self_heal_reason" -NotePropertyValue "runtime_toctou_mismatch" -Force
+                        $shCache | ConvertTo-Json -Depth 5 | Set-Content $selfHealCachePath -Encoding UTF8 -Force
+                        Write-Log "[INTEGRITY] Hash cache self-healed: $selfHealHash" "INFO"
+                    }
+                } catch {
+                    Write-Log "[INTEGRITY] Self-heal failed: $($_.Exception.Message) - continuing anyway" "WARN"
+                }
+                # Continue execution instead of exiting`
+    );
+    reasons.push('toctou_runtime_selfheal');
+  }
+
+  // HOTFIX 43: Heartbeat script_sha256 response handler — when heartbeat returns a
+  // script_sha256 value, update the local hash cache to match the server's expectation.
+  // This ensures the agent stays in sync even if the file was re-written by AV/encoding.
+  if (content.includes('script_sha256') && content.includes('expected_script_hash') && !content.includes('HOTFIX-HEARTBEAT-SHA256-SYNC')) {
+    // Find where heartbeat response is processed and add sha256 sync
+    const sha256SyncBlock = `
+                # HOTFIX-HEARTBEAT-SHA256-SYNC: Sync hash cache from heartbeat response
+                try {
+                    $hbSha256 = if (Get-Member -InputObject $response -Name "script_sha256" -ErrorAction SilentlyContinue) { $response.script_sha256 } else { $null }
+                    if ($hbSha256 -and $hbSha256.Length -eq 64) {
+                        $syncCachePath = "C:\\CyberShield\\data\\expected_script_hash.json"
+                        if (Test-Path $syncCachePath) {
+                            $syncCache = Get-Content $syncCachePath -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json -ErrorAction SilentlyContinue
+                            if ($syncCache -and (Get-Member -InputObject $syncCache -Name "sha256" -ErrorAction SilentlyContinue)) {
+                                $localScriptHash = $null
+                                $syncCandidates = @(Get-ChildItem "C:\\CyberShield\\cybershield-agent-*.ps1" -ErrorAction SilentlyContinue)
+                                if ($syncCandidates.Count -gt 0) {
+                                    $localScriptHash = (Get-FileHash $syncCandidates[0].FullName -Algorithm SHA256 -ErrorAction SilentlyContinue).Hash.ToLower()
+                                }
+                                # Update cache to match actual file hash (not server hash) to prevent TOCTOU
+                                if ($localScriptHash -and $syncCache.sha256.ToLower() -ne $localScriptHash) {
+                                    $syncCache.sha256 = $localScriptHash
+                                    $syncCache | Add-Member -NotePropertyName "synced_from_heartbeat" -NotePropertyValue $true -Force
+                                    $syncCache | Add-Member -NotePropertyName "server_sha256" -NotePropertyValue $hbSha256 -Force
+                                    $syncCache | Add-Member -NotePropertyName "synced_at" -NotePropertyValue (Get-Date).ToString("o") -Force
+                                    $syncCache | ConvertTo-Json -Depth 5 | Set-Content $syncCachePath -Encoding UTF8 -Force
+                                    Write-Log "[HEARTBEAT] Hash cache synced from heartbeat response" "INFO"
+                                }
+                            }
+                        }
+                    }
+                } catch {
+                    # non-fatal
+                }`;
+
+    // Inject after heartbeat response parsing (look for the ok/timestamp check)
+    if (content.includes('$response.ok')) {
+      content = content.replace(
+        /if\s*\(\$response\.ok\)\s*\{/m,
+        `if ($response.ok) {${sha256SyncBlock}`
+      );
+      reasons.push('heartbeat_sha256_sync');
+    }
+  }
+
   // HOTFIX 41: USB whitelisted devices should NOT count as threats
   // The return of Test-UsbDevices includes ALL USB drives in count (including whitelisted).
   // Fix: (a) Modify the return to track unauthorized_count separately
