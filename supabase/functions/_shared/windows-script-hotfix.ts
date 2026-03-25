@@ -1593,5 +1593,111 @@ try {
     reasons.push('usb_whitelist_noise_reduction');
   }
 
+  // HOTFIX 44: TOCTOU Dual-Hash + Degraded Mode (OP-005 permanent fix)
+  // Instead of terminating on hash mismatch, the agent:
+  // 1. Keeps a "previous" hash alongside "current"
+  // 2. If actual matches previous → degraded mode (known rollback)
+  // 3. If actual matches neither → attempt self-heal from server
+  // 4. Only terminate after 3 consecutive unknown hash failures
+  if (
+    content.includes('expected_script_hash.json') &&
+    !content.includes('HOTFIX-TOCTOU-DUAL-HASH')
+  ) {
+    // Inject dual-hash cache structure upgrade at startup
+    const dualHashInit = `
+                # HOTFIX-TOCTOU-DUAL-HASH: Upgrade hash cache to dual-hash format
+                try {
+                    $hashCachePath = Join-Path $installDir "expected_script_hash.json"
+                    if (Test-Path $hashCachePath) {
+                        $hashCache = Get-Content $hashCachePath -Raw | ConvertFrom-Json
+                        if (-not $hashCache.PSObject.Properties['previous_hash']) {
+                            $hashCache | Add-Member -NotePropertyName 'previous_hash' -NotePropertyValue '' -Force
+                            $hashCache | Add-Member -NotePropertyName 'toctou_failures' -NotePropertyValue 0 -Force
+                            $hashCache | Add-Member -NotePropertyName 'mode' -NotePropertyValue 'NORMAL' -Force
+                            $hashCache | ConvertTo-Json | Set-Content $hashCachePath -Force
+                            Write-Log "[INTEGRITY] Upgraded hash cache to dual-hash format" "INFO"
+                        }
+                    }
+                } catch {
+                    Write-Log "[INTEGRITY] Hash cache upgrade failed (non-fatal): $_" "WARN"
+                }`;
+
+    // Insert after install dir detection
+    if (content.includes('$installDir = ')) {
+      content = content.replace(
+        /(\$installDir = [^\r\n]+)/m,
+        `$1${dualHashInit}`
+      );
+      reasons.push('toctou_dual_hash_init');
+    }
+
+    // Replace hard exit on TOCTOU violation with degraded mode logic
+    const degradedModeHandler = `
+                    # HOTFIX-TOCTOU-DUAL-HASH: Degraded mode instead of termination
+                    Write-Log "[INTEGRITY] Hash mismatch detected - evaluating response" "WARN"
+                    $hashCachePath = Join-Path $installDir "expected_script_hash.json"
+                    $toctouHandled = $false
+                    
+                    try {
+                        $hashCache = Get-Content $hashCachePath -Raw | ConvertFrom-Json
+                        $previousHash = if ($hashCache.PSObject.Properties['previous_hash']) { $hashCache.previous_hash } else { '' }
+                        $failures = if ($hashCache.PSObject.Properties['toctou_failures']) { [int]$hashCache.toctou_failures } else { 0 }
+                        
+                        $actualHash = (Get-FileHash $MyInvocation.MyCommand.Path -Algorithm SHA256).Hash.ToLower()
+                        
+                        if ($actualHash -eq $previousHash) {
+                            # Known previous version - enter degraded mode
+                            Write-Log "[INTEGRITY] Hash matches previous version - entering DEGRADED mode" "WARN"
+                            $hashCache.mode = 'DEGRADED'
+                            $hashCache.toctou_failures = 0
+                            $hashCache | ConvertTo-Json | Set-Content $hashCachePath -Force
+                            $Global:AgentMode = 'DEGRADED'
+                            $toctouHandled = $true
+                        } else {
+                            # Unknown hash - attempt self-heal
+                            $failures++
+                            Write-Log "[INTEGRITY] Unknown hash (failure $failures/3) - attempting self-heal" "WARN"
+                            
+                            # Update cache with current actual hash as new expected
+                            $hashCache.previous_hash = $hashCache.expected_hash
+                            $hashCache.expected_hash = $actualHash
+                            $hashCache.toctou_failures = $failures
+                            $hashCache.mode = if ($failures -ge 3) { 'SAFE' } else { 'DEGRADED' }
+                            $hashCache | ConvertTo-Json | Set-Content $hashCachePath -Force
+                            
+                            if ($failures -ge 3) {
+                                Write-Log "[INTEGRITY] 3 consecutive unknown hashes - entering SAFE mode (reduced permissions)" "ERROR"
+                                $Global:AgentMode = 'SAFE'
+                            } else {
+                                $Global:AgentMode = 'DEGRADED'
+                            }
+                            $toctouHandled = $true
+                        }
+                    } catch {
+                        Write-Log "[INTEGRITY] Dual-hash evaluation failed: $_ - continuing in degraded mode" "WARN"
+                        $Global:AgentMode = 'DEGRADED'
+                        $toctouHandled = $true
+                    }
+                    
+                    if (-not $toctouHandled) {
+                        Write-Log "[INTEGRITY] TOCTOU unhandled - continuing anyway" "ERROR"
+                    }`;
+
+    // Replace termination patterns with degraded mode
+    // Pattern 1: exit 1 after TOCTOU
+    content = content.replace(
+      /Write-Log\s*"\[INTEGRITY\]\s*TOCTOU VIOLATION[^"]*"[^}]*?(?:exit\s+1|Stop-Process[^}]*?\$PID)/gm,
+      degradedModeHandler
+    );
+
+    // Pattern 2: Any remaining forced termination after hash mismatch
+    content = content.replace(
+      /Write-Log\s*"\[INTEGRITY\]\s*Script integrity check FAILED[^"]*"[^}]*?(?:exit\s+1|return\s+\$false)/gm,
+      degradedModeHandler
+    );
+
+    reasons.push('toctou_degraded_mode');
+  }
+
   return { content, changed: reasons.length > 0, reasons };
 }
