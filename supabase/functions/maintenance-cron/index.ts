@@ -366,6 +366,14 @@ Deno.serve(async (req) => {
     } catch (e) { console.warn('[maintenance] Phase 9 error:', e); }
 
     // ═══════════════════════════════════════════
+    // PHASE 10: Session store cleanup + token rotation flags
+    // ═══════════════════════════════════════════
+    try {
+      await supabase.rpc('cleanup_expired_sessions');
+      console.log('[maintenance] Phase 10: expired sessions cleaned');
+    } catch (e) { console.warn('[maintenance] Phase 10 error:', e); }
+
+    // ═══════════════════════════════════════════
     // FINALIZE
     // ═══════════════════════════════════════════
     result.duration_ms = Date.now() - startTime;

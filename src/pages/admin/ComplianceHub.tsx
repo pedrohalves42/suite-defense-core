@@ -7,6 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const SOC2Dashboard = lazy(() => import('./SOC2Dashboard'));
 const ComplianceTimeline = lazy(() => import('./ComplianceTimeline'));
+const SOC2Checklist = lazy(() => import('@/components/compliance/SOC2Checklist').then(m => ({ default: m.SOC2Checklist })));
+const DriftDashboard = lazy(() => import('@/components/compliance/DriftDashboard').then(m => ({ default: m.DriftDashboard })));
 const SystemAudit = lazy(() => import('./SystemAudit'));
 const EvidenceBundlePage = lazy(() => import('./EvidenceBundlePage'));
 const Playbooks = lazy(() => import('./Playbooks'));
@@ -75,6 +77,7 @@ export default function ComplianceHub() {
         <Suspense fallback={<TabLoader />}>
           <TabsContent value="overview" className="mt-4 space-y-6">
             <SOC2Dashboard />
+            <SOC2Checklist />
             <ComplianceTimeline />
           </TabsContent>
           <TabsContent value="evidence" className="mt-4 space-y-6">
@@ -87,6 +90,7 @@ export default function ComplianceHub() {
             <ComplianceAutomation />
           </TabsContent>
           <TabsContent value="risk" className="mt-4 space-y-6">
+            <DriftDashboard />
             <RiskScore />
             <SecurityBenchmark />
             <RansomwareIncident />

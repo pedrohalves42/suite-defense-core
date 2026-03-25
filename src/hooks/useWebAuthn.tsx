@@ -1,27 +1,19 @@
 import { useState, useCallback } from 'react';
+import { callEdgeFunction } from '@/lib/edge-function-client';
 import { logger } from '@/lib/logger';
 
 /**
- * WebAuthn/FIDO2 Browser API Hook
- * Provides low-level WebAuthn credential creation and assertion.
- * Ready for future FIDO2 backend integration.
+ * WebAuthn/FIDO2 Hook — Connected to fido2-register Edge Function
+ * Supports: register, list, revoke security keys
  */
 
-interface WebAuthnRegistrationOptions {
-  challenge: string;
-  rpId: string;
-  rpName: string;
-  userId: string;
-  userName: string;
-  userDisplayName: string;
-  attestation?: AttestationConveyancePreference;
-}
-
-interface WebAuthnAuthenticationOptions {
-  challenge: string;
-  rpId: string;
-  allowCredentials?: Array<{ id: string; type: string; transports?: string[] }>;
-  userVerification?: UserVerificationRequirement;
+interface WebAuthnCredential {
+  credential_id: string;
+  device_name: string;
+  created_at: string;
+  last_used_at: string | null;
+  aaguid: string;
+  backed_up: boolean;
 }
 
 // Base64url helpers
@@ -50,33 +42,40 @@ export const useWebAuthn = () => {
     typeof window !== 'undefined' &&
     typeof window.PublicKeyCredential !== 'undefined';
 
-  const register = useCallback(
-    async (options: WebAuthnRegistrationOptions) => {
-      if (!isSupported) throw new Error('WebAuthn não é suportado neste navegador');
+  const registerKey = useCallback(
+    async (deviceName: string): Promise<boolean> => {
+      if (!isSupported) {
+        setError('WebAuthn não é suportado neste navegador');
+        return false;
+      }
 
       setLoading(true);
       setError(null);
 
       try {
+        // 1. Get registration options from backend
+        const options = await callEdgeFunction('fido2-register', {
+          action: 'begin',
+          deviceName,
+        });
+
+        // 2. Create credential via WebAuthn API
         const publicKey: PublicKeyCredentialCreationOptions = {
           challenge: base64UrlToBuffer(options.challenge),
-          rp: { id: options.rpId, name: options.rpName },
+          rp: options.rp,
           user: {
-            id: base64UrlToBuffer(options.userId),
-            name: options.userName,
-            displayName: options.userDisplayName,
+            id: base64UrlToBuffer(options.user.id),
+            name: options.user.name,
+            displayName: options.user.displayName,
           },
-          pubKeyCredParams: [
-            { type: 'public-key', alg: -7 },   // ES256
-            { type: 'public-key', alg: -257 },  // RS256
-          ],
+          pubKeyCredParams: options.pubKeyCredParams as PublicKeyCredentialParameters[],
           authenticatorSelection: {
-            authenticatorAttachment: 'cross-platform',
-            residentKey: 'required',
-            userVerification: 'required',
+            authenticatorAttachment: options.authenticatorSelection.authenticatorAttachment as AuthenticatorAttachment,
+            residentKey: options.authenticatorSelection.residentKey as ResidentKeyRequirement,
+            userVerification: options.authenticatorSelection.userVerification as UserVerificationRequirement,
           },
-          attestation: options.attestation ?? 'none',
-          timeout: 60000,
+          attestation: options.attestation as AttestationConveyancePreference,
+          timeout: options.timeout,
         };
 
         const credential = (await navigator.credentials.create({
@@ -84,15 +83,23 @@ export const useWebAuthn = () => {
         })) as PublicKeyCredential;
         const response = credential.response as AuthenticatorAttestationResponse;
 
-        return {
-          id: credential.id,
-          rawId: bufferToBase64Url(credential.rawId),
-          type: credential.type,
-          response: {
-            clientDataJSON: bufferToBase64Url(response.clientDataJSON),
-            attestationObject: bufferToBase64Url(response.attestationObject),
+        // 3. Complete registration on backend
+        await callEdgeFunction('fido2-register', {
+          action: 'complete',
+          registrationResponse: {
+            id: credential.id,
+            rawId: bufferToBase64Url(credential.rawId),
+            type: credential.type,
+            response: {
+              clientDataJSON: bufferToBase64Url(response.clientDataJSON),
+              attestationObject: bufferToBase64Url(response.attestationObject),
+              transports: (credential as any).transports || [],
+            },
           },
-        };
+          expectedChallenge: options.challenge,
+        });
+
+        return true;
       } catch (err: unknown) {
         const msg =
           err instanceof DOMException && err.name === 'NotAllowedError'
@@ -101,8 +108,8 @@ export const useWebAuthn = () => {
               ? err.message
               : 'Falha ao registrar chave de segurança';
         setError(msg);
-        logger.error('useWebAuthn register error', err);
-        throw new Error(msg);
+        logger.error('useWebAuthn registerKey error', err);
+        return false;
       } finally {
         setLoading(false);
       }
@@ -110,60 +117,32 @@ export const useWebAuthn = () => {
     [isSupported],
   );
 
-  const authenticate = useCallback(
-    async (options: WebAuthnAuthenticationOptions) => {
-      if (!isSupported) throw new Error('WebAuthn não é suportado neste navegador');
+  const listKeys = useCallback(async (): Promise<WebAuthnCredential[]> => {
+    try {
+      const data = await callEdgeFunction('fido2-register', {
+        action: 'keys',
+      });
+      return data || [];
+    } catch (err) {
+      logger.error('useWebAuthn listKeys error', err);
+      setError(err instanceof Error ? err.message : 'Falha ao listar chaves');
+      return [];
+    }
+  }, []);
 
-      setLoading(true);
-      setError(null);
+  const revokeKey = useCallback(async (credentialId: string): Promise<boolean> => {
+    try {
+      await callEdgeFunction('fido2-register', {
+        action: 'keys',
+        credentialId,
+      });
+      return true;
+    } catch (err) {
+      logger.error('useWebAuthn revokeKey error', err);
+      setError(err instanceof Error ? err.message : 'Falha ao revogar chave');
+      return false;
+    }
+  }, []);
 
-      try {
-        const publicKey: PublicKeyCredentialRequestOptions = {
-          challenge: base64UrlToBuffer(options.challenge),
-          rpId: options.rpId,
-          allowCredentials: options.allowCredentials?.map((c) => ({
-            id: base64UrlToBuffer(c.id),
-            type: c.type as PublicKeyCredentialType,
-            transports: c.transports as AuthenticatorTransport[] | undefined,
-          })),
-          userVerification: options.userVerification ?? 'required',
-          timeout: 60000,
-        };
-
-        const credential = (await navigator.credentials.get({
-          publicKey,
-        })) as PublicKeyCredential;
-        const response = credential.response as AuthenticatorAssertionResponse;
-
-        return {
-          id: credential.id,
-          rawId: bufferToBase64Url(credential.rawId),
-          type: credential.type,
-          response: {
-            clientDataJSON: bufferToBase64Url(response.clientDataJSON),
-            authenticatorData: bufferToBase64Url(response.authenticatorData),
-            signature: bufferToBase64Url(response.signature),
-            userHandle: response.userHandle
-              ? bufferToBase64Url(response.userHandle)
-              : null,
-          },
-        };
-      } catch (err: unknown) {
-        const msg =
-          err instanceof DOMException && err.name === 'NotAllowedError'
-            ? 'Operação cancelada pelo usuário'
-            : err instanceof Error
-              ? err.message
-              : 'Falha na autenticação';
-        setError(msg);
-        logger.error('useWebAuthn authenticate error', err);
-        throw new Error(msg);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [isSupported],
-  );
-
-  return { isSupported, loading, error, register, authenticate };
+  return { isSupported, loading, error, registerKey, listKeys, revokeKey };
 };

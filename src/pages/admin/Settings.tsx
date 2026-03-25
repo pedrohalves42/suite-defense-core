@@ -14,6 +14,7 @@ import { AlertCircle, CheckCircle, Loader2, Shield, Eye, EyeOff } from 'lucide-r
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { logger } from '@/lib/logger';
 import { MFASettings } from '@/components/mfa/MFASettings';
+import { SecurityKeysManager } from '@/components/security/SecurityKeysManager';
 import { PasswordChangeCard } from '@/components/settings/PasswordChangeCard';
 import { AutomationSettings } from '@/components/settings/AutomationSettings';
 import { useTranslation } from 'react-i18next';
@@ -719,6 +720,7 @@ export default function Settings() {
         {/* Security Tab */}
         <TabsContent value="security" className="space-y-4">
           <MFASettings />
+          <SecurityKeysManager />
           
           <PasswordChangeCard />
           

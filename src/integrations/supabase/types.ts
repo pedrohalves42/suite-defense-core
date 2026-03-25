@@ -11966,6 +11966,83 @@ export type Database = {
           },
         ]
       }
+      compliance_baselines: {
+        Row: {
+          audit_trail_integrity: boolean | null
+          backup_frequency_hours: number | null
+          backup_restore_tested_days: number | null
+          baseline_hash: string | null
+          created_at: string | null
+          data_retention_days: number | null
+          encryption_at_rest: boolean | null
+          encryption_in_transit: boolean | null
+          id: string
+          mfa_enforcement: boolean | null
+          rls_coverage: number | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          audit_trail_integrity?: boolean | null
+          backup_frequency_hours?: number | null
+          backup_restore_tested_days?: number | null
+          baseline_hash?: string | null
+          created_at?: string | null
+          data_retention_days?: number | null
+          encryption_at_rest?: boolean | null
+          encryption_in_transit?: boolean | null
+          id?: string
+          mfa_enforcement?: boolean | null
+          rls_coverage?: number | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          audit_trail_integrity?: boolean | null
+          backup_frequency_hours?: number | null
+          backup_restore_tested_days?: number | null
+          baseline_hash?: string | null
+          created_at?: string | null
+          data_retention_days?: number | null
+          encryption_at_rest?: boolean | null
+          encryption_in_transit?: boolean | null
+          id?: string
+          mfa_enforcement?: boolean | null
+          rls_coverage?: number | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_baselines_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_baselines_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_baselines_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_baselines_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       compliance_benchmarks: {
         Row: {
           avg_score: number | null
@@ -13624,6 +13701,80 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_domain_events_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      drift_events: {
+        Row: {
+          category: string
+          current_value: Json | null
+          description: string
+          detected_at: string | null
+          drift_score: number
+          expected_value: Json | null
+          id: string
+          resolution_action: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          tenant_id: string
+        }
+        Insert: {
+          category: string
+          current_value?: Json | null
+          description: string
+          detected_at?: string | null
+          drift_score: number
+          expected_value?: Json | null
+          id?: string
+          resolution_action?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity: string
+          tenant_id: string
+        }
+        Update: {
+          category?: string
+          current_value?: Json | null
+          description?: string
+          detected_at?: string | null
+          drift_score?: number
+          expected_value?: Json | null
+          id?: string
+          resolution_action?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drift_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drift_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "drift_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "drift_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -15612,6 +15763,57 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      fido2_credentials: {
+        Row: {
+          aaguid: string | null
+          attestation_type: string | null
+          backed_up: boolean | null
+          created_at: string | null
+          credential_id: string
+          device_name: string
+          id: string
+          is_revoked: boolean | null
+          last_used_at: string | null
+          public_key: string
+          revoked_at: string | null
+          sign_count: number
+          transports: Json | null
+          user_id: string
+        }
+        Insert: {
+          aaguid?: string | null
+          attestation_type?: string | null
+          backed_up?: boolean | null
+          created_at?: string | null
+          credential_id: string
+          device_name: string
+          id?: string
+          is_revoked?: boolean | null
+          last_used_at?: string | null
+          public_key: string
+          revoked_at?: string | null
+          sign_count?: number
+          transports?: Json | null
+          user_id: string
+        }
+        Update: {
+          aaguid?: string | null
+          attestation_type?: string | null
+          backed_up?: boolean | null
+          created_at?: string | null
+          credential_id?: string
+          device_name?: string
+          id?: string
+          is_revoked?: boolean | null
+          last_used_at?: string | null
+          public_key?: string
+          revoked_at?: string | null
+          sign_count?: number
+          transports?: Json | null
+          user_id?: string
+        }
+        Relationships: []
       }
       forensic_snapshots: {
         Row: {
@@ -23767,6 +23969,27 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      session_store: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          key: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          key: string
+          value: Json
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          key?: string
+          value?: Json
+        }
+        Relationships: []
       }
       shadow_it_catalog: {
         Row: {
