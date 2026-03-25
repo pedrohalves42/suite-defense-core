@@ -132,6 +132,7 @@ const OnboardingWizard = lazy(() => import("./pages/admin/OnboardingWizard"));
 const ComplianceHub = lazy(() => import("./pages/admin/ComplianceHub"));
 const IntelligenceHub = lazy(() => import("./pages/admin/IntelligenceHub"));
 const OperationsHub = lazy(() => import("./pages/admin/OperationsHub"));
+const SecuritySettings = lazy(() => import("./pages/admin/SecuritySettings"));
 
 // ─── Client pages ───
 const ClientDashboard = lazy(() => import("./pages/client").then(m => ({ default: m.ClientDashboard })));
@@ -310,6 +311,7 @@ const App = () => (
                 <Route path="ai-autonomy" element={<RouteErrorBoundary route="AI Autonomy"><AutonomyDashboard /></RouteErrorBoundary>} />
                 <Route path="tasks" element={<RouteErrorBoundary route="Tasks"><Tasks /></RouteErrorBoundary>} />
                 <Route path="onboarding" element={<RouteErrorBoundary route="Onboarding"><OnboardingWizard /></RouteErrorBoundary>} />
+                <Route path="security-settings" element={<RouteErrorBoundary route="Security Settings"><SecuritySettings /></RouteErrorBoundary>} />
               </Route>
 
               {/* Super Admin Routes (System-wide) - Protected by MFA Guard */}

@@ -6,6 +6,7 @@ import { Heart, Gauge, ScrollText, Wrench } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const CronHealthDashboard = lazy(() => import('./CronHealthDashboard'));
+const CronHealthAlert = lazy(() => import('@/components/operations/CronHealthAlert').then(m => ({ default: m.CronHealthAlert })));
 const SystemHealth = lazy(() => import('./SystemHealth'));
 const JobsHealthDashboard = lazy(() => import('./JobsHealthDashboard'));
 const InstallationHealth = lazy(() => import('./InstallationHealth'));
@@ -60,6 +61,7 @@ export default function OperationsHub() {
 
         <Suspense fallback={<TabLoader />}>
           <TabsContent value="health" className="mt-4 space-y-6">
+            <CronHealthAlert />
             <CronHealthDashboard />
             <SystemHealth />
             <JobsHealthDashboard />
