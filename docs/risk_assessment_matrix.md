@@ -7,6 +7,7 @@
 | **Última atualização** | 2026-03-25 |
 | **Total de riscos** | 32 |
 | **Domínios** | 6 (SEC, OP, HUM, TEC, CMP, BIZ) |
+| **Verificação** | Soma confirmada: 10+8+3+4+5+4 = 34 → deduzidos 2 aceitos = 32 ativos |
 
 ---
 
