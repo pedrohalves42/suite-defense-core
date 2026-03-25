@@ -1640,9 +1640,13 @@ EOF
              fi
              rm -f "$_tmp_hash" "$_tmp_sig"
              log "SUCCESS" "[FORCE UPDATE] Cryptographic signature VERIFIED for update payload"
-         else
-             log "WARN" "[FORCE UPDATE] Ed25519 public key or openssl not available - cannot verify signature"
-         fi
+          else
+              # SEC-010: Fail-closed — reject update if signature cannot be verified
+              log "ERROR" "[FORCE UPDATE] REJECTED - Ed25519 public key or openssl not available. Cannot verify signature (SEC-010 fail-closed)."
+              logger -t CyberShield "FORCE UPDATE REJECTED: Ed25519 verification infrastructure missing. Update blocked (SEC-010)."
+              rm -f "$temp_script"
+              return 1
+          fi
      else
          # v5.0.13-patch: Reject unsigned payloads
          log "ERROR" "[FORCE UPDATE] REJECTED - No cryptographic signature on update payload. Unsigned updates blocked."
