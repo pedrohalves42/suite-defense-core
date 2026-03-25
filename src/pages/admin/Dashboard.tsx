@@ -34,7 +34,7 @@ import { useProactiveAlerts } from '@/hooks/useProactiveAlerts';
 import { useSimpleModeContext } from '@/hooks/useSimpleMode';
 import { useTranslation } from 'react-i18next';
 import { useUnifiedMetrics } from '@/hooks/useUnifiedMetrics';
-
+import { TenantRiskScore } from '@/components/dashboard/TenantRiskScore';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -367,6 +367,9 @@ export default function Dashboard() {
         <SecurityAdvisorCard />
         <GamificationHub />
       </motion.div>
+
+      {/* ═══ Risk Score ═══ */}
+      <TenantRiskScore />
 
       {/* ═══ BLOCO 4: Atalhos rápidos (colapsável) ═══ */}
       <Collapsible open={extrasOpen} onOpenChange={setExtrasOpen}>
