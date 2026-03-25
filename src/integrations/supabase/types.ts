@@ -19340,6 +19340,104 @@ export type Database = {
           },
         ]
       }
+      oncall_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          details: Json | null
+          escalated_at: string | null
+          id: string
+          incident_id: string
+          resolved_at: string | null
+          severity: string
+          status: string | null
+          summary: string
+          tenant_id: string | null
+          triggered_at: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          details?: Json | null
+          escalated_at?: string | null
+          id?: string
+          incident_id: string
+          resolved_at?: string | null
+          severity?: string
+          status?: string | null
+          summary: string
+          tenant_id?: string | null
+          triggered_at?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          details?: Json | null
+          escalated_at?: string | null
+          id?: string
+          incident_id?: string
+          resolved_at?: string | null
+          severity?: string
+          status?: string | null
+          summary?: string
+          tenant_id?: string | null
+          triggered_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oncall_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oncall_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "oncall_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "oncall_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      oncall_schedules: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          rotation: Json
+          timezone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          rotation?: Json
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          rotation?: Json
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       operational_calendar: {
         Row: {
           affected_agents: string[] | null
@@ -22422,6 +22520,74 @@ export type Database = {
           },
         ]
       }
+      saml_configs: {
+        Row: {
+          attribute_mapping: Json | null
+          certificate: string
+          created_at: string | null
+          enabled: boolean | null
+          entity_id: string
+          id: string
+          provider: string
+          sso_url: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          attribute_mapping?: Json | null
+          certificate?: string
+          created_at?: string | null
+          enabled?: boolean | null
+          entity_id: string
+          id?: string
+          provider: string
+          sso_url: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          attribute_mapping?: Json | null
+          certificate?: string
+          created_at?: string | null
+          enabled?: boolean | null
+          entity_id?: string
+          id?: string
+          provider?: string
+          sso_url?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saml_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saml_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "saml_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "saml_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       scheduled_job_heartbeat: {
         Row: {
           created_at: string
@@ -24440,6 +24606,51 @@ export type Database = {
           },
         ]
       }
+      sli_metrics_hourly: {
+        Row: {
+          created_at: string | null
+          endpoint: string
+          error_requests: number
+          hour: string
+          id: string
+          max_latency_ms: number
+          min_latency_ms: number
+          success_requests: number
+          tenant_id: string
+          total_latency_ms: number
+          total_requests: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          endpoint: string
+          error_requests?: number
+          hour: string
+          id?: string
+          max_latency_ms?: number
+          min_latency_ms?: number
+          success_requests?: number
+          tenant_id?: string
+          total_latency_ms?: number
+          total_requests?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          endpoint?: string
+          error_requests?: number
+          hour?: string
+          id?: string
+          max_latency_ms?: number
+          min_latency_ms?: number
+          success_requests?: number
+          tenant_id?: string
+          total_latency_ms?: number
+          total_requests?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       slo_alerts: {
         Row: {
           acknowledged: boolean | null
@@ -24586,6 +24797,36 @@ export type Database = {
           name?: string
           target_percent?: number
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      slo_error_budget_events: {
+        Row: {
+          details: Json | null
+          endpoint: string
+          error_budget_consumed: number
+          id: string
+          status_code: number
+          tenant_id: string
+          timestamp: string
+        }
+        Insert: {
+          details?: Json | null
+          endpoint: string
+          error_budget_consumed?: number
+          id?: string
+          status_code: number
+          tenant_id?: string
+          timestamp?: string
+        }
+        Update: {
+          details?: Json | null
+          endpoint?: string
+          error_budget_consumed?: number
+          id?: string
+          status_code?: number
+          tenant_id?: string
+          timestamp?: string
         }
         Relationships: []
       }
@@ -27991,6 +28232,7 @@ export type Database = {
           suspension_reason: string | null
           suspension_status: string
           suspension_warning_sent_at: string | null
+          tier: string | null
           updated_at: string
           zip_code: string | null
         }
@@ -28022,6 +28264,7 @@ export type Database = {
           suspension_reason?: string | null
           suspension_status?: string
           suspension_warning_sent_at?: string | null
+          tier?: string | null
           updated_at?: string
           zip_code?: string | null
         }
@@ -28053,6 +28296,7 @@ export type Database = {
           suspension_reason?: string | null
           suspension_status?: string
           suspension_warning_sent_at?: string | null
+          tier?: string | null
           updated_at?: string
           zip_code?: string | null
         }
