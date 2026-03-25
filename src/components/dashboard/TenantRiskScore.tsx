@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +6,7 @@ import { Shield, TrendingUp, TrendingDown, Minus, Info } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
+import { useMemo } from 'react';
 
 interface RiskDimension {
   label: string;
@@ -45,57 +45,65 @@ export function TenantRiskScore() {
       if (!tenant?.id) throw new Error('No tenant');
       const tid = tenant.id;
 
-      // Fetch multiple data points in parallel
-      const [agentsRes, vulnsRes, alertsRes, sessionsRes, mfaRes] = await Promise.all([
-        supabase.from('agents').select('status, last_heartbeat, antivirus_status, firewall_enabled', { count: 'exact' }).eq('tenant_id', tid),
-        supabase.from('vulnerability_findings').select('severity', { count: 'exact' }).eq('tenant_id', tid).is('acknowledged_at', null),
-        supabase.from('security_alerts').select('severity', { count: 'exact' }).eq('tenant_id', tid).eq('resolved', false),
-        supabase.from('active_sessions').select('id', { count: 'exact' }).eq('tenant_id', tid),
-        supabase.from('user_roles').select('user_id', { count: 'exact' }).eq('tenant_id', tid),
+      // Fetch data from actual tables in parallel
+      const [agentsRes, avRes, vulnsRes, detectionsRes, sessionsRes, rolesRes] = await Promise.all([
+        // Agents: status + heartbeat
+        supabase.from('agents').select('status, last_heartbeat, skip_firewall_remediation').eq('tenant_id', tid),
+        // AV status
+        supabase.from('antivirus_status').select('agent_id, status').eq('tenant_id', tid),
+        // Unresolved vulnerabilities
+        supabase.from('agent_vulnerabilities').select('severity').eq('tenant_id', tid),
+        // Unacknowledged detections (threats)
+        supabase.from('endpoint_detection_events').select('severity').eq('tenant_id', tid).is('acknowledged_at', null).limit(500),
+        // Active sessions
+        supabase.from('active_sessions').select('id', { count: 'exact', head: true }).eq('tenant_id', tid),
+        // User count
+        supabase.from('user_roles').select('user_id', { count: 'exact', head: true }).eq('tenant_id', tid),
       ]);
 
       const agents = agentsRes.data || [];
       const totalAgents = agents.length || 1;
+      const avData = avRes.data || [];
       const vulns = vulnsRes.data || [];
-      const alerts = alertsRes.data || [];
+      const detections = detectionsRes.data || [];
 
-      // 1. Endpoint Health (25%) — % online + AV active + FW enabled
+      // 1. Endpoint Health (25%) — % online + AV active
       const now = Date.now();
       const onlineAgents = agents.filter(a => {
         if (!a.last_heartbeat) return false;
         return now - new Date(a.last_heartbeat).getTime() < 15 * 60 * 1000;
       }).length;
-      const avActive = agents.filter(a => a.antivirus_status === 'active').length;
-      const fwEnabled = agents.filter(a => a.firewall_enabled === true).length;
+      const avActive = avData.filter(a => a.status === 'active' || a.status === 'enabled').length;
+      const avRatio = totalAgents > 0 ? avActive / totalAgents : 0;
       const endpointScore = Math.round(
-        ((onlineAgents / totalAgents) * 40 + (avActive / totalAgents) * 30 + (fwEnabled / totalAgents) * 30)
+        ((onlineAgents / totalAgents) * 50 + Math.min(avRatio, 1) * 50)
       );
 
-      // 2. Vulnerability Posture (25%) — inverse of unresolved vulns
+      // 2. Vulnerability Posture (25%)
       const critVulns = vulns.filter(v => v.severity === 'critical').length;
       const highVulns = vulns.filter(v => v.severity === 'high').length;
       const vulnPenalty = Math.min(critVulns * 15 + highVulns * 5, 100);
       const vulnScore = Math.max(0, 100 - vulnPenalty);
 
-      // 3. Active Threats (20%) — inverse of unresolved alerts
-      const critAlerts = alerts.filter(a => a.severity === 'critical').length;
-      const highAlerts = alerts.filter(a => a.severity === 'high').length;
-      const alertPenalty = Math.min(critAlerts * 20 + highAlerts * 8, 100);
-      const threatScore = Math.max(0, 100 - alertPenalty);
+      // 3. Active Threats (20%)
+      const critDetections = detections.filter(d => d.severity === 'critical').length;
+      const highDetections = detections.filter(d => d.severity === 'high').length;
+      const threatPenalty = Math.min(critDetections * 20 + highDetections * 8, 100);
+      const threatScore = Math.max(0, 100 - threatPenalty);
 
-      // 4. Access Control (15%) — session hygiene
+      // 4. Access Control (15%)
       const sessionCount = sessionsRes.count || 0;
-      const userCount = mfaRes.count || 1;
+      const userCount = rolesRes.count || 1;
       const avgSessionsPerUser = sessionCount / userCount;
       const accessScore = avgSessionsPerUser <= 2 ? 100 : avgSessionsPerUser <= 5 ? 70 : 40;
 
-      // 5. Coverage (15%) — agent deployment health
+      // 5. Coverage (15%)
       const coverageScore = totalAgents > 0 ? Math.min(100, Math.round((onlineAgents / totalAgents) * 100)) : 0;
 
       const dimensions: RiskDimension[] = [
         { label: 'Saúde dos Endpoints', score: endpointScore, weight: 0.25, detail: `${onlineAgents}/${totalAgents} online` },
         { label: 'Vulnerabilidades', score: vulnScore, weight: 0.25, detail: `${critVulns} críticas, ${highVulns} altas` },
-        { label: 'Ameaças Ativas', score: threatScore, weight: 0.20, detail: `${critAlerts + highAlerts} alertas abertos` },
+        { label: 'Ameaças Ativas', score: threatScore, weight: 0.20, detail: `${critDetections + highDetections} detecções abertas` },
         { label: 'Controle de Acesso', score: accessScore, weight: 0.15, detail: `${sessionCount} sessões ativas` },
         { label: 'Cobertura', score: coverageScore, weight: 0.15, detail: `${Math.round((onlineAgents / totalAgents) * 100)}% conectados` },
       ];
@@ -107,7 +115,7 @@ export function TenantRiskScore() {
       return {
         overallScore,
         dimensions,
-        trend: 'stable' as const, // TODO: compare with historical snapshot
+        trend: 'stable' as const,
         level: classifyLevel(overallScore),
       };
     },
@@ -162,12 +170,7 @@ export function TenantRiskScore() {
 
         <Progress
           value={riskData.overallScore}
-          className={`h-2 [&>div]:${
-            riskData.overallScore >= 80 ? 'bg-cta-positive' :
-            riskData.overallScore >= 60 ? 'bg-yellow-500' :
-            riskData.overallScore >= 40 ? 'bg-orange-500' :
-            'bg-destructive'
-          }`}
+          className="h-2"
         />
 
         {/* Dimensions breakdown */}
