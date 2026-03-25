@@ -27,18 +27,18 @@ interface SLIDashboardProps {
 
 const statusIcon = (status: string) => {
   switch (status) {
-    case 'healthy': return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-    case 'warning': return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-    case 'critical': return <XCircle className="h-4 w-4 text-red-500" />;
+    case 'healthy': return <CheckCircle2 className="h-4 w-4 text-primary" />;
+    case 'warning': return <AlertTriangle className="h-4 w-4 text-accent-foreground" />;
+    case 'critical': return <XCircle className="h-4 w-4 text-destructive" />;
     default: return <Activity className="h-4 w-4 text-muted-foreground" />;
   }
 };
 
 const statusColor = (status: string) => {
   switch (status) {
-    case 'healthy': return 'text-green-600';
-    case 'warning': return 'text-yellow-600';
-    case 'critical': return 'text-red-600';
+    case 'healthy': return 'text-primary';
+    case 'warning': return 'text-accent-foreground';
+    case 'critical': return 'text-destructive';
     default: return 'text-muted-foreground';
   }
 };
