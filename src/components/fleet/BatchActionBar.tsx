@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  RefreshCw, Search, XCircle, Loader2, CheckSquare
+  RefreshCw, Search, XCircle, Loader2, CheckSquare, Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +10,8 @@ import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useStepUpAuth } from '@/hooks/useStepUpAuth';
+import { MFAVerificationDialog } from '@/components/mfa/MFAVerificationDialog';
 
 interface BatchActionBarProps {
   selectedIds: string[];
@@ -21,6 +23,17 @@ export function BatchActionBar({ selectedIds, selectedNames, onClearSelection }:
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState<string | null>(null);
+
+  // ADR-008: Step-up auth for batch actions (critical operations)
+  const {
+    executeWithStepUp,
+    needsVerification,
+    onVerificationSuccess,
+    onVerificationCancel,
+  } = useStepUpAuth({ 
+    reason: 'Ações em massa requerem verificação de segurança adicional.',
+    windowMs: 5 * 60 * 1000 // 5 min window
+  });
 
   if (selectedIds.length === 0) return null;
 
@@ -58,6 +71,13 @@ export function BatchActionBar({ selectedIds, selectedNames, onClearSelection }:
     }
   };
 
+  // Wrap batch actions with step-up auth
+  const handleBatchAction = (type: string, label: string) => {
+    executeWithStepUp(async () => {
+      await createBatchJobs(type, label);
+    });
+  };
+
   return (
     <AnimatePresence>
       <motion.div
@@ -84,7 +104,7 @@ export function BatchActionBar({ selectedIds, selectedNames, onClearSelection }:
             variant="outline"
             className="h-8 text-xs"
             disabled={!!loading}
-            onClick={() => createBatchJobs('update_agent', 'Atualização')}
+            onClick={() => handleBatchAction('update_agent', 'Atualização')}
           >
             {loading === 'update_agent' ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
             Atualizar
@@ -95,7 +115,7 @@ export function BatchActionBar({ selectedIds, selectedNames, onClearSelection }:
             variant="outline"
             className="h-8 text-xs"
             disabled={!!loading}
-            onClick={() => createBatchJobs('full_scan', 'Scan completo')}
+            onClick={() => handleBatchAction('full_scan', 'Scan completo')}
           >
             {loading === 'full_scan' ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Search className="h-3 w-3 mr-1" />}
             Scan
@@ -112,6 +132,14 @@ export function BatchActionBar({ selectedIds, selectedNames, onClearSelection }:
             <XCircle className="h-3 w-3 mr-1" /> Limpar
           </Button>
         </div>
+
+        {/* MFA verification dialog for step-up auth */}
+        <MFAVerificationDialog
+          open={needsVerification}
+          onOpenChange={(open) => !open && onVerificationCancel()}
+          onSuccess={onVerificationSuccess}
+          onCancel={onVerificationCancel}
+        />
       </motion.div>
     </AnimatePresence>
   );
