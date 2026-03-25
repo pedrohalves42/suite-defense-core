@@ -3,11 +3,6 @@
  * shared-kernel definitions.
  *
  * Usage: npx tsx scripts/sync-shared-types.ts
- *
- * This script reads `src/domain/shared-kernel/shared-enums.ts` and
- * produces `supabase/functions/_shared/hexagonal/types.ts` with:
- *   - The same enum definitions (verbatim)
- *   - The Deno-only port interfaces & DomainEvent (appended)
  */
 
 import * as fs from 'fs';
@@ -19,16 +14,24 @@ const TARGET = path.join(ROOT, 'supabase/functions/_shared/hexagonal/types.ts');
 
 const enumSource = fs.readFileSync(SOURCE, 'utf-8');
 
-// Extract only the enum blocks (skip the doc comment header)
-const enumBlocks = enumSource
-  .split('\n')
-  .filter((line) => {
-    // Keep enums, blank lines, comments that aren't the module doc
-    if (line.startsWith('/**') || line.startsWith(' *') || line.startsWith(' */')) return false;
-    return true;
-  })
-  .join('\n')
-  .trim();
+// Extract only the enum blocks (skip the module-level doc comment)
+const lines = enumSource.split('\n');
+const enumLines: string[] = [];
+let inDocComment = false;
+let docCommentDone = false;
+
+for (const line of lines) {
+  if (!docCommentDone) {
+    if (line.trimStart().startsWith('/**')) { inDocComment = true; continue; }
+    if (inDocComment && line.trimStart().startsWith('*/')) { inDocComment = false; docCommentDone = true; continue; }
+    if (inDocComment) continue;
+    if (line.trim() === '') continue;
+    docCommentDone = true;
+  }
+  enumLines.push(line);
+}
+
+const enumBlocks = enumLines.join('\n').trim();
 
 const output = `/**
  * Deno-compatible domain types for the Hexagonal Architecture.
@@ -90,4 +93,4 @@ export interface DomainEvent {
 `;
 
 fs.writeFileSync(TARGET, output, 'utf-8');
-console.log(`✅ Synced types to ${path.relative(ROOT, TARGET)}`);
+console.log(\`✅ Synced types to \${path.relative(ROOT, TARGET)}\`);

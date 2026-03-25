@@ -1,23 +1,10 @@
-export enum Platform {
-  WINDOWS = 'windows',
-  LINUX = 'linux',
-  MACOS = 'macos',
-}
+/**
+ * Domain constants — re-exports from the canonical shared kernel
+ * plus entity-level enums for convenience.
+ */
 
-export enum UpdateChannel {
-  STABLE = 'stable',
-  BETA = 'beta',
-  ALPHA = 'alpha',
-}
-
-export enum UpdateStatus {
-  PENDING = 'pending',
-  DOWNLOADING = 'downloading',
-  APPLYING = 'applying',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  ROLLED_BACK = 'rolled_back',
-}
+// Canonical shared enums (single source of truth)
+export { Platform, UpdateChannel, UpdateStatus } from '../shared-kernel/shared-enums';
 
 // Re-export entity-level enums for convenience
 export { AgentState, AgentStatus, OsType } from '../entities/Agent';
