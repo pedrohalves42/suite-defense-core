@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * Validates that shared-kernel enums stay in sync between
  * the Vite frontend and Deno Edge Functions.
