@@ -1,0 +1,36 @@
+name: Agent Sync Validation
+
+on:
+  push:
+    paths:
+      - 'supabase/functions/_shared/agent-scripts/**'
+      - 'public/agent-scripts/**'
+  pull_request:
+    paths:
+      - 'supabase/functions/_shared/agent-scripts/**'
+      - 'public/agent-scripts/**'
+
+jobs:
+  validate-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate agent script sync
+        run: |
+          chmod +x scripts/check-agent-sync.sh
+          ./scripts/check-agent-sync.sh
+
+      - name: Validate Windows critical fixes
+        run: |
+          WIN="public/agent-scripts/cybershield-agent-windows-v5.ps1"
+          FAIL=0
+          for PAT in "Self-healing" "Global:BootScriptHash" "ExportPkcs8" "ContainsKey"; do
+            if grep -q "$PAT" "$WIN"; then
+              echo "✅ $PAT"
+            else
+              echo "❌ $PAT missing!"
+              FAIL=1
+            fi
+          done
+          exit $FAIL
