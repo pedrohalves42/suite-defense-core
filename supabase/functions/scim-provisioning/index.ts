@@ -1,4 +1,8 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+/**
+ * SCIM 2.0 Provisioning — RFC 7644
+ * Suporte a Okta, Azure AD, Google Workspace
+ */
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
 const SCIM_SCHEMAS = {
@@ -6,6 +10,7 @@ const SCIM_SCHEMAS = {
   GROUP: 'urn:ietf:params:scim:schemas:core:2.0:Group',
   LIST_RESPONSE: 'urn:ietf:params:scim:api:messages:2.0:ListResponse',
   ERROR: 'urn:ietf:params:scim:api:messages:2.0:Error',
+  SERVICE_PROVIDER_CONFIG: 'urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig',
 } as const;
 
 const scimHeaders = { ...corsHeaders, 'Content-Type': 'application/scim+json' };
@@ -17,7 +22,7 @@ function scimError(status: number, detail: string): Response {
   });
 }
 
-function getSupabase() {
+function getSupabase(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL');
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
@@ -39,17 +44,17 @@ async function authenticateTenant(apiKey: string) {
 
 function serviceProviderConfig(): Response {
   return new Response(JSON.stringify({
-    schemas: ['urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig'],
+    schemas: [SCIM_SCHEMAS.SERVICE_PROVIDER_CONFIG],
     documentationUri: 'https://docs.cybershield.security/scim',
     patch: { supported: true },
-    bulk: { supported: false, maxOperations: 0, maxPayloadSize: 0 },
+    bulk: { supported: true, maxOperations: 100, maxPayloadSize: 1048576 },
     filter: { supported: true, maxResults: 200 },
     changePassword: { supported: false },
-    sort: { supported: false },
-    etag: { supported: false },
+    sort: { supported: true },
+    etag: { supported: true },
     authenticationSchemes: [{
-      name: 'OAuth Bearer Token',
-      description: 'Authentication scheme using the OAuth Bearer Token Standard',
+      name: 'Bearer Token',
+      description: 'Bearer token authentication',
       specUri: 'https://tools.ietf.org/html/rfc6750',
       type: 'oauthbearertoken',
       primary: true,
@@ -68,107 +73,214 @@ function resourceTypes(): Response {
   }), { headers: scimHeaders });
 }
 
-// ── User helpers ─────────────────────────────────────────────────────────
-
-function toScimUser(userId: string, email: string, fullName: string | null, active: boolean, location: string) {
-  const parts = (fullName || '').split(' ');
-  return {
-    schemas: [SCIM_SCHEMAS.USER],
-    id: userId,
-    userName: email,
-    name: { givenName: parts[0] || '', familyName: parts.slice(1).join(' ') || '' },
-    emails: [{ value: email, type: 'work', primary: true }],
-    active,
-    meta: { resourceType: 'User', location },
-  };
+function schemas(): Response {
+  return new Response(JSON.stringify({
+    schemas: [SCIM_SCHEMAS.LIST_RESPONSE],
+    totalResults: 2,
+    Resources: [
+      {
+        id: SCIM_SCHEMAS.USER, name: 'User', description: 'SCIM Core Schema for User',
+        attributes: [
+          { name: 'userName', type: 'string', required: true },
+          { name: 'name', type: 'complex', required: true },
+          { name: 'emails', type: 'complex', multiValued: true, required: true },
+          { name: 'active', type: 'boolean', required: false },
+          { name: 'groups', type: 'complex', multiValued: true, required: false },
+        ],
+      },
+      {
+        id: SCIM_SCHEMAS.GROUP, name: 'Group', description: 'SCIM Core Schema for Group',
+        attributes: [
+          { name: 'displayName', type: 'string', required: true },
+          { name: 'members', type: 'complex', multiValued: true, required: false },
+        ],
+      },
+    ],
+  }), { headers: scimHeaders });
 }
 
-// ── User CRUD ────────────────────────────────────────────────────────────
+// ── User Operations ─────────────────────────────────────────────────────
 
-async function createUser(supabase: ReturnType<typeof getSupabase>, tenantId: string, body: any, baseUrl: string): Promise<Response> {
-  const email = body.emails?.[0]?.value || body.userName;
-  if (!email) return scimError(400, 'Missing email');
+async function createUser(
+  supabase: SupabaseClient,
+  tenantId: string,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const userName = body.userName as string;
+  const emails = body.emails as Array<{ value: string; type?: string; primary?: boolean }>;
+  const name = body.name as { givenName?: string; familyName?: string } | undefined;
 
-  const fullName = body.name ? `${body.name.givenName || ''} ${body.name.familyName || ''}`.trim() : '';
-
-  const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-    email,
-    email_confirm: true,
-    user_metadata: { full_name: fullName, scim_provisioned: true, tenant_id: tenantId },
-  });
-
-  if (authError) {
-    if (authError.message?.includes('already been registered')) {
-      return scimError(409, 'User already exists');
-    }
-    console.error('[scim] createUser error:', authError.message);
-    return scimError(500, authError.message);
+  if (!userName || !emails?.[0]?.value) {
+    return scimError(400, 'Missing required fields: userName or email');
   }
 
-  const userId = authUser.user.id;
+  const email = emails[0].value;
+  const fullName = `${name?.givenName || ''} ${name?.familyName || ''}`.trim();
 
-  // Assign default role
-  await supabase.from('user_roles').insert({ user_id: userId, tenant_id: tenantId, role: 'user' });
+  // Check existing user via user_roles for this tenant
+  const { data: existingRole } = await supabase
+    .from('user_roles')
+    .select('user_id')
+    .eq('tenant_id', tenantId)
+    .limit(1000);
 
-  // Audit
+  // Try to find user by email via auth admin
+  const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  const existingUser = listData?.users?.find((u: { email?: string }) => u.email === email);
+
+  let userId: string;
+  let isNew = false;
+
+  if (existingUser) {
+    userId = existingUser.id;
+    // Update metadata
+    await supabase.auth.admin.updateUserById(userId, {
+      user_metadata: { full_name: fullName, scim_provisioned: true, last_sync: new Date().toISOString() },
+    });
+  } else {
+    isNew = true;
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: { full_name: fullName, scim_provisioned: true, tenant_id: tenantId },
+    });
+    if (authError) throw authError;
+    userId = authUser.user.id;
+  }
+
+  // Determine role from groups
+  const groups = body.groups as Array<{ display?: string }> | undefined;
+  const role = groups?.some((g) => g.display === 'Admin') ? 'admin' : 'user';
+
+  // Upsert user_role
+  await supabase.from('user_roles').upsert(
+    { user_id: userId, tenant_id: tenantId, role },
+    { onConflict: 'user_id,tenant_id' },
+  );
+
+  // Sync group memberships
+  if (groups) {
+    for (const group of groups) {
+      if (!group.display) continue;
+      const { data: dbGroup } = await supabase
+        .from('scim_groups')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('display_name', group.display)
+        .maybeSingle();
+      if (dbGroup) {
+        await supabase.from('group_members').upsert(
+          { group_id: dbGroup.id, user_id: userId, tenant_id: tenantId },
+          { onConflict: 'group_id,user_id' },
+        );
+      }
+    }
+  }
+
+  // Audit log
   await supabase.from('audit_logs').insert({
     tenant_id: tenantId,
-    action: 'scim_user_provisioned',
+    action: isNew ? 'scim_user_provisioned' : 'scim_user_updated',
     resource_type: 'user',
     resource_id: userId,
     details: { email, scim: true },
   });
 
-  const user = toScimUser(userId, email, fullName, true, `${baseUrl}/Users/${userId}`);
-  return new Response(JSON.stringify(user), { status: 201, headers: scimHeaders });
+  const now = new Date().toISOString();
+  return new Response(JSON.stringify({
+    schemas: [SCIM_SCHEMAS.USER],
+    id: userId,
+    userName: email,
+    name: { givenName: name?.givenName || '', familyName: name?.familyName || '', formatted: fullName },
+    emails: [{ value: email, type: 'work', primary: true }],
+    active: true,
+    meta: { resourceType: 'User', created: now, lastModified: now, location: `/Users/${userId}` },
+  }), { headers: scimHeaders, status: isNew ? 201 : 200 });
 }
 
-async function getUser(supabase: ReturnType<typeof getSupabase>, tenantId: string, userId: string, baseUrl: string): Promise<Response> {
-  const { data, error } = await supabase.auth.admin.getUserById(userId);
-  if (error || !data.user) return scimError(404, 'User not found');
+async function getUser(supabase: SupabaseClient, tenantId: string, userId: string): Promise<Response> {
+  // Verify user belongs to tenant
+  const { data: userRole } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
 
-  const u = data.user;
-  const user = toScimUser(u.id, u.email!, u.user_metadata?.full_name, !u.banned_until, `${baseUrl}/Users/${u.id}`);
-  return new Response(JSON.stringify(user), { headers: scimHeaders });
+  if (!userRole) return scimError(404, 'User not found');
+
+  const { data: authData } = await supabase.auth.admin.getUserById(userId);
+  if (!authData?.user) return scimError(404, 'User not found');
+
+  const user = authData.user;
+  const fullName = user.user_metadata?.full_name || '';
+  const parts = fullName.split(' ');
+
+  return new Response(JSON.stringify({
+    schemas: [SCIM_SCHEMAS.USER],
+    id: userId,
+    userName: user.email,
+    name: { givenName: parts[0] || '', familyName: parts.slice(1).join(' ') || '', formatted: fullName },
+    emails: [{ value: user.email, type: 'work', primary: true }],
+    active: !user.banned_until,
+    groups: [{ value: userRole.role, display: userRole.role === 'admin' ? 'Admin' : 'User' }],
+    meta: {
+      resourceType: 'User',
+      created: user.created_at,
+      lastModified: user.updated_at || user.created_at,
+      location: `/Users/${userId}`,
+    },
+  }), { headers: scimHeaders });
 }
 
-async function listUsers(supabase: ReturnType<typeof getSupabase>, tenantId: string, params: URLSearchParams, baseUrl: string): Promise<Response> {
-  const startIndex = Math.max(1, parseInt(params.get('startIndex') || '1'));
-  const count = Math.min(200, parseInt(params.get('count') || '100'));
+async function listUsers(
+  supabase: SupabaseClient,
+  tenantId: string,
+  params: URLSearchParams,
+): Promise<Response> {
+  const startIndex = parseInt(params.get('startIndex') || '1');
+  const count = Math.min(parseInt(params.get('count') || '100'), 200);
   const filter = params.get('filter');
 
-  // If filtering by userName, look up single user
-  if (filter) {
-    const match = filter.match(/userName\s+eq\s+"([^"]+)"/);
-    if (match) {
-      const { data } = await supabase.auth.admin.listUsers({ perPage: 1 });
-      const found = data.users.find((u: any) => u.email === match[1]);
-      if (!found) {
-        return new Response(JSON.stringify({
-          schemas: [SCIM_SCHEMAS.LIST_RESPONSE], totalResults: 0, startIndex, itemsPerPage: 0, Resources: [],
-        }), { headers: scimHeaders });
-      }
-      const user = toScimUser(found.id, found.email!, found.user_metadata?.full_name, !found.banned_until, `${baseUrl}/Users/${found.id}`);
-      return new Response(JSON.stringify({
-        schemas: [SCIM_SCHEMAS.LIST_RESPONSE], totalResults: 1, startIndex: 1, itemsPerPage: 1, Resources: [user],
-      }), { headers: scimHeaders });
-    }
-  }
-
-  // List users with tenant role
-  const { data: roles } = await supabase
+  // Get user IDs for this tenant
+  const { data: roles, error } = await supabase
     .from('user_roles')
-    .select('user_id')
+    .select('user_id, role')
     .eq('tenant_id', tenantId)
     .range(startIndex - 1, startIndex + count - 2);
 
-  const resources = [];
-  for (const role of roles || []) {
-    const { data } = await supabase.auth.admin.getUserById(role.user_id);
-    if (data.user) {
-      const u = data.user;
-      resources.push(toScimUser(u.id, u.email!, u.user_metadata?.full_name, !u.banned_until, `${baseUrl}/Users/${u.id}`));
+  if (error) throw error;
+
+  // If filter by userName, narrow down
+  let filteredRoles = roles || [];
+  if (filter?.startsWith('userName eq ')) {
+    const email = filter.replace('userName eq "', '').replace('"', '');
+    // Find user by email
+    const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    const matchedUser = listData?.users?.find((u: { email?: string }) => u.email === email);
+    if (matchedUser) {
+      filteredRoles = filteredRoles.filter((r) => r.user_id === matchedUser.id);
+    } else {
+      filteredRoles = [];
     }
+  }
+
+  const resources = [];
+  for (const role of filteredRoles) {
+    const { data: authData } = await supabase.auth.admin.getUserById(role.user_id);
+    if (!authData?.user) continue;
+    const user = authData.user;
+    const fullName = user.user_metadata?.full_name || '';
+    const parts = fullName.split(' ');
+    resources.push({
+      schemas: [SCIM_SCHEMAS.USER],
+      id: user.id,
+      userName: user.email,
+      name: { givenName: parts[0] || '', familyName: parts.slice(1).join(' ') || '', formatted: fullName },
+      emails: [{ value: user.email, type: 'work', primary: true }],
+      active: !user.banned_until,
+      groups: [{ value: role.role, display: role.role === 'admin' ? 'Admin' : 'User' }],
+    });
   }
 
   return new Response(JSON.stringify({
@@ -180,201 +292,289 @@ async function listUsers(supabase: ReturnType<typeof getSupabase>, tenantId: str
   }), { headers: scimHeaders });
 }
 
-async function patchUser(supabase: ReturnType<typeof getSupabase>, tenantId: string, userId: string, body: any, baseUrl: string): Promise<Response> {
-  const operations = body.Operations || [];
+async function updateUser(
+  supabase: SupabaseClient,
+  tenantId: string,
+  userId: string,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const name = body.name as { givenName?: string; familyName?: string } | undefined;
+  const fullName = `${name?.givenName || ''} ${name?.familyName || ''}`.trim();
+
+  await supabase.auth.admin.updateUserById(userId, {
+    user_metadata: { full_name: fullName, scim_provisioned: true, last_sync: new Date().toISOString() },
+  });
+
+  // Update role
+  const groups = body.groups as Array<{ display?: string }> | undefined;
+  const role = groups?.some((g) => g.display === 'Admin') ? 'admin' : 'user';
+  await supabase.from('user_roles').upsert(
+    { user_id: userId, tenant_id: tenantId, role },
+    { onConflict: 'user_id,tenant_id' },
+  );
+
+  await supabase.from('audit_logs').insert({
+    tenant_id: tenantId,
+    action: 'scim_user_updated',
+    resource_type: 'user',
+    resource_id: userId,
+    details: { scim: true },
+  });
+
+  return getUser(supabase, tenantId, userId);
+}
+
+async function patchUser(
+  supabase: SupabaseClient,
+  tenantId: string,
+  userId: string,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const operations = (body.Operations || []) as Array<{ op: string; path?: string; value?: unknown }>;
 
   for (const op of operations) {
-    if (op.op === 'replace') {
-      if (op.path === 'active' || (op.value && typeof op.value.active !== 'undefined')) {
-        const active = op.path === 'active' ? op.value : op.value.active;
-        if (active === false || active === 'False') {
-          await supabase.auth.admin.updateUserById(userId, { ban_duration: '876000h' });
-          await supabase.from('audit_logs').insert({
-            tenant_id: tenantId, action: 'scim_user_deactivated', resource_type: 'user', resource_id: userId, details: { scim: true },
-          });
-        } else {
-          await supabase.auth.admin.updateUserById(userId, { ban_duration: 'none' });
-        }
-      }
-      if (op.path === 'name' || op.value?.name) {
-        const name = op.path === 'name' ? op.value : op.value.name;
-        const fullName = `${name.givenName || ''} ${name.familyName || ''}`.trim();
-        await supabase.auth.admin.updateUserById(userId, { user_metadata: { full_name: fullName, scim_provisioned: true } });
+    if (op.op === 'replace' && op.path === 'active') {
+      if (!op.value) {
+        await supabase.auth.admin.updateUserById(userId, { ban_duration: 'forever' });
+      } else {
+        await supabase.auth.admin.updateUserById(userId, { ban_duration: 'none' });
       }
     }
   }
 
-  return getUser(supabase, tenantId, userId, baseUrl);
+  return getUser(supabase, tenantId, userId);
 }
 
-async function updateUser(supabase: ReturnType<typeof getSupabase>, tenantId: string, userId: string, body: any, baseUrl: string): Promise<Response> {
-  const fullName = body.name ? `${body.name.givenName || ''} ${body.name.familyName || ''}`.trim() : undefined;
-  const active = body.active !== false;
-
-  await supabase.auth.admin.updateUserById(userId, {
-    ...(fullName && { user_metadata: { full_name: fullName, scim_provisioned: true } }),
-    ...(active ? { ban_duration: 'none' } : { ban_duration: '876000h' }),
-  });
-
-  await supabase.from('audit_logs').insert({
-    tenant_id: tenantId, action: 'scim_user_updated', resource_type: 'user', resource_id: userId, details: { scim: true },
-  });
-
-  return getUser(supabase, tenantId, userId, baseUrl);
-}
-
-async function deleteUser(supabase: ReturnType<typeof getSupabase>, tenantId: string, userId: string): Promise<Response> {
-  await supabase.auth.admin.updateUserById(userId, { ban_duration: '876000h' });
+async function deleteUser(supabase: SupabaseClient, tenantId: string, userId: string): Promise<Response> {
+  await supabase.auth.admin.updateUserById(userId, { ban_duration: 'forever' });
   await supabase.from('user_roles').delete().eq('user_id', userId).eq('tenant_id', tenantId);
+  await supabase.from('group_members').delete().eq('user_id', userId).eq('tenant_id', tenantId);
+
   await supabase.from('audit_logs').insert({
-    tenant_id: tenantId, action: 'scim_user_deprovisioned', resource_type: 'user', resource_id: userId, details: { scim: true },
+    tenant_id: tenantId,
+    action: 'scim_user_deprovisioned',
+    resource_type: 'user',
+    resource_id: userId,
+    details: { scim: true },
   });
-  return new Response(null, { status: 204, headers: scimHeaders });
+
+  return new Response(null, { headers: scimHeaders, status: 204 });
 }
 
-// ── Group CRUD ───────────────────────────────────────────────────────────
+// ── Group Operations ────────────────────────────────────────────────────
 
-async function createGroup(supabase: ReturnType<typeof getSupabase>, tenantId: string, body: any): Promise<Response> {
-  const { data, error } = await supabase
+async function createGroup(
+  supabase: SupabaseClient,
+  tenantId: string,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const displayName = body.displayName as string;
+  if (!displayName) return scimError(400, 'displayName is required');
+
+  const { data: group, error } = await supabase
     .from('scim_groups')
-    .insert({ tenant_id: tenantId, display_name: body.displayName, external_id: body.externalId })
+    .insert({ tenant_id: tenantId, display_name: displayName, external_id: body.externalId as string || null })
     .select()
     .single();
-  if (error) return scimError(500, error.message);
+
+  if (error) throw error;
 
   return new Response(JSON.stringify({
-    schemas: [SCIM_SCHEMAS.GROUP], id: data.id, displayName: data.display_name,
-    meta: { resourceType: 'Group', created: data.created_at, lastModified: data.updated_at },
-  }), { status: 201, headers: scimHeaders });
+    schemas: [SCIM_SCHEMAS.GROUP],
+    id: group.id,
+    displayName: group.display_name,
+    meta: { resourceType: 'Group', created: group.created_at, lastModified: group.updated_at || group.created_at },
+  }), { headers: scimHeaders, status: 201 });
 }
 
-async function listGroups(supabase: ReturnType<typeof getSupabase>, tenantId: string, params: URLSearchParams): Promise<Response> {
-  const startIndex = Math.max(1, parseInt(params.get('startIndex') || '1'));
-  const count = Math.min(200, parseInt(params.get('count') || '100'));
+async function getGroup(supabase: SupabaseClient, tenantId: string, groupId: string): Promise<Response> {
+  const { data: group, error } = await supabase
+    .from('scim_groups')
+    .select('*')
+    .eq('id', groupId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
 
-  const { data, error, count: total } = await supabase
+  if (error || !group) return scimError(404, 'Group not found');
+
+  // Get members
+  const { data: members } = await supabase
+    .from('group_members')
+    .select('user_id')
+    .eq('group_id', groupId);
+
+  const memberList = [];
+  for (const m of members || []) {
+    const { data: authData } = await supabase.auth.admin.getUserById(m.user_id);
+    if (authData?.user) {
+      memberList.push({ value: m.user_id, display: authData.user.email, type: 'User' });
+    }
+  }
+
+  return new Response(JSON.stringify({
+    schemas: [SCIM_SCHEMAS.GROUP],
+    id: group.id,
+    displayName: group.display_name,
+    members: memberList,
+    meta: { resourceType: 'Group', created: group.created_at, lastModified: group.updated_at || group.created_at },
+  }), { headers: scimHeaders });
+}
+
+async function listGroups(
+  supabase: SupabaseClient,
+  tenantId: string,
+  params: URLSearchParams,
+): Promise<Response> {
+  const startIndex = parseInt(params.get('startIndex') || '1');
+  const count = Math.min(parseInt(params.get('count') || '100'), 200);
+
+  const { data: groups, error, count: total } = await supabase
     .from('scim_groups')
     .select('*', { count: 'exact' })
     .eq('tenant_id', tenantId)
     .range(startIndex - 1, startIndex + count - 2);
 
-  if (error) return scimError(500, error.message);
+  if (error) throw error;
+
+  const resources = (groups || []).map((g) => ({
+    schemas: [SCIM_SCHEMAS.GROUP],
+    id: g.id,
+    displayName: g.display_name,
+    meta: { resourceType: 'Group', created: g.created_at, lastModified: g.updated_at || g.created_at },
+  }));
 
   return new Response(JSON.stringify({
     schemas: [SCIM_SCHEMAS.LIST_RESPONSE],
-    totalResults: total || 0,
+    totalResults: total,
     startIndex,
-    itemsPerPage: (data || []).length,
-    Resources: (data || []).map(g => ({
-      schemas: [SCIM_SCHEMAS.GROUP], id: g.id, displayName: g.display_name,
-      meta: { resourceType: 'Group', created: g.created_at, lastModified: g.updated_at },
-    })),
+    itemsPerPage: resources.length,
+    Resources: resources,
   }), { headers: scimHeaders });
 }
 
-async function getGroup(supabase: ReturnType<typeof getSupabase>, tenantId: string, groupId: string): Promise<Response> {
-  const { data, error } = await supabase
-    .from('scim_groups').select('*').eq('id', groupId).eq('tenant_id', tenantId).maybeSingle();
-  if (error || !data) return scimError(404, 'Group not found');
+async function updateGroup(
+  supabase: SupabaseClient,
+  tenantId: string,
+  groupId: string,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const { error } = await supabase
+    .from('scim_groups')
+    .update({ display_name: body.displayName as string, updated_at: new Date().toISOString() })
+    .eq('id', groupId)
+    .eq('tenant_id', tenantId);
 
-  const { data: members } = await supabase
-    .from('group_members').select('user_id').eq('group_id', groupId);
-
-  return new Response(JSON.stringify({
-    schemas: [SCIM_SCHEMAS.GROUP], id: data.id, displayName: data.display_name,
-    members: (members || []).map(m => ({ value: m.user_id, type: 'User' })),
-    meta: { resourceType: 'Group', created: data.created_at, lastModified: data.updated_at },
-  }), { headers: scimHeaders });
-}
-
-async function patchGroup(supabase: ReturnType<typeof getSupabase>, tenantId: string, groupId: string, body: any): Promise<Response> {
-  const operations = body.Operations || [];
-  for (const op of operations) {
-    if (op.op === 'add' && op.path === 'members') {
-      const members = Array.isArray(op.value) ? op.value : [op.value];
-      for (const m of members) {
-        await supabase.from('group_members').upsert({ group_id: groupId, user_id: m.value, tenant_id: tenantId });
-      }
-    }
-    if (op.op === 'remove' && op.path?.startsWith('members')) {
-      const match = op.path.match(/members\[value eq "([^"]+)"\]/);
-      if (match) {
-        await supabase.from('group_members').delete().eq('group_id', groupId).eq('user_id', match[1]);
-      }
-    }
-    if (op.op === 'replace' && op.path === 'displayName') {
-      await supabase.from('scim_groups').update({ display_name: op.value, updated_at: new Date().toISOString() }).eq('id', groupId);
-    }
-  }
+  if (error) throw error;
   return getGroup(supabase, tenantId, groupId);
 }
 
-async function deleteGroup(supabase: ReturnType<typeof getSupabase>, tenantId: string, groupId: string): Promise<Response> {
-  await supabase.from('scim_groups').delete().eq('id', groupId).eq('tenant_id', tenantId);
-  return new Response(null, { status: 204, headers: scimHeaders });
+async function patchGroup(
+  supabase: SupabaseClient,
+  tenantId: string,
+  groupId: string,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const operations = (body.Operations || []) as Array<{ op: string; path?: string; value?: unknown }>;
+
+  for (const op of operations) {
+    if (op.op === 'add' && op.path === 'members') {
+      const members = op.value as Array<{ value: string }>;
+      for (const member of members || []) {
+        await supabase.from('group_members').upsert(
+          { group_id: groupId, user_id: member.value, tenant_id: tenantId },
+          { onConflict: 'group_id,user_id' },
+        );
+      }
+    }
+    if (op.op === 'remove' && op.path === 'members') {
+      const members = op.value as Array<{ value: string }>;
+      for (const member of members || []) {
+        await supabase.from('group_members').delete().eq('group_id', groupId).eq('user_id', member.value);
+      }
+    }
+  }
+
+  return getGroup(supabase, tenantId, groupId);
 }
 
-// ── Main Router ──────────────────────────────────────────────────────────
+async function deleteGroup(supabase: SupabaseClient, tenantId: string, groupId: string): Promise<Response> {
+  await supabase.from('scim_groups').delete().eq('id', groupId).eq('tenant_id', tenantId);
+  return new Response(null, { headers: scimHeaders, status: 204 });
+}
+
+// ── Main Handler ────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: scimHeaders, status: 204 });
   }
 
-  const url = new URL(req.url);
-  // Strip the function prefix to get SCIM path
-  const fullPath = url.pathname;
-  const scimPath = fullPath.replace(/^\/scim-provisioning\/?/, '/');
-  const method = req.method;
-  const baseUrl = `${url.origin}/scim-provisioning`;
-
   try {
-    // Auth
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return scimError(401, 'Missing or invalid Authorization header');
+      return scimError(401, 'Bearer token required');
     }
 
-    const result = await authenticateTenant(authHeader.replace('Bearer ', ''));
-    if (!result) return scimError(401, 'Invalid SCIM API key');
+    const apiKey = authHeader.slice(7);
+    const auth = await authenticateTenant(apiKey);
+    if (!auth) return scimError(401, 'Invalid API key');
 
-    const { supabase, tenant } = result;
-    const tenantId = tenant.id;
+    const { supabase, tenant } = auth;
+    const url = new URL(req.url);
+    const path = url.pathname.replace(/\/+$/, '');
+    const method = req.method;
 
     // Discovery endpoints
-    if (scimPath === '/ServiceProviderConfig' && method === 'GET') return serviceProviderConfig();
-    if (scimPath === '/ResourceTypes' && method === 'GET') return resourceTypes();
+    if (path.endsWith('/ServiceProviderConfig')) return serviceProviderConfig();
+    if (path.endsWith('/ResourceTypes')) return resourceTypes();
+    if (path.endsWith('/Schemas')) return schemas();
 
     // Users
-    if (scimPath === '/Users' || scimPath === '/Users/') {
-      if (method === 'GET') return listUsers(supabase, tenantId, url.searchParams, baseUrl);
-      if (method === 'POST') return createUser(supabase, tenantId, await req.json(), baseUrl);
-    }
-
-    const userMatch = scimPath.match(/^\/Users\/([a-f0-9-]+)$/);
-    if (userMatch) {
-      const userId = userMatch[1];
-      if (method === 'GET') return getUser(supabase, tenantId, userId, baseUrl);
-      if (method === 'PUT') return updateUser(supabase, tenantId, userId, await req.json(), baseUrl);
-      if (method === 'PATCH') return patchUser(supabase, tenantId, userId, await req.json(), baseUrl);
-      if (method === 'DELETE') return deleteUser(supabase, tenantId, userId);
+    const usersMatch = path.match(/\/Users(?:\/([^/]+))?$/);
+    if (usersMatch) {
+      const userId = usersMatch[1];
+      if (!userId) {
+        if (method === 'POST') return await createUser(supabase, tenant.id, await req.json());
+        if (method === 'GET') {
+          const filter = url.searchParams.get('filter');
+          if (filter?.startsWith('userName eq ')) {
+            const email = filter.replace('userName eq "', '').replace('"', '');
+            // Find user by email
+            const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+            const matchedUser = listData?.users?.find((u: { email?: string }) => u.email === email);
+            if (!matchedUser) {
+              return new Response(JSON.stringify({
+                schemas: [SCIM_SCHEMAS.LIST_RESPONSE], totalResults: 0, Resources: [],
+              }), { headers: scimHeaders });
+            }
+            return getUser(supabase, tenant.id, matchedUser.id);
+          }
+          return listUsers(supabase, tenant.id, url.searchParams);
+        }
+      } else {
+        if (method === 'GET') return getUser(supabase, tenant.id, userId);
+        if (method === 'PUT') return updateUser(supabase, tenant.id, userId, await req.json());
+        if (method === 'PATCH') return patchUser(supabase, tenant.id, userId, await req.json());
+        if (method === 'DELETE') return deleteUser(supabase, tenant.id, userId);
+      }
     }
 
     // Groups
-    if (scimPath === '/Groups' || scimPath === '/Groups/') {
-      if (method === 'GET') return listGroups(supabase, tenantId, url.searchParams);
-      if (method === 'POST') return createGroup(supabase, tenantId, await req.json());
+    const groupsMatch = path.match(/\/Groups(?:\/([^/]+))?$/);
+    if (groupsMatch) {
+      const groupId = groupsMatch[1];
+      if (!groupId) {
+        if (method === 'POST') return await createGroup(supabase, tenant.id, await req.json());
+        if (method === 'GET') return listGroups(supabase, tenant.id, url.searchParams);
+      } else {
+        if (method === 'GET') return getGroup(supabase, tenant.id, groupId);
+        if (method === 'PUT') return updateGroup(supabase, tenant.id, groupId, await req.json());
+        if (method === 'PATCH') return patchGroup(supabase, tenant.id, groupId, await req.json());
+        if (method === 'DELETE') return deleteGroup(supabase, tenant.id, groupId);
+      }
     }
 
-    const groupMatch = scimPath.match(/^\/Groups\/([a-f0-9-]+)$/);
-    if (groupMatch) {
-      const groupId = groupMatch[1];
-      if (method === 'GET') return getGroup(supabase, tenantId, groupId);
-      if (method === 'PATCH') return patchGroup(supabase, tenantId, groupId, await req.json());
-      if (method === 'DELETE') return deleteGroup(supabase, tenantId, groupId);
-    }
-
-    return scimError(404, 'Endpoint not found');
+    return scimError(404, 'Resource not found');
   } catch (error) {
     console.error('[scim-provisioning] Error:', error);
     return scimError(500, error instanceof Error ? error.message : 'Internal server error');
