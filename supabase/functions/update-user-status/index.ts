@@ -1,129 +1,101 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { z } from 'https://esm.sh/zod@3.23.8';
-import { handleException, handleValidationError, createErrorResponse, ErrorCode, corsHeaders } from '../_shared/error-handler.ts';
+/**
+ * Update User Status (activate/deactivate)
+ * Migrated to serveTenant middleware
+ */
+
+import { serveTenant } from '../_shared/serve-tenant.ts';
 import { createAuditLog } from '../_shared/audit.ts';
-import { getTenantIdForUser, verifyUserTenant } from '../_shared/tenant.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 const UpdateStatusSchema = z.object({
   user_id: z.string().uuid({ message: 'ID de usuario invalido' }),
   is_active: z.boolean({ message: 'Status deve ser booleano' }),
 });
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+serveTenant(async (_req, ctx) => {
+  const { supabase, userId: actorId, tenantId, requestId, body } = ctx;
+
+  if (!actorId) {
+    return new Response(
+      JSON.stringify({ error: 'Authentication required' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
-  const requestId = crypto.randomUUID();
+  // Check admin role
+  const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
+    _user_id: actorId,
+    _role: 'admin',
+  });
 
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, { 
-      global: { headers: { Authorization: authHeader } } 
-    });
-    
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-
-    if (authError || !user) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    
-    console.log(`[${requestId}] Checking admin role for user:`, user.id);
-    
-    // Check if user is admin
-    const { data: hasAdminRole, error: roleError } = await supabaseAdmin.rpc('has_role', { 
-      _user_id: user.id, 
-      _role: 'admin' 
-    });
-
-    console.log(`[${requestId}] Admin check result:`, { hasAdminRole, roleError });
-
-    if (roleError) {
-      console.error(`[${requestId}] Role check error:`, roleError);
-      return createErrorResponse(
-        ErrorCode.INTERNAL_ERROR, 
-        'Falha ao verificar permissoes de admin', 
-        500, 
-        requestId
-      );
-    }
-
-    if (!hasAdminRole) {
-      console.warn(`[${requestId}] User ${user.id} is not admin`);
-      return createErrorResponse(ErrorCode.FORBIDDEN, 'Acesso negado', 403, requestId);
-    }
-
-    const body = await req.json();
-    const validation = UpdateStatusSchema.safeParse(body);
-    
-    if (!validation.success) {
-      return handleValidationError(validation.error, requestId);
-    }
-
-    const { user_id, is_active } = validation.data;
-
-    // Get admin's tenant using helper (handles multiple roles)
-    const adminTenantId = await getTenantIdForUser(supabaseAdmin, user.id);
-
-    if (!adminTenantId) {
-      return createErrorResponse(ErrorCode.FORBIDDEN, 'Tenant do admin nao encontrado', 403, requestId);
-    }
-
-    // Verify target user belongs to same tenant
-    const isInSameTenant = await verifyUserTenant(supabaseAdmin, user_id, adminTenantId);
-
-    if (!isInSameTenant) {
-      return createErrorResponse(ErrorCode.FORBIDDEN, 'Usuario nao encontrado no seu tenant', 403, requestId);
-    }
-
-    // Prevent self-deactivation
-    if (user_id === user.id) {
-      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Nao e possivel desativar sua propria conta', 400, requestId);
-    }
-
-    // Update user status using Admin API
-    if (is_active) {
-      // Unban user
-      const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
-        ban_duration: 'none',
-      });
-      if (error) throw error;
-    } else {
-      // Ban user indefinitely
-      const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
-        ban_duration: '876000h', // 100 years
-      });
-      if (error) throw error;
-    }
-
-    await createAuditLog({
-      supabase: supabaseAdmin,
-      userId: user.id,
-      tenantId: adminTenantId,
-      action: is_active ? 'user_activated' : 'user_deactivated',
-      resourceType: 'user',
-      resourceId: user_id,
-      details: { target_user_id: user_id, is_active },
-      request: req,
-      success: true,
-    });
-
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    return handleException(error, requestId, 'update-user-status');
+  if (roleError || !hasAdminRole) {
+    return new Response(
+      JSON.stringify({ error: 'Acesso negado' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
   }
+
+  // Validate body
+  const validation = UpdateStatusSchema.safeParse(body);
+  if (!validation.success) {
+    const errorMessage = validation.error.issues.map(i => i.message).join(', ');
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const { user_id, is_active } = validation.data;
+
+  // Prevent self-deactivation
+  if (user_id === actorId) {
+    return new Response(
+      JSON.stringify({ error: 'Nao e possivel desativar sua propria conta' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Verify target user is in same tenant
+  const { data: targetRole } = await supabase
+    .from('user_roles')
+    .select('tenant_id')
+    .eq('user_id', user_id)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  if (!targetRole) {
+    return new Response(
+      JSON.stringify({ error: 'Usuario nao encontrado no seu tenant' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Update user status using Admin API
+  if (is_active) {
+    const { error } = await supabase.auth.admin.updateUserById(user_id, {
+      ban_duration: 'none',
+    });
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.auth.admin.updateUserById(user_id, {
+      ban_duration: '876000h',
+    });
+    if (error) throw error;
+  }
+
+  await createAuditLog({
+    supabase,
+    userId: actorId,
+    tenantId,
+    action: is_active ? 'user_activated' : 'user_deactivated',
+    resourceType: 'user',
+    resourceId: user_id,
+    details: { target_user_id: user_id, is_active },
+    request: ctx.req,
+    success: true,
+  });
+
+  return { success: true };
+}, {
+  methods: ['POST'],
 });
