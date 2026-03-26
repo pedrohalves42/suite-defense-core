@@ -149,7 +149,7 @@ Identificar, avaliar e priorizar riscos de segurança da informação para a pla
 |----|-------|:-----:|:----:|:-----:|-----------|-------------------------|:------:|
 | AGT-017 | Falso-positivo em detecção comportamental | 3 | 2 | 6 🟡 | Mitigado | Baseline adaptativo, whitelist de processos conhecidos, threshold configurável | ✅ |
 | AGT-018 | Evasão de detecção (process hollowing) | 2 | 4 | 8 🟡 | Mitigar | 51 regras MITRE, monitoramento de parent-child, análise de command-line | ✅ |
-| AGT-019 | Regras MITRE desatualizadas | 2 | 3 | 6 🟡 | Mitigar | Atualização periódica de regras, versionamento de rule engine | 🔄 |
+| AGT-019 | Regras MITRE desatualizadas | 2 | 3 | 6 🟡 | Mitigado | Pipeline automático `mitre-sync` Edge Function, sync semanal via pg_cron, dashboard de regras stale | ✅ |
 | AGT-020 | DNS exfiltration não detectado | 2 | 4 | 8 🟡 | Mitigar | DNS filter, URL reputation, padrões de C2/DGA detectados (32+ patterns) | ✅ |
 
 ### 4.5 Riscos de Comunicação do Agente
@@ -168,7 +168,7 @@ Identificar, avaliar e priorizar riscos de segurança da informação para a pla
 | AGT-025 | Update falha e agente fica offline | 2 | 3 | 6 🟡 | Mitigado | Rollback automático para versão anterior, backup do script antes de update | ✅ |
 | AGT-026 | Enrollment key comprometida | 1 | 4 | 4 🟢 | Mitigado | Keys com expiração, uso único opcional, revogação imediata | ✅ |
 | AGT-027 | Agente instalado em máquina não autorizada | 2 | 3 | 6 🟡 | Mitigado | Validação de hostname/domain no enrollment, approval workflow | ✅ |
-| AGT-028 | Versões heterogêneas na frota (>3 versões) | 3 | 2 | 6 🟡 | Mitigar | Dashboard de versões, alerta de frota desatualizada, auto-update | 🔄 |
+| AGT-028 | Versões heterogêneas na frota (>3 versões) | 3 | 2 | 6 🟡 | Mitigado | `agent-version-management` Edge Function, enforcement automático, política de versão mínima por tenant, dry-run | ✅ |
 
 ---
 
