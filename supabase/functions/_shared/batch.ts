@@ -5,7 +5,8 @@
  *   import { batchQuery, batchUpsert } from '../_shared/batch.ts';
  */
 
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+// SupabaseClient type used loosely to avoid Deno-only import issues in build
+type SupabaseClient = any;
 
 /**
  * Process items in batches with a custom fetcher.

@@ -37363,6 +37363,7 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: Json
       }
+      cleanup_expired_cache: { Args: never; Returns: number }
       cleanup_expired_keys: { Args: never; Returns: number }
       cleanup_expired_sessions: { Args: never; Returns: number }
       cleanup_expired_telemetry: { Args: never; Returns: Json }
@@ -37881,6 +37882,7 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      get_cached_value: { Args: { p_key: string }; Returns: Json }
       get_critical_insights_count: {
         Args: { p_tenant_id: string }
         Returns: number
@@ -38152,6 +38154,7 @@ export type Database = {
           window_interval: string
         }[]
       }
+      invalidate_cache_prefix: { Args: { p_prefix: string }; Returns: number }
       is_active_tenant: { Args: { _tenant_id: string }; Returns: boolean }
       is_break_glass_user: {
         Args: { _tenant_id: string; _user_id: string }
@@ -38369,6 +38372,10 @@ export type Database = {
         Returns: Json
       }
       run_system_maintenance: { Args: never; Returns: Json }
+      set_cached_value: {
+        Args: { p_key: string; p_ttl_seconds?: number; p_value: Json }
+        Returns: undefined
+      }
       severity_floor_rate: { Args: { p_severity: string }; Returns: number }
       should_auto_execute_playbook: {
         Args: { p_context: Json; p_event_type: string; p_playbook_id: string }

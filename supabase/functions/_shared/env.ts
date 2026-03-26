@@ -8,7 +8,7 @@
  */
 
 export function requireEnv(name: string): string {
-  const value = Deno.env.get(name);
+  const value = (globalThis as any).Deno?.env?.get(name);
   if (!value) {
     console.error(`[FATAL] Missing required environment variable: ${name}`);
     throw new Error(`Server configuration error: missing ${name}`);
@@ -17,7 +17,7 @@ export function requireEnv(name: string): string {
 }
 
 export function optionalEnv(name: string, defaultValue = ''): string {
-  return Deno.env.get(name) || defaultValue;
+  return (globalThis as any).Deno?.env?.get(name) || defaultValue;
 }
 
 export function getSupabaseConfig() {

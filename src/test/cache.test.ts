@@ -1,10 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// We test the MemoryCache and getCached logic by importing the module.
-// The module uses Deno imports for SupabaseClient type, so we mock that too.
-// For simplicity, test the in-memory tier directly and mock supabase for tier 2.
+// ─── MemoryCache unit tests (reimplemented to avoid Deno imports) ───
 
-// Minimal MemoryCache reimplementation for pure-Node testing
 class MemoryCache {
   private store = new Map<string, { value: unknown; expiresAt: number }>();
 
@@ -22,12 +19,26 @@ class MemoryCache {
     this.store.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
   }
 
-  delete(key: string): void {
-    this.store.delete(key);
+  delete(key: string): boolean {
+    return this.store.delete(key);
+  }
+
+  has(key: string): boolean {
+    const entry = this.store.get(key);
+    if (!entry) return false;
+    if (Date.now() > entry.expiresAt) {
+      this.store.delete(key);
+      return false;
+    }
+    return true;
   }
 
   clear(): void {
     this.store.clear();
+  }
+
+  keys(): IterableIterator<string> {
+    return this.store.keys();
   }
 }
 
@@ -48,8 +59,7 @@ describe('MemoryCache', () => {
   });
 
   it('returns null for expired entries', async () => {
-    cache.set('exp', 'val', 0); // 0-second TTL → already expired
-    // Wait a tick so Date.now() advances past expiresAt
+    cache.set('exp', 'val', 0);
     await new Promise(r => setTimeout(r, 5));
     expect(cache.get('exp')).toBeNull();
   });
@@ -69,41 +79,71 @@ describe('MemoryCache', () => {
     expect(cache.get('a')).toBeNull();
     expect(cache.get('b')).toBeNull();
   });
+
+  it('has() returns true for existing non-expired keys', () => {
+    cache.set('exists', 'yes', 60);
+    expect(cache.has('exists')).toBe(true);
+    expect(cache.has('nope')).toBe(false);
+  });
+
+  it('has() returns false for expired keys', async () => {
+    cache.set('expiring', 'val', 0);
+    await new Promise(r => setTimeout(r, 5));
+    expect(cache.has('expiring')).toBe(false);
+  });
 });
 
 describe('getCached (integration-style)', () => {
-  it('calls fetcher on cache miss and returns result', async () => {
-    const mockSingle = vi.fn().mockResolvedValue({ data: null, error: { message: 'not found' } });
-    const mockUpsert = vi.fn().mockResolvedValue({ error: null });
-    const mockSupabase = {
-      from: vi.fn().mockImplementation((table: string) => {
-        if (table === 'kv_cache') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({ single: mockSingle }),
-            }),
-            upsert: mockUpsert,
-          };
-        }
-        return {};
-      }),
-    };
+  it('calls fetcher on cache miss and stores via RPC', async () => {
+    const mockRpc = vi.fn()
+      .mockResolvedValueOnce({ data: null, error: null }) // get_cached_value miss
+      .mockResolvedValueOnce({ error: null }); // set_cached_value
 
-    // Simulate getCached logic inline (since importing the real module requires Deno types)
-    const key = 'test:key';
+    const mockSupabase = { rpc: mockRpc };
     const fetcher = vi.fn().mockResolvedValue({ result: 42 });
 
-    // Tier 2: check table
-    const { data, error } = await mockSupabase.from('kv_cache').select('value, expires_at').eq('key', key).single();
-    expect(error).toBeTruthy();
+    // Simulate getCached logic
+    const key = 'test:key';
+    const { data } = await mockSupabase.rpc('get_cached_value', { p_key: key });
+    expect(data).toBeNull();
 
-    // Fetcher
     const value = await fetcher();
     expect(value).toEqual({ result: 42 });
-    expect(fetcher).toHaveBeenCalledOnce();
 
-    // Store in table
-    await mockSupabase.from('kv_cache').upsert({ key, value, expires_at: new Date().toISOString() });
-    expect(mockUpsert).toHaveBeenCalled();
+    await mockSupabase.rpc('set_cached_value', {
+      p_key: key,
+      p_value: value,
+      p_ttl_seconds: 300,
+    });
+    expect(mockRpc).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns cached value from RPC on hit', async () => {
+    const cachedValue = { name: 'cached' };
+    const mockRpc = vi.fn().mockResolvedValue({ data: cachedValue, error: null });
+    const mockSupabase = { rpc: mockRpc };
+
+    const { data, error } = await mockSupabase.rpc('get_cached_value', { p_key: 'hit-key' });
+    expect(error).toBeNull();
+    expect(data).toEqual(cachedValue);
+  });
+});
+
+describe('invalidateCacheByPrefix (logic)', () => {
+  it('clears memory entries matching prefix', () => {
+    const cache = new MemoryCache();
+    cache.set('prefix:a', 1, 60);
+    cache.set('prefix:b', 2, 60);
+    cache.set('other:c', 3, 60);
+
+    for (const key of Array.from(cache.keys())) {
+      if (key.startsWith('prefix:')) {
+        cache.delete(key);
+      }
+    }
+
+    expect(cache.get('prefix:a')).toBeNull();
+    expect(cache.get('prefix:b')).toBeNull();
+    expect(cache.get('other:c')).toBe(3);
   });
 });
