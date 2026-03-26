@@ -1,0 +1,262 @@
+openapi: 3.0.0
+info:
+  title: CyberShield Security Platform API
+  version: 2.0.0
+  description: |
+    API para gerenciamento de endpoints, compliance e segurança.
+    Todas as requisições devem incluir o header `X-Tenant-ID` e token de autenticação.
+  contact:
+    name: CyberShield Support
+    email: support@cybershield.security
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.cybershield.security/v1
+    description: Produção
+  - url: https://staging-api.cybershield.security/v1
+    description: Staging
+
+tags:
+  - name: Agents
+    description: Gerenciamento de agentes
+  - name: Compliance
+    description: Drift detection e baseline
+  - name: Security
+    description: Autenticação e tokens
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    TenantHeader:
+      type: apiKey
+      in: header
+      name: X-Tenant-ID
+    AgentToken:
+      type: apiKey
+      in: header
+      name: X-Agent-Token
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            trace_id:
+              type: string
+            status:
+              type: integer
+      required:
+        - error
+
+    HeartbeatRequest:
+      type: object
+      properties:
+        version:
+          type: string
+          example: "v5.0.15"
+        status:
+          type: string
+          enum: [active, degraded, offline]
+        metrics:
+          type: object
+          properties:
+            cpu:
+              type: number
+            memory:
+              type: number
+            disk:
+              type: number
+      required:
+        - version
+
+    HeartbeatResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        script_sha256:
+          type: string
+        commands:
+          type: array
+          items:
+            $ref: '#/components/schemas/Command'
+
+    Command:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        command:
+          type: string
+        timeout:
+          type: integer
+
+    DriftScore:
+      type: object
+      properties:
+        score:
+          type: integer
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        events:
+          type: integer
+
+    TenantConfig:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        tier:
+          type: string
+          enum: [free, pro, enterprise]
+        features:
+          type: array
+          items:
+            type: string
+        session_timeout_minutes:
+          type: integer
+
+  parameters:
+    TenantIdParam:
+      name: tenantId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: ID do tenant
+
+paths:
+  /agents/{agentId}/heartbeat:
+    post:
+      summary: Envia heartbeat do agente
+      tags: [Agents]
+      security:
+        - AgentToken: []
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HeartbeatRequest'
+      responses:
+        '200':
+          description: Heartbeat processado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeartbeatResponse'
+        '401':
+          description: Token inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite de taxa excedido
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /compliance/drift/{tenantId}:
+    get:
+      summary: Obtém pontuação de drift do tenant
+      tags: [Compliance]
+      security:
+        - BearerAuth: []
+        - TenantHeader: []
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: Pontuação de drift
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriftScore'
+        '401':
+          description: Não autenticado
+        '403':
+          description: Sem permissão
+
+  /tenants/{tenantId}/config:
+    get:
+      summary: Obtém configuração do tenant
+      tags: [Tenants]
+      security:
+        - BearerAuth: []
+        - TenantHeader: []
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: Configuração do tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantConfig'
+        '401':
+          description: Não autenticado
+        '403':
+          description: Sem permissão
+
+  /security/rotate-token:
+    post:
+      summary: Rotaciona token do agente
+      tags: [Security]
+      security:
+        - BearerAuth: []
+        - TenantHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Token rotacionado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  hmac_secret:
+                    type: string
+        '403':
+          description: Sem permissão
+        '429':
+          description: Limite de taxa excedido
