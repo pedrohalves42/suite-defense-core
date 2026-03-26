@@ -89,7 +89,7 @@ type TenantHandler = (req: Request, ctx: TenantContext) => Promise<any>;
 function jsonResponse(data: any, status = 200, extraHeaders?: Record<string, string>) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json', ...extraHeaders },
+    headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json', ...extraHeaders },
   });
 }
 
