@@ -56,7 +56,7 @@ export default tseslint.config(
       ],
       
       // Novas regras uteis
-      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-explicit-any": "error",
       "no-console": ["warn", { allow: ["warn", "error"] }],
       
       // ADR-026: Enforce tenant isolation on multi-tenant tables
