@@ -8,9 +8,8 @@ import { sanitizeForLog, sanitizeError } from '@/lib/sanitize';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-interface LogContext {
-  [key: string]: unknown;
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LogContext = Record<string, any>;
 
 // Buffer to batch log entries and avoid excessive network calls
 const LOG_BUFFER: Array<{ level: LogLevel; message: string; context?: LogContext; timestamp: string }> = [];
@@ -31,7 +30,7 @@ async function flushLogs() {
         event_type: `FrontendLog_${entry.level}`,
         payload: {
           message: entry.message,
-          context: sanitizeForLog(entry.context),
+          context: sanitizeForLog(entry.context) as Record<string, string | number | boolean | null> | undefined,
           url: typeof window !== 'undefined' ? window.location.href : undefined,
           user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
         },
