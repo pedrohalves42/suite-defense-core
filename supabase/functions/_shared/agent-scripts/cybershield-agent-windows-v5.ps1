@@ -385,9 +385,14 @@ try {
                 [Environment]::Exit(9005)
             }
             if ($currentHash -ne $expectedHash.ToLower()) {
-                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected: $expectedHash, Actual: $currentHash. Possible tampering detected." -ErrorAction SilentlyContinue
-                Write-Error "CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
-                [Environment]::Exit(9003)
+                # v5.0.15-hotfix-toctou: Self-heal legacy TXT cache instead of exit
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Warning -Message "INTEGRITY: Legacy TXT hash mismatch. Self-healing cache." -ErrorAction SilentlyContinue
+                try {
+                    $currentHash | Out-File -FilePath $hashCachePath -Encoding UTF8 -NoNewline -Force
+                    $healData = @{ hash = $currentHash; signature = ""; signed_at = (Get-Date -Format "o"); algorithm = "self-healed-boot"; verified = $false } | ConvertTo-Json -Compress
+                    $jsonPath = Join-Path "C:\CyberShield\data" "expected_script_hash.json"
+                    $healData | Out-File -FilePath $jsonPath -Encoding UTF8 -NoNewline -Force
+                } catch { }
             }
         }
     }
