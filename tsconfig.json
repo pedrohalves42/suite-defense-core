@@ -20,5 +20,9 @@
     {
       "path": "./tsconfig.node.json"
     }
+  ],
+  "exclude": [
+    "supabase/functions/**",
+    "supabase/**"
   ]
 }
