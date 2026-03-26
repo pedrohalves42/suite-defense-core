@@ -32,6 +32,7 @@
 
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from './cors.ts';
+import { securityHeaders } from './security-headers.ts';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
