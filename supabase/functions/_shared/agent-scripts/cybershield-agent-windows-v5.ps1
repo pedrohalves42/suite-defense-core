@@ -484,6 +484,13 @@ $Global:AutoRepairStats = @{
 # v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)
 $Global:SecurityDegraded = $false
 
+# v5.0.15-hotfix-toctou: Record script hash at boot for TOCTOU self-heal
+try {
+    $Global:BootScriptHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+} catch {
+    $Global:BootScriptHash = $null
+}
+
 # v5.0.13-fix: ProtectedProcessSet must be declared before use (StrictMode compatibility)
 $Global:ProtectedProcessSet = $null
 
