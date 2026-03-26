@@ -1,14 +1,15 @@
 /**
  * Structured logging utility for frontend applications
  * Logs to console in development and persists errors/warnings to backend in production
+ * Enhanced with sanitization to prevent sensitive data leaks (INV-003)
  */
 import { supabase } from '@/integrations/supabase/client';
+import { sanitizeForLog, sanitizeError } from '@/lib/sanitize';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface LogContext {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Buffer to batch log entries and avoid excessive network calls
@@ -30,7 +31,7 @@ async function flushLogs() {
         event_type: `FrontendLog_${entry.level}`,
         payload: {
           message: entry.message,
-          context: entry.context,
+          context: sanitizeForLog(entry.context),
           url: typeof window !== 'undefined' ? window.location.href : undefined,
           user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
         },
@@ -56,7 +57,8 @@ class Logger {
 
   private formatMessage(level: LogLevel, message: string, context?: LogContext): string {
     const timestamp = new Date().toISOString();
-    const contextStr = context ? ` ${JSON.stringify(context)}` : '';
+    const sanitized = context ? sanitizeForLog(context) : undefined;
+    const contextStr = sanitized ? ` ${JSON.stringify(sanitized)}` : '';
     return `[${timestamp}] [${level.toUpperCase()}] [${this.appName}] ${message}${contextStr}`;
   }
 
@@ -69,7 +71,7 @@ class Logger {
     LOG_BUFFER.push({
       level,
       message,
-      context,
+      context: context ? (sanitizeForLog(context) as LogContext) : undefined,
       timestamp: new Date().toISOString(),
     });
 
@@ -82,12 +84,14 @@ class Logger {
 
   debug(message: string, context?: LogContext) {
     if (this.isDevelopment) {
+      // eslint-disable-next-line no-console
       console.log(this.formatMessage('debug', message, context));
     }
   }
 
   info(message: string, context?: LogContext) {
     if (this.isDevelopment) {
+      // eslint-disable-next-line no-console
       console.log(this.formatMessage('info', message, context));
     }
     this.sendToMonitoring('info', message, context);
@@ -103,11 +107,7 @@ class Logger {
   error(message: string, error?: Error | unknown, context?: LogContext) {
     const errorContext = {
       ...context,
-      error: error instanceof Error ? {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-      } : error,
+      error: sanitizeError(error),
     };
 
     if (this.isDevelopment) {

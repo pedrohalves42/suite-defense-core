@@ -6,7 +6,10 @@
  */
 
 // Security headers for JSON API responses (most Edge Functions)
-export const securityHeaders = {
+export const securityHeaders: Record<string, string> = {
+  // HSTS - enforce HTTPS
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+
   // Prevent MIME type sniffing
   'X-Content-Type-Options': 'nosniff',
   
@@ -24,6 +27,9 @@ export const securityHeaders = {
   
   // CSP for JSON APIs - very restrictive since no HTML/scripts needed
   'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+
+  // Prevent cross-domain policy files
+  'X-Permitted-Cross-Domain-Policies': 'none',
 };
 
 // Security headers for HTML responses (if any Edge Function returns HTML)
