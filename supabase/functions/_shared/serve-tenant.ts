@@ -32,6 +32,7 @@
 
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from './cors.ts';
+import { securityHeaders } from './security-headers.ts';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -88,7 +89,7 @@ type TenantHandler = (req: Request, ctx: TenantContext) => Promise<any>;
 function jsonResponse(data: any, status = 200, extraHeaders?: Record<string, string>) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json', ...extraHeaders },
+    headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json', ...extraHeaders },
   });
 }
 

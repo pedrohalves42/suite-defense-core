@@ -1,11 +1,14 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { z } from 'https://esm.sh/zod@3.23.8';
-import { corsHeaders } from '../_shared/error-handler.ts';
-import { checkRateLimit } from '../_shared/rate-limit.ts';
-import { logger } from '../_shared/logger.ts'; // CORRECAO: Adicionar logger
+/**
+ * Update User Role
+ * CRITICAL SECURITY: Blocks super_admin assignment via this endpoint
+ * Migrated to serveTenant middleware
+ */
 
-// CRITICAL SECURITY: Block super_admin role modifications via this endpoint
-// super_admin can only be assigned via direct database operations
+import { serveTenant } from '../_shared/serve-tenant.ts';
+import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
 const UpdateRoleSchema = z.object({
   userId: z.string().uuid('Invalid user ID format').optional(),
   user_id: z.string().uuid('Invalid user ID format').optional(),
@@ -16,240 +19,141 @@ const UpdateRoleSchema = z.object({
       message: 'Roles must be unique',
     })
     .refine((roles) => !roles.includes('super_admin' as any), {
-      message: 'Cannot assign super_admin role through this endpoint. Contact system administrator.',
+      message: 'Cannot assign super_admin role through this endpoint.',
     }),
 }).refine(data => data.userId || data.user_id, {
-  message: 'Either userId or user_id is required'
+  message: 'Either userId or user_id is required',
 });
 
-interface ErrorResponse {
-  error: {
-    code: string;
-    message: string;
-    requestId: string;
-  };
-}
+serveTenant(async (_req, ctx) => {
+  const { supabase, userId: actorId, tenantId, requestId, body } = ctx;
 
-function createError(code: string, message: string, requestId: string, status: number): Response {
-  const body: ErrorResponse = {
-    error: { code, message, requestId },
-  };
-  
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
-
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  const requestId = crypto.randomUUID();
-
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    );
-
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Authenticate user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseClient.auth.getUser();
-
-    if (authError || !user) {
-      logger.error('Authentication failed', authError);
-      return createError('UNAUTHORIZED', 'Authentication required', requestId, 401);
-    }
-
-    logger.info(`[${requestId}] Checking role for user: ${user.id}`);
-    
-    // ADR-026 FIX: Get active_tenant_id from JWT claims for deterministic behavior
-    const activeTenantId = user.app_metadata?.active_tenant_id;
-    
-    if (!activeTenantId) {
-      logger.warn(`[${requestId}] No active tenant in session for user ${user.id}`);
-      return createError('BAD_REQUEST', 'No active tenant in session. Please switch to a tenant first.', requestId, 400);
-    }
-
-    // Check if user is admin - now explicitly filtering by active tenant to avoid non-deterministic results
-    const { data: actorRole, error: roleError } = await supabaseAdmin
-      .from('user_roles')
-      .select('role, tenant_id')
-      .eq('user_id', user.id)
-      .eq('tenant_id', activeTenantId) // ADR-026: Explicit tenant filter
-      .maybeSingle();
-
-    logger.debug(`[${requestId}] Actor role query result`, { actorRole, activeTenantId, roleError });
-
-    if (roleError) {
-      logger.error(`[${requestId}] Error fetching actor role`, roleError); // CORRECAO: Usar logger
-      return createError('INTERNAL', 'Internal server error', requestId, 500);
-    }
-
-    if (!actorRole || !['admin', 'super_admin'].includes(actorRole.role)) {
-      logger.warn(`[${requestId}] User ${user.id} is not admin, role: ${actorRole?.role}`); // CORRECAO: Usar logger
-      // Audit failed attempt
-      await supabaseAdmin.from('audit_logs').insert({
-        tenant_id: actorRole?.tenant_id || null,
-        user_id: user.id,
-        action: 'update_role',
-        resource_type: 'user',
-        success: false,
-        details: { reason: 'Insufficient permissions', actor_role: actorRole?.role },
-        ip_address: req.headers.get('x-forwarded-for'),
-        user_agent: req.headers.get('user-agent'),
-      });
-
-      return createError('NOT_ALLOWED', 'Only admins can update user roles', requestId, 403);
-    }
-
-    const actorTenantId = actorRole.tenant_id;
-
-    // Rate limiting: 10 req/min per tenant
-    const rateLimitResult = await checkRateLimit(
-      supabaseAdmin,
-      `tenant:${actorTenantId}`,
-      'update-user-role',
-      { maxRequests: 10, windowMinutes: 1 }
-    );
-
-    if (!rateLimitResult.allowed) {
-      return createError(
-        'RATE_LIMIT_EXCEEDED',
-        `Rate limit exceeded. Try again after ${rateLimitResult.resetAt?.toISOString()}`,
-        requestId,
-        429
-      );
-    }
-
-    // Parse and validate request body
-    const body = await req.json();
-    const validationResult = UpdateRoleSchema.safeParse(body);
-
-    if (!validationResult.success) {
-      const errorMessage = validationResult.error.issues.map(i => i.message).join(', ');
-      return createError('BAD_REQUEST', errorMessage, requestId, 400);
-    }
-
-    // CORRECAO: Suportar ambos os formatos
-    const { userId: userIdCamel, user_id: userIdSnake, roles: newRoles } = validationResult.data;
-    const userId = userIdCamel || userIdSnake!;
-
-    // Check if target user exists and is in the same tenant
-    const { data: targetUserRole, error: targetError } = await supabaseAdmin
-      .from('user_roles')
-      .select('role, tenant_id')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (targetError) {
-      logger.error('Error fetching target user', targetError); // CORRECAO: Usar logger
-      return createError('INTERNAL', 'Internal server error', requestId, 500);
-    }
-
-    if (!targetUserRole) {
-      return createError('NOT_FOUND', 'User not found', requestId, 404);
-    }
-
-    if (targetUserRole.tenant_id !== actorTenantId) {
-      return createError('NOT_ALLOWED', 'Cannot update users from different tenants', requestId, 403);
-    }
-
-    // Prevent admin from changing their own role
-    if (userId === user.id) {
-      return createError('BAD_REQUEST', 'Cannot change your own role', requestId, 400);
-    }
-
-    const currentRole = targetUserRole.role;
-
-    // Idempotency check: if role hasn't changed, return early
-    if (newRoles.length === 1 && newRoles[0] === currentRole) {
-      return new Response(
-        JSON.stringify({
-          updated: false,
-          message: 'Role unchanged',
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    // For this implementation, we assume only one role per user (matching current schema)
-    // If you need multiple roles, you'd need to modify the user_roles table structure
-    const newRole = newRoles[0];
-
-    // Prevent removing the last admin
-    if (currentRole === 'admin' && newRole !== 'admin') {
-      const { count, error: countError } = await supabaseAdmin
-        .from('user_roles')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'admin')
-        .eq('tenant_id', actorTenantId);
-
-      if (countError) {
-        logger.error('Error counting admins', countError); // CORRECAO: Usar logger
-        return createError('INTERNAL', 'Internal server error', requestId, 500);
-      }
-
-      if (count === 1) {
-        return createError(
-          'BAD_REQUEST',
-          'Cannot demote the last admin. Assign another admin first.',
-          requestId,
-          400
-        );
-      }
-    }
-
-    // FASE 6: Usar RPC SECURITY DEFINER em vez de update direto
-    const { data: rpcResult, error: rpcError } = await supabaseAdmin
-      .rpc('update_user_role_rpc', {
-        p_user_id: userId,
-        p_new_role: newRole
-      });
-
-    if (rpcError) {
-      logger.error('RPC error', rpcError);
-      return createError('INTERNAL', 'Failed to update user role', requestId, 500);
-    }
-
-    logger.info(`[${requestId}] Role updated successfully via RPC`, { userId, newRole, rpcResult });
-
+  if (!actorId) {
     return new Response(
-      JSON.stringify({
-        updated: true,
-        message: 'User role updated successfully',
-        data: rpcResult,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  } catch (error) {
-    logger.error('Unexpected error in update-user-role', error); // CORRECAO: Usar logger
-    
-    return createError(
-      'INTERNAL',
-      error instanceof Error ? error.message : 'An unexpected error occurred',
-      requestId,
-      500
+      JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Authentication required', requestId } }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
     );
   }
+
+  // Check admin role
+  const { data: actorRole, error: roleError } = await supabase
+    .from('user_roles')
+    .select('role, tenant_id')
+    .eq('user_id', actorId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  if (roleError || !actorRole || !['admin', 'super_admin'].includes(actorRole.role)) {
+    logger.warn(`[${requestId}] User ${actorId} is not admin, role: ${actorRole?.role}`);
+    await supabase.from('audit_logs').insert({
+      tenant_id: tenantId,
+      user_id: actorId,
+      action: 'update_role',
+      resource_type: 'user',
+      success: false,
+      details: { reason: 'Insufficient permissions', actor_role: actorRole?.role },
+      ip_address: ctx.req.headers.get('x-forwarded-for'),
+      user_agent: ctx.req.headers.get('user-agent'),
+    });
+    return new Response(
+      JSON.stringify({ error: { code: 'NOT_ALLOWED', message: 'Only admins can update user roles', requestId } }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Rate limiting
+  const rateLimitResult = await checkRateLimit(supabase, `tenant:${tenantId}`, 'update-user-role', {
+    maxRequests: 10,
+    windowMinutes: 1,
+  });
+  if (!rateLimitResult.allowed) {
+    return new Response(
+      JSON.stringify({ error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Rate limit exceeded', requestId } }),
+      { status: 429, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Validate body
+  const validationResult = UpdateRoleSchema.safeParse(body);
+  if (!validationResult.success) {
+    const errorMessage = validationResult.error.issues.map(i => i.message).join(', ');
+    return new Response(
+      JSON.stringify({ error: { code: 'BAD_REQUEST', message: errorMessage, requestId } }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const { userId: userIdCamel, user_id: userIdSnake, roles: newRoles } = validationResult.data;
+  const targetUserId = userIdCamel || userIdSnake!;
+
+  // Prevent self-change
+  if (targetUserId === actorId) {
+    return new Response(
+      JSON.stringify({ error: { code: 'BAD_REQUEST', message: 'Cannot change your own role', requestId } }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Check target user in same tenant
+  const { data: targetUserRole } = await supabase
+    .from('user_roles')
+    .select('role, tenant_id')
+    .eq('user_id', targetUserId)
+    .maybeSingle();
+
+  if (!targetUserRole) {
+    return new Response(
+      JSON.stringify({ error: { code: 'NOT_FOUND', message: 'User not found', requestId } }),
+      { status: 404, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (targetUserRole.tenant_id !== tenantId) {
+    return new Response(
+      JSON.stringify({ error: { code: 'NOT_ALLOWED', message: 'Cannot update users from different tenants', requestId } }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const newRole = newRoles[0];
+
+  // Idempotency
+  if (newRoles.length === 1 && newRoles[0] === targetUserRole.role) {
+    return { updated: false, message: 'Role unchanged' };
+  }
+
+  // Prevent removing last admin
+  if (targetUserRole.role === 'admin' && newRole !== 'admin') {
+    const { count } = await supabase
+      .from('user_roles')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'admin')
+      .eq('tenant_id', tenantId);
+
+    if (count === 1) {
+      return new Response(
+        JSON.stringify({ error: { code: 'BAD_REQUEST', message: 'Cannot demote the last admin', requestId } }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  const { data: rpcResult, error: rpcError } = await supabase.rpc('update_user_role_rpc', {
+    p_user_id: targetUserId,
+    p_new_role: newRole,
+  });
+
+  if (rpcError) {
+    logger.error('RPC error', rpcError);
+    return new Response(
+      JSON.stringify({ error: { code: 'INTERNAL', message: 'Failed to update user role', requestId } }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  logger.info(`[${requestId}] Role updated successfully`, { targetUserId, newRole });
+
+  return { updated: true, message: 'User role updated successfully', data: rpcResult };
+}, {
+  methods: ['POST'],
 });

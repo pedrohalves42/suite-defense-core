@@ -1,68 +1,44 @@
 /**
  * Agent Version Management Service
  * AGT-028: Enforcement de versão da frota e compliance
- *
- * Endpoints (POST, action in body):
- *   fleet-compliance  — Métricas de compliance de versão
- *   enforce-update    — Agenda updates forçados (com dry-run)
- *   set-min-version   — Define versão mínima obrigatória
+ * Migrated to serveTenant middleware
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { serveTenant } from '../_shared/serve-tenant.ts';
 
-const VERSION_TOLERANCE = 2; // max minor versions behind
-const AUTO_UPDATE_DELAY_H = 24;
+const VERSION_TOLERANCE = 2;
 
-Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders, status: 204 });
+serveTenant(async (_req, ctx) => {
+  const { supabase, body, requestId } = ctx;
+  const action = body.action ?? 'fleet-compliance';
+
+  if (action === 'fleet-compliance') {
+    return await getFleetCompliance(supabase, body.tenant_id);
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!supabaseUrl || !serviceRoleKey) {
-    return json({ error: 'Missing server credentials' }, 500);
+  if (action === 'enforce-update') {
+    return await enforceUpdate(supabase, body.tenant_id, body.dry_run ?? true);
   }
 
-  const authError = assertInternalCaller(req, { allowAuthenticatedUsers: true });
-  if (authError) return authError;
-
-  const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
-
-  try {
-    const body = await req.json().catch(() => ({}));
-    const action = body.action ?? 'fleet-compliance';
-
-    if (action === 'fleet-compliance') {
-      return json(await getFleetCompliance(supabase, body.tenant_id));
+  if (action === 'set-min-version') {
+    if (!body.tenant_id || !body.min_version) {
+      return new Response(
+        JSON.stringify({ error: 'tenant_id and min_version required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
-
-    if (action === 'enforce-update') {
-      return json(await enforceUpdate(supabase, body.tenant_id, body.dry_run ?? true));
-    }
-
-    if (action === 'set-min-version') {
-      if (!body.tenant_id || !body.min_version) {
-        return json({ error: 'tenant_id and min_version required' }, 400);
-      }
-      return json(await setMinVersion(supabase, body.tenant_id, body.min_version, body.reason));
-    }
-
-    return json({ error: `Unknown action: ${action}` }, 400);
-  } catch (err) {
-    console.error('[agent-version-management] Error:', err);
-    return json({ error: err.message }, 500);
+    return await setMinVersion(supabase, body.tenant_id, body.min_version, body.reason);
   }
+
+  return new Response(
+    JSON.stringify({ error: `Unknown action: ${action}` }),
+    { status: 400, headers: { 'Content-Type': 'application/json' } }
+  );
+}, {
+  tenantSource: 'body',
+  allowFallback: true,
+  methods: ['POST'],
 });
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
 
 // ── Helpers ──────────────────────────────────────────
 
@@ -148,13 +124,12 @@ async function enforceUpdate(supabase: any, tenantId?: string, dryRun = true) {
       });
       scheduled++;
       details.push({ agent_id: agent.agent_id, action: 'scheduled' });
-    } catch (e) {
+    } catch (e: any) {
       failed++;
       details.push({ agent_id: agent.agent_id, action: 'failed', error: e.message });
     }
   }
 
-  // Audit
   await supabase.from('audit_logs').insert({
     event_type: 'version_enforcement',
     actor_id: '00000000-0000-0000-0000-000000000000',
