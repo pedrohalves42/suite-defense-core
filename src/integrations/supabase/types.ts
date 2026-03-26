@@ -18479,6 +18479,27 @@ export type Database = {
           },
         ]
       }
+      kv_cache: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          key: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          key: string
+          value: Json
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          key?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       marketing_costs: {
         Row: {
           channel: string
