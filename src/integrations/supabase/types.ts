@@ -11320,6 +11320,80 @@ export type Database = {
           },
         ]
       }
+      backup_verifications: {
+        Row: {
+          backup_hash: string
+          backup_size_bytes: number | null
+          evidence_path: string | null
+          id: string
+          report_generated_at: string | null
+          restore_duration_seconds: number | null
+          restored_at: string | null
+          restored_by: string | null
+          tenant_id: string | null
+          test_id: string
+          verification_details: Json | null
+          verification_status: string | null
+        }
+        Insert: {
+          backup_hash: string
+          backup_size_bytes?: number | null
+          evidence_path?: string | null
+          id?: string
+          report_generated_at?: string | null
+          restore_duration_seconds?: number | null
+          restored_at?: string | null
+          restored_by?: string | null
+          tenant_id?: string | null
+          test_id: string
+          verification_details?: Json | null
+          verification_status?: string | null
+        }
+        Update: {
+          backup_hash?: string
+          backup_size_bytes?: number | null
+          evidence_path?: string | null
+          id?: string
+          report_generated_at?: string | null
+          restore_duration_seconds?: number | null
+          restored_at?: string | null
+          restored_by?: string | null
+          tenant_id?: string | null
+          test_id?: string
+          verification_details?: Json | null
+          verification_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backup_verifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backup_verifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "backup_verifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "backup_verifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       blast_radius_policies: {
         Row: {
           action_type: string
@@ -16551,6 +16625,66 @@ export type Database = {
           },
           {
             foreignKeyName: "governance_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string | null
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string | null
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string | null
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "scim_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "group_members_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -23038,6 +23172,65 @@ export type Database = {
           },
         ]
       }
+      scim_groups: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_name: string
+          external_id: string | null
+          id: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_name: string
+          external_id?: string | null
+          id?: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_name?: string
+          external_id?: string | null
+          id?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scim_groups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scim_groups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "scim_groups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "scim_groups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       score_governance_log: {
         Row: {
           audit_id: string | null
@@ -28224,6 +28417,8 @@ export type Database = {
           name: string
           owner_user_id: string
           phone: string | null
+          scim_api_key: string | null
+          scim_config: Json | null
           session_timeout_minutes: Json | null
           setup_completed: boolean | null
           slug: string
@@ -28256,6 +28451,8 @@ export type Database = {
           name: string
           owner_user_id: string
           phone?: string | null
+          scim_api_key?: string | null
+          scim_config?: Json | null
           session_timeout_minutes?: Json | null
           setup_completed?: boolean | null
           slug: string
@@ -28288,6 +28485,8 @@ export type Database = {
           name?: string
           owner_user_id?: string
           phone?: string | null
+          scim_api_key?: string | null
+          scim_config?: Json | null
           session_timeout_minutes?: Json | null
           setup_completed?: boolean | null
           slug?: string
@@ -37430,6 +37629,7 @@ export type Database = {
         Args: { p_score: number; p_tenant_id: string }
         Returns: Json
       }
+      generate_scim_api_key: { Args: never; Returns: string }
       get_action_center_feed: { Args: { p_tenant_id: string }; Returns: Json }
       get_active_tenant_id: { Args: never; Returns: string }
       get_adaptive_blast_radius: {
