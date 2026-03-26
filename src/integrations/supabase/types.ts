@@ -5378,6 +5378,45 @@ export type Database = {
           },
         ]
       }
+      agent_update_events: {
+        Row: {
+          agent_id: string
+          completed_at: string | null
+          current_version: string
+          error_message: string | null
+          id: string
+          status: string | null
+          target_version: string
+          tenant_id: string | null
+          triggered_at: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          agent_id: string
+          completed_at?: string | null
+          current_version: string
+          error_message?: string | null
+          id?: string
+          status?: string | null
+          target_version: string
+          tenant_id?: string | null
+          triggered_at?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          agent_id?: string
+          completed_at?: string | null
+          current_version?: string
+          error_message?: string | null
+          id?: string
+          status?: string | null
+          target_version?: string
+          tenant_id?: string | null
+          triggered_at?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       agent_update_policies: {
         Row: {
           created_at: string | null
@@ -18644,6 +18683,84 @@ export type Database = {
           },
         ]
       }
+      mitre_metadata: {
+        Row: {
+          id: string
+          new_rules: number | null
+          sync_duration_ms: number | null
+          synced_at: string | null
+          total_rules: number | null
+          updated_rules: number | null
+          version: string | null
+        }
+        Insert: {
+          id?: string
+          new_rules?: number | null
+          sync_duration_ms?: number | null
+          synced_at?: string | null
+          total_rules?: number | null
+          updated_rules?: number | null
+          version?: string | null
+        }
+        Update: {
+          id?: string
+          new_rules?: number | null
+          sync_duration_ms?: number | null
+          synced_at?: string | null
+          total_rules?: number | null
+          updated_rules?: number | null
+          version?: string | null
+        }
+        Relationships: []
+      }
+      mitre_rules: {
+        Row: {
+          data_sources: Json | null
+          description: string | null
+          detection: string | null
+          id: string
+          is_active: boolean | null
+          last_synced_at: string | null
+          mitre_created: string | null
+          mitre_modified: string | null
+          mitre_version: number | null
+          name: string
+          platform: Json | null
+          tactic: string | null
+          technique_id: string
+        }
+        Insert: {
+          data_sources?: Json | null
+          description?: string | null
+          detection?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          mitre_created?: string | null
+          mitre_modified?: string | null
+          mitre_version?: number | null
+          name: string
+          platform?: Json | null
+          tactic?: string | null
+          technique_id: string
+        }
+        Update: {
+          data_sources?: Json | null
+          description?: string | null
+          detection?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          mitre_created?: string | null
+          mitre_modified?: string | null
+          mitre_version?: number | null
+          name?: string
+          platform?: Json | null
+          tactic?: string | null
+          technique_id?: string
+        }
+        Relationships: []
+      }
       network_anomalies: {
         Row: {
           acknowledged: boolean | null
@@ -28395,6 +28512,36 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      tenant_version_policies: {
+        Row: {
+          auto_update_enabled: boolean | null
+          created_at: string | null
+          id: string
+          min_version: string | null
+          reason: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          auto_update_enabled?: boolean | null
+          created_at?: string | null
+          id?: string
+          min_version?: string | null
+          reason?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          auto_update_enabled?: boolean | null
+          created_at?: string | null
+          id?: string
+          min_version?: string | null
+          reason?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       tenants: {
         Row: {
