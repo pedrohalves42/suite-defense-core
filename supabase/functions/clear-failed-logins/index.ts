@@ -1,5 +1,10 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+/**
+ * Clear Failed Logins
+ * Clears brute-force protection after successful login
+ * Migrated to serveTenant middleware
+ */
+
+import { serveTenant } from '../_shared/serve-tenant.ts';
 
 function extractIpAddress(req: Request): string {
   const cfConnectingIp = req.headers.get('cf-connecting-ip');
@@ -12,73 +17,32 @@ function extractIpAddress(req: Request): string {
   return 'unknown';
 }
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+serveTenant(async (req, ctx) => {
+  const { supabase, userId, requestId } = ctx;
+
+  const ipAddress = extractIpAddress(req);
+
+  if (!ipAddress || ipAddress === 'unknown') {
+    return new Response(
+      JSON.stringify({ error: 'Unable to determine IP address' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
-  try {
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+  console.log(`[clear-failed-logins][${requestId}] Clearing for IP: ${ipAddress}, user: ${userId}`);
 
-    // SECURITY FIX: Require authentication - prevents anyone from clearing brute-force protection
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Authorization required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  await supabase
+    .from('failed_login_attempts')
+    .delete()
+    .eq('ip_address', ipAddress);
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  await supabase
+    .from('ip_blocklist')
+    .delete()
+    .eq('ip_address', ipAddress);
 
-    const ipAddress = extractIpAddress(req);
-
-    if (!ipAddress || ipAddress === 'unknown') {
-      return new Response(
-        JSON.stringify({ error: 'Unable to determine IP address' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log(`[clear-failed-logins] Clearing for IP: ${ipAddress}, user: ${user.id}`);
-
-    // Limpar tentativas falhadas apos login bem-sucedido
-    await supabaseAdmin
-      .from('failed_login_attempts')
-      .delete()
-      .eq('ip_address', ipAddress);
-
-    // Remover IP da blocklist
-    await supabaseAdmin
-      .from('ip_blocklist')
-      .delete()
-      .eq('ip_address', ipAddress);
-
-    return new Response(
-      JSON.stringify({ success: true }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  } catch (error) {
-    console.error('Error clearing failed logins:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  }
+  return { success: true };
+}, {
+  skipTenantValidation: true,
+  methods: ['POST'],
 });
