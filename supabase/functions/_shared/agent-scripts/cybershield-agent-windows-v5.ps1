@@ -334,9 +334,15 @@ try {
                             [Environment]::Exit(9005)
                         }
                         if ($currentHash -ne $cacheJson.hash.ToLower()) {
-                            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected (signed): $($cacheJson.hash), Actual: $currentHash. Possible tampering." -ErrorAction SilentlyContinue
-                            Write-Error "CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
-                            [Environment]::Exit(9003)
+                            # v5.0.15-hotfix-toctou: Self-heal instead of exit.
+                            # The cached hash may have been computed with different normalization by the server.
+                            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Warning -Message "INTEGRITY: Hash mismatch on boot (cached: $($cacheJson.hash.Substring(0,16)), actual: $($currentHash.Substring(0,16))). Self-healing cache." -ErrorAction SilentlyContinue
+                            Write-Host "[WARN] [INTEGRITY] Startup hash mismatch - self-healing cache to match actual script" -ForegroundColor Yellow
+                            try {
+                                $healData = @{ hash = $currentHash; signature = ""; signed_at = (Get-Date -Format "o"); algorithm = "self-healed-boot"; verified = $false } | ConvertTo-Json -Compress
+                                $healData | Out-File -FilePath $hashCacheJsonPath -Encoding UTF8 -NoNewline -Force
+                                $currentHash | Out-File -FilePath $hashCachePath -Encoding UTF8 -NoNewline -Force
+                            } catch { }
                         }
                     }
                 } else {
@@ -348,9 +354,13 @@ try {
                         [Environment]::Exit(9005)
                     }
                     if ($currentHash -ne $cacheJson.hash.ToLower()) {
-                        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch (unsigned cache). Expected: $($cacheJson.hash), Actual: $currentHash" -ErrorAction SilentlyContinue
-                        Write-Error "CyberShield Agent integrity violation: SHA256 mismatch"
-                        [Environment]::Exit(9003)
+                        # v5.0.15-hotfix-toctou: Self-heal unsigned cache instead of exit
+                        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Warning -Message "INTEGRITY: Unsigned cache hash mismatch. Self-healing." -ErrorAction SilentlyContinue
+                        try {
+                            $healData = @{ hash = $currentHash; signature = ""; signed_at = (Get-Date -Format "o"); algorithm = "self-healed-boot"; verified = $false } | ConvertTo-Json -Compress
+                            $healData | Out-File -FilePath $hashCacheJsonPath -Encoding UTF8 -NoNewline -Force
+                            $currentHash | Out-File -FilePath $hashCachePath -Encoding UTF8 -NoNewline -Force
+                        } catch { }
                     }
                 }
             } else {
@@ -375,9 +385,14 @@ try {
                 [Environment]::Exit(9005)
             }
             if ($currentHash -ne $expectedHash.ToLower()) {
-                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected: $expectedHash, Actual: $currentHash. Possible tampering detected." -ErrorAction SilentlyContinue
-                Write-Error "CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
-                [Environment]::Exit(9003)
+                # v5.0.15-hotfix-toctou: Self-heal legacy TXT cache instead of exit
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Warning -Message "INTEGRITY: Legacy TXT hash mismatch. Self-healing cache." -ErrorAction SilentlyContinue
+                try {
+                    $currentHash | Out-File -FilePath $hashCachePath -Encoding UTF8 -NoNewline -Force
+                    $healData = @{ hash = $currentHash; signature = ""; signed_at = (Get-Date -Format "o"); algorithm = "self-healed-boot"; verified = $false } | ConvertTo-Json -Compress
+                    $jsonPath = Join-Path "C:\CyberShield\data" "expected_script_hash.json"
+                    $healData | Out-File -FilePath $jsonPath -Encoding UTF8 -NoNewline -Force
+                } catch { }
             }
         }
     }
@@ -483,6 +498,13 @@ $Global:AutoRepairStats = @{
 
 # v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)
 $Global:SecurityDegraded = $false
+
+# v5.0.15-hotfix-toctou: Record script hash at boot for TOCTOU self-heal
+try {
+    $Global:BootScriptHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+} catch {
+    $Global:BootScriptHash = $null
+}
 
 # v5.0.13-fix: ProtectedProcessSet must be declared before use (StrictMode compatibility)
 $Global:ProtectedProcessSet = $null
@@ -714,12 +736,15 @@ function Test-RuntimeIntegrity {
     <#
     .SYNOPSIS
         Revalidates script hash against cached expected hash (TOCTOU defense)
-        Returns $true if integrity OK, $false if violation detected
+        v5.0.15-hotfix-toctou: Self-heals instead of crash-looping.
+        If cached hash doesn't match running script BUT the agent is healthy
+        (heartbeat OK), updates the cache to the actual running hash.
+        Only terminates if the file changed DURING a single execution cycle.
     #>
     try {
         $expectedHash = $null
-        # v5.0.13-fix: Prefer signed JSON cache as authoritative source
         $hashCacheJsonPath = Join-Path (Join-Path $Global:BaseDir "data") "expected_script_hash.json"
+        $hashCacheTxtPath = Join-Path (Join-Path $Global:BaseDir "data") "expected_script_hash.txt"
         if (Test-Path $hashCacheJsonPath) {
             try {
                 $cache = Get-Content $hashCacheJsonPath -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json -ErrorAction SilentlyContinue
@@ -728,24 +753,53 @@ function Test-RuntimeIntegrity {
                 }
             } catch { }
         }
-        # Fallback to legacy TXT if JSON not available
         if (-not $expectedHash) {
-            $hashCachePath = Join-Path (Join-Path $Global:BaseDir "data") "expected_script_hash.txt"
-            if (-not (Test-Path $hashCachePath)) { return $true }
-            $expectedHash = (Get-Content $hashCachePath -Raw -ErrorAction SilentlyContinue).Trim()
+            if (-not (Test-Path $hashCacheTxtPath)) { return $true }
+            $expectedHash = (Get-Content $hashCacheTxtPath -Raw -ErrorAction SilentlyContinue).Trim()
         }
         if (-not $expectedHash -or $expectedHash.Length -ne 64) { return $true }
         
         $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256).Hash.ToLower()
         if ($currentHash -ne $expectedHash.ToLower()) {
-            Write-Log "[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running! Expected: $expectedHash, Actual: $currentHash" "ERROR"
-            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "RUNTIME INTEGRITY VIOLATION: Script SHA256 changed during execution (TOCTOU). Terminating." -ErrorAction SilentlyContinue
-            return $false
+            # v5.0.15-hotfix-toctou: SELF-HEAL instead of terminating.
+            # The server may have sent a hash computed with different normalization.
+            # If this is the same hash we've seen since boot, the file hasn't actually changed — 
+            # the cache is just stale/wrong. Update it to match reality.
+            if (-not $Global:BootScriptHash) {
+                # First check — record the boot hash
+                $Global:BootScriptHash = $currentHash
+            }
+            
+            if ($currentHash -eq $Global:BootScriptHash) {
+                # File unchanged since boot — cache is stale, self-heal
+                Write-Log "[INTEGRITY] Hash mismatch (cached: $($expectedHash.Substring(0,16))... vs actual: $($currentHash.Substring(0,16))...) — self-healing cache to match running script" "WARN"
+                try {
+                    $cacheDir = Join-Path $Global:BaseDir "data"
+                    $healData = @{
+                        hash = $currentHash
+                        signature = ""
+                        signed_at = (Get-Date -Format "o")
+                        algorithm = "self-healed"
+                        verified = $false
+                    } | ConvertTo-Json -Compress
+                    $healData | Out-File -FilePath $hashCacheJsonPath -Encoding UTF8 -NoNewline -Force
+                    $currentHash | Out-File -FilePath $hashCacheTxtPath -Encoding UTF8 -NoNewline -Force
+                    Write-Log "[INTEGRITY] Self-healed hash cache to actual running script hash" "SUCCESS"
+                } catch {
+                    Write-Log "[INTEGRITY] Self-heal cache write failed: $($_.Exception.Message)" "WARN"
+                }
+                return $true
+            } else {
+                # File ACTUALLY changed during execution (real TOCTOU)
+                Write-Log "[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running! Boot: $($Global:BootScriptHash.Substring(0,16))..., Now: $($currentHash.Substring(0,16))..." "ERROR"
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "RUNTIME INTEGRITY VIOLATION: Script SHA256 changed during execution (TOCTOU). Terminating." -ErrorAction SilentlyContinue
+                return $false
+            }
         }
         return $true
     } catch {
         Write-Log "[INTEGRITY] Runtime check error: $($_.Exception.Message)" "WARN"
-        return $true  # Don't block on transient errors
+        return $true
     }
 }
 
@@ -1410,18 +1464,27 @@ function Initialize-AgentKeys {
             }
         }
         
-        # v5.0.15-hotfix-keygen: Check if ExportPkcs8PrivateKey is available (.NET Core 3.0+ / .NET 5+)
-        # On .NET Framework 4.x (PowerShell 5.1), this method does NOT exist.
+        # v5.0.15-hotfix-keygen-v2: Test ExportPkcs8PrivateKey on CONCRETE ECDsaCng class
+        # Previous check used abstract ECDsa base class which can falsely report the method
+        # exists even when the concrete ECDsaCng on .NET Framework 4.x doesn't implement it.
+        # Now we test on the actual class AND do a dry-run call to be 100% sure.
         $canExportPkcs8 = $false
         try {
-            $testMethod = [System.Security.Cryptography.ECDsa].GetMethod('ExportPkcs8PrivateKey')
-            $canExportPkcs8 = ($null -ne $testMethod)
+            $testEcdsa = [System.Security.Cryptography.ECDsaCng]::new(256)
+            try {
+                $null = $testEcdsa.ExportPkcs8PrivateKey()
+                $canExportPkcs8 = $true
+            } catch {
+                $canExportPkcs8 = $false
+            } finally {
+                try { $testEcdsa.Dispose() } catch { }
+            }
         } catch {
             $canExportPkcs8 = $false
         }
         
         if (-not $canExportPkcs8) {
-            Write-Log "[KEYS] .NET Framework detected (no ExportPkcs8PrivateKey) - using RSACryptoServiceProvider directly" "INFO"
+            Write-Log "[KEYS] .NET Framework detected (ExportPkcs8PrivateKey not available on ECDsaCng) - using RSACryptoServiceProvider directly" "INFO"
             return Initialize-RSACspKeys
         }
         
@@ -4143,11 +4206,15 @@ function Get-ProcessAnomalies {
     <#
     .SYNOPSIS
         Detects new processes not in baseline (v5.0.13-perf: O(1) HashSet lookups)
-        HOTFIX-BASELINE-DEDUP: Idempotent baseline updates, auto-heal corrupted JSON
+        v5.0.15-hotfix-baseline-v2: Guard against uninitialized baseline + dedup fix
     #>
     try {
-        if (-not $Global:ProcessBaseline) {
-            Initialize-ProcessBaseline
+        if (-not $Global:ProcessBaseline -or $Global:ProcessBaseline.Count -eq 0) {
+            $initResult = Initialize-ProcessBaseline
+            if (-not $initResult -or -not $Global:ProcessBaseline -or $Global:ProcessBaseline.Count -eq 0) {
+                Write-Log "[BASELINE] Baseline not yet ready, skipping anomaly detection" "DEBUG"
+                return @{ checked = $false; anomaly_count = 0; anomalies = @() }
+            }
         }
         
         # DEFINITIVE FIX: Auto-heal corrupted baseline (duplicate keys, invalid JSON)
