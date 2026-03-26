@@ -6,7 +6,8 @@
  *   import { getCached, invalidateCache } from '../_shared/cache.ts';
  */
 
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+// SupabaseClient type used loosely to avoid Deno-only import issues in build
+type SupabaseClient = any;
 
 // ─── Tier 1: In-Memory Cache (per Edge Function invocation) ───
 
