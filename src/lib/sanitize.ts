@@ -105,7 +105,7 @@ export function sanitizeError(error: unknown): Record<string, unknown> {
       name: error.name,
       message: error.message,
       stack: import.meta.env.DEV ? error.stack : undefined,
-      code: (error as Record<string, unknown>).code,
+      code: 'code' in error ? (error as { code?: string }).code : undefined,
     };
   }
   return { raw: String(error) };
