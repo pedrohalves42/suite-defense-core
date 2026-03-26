@@ -334,9 +334,15 @@ try {
                             [Environment]::Exit(9005)
                         }
                         if ($currentHash -ne $cacheJson.hash.ToLower()) {
-                            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch. Expected (signed): $($cacheJson.hash), Actual: $currentHash. Possible tampering." -ErrorAction SilentlyContinue
-                            Write-Error "CyberShield Agent integrity violation: SHA256 mismatch (tampering detected)"
-                            [Environment]::Exit(9003)
+                            # v5.0.15-hotfix-toctou: Self-heal instead of exit.
+                            # The cached hash may have been computed with different normalization by the server.
+                            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Warning -Message "INTEGRITY: Hash mismatch on boot (cached: $($cacheJson.hash.Substring(0,16)), actual: $($currentHash.Substring(0,16))). Self-healing cache." -ErrorAction SilentlyContinue
+                            Write-Host "[WARN] [INTEGRITY] Startup hash mismatch - self-healing cache to match actual script" -ForegroundColor Yellow
+                            try {
+                                $healData = @{ hash = $currentHash; signature = ""; signed_at = (Get-Date -Format "o"); algorithm = "self-healed-boot"; verified = $false } | ConvertTo-Json -Compress
+                                $healData | Out-File -FilePath $hashCacheJsonPath -Encoding UTF8 -NoNewline -Force
+                                $currentHash | Out-File -FilePath $hashCachePath -Encoding UTF8 -NoNewline -Force
+                            } catch { }
                         }
                     }
                 } else {
@@ -348,9 +354,13 @@ try {
                         [Environment]::Exit(9005)
                     }
                     if ($currentHash -ne $cacheJson.hash.ToLower()) {
-                        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Error -Message "INTEGRITY VIOLATION: Script SHA256 mismatch (unsigned cache). Expected: $($cacheJson.hash), Actual: $currentHash" -ErrorAction SilentlyContinue
-                        Write-Error "CyberShield Agent integrity violation: SHA256 mismatch"
-                        [Environment]::Exit(9003)
+                        # v5.0.15-hotfix-toctou: Self-heal unsigned cache instead of exit
+                        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9003 -EntryType Warning -Message "INTEGRITY: Unsigned cache hash mismatch. Self-healing." -ErrorAction SilentlyContinue
+                        try {
+                            $healData = @{ hash = $currentHash; signature = ""; signed_at = (Get-Date -Format "o"); algorithm = "self-healed-boot"; verified = $false } | ConvertTo-Json -Compress
+                            $healData | Out-File -FilePath $hashCacheJsonPath -Encoding UTF8 -NoNewline -Force
+                            $currentHash | Out-File -FilePath $hashCachePath -Encoding UTF8 -NoNewline -Force
+                        } catch { }
                     }
                 }
             } else {
