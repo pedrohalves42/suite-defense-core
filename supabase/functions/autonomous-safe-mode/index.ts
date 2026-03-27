@@ -581,7 +581,7 @@ async function processVersionBlockRule(supabase: any, rule: any): Promise<RuleRe
     time_window_hours: 24
   };
 
-  console.log(`[UPDATE_BLOCK_004] Detecting problematic versions`);
+  logger.debug(`[UPDATE_BLOCK_004] Detecting problematic versions`);
 
   const { data: candidates, error } = await supabase
     .rpc('detect_version_block_candidates', {
@@ -591,11 +591,11 @@ async function processVersionBlockRule(supabase: any, rule: any): Promise<RuleRe
     });
 
   if (error) {
-    console.error('[UPDATE_BLOCK_004] Detection error:', error);
+    logger.error('[UPDATE_BLOCK_004] Detection error:', error);
     throw error;
   }
 
-  console.log(`[UPDATE_BLOCK_004] Found ${candidates?.length || 0} problematic versions`);
+  logger.debug(`[UPDATE_BLOCK_004] Found ${candidates?.length || 0} problematic versions`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -612,7 +612,7 @@ async function processVersionBlockRule(supabase: any, rule: any): Promise<RuleRe
       });
 
     if (blockError) {
-      console.error(`[UPDATE_BLOCK_004] Error blocking version ${candidate.version}:`, blockError);
+      logger.error(`[UPDATE_BLOCK_004] Error blocking version ${candidate.version}:`, blockError);
       continue;
     }
 
@@ -628,7 +628,7 @@ async function processVersionBlockRule(supabase: any, rule: any): Promise<RuleRe
       reason: `${candidate.failure_rate}% taxa de falha em ${candidate.total_agents} agentes`
     });
 
-    console.log(`[UPDATE_BLOCK_004] Blocked version ${candidate.version} for ${candidate.platform}`);
+    logger.debug(`[UPDATE_BLOCK_004] Blocked version ${candidate.version} for ${candidate.platform}`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
@@ -643,18 +643,18 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
     auto_revert_after_hours: 2
   };
 
-  console.log(`[AGENT_IMPRODUTIVE_005] Detecting improdutive agents`);
+  logger.debug(`[AGENT_IMPRODUTIVE_005] Detecting improdutive agents`);
 
   // Usar RPC que detecta agentes improdutivos
   const { data: candidates, error } = await supabase
     .rpc('detect_improdutive_agents');
 
   if (error) {
-    console.error('[AGENT_IMPRODUTIVE_005] Detection error:', error);
+    logger.error('[AGENT_IMPRODUTIVE_005] Detection error:', error);
     throw error;
   }
 
-  console.log(`[AGENT_IMPRODUTIVE_005] Found ${candidates?.length || 0} improdutive agents`);
+  logger.debug(`[AGENT_IMPRODUTIVE_005] Found ${candidates?.length || 0} improdutive agents`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -670,7 +670,7 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
       });
 
     if (throttleError) {
-      console.error(`[AGENT_IMPRODUTIVE_005] Error throttling ${candidate.agent_name}:`, throttleError);
+      logger.error(`[AGENT_IMPRODUTIVE_005] Error throttling ${candidate.agent_name}:`, throttleError);
       actionsExecuted.push({ type: 'APPLY_THROTTLE', success: false, error: throttleError.message });
       continue;
     }
@@ -730,7 +730,7 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
       reason: `Improdutivo: ${candidate.stale_queued_jobs || 0} jobs parados, ${Math.round(candidate.minutes_since_execution || 0)}min sem execução`
     });
 
-    console.log(`[AGENT_IMPRODUTIVE_005] Throttled improdutive agent ${candidate.agent_name}`);
+    logger.debug(`[AGENT_IMPRODUTIVE_005] Throttled improdutive agent ${candidate.agent_name}`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
@@ -740,17 +740,17 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
 // AUTO_REVERT_THROTTLE_006: Remove throttle após estabilização
 // =============================================================
 async function processAutoRevertThrottle(supabase: any, rule: any): Promise<RuleResult> {
-  console.log('[AUTO_REVERT_THROTTLE_006] Checking revert candidates');
+  logger.debug('[AUTO_REVERT_THROTTLE_006] Checking revert candidates');
 
   const { data: candidates, error } = await supabase
     .rpc('detect_throttle_revert_candidates');
 
   if (error) {
-    console.error('[AUTO_REVERT_THROTTLE_006] Detection error:', error);
+    logger.error('[AUTO_REVERT_THROTTLE_006] Detection error:', error);
     throw error;
   }
 
-  console.log(`[AUTO_REVERT_THROTTLE_006] Found ${candidates?.length || 0} revert candidates`);
+  logger.debug(`[AUTO_REVERT_THROTTLE_006] Found ${candidates?.length || 0} revert candidates`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -764,7 +764,7 @@ async function processAutoRevertThrottle(supabase: any, rule: any): Promise<Rule
       });
 
     if (revertError) {
-      console.error(`[AUTO_REVERT_THROTTLE_006] Error reverting ${candidate.agent_name}:`, revertError);
+      logger.error(`[AUTO_REVERT_THROTTLE_006] Error reverting ${candidate.agent_name}:`, revertError);
       actionsExecuted.push({ type: 'REMOVE_THROTTLE', success: false, error: revertError.message });
       continue;
     }
