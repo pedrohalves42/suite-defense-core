@@ -7,6 +7,7 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { hashToken } from './token-hash.ts';
 import { corsHeaders } from './cors.ts';
+import { logger } from './logger.ts';
 
 export interface AuthenticatedAgent {
   id: string;
@@ -71,7 +72,7 @@ export async function authenticateAgent(
     .maybeSingle();
 
   if (tokenError || !token?.agents) {
-    console.warn(`[${endpoint}] Invalid agent token attempt, prefix: ${agentToken.substring(0, 8)}`);
+    logger.warn(`[${endpoint}] Invalid agent token attempt, prefix: ${agentToken.substring(0, 8)}`);
     return {
       success: false,
       response: new Response(
@@ -82,9 +83,9 @@ export async function authenticateAgent(
   }
 
   // HARDENED: Check token expiration (propagates to all serveAgent endpoints)
-  const expiresAt = (token as any).expires_at;
+  const expiresAt = token.expires_at as string | null;
   if (expiresAt && new Date(expiresAt) < new Date()) {
-    console.warn(`[${endpoint}] Expired agent token, prefix: ${agentToken.substring(0, 8)}, expired: ${expiresAt}`);
+    logger.warn(`[${endpoint}] Expired agent token, prefix: ${agentToken.substring(0, 8)}, expired: ${expiresAt}`);
     return {
       success: false,
       response: new Response(

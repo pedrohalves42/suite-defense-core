@@ -47,22 +47,6 @@ export async function validateGovernance(ctx: SubmitContext, updateData: Record<
 }
 
 /**
- * Handle empty web activity collections.
- */
-export function handleEmptyWebActivity(ctx: SubmitContext, updateData: Record<string, unknown>): void {
-  const { job, payload, sideEffects } = ctx
-  
-  if (job.type === 'collect_web_activity' && payload.status === 'completed' && !sideEffects.inserted) {
-    updateData.status = 'completed'
-    updateData.error_message = '[WARNING] Coleta web concluída sem histórico disponível no endpoint (sem DNS cache/browser history neste ciclo).'
-    logger.warn('[submit-job-result] [WEB_ACTIVITY_EMPTY] Completed sem dados', {
-      job_id: payload.job_id,
-      agent: agent.agent_name
-    })
-  }
-}
-
-/**
  * HARDENING: update_agent version validation.
  */
 export async function validateUpdateAgentVersion(ctx: SubmitContext): Promise<void> {
