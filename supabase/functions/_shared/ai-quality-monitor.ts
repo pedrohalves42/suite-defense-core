@@ -5,6 +5,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from './logger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -306,7 +307,7 @@ export async function createQualityAlert(
       resolved: false,
     });
   } catch (err) {
-    console.error('[AI Quality] Failed to create alert:', err);
+    logger.error('[AI Quality] Failed to create alert:', err);
   }
 }
 
@@ -317,7 +318,7 @@ export function logQualityCheck(
   functionName: string,
   result: QualityCheckResult
 ): void {
-  console.log(JSON.stringify({
+  logger.info(JSON.stringify({
     type: 'ai_quality_check',
     function_name: functionName,
     passed: result.passed,

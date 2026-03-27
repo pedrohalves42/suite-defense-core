@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 /**
  * AI Anomaly Detector
  * 
@@ -197,7 +198,7 @@ async function checkRecentAnomalies(
       .limit(15);
     
     if (error) {
-      console.error('[ai-anomaly-detector] Failed to check recent anomalies:', error);
+      logger.error('[ai-anomaly-detector] Failed to check recent anomalies:', error);
       return { count: 0, lastSeverity: null };
     }
     
@@ -206,7 +207,7 @@ async function checkRecentAnomalies(
       lastSeverity: data?.[0]?.severity || null
     };
   } catch (error) {
-    console.error('[ai-anomaly-detector] Error checking recent anomalies:', error);
+    logger.error('[ai-anomaly-detector] Error checking recent anomalies:', error);
     return { count: 0, lastSeverity: null };
   }
 }
@@ -235,7 +236,7 @@ export async function logAnomaly(
       },
     });
   } catch (error) {
-    console.error('[ai-anomaly-detector] Failed to log anomaly:', error);
+    logger.error('[ai-anomaly-detector] Failed to log anomaly:', error);
   }
 }
 
@@ -259,7 +260,7 @@ export async function processAnomalies(
     
     // Skip se 10+ ocorrências (alert fatigue prevention)
     if (recent.count >= SKIP_THRESHOLD) {
-      console.log(
+      logger.info(
         `[ai-anomaly-detector] Rate limit: Skipping anomaly log for ${anomaly.type} - ${recent.count} occurrences in last ${RATE_LIMIT_HOURS}h`
       );
       continue;
@@ -269,7 +270,7 @@ export async function processAnomalies(
     if (recent.count >= DOWNGRADE_THRESHOLD && anomaly.severity === 'critical') {
       anomaly.severity = 'warning';
       anomaly.description += ' [Downgraded: repeated occurrence]';
-      console.log(
+      logger.info(
         `[ai-anomaly-detector] Downgraded ${anomaly.type} from critical to warning - ${recent.count} recent occurrences`
       );
     }
@@ -285,7 +286,7 @@ export async function processAnomalies(
 
   // Log resumo se houver anomalias que requerem review
   if (validation.requiresReview) {
-    console.warn(
+    logger.warn(
       `[ai-anomaly-detector] REVIEW REQUIRED: ${validation.anomalies.length} anomalies detected for ${context.functionName} in tenant ${context.tenantId}`
     );
   }

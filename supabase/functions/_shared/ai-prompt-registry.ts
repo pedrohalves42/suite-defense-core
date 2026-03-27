@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 /**
  * AI Prompt Registry - Versioning and Governance v3.0
  * 
@@ -780,7 +781,7 @@ export function logPromptUsage(
   functionName: string,
   additionalContext?: Record<string, unknown>
 ): void {
-  console.log(JSON.stringify({
+  logger.info(JSON.stringify({
     type: 'prompt_usage',
     prompt_id: promptId,
     prompt_hash: promptHash,

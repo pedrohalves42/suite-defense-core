@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 /**
  * Centralized environment variable validation
  * Eliminates silent crashes from Deno.env.get()! assertions
@@ -10,7 +11,7 @@
 export function requireEnv(name: string): string {
   const value = (globalThis as any).Deno?.env?.get(name);
   if (!value) {
-    console.error(`[FATAL] Missing required environment variable: ${name}`);
+    logger.error(`[FATAL] Missing required environment variable: ${name}`);
     throw new Error(`Server configuration error: missing ${name}`);
   }
   return value;

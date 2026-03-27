@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 /**
  * Agent Script Integrity Validator
  * Validates the agent script on Edge Function startup to fail fast if corrupted
@@ -97,7 +98,7 @@ export async function validateAgentScriptOrThrow(): Promise<void> {
     throw new Error(`Agent script validation failed: ${result.error}`);
   }
 
-  console.log('[VALIDATION] Agent script validated successfully:', result.details);
+  logger.info('[VALIDATION] Agent script validated successfully:', result.details);
 }
 
 /**

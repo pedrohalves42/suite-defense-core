@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 /**
  * Two-tier cache: in-memory (per-invocation) + Supabase kv_cache table (cross-invocation)
  * No Redis dependency — works on existing Supabase infrastructure.
@@ -179,7 +180,7 @@ export async function cleanupExpiredCache(
 ): Promise<number> {
   const { data, error } = await supabase.rpc('cleanup_expired_cache');
   if (error) {
-    console.error('[cache] cleanup failed:', error.message);
+    logger.error('[cache] cleanup failed:', error.message);
     return 0;
   }
   return (data as number) || 0;

@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 /**
  * AI Inference Metrics Logger
  * Tracks latency, model usage, success rates, and token consumption
@@ -28,7 +29,7 @@ export function logAIMetrics(metrics: AIInferenceMetrics): void {
   };
 
   // Structured log for observability platforms
-  console.log(JSON.stringify(logEntry));
+  logger.info(JSON.stringify(logEntry));
 }
 
 /**
@@ -103,7 +104,7 @@ export function extractTokenUsage(response: any): { prompt?: number; completion?
 export function createMetricsLogger(functionName: string, model: string = 'google/gemini-2.5-flash') {
   return {
     logStart: (tenantId?: string) => {
-      console.log(JSON.stringify({
+      logger.info(JSON.stringify({
         type: 'ai_call_start',
         function_name: functionName,
         model,

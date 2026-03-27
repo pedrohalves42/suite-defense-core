@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 /**
  * Business Hours Utility
  * 
@@ -40,7 +41,7 @@ export function isWithinBusinessHours(config: BusinessHoursConfig | null | undef
     const weekdayPart = parts.find(p => p.type === 'weekday');
     
     if (!hourPart || !minutePart || !weekdayPart) {
-      console.warn('[BusinessHours] Failed to parse date parts, assuming within hours');
+      logger.warn('[BusinessHours] Failed to parse date parts, assuming within hours');
       return true;
     }
 
@@ -80,7 +81,7 @@ export function isWithinBusinessHours(config: BusinessHoursConfig | null | undef
 
     return currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes;
   } catch (error) {
-    console.warn('[BusinessHours] Error checking business hours:', error);
+    logger.warn('[BusinessHours] Error checking business hours:', error);
     // Em caso de erro, considera dentro do expediente para não bloquear alertas
     return true;
   }
@@ -103,13 +104,13 @@ export async function getTenantBusinessHours(
       .maybeSingle();
 
     if (error) {
-      console.warn(`[BusinessHours] Error fetching tenant settings for ${tenantId}:`, error.message);
+      logger.warn(`[BusinessHours] Error fetching tenant settings for ${tenantId}:`, error.message);
       return null;
     }
 
     return settings?.business_hours as BusinessHoursConfig | null;
   } catch (error) {
-    console.warn('[BusinessHours] Error in getTenantBusinessHours:', error);
+    logger.warn('[BusinessHours] Error in getTenantBusinessHours:', error);
     return null;
   }
 }

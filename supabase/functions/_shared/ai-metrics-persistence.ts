@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { AIInferenceMetrics } from './ai-metrics.ts';
+import { logger } from './logger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -32,11 +33,11 @@ export async function persistAIMetrics(metrics: AIInferenceMetrics): Promise<voi
       .insert(record);
     
     if (error) {
-      console.error('[AI Metrics] Failed to persist metrics:', error);
+      logger.error('[AI Metrics] Failed to persist metrics:', error);
     }
   } catch (err) {
     // Don't throw - metrics persistence should not break the main flow
-    console.error('[AI Metrics] Persistence error:', err);
+    logger.error('[AI Metrics] Persistence error:', err);
   }
 }
 
@@ -70,10 +71,10 @@ export async function persistAIMetricsBatch(metricsArray: AIInferenceMetrics[]):
       .insert(records);
     
     if (error) {
-      console.error('[AI Metrics] Failed to persist batch metrics:', error);
+      logger.error('[AI Metrics] Failed to persist batch metrics:', error);
     }
   } catch (err) {
-    console.error('[AI Metrics] Batch persistence error:', err);
+    logger.error('[AI Metrics] Batch persistence error:', err);
   }
 }
 
@@ -94,13 +95,13 @@ export async function cleanupOldAIMetrics(): Promise<number> {
       .select('id');
     
     if (error) {
-      console.error('[AI Metrics] Cleanup error:', error);
+      logger.error('[AI Metrics] Cleanup error:', error);
       return 0;
     }
     
     return data?.length || 0;
   } catch (err) {
-    console.error('[AI Metrics] Cleanup exception:', err);
+    logger.error('[AI Metrics] Cleanup exception:', err);
     return 0;
   }
 }
@@ -209,7 +210,7 @@ export async function getAIMetricsSummary(tenantId?: string, hoursBack = 24): Pr
       by_model: byModel,
     };
   } catch (err) {
-    console.error('[AI Metrics] Summary error:', err);
+    logger.error('[AI Metrics] Summary error:', err);
     return {
       total_calls: 0,
       success_rate: 0,

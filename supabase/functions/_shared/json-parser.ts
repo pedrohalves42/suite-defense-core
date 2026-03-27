@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 /**
  * Robust JSON Parser for AI Responses v1.0
  * 
@@ -88,9 +89,9 @@ export function safeParseJSON<T = unknown>(content: string, context: string = 'u
   try {
     jsonBlock = extractJSONObject(cleaned);
   } catch (extractError) {
-    console.error(`[safeParseJSON:${context}] Extraction failed:`, extractError);
-    console.error(`[safeParseJSON:${context}] Content length: ${cleaned.length}`);
-    console.error(`[safeParseJSON:${context}] First 500 chars:`, cleaned.substring(0, 500));
+    logger.error(`[safeParseJSON:${context}] Extraction failed:`, extractError);
+    logger.error(`[safeParseJSON:${context}] Content length: ${cleaned.length}`);
+    logger.error(`[safeParseJSON:${context}] First 500 chars:`, cleaned.substring(0, 500));
     throw new Error('AI_JSON_EXTRACTION_ERROR');
   }
 
@@ -101,11 +102,11 @@ export function safeParseJSON<T = unknown>(content: string, context: string = 'u
   try {
     return JSON.parse(sanitized) as T;
   } catch (parseError) {
-    console.error(`[safeParseJSON:${context}] Parse failed after extraction`);
-    console.error(`[safeParseJSON:${context}] Extracted length: ${sanitized.length}`);
-    console.error(`[safeParseJSON:${context}] Parse error:`, parseError);
-    console.error(`[safeParseJSON:${context}] First 500 chars:`, sanitized.substring(0, 500));
-    console.error(`[safeParseJSON:${context}] Last 300 chars:`, sanitized.substring(sanitized.length - 300));
+    logger.error(`[safeParseJSON:${context}] Parse failed after extraction`);
+    logger.error(`[safeParseJSON:${context}] Extracted length: ${sanitized.length}`);
+    logger.error(`[safeParseJSON:${context}] Parse error:`, parseError);
+    logger.error(`[safeParseJSON:${context}] First 500 chars:`, sanitized.substring(0, 500));
+    logger.error(`[safeParseJSON:${context}] Last 300 chars:`, sanitized.substring(sanitized.length - 300));
     
     // Try one more time with aggressive cleanup
     try {

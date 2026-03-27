@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 /**
  * ? Build Telemetry Tracker
  * Monitora performance e eventos de cada build em tempo real
@@ -31,7 +32,7 @@ export class BuildTelemetry {
     const timestamp = Date.now();
     this.stepTimers.set(step, timestamp);
     
-    console.log(JSON.stringify({
+    logger.info(JSON.stringify({
       type: 'telemetry',
       event: 'step_started',
       build_id: this.buildId,
@@ -51,7 +52,7 @@ export class BuildTelemetry {
     const startTime = this.stepTimers.get(step) || endTime;
     const duration = endTime - startTime;
     
-    console.log(JSON.stringify({
+    logger.info(JSON.stringify({
       type: 'telemetry',
       event: 'step_completed',
       build_id: this.buildId,
@@ -74,7 +75,7 @@ export class BuildTelemetry {
     const startTime = this.stepTimers.get(step) || endTime;
     const duration = endTime - startTime;
     
-    console.error(JSON.stringify({
+    logger.error(JSON.stringify({
       type: 'telemetry',
       event: 'step_failed',
       build_id: this.buildId,
@@ -95,7 +96,7 @@ export class BuildTelemetry {
    * Log generico de informacao
    */
   info(message: string, metadata?: Record<string, any>): void {
-    console.log(JSON.stringify({
+    logger.info(JSON.stringify({
       type: 'telemetry',
       event: 'info',
       build_id: this.buildId,
@@ -111,7 +112,7 @@ export class BuildTelemetry {
    * Log de warning
    */
   warn(message: string, metadata?: Record<string, any>): void {
-    console.warn(JSON.stringify({
+    logger.warn(JSON.stringify({
       type: 'telemetry',
       event: 'warning',
       build_id: this.buildId,
@@ -127,7 +128,7 @@ export class BuildTelemetry {
    * Log de erro
    */
   error(message: string, error?: Error | string, metadata?: Record<string, any>): void {
-    console.error(JSON.stringify({
+    logger.error(JSON.stringify({
       type: 'telemetry',
       event: 'error',
       build_id: this.buildId,
@@ -147,7 +148,7 @@ export class BuildTelemetry {
   completeBuild(metadata?: Record<string, any>): void {
     const totalDuration = Date.now() - this.startTime;
     
-    console.log(JSON.stringify({
+    logger.info(JSON.stringify({
       type: 'telemetry',
       event: 'build_completed',
       build_id: this.buildId,
@@ -165,7 +166,7 @@ export class BuildTelemetry {
   failBuild(error: Error | string, metadata?: Record<string, any>): void {
     const totalDuration = Date.now() - this.startTime;
     
-    console.error(JSON.stringify({
+    logger.error(JSON.stringify({
       type: 'telemetry',
       event: 'build_failed',
       build_id: this.buildId,

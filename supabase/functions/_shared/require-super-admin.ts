@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from './cors.ts';
+import { logger } from './logger.ts';
 
 export interface SuperAdminAuthResult {
   success: boolean;
@@ -36,7 +37,7 @@ export async function requireSuperAdmin(
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error(`${logPrefix} [SECURITY] Missing Supabase credentials`);
+      logger.error(`${logPrefix} [SECURITY] Missing Supabase credentials`);
       return {
         success: false,
         error: 'Internal server configuration error',
@@ -53,7 +54,7 @@ export async function requireSuperAdmin(
     // Extract JWT from Authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.warn(`${logPrefix} [SECURITY] Missing Authorization header`);
+      logger.warn(`${logPrefix} [SECURITY] Missing Authorization header`);
       return {
         success: false,
         error: 'Unauthorized: Missing Authorization header',
@@ -74,7 +75,7 @@ export async function requireSuperAdmin(
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
-      console.warn(`${logPrefix} [SECURITY] Authentication failed:`, authError?.message);
+      logger.warn(`${logPrefix} [SECURITY] Authentication failed:`, authError?.message);
       return {
         success: false,
         error: 'Unauthorized: Invalid or expired token',
@@ -88,7 +89,7 @@ export async function requireSuperAdmin(
       };
     }
 
-    console.log(`${logPrefix} [AUTH] User authenticated: ${user.id}`);
+    logger.info(`${logPrefix} [AUTH] User authenticated: ${user.id}`);
 
     // CRITICAL: Validate super_admin role using RPC (bypasses RLS)
     const { data: isSuperAdmin, error: roleError } = await supabaseClient.rpc('is_super_admin', {
@@ -96,7 +97,7 @@ export async function requireSuperAdmin(
     });
 
     if (roleError) {
-      console.error(`${logPrefix} [SECURITY] Error checking super_admin role:`, roleError);
+      logger.error(`${logPrefix} [SECURITY] Error checking super_admin role:`, roleError);
       return {
         success: false,
         error: 'Failed to verify permissions',
@@ -111,7 +112,7 @@ export async function requireSuperAdmin(
     }
 
     if (!isSuperAdmin) {
-      console.warn(`${logPrefix} [SECURITY] Access denied: User ${user.id} is not super_admin`);
+      logger.warn(`${logPrefix} [SECURITY] Access denied: User ${user.id} is not super_admin`);
       return {
         success: false,
         error: 'Access denied: Super Admin privileges required',
@@ -128,14 +129,14 @@ export async function requireSuperAdmin(
       };
     }
 
-    console.log(`${logPrefix} [AUTH] Super admin verified: ${user.id}`);
+    logger.info(`${logPrefix} [AUTH] Super admin verified: ${user.id}`);
 
     return {
       success: true,
       userId: user.id,
     };
   } catch (error) {
-    console.error(`${logPrefix} [SECURITY] Unexpected error in requireSuperAdmin:`, error);
+    logger.error(`${logPrefix} [SECURITY] Unexpected error in requireSuperAdmin:`, error);
     return {
       success: false,
       error: 'Internal authentication error',

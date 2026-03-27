@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 /**
  * Circuit Breaker + Timeout for AI calls
  * Provides resilience against AI service failures
@@ -37,11 +38,11 @@ export function shouldAllowCall(): boolean {
   // Check if enough time has passed to try again (half-open state)
   const timeSinceLastFailure = Date.now() - circuitState.lastFailure;
   if (timeSinceLastFailure > RESET_TIMEOUT_MS) {
-    console.log('[CircuitBreaker] Entering half-open state, allowing test call');
+    logger.info('[CircuitBreaker] Entering half-open state, allowing test call');
     return true;
   }
 
-  console.log('[CircuitBreaker] Circuit is OPEN, blocking call');
+  logger.info('[CircuitBreaker] Circuit is OPEN, blocking call');
   return false;
 }
 
@@ -50,7 +51,7 @@ export function shouldAllowCall(): boolean {
  */
 export function recordSuccess(): void {
   if (circuitState.isOpen) {
-    console.log('[CircuitBreaker] Call succeeded, closing circuit');
+    logger.info('[CircuitBreaker] Call succeeded, closing circuit');
   }
   circuitState.failures = 0;
   circuitState.isOpen = false;
@@ -65,9 +66,9 @@ export function recordFailure(): void {
 
   if (circuitState.failures >= FAILURE_THRESHOLD) {
     circuitState.isOpen = true;
-    console.log(`[CircuitBreaker] Circuit OPENED after ${circuitState.failures} failures`);
+    logger.info(`[CircuitBreaker] Circuit OPENED after ${circuitState.failures} failures`);
   } else {
-    console.log(`[CircuitBreaker] Failure recorded (${circuitState.failures}/${FAILURE_THRESHOLD})`);
+    logger.info(`[CircuitBreaker] Failure recorded (${circuitState.failures}/${FAILURE_THRESHOLD})`);
   }
 }
 
@@ -125,7 +126,7 @@ export async function withCircuitBreaker<T>(
   } catch (error) {
     recordFailure();
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[CircuitBreaker] AI call failed:', errorMessage);
+    logger.error('[CircuitBreaker] AI call failed:', errorMessage);
 
     if (fallbackResponse !== undefined) {
       return {

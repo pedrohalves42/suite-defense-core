@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 /**
  * AI Sanitizer - Proteção contra Prompt Injection e vazamento de dados
  * 
@@ -102,7 +103,7 @@ export function sanitizeForAI(
   if (result.blockedPatterns.length > 0) {
     result.blocked = true;
     if (logBlocked) {
-      console.warn('[ai-sanitizer] Blocked patterns detected:', result.blockedPatterns);
+      logger.warn('[ai-sanitizer] Blocked patterns detected:', result.blockedPatterns);
     }
   }
 
@@ -164,7 +165,7 @@ export function sanitizeObjectForAI<T extends Record<string, any>>(
   const sanitized = sanitizeValue(obj, 'root') as T;
   
   if (warnings.length > 0) {
-    console.warn('[ai-sanitizer] Object sanitization warnings:', warnings);
+    logger.warn('[ai-sanitizer] Object sanitization warnings:', warnings);
   }
 
   return { sanitized, warnings };

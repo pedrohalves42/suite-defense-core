@@ -12,6 +12,7 @@
  */
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { logger } from './logger.ts';
 
 export interface SignatureVerificationResult {
   valid: boolean
@@ -47,7 +48,7 @@ export async function verifyResultSignature(
     // Must match exactly what the agent signed
     const canonicalPayload = buildCanonicalPayload(payload)
     
-    console.log('[verify-result-signature] Starting verification:', {
+    logger.info('[verify-result-signature] Starting verification:', {
       agentId,
       jobId: payload.jobId,
       executionId: payload.executionId,
@@ -63,7 +64,7 @@ export async function verifyResultSignature(
       })
 
     if (keyError) {
-      console.error('[verify-result-signature] Error fetching agent keys:', keyError)
+      logger.error('[verify-result-signature] Error fetching agent keys:', keyError)
       return {
         valid: false,
         errorCode: 'KEY_FETCH_ERROR',
@@ -72,7 +73,7 @@ export async function verifyResultSignature(
     }
 
     if (!keyResult || keyResult.length === 0) {
-      console.warn('[verify-result-signature] No valid signing keys found for agent:', agentId)
+      logger.warn('[verify-result-signature] No valid signing keys found for agent:', agentId)
       return {
         valid: false,
         errorCode: 'NO_VALID_KEY',
@@ -90,7 +91,7 @@ export async function verifyResultSignature(
       )
 
       if (verifyResult.valid) {
-        console.log('[verify-result-signature] Signature verified successfully:', {
+        logger.info('[verify-result-signature] Signature verified successfully:', {
           agentId,
           keyId: key.key_id,
           keyVersion: key.version,
@@ -108,7 +109,7 @@ export async function verifyResultSignature(
     }
 
     // 4. No key could verify the signature
-    console.warn('[verify-result-signature] Signature verification failed for all keys:', {
+    logger.warn('[verify-result-signature] Signature verification failed for all keys:', {
       agentId,
       keysAttempted: keyResult.length,
       keyVersions: keyResult.map((k: { version: number }) => k.version)
@@ -121,7 +122,7 @@ export async function verifyResultSignature(
     }
 
   } catch (error) {
-    console.error('[verify-result-signature] Unexpected error:', error)
+    logger.error('[verify-result-signature] Unexpected error:', error)
     return {
       valid: false,
       errorCode: 'VERIFICATION_ERROR',
@@ -221,7 +222,7 @@ async function tryVerifyWithKey(
     return { valid: isValid }
     
   } catch (error) {
-    console.warn('[verify-result-signature] Key verification attempt failed:', error)
+    logger.warn('[verify-result-signature] Key verification attempt failed:', error)
     return { 
       valid: false, 
       error: error instanceof Error ? error.message : 'Verification failed' 

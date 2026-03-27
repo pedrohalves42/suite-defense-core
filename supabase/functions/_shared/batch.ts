@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 /**
  * Batch query utilities for N+1 prevention
  * 
@@ -49,7 +50,7 @@ export async function batchUpsert(
       .upsert(batch, { onConflict: conflictKey });
 
     if (error) {
-      console.error(`[batchUpsert] Batch ${i / batchSize} failed:`, error.message);
+      logger.error(`[batchUpsert] Batch ${i / batchSize} failed:`, error.message);
       failed += batch.length;
     } else {
       success += batch.length;
@@ -81,7 +82,7 @@ export async function batchFetchByIds<T = Record<string, unknown>>(
       .in(idColumn, batch);
 
     if (error) {
-      console.error(`[batchFetchByIds] Batch ${i / batchSize} failed:`, error.message);
+      logger.error(`[batchFetchByIds] Batch ${i / batchSize} failed:`, error.message);
       continue;
     }
 

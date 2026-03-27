@@ -1,6 +1,7 @@
 // Enhanced error handler with standardized responses and CORS support
 import { corsHeaders } from './cors.ts';
 import { ZodError } from 'https://esm.sh/zod@3.23.8';
+import { logger } from './logger.ts';
 
 export { corsHeaders };
 
@@ -92,7 +93,7 @@ export function handleException(
   requestId: string,
   functionName: string
 ): Response {
-  console.error(`[${requestId}] [${functionName}] Exception:`, error);
+  logger.error(`[${requestId}] [${functionName}] Exception:`, error);
   
   const message = error instanceof Error ? error.message : 'Unknown error occurred';
   const standardError = createStandardError(
