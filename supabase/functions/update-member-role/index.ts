@@ -1,123 +1,108 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { z } from 'https://esm.sh/zod@3.23.8';
-import { handleException, handleValidationError, createErrorResponse, ErrorCode, corsHeaders } from '../_shared/error-handler.ts';
+/**
+ * Update Member Role - Migrated to serveTenant middleware
+ */
+
+import { serveTenant } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { getTenantIdForUser } from '../_shared/tenant.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+import { handleValidationError } from '../_shared/error-handler.ts';
 
 const UpdateRoleSchema = z.object({
   user_role_id: z.string().uuid(),
   new_role: z.enum(['admin', 'operator', 'viewer']),
 });
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+serveTenant(async (req, ctx) => {
+  const { supabase, userId, requestId, body } = ctx;
+
+  // Verify admin role
+  const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', {
+    _user_id: userId, _role: 'admin'
+  });
+
+  if (roleError || !hasAdminRole) {
+    return new Response(
+      JSON.stringify({ error: 'Acesso negado' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
-  const requestId = crypto.randomUUID();
-
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, { 
-      global: { headers: { Authorization: authHeader } } 
-    });
-    
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-
-    if (authError || !user) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    
-    // Verificar se e admin
-    const { data: hasAdminRole, error: roleError } = await supabaseAdmin.rpc('has_role', { 
-      _user_id: user.id, 
-      _role: 'admin' 
-    });
-
-    if (roleError || !hasAdminRole) {
-      return createErrorResponse(ErrorCode.FORBIDDEN, 'Acesso negado', 403, requestId);
-    }
-
-    const body = await req.json();
-
-    // Validar input
-    const validation = UpdateRoleSchema.safeParse(body);
-    if (!validation.success) {
-      return handleValidationError(validation.error, requestId);
-    }
-
-    const { user_role_id, new_role } = validation.data;
-
-    // Get admin's tenant using helper (handles multiple roles)
-    const adminTenantId = await getTenantIdForUser(supabaseAdmin, user.id);
-
-    if (!adminTenantId) {
-      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant nao encontrado', 400, requestId);
-    }
-
-    // Buscar user_role a ser atualizado
-    const { data: targetRole, error: targetError } = await supabaseAdmin
-      .from('user_roles')
-      .select('user_id, tenant_id, role')
-      .eq('id', user_role_id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (targetError || !targetRole) {
-      return createErrorResponse(ErrorCode.NOT_FOUND, 'Membro nao encontrado', 404, requestId);
-    }
-
-    // Verificar se o membro pertence ao mesmo tenant
-    if (targetRole.tenant_id !== adminTenantId) {
-      return createErrorResponse(ErrorCode.FORBIDDEN, 'Membro nao pertence ao seu tenant', 403, requestId);
-    }
-
-    // Nao permitir que o admin altere seu proprio role
-    if (targetRole.user_id === user.id) {
-      return createErrorResponse(ErrorCode.FORBIDDEN, 'Voce nao pode alterar seu proprio role', 403, requestId);
-    }
-
-    // Atualizar role
-    const { error: updateError } = await supabaseAdmin
-      .from('user_roles')
-      .update({ role: new_role })
-      .eq('id', user_role_id);
-
-    if (updateError) throw updateError;
-
-    await createAuditLog({
-      supabase: supabaseAdmin,
-      userId: user.id,
-      tenantId: adminTenantId,
-      action: 'member_role_updated',
-      resourceType: 'user_role',
-      resourceId: user_role_id,
-      details: { 
-        target_user_id: targetRole.user_id,
-        old_role: targetRole.role, 
-        new_role 
-      },
-      request: req,
-      success: true,
-    });
-
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    return handleException(error, requestId, 'update-member-role');
+  // Validate input
+  const validation = UpdateRoleSchema.safeParse(body);
+  if (!validation.success) {
+    return handleValidationError(validation.error, requestId);
   }
+
+  const { user_role_id, new_role } = validation.data;
+
+  // Get admin's tenant
+  const adminTenantId = await getTenantIdForUser(supabase, userId!);
+  if (!adminTenantId) {
+    return new Response(
+      JSON.stringify({ error: 'Tenant nao encontrado' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Get target role
+  const { data: targetRole, error: targetError } = await supabase
+    .from('user_roles')
+    .select('user_id, tenant_id, role')
+    .eq('id', user_role_id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (targetError || !targetRole) {
+    return new Response(
+      JSON.stringify({ error: 'Membro nao encontrado' }),
+      { status: 404, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Verify same tenant
+  if (targetRole.tenant_id !== adminTenantId) {
+    return new Response(
+      JSON.stringify({ error: 'Membro nao pertence ao seu tenant' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Cannot change own role
+  if (targetRole.user_id === userId) {
+    return new Response(
+      JSON.stringify({ error: 'Voce nao pode alterar seu proprio role' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Update role
+  const { error: updateError } = await supabase
+    .from('user_roles')
+    .update({ role: new_role })
+    .eq('id', user_role_id);
+
+  if (updateError) throw updateError;
+
+  await createAuditLog({
+    supabase,
+    userId: userId!,
+    tenantId: adminTenantId,
+    action: 'member_role_updated',
+    resourceType: 'user_role',
+    resourceId: user_role_id,
+    details: {
+      target_user_id: targetRole.user_id,
+      old_role: targetRole.role,
+      new_role,
+    },
+    request: req,
+    success: true,
+  });
+
+  return { success: true };
+}, {
+  skipTenantValidation: true,
 });
