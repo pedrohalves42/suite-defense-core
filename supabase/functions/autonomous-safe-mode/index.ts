@@ -295,7 +295,7 @@ async function processSafeModeRule(supabase: any, rule: any): Promise<RuleResult
   const timeWindowMinutes = conditions.time_window_minutes || 10;
   const minFailures = conditions.min_failures || 3;
 
-  console.log(`[SAFE_MODE_RULE_001] Detecting failure patterns (window: ${timeWindowMinutes}min, threshold: ${minFailures})`);
+  logger.debug(`[SAFE_MODE_RULE_001] Detecting failure patterns (window: ${timeWindowMinutes}min, threshold: ${minFailures})`);
 
   // Detect agents with critical failure patterns
   const { data: agentsWithFailures, error: detectError } = await supabase
@@ -305,11 +305,11 @@ async function processSafeModeRule(supabase: any, rule: any): Promise<RuleResult
     });
 
   if (detectError) {
-    console.error('[SAFE_MODE_RULE_001] Error detecting failure patterns:', detectError);
+    logger.error('[SAFE_MODE_RULE_001] Error detecting failure patterns:', detectError);
     throw detectError;
   }
 
-  console.log(`[SAFE_MODE_RULE_001] Found ${agentsWithFailures?.length || 0} candidates`);
+  logger.debug(`[SAFE_MODE_RULE_001] Found ${agentsWithFailures?.length || 0} candidates`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -328,7 +328,7 @@ async function processSafeModeRule(supabase: any, rule: any): Promise<RuleResult
       });
 
     if (entryError) {
-      console.error(`[SAFE_MODE_RULE_001] Error for ${agent.agent_name}:`, entryError);
+      logger.error(`[SAFE_MODE_RULE_001] Error for ${agent.agent_name}:`, entryError);
       continue;
     }
 
@@ -417,7 +417,7 @@ async function processThrottleRule(supabase: any, rule: any): Promise<RuleResult
   };
   const params = rule.definition?.parameters || { poll_interval_seconds: 300 };
 
-  console.log(`[AGENT_THROTTLE_002] Detecting throttle candidates`);
+  logger.debug(`[AGENT_THROTTLE_002] Detecting throttle candidates`);
 
   const { data: candidates, error } = await supabase
     .rpc('detect_throttle_candidates', {
@@ -426,11 +426,11 @@ async function processThrottleRule(supabase: any, rule: any): Promise<RuleResult
     });
 
   if (error) {
-    console.error('[AGENT_THROTTLE_002] Detection error:', error);
+    logger.error('[AGENT_THROTTLE_002] Detection error:', error);
     throw error;
   }
 
-  console.log(`[AGENT_THROTTLE_002] Found ${candidates?.length || 0} candidates`);
+  logger.debug(`[AGENT_THROTTLE_002] Found ${candidates?.length || 0} candidates`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -446,7 +446,7 @@ async function processThrottleRule(supabase: any, rule: any): Promise<RuleResult
       });
 
     if (throttleError) {
-      console.error(`[AGENT_THROTTLE_002] Error throttling ${candidate.agent_name}:`, throttleError);
+      logger.error(`[AGENT_THROTTLE_002] Error throttling ${candidate.agent_name}:`, throttleError);
       continue;
     }
 
@@ -478,7 +478,7 @@ async function processThrottleRule(supabase: any, rule: any): Promise<RuleResult
       reason: `${candidate.request_count} requests, ${candidate.error_rate}% taxa de erro`
     });
 
-    console.log(`[AGENT_THROTTLE_002] Throttled agent ${candidate.agent_name}`);
+    logger.debug(`[AGENT_THROTTLE_002] Throttled agent ${candidate.agent_name}`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
@@ -490,7 +490,7 @@ async function processIsolateRule(supabase: any, rule: any): Promise<RuleResult>
     time_window_minutes: 10
   };
 
-  console.log(`[AGENT_ISOLATE_003] Detecting isolation candidates`);
+  logger.debug(`[AGENT_ISOLATE_003] Detecting isolation candidates`);
 
   const { data: candidates, error } = await supabase
     .rpc('detect_isolation_candidates', {
@@ -499,11 +499,11 @@ async function processIsolateRule(supabase: any, rule: any): Promise<RuleResult>
     });
 
   if (error) {
-    console.error('[AGENT_ISOLATE_003] Detection error:', error);
+    logger.error('[AGENT_ISOLATE_003] Detection error:', error);
     throw error;
   }
 
-  console.log(`[AGENT_ISOLATE_003] Found ${candidates?.length || 0} candidates`);
+  logger.debug(`[AGENT_ISOLATE_003] Found ${candidates?.length || 0} candidates`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -518,7 +518,7 @@ async function processIsolateRule(supabase: any, rule: any): Promise<RuleResult>
       });
 
     if (isolateError) {
-      console.error(`[AGENT_ISOLATE_003] Error isolating ${candidate.agent_name}:`, isolateError);
+      logger.error(`[AGENT_ISOLATE_003] Error isolating ${candidate.agent_name}:`, isolateError);
       continue;
     }
 
@@ -568,7 +568,7 @@ async function processIsolateRule(supabase: any, rule: any): Promise<RuleResult>
       reason: `${candidate.event_count} eventos de segurança suspeitos`
     });
 
-    console.log(`[AGENT_ISOLATE_003] Isolated agent ${candidate.agent_name}`);
+    logger.debug(`[AGENT_ISOLATE_003] Isolated agent ${candidate.agent_name}`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
