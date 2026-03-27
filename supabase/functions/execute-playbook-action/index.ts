@@ -1,7 +1,4 @@
-// P-13005: Legacy `serve()` import still used — migration to serveTenant requires refactoring auth flow
-// Keeping as-is for stability; auth is correctly implemented inline
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { serveTenant } from '../_shared/serve-tenant.ts';
 import { 
   isProcessProtected, 
   isServiceProtected 
@@ -24,79 +21,48 @@ interface PlaybookAction {
 
 interface ExecuteRequest {
   execution_id: string;
-  action_index?: number; // Se não fornecido, executa todas
+  action_index?: number;
   notes?: string;
 }
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+serveTenant(async (req, ctx) => {
+  const { supabase, tenantId, userId, requestId, body } = ctx;
+  const startTime = Date.now();
+
+  const { execution_id, action_index, notes } = body as ExecuteRequest;
+
+  if (!execution_id) {
+    return new Response(JSON.stringify({ error: 'execution_id is required' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
-  const startTime = Date.now();
-  
-  try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+  console.log(`[execute-playbook-action] Executing ${execution_id}, action_index: ${action_index}`);
 
-    // Autenticar usuário
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+  // ✅ V-11007: Role check — user must be admin/super_admin/operator in this tenant
+  const { data: userRole } = await supabase
+    .from('user_roles')
+    .select('role, tenant_id')
+    .eq('user_id', userId)
+    .eq('tenant_id', tenantId)
+    .in('role', ['admin', 'super_admin', 'operator'])
+    .limit(1)
+    .maybeSingle();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+  if (!userRole) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const body: ExecuteRequest = await req.json();
-    const { execution_id, action_index, notes } = body;
-
-    if (!execution_id) {
-      return new Response(JSON.stringify({ error: 'execution_id is required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    console.log(`[execute-playbook-action] Executing ${execution_id}, action_index: ${action_index}`);
-
-    // ✅ ENTERPRISE: Buscar execução COM SNAPSHOTS IMUTÁVEIS
-    // V-11007 FIX: Don't fetch yet — first resolve tenant, then filter by tenant_id
-    // Step 1: Get user's tenant access
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('role, tenant_id')
-      .eq('user_id', user.id)
-      .in('role', ['admin', 'super_admin', 'operator'])
-      .limit(1)
-      .maybeSingle();
-
-    if (!userRole) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Step 2: Fetch execution WITH tenant filter
+    // Step 2: Fetch execution WITH tenant filter (serveTenant already validated tenant access)
     const { data: execution, error: execError } = await supabase
       .from('playbook_executions')
       .select('*')
       .eq('id', execution_id)
-      .eq('tenant_id', userRole.tenant_id) // V-11007: Prevent cross-tenant access
+      .eq('tenant_id', tenantId)
       .single();
 
     if (execError || !execution) {
