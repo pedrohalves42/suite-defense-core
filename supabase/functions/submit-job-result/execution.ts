@@ -6,7 +6,7 @@
 import { logger } from '../_shared/logger.ts'
 import { logSecurityEvent } from '../_shared/security-log.ts'
 import { sanitizeErrorMessage } from '../_shared/sanitize.ts'
-import { verifyResultSignature, computeOutputHash } from '../_shared/verify-result-signature.ts'
+import { verifyResultSignature } from '../_shared/verify-result-signature.ts'
 import type { SubmitContext } from './types.ts'
 
 export interface ExecutionResult {
