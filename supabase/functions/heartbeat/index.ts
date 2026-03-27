@@ -1,18 +1,26 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { encodeBase64 } from 'https://deno.land/std@0.208.0/encoding/base64.ts'
-import { AgentTokenSchema } from '../_shared/validation.ts'
 import { handleException, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logger } from '../_shared/logger.ts'
 import { requireEnv } from '../_shared/env.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
-import { hashToken } from '../_shared/token-hash.ts'
 import { normalizeVersion, normalizeForWindows } from '../_shared/hexagonal/update-decision-service.ts'
 import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts'
+import { authenticateAgent } from '../_shared/agent-auth.ts'
 // NOTE: Codebase script imports removed - .ps1 files are NOT bundled in Deno Deploy
 // All script content is served exclusively from the agent_releases DB table
 // Domain event dispatch removed from hot path to reduce latency
+
+// Extra agent fields needed for force-update logic
+const HEARTBEAT_EXTRA_FIELDS = [
+  'status', 'skip_firewall_remediation', 'agent_version',
+  'force_update_version', 'force_update_reason', 'force_update_at',
+  'force_update_override_safe_mode', 'force_update_override_safe_mode_expires_at',
+  'force_update_delivered_count', 'force_update_first_delivered_at',
+  'last_forced_update_applied'
+]
 
 Deno.serve(async (req) => {
   // QUAL-01: Proper HTTP method validation
@@ -28,13 +36,13 @@ Deno.serve(async (req) => {
     const supabaseKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY')
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Verificar token do agente
-    const agentToken = req.headers.get('X-Agent-Token')
-    if (!agentToken) {
-      return new Response(
-        JSON.stringify({ error: 'Token do agente necessario' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      )
+    // Authenticate agent via shared middleware (eliminates manual token lookup boilerplate)
+    const authResult = await authenticateAgent(supabase, req, 'heartbeat', {
+      extraAgentFields: HEARTBEAT_EXTRA_FIELDS,
+    })
+    
+    if (!authResult.success) {
+      return authResult.response
     }
 
     // CORRECAO: Interface explicita para OS info
@@ -46,52 +54,23 @@ Deno.serve(async (req) => {
       hostname?: string;
     }
 
-    // Validar formato do token
-    const tokenValidation = AgentTokenSchema.safeParse(agentToken)
-    if (!tokenValidation.success) {
-      return new Response(
-        JSON.stringify({ error: 'Formato de token invalido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
-
-    // FASE 2: Buscar agente pelo hash do token (não mais token em plaintext)
-    const tokenHash = await hashToken(agentToken)
-    // TUNING: Expanded join to include tenant_id + force_update fields
-    // This eliminates 2 redundant DB queries later (getTenantId + forceCheck)
-    const { data: token } = await supabase
-      .from('agent_tokens')
-      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status, skip_firewall_remediation, agent_version, tenant_id, force_update_version, force_update_reason, force_update_at, force_update_override_safe_mode, force_update_override_safe_mode_expires_at, force_update_delivered_count, force_update_first_delivered_at, last_forced_update_applied)')
-      .eq('token_hash', tokenHash)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (!token?.agents) {
-      return new Response(
-        JSON.stringify({ error: 'Token invalido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      )
-    }
-
-    // CORRECAO: Schema garante agents como objeto unico com tipagem explicita
-    const agent = token.agents as unknown as { 
-      id: string; 
-      agent_name: string; 
-      hmac_secret: string; 
-      status: string;
-      skip_firewall_remediation: boolean;
-      agent_version: string | null;
-      tenant_id: string | null;
-      force_update_version: string | null;
-      force_update_reason: string | null;
-      force_update_at: string | null;
-      force_update_override_safe_mode: boolean;
-      force_update_override_safe_mode_expires_at: string | null;
-      force_update_delivered_count: number;
-      force_update_first_delivered_at: string | null;
-      last_forced_update_applied: string | null;
+    // Build typed agent from base + extra fields
+    const agent = {
+      id: authResult.agent.id,
+      agent_name: authResult.agent.agent_name,
+      hmac_secret: authResult.agent.hmac_secret,
+      tenant_id: authResult.agent.tenant_id,
+      status: authResult.agentData.status as string || '',
+      skip_firewall_remediation: authResult.agentData.skip_firewall_remediation as boolean || false,
+      agent_version: authResult.agentData.agent_version as string | null || null,
+      force_update_version: authResult.agentData.force_update_version as string | null || null,
+      force_update_reason: authResult.agentData.force_update_reason as string | null || null,
+      force_update_at: authResult.agentData.force_update_at as string | null || null,
+      force_update_override_safe_mode: authResult.agentData.force_update_override_safe_mode as boolean || false,
+      force_update_override_safe_mode_expires_at: authResult.agentData.force_update_override_safe_mode_expires_at as string | null || null,
+      force_update_delivered_count: authResult.agentData.force_update_delivered_count as number || 0,
+      force_update_first_delivered_at: authResult.agentData.force_update_first_delivered_at as string | null || null,
+      last_forced_update_applied: authResult.agentData.last_forced_update_applied as string | null || null,
     }
     
     // FASE 1.2: HMAC OBRIGATORIO - Agora hmac_secret e NOT NULL
