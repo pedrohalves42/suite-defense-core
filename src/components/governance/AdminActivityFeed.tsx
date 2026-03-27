@@ -62,7 +62,9 @@ export function AdminActivityFeed({ limit = 20 }: { limit?: number }) {
       return (data || []) as AuditEntry[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 60_000,
+    refetchInterval: 300_000, // COST-OPT: 60s → 5min
+    refetchIntervalInBackground: false,
+    staleTime: 120_000,
   });
 
   if (isLoading) {
