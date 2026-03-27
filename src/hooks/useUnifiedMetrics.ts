@@ -217,7 +217,7 @@ export function useUnifiedMetrics() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 120_000, // TUNING v11: 60s → 2min (metrics are memoized, less polling needed)
+    refetchInterval: 300_000, // TUNING v11: 60s → 2min (metrics are memoized, less polling needed)
     staleTime: 60_000,
     refetchIntervalInBackground: false,
   });

@@ -275,7 +275,7 @@ export default function SecurityMonitoring() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 120000,
+    refetchInterval: 300_000,
     refetchIntervalInBackground: false,
   });
 

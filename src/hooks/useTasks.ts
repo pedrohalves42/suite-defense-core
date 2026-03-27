@@ -103,7 +103,7 @@ export function useTasks(filters?: TaskFilters) {
       return data as Task[];
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: 120000,
+    refetchInterval: 300_000,
     refetchIntervalInBackground: false,
   });
 }
@@ -164,7 +164,7 @@ export function useTaskStats() {
       } as TaskStats;
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: 120000,
+    refetchInterval: 300_000,
     refetchIntervalInBackground: false,
   });
 }

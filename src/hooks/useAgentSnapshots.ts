@@ -35,7 +35,7 @@ export function useAgentSnapshots() {
     },
     enabled: !tenantLoading && !!tenant?.id,
     staleTime: 60_000,
-    refetchInterval: 120_000, // COST-OPT v8: 30s → 2min (snapshots via view, not critical path)
+    refetchInterval: 300_000, // COST-OPT v8: 30s → 2min (snapshots via view, not critical path)
     refetchIntervalInBackground: false,
   });
 }

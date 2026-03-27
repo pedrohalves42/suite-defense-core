@@ -119,7 +119,7 @@ export default function DiagnosticsCenter() {
         });
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 120000,
+    refetchInterval: 300_000,
     refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
   });
 
@@ -136,7 +136,7 @@ export default function DiagnosticsCenter() {
       if (error) throw error;
       return (data || []) as unknown as ProblematicAgent[];
     },
-    refetchInterval: 120000,
+    refetchInterval: 300_000,
     refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
     enabled: !tenantLoading && !!tenant?.id,
   });
@@ -159,7 +159,7 @@ export default function DiagnosticsCenter() {
       return names as string[];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 120000,
+    refetchInterval: 300_000,
     refetchIntervalInBackground: false,
   });
 
