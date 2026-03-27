@@ -39,8 +39,8 @@ export function useDetectionEvents(options?: { agentId?: string; status?: string
       return (data || []) as unknown as EndpointDetectionEvent[];
     },
     enabled: !loading && !!activeTenant?.id,
-    staleTime: 15_000,
-    refetchInterval: 30_000,
+    staleTime: 120_000,
+    refetchInterval: 300_000, // COST-OPT: 30s → 5min
     refetchIntervalInBackground: false,
   });
 }
@@ -203,7 +203,9 @@ export function useTelemetryStats() {
       } as TelemetryStats;
     },
     enabled: !loading && !!activeTenant?.id,
-    refetchInterval: 60_000,
+    refetchInterval: 300_000, // COST-OPT: 60s → 5min
+    refetchIntervalInBackground: false,
+    staleTime: 120_000,
   });
 }
 

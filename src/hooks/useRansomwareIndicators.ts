@@ -64,7 +64,8 @@ export function useRansomwareIndicators() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 15_000,
-    refetchIntervalInBackground: false, // More frequent for ransomware
+    refetchInterval: 300_000, // COST-OPT: 15s → 5min
+    refetchIntervalInBackground: false,
+    staleTime: 120_000,
   });
 }
