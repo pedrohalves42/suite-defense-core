@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
+import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -55,8 +56,8 @@ Deno.serve(async (req) => {
     // 3. Has valid JWT auth header
     const internalSecret = req.headers.get('x-internal-secret');
     const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-    const isCronCall = body.source === 'cron';
-    const isInternalCall = internalSecret && internalSecret === expectedSecret;
+    const isInternalCall = internalSecret && expectedSecret && 
+      await timingSafeEqual(internalSecret, expectedSecret);
     const authHeader = req.headers.get('Authorization');
     
     if (!isCronCall && !isInternalCall && !authHeader) {

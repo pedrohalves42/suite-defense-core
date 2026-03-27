@@ -35,6 +35,7 @@ import { corsHeaders } from './cors.ts';
 import { securityHeaders } from './security-headers.ts';
 import { requireEnv } from './env.ts';
 import { logger } from './logger.ts';
+import { timingSafeEqual } from './crypto-utils.ts';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
