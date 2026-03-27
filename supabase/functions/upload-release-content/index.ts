@@ -2,6 +2,7 @@ import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * upload-release-content
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
     const isServiceRole = authHeader && Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') && await timingSafeEqual(authHeader, `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`);
     
     if (!isInternalAuth && !isServiceRole) {
-      console.warn('[upload-release-content] No internal auth, proceeding with caution');
+      logger.warn('[upload-release-content] No internal auth, proceeding with caution');
     }
 
     const { platform, version, content, release_notes } = await req.json();
@@ -128,9 +129,9 @@ Deno.serve(async (req) => {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
-      console.log(`[upload-release-content] Version check passed: script=v${scriptVersion}, target=${version}`);
+      logger.info(`[upload-release-content] Version check passed: script=v${scriptVersion}, target=${version}`);
     } else {
-      console.warn('[upload-release-content] Could not extract version from script header, skipping version check');
+      logger.warn('[upload-release-content] Could not extract version from script header, skipping version check');
     }
 
     const supabase = createClient(
@@ -157,13 +158,13 @@ Deno.serve(async (req) => {
       try {
         signature = await ecdsaSign(hash, ecdsaPrivateKey);
         signedAt = new Date().toISOString();
-        console.log(`[upload-release-content] ECDSA signature generated for ${platform}/${version}`);
+        logger.info(`[upload-release-content] ECDSA signature generated for ${platform}/${version}`);
       } catch (signErr) {
-        console.error('[upload-release-content] ECDSA signing failed:', (signErr as Error).message);
+        logger.error('[upload-release-content] ECDSA signing failed:', (signErr as Error).message);
         // Don't block upload if signing fails - log and continue
       }
     } else {
-      console.warn('[upload-release-content] ECDSA_PRIVATE_KEY not configured, skipping signing');
+      logger.warn('[upload-release-content] ECDSA_PRIVATE_KEY not configured, skipping signing');
     }
 
     // Deactivate old releases for same platform+version, then insert
@@ -183,7 +184,7 @@ Deno.serve(async (req) => {
 
     if (error) throw new Error(error.message);
 
-    console.log(`[upload-release-content] Success: ${platform}/${version} (${bytes.length} bytes, sha256=${hash.substring(0, 16)}..., signed=${!!signature})`);
+    logger.info(`[upload-release-content] Success: ${platform}/${version} (${bytes.length} bytes, sha256=${hash.substring(0, 16)}..., signed=${!!signature})`);
 
     return new Response(JSON.stringify({
       success: true, platform, version,
@@ -193,7 +194,7 @@ Deno.serve(async (req) => {
       header: normalized.substring(0, 80),
     }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (e) {
-    console.error('[upload-release-content] Error:', (e as Error).message);
+    logger.error('[upload-release-content] Error:', (e as Error).message);
     return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

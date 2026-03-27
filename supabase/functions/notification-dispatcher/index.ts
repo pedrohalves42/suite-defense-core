@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * notification-dispatcher — Consolidated notification function
@@ -118,7 +119,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[notification-dispatcher][${requestId}] channel=${channel} type=${type} severity=${severity}`);
+    logger.info(`[notification-dispatcher][${requestId}] channel=${channel} type=${type} severity=${severity}`);
 
     // Store in-app notification
     if (channel === 'in_app') {
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
         });
 
       if (insertErr) {
-        console.error(`[notification-dispatcher][${requestId}] Insert error:`, insertErr.message);
+        logger.error(`[notification-dispatcher][${requestId}] Insert error:`, insertErr.message);
         return new Response(
           JSON.stringify({ error: insertErr.message, requestId }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -156,7 +157,7 @@ Deno.serve(async (req) => {
       .eq('is_verified', true);
 
     if (!channels || channels.length === 0) {
-      console.warn(`[notification-dispatcher][${requestId}] No active ${channel} channel for tenant ${tenant_id}`);
+      logger.warn(`[notification-dispatcher][${requestId}] No active ${channel} channel for tenant ${tenant_id}`);
       // Fallback to in-app
       await supabase.from('notifications').insert({
         tenant_id,
@@ -180,7 +181,7 @@ Deno.serve(async (req) => {
       try {
         if (channel === 'email') {
           // Log email dispatch (actual sending would use a provider)
-          console.log(`[notification-dispatcher][${requestId}] Email dispatch to ${ch.config?.email || 'configured'}`);
+          logger.info(`[notification-dispatcher][${requestId}] Email dispatch to ${ch.config?.email || 'configured'}`);
           dispatched.push(ch.id);
         } else if (channel === 'telegram') {
           const chatId = ch.config?.chat_id;
@@ -198,7 +199,7 @@ Deno.serve(async (req) => {
             dispatched.push(ch.id);
           }
         } else if (channel === 'whatsapp') {
-          console.log(`[notification-dispatcher][${requestId}] WhatsApp dispatch to ${ch.config?.phone || 'configured'}`);
+          logger.info(`[notification-dispatcher][${requestId}] WhatsApp dispatch to ${ch.config?.phone || 'configured'}`);
           dispatched.push(ch.id);
         }
       } catch (e) {
@@ -231,7 +232,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {
-    console.error(`[notification-dispatcher][${requestId}] Fatal:`, error);
+    logger.error(`[notification-dispatcher][${requestId}] Fatal:`, error);
     return new Response(
       JSON.stringify({ error: 'Internal error', message: String(error), requestId }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

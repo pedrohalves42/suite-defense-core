@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * Check Production Health
@@ -26,7 +27,7 @@ Deno.serve(async (req) => {
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
 
-  console.log('[check-production-health] Starting health check at', now.toISOString());
+  logger.info('[check-production-health] Starting health check at', now.toISOString());
 
   try {
     // [OK]  CHECK 1: Heartbeats recentes
@@ -37,7 +38,7 @@ Deno.serve(async (req) => {
       .neq('status', 'inactive');
 
     if (heartbeatError) {
-      console.error('[check-production-health] Error checking heartbeats:', heartbeatError);
+      logger.error('[check-production-health] Error checking heartbeats:', heartbeatError);
     } else if (!recentHeartbeats || recentHeartbeats.length === 0) {
       // Verificar se existem agentes ativos/pendentes
       const { count: activeAgentsCount } = await supabase
@@ -58,10 +59,10 @@ Deno.serve(async (req) => {
             threshold_minutes: 60
           }
         });
-        console.log('[check-production-health] [WARN] ? No recent heartbeats detected');
+        logger.info('[check-production-health] [WARN] ? No recent heartbeats detected');
       }
     } else {
-      console.log(`[check-production-health] [OK]  ${recentHeartbeats.length} agents with recent heartbeats`);
+      logger.info(`[check-production-health] [OK]  ${recentHeartbeats.length} agents with recent heartbeats`);
     }
 
     // [OK]  CHECK 2: Taxa de falha de instalacao
@@ -72,12 +73,12 @@ Deno.serve(async (req) => {
       .in('event_type', ['post_installation', 'post_installation_unverified']);
 
     if (installError) {
-      console.error('[check-production-health] Error checking installations:', installError);
+      logger.error('[check-production-health] Error checking installations:', installError);
     } else if (installations && installations.length >= 10) {
       const failureCount = installations.filter(i => i.success === false).length;
       const failureRate = failureCount / installations.length;
 
-      console.log(`[check-production-health] Installation stats: ${failureCount}/${installations.length} failed (${(failureRate * 100).toFixed(1)}%)`);
+      logger.info(`[check-production-health] Installation stats: ${failureCount}/${installations.length} failed (${(failureRate * 100).toFixed(1)}%)`);
 
       if (failureRate > 0.30) {
         alerts.push({
@@ -94,10 +95,10 @@ Deno.serve(async (req) => {
             period_hours: 24
           }
         });
-        console.log('[check-production-health] [WARN] ? High installation failure rate detected');
+        logger.info('[check-production-health] [WARN] ? High installation failure rate detected');
       }
     } else {
-      console.log(`[check-production-health] [OK]  Installation sample too small (${installations?.length || 0} < 10)`);
+      logger.info(`[check-production-health] [OK]  Installation sample too small (${installations?.length || 0} < 10)`);
     }
 
     // [OK]  CHECK 3: Jobs em fila acumulando
@@ -108,7 +109,7 @@ Deno.serve(async (req) => {
       .lt('created_at', thirtyMinutesAgo.toISOString());
 
     if (jobsError) {
-      console.error('[check-production-health] Error checking queued jobs:', jobsError);
+      logger.error('[check-production-health] Error checking queued jobs:', jobsError);
     } else if (queuedJobsCount && queuedJobsCount > 100) {
       alerts.push({
         tenant_id: null, // System-wide alert
@@ -122,14 +123,14 @@ Deno.serve(async (req) => {
           age_minutes: 30
         }
       });
-      console.log('[check-production-health] [WARN] ? Too many stuck jobs in queue');
+      logger.info('[check-production-health] [WARN] ? Too many stuck jobs in queue');
     } else {
-      console.log(`[check-production-health] [OK]  Queued jobs within normal range (${queuedJobsCount || 0})`);
+      logger.info(`[check-production-health] [OK]  Queued jobs within normal range (${queuedJobsCount || 0})`);
     }
 
     // [OK]  Inserir alertas no banco
     if (alerts.length > 0) {
-      console.log(`[check-production-health] Creating ${alerts.length} alert(s)`);
+      logger.info(`[check-production-health] Creating ${alerts.length} alert(s)`);
       
       const criticalAlerts = [];
       
@@ -143,7 +144,7 @@ Deno.serve(async (req) => {
           });
 
         if (insertError) {
-          console.error('[check-production-health] Error inserting alert:', insertError);
+          logger.error('[check-production-health] Error inserting alert:', insertError);
         } else if (alert.severity === 'critical' || alert.severity === 'high') {
           criticalAlerts.push(alert);
         }
@@ -151,7 +152,7 @@ Deno.serve(async (req) => {
 
       // [OK]  CORRECAO #3A: Enviar notificacoes automaticas para alertas criticos
       if (criticalAlerts.length > 0) {
-        console.log(`[check-production-health] Sending notifications for ${criticalAlerts.length} critical alert(s)`);
+        logger.info(`[check-production-health] Sending notifications for ${criticalAlerts.length} critical alert(s)`);
         
         try {
           const { error: notifyError } = await supabase.functions.invoke('notification-dispatcher', {
@@ -168,17 +169,17 @@ Deno.serve(async (req) => {
           });
 
           if (notifyError) {
-            console.error('[check-production-health] Error sending notifications:', notifyError);
+            logger.error('[check-production-health] Error sending notifications:', notifyError);
           } else {
-            console.log('[check-production-health] [OK]  Notifications sent successfully');
+            logger.info('[check-production-health] [OK]  Notifications sent successfully');
           }
         } catch (notifyErr) {
-          console.error('[check-production-health] Exception sending notifications:', notifyErr);
+          logger.error('[check-production-health] Exception sending notifications:', notifyErr);
         }
       }
     }
 
-    console.log('[check-production-health] Health check completed');
+    logger.info('[check-production-health] Health check completed');
 
     const result = {
       success: true,
@@ -215,7 +216,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('[check-production-health] Unexpected error:', error);
+    logger.error('[check-production-health] Unexpected error:', error);
     
     // Log error observability
     try {
@@ -228,7 +229,7 @@ Deno.serve(async (req) => {
         p_processed_count: 0,
         p_job_source: 'cron'
       });
-    } catch (e) { console.warn('[check-production-health] Failed to log job run:', e); }
+    } catch (e) { logger.warn('[check-production-health] Failed to log job run:', e); }
     
     return new Response(
       JSON.stringify({

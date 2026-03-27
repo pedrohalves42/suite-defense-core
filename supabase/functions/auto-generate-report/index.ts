@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders, handleException } from '../_shared/error-handler.ts'
+import { logger } from '../_shared/logger.ts';
 
 interface ReportGenerationPayload {
   tenant_id: string
@@ -131,7 +132,7 @@ Deno.serve(async (req) => {
   try {
     const payload: ReportGenerationPayload = await req.json()
     
-    console.log('[auto-generate-report] Starting report generation:', payload)
+    logger.info('[auto-generate-report] Starting report generation:', payload)
     
     const { tenant_id, agent_id, agent_name, job_id, job_type, triggered_by } = payload
     
@@ -295,11 +296,11 @@ Deno.serve(async (req) => {
       .single()
 
     if (insertError) {
-      console.error('[auto-generate-report] Failed to insert report:', insertError)
+      logger.error('[auto-generate-report] Failed to insert report:', insertError)
       throw insertError
     }
 
-    console.log('[auto-generate-report] Report generated successfully:', {
+    logger.info('[auto-generate-report] Report generated successfully:', {
       report_id: report.id,
       report_type: reportType,
       risk_score: riskScore,

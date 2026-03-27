@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,7 +72,7 @@ serve(async (req) => {
     weekEnd.setHours(23, 59, 59, 999);
 
     for (const tenant of tenants || []) {
-      console.log(`[generate-weekly-report] Processing tenant: ${tenant.name}`);
+      logger.info(`[generate-weekly-report] Processing tenant: ${tenant.name}`);
 
       // Playbook Executions
       const { data: executions } = await supabase
@@ -205,7 +206,7 @@ serve(async (req) => {
         .single();
 
       if (reportError) {
-        console.error(`[generate-weekly-report] Error saving report for ${tenant.name}:`, reportError);
+        logger.error(`[generate-weekly-report] Error saving report for ${tenant.name}:`, reportError);
         continue;
       }
 
@@ -242,9 +243,9 @@ serve(async (req) => {
           }),
         });
         
-        console.log(`[generate-weekly-report] Email sent for ${tenant.name}`);
+        logger.info(`[generate-weekly-report] Email sent for ${tenant.name}`);
       } catch (emailError) {
-        console.error(`[generate-weekly-report] Email error for ${tenant.name}:`, emailError);
+        logger.error(`[generate-weekly-report] Email error for ${tenant.name}:`, emailError);
       }
     }
 
@@ -264,7 +265,7 @@ serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch (logErr) {
-      console.error('[generate-weekly-report] Failed to log job run:', logErr);
+      logger.error('[generate-weekly-report] Failed to log job run:', logErr);
     }
 
     return new Response(JSON.stringify({
@@ -282,7 +283,7 @@ serve(async (req) => {
 
   } catch (error) {
     const durationMs = Date.now() - startedAt;
-    console.error('[generate-weekly-report] Error:', error);
+    logger.error('[generate-weekly-report] Error:', error);
 
     // Log failed job execution
     try {
@@ -300,7 +301,7 @@ serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch (logErr) {
-      console.error('[generate-weekly-report] Failed to log error:', logErr);
+      logger.error('[generate-weekly-report] Failed to log error:', logErr);
     }
 
     return new Response(JSON.stringify({

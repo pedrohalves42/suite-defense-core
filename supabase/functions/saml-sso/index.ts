@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
+import { logger } from '../_shared/logger.ts';
 
 /**
  * SAML 2.0 SSO Edge Function
@@ -87,7 +88,7 @@ Deno.serve(async (req) => {
         expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
       })
 
-      console.log(`[saml-sso] Login initiated for tenant ${tenantId}, provider: ${config.provider}`)
+      logger.info(`[saml-sso] Login initiated for tenant ${tenantId}, provider: ${config.provider}`)
       return new Response(JSON.stringify({ redirect_url: redirectUrl }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -184,7 +185,7 @@ Deno.serve(async (req) => {
         }).catch(() => {})
       }
 
-      console.log(`[saml-sso] ACS: user ${email} authenticated via SAML, role: ${role}`)
+      logger.info(`[saml-sso] ACS: user ${email} authenticated via SAML, role: ${role}`)
 
       return new Response(JSON.stringify({
         success: true,
@@ -269,7 +270,7 @@ Deno.serve(async (req) => {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   } catch (error) {
-    console.error('[saml-sso] Error:', error)
+    logger.error('[saml-sso] Error:', error)
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })

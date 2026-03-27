@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -55,7 +56,7 @@ Deno.serve(async (req) => {
       throw new Error("Forbidden: Super Admin access required");
     }
 
-    console.log(`[COHORT-ANALYSIS] Calculating cohorts for super admin ${userData.user.id}`);
+    logger.info(`[COHORT-ANALYSIS] Calculating cohorts for super admin ${userData.user.id}`);
 
     // Get all tenants with their creation date
     const { data: tenants, error: tenantsError } = await supabase
@@ -147,14 +148,14 @@ Deno.serve(async (req) => {
       },
     };
 
-    console.log(`[COHORT-ANALYSIS] Success: ${cohorts.length} cohorts analyzed`);
+    logger.info(`[COHORT-ANALYSIS] Success: ${cohorts.length} cohorts analyzed`);
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    console.error("[COHORT-ANALYSIS] Error:", error);
+    logger.error("[COHORT-ANALYSIS] Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       {

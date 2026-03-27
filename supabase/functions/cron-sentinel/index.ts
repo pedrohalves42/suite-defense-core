@@ -13,6 +13,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { recordMetric } from '../_shared/apm.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
   
-  console.log(`[${requestId}] cron-sentinel started`);
+  logger.info(`[${requestId}] cron-sentinel started`);
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -77,7 +78,7 @@ Deno.serve(async (req) => {
       .select('*');
 
     if (queryError) {
-      console.error(`[${requestId}] Error querying silent failures:`, queryError);
+      logger.error(`[${requestId}] Error querying silent failures:`, queryError);
       throw queryError;
     }
 
@@ -88,10 +89,10 @@ Deno.serve(async (req) => {
       .filter((job) => job.enabled !== false) // only check enabled jobs
       .filter((job) => deriveHealthStatus(job) !== 'OK');
 
-    console.log(`[${requestId}] Checked ${allJobs.length} jobs, found ${unhealthyJobs.length} unhealthy`);
+    logger.info(`[${requestId}] Checked ${allJobs.length} jobs, found ${unhealthyJobs.length} unhealthy`);
 
     if (unhealthyJobs.length === 0) {
-      console.log(`[${requestId}] All cron jobs healthy - no action needed`);
+      logger.info(`[${requestId}] All cron jobs healthy - no action needed`);
       
       await supabase.rpc('log_scheduled_job_run', {
         p_job_key: 'cron-sentinel',
@@ -130,7 +131,7 @@ Deno.serve(async (req) => {
       .limit(1);
 
     if (existingTask && existingTask.length > 0) {
-      console.log(`[${requestId}] Open task already exists, skipping creation`);
+      logger.info(`[${requestId}] Open task already exists, skipping creation`);
       
       return new Response(
         JSON.stringify({
@@ -182,11 +183,11 @@ Deno.serve(async (req) => {
       .single();
 
     if (taskError) {
-      console.error(`[${requestId}] Error creating task:`, taskError);
+      logger.error(`[${requestId}] Error creating task:`, taskError);
       throw taskError;
     }
 
-    console.log(`[${requestId}] Created P0 task: ${task?.id}`);
+    logger.info(`[${requestId}] Created P0 task: ${task?.id}`);
 
     // Log to audit
     await supabase.from('audit_logs').insert({
@@ -228,7 +229,7 @@ Deno.serve(async (req) => {
       duration_ms: duration,
       status_code: 200,
       metadata: { silent_jobs: unhealthyJobs.length, task_id: task?.id }
-    }).catch((e) => console.warn('[cron-sentinel] APM metric failed:', e));
+    }).catch((e) => logger.warn('[cron-sentinel] APM metric failed:', e));
 
     return new Response(
       JSON.stringify({
@@ -243,7 +244,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error(`[${requestId}] Fatal error:`, error);
+    logger.error(`[${requestId}] Fatal error:`, error);
 
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -265,7 +266,7 @@ Deno.serve(async (req) => {
         p_success: false,
         p_error: error instanceof Error ? error.message : 'Unknown error'
       });
-    } catch (e) { console.warn('[cron-sentinel] Failed to update cron health:', e); }
+    } catch (e) { logger.warn('[cron-sentinel] Failed to update cron health:', e); }
 
     return new Response(
       JSON.stringify({

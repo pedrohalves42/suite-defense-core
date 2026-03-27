@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +13,7 @@ serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] Get installation pipeline metrics request started`);
+  logger.info(`[${requestId}] Get installation pipeline metrics request started`);
 
   try {
     const supabaseClient = createClient(
@@ -75,7 +76,7 @@ serve(async (req) => {
 
     // Validate hours_back parameter if provided
     if (hoursBack !== null && (isNaN(hoursBack) || hoursBack < 1 || hoursBack > 720)) {
-      console.error(`[${requestId}] Invalid hours_back: ${hoursBack}`);
+      logger.error(`[${requestId}] Invalid hours_back: ${hoursBack}`);
       return new Response(
         JSON.stringify({
           success: false,
@@ -89,7 +90,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[${requestId}] Fetching metrics for tenant ${tenantId}, hours_back: ${hoursBack ?? 'all time'}`);
+    logger.info(`[${requestId}] Fetching metrics for tenant ${tenantId}, hours_back: ${hoursBack ?? 'all time'}`);
 
     // Call the SQL function to calculate metrics (null means all time)
     const { data: metrics, error: metricsError } = await supabaseClient
@@ -99,11 +100,11 @@ serve(async (req) => {
       });
 
     if (metricsError) {
-      console.error(`[${requestId}] Error calling calculate_pipeline_metrics:`, metricsError);
+      logger.error(`[${requestId}] Error calling calculate_pipeline_metrics:`, metricsError);
       throw metricsError;
     }
 
-    console.log(`[${requestId}] Metrics calculated successfully:`, metrics);
+    logger.info(`[${requestId}] Metrics calculated successfully:`, metrics);
 
     // Return the first row (the function returns a table with 1 row)
     const result = metrics && metrics.length > 0 ? metrics[0] : {
@@ -134,7 +135,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error(`[${requestId}] Error:`, error);
+    logger.error(`[${requestId}] Error:`, error);
     return new Response(
       JSON.stringify({
         success: false,

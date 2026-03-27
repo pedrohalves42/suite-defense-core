@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * Adaptive TTL per job type.
@@ -32,7 +33,7 @@ Deno.serve(async (req) => {
   if (authError) return authError;
 
   const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] Processing scheduled jobs`);
+  logger.info(`[${requestId}] Processing scheduled jobs`);
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -58,11 +59,11 @@ Deno.serve(async (req) => {
       .limit(100);
 
     if (scheduledError) {
-      console.error(`[${requestId}] Error fetching scheduled jobs:`, scheduledError);
+      logger.error(`[${requestId}] Error fetching scheduled jobs:`, scheduledError);
       throw scheduledError;
     }
 
-    console.log(`[${requestId}] Found ${scheduledJobs?.length || 0} one-time scheduled jobs to process`);
+    logger.info(`[${requestId}] Found ${scheduledJobs?.length || 0} one-time scheduled jobs to process`);
 
     // Filter: only activate jobs for online agents (heartbeat within 2 hours)
     let skippedOneTimeOffline = 0;
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
         } else {
           offlineJobIds.push(job.id);
           skippedOneTimeOffline++;
-          console.log(`[${requestId}] Skipping scheduled job ${job.id} - agent ${job.agent_name} offline`);
+          logger.info(`[${requestId}] Skipping scheduled job ${job.id} - agent ${job.agent_name} offline`);
         }
       }
 
@@ -99,10 +100,10 @@ Deno.serve(async (req) => {
           .in('id', onlineJobIds);
 
         if (updateError) {
-          console.error(`[${requestId}] Error updating scheduled jobs:`, updateError);
+          logger.error(`[${requestId}] Error updating scheduled jobs:`, updateError);
         } else {
           processedCount = onlineJobIds.length;
-          console.log(`[${requestId}] Activated ${processedCount} scheduled jobs`);
+          logger.info(`[${requestId}] Activated ${processedCount} scheduled jobs`);
         }
       }
 
@@ -119,7 +120,7 @@ Deno.serve(async (req) => {
           .lt('expires_at', now);
 
         if (failError) {
-          console.error(`[${requestId}] Error failing expired offline jobs:`, failError);
+          logger.error(`[${requestId}] Error failing expired offline jobs:`, failError);
         }
       }
     }
@@ -139,11 +140,11 @@ Deno.serve(async (req) => {
       .limit(50);
 
     if (recurringError) {
-      console.error(`[${requestId}] Error fetching recurring jobs:`, recurringError);
+      logger.error(`[${requestId}] Error fetching recurring jobs:`, recurringError);
       throw recurringError;
     }
 
-    console.log(`[${requestId}] Found ${recurringJobs?.length || 0} recurring jobs to process`);
+    logger.info(`[${requestId}] Found ${recurringJobs?.length || 0} recurring jobs to process`);
 
     let skippedOfflineCount = 0;
     
@@ -160,7 +161,7 @@ Deno.serve(async (req) => {
           
           if (!isOnline) {
             skippedOfflineCount++;
-            console.log(`[${requestId}] Skipping recurring job ${recurringJob.id} - agent offline:`, {
+            logger.info(`[${requestId}] Skipping recurring job ${recurringJob.id} - agent offline:`, {
               agent_name: recurringJob.agent_name,
               last_heartbeat: agent?.last_heartbeat || 'never',
               status: agent?.status || 'unknown'
@@ -186,7 +187,7 @@ Deno.serve(async (req) => {
             });
 
           if (nextRunError) {
-            console.error(`[${requestId}] Error calculating next run for job ${recurringJob.id}:`, nextRunError);
+            logger.error(`[${requestId}] Error calculating next run for job ${recurringJob.id}:`, nextRunError);
             continue;
           }
 
@@ -202,12 +203,12 @@ Deno.serve(async (req) => {
             });
 
           if (insertError) {
-            console.error(`[${requestId}] Error creating job instance for ${recurringJob.id}:`, insertError);
+            logger.error(`[${requestId}] Error creating job instance for ${recurringJob.id}:`, insertError);
             continue;
           }
 
           if (!newJobId) {
-            console.log(`[${requestId}] Skipping recurring job ${recurringJob.id} - active job of type '${recurringJob.type}' already exists for agent ${recurringJob.agent_name}`);
+            logger.info(`[${requestId}] Skipping recurring job ${recurringJob.id} - active job of type '${recurringJob.type}' already exists for agent ${recurringJob.agent_name}`);
             // Still update next_run_at below
           }
 
@@ -221,19 +222,19 @@ Deno.serve(async (req) => {
             .eq('id', recurringJob.id);
 
           if (updateRecurringError) {
-            console.error(`[${requestId}] Error updating recurring job ${recurringJob.id}:`, updateRecurringError);
+            logger.error(`[${requestId}] Error updating recurring job ${recurringJob.id}:`, updateRecurringError);
             continue;
           }
 
           createdRecurringCount++;
-          console.log(`[${requestId}] Created instance of recurring job ${recurringJob.id}, next run at ${nextRunData}`);
+          logger.info(`[${requestId}] Created instance of recurring job ${recurringJob.id}, next run at ${nextRunData}`);
         } catch (error) {
-          console.error(`[${requestId}] Error processing recurring job ${recurringJob.id}:`, error);
+          logger.error(`[${requestId}] Error processing recurring job ${recurringJob.id}:`, error);
         }
       }
     }
     
-    console.log(`[${requestId}] Skipped ${skippedOfflineCount} jobs for offline agents`);
+    logger.info(`[${requestId}] Skipped ${skippedOfflineCount} jobs for offline agents`);
 
     const result = {
       success: true,
@@ -245,7 +246,7 @@ Deno.serve(async (req) => {
       timestamp: now
     };
 
-    console.log(`[${requestId}] Completed:`, result);
+    logger.info(`[${requestId}] Completed:`, result);
 
     // Report to cron health
     const duration = Date.now() - new Date(now).getTime();
@@ -259,7 +260,7 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch (logErr) {
-      console.error(`[${requestId}] Failed to log cron health:`, logErr);
+      logger.error(`[${requestId}] Failed to log cron health:`, logErr);
     }
 
     return new Response(
@@ -271,7 +272,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error(`[${requestId}] Fatal error:`, error);
+    logger.error(`[${requestId}] Fatal error:`, error);
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     

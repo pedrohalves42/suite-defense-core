@@ -19,6 +19,7 @@ import {
   EDGE_VERSION 
 } from '../_shared/health-probe.ts';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
+import { logger } from '../_shared/logger.ts';
 
 const supabaseUrl = requireEnv('SUPABASE_URL');
 const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
@@ -36,7 +37,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] Starting RLS tests - Edge v${EDGE_VERSION}`);
+  logger.info(`[${requestId}] Starting RLS tests - Edge v${EDGE_VERSION}`);
 
   try {
     // SECURITY FIX: x-cron-source header was spoofable by anyone. 
@@ -50,7 +51,7 @@ Deno.serve(async (req: Request) => {
       (authHeader && serviceRoleKeyValue && await timingSafeEqual(authHeader, `Bearer ${serviceRoleKeyValue}`));
     
     if (!isInternalCall && !authHeader) {
-      console.log(`[${requestId}] Rejected: No valid auth`);
+      logger.info(`[${requestId}] Rejected: No valid auth`);
       return secureErrorResponse('Unauthorized', 401, { request_id: requestId });
     }
 
@@ -198,7 +199,7 @@ Deno.serve(async (req: Request) => {
     const failedTests = results.filter(r => !r.passed);
     const totalTime = Date.now() - startTime;
 
-    console.log(`[${requestId}] Tests complete: ${passedTests}/${totalTests} passed in ${totalTime}ms`);
+    logger.info(`[${requestId}] Tests complete: ${passedTests}/${totalTests} passed in ${totalTime}ms`);
 
     // Record results in database - aligned with rls_test_results schema
     const now = new Date().toISOString();
@@ -214,7 +215,7 @@ Deno.serve(async (req: Request) => {
       });
       
       if (insertError) {
-        console.error(`[${requestId}] Failed to insert test result:`, insertError);
+        logger.error(`[${requestId}] Failed to insert test result:`, insertError);
       }
     }
 
@@ -268,7 +269,7 @@ Deno.serve(async (req: Request) => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[${requestId}] Error:`, error);
+    logger.error(`[${requestId}] Error:`, error);
     
     // Register failure in cron health check
     try {
@@ -279,7 +280,7 @@ Deno.serve(async (req: Request) => {
         p_error: errorMessage
       });
     } catch {
-      console.error(`[${requestId}] Failed to update cron health`);
+      logger.error(`[${requestId}] Failed to update cron health`);
     }
     
     return secureErrorResponse(

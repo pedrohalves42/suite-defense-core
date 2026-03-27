@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,7 +34,7 @@ serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
   try {
-    console.log('[process-playbook-trigger-logs] Starting batch processing...');
+    logger.info('[process-playbook-trigger-logs] Starting batch processing...');
 
     // Buscar logs pendentes
     const { data: pendingLogs, error: fetchError } = await supabase
@@ -45,12 +46,12 @@ serve(async (req) => {
       .limit(BATCH_SIZE);
 
     if (fetchError) {
-      console.error('[process-playbook-trigger-logs] Error fetching logs:', fetchError);
+      logger.error('[process-playbook-trigger-logs] Error fetching logs:', fetchError);
       throw fetchError;
     }
 
     if (!pendingLogs || pendingLogs.length === 0) {
-      console.log('[process-playbook-trigger-logs] No pending logs to process');
+      logger.info('[process-playbook-trigger-logs] No pending logs to process');
       return new Response(JSON.stringify({
         success: true,
         processed: 0,
@@ -61,7 +62,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[process-playbook-trigger-logs] Found ${pendingLogs.length} pending logs`);
+    logger.info(`[process-playbook-trigger-logs] Found ${pendingLogs.length} pending logs`);
 
     // Marcar como processando para evitar duplicação
     const logIds = pendingLogs.map(l => l.id);
@@ -71,7 +72,7 @@ serve(async (req) => {
       .in('id', logIds);
 
     if (updateError) {
-      console.error('[process-playbook-trigger-logs] Error marking as processing:', updateError);
+      logger.error('[process-playbook-trigger-logs] Error marking as processing:', updateError);
       // Continuar mesmo assim
     }
 
@@ -91,7 +92,7 @@ serve(async (req) => {
       const daysSinceCreation = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
       
       if (daysSinceCreation > 7) {
-        console.log(`[process-playbook-trigger-logs] Expiring old log ${log.id} (${daysSinceCreation.toFixed(1)} days old)`);
+        logger.info(`[process-playbook-trigger-logs] Expiring old log ${log.id} (${daysSinceCreation.toFixed(1)} days old)`);
         
         await supabase
           .from('ai_action_logs')
@@ -153,11 +154,11 @@ serve(async (req) => {
           status: 'processed',
         });
 
-        console.log(`[process-playbook-trigger-logs] Processed log ${log.id}: triggered=${result.triggered}`);
+        logger.info(`[process-playbook-trigger-logs] Processed log ${log.id}: triggered=${result.triggered}`);
 
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-        console.error(`[process-playbook-trigger-logs] Error processing log ${log.id}:`, errorMsg);
+        logger.error(`[process-playbook-trigger-logs] Error processing log ${log.id}:`, errorMsg);
 
         // Marcar como falha
         await supabase
@@ -179,7 +180,7 @@ serve(async (req) => {
     }
 
     const duration = Date.now() - startTime;
-    console.log(`[process-playbook-trigger-logs] Completed: ${results.success} success, ${results.failed} failed, ${results.expired} expired (${duration}ms)`);
+    logger.info(`[process-playbook-trigger-logs] Completed: ${results.success} success, ${results.failed} failed, ${results.expired} expired (${duration}ms)`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -194,7 +195,7 @@ serve(async (req) => {
 
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[process-playbook-trigger-logs] Fatal error:', errorMsg);
+    logger.error('[process-playbook-trigger-logs] Fatal error:', errorMsg);
 
     return new Response(JSON.stringify({
       success: false,

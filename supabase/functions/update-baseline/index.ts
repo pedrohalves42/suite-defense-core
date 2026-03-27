@@ -8,6 +8,7 @@
  */
 
 import { serveAgent } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface BaselinePayload {
   baseline_type: string;
@@ -55,7 +56,7 @@ serveAgent(async (_req, ctx) => {
     );
   }
 
-  console.log(`[${requestId}] [update-baseline] Agent ${agentName}: ${baseline_type} with ${data_points.length} points`);
+  logger.info(`[${requestId}] [update-baseline] Agent ${agentName}: ${baseline_type} with ${data_points.length} points`);
 
   // Calculate statistics
   const { mean, stdDev } = calculateStats(data_points);
@@ -105,7 +106,7 @@ serveAgent(async (_req, ctx) => {
       .update(baselineRow)
       .eq('id', existing.id);
     if (error) {
-      console.error(`[${requestId}] [update-baseline] Update error:`, error.message);
+      logger.error(`[${requestId}] [update-baseline] Update error:`, error.message);
       throw error;
     }
   } else {
@@ -113,7 +114,7 @@ serveAgent(async (_req, ctx) => {
       .from('agent_behavioral_baseline')
       .insert(baselineRow);
     if (error) {
-      console.error(`[${requestId}] [update-baseline] Insert error:`, error.message);
+      logger.error(`[${requestId}] [update-baseline] Insert error:`, error.message);
       throw error;
     }
   }
@@ -154,7 +155,7 @@ serveAgent(async (_req, ctx) => {
     });
   } catch (_) { /* non-critical */ }
 
-  console.log(`[${requestId}] [update-baseline] Done: mean=${finalMean}, stdDev=${finalStdDev}, anomalies=${anomaliesDetected} in ${durationMs}ms`);
+  logger.info(`[${requestId}] [update-baseline] Done: mean=${finalMean}, stdDev=${finalStdDev}, anomalies=${anomaliesDetected} in ${durationMs}ms`);
 
   return {
     success: true,

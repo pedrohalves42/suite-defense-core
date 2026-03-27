@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 function extractIpAddress(req: Request): string {
   const cfConnectingIp = req.headers.get('cf-connecting-ip');
@@ -57,13 +58,13 @@ Deno.serve(async (req) => {
       });
 
     if (blockError) {
-      console.error('[BRUTE-FORCE] Error checking block status:', blockError);
+      logger.error('[BRUTE-FORCE] Error checking block status:', blockError);
     }
 
     const blockData = blockResult?.[0];
     
     if (blockData?.is_blocked) {
-      console.log(`[BRUTE-FORCE] IP ${ipAddress} blocked until ${blockData.blocked_until} (level ${blockData.block_level})`);
+      logger.info(`[BRUTE-FORCE] IP ${ipAddress} blocked until ${blockData.blocked_until} (level ${blockData.block_level})`);
       
       // Enviar alerta apenas para bloqueios de nível 2+ (10+ tentativas)
 
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
             }
           });
         } catch (alertError) {
-          console.error('[BRUTE-FORCE] Failed to send alert:', alertError);
+          logger.error('[BRUTE-FORCE] Failed to send alert:', alertError);
         }
       }
 
@@ -114,7 +115,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error recording failed login:', error);
+    logger.error('Error recording failed login:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       {

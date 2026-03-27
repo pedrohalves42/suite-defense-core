@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,7 +57,7 @@ serve(async (req: Request): Promise<Response> => {
     const { data: notifications, error: fetchError } = await query;
 
     if (fetchError) {
-      console.error("Error fetching notifications:", fetchError);
+      logger.error("Error fetching notifications:", fetchError);
       throw fetchError;
     }
 
@@ -71,7 +72,7 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    console.log(`Processing ${notifications.length} pending notifications`);
+    logger.info(`Processing ${notifications.length} pending notifications`);
 
     let sentCount = 0;
     let skippedCount = 0;
@@ -188,7 +189,7 @@ serve(async (req: Request): Promise<Response> => {
               success = true;
             } catch (emailError: any) {
               errorMessage = `Email error: ${emailError.message}`;
-              console.error("Email send error:", emailError);
+              logger.error("Email send error:", emailError);
             }
           } else {
             errorMessage = "RESEND_API_KEY not configured";
@@ -229,7 +230,7 @@ serve(async (req: Request): Promise<Response> => {
         }
 
       } catch (notifError: any) {
-        console.error(`Error processing notification ${notification.id}:`, notifError);
+        logger.error(`Error processing notification ${notification.id}:`, notifError);
         await supabase
           .from("notification_queue")
           .update({ 
@@ -243,7 +244,7 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     // Log results
-    console.log(`Notification processing complete: sent=${sentCount}, skipped=${skippedCount}, failed=${failedCount}`);
+    logger.info(`Notification processing complete: sent=${sentCount}, skipped=${skippedCount}, failed=${failedCount}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -257,7 +258,7 @@ serve(async (req: Request): Promise<Response> => {
     });
 
   } catch (error: any) {
-    console.error("Error in send-report-notification:", error);
+    logger.error("Error in send-report-notification:", error);
     return new Response(JSON.stringify({ 
       success: false, 
       error: error.message 

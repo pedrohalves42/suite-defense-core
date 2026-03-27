@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { Resend } from "https://esm.sh/resend@4.0.0";
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +19,7 @@ Deno.serve(async (req) => {
 
   const requestId = crypto.randomUUID();
   const startedAt = Date.now();
-  console.log(`[${requestId}] Detect stuck installations cron job started`);
+  logger.info(`[${requestId}] Detect stuck installations cron job started`);
 
   try {
     const supabaseClient = createClient(
@@ -34,7 +35,7 @@ Deno.serve(async (req) => {
       .eq("is_stuck", true);
 
     if (queryError) {
-      console.error(`[${requestId}] Error querying stuck agents:`, queryError);
+      logger.error(`[${requestId}] Error querying stuck agents:`, queryError);
       
       // Log failure with observability
       await supabaseClient.rpc('log_scheduled_job_run', {
@@ -50,7 +51,7 @@ Deno.serve(async (req) => {
       throw queryError;
     }
 
-    console.log(`[${requestId}] Found ${stuckAgents?.length || 0} stuck agents`);
+    logger.info(`[${requestId}] Found ${stuckAgents?.length || 0} stuck agents`);
 
     if (!stuckAgents || stuckAgents.length === 0) {
       // Log success with observability - no stuck agents
@@ -101,7 +102,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (tenantError) {
-        console.error(`[${requestId}] Error fetching tenant ${tenantId}:`, tenantError);
+        logger.error(`[${requestId}] Error fetching tenant ${tenantId}:`, tenantError);
         continue;
       }
 
@@ -113,7 +114,7 @@ Deno.serve(async (req) => {
         .eq("role", "admin");
 
       if (adminError || !adminRoles || adminRoles.length === 0) {
-        console.error(`[${requestId}] No admins found for tenant ${tenantId}`);
+        logger.error(`[${requestId}] No admins found for tenant ${tenantId}`);
         continue;
       }
 
@@ -125,7 +126,7 @@ Deno.serve(async (req) => {
         .in("user_id", adminUserIds);
 
       if (profileError || !adminProfiles || adminProfiles.length === 0) {
-        console.error(`[${requestId}] No admin profiles found for tenant ${tenantId}`);
+        logger.error(`[${requestId}] No admin profiles found for tenant ${tenantId}`);
         continue;
       }
 
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
       const { data: { users }, error: usersError } = await supabaseClient.auth.admin.listUsers();
       
       if (usersError || !users) {
-        console.error(`[${requestId}] Error fetching users:`, usersError);
+        logger.error(`[${requestId}] Error fetching users:`, usersError);
         continue;
       }
 
@@ -143,7 +144,7 @@ Deno.serve(async (req) => {
         .filter(e => e) as string[];
 
       if (adminEmails.length === 0) {
-        console.error(`[${requestId}] No admin emails found for tenant ${tenantId}`);
+        logger.error(`[${requestId}] No admin emails found for tenant ${tenantId}`);
         continue;
       }
 
@@ -171,7 +172,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (alertError) {
-        console.error(`[${requestId}] Error creating alert for tenant ${tenantId}:`, alertError);
+        logger.error(`[${requestId}] Error creating alert for tenant ${tenantId}:`, alertError);
       } else {
         alertsCreated.push(alert);
       }
@@ -179,7 +180,7 @@ Deno.serve(async (req) => {
       // Send email alert
       const resendApiKey = Deno.env.get("RESEND_API_KEY");
       if (!resendApiKey) {
-        console.warn(`[${requestId}] RESEND_API_KEY not configured, skipping email`);
+        logger.warn(`[${requestId}] RESEND_API_KEY not configured, skipping email`);
         continue;
       }
 
@@ -218,7 +219,7 @@ Deno.serve(async (req) => {
           html: emailHtml
         });
 
-        console.log(`[${requestId}] Email sent to ${adminEmails.length} admin(s) for tenant ${tenantId}`);
+        logger.info(`[${requestId}] Email sent to ${adminEmails.length} admin(s) for tenant ${tenantId}`);
         if (emailResult.data?.id) {
           emailsSent.push({ tenant_id: tenantId, email_id: emailResult.data.id });
         }
@@ -234,7 +235,7 @@ Deno.serve(async (req) => {
             .eq("id", alert.id);
         }
       } catch (emailError) {
-        console.error(`[${requestId}] Error sending email for tenant ${tenantId}:`, emailError);
+        logger.error(`[${requestId}] Error sending email for tenant ${tenantId}:`, emailError);
       }
     }
 
@@ -269,7 +270,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error(`[${requestId}] Error:`, error);
+    logger.error(`[${requestId}] Error:`, error);
     
     // Try to log failure
     try {
@@ -289,7 +290,7 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch {
-      console.error(`[${requestId}] Failed to log error`);
+      logger.error(`[${requestId}] Failed to log error`);
     }
 
     return new Response(

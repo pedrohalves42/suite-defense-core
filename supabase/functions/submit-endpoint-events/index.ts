@@ -13,6 +13,7 @@
  * Auth: X-Agent-Token (serveAgent middleware)
  */
 import { serveAgent } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 // V-2006: Batch size limit to prevent DoS
 const MAX_EVENTS_PER_BATCH = 1000;
@@ -190,7 +191,7 @@ function runDetections(events: any[], type: string): any[] {
             event_time: event.event_time || new Date().toISOString(),
           });
         }
-      } catch (err) { console.warn(`[submit-endpoint-events] Rule ${rule.id} match error:`, (err as Error).message); }
+      } catch (err) { logger.warn(`[submit-endpoint-events] Rule ${rule.id} match error:`, (err as Error).message); }
     }
   }
   return detections;
@@ -211,11 +212,11 @@ async function triggerBufferFlush() {
     });
 
     if (!response.ok) {
-      console.warn(`[submit-endpoint-events] flush trigger failed with status ${response.status}`);
+      logger.warn(`[submit-endpoint-events] flush trigger failed with status ${response.status}`);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[submit-endpoint-events] flush trigger error: ${message}`);
+    logger.warn(`[submit-endpoint-events] flush trigger error: ${message}`);
   }
 }
 
@@ -278,7 +279,7 @@ serveAgent(async (_req, ctx) => {
       const chunk = bufferRows.slice(i, i + CHUNK_SIZE);
       insertPromises.push(
         supabase.from('endpoint_event_buffer').insert(chunk).then(({ error }: any) => {
-          if (error) console.error('[submit-endpoint-events] buffer insert error:', error.message);
+          if (error) logger.error('[submit-endpoint-events] buffer insert error:', error.message);
           else stats.buffered += chunk.length;
         })
       );
@@ -307,7 +308,7 @@ serveAgent(async (_req, ctx) => {
     }));
     
     const { error } = await supabase.from('endpoint_detection_events').insert(detRows);
-    if (error) console.error('[submit-endpoint-events] detection insert error:', error.message);
+    if (error) logger.error('[submit-endpoint-events] detection insert error:', error.message);
     else stats.detections = detRows.length;
 
     // Create system alerts for high/critical detections (real-time, not buffered)
@@ -330,11 +331,11 @@ serveAgent(async (_req, ctx) => {
       }));
       
       const { error: alertError } = await supabase.from('system_alerts').insert(alerts);
-      if (alertError) console.error('[submit-endpoint-events] alert insert error:', alertError.message);
+      if (alertError) logger.error('[submit-endpoint-events] alert insert error:', alertError.message);
     }
   }
 
-  console.log(`[submit-endpoint-events] Agent ${agentId}: buffered=${stats.buffered} detections=${stats.detections}`);
+  logger.info(`[submit-endpoint-events] Agent ${agentId}: buffered=${stats.buffered} detections=${stats.detections}`);
 
   return {
     success: true,

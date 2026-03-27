@@ -4,6 +4,7 @@
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface ExecuteSolutionRequest {
   action_id: string;
@@ -15,7 +16,7 @@ serveTenant(async (_req, ctx) => {
   const { tenantId, supabase, body } = ctx;
   const { action_id, solution_type, parameters = {} } = body as ExecuteSolutionRequest;
 
-  console.log(`[AI-EXECUTE-SOLUTION] Executing ${solution_type} for action ${action_id}`);
+  logger.info(`[AI-EXECUTE-SOLUTION] Executing ${solution_type} for action ${action_id}`);
 
   // Get action details
   const { data: action, error: actionError } = await supabase

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { corsHeaders } from '../_shared/cors.ts'
+import { logger } from '../_shared/logger.ts';
 
 /**
  * agent-snapshot - Edge Function Canônica
@@ -43,7 +44,7 @@ serve(async (req) => {
     // Autenticação
     const { data: authData, error: authError } = await supabase.auth.getUser()
     if (authError || !authData?.user) {
-      console.error('[agent-snapshot][AUTH_ERROR]', { authError, correlationId })
+      logger.error('[agent-snapshot][AUTH_ERROR]', { authError, correlationId })
       return jsonError(401, 'Unauthorized', correlationId)
     }
 
@@ -71,7 +72,7 @@ serve(async (req) => {
       .rpc('get_agent_snapshot', { p_agent_id: agent_id })
 
     if (rpcError) {
-      console.error('[agent-snapshot][RPC_ERROR]', { rpcError, agent_id, correlationId })
+      logger.error('[agent-snapshot][RPC_ERROR]', { rpcError, agent_id, correlationId })
       return jsonError(500, 'Failed to fetch agent snapshot', correlationId)
     }
 
@@ -97,7 +98,7 @@ serve(async (req) => {
     )
 
   } catch (err) {
-    console.error('[agent-snapshot][UNHANDLED_ERROR]', { err, correlationId })
+    logger.error('[agent-snapshot][UNHANDLED_ERROR]', { err, correlationId })
     return jsonError(500, 'Unexpected error', correlationId)
   }
 })

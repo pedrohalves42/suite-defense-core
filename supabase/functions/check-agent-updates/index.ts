@@ -4,6 +4,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { hashToken } from '../_shared/token-hash.ts';
 import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * Edge Function para agentes verificarem updates disponiveis
@@ -22,14 +23,14 @@ Deno.serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] Check agent updates request received`);
+  logger.info(`[${requestId}] Check agent updates request received`);
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error(`[${requestId}] Missing environment variables`);
+      logger.error(`[${requestId}] Missing environment variables`);
       return new Response(
         JSON.stringify({ error: 'Server configuration error', requestId }),
         {
@@ -44,7 +45,7 @@ Deno.serve(async (req) => {
     // 1. Validar X-Agent-Token
     const agentToken = req.headers.get('X-Agent-Token');
     if (!agentToken) {
-      console.warn(`[${requestId}] Missing X-Agent-Token header`);
+      logger.warn(`[${requestId}] Missing X-Agent-Token header`);
       return new Response(
         JSON.stringify({ error: 'Missing agent token', requestId }),
         {
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (tokenError || !tokenData || !tokenData.agents) {
-      console.warn(`[${requestId}] Invalid or inactive agent token`);
+      logger.warn(`[${requestId}] Invalid or inactive agent token`);
       return new Response(
         JSON.stringify({ error: 'Invalid agent token', requestId }),
         {
@@ -94,7 +95,7 @@ Deno.serve(async (req) => {
     );
 
     if (!hmacResult.valid) {
-      console.warn(`[${requestId}] HMAC validation failed:`, {
+      logger.warn(`[${requestId}] HMAC validation failed:`, {
         errorCode: hmacResult.errorCode,
         errorMessage: hmacResult.errorMessage
       });
@@ -128,11 +129,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[${requestId}] Agent authenticated: ${agent.agent_name}`);
+    logger.info(`[${requestId}] Agent authenticated: ${agent.agent_name}`);
 
     // 4. Determinar platform do agente
     const platform = (agent.os_type?.toLowerCase() || 'windows');
-    console.log(`[${requestId}] Platform: ${platform}`);
+    logger.info(`[${requestId}] Platform: ${platform}`);
 
     // 5. Buscar versao latest da tabela agent_releases (consistente com serve-agent-update)
     const { data: latestRelease, error: releaseError } = await supabase
@@ -146,7 +147,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (releaseError || !latestRelease) {
-      console.log(`[${requestId}] No updates available for platform ${platform}`);
+      logger.info(`[${requestId}] No updates available for platform ${platform}`);
       return new Response(
         JSON.stringify({
           has_update: false,
@@ -165,7 +166,7 @@ Deno.serve(async (req) => {
     const latestNorm = normalizeVersion(latestRelease.version);
     const hasUpdate = currentNorm !== latestNorm;
 
-    console.log(`[${requestId}] Version comparison: current=${currentNorm} latest=${latestNorm} hasUpdate=${hasUpdate}`);
+    logger.info(`[${requestId}] Version comparison: current=${currentNorm} latest=${latestNorm} hasUpdate=${hasUpdate}`);
 
     // 7. Retornar informacoes da versao
     return new Response(
@@ -186,7 +187,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error(`[${requestId}] Unexpected error:`, error);
+    logger.error(`[${requestId}] Unexpected error:`, error);
     return new Response(
       JSON.stringify({
         error: 'Internal server error',

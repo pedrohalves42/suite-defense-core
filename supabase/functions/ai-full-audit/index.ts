@@ -4,6 +4,7 @@ import { safeParseJSON, createFallbackAudit, createFallbackRedTeam } from "../_s
 import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { requireEnv } from '../_shared/env.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * AI Full Audit Orchestrator v2.3
@@ -120,7 +121,7 @@ async function logGovernanceEvent(
       metadata: metadata,
     });
   } catch (err) {
-    console.warn('[ai-full-audit] Failed to log governance event:', err);
+    logger.warn('[ai-full-audit] Failed to log governance event:', err);
   }
 }
 
@@ -141,7 +142,7 @@ function isRateLimited(error?: string): boolean {
 serveTenant(async (req, ctx) => {
   const { supabase: serviceClient, tenantId, userId, isInternal, requestId } = ctx;
 
-  console.log(`[ai-full-audit] Starting FULL audit v2.3 for tenant ${tenantId} (Red → Ana → Gap) [multi-provider] [requestId: ${requestId}]`);
+  logger.info(`[ai-full-audit] Starting FULL audit v2.3 for tenant ${tenantId} (Red → Ana → Gap) [multi-provider] [requestId: ${requestId}]`);
 
   // For user calls, create a user-context client for RPC that needs auth.uid()
   let userClient = serviceClient;
@@ -160,7 +161,7 @@ serveTenant(async (req, ctx) => {
     .rpc('get_audit_raw_metrics', { p_tenant_id: tenantId });
 
   if (metricsError) {
-    console.error('Error fetching metrics:', metricsError);
+    logger.error('Error fetching metrics:', metricsError);
     return new Response(
       JSON.stringify({
         error: 'Failed to fetch system metrics',
@@ -175,7 +176,7 @@ serveTenant(async (req, ctx) => {
   }
 
   // ============ PHASE 1: RED TEAM (FIRST - NO BIAS) ============
-  console.log('[ai-full-audit] Phase 1: Running Red Team assessment...');
+  logger.info('[ai-full-audit] Phase 1: Running Red Team assessment...');
 
   const redPersona = await AIPromptRegistry.getPromptWithMetadata('red-team-persona');
   const redTemplate = await AIPromptRegistry.getPromptWithMetadata('red-team-analysis-template');
@@ -209,10 +210,10 @@ serveTenant(async (req, ctx) => {
 
   // Handle Red Team AI failure with graceful fallback
   if (!redAiResult.success || !redAiResult.content) {
-    console.error('[ai-full-audit] Red Team AI failed:', redAiResult.error);
+    logger.error('[ai-full-audit] Red Team AI failed:', redAiResult.error);
 
     if (isCreditsExhausted(redAiResult.error)) {
-      console.warn('[ai-full-audit] AI unavailable. Returning deterministic audit result.');
+      logger.warn('[ai-full-audit] AI unavailable. Returning deterministic audit result.');
       
       const fallbackCriteria = calculateBinaryCriteria(metrics);
       const criteriaCount = Object.values(fallbackCriteria).filter(Boolean).length;
@@ -271,7 +272,7 @@ serveTenant(async (req, ctx) => {
   try {
     redResult = safeParseJSON(redContent, 'red-team');
   } catch (parseError) {
-    console.error('[ai-full-audit] Red Team parse failed, using fallback');
+    logger.error('[ai-full-audit] Red Team parse failed, using fallback');
     
     const fallbackCriteria = calculateBinaryCriteria(metrics);
     redResult = createFallbackRedTeam('AI_JSON_PARSE_ERROR', fallbackCriteria);
@@ -290,7 +291,7 @@ serveTenant(async (req, ctx) => {
   let binaryCriteriaFallbackUsed = false;
   
   if (Object.keys(binaryCriteria).length < 7) {
-    console.warn('[ai-full-audit] Red Team binary_criteria incomplete, calculating fallback');
+    logger.warn('[ai-full-audit] Red Team binary_criteria incomplete, calculating fallback');
     binaryCriteria = calculateBinaryCriteria(metrics);
     redResult.binary_criteria = binaryCriteria;
     binaryCriteriaFallbackUsed = true;
@@ -308,7 +309,7 @@ serveTenant(async (req, ctx) => {
   
   const expectedThreatLevel = getDeterministicThreatLevel(criteriaCountTrue);
   if (redResult.threat_level !== expectedThreatLevel) {
-    console.warn(`[ai-full-audit] threat_level mismatch: LLM=${redResult.threat_level}, criteria=${expectedThreatLevel}. Correcting.`);
+    logger.warn(`[ai-full-audit] threat_level mismatch: LLM=${redResult.threat_level}, criteria=${expectedThreatLevel}. Correcting.`);
     redResult.threat_level = expectedThreatLevel;
   }
   
@@ -346,13 +347,13 @@ serveTenant(async (req, ctx) => {
     .single();
 
   if (redSaveError) {
-    console.error('Error saving Red Team:', redSaveError);
+    logger.error('Error saving Red Team:', redSaveError);
   }
   
-  console.log(`[ai-full-audit] Phase 1 complete. Red Score: ${redResult.red_score}, Threat: ${redResult.threat_level}, Provider: ${redAiResult.provider}, Criteria TRUE: ${criteriaCountTrue}`);
+  logger.info(`[ai-full-audit] Phase 1 complete. Red Score: ${redResult.red_score}, Threat: ${redResult.threat_level}, Provider: ${redAiResult.provider}, Criteria TRUE: ${criteriaCountTrue}`);
 
   // ============ PHASE 2: ANA (WITH RED TEAM CONTEXT) ============
-  console.log('[ai-full-audit] Phase 2: Running Ana audit with Red Team handoff...');
+  logger.info('[ai-full-audit] Phase 2: Running Ana audit with Red Team handoff...');
 
   const anaPersona = await AIPromptRegistry.getPromptWithMetadata('ana-auditor-persona');
   const anaTemplate = await AIPromptRegistry.getPromptWithMetadata('ana-analysis-template');
@@ -395,10 +396,10 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
 
   // Handle Ana AI failure
   if (!anaAiResult.success || !anaAiResult.content) {
-    console.error('[ai-full-audit] Ana AI failed:', anaAiResult.error);
+    logger.error('[ai-full-audit] Ana AI failed:', anaAiResult.error);
 
     if (isCreditsExhausted(anaAiResult.error)) {
-      console.warn('[ai-full-audit] AI unavailable at Ana phase. Returning deterministic result with Red Team.');
+      logger.warn('[ai-full-audit] AI unavailable at Ana phase. Returning deterministic result with Red Team.');
       
       const deterministicScore = calculateDeterministicScore(metrics);
       const deterministicThreatLevel = getDeterministicThreatLevel(criteriaCountTrue);
@@ -455,7 +456,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
   try {
     anaResult = safeParseJSON(anaContent, 'ana');
   } catch (parseError) {
-    console.error('[ai-full-audit] Ana parse failed, using fallback');
+    logger.error('[ai-full-audit] Ana parse failed, using fallback');
     
     anaResult = createFallbackAudit('AI_JSON_PARSE_ERROR');
     anaFallbackUsed = true;
@@ -469,10 +470,10 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
   }
 
   // ============ SCORE GOVERNANCE: Guardrails + Moving Average ============
-  console.log('[ai-full-audit] Applying score governance v2.0...');
+  logger.info('[ai-full-audit] Applying score governance v2.0...');
   
   const deterministicBaseScore = calculateDeterministicScore(metrics);
-  console.log(`[ai-full-audit] Deterministic base score: ${deterministicBaseScore}`);
+  logger.info(`[ai-full-audit] Deterministic base score: ${deterministicBaseScore}`);
   
   await logGovernanceEvent(
     serviceClient, tenantId, null, 'deterministic_base_applied',
@@ -482,7 +483,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
   );
   
   const redRiskFactor = calculateRiskFactor(redResult.red_score);
-  console.log(`[ai-full-audit] Red risk factor: ${redRiskFactor.toFixed(3)}`);
+  logger.info(`[ai-full-audit] Red risk factor: ${redRiskFactor.toFixed(3)}`);
   
   await logGovernanceEvent(
     serviceClient, tenantId, null, 'risk_factor_applied',
@@ -495,7 +496,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     .rpc('get_previous_audit_score', { p_tenant_id: tenantId });
   
   if (rpcError) {
-    console.warn('[ai-full-audit] RPC get_previous_audit_score failed:', rpcError.message);
+    logger.warn('[ai-full-audit] RPC get_previous_audit_score failed:', rpcError.message);
   }
   
   const rawScore = anaResult.overall_score;
@@ -503,7 +504,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
   const avgLast3 = prevAuditData?.[0]?.avg_last_3 ?? rawScore;
   const avgLast7 = prevAuditData?.[0]?.avg_last_7 ?? rawScore;
   
-  console.log(`[ai-full-audit] Historical scores: prev=${previousScore}, avg3=${avgLast3}, avg7=${avgLast7} (fallback: ${!prevAuditData?.[0]})`);
+  logger.info(`[ai-full-audit] Historical scores: prev=${previousScore}, avg3=${avgLast3}, avg7=${avgLast7} (fallback: ${!prevAuditData?.[0]})`);
   
   const rawDelta = rawScore - previousScore;
   let guardedScore = rawScore;
@@ -515,7 +516,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     guardedScore = previousScore + maxDelta;
     guardrailApplied = true;
     guardrailReason = `Delta original ${rawDelta} limitado a ${maxDelta} (score anterior: ${previousScore})`;
-    console.log(`[ai-full-audit] GUARDRAIL APPLIED: ${rawScore} -> ${guardedScore} (delta ${rawDelta} > 10)`);
+    logger.info(`[ai-full-audit] GUARDRAIL APPLIED: ${rawScore} -> ${guardedScore} (delta ${rawDelta} > 10)`);
     
     await logGovernanceEvent(
       serviceClient, tenantId, null, 'guardrail_applied',
@@ -556,7 +557,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     const originalMarket = marketScore;
     marketScore = 50;
     marketFloorApplied = true;
-    console.log('[ai-full-audit] Market score floor applied (40 < market && avg3 > 50)');
+    logger.info('[ai-full-audit] Market score floor applied (40 < market && avg3 > 50)');
     
     await logGovernanceEvent(
       serviceClient, tenantId, null, 'market_score_calculated',
@@ -573,7 +574,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     );
   }
   
-  console.log(`[ai-full-audit] Scores: raw=${rawScore}, guarded=${guardedScore}, official=${officialScore}, market=${marketScore}`);
+  logger.info(`[ai-full-audit] Scores: raw=${rawScore}, guarded=${guardedScore}, official=${officialScore}, market=${marketScore}`);
   
   // Save Ana result with governance data
   const anaPromptHash = `${anaPersona.hash.slice(0, 8)}-${anaTemplate.hash.slice(0, 8)}`;
@@ -627,13 +628,13 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     .single();
 
   if (anaSaveError) {
-    console.error('Error saving Ana audit:', anaSaveError);
+    logger.error('Error saving Ana audit:', anaSaveError);
   }
 
-  console.log(`[ai-full-audit] Phase 2 complete. Raw: ${rawScore}, Official: ${officialScore}, Market: ${marketScore}, Providers: Red=${redAiResult.provider}, Ana=${anaAiResult.provider}`);
+  logger.info(`[ai-full-audit] Phase 2 complete. Raw: ${rawScore}, Official: ${officialScore}, Market: ${marketScore}, Providers: Red=${redAiResult.provider}, Ana=${anaAiResult.provider}`);
 
   // ============ PHASE 3: CONFIDENCE GAP ============
-  console.log('[ai-full-audit] Phase 3: Calculating Confidence Gap...');
+  logger.info('[ai-full-audit] Phase 3: Calculating Confidence Gap...');
 
   const anaScore = anaResult.overall_score;
   const redScore = redResult.red_score;
@@ -701,11 +702,11 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     .single();
 
   if (gapSaveError) {
-    console.error('Error saving confidence gap:', gapSaveError);
+    logger.error('Error saving confidence gap:', gapSaveError);
   }
 
-  console.log(`[ai-full-audit] Phase 3 complete. Gap: ${gap} (${healthStatus}), Alert: ${alertTriggered}`);
-  console.log(`[ai-full-audit] FULL AUDIT v2.3 COMPLETE. Total tokens: ${redTokens + anaTokens}, Providers: Red=${redAiResult.provider}, Ana=${anaAiResult.provider}`);
+  logger.info(`[ai-full-audit] Phase 3 complete. Gap: ${gap} (${healthStatus}), Alert: ${alertTriggered}`);
+  logger.info(`[ai-full-audit] FULL AUDIT v2.3 COMPLETE. Total tokens: ${redTokens + anaTokens}, Providers: Red=${redAiResult.provider}, Ana=${anaAiResult.provider}`);
 
   return new Response(
     JSON.stringify({

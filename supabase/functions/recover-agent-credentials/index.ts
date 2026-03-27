@@ -15,6 +15,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { hashToken } from '../_shared/token-hash.ts';
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -49,7 +50,7 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: authError } = await userClient.auth.getUser();
     if (authError || !user) {
-      console.error(`[${requestId}] Auth failed:`, authError?.message);
+      logger.error(`[${requestId}] Auth failed:`, authError?.message);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -95,23 +96,23 @@ Deno.serve(async (req) => {
         .eq('user_id', user.id)
         .limit(1)
         .maybeSingle();
-      if (roleError) console.error(`[${requestId}] Role check failed:`, roleError?.message);
+      if (roleError) logger.error(`[${requestId}] Role check failed:`, roleError?.message);
       userRole = fallbackRole;
     }
 
     if (!userRole) {
-      console.error(`[${requestId}] No role found for user ${user.id}`);
+      logger.error(`[${requestId}] No role found for user ${user.id}`);
       return new Response(
         JSON.stringify({ error: 'Forbidden' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[${requestId}] User ${user.email} role=${userRole.role} tenant=${userRole.tenant_id} activeTenant=${activeTenantId}`);
+    logger.info(`[${requestId}] User ${user.email} role=${userRole.role} tenant=${userRole.tenant_id} activeTenant=${activeTenantId}`);
 
     const allowedRoles = ['admin', 'operator', 'super_admin'];
     if (!allowedRoles.includes(userRole.role)) {
-      console.warn(`[${requestId}] Insufficient role: ${userRole.role}`);
+      logger.warn(`[${requestId}] Insufficient role: ${userRole.role}`);
       return new Response(
         JSON.stringify({ error: 'Forbidden: insufficient permissions' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -129,7 +130,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[${requestId}] Recovery request for agent: ${agentName} by user: ${user.email}`);
+    logger.info(`[${requestId}] Recovery request for agent: ${agentName} by user: ${user.email}`);
 
     // Find agent - enforce tenant isolation using active tenant
     const effectiveTenantId = activeTenantId || userRole.tenant_id;
@@ -148,7 +149,7 @@ Deno.serve(async (req) => {
     const { data: agent, error: agentError } = await query.maybeSingle();
 
     if (agentError || !agent) {
-      console.warn(`[${requestId}] Agent not found: ${agentName}`);
+      logger.warn(`[${requestId}] Agent not found: ${agentName}`);
       return new Response(
         JSON.stringify({ error: 'Agent not found in your tenant' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -180,7 +181,7 @@ Deno.serve(async (req) => {
       });
 
     if (tokenError) {
-      console.error(`[${requestId}] Token creation failed:`, tokenError);
+      logger.error(`[${requestId}] Token creation failed:`, tokenError);
       return new Response(
         JSON.stringify({ error: 'Failed to generate credentials' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -202,7 +203,7 @@ Deno.serve(async (req) => {
       success: true,
     });
 
-    console.log(`[${requestId}] Credentials recovered for ${agentName} (prefix: ${tokenPrefix})`);
+    logger.info(`[${requestId}] Credentials recovered for ${agentName} (prefix: ${tokenPrefix})`);
 
     return new Response(
       JSON.stringify({
@@ -216,7 +217,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error(`[${requestId}] Error:`, error);
+    logger.error(`[${requestId}] Error:`, error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Internal error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

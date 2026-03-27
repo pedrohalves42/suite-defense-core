@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -107,7 +108,7 @@ Deno.serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID().slice(0, 8);
-  console.log(`[${requestId}] [FETCH-NVD] Starting NVD CVE fetch`);
+  logger.info(`[${requestId}] [FETCH-NVD] Starting NVD CVE fetch`);
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -135,7 +136,7 @@ Deno.serve(async (req) => {
         .limit(100);
 
       if (!cacheError && cachedCVEs && cachedCVEs.length > 0) {
-        console.log(`[${requestId}] [FETCH-NVD] Cache hit: ${cachedCVEs.length} CVEs for "${keyword}"`);
+        logger.info(`[${requestId}] [FETCH-NVD] Cache hit: ${cachedCVEs.length} CVEs for "${keyword}"`);
         return new Response(
           JSON.stringify({
             success: true,
@@ -169,7 +170,7 @@ Deno.serve(async (req) => {
     params.append('startIndex', String(startIndex));
 
     const nvdUrl = `${NVD_API_BASE}?${params.toString()}`;
-    console.log(`[${requestId}] [FETCH-NVD] Fetching from NVD: ${nvdUrl}`);
+    logger.info(`[${requestId}] [FETCH-NVD] Fetching from NVD: ${nvdUrl}`);
 
     // Fetch from NVD API
     const nvdResponse = await fetch(nvdUrl, {
@@ -181,7 +182,7 @@ Deno.serve(async (req) => {
 
     if (!nvdResponse.ok) {
       const errorText = await nvdResponse.text();
-      console.error(`[${requestId}] [FETCH-NVD] NVD API error: ${nvdResponse.status} - ${errorText}`);
+      logger.error(`[${requestId}] [FETCH-NVD] NVD API error: ${nvdResponse.status} - ${errorText}`);
       
       // If rate limited, return appropriate error
       if (nvdResponse.status === 403 || nvdResponse.status === 429) {
@@ -198,7 +199,7 @@ Deno.serve(async (req) => {
     }
 
     const nvdData: NVDResponse = await nvdResponse.json();
-    console.log(`[${requestId}] [FETCH-NVD] NVD returned ${nvdData.totalResults} total results, ${nvdData.vulnerabilities.length} in this page`);
+    logger.info(`[${requestId}] [FETCH-NVD] NVD returned ${nvdData.totalResults} total results, ${nvdData.vulnerabilities.length} in this page`);
 
     // Transform NVD data to our format
     const cveRecords: CVERecord[] = nvdData.vulnerabilities.map(vuln => {
@@ -317,10 +318,10 @@ Deno.serve(async (req) => {
         });
 
       if (upsertError) {
-        console.error(`[${requestId}] [FETCH-NVD] Error upserting CVEs:`, upsertError);
+        logger.error(`[${requestId}] [FETCH-NVD] Error upserting CVEs:`, upsertError);
         // Don't throw, still return results
       } else {
-        console.log(`[${requestId}] [FETCH-NVD] Cached ${cveRecords.length} CVEs to database`);
+        logger.info(`[${requestId}] [FETCH-NVD] Cached ${cveRecords.length} CVEs to database`);
       }
     }
 
@@ -353,7 +354,7 @@ Deno.serve(async (req) => {
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[${requestId}] [FETCH-NVD] Error:`, message);
+    logger.error(`[${requestId}] [FETCH-NVD] Error:`, message);
     
     return new Response(
       JSON.stringify({ error: message }),

@@ -19,6 +19,7 @@ import {
   EDGE_VERSION 
 } from '../_shared/health-probe.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -48,7 +49,7 @@ Deno.serve(async (req: Request) => {
   if (authError) return authError;
 
   const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] Security alert dispatcher started - Edge v${EDGE_VERSION}`);
+  logger.info(`[${requestId}] Security alert dispatcher started - Edge v${EDGE_VERSION}`);
 
   try {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
@@ -72,14 +73,14 @@ Deno.serve(async (req: Request) => {
       .not('blocked_until', 'is', null);
 
     const rateLimitBreaches = rateLimitData?.length || 0;
-    console.log(`[${requestId}] Rate limit breaches: ${rateLimitBreaches}`);
+    logger.info(`[${requestId}] Rate limit breaches: ${rateLimitBreaches}`);
 
     // 2. Check for replay attempts (duplicate HMAC signatures)
     const { data: replayData, error: rpError } = await supabase
       .rpc('get_replay_attempts', { hours_back: 1 });
 
     const replayAttempts = replayData?.[0]?.attempt_count || 0;
-    console.log(`[${requestId}] Replay attempts: ${replayAttempts}`);
+    logger.info(`[${requestId}] Replay attempts: ${replayAttempts}`);
 
     // 3. Check failed login spikes (last 10 minutes)
     const { data: failedLoginData, error: flError } = await supabase
@@ -96,7 +97,7 @@ Deno.serve(async (req: Request) => {
     const failedLoginSpikes = Object.entries(ipCounts)
       .filter(([_, count]) => count >= 5) // 5+ attempts from same IP = spike
       .length;
-    console.log(`[${requestId}] Failed login spikes: ${failedLoginSpikes}`);
+    logger.info(`[${requestId}] Failed login spikes: ${failedLoginSpikes}`);
 
     // 4. Check blocked IPs
     const { data: blockedIpData, error: biError } = await supabase
@@ -105,7 +106,7 @@ Deno.serve(async (req: Request) => {
       .gte('blocked_until', now.toISOString());
 
     const blockedIps = blockedIpData?.length || 0;
-    console.log(`[${requestId}] Blocked IPs: ${blockedIps}`);
+    logger.info(`[${requestId}] Blocked IPs: ${blockedIps}`);
 
     // 5. Check critical security events (last hour)
     const { data: securityEventsData, error: seError } = await supabase
@@ -115,7 +116,7 @@ Deno.serve(async (req: Request) => {
       .in('severity', ['high', 'critical']);
 
     const criticalEvents = securityEventsData?.length || 0;
-    console.log(`[${requestId}] Critical events: ${criticalEvents}`);
+    logger.info(`[${requestId}] Critical events: ${criticalEvents}`);
 
     // Compile metrics
     const metrics: SecurityMetrics = {
@@ -176,7 +177,7 @@ Deno.serve(async (req: Request) => {
         }
       }
     } catch (cronError) {
-      console.warn(`[${requestId}] Cron silence check failed:`, cronError);
+      logger.warn(`[${requestId}] Cron silence check failed:`, cronError);
     }
 
     // Log to security_logs
@@ -189,7 +190,7 @@ Deno.serve(async (req: Request) => {
       blocked: false,
     });
 
-    console.log(`[${requestId}] Security scan complete. Alerts: ${alerts.length}`);
+    logger.info(`[${requestId}] Security scan complete. Alerts: ${alerts.length}`);
 
     // Report success to cron health monitoring
     try {
@@ -211,7 +212,7 @@ Deno.serve(async (req: Request) => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[${requestId}] Error:`, error);
+    logger.error(`[${requestId}] Error:`, error);
 
     // Report failure to cron health monitoring
     try {
@@ -245,7 +246,7 @@ async function createSystemAlert(
       resolved: false,
     });
   } catch (error) {
-    console.error('Failed to create system alert:', error);
+    logger.error('Failed to create system alert:', error);
   }
 }
 

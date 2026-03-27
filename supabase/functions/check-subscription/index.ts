@@ -1,9 +1,10 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { serveTenant } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
+  logger.info(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
 serveTenant(async (req, ctx) => {

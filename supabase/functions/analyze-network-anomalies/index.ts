@@ -6,6 +6,7 @@ import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from "../_
 import { persistAIMetrics } from "../_shared/ai-metrics-persistence.ts";
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from "../_shared/ai-evidence-types.ts";
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,7 +48,7 @@ Deno.serve(async (req) => {
       } = await supabaseClient.auth.getUser();
 
       if (authError || !user) {
-        console.error('Authentication error:', authError);
+        logger.error('Authentication error:', authError);
         return new Response(
           JSON.stringify({ error: 'Nao autenticado' }),
           {
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
         );
       }
     } else {
-      console.log('[analyze-network-anomalies] Running in cron mode (no auth header)');
+      logger.info('[analyze-network-anomalies] Running in cron mode (no auth header)');
     }
 
     const { agentName, timeRangeHours = 24 }: AnalysisRequest = await req.json();
@@ -81,7 +82,7 @@ Deno.serve(async (req) => {
     const { data: agents, error: agentsError } = await agentsQuery;
 
     if (agentsError) {
-      console.error('Error fetching agents:', agentsError);
+      logger.error('Error fetching agents:', agentsError);
       return new Response(
         JSON.stringify({ error: 'Erro ao buscar dados dos agentes' }),
         {
@@ -104,7 +105,7 @@ Deno.serve(async (req) => {
     const { data: jobs, error: jobsError } = await jobsQuery;
 
     if (jobsError) {
-      console.error('Error fetching jobs:', jobsError);
+      logger.error('Error fetching jobs:', jobsError);
       return new Response(
         JSON.stringify({ error: 'Erro ao buscar dados dos jobs' }),
         {
@@ -153,7 +154,7 @@ Deno.serve(async (req) => {
 
     const { sanitized: sanitizedContext, warnings } = sanitizeObjectForAI(analysisContext);
     if (warnings.length > 0) {
-      console.warn('[analyze-network-anomalies] Sanitization warnings:', warnings);
+      logger.warn('[analyze-network-anomalies] Sanitization warnings:', warnings);
     }
 
     const rawPrompt = `Voce e um especialista em seguranca de rede e analise de comportamento de sistemas.
@@ -173,7 +174,7 @@ Seja especifico e tecnico, focando em seguranca cibernetica.`;
 
     const promptSanitizeResult = sanitizeForAI(rawPrompt);
     if (promptSanitizeResult.blocked) {
-      console.warn('[analyze-network-anomalies] Prompt injection blocked:', promptSanitizeResult.blockedPatterns);
+      logger.warn('[analyze-network-anomalies] Prompt injection blocked:', promptSanitizeResult.blockedPatterns);
     }
     const aiPrompt = promptSanitizeResult.sanitized;
 
@@ -189,7 +190,7 @@ Seja especifico e tecnico, focando em seguranca cibernetica.`;
 
     // Handle AI call failure
     if (!aiResult.success) {
-      console.error('[analyze-network-anomalies] AI call failed:', aiResult.error);
+      logger.error('[analyze-network-anomalies] AI call failed:', aiResult.error);
       return new Response(
         JSON.stringify({ 
           error: 'Erro ao analisar dados com IA - servico temporariamente indisponivel',
@@ -205,9 +206,9 @@ Seja especifico e tecnico, focando em seguranca cibernetica.`;
     }
 
     const analysis = aiResult.content;
-    console.log(`[analyze-network-anomalies] Analysis completed via ${aiResult.provider} in ${aiResult.latencyMs}ms`);
+    logger.info(`[analyze-network-anomalies] Analysis completed via ${aiResult.provider} in ${aiResult.latencyMs}ms`);
 
-    console.log('[analyze-network-anomalies] Analysis completed successfully');
+    logger.info('[analyze-network-anomalies] Analysis completed successfully');
 
     // Build evidence array from analysis context
     const evidenceArray: AIEvidence[] = [];
@@ -284,7 +285,7 @@ Seja especifico e tecnico, focando em seguranca cibernetica.`;
       }
     );
   } catch (error) {
-    console.error('Error in analyze-network-anomalies:', error);
+    logger.error('Error in analyze-network-anomalies:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro desconhecido' }),
       {

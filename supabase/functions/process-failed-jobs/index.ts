@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,7 +52,7 @@ Deno.serve(async (req) => {
   };
 
   try {
-    console.log('[process-failed-jobs] Starting intelligent failed jobs processing...');
+    logger.info('[process-failed-jobs] Starting intelligent failed jobs processing...');
 
     // Get failed jobs with retry count < MAX_RETRIES
     // Agora inclui failure_class para decisão inteligente
@@ -68,7 +69,7 @@ Deno.serve(async (req) => {
     }
 
     if (!failedJobs || failedJobs.length === 0) {
-      console.log('[process-failed-jobs] No failed jobs to process');
+      logger.info('[process-failed-jobs] No failed jobs to process');
       
       await supabase.rpc('log_scheduled_job_run', {
         p_job_key: 'process-failed-jobs',
@@ -85,7 +86,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[process-failed-jobs] Found ${failedJobs.length} failed jobs to process`);
+    logger.info(`[process-failed-jobs] Found ${failedJobs.length} failed jobs to process`);
 
     for (const job of failedJobs) {
       results.processed++;
@@ -102,7 +103,7 @@ Deno.serve(async (req) => {
 
         if (shouldDlq) {
           // Enviar direto para DLQ (sem retry inútil)
-          console.log(`[process-failed-jobs] Job ${job.id} -> DLQ (class: ${failureClass}, retries: ${currentRetry})`);
+          logger.info(`[process-failed-jobs] Job ${job.id} -> DLQ (class: ${failureClass}, retries: ${currentRetry})`);
           
           results.sentToDlq++;
           if (currentRetry >= MAX_RETRIES) {
@@ -165,7 +166,7 @@ Deno.serve(async (req) => {
 
         } else if (shouldRetry) {
           // Retry apenas para TRANSIENT
-          console.log(`[process-failed-jobs] Job ${job.id} -> RETRY (class: ${failureClass}, attempt: ${currentRetry}/${MAX_RETRIES})`);
+          logger.info(`[process-failed-jobs] Job ${job.id} -> RETRY (class: ${failureClass}, attempt: ${currentRetry}/${MAX_RETRIES})`);
 
           const { error: createError } = await supabase
             .from('jobs')
@@ -202,7 +203,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log('[process-failed-jobs] Processing complete:', results);
+    logger.info('[process-failed-jobs] Processing complete:', results);
 
     // Log observability
     await supabase.rpc('log_scheduled_job_run', {
@@ -219,7 +220,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[process-failed-jobs] Error:', error);
+    logger.error('[process-failed-jobs] Error:', error);
     
     await supabase.rpc('log_scheduled_job_run', {
       p_job_key: 'process-failed-jobs',

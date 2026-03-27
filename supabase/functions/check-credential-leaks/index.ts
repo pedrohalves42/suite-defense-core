@@ -1,4 +1,5 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, requestId, body } = ctx;
@@ -33,7 +34,7 @@ serveTenant(async (req, ctx) => {
         }
         await new Promise(r => setTimeout(r, 150));
       } catch (e) {
-        console.error('k-Anonymity check failed:', e);
+        logger.error('k-Anonymity check failed:', e);
       }
     }
   }
@@ -73,7 +74,7 @@ serveTenant(async (req, ctx) => {
         }
         await new Promise(r => setTimeout(r, 1600));
       } catch (e) {
-        console.error(`Breach check failed for ${monitor.email_domain}:`, e);
+        logger.error(`Breach check failed for ${monitor.email_domain}:`, e);
       }
       await supabase.from('credential_monitors').update({ last_check_at: new Date().toISOString() }).eq('id', monitor.id);
       results.domains_checked++;
@@ -127,7 +128,7 @@ Forneça: Score de risco (0-100), Top 3 riscos, Recomendações prioritárias, S
       }
     }
   } catch (e) {
-    console.error('AI identity analysis failed:', e);
+    logger.error('AI identity analysis failed:', e);
     results.ai_analysis = 'Análise IA indisponível no momento.';
   }
 

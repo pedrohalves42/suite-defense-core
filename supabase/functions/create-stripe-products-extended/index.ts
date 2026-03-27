@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +19,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log("[CREATE-STRIPE-PRODUCTS-EXTENDED] Starting extended period price creation");
+    logger.info("[CREATE-STRIPE-PRODUCTS-EXTENDED] Starting extended period price creation");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
@@ -102,7 +103,7 @@ Deno.serve(async (req) => {
         // Get product ID from existing price
         const existingPrice = await stripe.prices.retrieve(monthlyPlan.stripe_price_id);
         productId = existingPrice.product as string;
-        console.log(`[CREATE-STRIPE-PRODUCTS-EXTENDED] Using existing product ${productId} for ${plan.name}`);
+        logger.info(`[CREATE-STRIPE-PRODUCTS-EXTENDED] Using existing product ${productId} for ${plan.name}`);
       } else {
         // Create new product if none exists
         const product = await stripe.products.create({
@@ -110,14 +111,14 @@ Deno.serve(async (req) => {
           metadata: { plan: plan.name }
         });
         productId = product.id;
-        console.log(`[CREATE-STRIPE-PRODUCTS-EXTENDED] Created new product ${productId} for ${plan.name}`);
+        logger.info(`[CREATE-STRIPE-PRODUCTS-EXTENDED] Created new product ${productId} for ${plan.name}`);
       }
 
       // Create prices for each extended period
       for (const period of periods) {
         const totalCents = calculatePrice(plan.baseMonthly, period.months, period.discountPct);
         
-        console.log(`[CREATE-STRIPE-PRODUCTS-EXTENDED] Creating ${plan.name} ${period.code}: R$${(totalCents/100).toFixed(2)} (${period.discountPct}% off)`);
+        logger.info(`[CREATE-STRIPE-PRODUCTS-EXTENDED] Creating ${plan.name} ${period.code}: R$${(totalCents/100).toFixed(2)} (${period.discountPct}% off)`);
 
         // Create price with interval_count for multi-month billing
         const price = await stripe.prices.create({
@@ -144,9 +145,9 @@ Deno.serve(async (req) => {
           .eq("name", fullPlanName);
 
         if (updateError) {
-          console.error(`[CREATE-STRIPE-PRODUCTS-EXTENDED] Failed to update ${plan.name} ${period.code}: ${updateError.message}`);
+          logger.error(`[CREATE-STRIPE-PRODUCTS-EXTENDED] Failed to update ${plan.name} ${period.code}: ${updateError.message}`);
         } else {
-          console.log(`[CREATE-STRIPE-PRODUCTS-EXTENDED] Updated DB: ${plan.name} ${period.code} = ${price.id}`);
+          logger.info(`[CREATE-STRIPE-PRODUCTS-EXTENDED] Updated DB: ${plan.name} ${period.code} = ${price.id}`);
         }
 
         createdPrices.push({
@@ -160,7 +161,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[CREATE-STRIPE-PRODUCTS-EXTENDED] Created ${createdPrices.length} prices successfully`);
+    logger.info(`[CREATE-STRIPE-PRODUCTS-EXTENDED] Created ${createdPrices.length} prices successfully`);
 
     return new Response(
       JSON.stringify({
@@ -177,7 +178,7 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("[CREATE-STRIPE-PRODUCTS-EXTENDED] Error:", errorMessage);
+    logger.error("[CREATE-STRIPE-PRODUCTS-EXTENDED] Error:", errorMessage);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }

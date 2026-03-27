@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * CONSOLIDATED security-monitor (COST-OPT v10)
@@ -94,7 +95,7 @@ Deno.serve(async (req) => {
           .is('expiration_notified_at', null)
           .eq('is_active', true);
 
-        if (error) { console.error('[security-monitor] expiring-keys error:', error.message); return; }
+        if (error) { logger.error('[security-monitor] expiring-keys error:', error.message); return; }
         result.expiring_keys.keys_found = expiringKeys?.length || 0;
 
         if (expiringKeys?.length) {
@@ -123,7 +124,7 @@ Deno.serve(async (req) => {
     ]);
 
     [rotationResult, keysResult].forEach((r, i) => {
-      if (r.status === 'rejected') console.error(`[security-monitor] Check ${i} failed:`, r.reason);
+      if (r.status === 'rejected') logger.error(`[security-monitor] Check ${i} failed:`, r.reason);
     });
 
     result.duration_ms = Date.now() - startedAt;
@@ -136,14 +137,14 @@ Deno.serve(async (req) => {
       });
     } catch (_) { /* best effort */ }
 
-    console.log(`[security-monitor] Completed in ${result.duration_ms}ms`, JSON.stringify(result));
+    logger.info(`[security-monitor] Completed in ${result.duration_ms}ms`, JSON.stringify(result));
 
     return new Response(JSON.stringify({ success: true, ...result }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
     const msg = (e as Error).message;
-    console.error('[security-monitor] Fatal:', msg);
+    logger.error('[security-monitor] Fatal:', msg);
     return new Response(JSON.stringify({ error: msg }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

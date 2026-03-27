@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const TIMEOUT_MINUTES = 30;
 
@@ -28,7 +29,7 @@ Deno.serve(async (req) => {
   };
 
   try {
-    console.log('[cleanup-stale-playbooks] Starting cleanup...');
+    logger.info('[cleanup-stale-playbooks] Starting cleanup...');
 
     const cutoffTime = new Date(Date.now() - TIMEOUT_MINUTES * 60 * 1000).toISOString();
 
@@ -44,7 +45,7 @@ Deno.serve(async (req) => {
     }
 
     if (!staleExecutions || staleExecutions.length === 0) {
-      console.log('[cleanup-stale-playbooks] No stale executions found');
+      logger.info('[cleanup-stale-playbooks] No stale executions found');
       
       // Log observability using RPC with job_key
       await supabase.rpc('log_scheduled_job_run', {
@@ -62,7 +63,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[cleanup-stale-playbooks] Found ${staleExecutions.length} stale executions`);
+    logger.info(`[cleanup-stale-playbooks] Found ${staleExecutions.length} stale executions`);
 
     for (const execution of staleExecutions) {
       results.processed++;
@@ -111,7 +112,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log('[cleanup-stale-playbooks] Cleanup complete:', results);
+    logger.info('[cleanup-stale-playbooks] Cleanup complete:', results);
 
     // Log observability - success using RPC with job_key
     await supabase.rpc('log_scheduled_job_run', {
@@ -128,7 +129,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[cleanup-stale-playbooks] Error:', error);
+    logger.error('[cleanup-stale-playbooks] Error:', error);
 
     // Log observability - failure using RPC with job_key
     await supabase.rpc('log_scheduled_job_run', {

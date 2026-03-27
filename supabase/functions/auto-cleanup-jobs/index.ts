@@ -13,6 +13,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
+import { logger } from '../_shared/logger.ts';
 
 interface CleanupResult {
   queued_cancelled: number
@@ -34,7 +35,7 @@ Deno.serve(async (req) => {
   const requestId = crypto.randomUUID()
   const startTime = Date.now()
   
-  console.log(`[${requestId}] auto-cleanup-jobs started`)
+  logger.info(`[${requestId}] auto-cleanup-jobs started`)
 
   // Validate authorization (internal secret, scheduled, or admin)
   const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET')
@@ -47,7 +48,7 @@ Deno.serve(async (req) => {
   const hasBearer = authHeader?.startsWith('Bearer ')
   
   if (!isScheduled && !isInternal && !hasBearer) {
-    console.warn(`[${requestId}] Unauthorized access attempt`)
+    logger.warn(`[${requestId}] Unauthorized access attempt`)
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -62,7 +63,7 @@ Deno.serve(async (req) => {
     // KILL SWITCH CHECK (ADR-FINAL) - Halt all automation if system is in halt_jobs mode
     const { data: systemMode } = await supabase.rpc('get_system_mode_safe')
     if (systemMode === 'halt_jobs') {
-      console.log(`[${requestId}] SYSTEM_HALTED: Kill switch active, skipping cleanup`)
+      logger.info(`[${requestId}] SYSTEM_HALTED: Kill switch active, skipping cleanup`)
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -92,9 +93,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[${requestId}] Thresholds: queued=${queuedThresholdHours}h, delivered=${deliveredThresholdHours}h`)
+    logger.info(`[${requestId}] Thresholds: queued=${queuedThresholdHours}h, delivered=${deliveredThresholdHours}h`)
     if (targetTenantId) {
-      console.log(`[${requestId}] Target tenant: ${targetTenantId}`)
+      logger.info(`[${requestId}] Target tenant: ${targetTenantId}`)
     }
 
     const queuedCutoff = new Date(Date.now() - queuedThresholdHours * 60 * 60 * 1000).toISOString()
@@ -131,7 +132,7 @@ Deno.serve(async (req) => {
         })
 
         if (blastError) {
-          console.error(`[${requestId}] Blast radius check failed:`, blastError)
+          logger.error(`[${requestId}] Blast radius check failed:`, blastError)
           return new Response(
             JSON.stringify({ error: 'BLAST_RADIUS_CHECK_FAILED', message: blastError.message, request_id: requestId }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -139,7 +140,7 @@ Deno.serve(async (req) => {
         }
 
         if (!blastCheck?.allowed) {
-          console.warn(`[${requestId}] [V-311] Blast radius exceeded for tenant cleanup`, {
+          logger.warn(`[${requestId}] [V-311] Blast radius exceeded for tenant cleanup`, {
             tenant_id: targetTenantId,
             requested: totalAffected,
             affected_percent: blastCheck?.affected_percent,
@@ -180,12 +181,12 @@ Deno.serve(async (req) => {
     const { data: cancelledJobs, error: cancelError } = await queuedQuery.select('id, tenant_id')
 
     if (cancelError) {
-      console.error(`[${requestId}] Error cancelling queued jobs:`, cancelError)
+      logger.error(`[${requestId}] Error cancelling queued jobs:`, cancelError)
       throw cancelError
     }
 
     const queuedCancelled = cancelledJobs?.length ?? 0
-    console.log(`[${requestId}] Cancelled ${queuedCancelled} old queued jobs`)
+    logger.info(`[${requestId}] Cancelled ${queuedCancelled} old queued jobs`)
 
     // Step 2: Fail old delivered jobs (timeout)
     let deliveredQuery = supabase
@@ -205,12 +206,12 @@ Deno.serve(async (req) => {
     const { data: failedJobs, error: failError } = await deliveredQuery.select('id, tenant_id')
 
     if (failError) {
-      console.error(`[${requestId}] Error failing delivered jobs:`, failError)
+      logger.error(`[${requestId}] Error failing delivered jobs:`, failError)
       throw failError
     }
 
     const deliveredFailed = failedJobs?.length ?? 0
-    console.log(`[${requestId}] Failed ${deliveredFailed} timed out delivered jobs`)
+    logger.info(`[${requestId}] Failed ${deliveredFailed} timed out delivered jobs`)
 
     // Calculate affected tenants
     const allJobs = [...(cancelledJobs ?? []), ...(failedJobs ?? [])]
@@ -251,7 +252,7 @@ Deno.serve(async (req) => {
           }
         }
       }
-      console.log(`[${requestId}] Re-scheduled ${retriedCount} recurring jobs for retry`)
+      logger.info(`[${requestId}] Re-scheduled ${retriedCount} recurring jobs for retry`)
     }
 
     const result: CleanupResult = {
@@ -263,7 +264,7 @@ Deno.serve(async (req) => {
     }
 
     const duration = Date.now() - startTime
-    console.log(`[${requestId}] Cleanup completed in ${duration}ms:`, result)
+    logger.info(`[${requestId}] Cleanup completed in ${duration}ms:`, result)
 
     // Log observability
     await supabase.rpc('log_scheduled_job_run', {
@@ -287,7 +288,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     const duration = Date.now() - startTime
-    console.error(`[${requestId}] Error after ${duration}ms:`, error)
+    logger.error(`[${requestId}] Error after ${duration}ms:`, error)
     
     // Log error observability
     try {
@@ -303,7 +304,7 @@ Deno.serve(async (req) => {
         p_processed_count: 0,
         p_job_source: 'cron'
       })
-    } catch (e) { console.warn('[auto-cleanup-jobs] Failed to log job run:', e); }
+    } catch (e) { logger.warn('[auto-cleanup-jobs] Failed to log job run:', e); }
     
     return new Response(
       JSON.stringify({ 

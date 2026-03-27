@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -177,14 +178,14 @@ Deno.serve(async (req) => {
     for (let i = 0; i < nodes.length; i += 100) {
       const batch = nodes.slice(i, i + 100);
       const { error } = await supabase.from("security_graph_nodes").insert(batch);
-      if (error) console.error("Node insert error:", error);
+      if (error) logger.error("Node insert error:", error);
     }
 
     // Insert edges in batches
     for (let i = 0; i < edges.length; i += 100) {
       const batch = edges.slice(i, i + 100);
       const { error } = await supabase.from("security_graph_edges").insert(batch);
-      if (error) console.error("Edge insert error:", error);
+      if (error) logger.error("Edge insert error:", error);
     }
 
     return new Response(JSON.stringify({

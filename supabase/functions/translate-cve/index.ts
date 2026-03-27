@@ -1,4 +1,5 @@
 import { aiSimpleComplete, getProviderStatus } from '../_shared/ai-multi-provider.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,7 +43,7 @@ Seja conciso e claro. Responda APENAS com a tradução, sem explicações adicio
     );
 
     if (response.error) {
-      console.error('AI translation error:', response.error);
+      logger.error('AI translation error:', response.error);
       return new Response(JSON.stringify({ 
         translated: description, // Fallback to original
         error: response.error,
@@ -53,7 +54,7 @@ Seja conciso e claro. Responda APENAS com a tradução, sem explicações adicio
       });
     }
 
-    console.log(`[translate-cve] CVE ${cve_id} translated via ${response.provider} in ${response.latencyMs}ms`);
+    logger.info(`[translate-cve] CVE ${cve_id} translated via ${response.provider} in ${response.latencyMs}ms`);
 
     return new Response(JSON.stringify({ 
       cve_id,
@@ -69,7 +70,7 @@ Seja conciso e claro. Responda APENAS com a tradução, sem explicações adicio
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Translation error:', errorMessage);
+    logger.error('Translation error:', errorMessage);
     return new Response(JSON.stringify({ 
       error: errorMessage,
       translated: null,

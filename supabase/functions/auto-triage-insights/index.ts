@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -18,7 +19,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('[auto-triage-insights] Starting auto-triage of old informational insights...');
+    logger.info('[auto-triage-insights] Starting auto-triage of old informational insights...');
 
     // Calculate 7 days ago
     const sevenDaysAgo = new Date();
@@ -33,12 +34,12 @@ Deno.serve(async (req) => {
       .lt('created_at', sevenDaysAgo.toISOString());
 
     if (fetchError) {
-      console.error('[auto-triage-insights] Error fetching insights:', fetchError);
+      logger.error('[auto-triage-insights] Error fetching insights:', fetchError);
       throw fetchError;
     }
 
     if (!insightsToTriage || insightsToTriage.length === 0) {
-      console.log('[auto-triage-insights] No insights to auto-triage');
+      logger.info('[auto-triage-insights] No insights to auto-triage');
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -49,7 +50,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[auto-triage-insights] Found ${insightsToTriage.length} insights to auto-triage`);
+    logger.info(`[auto-triage-insights] Found ${insightsToTriage.length} insights to auto-triage`);
 
     // Update insights
     const { data: updated, error: updateError } = await supabase
@@ -69,12 +70,12 @@ Deno.serve(async (req) => {
       .select('id');
 
     if (updateError) {
-      console.error('[auto-triage-insights] Error updating insights:', updateError);
+      logger.error('[auto-triage-insights] Error updating insights:', updateError);
       throw updateError;
     }
 
     const triagedCount = updated?.length || 0;
-    console.log(`[auto-triage-insights] Auto-triaged ${triagedCount} insights`);
+    logger.info(`[auto-triage-insights] Auto-triaged ${triagedCount} insights`);
 
     // Log audit event (defensive - non-blocking)
     if (triagedCount > 0) {
@@ -91,7 +92,7 @@ Deno.serve(async (req) => {
           success: true
         });
       } catch (auditError) {
-        console.warn('[auto-triage-insights] Audit log failed (non-blocking):', auditError);
+        logger.warn('[auto-triage-insights] Audit log failed (non-blocking):', auditError);
         // Don't block the operation if audit fails
       }
     }
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch (logErr) {
-      console.warn('[auto-triage-insights] Failed to log job run:', logErr);
+      logger.warn('[auto-triage-insights] Failed to log job run:', logErr);
     }
 
     return new Response(
@@ -128,7 +129,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     const durationMs = Date.now() - startedAt;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[auto-triage-insights] Error:', error);
+    logger.error('[auto-triage-insights] Error:', error);
 
     // Log failed job execution
     try {
@@ -145,7 +146,7 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch (logErr) {
-      console.warn('[auto-triage-insights] Failed to log error:', logErr);
+      logger.warn('[auto-triage-insights] Failed to log error:', logErr);
     }
 
     return new Response(

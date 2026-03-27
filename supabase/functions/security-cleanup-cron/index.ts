@@ -11,6 +11,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsSecurityHeaders, secureJsonResponse, secureCorsPreflightResponse, secureErrorResponse } from '../_shared/security-headers.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -35,7 +36,7 @@ Deno.serve(async (req: Request) => {
 
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
-  console.log(`[${requestId}] Security cleanup cron started`);
+  logger.info(`[${requestId}] Security cleanup cron started`);
 
   try {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
@@ -60,10 +61,10 @@ Deno.serve(async (req: Request) => {
       .select('id');
     
     if (hmacError) {
-      console.error(`[${requestId}] HMAC cleanup error:`, hmacError);
+      logger.error(`[${requestId}] HMAC cleanup error:`, hmacError);
     }
     stats.hmac_signatures_deleted = hmacDeleted?.length || 0;
-    console.log(`[${requestId}] Deleted ${stats.hmac_signatures_deleted} old HMAC signatures`);
+    logger.info(`[${requestId}] Deleted ${stats.hmac_signatures_deleted} old HMAC signatures`);
 
     // 2. Cleanup rate_limits > 2 hours (P1 optimization - reduced from 7 days)
     const rateLimitCutoff = new Date(now.getTime() - 2 * 60 * 60 * 1000);
@@ -74,7 +75,7 @@ Deno.serve(async (req: Request) => {
       .select('id');
     
     stats.rate_limits_deleted = rateLimitsDeleted?.length || 0;
-    console.log(`[${requestId}] Deleted ${stats.rate_limits_deleted} old rate limits`);
+    logger.info(`[${requestId}] Deleted ${stats.rate_limits_deleted} old rate limits`);
 
     // 3. Cleanup failed_login_attempts > 30 days
     const failedLoginCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -85,7 +86,7 @@ Deno.serve(async (req: Request) => {
       .select('id');
     
     stats.failed_logins_deleted = failedLoginsDeleted?.length || 0;
-    console.log(`[${requestId}] Deleted ${stats.failed_logins_deleted} old failed login attempts`);
+    logger.info(`[${requestId}] Deleted ${stats.failed_logins_deleted} old failed login attempts`);
 
     // 4. Cleanup expired IP blocklist entries
     const { data: ipBlocklistDeleted, error: ipError } = await supabase
@@ -95,7 +96,7 @@ Deno.serve(async (req: Request) => {
       .select('id');
     
     stats.ip_blocklist_deleted = ipBlocklistDeleted?.length || 0;
-    console.log(`[${requestId}] Deleted ${stats.ip_blocklist_deleted} expired IP blocklist entries`);
+    logger.info(`[${requestId}] Deleted ${stats.ip_blocklist_deleted} expired IP blocklist entries`);
 
     // 5. Cleanup old agent_system_metrics > 30 days
     const metricsCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -106,7 +107,7 @@ Deno.serve(async (req: Request) => {
       .select('id');
     
     stats.old_metrics_deleted = metricsDeleted?.length || 0;
-    console.log(`[${requestId}] Deleted ${stats.old_metrics_deleted} old system metrics`);
+    logger.info(`[${requestId}] Deleted ${stats.old_metrics_deleted} old system metrics`);
 
     // 6. Archive/cleanup security_logs > 90 days
     const securityLogsCutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
@@ -117,7 +118,7 @@ Deno.serve(async (req: Request) => {
       .select('id');
     
     stats.security_logs_archived = securityLogsDeleted?.length || 0;
-    console.log(`[${requestId}] Archived ${stats.security_logs_archived} old security logs`);
+    logger.info(`[${requestId}] Archived ${stats.security_logs_archived} old security logs`);
 
     // Calculate execution time
     const executionTime = Date.now() - startTime;
@@ -136,7 +137,7 @@ Deno.serve(async (req: Request) => {
     });
 
     const totalDeleted = Object.values(stats).reduce((a, b) => a + b, 0);
-    console.log(`[${requestId}] Security cleanup complete. Total deleted: ${totalDeleted}. Time: ${executionTime}ms`);
+    logger.info(`[${requestId}] Security cleanup complete. Total deleted: ${totalDeleted}. Time: ${executionTime}ms`);
 
     // Log observability to scheduled_job_runs
     await supabase.rpc('log_scheduled_job_run', {
@@ -159,7 +160,7 @@ Deno.serve(async (req: Request) => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[${requestId}] Error:`, error);
+    logger.error(`[${requestId}] Error:`, error);
     
     // Log error observability
     try {
@@ -173,7 +174,7 @@ Deno.serve(async (req: Request) => {
         p_processed_count: 0,
         p_job_source: 'cron'
       });
-    } catch (logErr) { console.warn('[security-cleanup-cron] Failed to log error:', logErr); }
+    } catch (logErr) { logger.warn('[security-cleanup-cron] Failed to log error:', logErr); }
     
     return secureErrorResponse(
       'Security cleanup failed',

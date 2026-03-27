@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { authenticateApiKey, logApiRequest, hasScope } from '../_shared/api-auth.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   const startTime = Date.now();
@@ -130,7 +131,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error in api-tenant-stats:', error);
+    logger.error('Error in api-tenant-stats:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       {

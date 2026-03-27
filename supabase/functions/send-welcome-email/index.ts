@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { Resend } from 'https://esm.sh/resend@4.0.0';
+import { logger } from '../_shared/logger.ts';
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
@@ -27,7 +28,7 @@ Deno.serve(async (req) => {
 
     // Check if RESEND_API_KEY is configured
     if (!Deno.env.get('RESEND_API_KEY')) {
-      console.error('RESEND_API_KEY not configured, skipping welcome email');
+      logger.error('RESEND_API_KEY not configured, skipping welcome email');
       return new Response(
         JSON.stringify({ success: false, message: 'Email service not configured' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -180,14 +181,14 @@ Deno.serve(async (req) => {
         `,
       });
 
-      console.log('Welcome email sent successfully to:', email);
+      logger.info('Welcome email sent successfully to:', email);
       
       return new Response(
         JSON.stringify({ success: true, message: 'Welcome email sent' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError);
+      logger.error('Failed to send welcome email:', emailError);
       // Don't fail the request if email fails
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to send email', details: String(emailError) }),
@@ -195,7 +196,7 @@ Deno.serve(async (req) => {
       );
     }
   } catch (error) {
-    console.error('Error in send-welcome-email:', error);
+    logger.error('Error in send-welcome-email:', error);
     return new Response(
       JSON.stringify({ error: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

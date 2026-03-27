@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,7 +46,7 @@ Deno.serve(async (req) => {
     // Get current user
     const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) {
-      console.error('[dlq-action] Auth error:', userError);
+      logger.error('[dlq-action] Auth error:', userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[dlq-action] User ${user.id} performing ${action}`);
+    logger.info(`[dlq-action] User ${user.id} performing ${action}`);
 
     // Get user's tenants for authorization
     const { data: userRoles, error: rolesError } = await serviceClient
@@ -140,14 +141,14 @@ Deno.serve(async (req) => {
           .eq('id', dlqItemId);
 
         if (updateError) {
-          console.error('[dlq-action] Resolve failed:', updateError);
+          logger.error('[dlq-action] Resolve failed:', updateError);
           return new Response(
             JSON.stringify({ error: 'Failed to resolve item' }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
-        console.log(`[dlq-action] Resolved item ${dlqItemId}`);
+        logger.info(`[dlq-action] Resolved item ${dlqItemId}`);
         return new Response(
           JSON.stringify({ success: true, dlqItemId }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -206,14 +207,14 @@ Deno.serve(async (req) => {
           .in('id', dlqItemIds);
 
         if (updateError) {
-          console.error('[dlq-action] Batch resolve failed:', updateError);
+          logger.error('[dlq-action] Batch resolve failed:', updateError);
           return new Response(
             JSON.stringify({ error: 'Failed to resolve items' }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
-        console.log(`[dlq-action] Resolved ${dlqItemIds.length} items`);
+        logger.info(`[dlq-action] Resolved ${dlqItemIds.length} items`);
         return new Response(
           JSON.stringify({ success: true, count: dlqItemIds.length }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -264,14 +265,14 @@ Deno.serve(async (req) => {
           .eq('id', dlqItemId);
 
         if (deleteError) {
-          console.error('[dlq-action] Delete failed:', deleteError);
+          logger.error('[dlq-action] Delete failed:', deleteError);
           return new Response(
             JSON.stringify({ error: 'Failed to delete item' }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
-        console.log(`[dlq-action] Deleted item ${dlqItemId}`);
+        logger.info(`[dlq-action] Deleted item ${dlqItemId}`);
         return new Response(
           JSON.stringify({ success: true }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -286,7 +287,7 @@ Deno.serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('[dlq-action] Unexpected error:', error);
+    logger.error('[dlq-action] Unexpected error:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

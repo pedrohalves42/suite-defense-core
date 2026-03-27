@@ -15,6 +15,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
+import { logger } from '../_shared/logger.ts';
 
 interface ExecutionResult {
   actions_processed: number
@@ -42,7 +43,7 @@ Deno.serve(async (req) => {
   const requestId = crypto.randomUUID()
   const startTime = Date.now()
   
-  console.log(`[${requestId}] auto-execute-ai-actions started`)
+  logger.info(`[${requestId}] auto-execute-ai-actions started`)
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -52,7 +53,7 @@ Deno.serve(async (req) => {
     // KILL SWITCH CHECK (ADR-FINAL) - Halt all automation if system is in halt_jobs mode
     const { data: systemMode } = await supabase.rpc('get_system_mode_safe')
     if (systemMode === 'halt_jobs') {
-      console.log(`[${requestId}] SYSTEM_HALTED: Kill switch active, skipping AI actions`)
+      logger.info(`[${requestId}] SYSTEM_HALTED: Kill switch active, skipping AI actions`)
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -82,13 +83,13 @@ Deno.serve(async (req) => {
         )
         
         if (!response.ok) {
-          console.error(`[${requestId}] Policy resolution failed: ${response.status}`)
+          logger.error(`[${requestId}] Policy resolution failed: ${response.status}`)
           return { execution_mode: 'approval', source: 'tenant_fallback' }
         }
         
         return await response.json()
       } catch (err) {
-        console.error(`[${requestId}] Policy resolution error:`, err)
+        logger.error(`[${requestId}] Policy resolution error:`, err)
         return { execution_mode: 'approval', source: 'tenant_fallback' }
       }
     }
@@ -102,7 +103,7 @@ Deno.serve(async (req) => {
     // Fallback para query direta se RPC não existir
     let pendingActions = pendingActionsRaw
     if (actionsError || !pendingActionsRaw) {
-      console.log(`[${requestId}] Using fallback query (RPC not available)`)
+      logger.info(`[${requestId}] Using fallback query (RPC not available)`)
       const { data, error } = await supabase
         .from('ai_actions')
         .select(`
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
     }
 
     if (!pendingActions || pendingActions.length === 0) {
-      console.log(`[${requestId}] No pending actions found`)
+      logger.info(`[${requestId}] No pending actions found`)
       
       // Log job run even when no actions
       await supabase.rpc('log_scheduled_job_run', {
@@ -144,7 +145,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log(`[${requestId}] Found ${pendingActions.length} pending actions`)
+    logger.info(`[${requestId}] Found ${pendingActions.length} pending actions`)
 
     // Buscar configurações de ações (whitelist)
     const { data: actionConfigs } = await supabase
@@ -169,14 +170,14 @@ Deno.serve(async (req) => {
       
       // Skip se não está na whitelist ou está desabilitado
       if (!config || !config.is_enabled) {
-        console.log(`[${requestId}] Skipping ${action.id}: action type ${action.action_type} not enabled`)
+        logger.info(`[${requestId}] Skipping ${action.id}: action type ${action.action_type} not enabled`)
         result.actions_skipped++
         continue
       }
 
       // Skip se requer aprovação manual (from ai_action_configs)
       if (config.requires_approval) {
-        console.log(`[${requestId}] Skipping ${action.id}: requires manual approval (config)`)
+        logger.info(`[${requestId}] Skipping ${action.id}: requires manual approval (config)`)
         result.actions_skipped++
         continue
       }
@@ -185,18 +186,18 @@ Deno.serve(async (req) => {
       const insightType = insight?.insight_type || ''
       const policy = await resolvePolicy(action.tenant_id, insightType)
       
-      console.log(`[${requestId}] Action ${action.id} policy: mode=${policy.execution_mode}, source=${policy.source}`)
+      logger.info(`[${requestId}] Action ${action.id} policy: mode=${policy.execution_mode}, source=${policy.source}`)
       
       // Skip se tenant desabilitou este tipo de insight
       if (policy.execution_mode === 'disabled') {
-        console.log(`[${requestId}] Skipping ${action.id}: disabled by policy (source=${policy.source})`)
+        logger.info(`[${requestId}] Skipping ${action.id}: disabled by policy (source=${policy.source})`)
         result.actions_skipped++
         continue
       }
       
       // Skip se requer aprovação (não é auto)
       if (policy.execution_mode === 'approval') {
-        console.log(`[${requestId}] Skipping ${action.id}: requires approval (source=${policy.source})`)
+        logger.info(`[${requestId}] Skipping ${action.id}: requires approval (source=${policy.source})`)
         result.actions_skipped++
         continue
       }
@@ -204,7 +205,7 @@ Deno.serve(async (req) => {
       // Só continua se execution_mode === 'auto'
       // Skip se é alto risco (proteção adicional)
       if (config.risk_level === 'high') {
-        console.log(`[${requestId}] Skipping ${action.id}: high risk action`)
+        logger.info(`[${requestId}] Skipping ${action.id}: high risk action`)
         result.actions_skipped++
         continue
       }
@@ -218,7 +219,7 @@ Deno.serve(async (req) => {
       })
 
       if (needsHumanReview) {
-        console.log(`[${requestId}] HUMAN-IN-THE-LOOP: Action ${action.id} (severity=${insightSeverity}) requires human review, creating approval request`)
+        logger.info(`[${requestId}] HUMAN-IN-THE-LOOP: Action ${action.id} (severity=${insightSeverity}) requires human review, creating approval request`)
         
         // Create approval request instead of auto-executing
         await supabase.from('approval_requests').insert({
@@ -253,7 +254,7 @@ Deno.serve(async (req) => {
         })
 
       if (!canExecute) {
-        console.log(`[${requestId}] Skipping ${action.id}: rate limit exceeded`)
+        logger.info(`[${requestId}] Skipping ${action.id}: rate limit exceeded`)
         result.actions_skipped++
         continue
       }
@@ -336,7 +337,7 @@ Deno.serve(async (req) => {
           }
 
           default:
-            console.log(`[${requestId}] Action type ${action.action_type} not auto-executable`)
+            logger.info(`[${requestId}] Action type ${action.action_type} not auto-executable`)
             result.actions_skipped++
             continue
         }
@@ -381,14 +382,14 @@ Deno.serve(async (req) => {
             .eq('id', action.insight_id)
           
           result.insights_resolved++
-          console.log(`[${requestId}] Insight ${action.insight_id} marked as resolved (cycle closed)`)
+          logger.info(`[${requestId}] Insight ${action.insight_id} marked as resolved (cycle closed)`)
         }
 
-        console.log(`[${requestId}] Auto-executed action ${action.id} (policy_source=${policy.source})`)
+        logger.info(`[${requestId}] Auto-executed action ${action.id} (policy_source=${policy.source})`)
         result.actions_executed++
 
       } catch (execError: any) {
-        console.error(`[${requestId}] Failed to execute action ${action.id}:`, execError)
+        logger.error(`[${requestId}] Failed to execute action ${action.id}:`, execError)
         result.errors.push(`${action.id}: ${execError.message}`)
         
         // Marcar ação como falhou
@@ -413,7 +414,7 @@ Deno.serve(async (req) => {
     }
 
     const duration = Date.now() - startTime
-    console.log(`[${requestId}] Completed in ${duration}ms:`, result)
+    logger.info(`[${requestId}] Completed in ${duration}ms:`, result)
 
     // Log job run
     await supabase.rpc('log_scheduled_job_run', {
@@ -437,7 +438,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     const duration = Date.now() - startTime
-    console.error(`[${requestId}] Error after ${duration}ms:`, error)
+    logger.error(`[${requestId}] Error after ${duration}ms:`, error)
     
     // Log job run failure
     const supabase = createClient(

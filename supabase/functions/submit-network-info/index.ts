@@ -2,6 +2,7 @@ import { requireEnv } from '../_shared/env.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { hashToken } from '../_shared/token-hash.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -58,7 +59,7 @@ serve(async (req) => {
       .single();
 
     if (tokenError || !tokenData) {
-      console.error('Invalid agent token:', tokenError);
+      logger.error('Invalid agent token:', tokenError);
       return new Response(
         JSON.stringify({ error: 'Invalid or expired agent token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -91,7 +92,7 @@ serve(async (req) => {
       });
 
     if (insertError) {
-      console.error('Error inserting network info:', insertError);
+      logger.error('Error inserting network info:', insertError);
       return new Response(
         JSON.stringify({ error: 'Failed to save network info' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -105,7 +106,7 @@ serve(async (req) => {
       .eq('agent_id', agentId)
       .lt('collected_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
-    console.log(`Network info saved for agent ${agentId}`);
+    logger.info(`Network info saved for agent ${agentId}`);
 
     return new Response(
       JSON.stringify({ success: true }),
@@ -113,7 +114,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in submit-network-info:', error);
+    logger.error('Error in submit-network-info:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

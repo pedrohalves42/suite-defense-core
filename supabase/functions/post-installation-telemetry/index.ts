@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { verifyHmacSignature } from "../_shared/hmac.ts";
 import { hashToken } from "../_shared/token-hash.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { logger } from '../_shared/logger.ts';
 
 // HARDENED: Restrict CORS — this endpoint is called by PowerShell agents, not browsers
 const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || "https://cybershield-audit.lovable.app";
@@ -19,7 +20,7 @@ serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] POST installation telemetry request started`);
+  logger.info(`[${requestId}] POST installation telemetry request started`);
 
   try {
     const supabaseClient = createClient(
@@ -32,9 +33,9 @@ serve(async (req) => {
     let body: any;
     try {
       body = await req.json();
-      console.log(`[${requestId}] Body parsed successfully`);
+      logger.info(`[${requestId}] Body parsed successfully`);
     } catch (parseError) {
-      console.error(`[${requestId}] Body parse failed:`, parseError);
+      logger.error(`[${requestId}] Body parse failed:`, parseError);
       return new Response(
         JSON.stringify({ 
           error: "Invalid JSON body", 
@@ -47,7 +48,7 @@ serve(async (req) => {
     // HARDENED: X-Agent-Token is REQUIRED — no fallback mode
     const agentTokenHeader = req.headers.get("X-Agent-Token");
     if (!agentTokenHeader) {
-      console.warn(`[${requestId}] REJECTED: Missing X-Agent-Token header`);
+      logger.warn(`[${requestId}] REJECTED: Missing X-Agent-Token header`);
       return new Response(
         JSON.stringify({ 
           error: "Authentication required", 
@@ -61,7 +62,7 @@ serve(async (req) => {
     // Validate token format
     const tokenValidation = AgentTokenSchema.safeParse(agentTokenHeader);
     if (!tokenValidation.success) {
-      console.warn(`[${requestId}] REJECTED: Invalid token format`);
+      logger.warn(`[${requestId}] REJECTED: Invalid token format`);
       return new Response(
         JSON.stringify({ 
           error: "Invalid token format",
@@ -81,7 +82,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (tokenError || !agentToken) {
-      console.warn(`[${requestId}] REJECTED: Token not found, prefix: ${agentTokenHeader.substring(0, 8)}`);
+      logger.warn(`[${requestId}] REJECTED: Token not found, prefix: ${agentTokenHeader.substring(0, 8)}`);
       return new Response(
         JSON.stringify({ 
           error: "Invalid or unknown token",
@@ -93,7 +94,7 @@ serve(async (req) => {
     }
 
     if (!agentToken.is_active) {
-      console.warn(`[${requestId}] REJECTED: Token inactive`);
+      logger.warn(`[${requestId}] REJECTED: Token inactive`);
       return new Response(
         JSON.stringify({ 
           error: "Token is inactive",
@@ -105,7 +106,7 @@ serve(async (req) => {
     }
 
     if (agentToken.expires_at && new Date(agentToken.expires_at) < new Date()) {
-      console.warn(`[${requestId}] REJECTED: Token expired at ${agentToken.expires_at}`);
+      logger.warn(`[${requestId}] REJECTED: Token expired at ${agentToken.expires_at}`);
       return new Response(
         JSON.stringify({ 
           error: "Token has expired",
@@ -129,7 +130,7 @@ serve(async (req) => {
     const isVerified = hmacResult.valid;
     
     if (!isVerified) {
-      console.warn(`[${requestId}] REJECTED: HMAC verification failed:`, {
+      logger.warn(`[${requestId}] REJECTED: HMAC verification failed:`, {
         errorCode: hmacResult.errorCode,
         errorMessage: hmacResult.errorMessage,
         agentName: agent.agent_name
@@ -145,7 +146,7 @@ serve(async (req) => {
       );
     }
     
-    console.log(`[${requestId}] HMAC verified successfully for agent: ${agent.agent_name}`);
+    logger.info(`[${requestId}] HMAC verified successfully for agent: ${agent.agent_name}`);
 
     // Parse telemetry data from body
     const {
@@ -164,7 +165,7 @@ serve(async (req) => {
       metadata
     } = body;
     
-    console.log(`[${requestId}] Telemetry data received:`, { 
+    logger.info(`[${requestId}] Telemetry data received:`, { 
       agent_name: agent.agent_name, 
       success, 
       task_created, 
@@ -210,7 +211,7 @@ serve(async (req) => {
       .insert(telemetryData);
 
     if (!insertError) {
-      console.log(`[${requestId}] [OK]  Telemetry inserted successfully`, {
+      logger.info(`[${requestId}] [OK]  Telemetry inserted successfully`, {
         agent_id: agent.id,
         agent_name: agent.agent_name,
         event_type: 'post_installation',
@@ -222,7 +223,7 @@ serve(async (req) => {
     if (insertError) {
       // Handle duplicate key violations gracefully (idempotent operation)
       if (insertError.code === "23505") {
-        console.log(`[${requestId}] Duplicate telemetry detected (idempotent), returning success`);
+        logger.info(`[${requestId}] Duplicate telemetry detected (idempotent), returning success`);
         return new Response(
           JSON.stringify({ 
             status: "already_recorded", 
@@ -234,11 +235,11 @@ serve(async (req) => {
         );
       }
       
-      console.error(`[${requestId}] Database insert error:`, insertError);
+      logger.error(`[${requestId}] Database insert error:`, insertError);
       throw insertError;
     }
 
-    console.log(`[${requestId}] Telemetry recorded successfully`, {
+    logger.info(`[${requestId}] Telemetry recorded successfully`, {
       agent_id: agent.id,
       agent_name: agent.agent_name,
       verified: true,
@@ -265,7 +266,7 @@ serve(async (req) => {
 
     // Handle failed installations by notifying admins (optional)
     if (!success) {
-      console.log(`[${requestId}] Installation failed, checking for admin notification`, {
+      logger.info(`[${requestId}] Installation failed, checking for admin notification`, {
         errors,
       });
 
@@ -284,7 +285,7 @@ serve(async (req) => {
 
       if (adminRole) {
         const profiles = adminRole.profiles as any;
-        console.log(`[${requestId}] Admin found for notification`, {
+        logger.info(`[${requestId}] Admin found for notification`, {
           adminEmail: profiles?.email,
         });
       }
@@ -304,7 +305,7 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error(`[${requestId}] Unhandled error:`, { 
+    logger.error(`[${requestId}] Unhandled error:`, { 
       message: error.message, 
       stack: error.stack 
     });

@@ -104,7 +104,7 @@ Deno.serve(async (req: Request) => {
         p_processed_count: 0,
         p_job_source: 'cron'
       });
-    } catch (e) { console.warn('[hmac-cleanup-scheduled] Failed to log job run:', e); }
+    } catch (e) { logger.warn('[hmac-cleanup-scheduled] Failed to log job run:', e); }
     
     return new Response(JSON.stringify({ 
       error: 'Cleanup failed',

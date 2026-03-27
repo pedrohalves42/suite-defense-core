@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,7 +45,7 @@ Deno.serve(async (req) => {
     const isSuperAdmin = roles.some(r => r.role === 'super_admin');
     const tenantId = isSuperAdmin ? null : roles[0].tenant_id;
 
-    console.log(`[SUBSCRIPTION-ANALYTICS] User ${userData.user.id} (super_admin: ${isSuperAdmin})`);
+    logger.info(`[SUBSCRIPTION-ANALYTICS] User ${userData.user.id} (super_admin: ${isSuperAdmin})`);
 
     // Query base para subscriptions
     let subsQuery = supabase
@@ -239,14 +240,14 @@ Deno.serve(async (req) => {
       avg_revenue_per_customer: Math.round(avgRevenuePerCustomer * 100) / 100,
     };
 
-    console.log(`[SUBSCRIPTION-ANALYTICS] Success: MRR=${response.mrr}, Churn=${response.churn_rate}%`);
+    logger.info(`[SUBSCRIPTION-ANALYTICS] Success: MRR=${response.mrr}, Churn=${response.churn_rate}%`);
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    console.error("[SUBSCRIPTION-ANALYTICS] Error:", error);
+    logger.error("[SUBSCRIPTION-ANALYTICS] Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       {

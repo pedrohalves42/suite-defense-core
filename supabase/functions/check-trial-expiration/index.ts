@@ -1,12 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-console.log("[CHECK-TRIAL-EXPIRATION] Cron job started");
+logger.info("[CHECK-TRIAL-EXPIRATION] Cron job started");
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -57,8 +58,8 @@ Deno.serve(async (req) => {
       .lte("trial_end", oneDayFromNow.toISOString())
       .is("metadata->trial_1day_email_sent", null);
 
-    console.log(`[CHECK-TRIAL-EXPIRATION] Found ${expiringSoon?.length || 0} trials expiring in 7 days`);
-    console.log(`[CHECK-TRIAL-EXPIRATION] Found ${expiringTomorrow?.length || 0} trials expiring in 1 day`);
+    logger.info(`[CHECK-TRIAL-EXPIRATION] Found ${expiringSoon?.length || 0} trials expiring in 7 days`);
+    logger.info(`[CHECK-TRIAL-EXPIRATION] Found ${expiringTomorrow?.length || 0} trials expiring in 1 day`);
 
     // Send 7-day reminders
     for (const sub of expiringSoon || []) {
@@ -100,7 +101,7 @@ Deno.serve(async (req) => {
         .eq("tenant_id", sub.tenant_id);
     }
 
-    console.log("[CHECK-TRIAL-EXPIRATION] Completed successfully");
+    logger.info("[CHECK-TRIAL-EXPIRATION] Completed successfully");
 
     const result = { 
       success: true,
@@ -123,7 +124,7 @@ Deno.serve(async (req) => {
       { headers: { "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
-    console.error("[CHECK-TRIAL-EXPIRATION] Error:", error);
+    logger.error("[CHECK-TRIAL-EXPIRATION] Error:", error);
     
     // Log error observability
     try {
@@ -136,7 +137,7 @@ Deno.serve(async (req) => {
         p_processed_count: 0,
         p_job_source: 'cron'
       });
-    } catch (e) { console.warn('[check-trial-expiration] Failed to log job run:', e); }
+    } catch (e) { logger.warn('[check-trial-expiration] Failed to log job run:', e); }
     
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),

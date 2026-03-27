@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { hashToken } from '../_shared/token-hash.ts';
 import { corsSecurityHeaders, secureJsonResponse, secureErrorResponse, secureCorsPreflightResponse } from '../_shared/security-headers.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface ProcessEntry {
   pid: number;
@@ -60,7 +61,7 @@ serve(async (req) => {
       .single();
 
     if (tokenError || !tokenData) {
-      console.error('Invalid agent token:', tokenError);
+      logger.error('Invalid agent token:', tokenError);
       return secureErrorResponse('Invalid or expired agent token', 401);
     }
 
@@ -130,7 +131,7 @@ serve(async (req) => {
       });
 
     if (insertError) {
-      console.error('Error inserting process data:', insertError);
+      logger.error('Error inserting process data:', insertError);
       return secureErrorResponse('Failed to save process data', 500);
     }
 
@@ -181,11 +182,11 @@ serve(async (req) => {
           automationTriggered = result.triggered || 0;
         }
       } catch (e) {
-        console.warn('Automation evaluation failed (non-blocking)', e);
+        logger.warn('Automation evaluation failed (non-blocking)', e);
       }
     }
 
-    console.log(`Process snapshot saved for agent ${agentId}: ${processes.length} processes, ${services.length} services, ${newProcesses.length} new, ${suspiciousProcesses.length} suspicious, ${automationTriggered} automations`);
+    logger.info(`Process snapshot saved for agent ${agentId}: ${processes.length} processes, ${services.length} services, ${newProcesses.length} new, ${suspiciousProcesses.length} suspicious, ${automationTriggered} automations`);
 
     return secureJsonResponse({
       success: true,
@@ -195,7 +196,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in submit-processes:', error);
+    logger.error('Error in submit-processes:', error);
     return secureErrorResponse(
       error instanceof Error ? error.message : 'Unknown error',
       500

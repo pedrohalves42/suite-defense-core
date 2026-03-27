@@ -21,6 +21,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface CollectionJobTemplate {
   type: string;
@@ -105,7 +106,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    console.log(`[${requestId}] [seed-collection-jobs] Starting`);
+    logger.info(`[${requestId}] [seed-collection-jobs] Starting`);
 
     // Get active agents with recent heartbeat (< 2 hours)
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
@@ -122,14 +123,14 @@ Deno.serve(async (req) => {
     }
 
     if (!activeAgents || activeAgents.length === 0) {
-      console.log(`[${requestId}] No active agents with recent heartbeat`);
+      logger.info(`[${requestId}] No active agents with recent heartbeat`);
       return new Response(
         JSON.stringify({ success: true, message: 'No active agents', jobs_created: 0 }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[${requestId}] Found ${activeAgents.length} active agents`);
+    logger.info(`[${requestId}] Found ${activeAgents.length} active agents`);
 
     let totalCreated = 0;
     let totalSkipped = 0;
@@ -154,19 +155,19 @@ Deno.serve(async (req) => {
           );
 
           if (createError) {
-            console.error(`[${requestId}] Error creating ${template.type} for ${agent.agent_name}:`, createError.message);
+            logger.error(`[${requestId}] Error creating ${template.type} for ${agent.agent_name}:`, createError.message);
             skipped++;
             continue;
           }
 
           if (jobId) {
             created++;
-            console.log(`[${requestId}] Created ${template.type} job ${jobId} for ${agent.agent_name}`);
+            logger.info(`[${requestId}] Created ${template.type} job ${jobId} for ${agent.agent_name}`);
           } else {
             skipped++; // Already exists (dedup)
           }
         } catch (err) {
-          console.error(`[${requestId}] Exception creating ${template.type} for ${agent.agent_name}:`, err);
+          logger.error(`[${requestId}] Exception creating ${template.type} for ${agent.agent_name}:`, err);
           skipped++;
         }
       }
@@ -186,7 +187,7 @@ Deno.serve(async (req) => {
       duration_ms: durationMs,
     };
 
-    console.log(`[${requestId}] [seed-collection-jobs] Done:`, JSON.stringify(result));
+    logger.info(`[${requestId}] [seed-collection-jobs] Done:`, JSON.stringify(result));
 
     // Report cron health
     try {
@@ -198,7 +199,7 @@ Deno.serve(async (req) => {
         p_processed_count: totalCreated,
         p_job_source: 'cron',
       });
-    } catch (e) { console.warn('[seed-collection-jobs] Failed to log job run:', e); }
+    } catch (e) { logger.warn('[seed-collection-jobs] Failed to log job run:', e); }
 
     return new Response(JSON.stringify(result), {
       status: 200,
@@ -206,7 +207,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[${requestId}] [seed-collection-jobs] Fatal:`, errorMsg);
+    logger.error(`[${requestId}] [seed-collection-jobs] Fatal:`, errorMsg);
 
     return new Response(
       JSON.stringify({ success: false, error: errorMsg }),

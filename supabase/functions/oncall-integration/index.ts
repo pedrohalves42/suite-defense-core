@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
+import { logger } from '../_shared/logger.ts';
 
 /**
  * On-Call Rotation / PagerDuty Integration
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
         status: 'triggered',
       })
 
-      console.log(`[oncall] Alert created: ${summary} (${severity})`)
+      logger.info(`[oncall] Alert created: ${summary} (${severity})`)
       return new Response(JSON.stringify({ success: true, incident_id: dedupKey }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -103,7 +104,7 @@ Deno.serve(async (req) => {
             escalationLevel: oc.escalation_level,
           })) || []
         } catch (e) {
-          console.warn('[oncall] PagerDuty API error:', (e as Error).message)
+          logger.warn('[oncall] PagerDuty API error:', (e as Error).message)
         }
       }
 
@@ -144,7 +145,7 @@ Deno.serve(async (req) => {
         escalated_at: new Date().toISOString(),
       }).eq('incident_id', incidentId)
 
-      console.log(`[oncall] Incident ${incidentId} escalated`)
+      logger.info(`[oncall] Incident ${incidentId} escalated`)
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -189,7 +190,7 @@ Deno.serve(async (req) => {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   } catch (error) {
-    console.error('[oncall-integration] Error:', error)
+    logger.error('[oncall-integration] Error:', error)
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })

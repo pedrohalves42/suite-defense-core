@@ -2,6 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsSecurityHeaders, secureJsonResponse, secureErrorResponse, secureCorsPreflightResponse } from '../_shared/security-headers.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * Evaluate Automation Rules — Enterprise-Grade Engine v2
@@ -293,7 +294,7 @@ async function logDecision(
       trigger_data: triggerData,
     });
   } catch (e) {
-    console.warn('[DecisionLog] Failed to log decision:', e);
+    logger.warn('[DecisionLog] Failed to log decision:', e);
   }
 }
 
@@ -315,7 +316,7 @@ async function logExecution(
       metadata,
     });
   } catch (e) {
-    console.warn('[ExecLog] Failed:', e);
+    logger.warn('[ExecLog] Failed:', e);
   }
 }
 
@@ -334,7 +335,7 @@ async function createApprovalRequest(
       status: 'pending',
     });
   } catch (e) {
-    console.warn('[Approval] Failed to create:', e);
+    logger.warn('[Approval] Failed to create:', e);
   }
 }
 
@@ -397,7 +398,7 @@ async function executeAction(
             }),
           });
         } catch (bridgeErr) {
-          console.warn('[SOAR Bridge] Failed:', bridgeErr);
+          logger.warn('[SOAR Bridge] Failed:', bridgeErr);
         }
       }
 
@@ -420,7 +421,7 @@ async function executeAction(
           agentDetail.scheduling_paused;
         
         if (isOffline) {
-          console.log(`[evaluate-automation-rules] Skipping job creation for offline agent ${agent.agent_name}`);
+          logger.info(`[evaluate-automation-rules] Skipping job creation for offline agent ${agent.agent_name}`);
           return { status: 'skipped', result: { reason: 'agent_offline', agent_name: agent.agent_name } };
         }
       }
@@ -771,22 +772,22 @@ async function evaluateForTenant(
       p_window_minutes: 10,
     });
     if (globalBreaker && !globalBreaker.allowed) {
-      console.warn(`[Enterprise Engine v2] GLOBAL CIRCUIT BREAKER OPEN for tenant ${tenantId}: ${globalBreaker.reason || 'Impact threshold exceeded'} (${globalBreaker.impact_percent}%)`);
+      logger.warn(`[Enterprise Engine v2] GLOBAL CIRCUIT BREAKER OPEN for tenant ${tenantId}: ${globalBreaker.reason || 'Impact threshold exceeded'} (${globalBreaker.impact_percent}%)`);
       return { evaluated: 0, triggered: 0, blocked: rules.length, decisions: 1, risk_score: undefined };
     }
   } catch (e) {
-    console.warn('[Enterprise Engine v2] Global circuit breaker check failed (fail-open):', e);
+    logger.warn('[Enterprise Engine v2] Global circuit breaker check failed (fail-open):', e);
   }
 
   // ─── P0: TENANT DAILY QUOTA ───
   try {
     const { data: quota } = await supabase.rpc('check_tenant_automation_quota', { p_tenant_id: tenantId });
     if (quota && !quota.allowed) {
-      console.warn(`[Enterprise Engine v2] TENANT QUOTA EXHAUSTED for ${tenantId}: ${quota.current}/${quota.max}`);
+      logger.warn(`[Enterprise Engine v2] TENANT QUOTA EXHAUSTED for ${tenantId}: ${quota.current}/${quota.max}`);
       return { evaluated: 0, triggered: 0, blocked: rules.length, decisions: 1, risk_score: undefined };
     }
   } catch (e) {
-    console.warn('[Enterprise Engine v2] Tenant quota check failed (fail-open):', e);
+    logger.warn('[Enterprise Engine v2] Tenant quota check failed (fail-open):', e);
   }
 
   const { data: metrics } = await supabase
@@ -962,7 +963,7 @@ Deno.serve(async (req) => {
         try {
           const payload = JSON.parse(atob(token.split('.')[1]));
           if (payload.role === 'service_role') isServiceRole = true;
-        } catch (e) { console.warn('[evaluate-automation-rules] JWT parse failed:', e); }
+        } catch (e) { logger.warn('[evaluate-automation-rules] JWT parse failed:', e); }
 
         if (!isServiceRole) {
           const { data: { user }, error: authError } = await supabase.auth.getUser(token);
@@ -1013,10 +1014,10 @@ Deno.serve(async (req) => {
             p_success: true,
             p_details: { tenants: tenants.length, evaluated: totalEvaluated, triggered: totalTriggered, blocked: totalBlocked, decisions: totalDecisions },
           });
-        } catch (e) { console.warn('[evaluate-automation-rules] Failed to update cron health:', e); }
+        } catch (e) { logger.warn('[evaluate-automation-rules] Failed to update cron health:', e); }
       }
 
-      console.log(`[Enterprise Engine v2] ${tenants.length} tenants | ${totalEvaluated} rules | ${totalTriggered} triggered | ${totalBlocked} blocked | ${totalDecisions} decisions`);
+      logger.info(`[Enterprise Engine v2] ${tenants.length} tenants | ${totalEvaluated} rules | ${totalTriggered} triggered | ${totalBlocked} blocked | ${totalDecisions} decisions`);
 
       return secureJsonResponse({
         tenants_processed: tenants.length,
@@ -1039,15 +1040,15 @@ Deno.serve(async (req) => {
           p_success: true,
           p_details: result,
         });
-      } catch (e) { console.warn('[evaluate-automation-rules] cron health update failed:', e); }
+      } catch (e) { logger.warn('[evaluate-automation-rules] cron health update failed:', e); }
     }
 
-    console.log(`[Enterprise Engine v2] tenant=${tenantId} | ${result.evaluated} rules | ${result.triggered} triggered | ${result.blocked} blocked | ${result.decisions} decisions | risk=${result.risk_score ?? 'n/a'}`);
+    logger.info(`[Enterprise Engine v2] tenant=${tenantId} | ${result.evaluated} rules | ${result.triggered} triggered | ${result.blocked} blocked | ${result.decisions} decisions | risk=${result.risk_score ?? 'n/a'}`);
 
     return secureJsonResponse(result);
 
   } catch (error) {
-    console.error('Error in evaluate-automation-rules:', error);
+    logger.error('Error in evaluate-automation-rules:', error);
     return secureErrorResponse(
       error instanceof Error ? error.message : 'Unknown error',
       500

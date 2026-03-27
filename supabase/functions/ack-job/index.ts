@@ -4,10 +4,11 @@ import { handleException, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { hashToken } from '../_shared/token-hash.ts'
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   // [WARN] ⚠️ DEPRECATED: Sunset date 2026-06-01. Use /submit-job-result (v3) instead.
-  console.warn('[ack-job] [WARN] ⚠️ DEPRECATED: Sunset 2026-06-01. Use /submit-job-result instead.');
+  logger.warn('[ack-job] [WARN] ⚠️ DEPRECATED: Sunset 2026-06-01. Use /submit-job-result instead.');
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -58,7 +59,7 @@ Deno.serve(async (req) => {
     
     // FASE 1.2: HMAC OBRIGATORIO - Agora hmac_secret e NOT NULL
     if (!agent.hmac_secret) {
-      console.error('[ack-job] CRITICAL SECURITY: Agent without HMAC secret:', agent.agent_name)
+      logger.error('[ack-job] CRITICAL SECURITY: Agent without HMAC secret:', agent.agent_name)
       return new Response(
         JSON.stringify({ error: 'HMAC secret not configured for agent' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -68,7 +69,7 @@ Deno.serve(async (req) => {
     // Verificar HMAC (obrigatorio)
     const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
     if (!hmacResult.valid) {
-      console.warn('[ack-job] HMAC verification failed:', {
+      logger.warn('[ack-job] HMAC verification failed:', {
         agent: agent.agent_name,
         errorCode: hmacResult.errorCode,
         errorMessage: hmacResult.errorMessage,
@@ -147,7 +148,7 @@ Deno.serve(async (req) => {
 
     const validatedJobId = jobIdValidation.data
 
-    console.log('[ACK] Job:', validatedJobId, 'por agente:', agent.agent_name)
+    logger.info('[ACK] Job:', validatedJobId, 'por agente:', agent.agent_name)
 
     // Buscar job primeiro para validar
     const { data: existingJob, error: fetchError } = await supabase
@@ -159,7 +160,7 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (fetchError || !existingJob) {
-      console.error('[ACK] Job nao encontrado:', validatedJobId, fetchError)
+      logger.error('[ACK] Job nao encontrado:', validatedJobId, fetchError)
       return new Response(
         JSON.stringify({ error: 'Job nao encontrado' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
@@ -167,8 +168,8 @@ Deno.serve(async (req) => {
     }
 
     // FASE 3: TELEMETRIA - Logar detalhes completos do job antes do ACK
-    console.log(`[ack-job] Processing acknowledgment for job ${validatedJobId}`)
-    console.log('[ack-job] Job details:', {
+    logger.info(`[ack-job] Processing acknowledgment for job ${validatedJobId}`)
+    logger.info('[ack-job] Job details:', {
       id: existingJob.id,
       type: existingJob.type,
       agent_name: existingJob.agent_name,
@@ -178,12 +179,12 @@ Deno.serve(async (req) => {
     })
 
     if (existingJob.status === 'done') {
-      console.log(`[ack-job] Job ${validatedJobId} already marked as done (idempotent ack)`)
+      logger.info(`[ack-job] Job ${validatedJobId} already marked as done (idempotent ack)`)
     }
 
     // Verificar se job pertence ao agente
     if (existingJob.agent_name !== agent.agent_name) {
-      console.error('[ACK] Job pertence a outro agente:', existingJob.agent_name, '!=', agent.agent_name)
+      logger.error('[ACK] Job pertence a outro agente:', existingJob.agent_name, '!=', agent.agent_name)
       return new Response(
         JSON.stringify({ error: 'Job pertence a outro agente' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
@@ -192,7 +193,7 @@ Deno.serve(async (req) => {
 
     // Idempotencia: se ja esta done, retornar sucesso
     if (existingJob.status === 'done') {
-      console.log('[ACK] Job ja estava confirmado (idempotente):', validatedJobId)
+      logger.info('[ACK] Job ja estava confirmado (idempotente):', validatedJobId)
       return new Response(
         JSON.stringify({ 
           ok: true, 
@@ -226,14 +227,14 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (updateError) {
-      console.error('[ACK] Erro ao atualizar job:', updateError)
+      logger.error('[ACK] Erro ao atualizar job:', updateError)
       return new Response(
         JSON.stringify({ error: 'Erro ao atualizar job' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       )
     }
 
-    console.log('[ACK] Job confirmado com sucesso:', validatedJobId, updatedJob)
+    logger.info('[ACK] Job confirmado com sucesso:', validatedJobId, updatedJob)
 
     return new Response(
       JSON.stringify({ 

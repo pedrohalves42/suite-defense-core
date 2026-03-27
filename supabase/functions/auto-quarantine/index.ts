@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { handleException } from '../_shared/error-handler.ts';
 import { createAuditLog } from '../_shared/audit.ts';
+import { logger } from '../_shared/logger.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -26,7 +27,7 @@ Deno.serve(async (req: Request) => {
     const authHeader = req.headers.get('X-Internal-Secret');
     
     if (!authHeader || authHeader !== internalSecret) {
-      console.error('[AUTO-QUARANTINE] Unauthorized: Invalid or missing internal secret');
+      logger.error('[AUTO-QUARANTINE] Unauthorized: Invalid or missing internal secret');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { 
@@ -47,7 +48,7 @@ Deno.serve(async (req: Request) => {
       total_scans
     }: QuarantineRequest = await req.json();
 
-    console.log('[AUTO-QUARANTINE] Processing quarantine request', {
+    logger.info('[AUTO-QUARANTINE] Processing quarantine request', {
       virus_scan_id,
       agent_name,
       file_path,
@@ -65,7 +66,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (agentError || !agent) {
-      console.error('[AUTO-QUARANTINE] Agent not found:', agentError);
+      logger.error('[AUTO-QUARANTINE] Agent not found:', agentError);
       throw new Error('Agent not found');
     }
 
@@ -81,7 +82,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (!settings?.enable_auto_quarantine) {
-      console.log('[AUTO-QUARANTINE] Auto-quarantine disabled for tenant');
+      logger.info('[AUTO-QUARANTINE] Auto-quarantine disabled for tenant');
       return new Response(
         JSON.stringify({ message: 'Auto-quarantine is disabled' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -108,11 +109,11 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (quarantineError) {
-      console.error('[AUTO-QUARANTINE] Error creating quarantine record:', quarantineError);
+      logger.error('[AUTO-QUARANTINE] Error creating quarantine record:', quarantineError);
       throw quarantineError;
     }
 
-    console.log('[AUTO-QUARANTINE] File quarantined successfully:', quarantined.id);
+    logger.info('[AUTO-QUARANTINE] File quarantined successfully:', quarantined.id);
 
     // Create audit log with tenant_id
     await createAuditLog({

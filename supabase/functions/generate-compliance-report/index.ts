@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -139,7 +140,7 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    console.log(`[generate-compliance-report] Looking up tenant for user: ${user.id}`);
+    logger.info(`[generate-compliance-report] Looking up tenant for user: ${user.id}`);
 
     const body = await req.json();
     let tenantName = "Empresa";
@@ -157,7 +158,7 @@ Deno.serve(async (req) => {
     if (body.tenant_id) {
       // Validate user has access to requested tenant
       if (!userTenantIds.includes(body.tenant_id)) {
-        console.warn(`[SECURITY] User ${user.id} attempted access to unauthorized tenant ${body.tenant_id}`);
+        logger.warn(`[SECURITY] User ${user.id} attempted access to unauthorized tenant ${body.tenant_id}`);
         return new Response(JSON.stringify({ error: "Access denied: You do not have access to this tenant" }), 
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -180,7 +181,7 @@ Deno.serve(async (req) => {
     }
 
     if (!tenantId) {
-      console.error(`[generate-compliance-report] No tenant found for user_id: ${user.id}`);
+      logger.error(`[generate-compliance-report] No tenant found for user_id: ${user.id}`);
       return new Response(JSON.stringify({ 
         error: "Usuário não está associado a nenhuma empresa. Contate o administrador.",
         code: "NO_TENANT",
@@ -198,7 +199,7 @@ Deno.serve(async (req) => {
       tenantName = tenantRow.name;
     }
 
-    console.log(`[generate-compliance-report] Found tenant: ${tenantId} (${tenantName})`);
+    logger.info(`[generate-compliance-report] Found tenant: ${tenantId} (${tenantName})`);
 
     const template = (body.template ?? body.template_type) as string;
     const periodStart = body.period_start ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -210,7 +211,7 @@ Deno.serve(async (req) => {
     }
 
     // ===== EXPANDED DATA COLLECTION =====
-    console.log(`[generate-compliance-report] Collecting data for tenant ${tenantId}...`);
+    logger.info(`[generate-compliance-report] Collecting data for tenant ${tenantId}...`);
 
     // Basic counts
     const { count: agentCount } = await supabase.from("agents").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId);
@@ -301,7 +302,7 @@ Deno.serve(async (req) => {
     // HMAC secret verification
     const hmacSecret = Deno.env.get("COMPLIANCE_HMAC_SECRET");
     if (!hmacSecret) {
-      console.error("[generate-compliance-report] COMPLIANCE_HMAC_SECRET not configured!");
+      logger.error("[generate-compliance-report] COMPLIANCE_HMAC_SECRET not configured!");
       return new Response(JSON.stringify({ error: "Server configuration error: HMAC secret not configured" }), 
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -703,12 +704,12 @@ Deno.serve(async (req) => {
       .single();
 
     if (saveError) {
-      console.error("[generate-compliance-report] Failed to save report:", saveError);
+      logger.error("[generate-compliance-report] Failed to save report:", saveError);
       return new Response(JSON.stringify({ error: "Failed to persist report" }), 
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    console.log(`[generate-compliance-report] Report ${auditId} generated and persisted with ID: ${savedReport.id}`);
+    logger.info(`[generate-compliance-report] Report ${auditId} generated and persisted with ID: ${savedReport.id}`);
     
     return new Response(JSON.stringify({ 
       success: true, 
@@ -718,7 +719,7 @@ Deno.serve(async (req) => {
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error) {
-    console.error("[generate-compliance-report] Error:", error);
+    logger.error("[generate-compliance-report] Error:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), 
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }

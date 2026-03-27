@@ -9,6 +9,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { validateCallerTenant } from '../_shared/validate-caller-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface CategoryScore {
   category: string;
@@ -66,7 +67,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[${requestId}] [calc-compliance] Starting for tenant ${tenant_id}`);
+    logger.info(`[${requestId}] [calc-compliance] Starting for tenant ${tenant_id}`);
 
     // ─── Gather Metrics ──────────────────────────────────
 
@@ -200,7 +201,7 @@ Deno.serve(async (req) => {
       });
 
     if (snapshotError) {
-      console.warn(`[${requestId}] [calc-compliance] Snapshot insert error:`, snapshotError.message);
+      logger.warn(`[${requestId}] [calc-compliance] Snapshot insert error:`, snapshotError.message);
     }
 
     // ─── Alert on Degradation ───────────────────────────
@@ -250,9 +251,9 @@ Deno.serve(async (req) => {
         p_processed_count: categories.length,
         p_job_source: 'api',
       });
-    } catch (e) { console.warn('[calculate-compliance] Failed to log job run:', e); }
+    } catch (e) { logger.warn('[calculate-compliance] Failed to log job run:', e); }
 
-    console.log(`[${requestId}] [calc-compliance] Done: score=${overallScore} grade=${grade} drift=${hasDrift} in ${durationMs}ms`);
+    logger.info(`[${requestId}] [calc-compliance] Done: score=${overallScore} grade=${grade} drift=${hasDrift} in ${durationMs}ms`);
 
     return new Response(
       JSON.stringify({
@@ -266,7 +267,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error(`[${requestId}] [calc-compliance] Error:`, error);
+    logger.error(`[${requestId}] [calc-compliance] Error:`, error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Internal error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

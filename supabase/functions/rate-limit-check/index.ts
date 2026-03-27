@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -139,7 +140,7 @@ Deno.serve(async (req: Request) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Rate limit check error:", error);
+    logger.error("Rate limit check error:", error);
     // Fail open — don't block requests if rate limiter errors
     return new Response(
       JSON.stringify({ allowed: true, error: "Rate limiter unavailable" }),

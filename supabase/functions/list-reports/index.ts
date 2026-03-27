@@ -4,6 +4,7 @@ import { handleException, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { hashToken } from '../_shared/token-hash.ts'
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -92,7 +93,7 @@ Deno.serve(async (req) => {
       .update({ last_used_at: new Date().toISOString() })
       .eq('token_hash', tokenHash)
 
-    console.log('Listando relatorios para agente:', agent.agent_name)
+    logger.info('Listando relatorios para agente:', agent.agent_name)
 
     // Buscar relatorios do agente (ultimos 50)
     const { data: reports } = await supabase

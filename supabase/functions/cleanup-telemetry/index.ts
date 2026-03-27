@@ -6,6 +6,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -24,7 +25,7 @@ Deno.serve(async (req) => {
     // 1. Run cleanup
     const { data: cleanupResult, error: cleanupError } = await supabase.rpc('cleanup_expired_telemetry');
     if (cleanupError) {
-      console.error('[cleanup-telemetry] Cleanup error:', cleanupError.message);
+      logger.error('[cleanup-telemetry] Cleanup error:', cleanupError.message);
     }
 
     // 2. Run summarization for each tenant
@@ -48,7 +49,7 @@ Deno.serve(async (req) => {
             p_hours_ago: 2,
           });
           if (summaryError) {
-            console.error(`[cleanup-telemetry] Summary error for ${tenantId}:`, summaryError.message);
+            logger.error(`[cleanup-telemetry] Summary error for ${tenantId}:`, summaryError.message);
           }
           return { tenant_id: tenantId, result: summaryResult };
         })
@@ -66,7 +67,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[cleanup-telemetry] Error:', error);
+    logger.error('[cleanup-telemetry] Error:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

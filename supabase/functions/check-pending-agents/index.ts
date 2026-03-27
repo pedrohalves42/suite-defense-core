@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { Resend } from 'https://esm.sh/resend@4.0.0';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,7 +32,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('[check-pending-agents] Starting check...');
+    logger.info('[check-pending-agents] Starting check...');
 
     // Find agents that are:
     // 1. Status = 'pending' or 'active' but no heartbeat
@@ -48,12 +49,12 @@ Deno.serve(async (req) => {
       .limit(100);
 
     if (agentsError) {
-      console.error('[check-pending-agents] Error fetching agents:', agentsError);
+      logger.error('[check-pending-agents] Error fetching agents:', agentsError);
       throw agentsError;
     }
 
     if (!agents || agents.length === 0) {
-      console.log('[check-pending-agents] No pending agents found');
+      logger.info('[check-pending-agents] No pending agents found');
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[check-pending-agents] Found ${agents.length} agents without heartbeat`);
+    logger.info(`[check-pending-agents] Found ${agents.length} agents without heartbeat`);
 
     // Check which ones don't have post_installation event
     const agentIds = agents.map(a => a.id);
@@ -75,13 +76,13 @@ Deno.serve(async (req) => {
       .eq('event_type', 'post_installation');
 
     if (installError) {
-      console.error('[check-pending-agents] Error checking installations:', installError);
+      logger.error('[check-pending-agents] Error checking installations:', installError);
     }
 
     const installedAgentIds = new Set(installations?.map(i => i.agent_id) || []);
     const notInstalledAgents = agents.filter(a => !installedAgentIds.has(a.id));
 
-    console.log(`[check-pending-agents] ${notInstalledAgents.length} agents not yet installed`);
+    logger.info(`[check-pending-agents] ${notInstalledAgents.length} agents not yet installed`);
 
     if (notInstalledAgents.length === 0) {
       return new Response(
@@ -118,7 +119,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (recentAlert) {
-        console.log(`[check-pending-agents] Alert already sent for tenant ${tenantId} in last hour`);
+        logger.info(`[check-pending-agents] Alert already sent for tenant ${tenantId} in last hour`);
         continue;
       }
 
@@ -177,7 +178,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (alertError) {
-        console.error('[check-pending-agents] Error creating alert:', alertError);
+        logger.error('[check-pending-agents] Error creating alert:', alertError);
       } else {
         notifications.push({
           tenant_id: tenantId,
@@ -219,15 +220,15 @@ ${agentList}
               })
               .eq('id', insertedAlert.id);
 
-            console.log(`[check-pending-agents] Email sent to ${adminEmails.length} admin(s) for tenant ${tenantId}`);
+            logger.info(`[check-pending-agents] Email sent to ${adminEmails.length} admin(s) for tenant ${tenantId}`);
           } catch (emailError) {
-            console.error('[check-pending-agents] Error sending email:', emailError);
+            logger.error('[check-pending-agents] Error sending email:', emailError);
           }
         }
       }
     }
 
-    console.log(`[check-pending-agents] Created ${notifications.length} notifications`);
+    logger.info(`[check-pending-agents] Created ${notifications.length} notifications`);
 
     return new Response(
       JSON.stringify({ 
@@ -241,7 +242,7 @@ ${agentList}
     );
 
   } catch (error) {
-    console.error('[check-pending-agents] Error:', error);
+    logger.error('[check-pending-agents] Error:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 

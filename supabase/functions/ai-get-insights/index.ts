@@ -6,6 +6,7 @@
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { logger } from '../_shared/logger.ts';
 
 serveTenant(async (req, ctx) => {
   const { supabase, userId, tenantId, isInternal, requestId } = ctx;
@@ -52,7 +53,7 @@ serveTenant(async (req, ctx) => {
 
   const { data: insights, error, count } = await query;
   if (error) {
-    console.error(`[ai-get-insights][${requestId}] Error:`, error);
+    logger.error(`[ai-get-insights][${requestId}] Error:`, error);
     throw error;
   }
 

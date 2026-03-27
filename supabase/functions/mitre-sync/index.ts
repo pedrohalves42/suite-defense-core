@@ -12,6 +12,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const MITRE_ENTERPRISE_URL =
   'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json';
@@ -84,7 +85,7 @@ Deno.serve(async (req: Request) => {
 
     return json({ error: `Unknown action: ${action}` }, 400);
   } catch (err) {
-    console.error('[mitre-sync] Error:', err);
+    logger.error('[mitre-sync] Error:', err);
     return json({ error: err.message }, 500);
   }
 });
@@ -100,7 +101,7 @@ function json(data: unknown, status = 200) {
 
 async function syncMitreRules(supabase: ReturnType<typeof createClient>) {
   const t0 = Date.now();
-  console.log('[mitre-sync] Fetching MITRE Enterprise ATT&CK…');
+  logger.info('[mitre-sync] Fetching MITRE Enterprise ATT&CK…');
 
   const resp = await fetch(MITRE_ENTERPRISE_URL);
   if (!resp.ok) throw new Error(`MITRE fetch failed: ${resp.status}`);
@@ -140,7 +141,7 @@ async function syncMitreRules(supabase: ReturnType<typeof createClient>) {
       .select('technique_id');
 
     if (error) {
-      console.error('[mitre-sync] Batch upsert error:', error.message);
+      logger.error('[mitre-sync] Batch upsert error:', error.message);
     } else {
       synced += data?.length ?? 0;
     }
@@ -158,7 +159,7 @@ async function syncMitreRules(supabase: ReturnType<typeof createClient>) {
     sync_duration_ms: durationMs,
   });
 
-  console.log(
+  logger.info(
     `[mitre-sync] Done in ${durationMs}ms: version=${mitreVersion}, total=${techniques.length}, upserted=${synced}`
   );
 

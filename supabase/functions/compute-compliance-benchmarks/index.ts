@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * compute-compliance-benchmarks
@@ -61,7 +62,7 @@ Deno.serve(async (req) => {
     const now = new Date();
     const periodMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    console.log(`[compute-compliance-benchmarks] Computing for period ${periodMonth}`);
+    logger.info(`[compute-compliance-benchmarks] Computing for period ${periodMonth}`);
 
     // Get all active tenants with subscriptions
     const { data: tenants } = await supabase
@@ -129,7 +130,7 @@ Deno.serve(async (req) => {
       });
 
     if (upsertError) {
-      console.error('[compute-compliance-benchmarks] Upsert error:', upsertError);
+      logger.error('[compute-compliance-benchmarks] Upsert error:', upsertError);
       throw upsertError;
     }
 
@@ -143,13 +144,13 @@ Deno.serve(async (req) => {
       categories: catAvg,
     };
 
-    console.log(`[compute-compliance-benchmarks] Success:`, result);
+    logger.info(`[compute-compliance-benchmarks] Success:`, result);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('[compute-compliance-benchmarks] Error:', error);
+    logger.error('[compute-compliance-benchmarks] Error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -231,7 +232,7 @@ async function calculateTenantComplianceScore(
 
     return { overall: Math.round(overall), categories };
   } catch (error) {
-    console.error(`[compute-compliance-benchmarks] Error for tenant ${tenantId}:`, error);
+    logger.error(`[compute-compliance-benchmarks] Error for tenant ${tenantId}:`, error);
     return null;
   }
 }

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { validateCallerTenant } from '../_shared/validate-caller-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -53,7 +54,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[calculate-risk-score] Calculating risk score for tenant: ${tenant_id}`);
+    logger.info(`[calculate-risk-score] Calculating risk score for tenant: ${tenant_id}`);
 
     let score = 100;
     const breakdown: RiskBreakdown = {
@@ -175,11 +176,11 @@ serve(async (req) => {
       });
 
     if (insertError) {
-      console.error('[calculate-risk-score] Error inserting score:', insertError);
+      logger.error('[calculate-risk-score] Error inserting score:', insertError);
       throw insertError;
     }
 
-    console.log(`[calculate-risk-score] Score calculated: ${score}, trend: ${trend}`);
+    logger.info(`[calculate-risk-score] Score calculated: ${score}, trend: ${trend}`);
 
     return new Response(
       JSON.stringify({
@@ -195,7 +196,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[calculate-risk-score] Error:', error);
+    logger.error('[calculate-risk-score] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,7 +42,7 @@ Deno.serve(async (req) => {
       throw new Error("Forbidden: Super Admin access required");
     }
 
-    console.log(`[UNIT-ECONOMICS] Calculating metrics for super admin ${userData.user.id}`);
+    logger.info(`[UNIT-ECONOMICS] Calculating metrics for super admin ${userData.user.id}`);
 
     // Get all active subscriptions with pricing
     const { data: subscriptions, error: subsError } = await supabase
@@ -77,7 +78,7 @@ Deno.serve(async (req) => {
       .select('*');
 
     if (marketingError) {
-      console.log('[UNIT-ECONOMICS] No marketing costs data:', marketingError.message);
+      logger.info('[UNIT-ECONOMICS] No marketing costs data:', marketingError.message);
     }
 
     // Calculate CAC (Customer Acquisition Cost)
@@ -133,14 +134,14 @@ Deno.serve(async (req) => {
       total_conversions: totalConversions,
     };
 
-    console.log(`[UNIT-ECONOMICS] Success: MRR=${response.mrr}, LTV=${response.ltv}, CAC=${response.cac}`);
+    logger.info(`[UNIT-ECONOMICS] Success: MRR=${response.mrr}, LTV=${response.ltv}, CAC=${response.cac}`);
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    console.error("[UNIT-ECONOMICS] Error:", error);
+    logger.error("[UNIT-ECONOMICS] Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       {

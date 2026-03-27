@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { getTenantIdForUser } from '../_shared/tenant.ts';
+import { logger } from '../_shared/logger.ts';
 // ==================== CRYPTO FUNCTIONS ====================
 
 async function generateSHA256(content: string): Promise<string> {
@@ -348,8 +349,8 @@ serve(async (req) => {
         .select('*')
         .eq('user_id', user.id);
       
-      console.error(`[generate-security-report] No tenant found for user_id: ${user.id}`);
-      console.error(`[generate-security-report] user_roles query result:`, debugRoles, debugError);
+      logger.error(`[generate-security-report] No tenant found for user_id: ${user.id}`);
+      logger.error(`[generate-security-report] user_roles query result:`, debugRoles, debugError);
       
       return new Response(
         JSON.stringify({ 
@@ -373,7 +374,7 @@ serve(async (req) => {
       .maybeSingle();
     
     const tenantName = tenantData?.name || 'Unknown';
-    console.log(`[generate-security-report] Found tenant: ${tenantId} (${tenantName}) for user: ${user.id}`);
+    logger.info(`[generate-security-report] Found tenant: ${tenantId} (${tenantName}) for user: ${user.id}`);
 
 
     const url = new URL(req.url);
@@ -381,7 +382,7 @@ serve(async (req) => {
     const template = (url.searchParams.get('template') || 'LGPD').toUpperCase() as ComplianceTemplate;
     const agentId = url.searchParams.get('agent_id');
 
-    console.log(`Generating report for tenant ${tenantId}, format: ${format}, template: ${template}`);
+    logger.info(`Generating report for tenant ${tenantId}, format: ${format}, template: ${template}`);
 
     let agentFilter = {};
     if (agentId) {
@@ -523,7 +524,7 @@ serve(async (req) => {
         hmac_signature: hmac,
       };
 
-      console.log(`Compliance report generated: ${compliancePayload.audit_id}, SHA256: ${sha256.substring(0, 16)}...`);
+      logger.info(`Compliance report generated: ${compliancePayload.audit_id}, SHA256: ${sha256.substring(0, 16)}...`);
 
       return new Response(
         JSON.stringify({ success: true, payload: compliancePayload }),
@@ -607,7 +608,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error generating security report:', error);
+    logger.error('Error generating security report:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),

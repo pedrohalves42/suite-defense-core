@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { handleException } from '../_shared/error-handler.ts';
 import { createAuditLog } from '../_shared/audit.ts';
+import { logger } from '../_shared/logger.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -92,7 +93,7 @@ Deno.serve(async (req: Request) => {
 
     // V-3001 FIX: For internal calls, use agent's tenant_id; for user calls, verify match
     if (tenantId && tenantId !== agent.tenant_id) {
-      console.warn(`[SECURITY] Tenant mismatch: user tenant ${tenantId} vs agent tenant ${agent.tenant_id}`);
+      logger.warn(`[SECURITY] Tenant mismatch: user tenant ${tenantId} vs agent tenant ${agent.tenant_id}`);
       return new Response(JSON.stringify({ error: 'Access denied: agent belongs to different tenant' }), {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -110,7 +111,7 @@ Deno.serve(async (req: Request) => {
       });
 
       if (!blastError && blastCheck && !blastCheck.allowed) {
-        console.warn(`[auto-remediate] Blast radius exceeded for ${action_type}: ${blastCheck.affected_percent}%`);
+        logger.warn(`[auto-remediate] Blast radius exceeded for ${action_type}: ${blastCheck.affected_percent}%`);
 
         // Record blocked action
         await supabase.from('auto_remediation_actions').insert({
@@ -135,7 +136,7 @@ Deno.serve(async (req: Request) => {
       }
     } catch (blastErr) {
       // Fail-open: if blast radius check fails, proceed with remediation
-      console.warn(`[auto-remediate] Blast radius check failed (fail-open): ${blastErr}`);
+      logger.warn(`[auto-remediate] Blast radius check failed (fail-open): ${blastErr}`);
     }
 
     // ═══════════════════════════════════════════════════════
@@ -149,7 +150,7 @@ Deno.serve(async (req: Request) => {
       });
 
       if (globalBreaker && !globalBreaker.allowed) {
-        console.warn(`[auto-remediate] Global circuit breaker tripped for tenant ${tenantId}`);
+        logger.warn(`[auto-remediate] Global circuit breaker tripped for tenant ${tenantId}`);
         return new Response(JSON.stringify({
           success: false,
           error: 'CIRCUIT_BREAKER_OPEN',

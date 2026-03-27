@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * Invoca todos os scheduled_jobs que estão habilitados e no horário de execução.
@@ -16,7 +17,7 @@ Deno.serve(async (req) => {
 
   const requestId = crypto.randomUUID();
   const startedAt = Date.now();
-  console.log(`[${requestId}] invoke-scheduled-jobs started`);
+  logger.info(`[${requestId}] invoke-scheduled-jobs started`);
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -26,7 +27,7 @@ Deno.serve(async (req) => {
     // KILL SWITCH CHECK (ADR-FINAL) - Halt all automation if system is in halt_jobs mode
     const { data: systemMode } = await supabase.rpc('get_system_mode_safe');
     if (systemMode === 'halt_jobs') {
-      console.log(`[${requestId}] SYSTEM_HALTED: Kill switch active, skipping all jobs`);
+      logger.info(`[${requestId}] SYSTEM_HALTED: Kill switch active, skipping all jobs`);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -52,11 +53,11 @@ Deno.serve(async (req) => {
       .eq('enabled', true);
 
     if (fetchError) {
-      console.error(`[${requestId}] Error fetching scheduled jobs:`, fetchError);
+      logger.error(`[${requestId}] Error fetching scheduled jobs:`, fetchError);
       throw fetchError;
     }
 
-    console.log(`[${requestId}] Found ${scheduledJobs?.length || 0} enabled scheduled jobs`);
+    logger.info(`[${requestId}] Found ${scheduledJobs?.length || 0} enabled scheduled jobs`);
 
     // Map of job_type to edge function name
     const jobTypeToFunction: Record<string, string> = {
@@ -111,7 +112,7 @@ Deno.serve(async (req) => {
         }
 
         if (!functionName) {
-          console.log(`[${requestId}] No function mapping for job: ${job.name} (type: ${job.job_type})`);
+          logger.info(`[${requestId}] No function mapping for job: ${job.name} (type: ${job.job_type})`);
           results.push({
             name: job.name,
             job_type: job.job_type,
@@ -123,7 +124,7 @@ Deno.serve(async (req) => {
 
         // Check if should run based on next_run_at
         if (job.next_run_at && new Date(job.next_run_at) > now) {
-          console.log(`[${requestId}] Job ${job.name} not due yet (next_run_at: ${job.next_run_at})`);
+          logger.info(`[${requestId}] Job ${job.name} not due yet (next_run_at: ${job.next_run_at})`);
           results.push({
             name: job.name,
             job_type: job.job_type,
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        console.log(`[${requestId}] Invoking function: ${functionName} for job: ${job.name}`);
+        logger.info(`[${requestId}] Invoking function: ${functionName} for job: ${job.name}`);
 
         // Get internal secret to pass to child functions (ADR-023 compliant)
         const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
@@ -151,7 +152,7 @@ Deno.serve(async (req) => {
         });
 
         if (invokeError) {
-          console.error(`[${requestId}] Error invoking ${functionName}:`, invokeError);
+          logger.error(`[${requestId}] Error invoking ${functionName}:`, invokeError);
           results.push({
             name: job.name,
             job_type: job.job_type,
@@ -172,7 +173,7 @@ Deno.serve(async (req) => {
           })
           .eq('id', job.id);
 
-        console.log(`[${requestId}] Successfully executed job: ${job.name}`);
+        logger.info(`[${requestId}] Successfully executed job: ${job.name}`);
         results.push({
           name: job.name,
           job_type: job.job_type,
@@ -181,7 +182,7 @@ Deno.serve(async (req) => {
         });
 
       } catch (jobError) {
-        console.error(`[${requestId}] Error processing job ${job.name}:`, jobError);
+        logger.error(`[${requestId}] Error processing job ${job.name}:`, jobError);
         results.push({
           name: job.name,
           job_type: job.job_type,
@@ -203,7 +204,7 @@ Deno.serve(async (req) => {
       duration_ms: durationMs
     };
 
-    console.log(`[${requestId}] Completed:`, summary);
+    logger.info(`[${requestId}] Completed:`, summary);
 
     // Log successful job execution
     try {
@@ -221,7 +222,7 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch (logErr) {
-      console.error(`[${requestId}] Failed to log job run:`, logErr);
+      logger.error(`[${requestId}] Failed to log job run:`, logErr);
     }
 
     return new Response(
@@ -234,7 +235,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     const durationMs = Date.now() - startedAt;
-    console.error(`[${requestId}] Fatal error:`, error);
+    logger.error(`[${requestId}] Fatal error:`, error);
 
     // Log failed job execution
     try {
@@ -251,7 +252,7 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch (logErr) {
-      console.error(`[${requestId}] Failed to log error:`, logErr);
+      logger.error(`[${requestId}] Failed to log error:`, logErr);
     }
     
     return new Response(

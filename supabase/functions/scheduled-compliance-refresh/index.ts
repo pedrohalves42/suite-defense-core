@@ -8,6 +8,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -30,7 +31,7 @@ Deno.serve(async (req) => {
       .eq('status', 'active');
 
     if (tenantErr) {
-      console.error(`[${requestId}] Failed to fetch tenants:`, tenantErr);
+      logger.error(`[${requestId}] Failed to fetch tenants:`, tenantErr);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch tenants' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -59,13 +60,13 @@ Deno.serve(async (req) => {
         });
 
         if (fnErr) {
-          console.error(`[${requestId}] Compliance calc failed for ${tenant.id}:`, fnErr);
+          logger.error(`[${requestId}] Compliance calc failed for ${tenant.id}:`, fnErr);
           results.push({ tenant_id: tenant.id, status: 'error', error: fnErr.message });
         } else {
           results.push({ tenant_id: tenant.id, status: 'ok' });
         }
       } catch (err) {
-        console.error(`[${requestId}] Exception for tenant ${tenant.id}:`, err);
+        logger.error(`[${requestId}] Exception for tenant ${tenant.id}:`, err);
         results.push({ tenant_id: tenant.id, status: 'error', error: String(err) });
       }
     }
@@ -81,14 +82,14 @@ Deno.serve(async (req) => {
       details: results,
     };
 
-    console.log(`[${requestId}] Compliance refresh complete:`, JSON.stringify(summary));
+    logger.info(`[${requestId}] Compliance refresh complete:`, JSON.stringify(summary));
 
     return new Response(
       JSON.stringify(summary),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err) {
-    console.error(`[${requestId}] Fatal error:`, err);
+    logger.error(`[${requestId}] Fatal error:`, err);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

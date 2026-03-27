@@ -5,6 +5,7 @@ import { callAIJson, getAIProviderHealth, type AIMessage } from '../_shared/ai-p
 import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from '../_shared/ai-metrics.ts';
 import { persistAIMetrics } from '../_shared/ai-metrics-persistence.ts';
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from '../_shared/ai-evidence-types.ts';
+import { logger } from '../_shared/logger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -91,7 +92,7 @@ async function incrementAIQuotaUsage(
   try {
     // Validate insightsCount to ensure it's a safe integer
     if (!Number.isInteger(insightsCount) || insightsCount < 0 || insightsCount > 1000) {
-      console.log(`[ai-system-analyzer] Invalid insightsCount: ${insightsCount}`);
+      logger.info(`[ai-system-analyzer] Invalid insightsCount: ${insightsCount}`);
       return;
     }
     
@@ -104,7 +105,7 @@ async function incrementAIQuotaUsage(
       .single();
 
     if (selectError || !current) {
-      console.log(`[ai-system-analyzer] Could not fetch quota for tenant ${tenantId}:`, selectError);
+      logger.info(`[ai-system-analyzer] Could not fetch quota for tenant ${tenantId}:`, selectError);
       return;
     }
 
@@ -117,7 +118,7 @@ async function incrementAIQuotaUsage(
       .eq('feature_key', 'ai_insights');
   } catch (error) {
     // Quota tracking is best-effort, don't fail the analysis
-    console.log(`[ai-system-analyzer] Could not increment quota for tenant ${tenantId}:`, error);
+    logger.info(`[ai-system-analyzer] Could not increment quota for tenant ${tenantId}:`, error);
   }
 }
 
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
     // KILL SWITCH CHECK (ADR-FINAL) - Halt all automation if system is in halt_jobs mode
     const { data: systemMode } = await supabase.rpc('get_system_mode_safe');
     if (systemMode === 'halt_jobs') {
-      console.log('[ai-system-analyzer] SYSTEM_HALTED: Kill switch active, skipping analysis');
+      logger.info('[ai-system-analyzer] SYSTEM_HALTED: Kill switch active, skipping analysis');
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -144,7 +145,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[ai-system-analyzer] Starting analysis cycle...');
+    logger.info('[ai-system-analyzer] Starting analysis cycle...');
 
     // Buscar todos os tenants ativos
     const { data: tenants, error: tenantsError } = await supabase
@@ -152,19 +153,19 @@ Deno.serve(async (req) => {
       .select('id, name');
 
     if (tenantsError) {
-      console.error('[ai-system-analyzer] Error fetching tenants:', tenantsError);
+      logger.error('[ai-system-analyzer] Error fetching tenants:', tenantsError);
       throw tenantsError;
     }
 
     if (!tenants || tenants.length === 0) {
-      console.log('[ai-system-analyzer] No tenants found, skipping analysis');
+      logger.info('[ai-system-analyzer] No tenants found, skipping analysis');
       return new Response(JSON.stringify({ message: 'No tenants to analyze' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });
     }
 
-    console.log(`[ai-system-analyzer] Analyzing ${tenants.length} tenant(s)`);
+    logger.info(`[ai-system-analyzer] Analyzing ${tenants.length} tenant(s)`);
 
     const insights: AIInsight[] = [];
     const skippedTenants: { id: string; name: string; reason: string }[] = [];
@@ -175,12 +176,12 @@ Deno.serve(async (req) => {
         const eligibility = await checkTenantAIEligibility(supabase, tenant.id);
         
         if (!eligibility.eligible) {
-          console.log(`[ai-system-analyzer] Skipping tenant ${tenant.name}: ${eligibility.reason}`);
+          logger.info(`[ai-system-analyzer] Skipping tenant ${tenant.name}: ${eligibility.reason}`);
           skippedTenants.push({ id: tenant.id, name: tenant.name, reason: eligibility.reason! });
           continue;
         }
 
-        console.log(`[ai-system-analyzer] Analyzing tenant: ${tenant.name} (${tenant.id})`);
+        logger.info(`[ai-system-analyzer] Analyzing tenant: ${tenant.name} (${tenant.id})`);
 
         // Coletar dados dos ultimos 7 dias para analise
         const cutoffDate = new Date();
@@ -264,7 +265,7 @@ Deno.serve(async (req) => {
           analysisData.systemAlerts.length;
 
         if (totalDataPoints < 5) {
-          console.log(`[ai-system-analyzer] Insufficient data for tenant ${tenant.name}, skipping`);
+          logger.info(`[ai-system-analyzer] Insufficient data for tenant ${tenant.name}, skipping`);
           continue;
         }
 
@@ -279,7 +280,7 @@ Deno.serve(async (req) => {
         insights.push(...tenantInsights);
 
       } catch (tenantError) {
-        console.error(`[ai-system-analyzer] Error analyzing tenant ${tenant.name}:`, tenantError);
+        logger.error(`[ai-system-analyzer] Error analyzing tenant ${tenant.name}:`, tenantError);
         // Continuar com proximo tenant em caso de erro
         continue;
       }
@@ -307,7 +308,7 @@ Deno.serve(async (req) => {
           .in('title', titlesForTenant);
         
         if (dedupError) {
-          console.warn('[ai-system-analyzer] Dedup error:', dedupError.message);
+          logger.warn('[ai-system-analyzer] Dedup error:', dedupError.message);
         }
       }
     }
@@ -320,11 +321,11 @@ Deno.serve(async (req) => {
         .select();
 
       if (insertError) {
-        console.error('[ai-system-analyzer] Error saving insights:', insertError);
+        logger.error('[ai-system-analyzer] Error saving insights:', insertError);
         throw insertError;
       }
 
-      console.log(`[ai-system-analyzer] Successfully saved ${insights.length} insights (deduped old ones)`);
+      logger.info(`[ai-system-analyzer] Successfully saved ${insights.length} insights (deduped old ones)`);
 
       // FASE 2: Gerar acoes sugeridas baseadas nos insights
       if (insertedInsights && insertedInsights.length > 0) {
@@ -336,9 +337,9 @@ Deno.serve(async (req) => {
             .insert(suggestedActions);
 
           if (actionError) {
-            console.error(`[ai-system-analyzer] Error inserting suggested actions:`, actionError);
+            logger.error(`[ai-system-analyzer] Error inserting suggested actions:`, actionError);
           } else {
-            console.log(`[ai-system-analyzer] Generated ${suggestedActions.length} suggested actions`);
+            logger.info(`[ai-system-analyzer] Generated ${suggestedActions.length} suggested actions`);
           }
         }
 
@@ -357,16 +358,16 @@ Deno.serve(async (req) => {
             });
             
             if (dispatchResponse.error) {
-              console.warn(`[ai-system-analyzer] Dispatch failed for insight ${insight.id}:`, dispatchResponse.error);
+              logger.warn(`[ai-system-analyzer] Dispatch failed for insight ${insight.id}:`, dispatchResponse.error);
             }
           } catch (dispatchErr) {
-            console.warn('[ai-system-analyzer] Insight dispatch error:', dispatchErr);
+            logger.warn('[ai-system-analyzer] Insight dispatch error:', dispatchErr);
           }
         }
-        console.log(`[ai-system-analyzer] Dispatched ${insertedInsights.length} insights to pipeline`);
+        logger.info(`[ai-system-analyzer] Dispatched ${insertedInsights.length} insights to pipeline`);
       }
     } else {
-      console.log('[ai-system-analyzer] No insights generated');
+      logger.info('[ai-system-analyzer] No insights generated');
     }
 
     // ── AUTO-RESOLVE: Close stale in_progress tasks (>48h without progress) ──
@@ -384,12 +385,12 @@ Deno.serve(async (req) => {
         .select('id');
 
       if (resolveError) {
-        console.warn('[ai-system-analyzer] Auto-resolve tasks error:', resolveError.message);
+        logger.warn('[ai-system-analyzer] Auto-resolve tasks error:', resolveError.message);
       } else if (resolvedTasks && resolvedTasks.length > 0) {
-        console.log(`[ai-system-analyzer] Auto-resolved ${resolvedTasks.length} stale in_progress tasks`);
+        logger.info(`[ai-system-analyzer] Auto-resolved ${resolvedTasks.length} stale in_progress tasks`);
       }
     } catch (e) {
-      console.warn('[ai-system-analyzer] Auto-resolve tasks failed:', e);
+      logger.warn('[ai-system-analyzer] Auto-resolve tasks failed:', e);
     }
 
     const result = { 
@@ -419,7 +420,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[ai-system-analyzer] Fatal error:', error);
+    logger.error('[ai-system-analyzer] Fatal error:', error);
     
     // Log error observability
     try {
@@ -432,7 +433,7 @@ Deno.serve(async (req) => {
         p_processed_count: 0,
         p_job_source: 'cron'
       });
-    } catch (e) { console.warn('[ai-system-analyzer] Failed to log job run:', e); }
+    } catch (e) { logger.warn('[ai-system-analyzer] Failed to log job run:', e); }
     
     return new Response(
       JSON.stringify({ 
@@ -608,7 +609,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
     // Sanitizar o prompt antes de enviar à IA
     const promptSanitizeResult = sanitizeForAI(rawPrompt);
     if (promptSanitizeResult.blocked) {
-      console.warn('[ai-system-analyzer] Prompt injection blocked for tenant:', tenantId, promptSanitizeResult.blockedPatterns);
+      logger.warn('[ai-system-analyzer] Prompt injection blocked for tenant:', tenantId, promptSanitizeResult.blockedPatterns);
     }
     const prompt = promptSanitizeResult.sanitized;
 
@@ -627,14 +628,14 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
 
     // Handle AI call failure
     if (!aiResult.success || !parsedInsights) {
-      console.error('[ai-system-analyzer] AI call failed for tenant:', tenantId, aiResult.error);
+      logger.error('[ai-system-analyzer] AI call failed for tenant:', tenantId, aiResult.error);
       return [];
     }
 
-    console.log(`[ai-system-analyzer] Analysis for ${tenantName} completed via ${aiResult.provider} in ${aiResult.latencyMs}ms`);
+    logger.info(`[ai-system-analyzer] Analysis for ${tenantName} completed via ${aiResult.provider} in ${aiResult.latencyMs}ms`);
 
     if (!Array.isArray(parsedInsights)) {
-      console.error('[ai-system-analyzer] AI response is not an array');
+      logger.error('[ai-system-analyzer] AI response is not an array');
       return [];
     }
 
@@ -743,7 +744,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
     }));
 
   } catch (error) {
-    console.error('[ai-system-analyzer] Error in AI analysis:', error);
+    logger.error('[ai-system-analyzer] Error in AI analysis:', error);
     return [];
   }
 }

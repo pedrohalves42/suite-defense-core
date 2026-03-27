@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +17,7 @@ Deno.serve(async (req) => {
   if (authError) return authError;
 
   const startTime = Date.now();
-  console.log('[calculate-behavioral-baselines] Starting baseline calculation...');
+  logger.info('[calculate-behavioral-baselines] Starting baseline calculation...');
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -32,13 +33,13 @@ Deno.serve(async (req) => {
 
     if (agentsError) throw new Error(`Failed to fetch agents: ${agentsError.message}`);
     if (!agents || agents.length === 0) {
-      console.log('[calculate-behavioral-baselines] No active agents found');
+      logger.info('[calculate-behavioral-baselines] No active agents found');
       return new Response(JSON.stringify({ message: 'No active agents', processed: 0 }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log(`[calculate-behavioral-baselines] Processing ${agents.length} agents`);
+    logger.info(`[calculate-behavioral-baselines] Processing ${agents.length} agents`);
 
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -56,7 +57,7 @@ Deno.serve(async (req) => {
           .order('collected_at', { ascending: true });
 
         if (!processData || processData.length < 3) {
-          console.log(`[calculate-behavioral-baselines] Agent ${agent.agent_name}: insufficient data (${processData?.length || 0} snapshots)`);
+          logger.info(`[calculate-behavioral-baselines] Agent ${agent.agent_name}: insufficient data (${processData?.length || 0} snapshots)`);
           continue;
         }
 
@@ -172,13 +173,13 @@ Deno.serve(async (req) => {
 
         processedCount++;
       } catch (agentError) {
-        console.error(`[calculate-behavioral-baselines] Error processing agent ${agent.agent_name}:`, String(agentError));
+        logger.error(`[calculate-behavioral-baselines] Error processing agent ${agent.agent_name}:`, String(agentError));
         errorCount++;
       }
     }
 
     const duration = Date.now() - startTime;
-    console.log(`[calculate-behavioral-baselines] Complete: ${processedCount} agents processed, ${errorCount} errors, ${duration}ms`);
+    logger.info(`[calculate-behavioral-baselines] Complete: ${processedCount} agents processed, ${errorCount} errors, ${duration}ms`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -189,7 +190,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('[calculate-behavioral-baselines] Fatal error:', String(error));
+    logger.error('[calculate-behavioral-baselines] Fatal error:', String(error));
     return new Response(JSON.stringify({ error: String(error) }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

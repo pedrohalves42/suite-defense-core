@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { authenticateAgent } from '../_shared/agent-auth.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * submit-ransomware-indicator: Receives ransomware detection signals from agents
@@ -102,7 +103,7 @@ Deno.serve(async (req) => {
         .insert(record);
 
       if (insertError) {
-        console.error(`[${requestId}] Insert error:`, insertError);
+        logger.error(`[${requestId}] Insert error:`, insertError);
       } else {
         insertedCount++;
       }
@@ -192,21 +193,21 @@ Deno.serve(async (req) => {
             },
             headers: { 'X-Internal-Secret': internalSecret },
           });
-          console.log(`[${requestId}] Published ${iocs.length} IoCs to CyberShield Threat Network`);
+          logger.info(`[${requestId}] Published ${iocs.length} IoCs to CyberShield Threat Network`);
         }
       }
     } catch (threatNetErr) {
-      console.error(`[${requestId}] Failed to publish to Threat Network (non-blocking):`, threatNetErr);
+      logger.error(`[${requestId}] Failed to publish to Threat Network (non-blocking):`, threatNetErr);
     }
 
-    console.log(`[${requestId}] RANSOMWARE ALERT: ${insertedCount} indicators from ${agent.agent_name}, ${alertsCreated} alerts created`);
+    logger.info(`[${requestId}] RANSOMWARE ALERT: ${insertedCount} indicators from ${agent.agent_name}, ${alertsCreated} alerts created`);
 
     return new Response(
       JSON.stringify({ success: true, inserted: insertedCount, alerts_created: alertsCreated, evidence_hash: evidenceHash }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error(`[${requestId}] Error:`, error);
+    logger.error(`[${requestId}] Error:`, error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

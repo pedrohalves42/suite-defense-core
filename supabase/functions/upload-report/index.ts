@@ -5,6 +5,7 @@ import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logSecurityEvent, extractIpAddress } from '../_shared/security-log.ts'
 import { hashToken } from '../_shared/token-hash.ts'
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID()
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
     
     // Validar tenant_id existe
     if (!agent.tenant_id) {
-      console.error(`[${requestId}] Agent ${agent.agent_name} has no tenant_id`)
+      logger.error(`[${requestId}] Agent ${agent.agent_name} has no tenant_id`)
       return new Response(
         JSON.stringify({ error: 'Configuracao invalida do agente' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
@@ -121,7 +122,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      console.log('Upload de report de job:', job_id, 'por agente:', agent.agent_name)
+      logger.info('Upload de report de job:', job_id, 'por agente:', agent.agent_name)
 
       sanitizedKind = 'job_result'
       sanitizedFilename = `job-${job_id}-${Date.now()}.json`
@@ -187,7 +188,7 @@ Deno.serve(async (req) => {
       sanitizedKind = validation.data.kind
       fileContent = await file.text()
 
-      console.log('Upload de relatorio:', sanitizedKind, 'por agente:', agent.agent_name)
+      logger.info('Upload de relatorio:', sanitizedKind, 'por agente:', agent.agent_name)
     }
 
     // Salvar relatorio no banco com validacao explicita de tenant_id

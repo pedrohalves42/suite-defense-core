@@ -2,6 +2,7 @@ import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
 import { timingSafeEqual } from '../_shared/crypto-utils.ts'
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,14 +39,14 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization');
   
   if (!isInternalCall && !authHeader) {
-    console.log('[integrity-sentinel] Unauthorized: No valid origin');
+    logger.info('[integrity-sentinel] Unauthorized: No valid origin');
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 
-  console.log(`[integrity-sentinel] Authorized call from: ${isInternalCall ? 'internal' : 'jwt'}`);
+  logger.info(`[integrity-sentinel] Authorized call from: ${isInternalCall ? 'internal' : 'jwt'}`);
 
   const supabase = createClient(
     requireEnv('SUPABASE_URL'),
@@ -58,7 +59,7 @@ Deno.serve(async (req) => {
     // KILL SWITCH CHECK (ADR-FINAL) - Halt all automation if system is in halt_jobs mode
     const { data: systemMode } = await supabase.rpc('get_system_mode_safe')
     if (systemMode === 'halt_jobs') {
-      console.log('[integrity-sentinel] SYSTEM_HALTED: Kill switch active, skipping integrity check')
+      logger.info('[integrity-sentinel] SYSTEM_HALTED: Kill switch active, skipping integrity check')
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -69,7 +70,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('[integrity-sentinel] Starting integrity check...')
+    logger.info('[integrity-sentinel] Starting integrity check...')
 
     // ============================================================
     // 1. VERIFICAR VIOLAÇÕES DE INTEGRIDADE via RPC (mais eficiente)
@@ -79,9 +80,9 @@ Deno.serve(async (req) => {
       .rpc('detect_silent_job_failures')
 
     if (violationsError) {
-      console.error('[integrity-sentinel] Error fetching violations:', violationsError)
+      logger.error('[integrity-sentinel] Error fetching violations:', violationsError)
     } else if (violations && violations.length > 0) {
-      console.error('[integrity-sentinel] 🔴 CRITICAL: Found integrity violations!', {
+      logger.error('[integrity-sentinel] 🔴 CRITICAL: Found integrity violations!', {
         count: violations.length,
         violations: violations.map((v: any) => ({
           job_id: v.job_id,
@@ -114,7 +115,7 @@ Deno.serve(async (req) => {
           .limit(1)
 
         if (existingAlerts && existingAlerts.length > 0) {
-          console.log('[integrity-sentinel] Skipping duplicate alert for tenant:', tenantId)
+          logger.info('[integrity-sentinel] Skipping duplicate alert for tenant:', tenantId)
           continue
         }
 
@@ -141,13 +142,13 @@ Deno.serve(async (req) => {
           })
 
         if (alertError) {
-          console.error('[integrity-sentinel] Error creating alert for tenant:', tenantId, alertError)
+          logger.error('[integrity-sentinel] Error creating alert for tenant:', tenantId, alertError)
         } else {
-          console.log('[integrity-sentinel] Created P0 alert for tenant:', tenantId)
+          logger.info('[integrity-sentinel] Created P0 alert for tenant:', tenantId)
         }
       }
     } else {
-      console.log('[integrity-sentinel] ✅ No integrity violations found')
+      logger.info('[integrity-sentinel] ✅ No integrity violations found')
     }
 
     // ============================================================
@@ -157,12 +158,12 @@ Deno.serve(async (req) => {
       .rpc('validate_agent_release_integrity')
 
     if (releaseError) {
-      console.error('[integrity-sentinel] Error validating release integrity:', releaseError)
+      logger.error('[integrity-sentinel] Error validating release integrity:', releaseError)
     } else if (releaseIntegrity) {
       const invalidReleases = releaseIntegrity.filter((r: { is_valid: boolean }) => !r.is_valid)
       
       if (invalidReleases.length > 0) {
-        console.warn('[integrity-sentinel] ⚠️ Invalid agent releases found:', invalidReleases)
+        logger.warn('[integrity-sentinel] ⚠️ Invalid agent releases found:', invalidReleases)
         
         // Criar alerta para releases inválidos (não é P0, é warning)
         // Usar tenant null para alerta global
@@ -181,10 +182,10 @@ Deno.serve(async (req) => {
           })
 
         if (releaseAlertError) {
-          console.error('[integrity-sentinel] Error creating release integrity alert:', releaseAlertError)
+          logger.error('[integrity-sentinel] Error creating release integrity alert:', releaseAlertError)
         }
       } else {
-        console.log('[integrity-sentinel] ✅ All agent releases valid')
+        logger.info('[integrity-sentinel] ✅ All agent releases valid')
       }
     }
 
@@ -201,14 +202,14 @@ Deno.serve(async (req) => {
       .limit(100)
 
     if (!emptyError && emptyOutputJobs && emptyOutputJobs.length > 0) {
-      console.warn('[integrity-sentinel] ⚠️ Jobs completed without output:', {
+      logger.warn('[integrity-sentinel] ⚠️ Jobs completed without output:', {
         count: emptyOutputJobs.length,
         sample: emptyOutputJobs.slice(0, 5)
       })
     }
 
     const duration = Date.now() - startTime
-    console.log('[integrity-sentinel] Check completed', {
+    logger.info('[integrity-sentinel] Check completed', {
       duration_ms: duration,
       violations_found: violations?.length || 0,
       release_issues: releaseIntegrity?.filter((r: { is_valid: boolean }) => !r.is_valid).length || 0,
@@ -249,7 +250,7 @@ Deno.serve(async (req) => {
     )
 
   } catch (err) {
-    console.error('[integrity-sentinel] Unhandled error:', err)
+    logger.error('[integrity-sentinel] Unhandled error:', err)
     
     // Register failure in cron health check
     try {
@@ -259,7 +260,7 @@ Deno.serve(async (req) => {
         p_error: err instanceof Error ? err.message : 'Unknown error'
       });
     } catch {
-      console.error('[integrity-sentinel] Failed to update cron health');
+      logger.error('[integrity-sentinel] Failed to update cron health');
     }
     
     // Try to log failure
@@ -274,7 +275,7 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch {
-      console.error('[integrity-sentinel] Failed to log error');
+      logger.error('[integrity-sentinel] Failed to log error');
     }
 
     return new Response(
