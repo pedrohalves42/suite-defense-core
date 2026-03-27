@@ -171,12 +171,12 @@ export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
       let isInternal = false;
       let userId: string | null = null;
 
-      // 4a. Internal call via X-Internal-Secret
-      if (internalSecret && expectedInternalSecret && internalSecret === expectedInternalSecret) {
+      // 4a. Internal call via X-Internal-Secret (timing-safe)
+      if (internalSecret && expectedInternalSecret && await timingSafeEqual(internalSecret, expectedInternalSecret)) {
         isInternal = true;
       }
-      // 4b. Service role key in Authorization
-      else if (authHeader && authHeader === `Bearer ${serviceRoleKey}`) {
+      // 4b. Service role key in Authorization (timing-safe)
+      else if (authHeader && serviceRoleKey && await timingSafeEqual(authHeader, `Bearer ${serviceRoleKey}`)) {
         isInternal = true;
       }
       // 4c. Standard JWT auth
