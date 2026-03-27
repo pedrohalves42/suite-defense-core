@@ -1,5 +1,6 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface SoftwareItem {
   name: string;
@@ -101,7 +102,7 @@ async function scanAgentVulnerabilities(
       .upsert(vulnerabilities, { onConflict: 'agent_id,check_key' });
     
     if (upsertError) {
-      console.error('[scan-vulnerabilities] Upsert error:', upsertError);
+      logger.error('[scan-vulnerabilities] Upsert error:', upsertError);
     }
   }
 
@@ -158,7 +159,7 @@ serveTenant(async (req, ctx) => {
   try {
     // ✅ BATCH MODE: Scan all agents for this tenant (serveTenant already validated access)
     if (mode === 'batch_all_agents') {
-      console.log(`[${requestId}] [SCAN-VULNS] Starting BATCH scan for tenant ${tenantId}`);
+      logger.info(`[${requestId}] [SCAN-VULNS] Starting BATCH scan for tenant ${tenantId}`);
       
       const { data: agents, error: agentsError } = await supabase
         .from('agents')
@@ -168,12 +169,12 @@ serveTenant(async (req, ctx) => {
         .limit(100);
       
       if (agentsError) {
-        console.error(`[${requestId}] [SCAN-VULNS] Error fetching agents:`, agentsError);
+        logger.error(`[${requestId}] [SCAN-VULNS] Error fetching agents:`, agentsError);
         throw agentsError;
       }
       
       if (!agents || agents.length === 0) {
-        console.log(`[${requestId}] [SCAN-VULNS] No active agents found for batch scan`);
+        logger.info(`[${requestId}] [SCAN-VULNS] No active agents found for batch scan`);
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -185,7 +186,7 @@ serveTenant(async (req, ctx) => {
         );
       }
       
-      console.log(`[${requestId}] [SCAN-VULNS] Batch scanning ${agents.length} agents`);
+      logger.info(`[${requestId}] [SCAN-VULNS] Batch scanning ${agents.length} agents`);
       
       let totalVulns = 0;
       let agentsScanned = 0;
@@ -207,7 +208,7 @@ serveTenant(async (req, ctx) => {
             vulns_found: scanResult.vulnerabilities_found
           });
         } catch (agentError) {
-          console.error(`[${requestId}] [SCAN-VULNS] Error scanning agent ${agent.id}:`, agentError);
+          logger.error(`[${requestId}] [SCAN-VULNS] Error scanning agent ${agent.id}:`, agentError);
         }
       }
       
@@ -235,15 +236,15 @@ serveTenant(async (req, ctx) => {
                   }
                 }
               });
-              console.log(`[${requestId}] [SCAN-VULNS] Triggered playbook for agent ${agentResult.agent_name} with critical vulns`);
+              logger.info(`[${requestId}] [SCAN-VULNS] Triggered playbook for agent ${agentResult.agent_name} with critical vulns`);
             }
           } catch (triggerError) {
-            console.error(`[${requestId}] [SCAN-VULNS] Error triggering playbook:`, triggerError);
+            logger.error(`[${requestId}] [SCAN-VULNS] Error triggering playbook:`, triggerError);
           }
         }
       }
       
-      console.log(`[${requestId}] [SCAN-VULNS] Batch scan complete: ${agentsScanned} agents, ${totalVulns} total vulnerabilities`);
+      logger.info(`[${requestId}] [SCAN-VULNS] Batch scan complete: ${agentsScanned} agents, ${totalVulns} total vulnerabilities`);
       
       return new Response(
         JSON.stringify({ 
@@ -267,7 +268,7 @@ serveTenant(async (req, ctx) => {
 
     const tenant_id = tenantId;
 
-    console.log(`[${requestId}] [SCAN-VULNS] Starting vulnerability scan for agent ${agent_id}`);
+    logger.info(`[${requestId}] [SCAN-VULNS] Starting vulnerability scan for agent ${agent_id}`);
 
     // 1. Get software inventory for this agent
     const { data: software, error: softwareError } = await supabase
@@ -277,12 +278,12 @@ serveTenant(async (req, ctx) => {
       .limit(200);
 
     if (softwareError) {
-      console.error(`[${requestId}] [SCAN-VULNS] Error fetching software:`, softwareError);
+      logger.error(`[${requestId}] [SCAN-VULNS] Error fetching software:`, softwareError);
       throw new Error(softwareError.message || 'Failed to fetch software inventory');
     }
 
     if (!software || software.length === 0) {
-      console.log(`[${requestId}] [SCAN-VULNS] No software inventory found for agent`);
+      logger.info(`[${requestId}] [SCAN-VULNS] No software inventory found for agent`);
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -294,7 +295,7 @@ serveTenant(async (req, ctx) => {
       );
     }
 
-    console.log(`[${requestId}] [SCAN-VULNS] Found ${software.length} software items to scan`);
+    logger.info(`[${requestId}] [SCAN-VULNS] Found ${software.length} software items to scan`);
 
     // 2. Build list of unique software keywords to search
     const softwareKeywords = new Set<string>();
@@ -314,7 +315,7 @@ serveTenant(async (req, ctx) => {
       });
     }
 
-    console.log(`[${requestId}] [SCAN-VULNS] Extracted ${softwareKeywords.size} unique keywords to search`);
+    logger.info(`[${requestId}] [SCAN-VULNS] Extracted ${softwareKeywords.size} unique keywords to search`);
 
     // 3. Search for CVEs in database (already cached from NVD)
     const vulnerabilities: any[] = [];
@@ -332,12 +333,12 @@ serveTenant(async (req, ctx) => {
         .limit(50);
 
       if (cveError) {
-        console.log(`[${requestId}] [SCAN-VULNS] Error searching CVEs for "${keyword}":`, cveError.message);
+        logger.info(`[${requestId}] [SCAN-VULNS] Error searching CVEs for "${keyword}":`, cveError.message);
         continue;
       }
 
       if (cves && cves.length > 0) {
-        console.log(`[${requestId}] [SCAN-VULNS] Found ${cves.length} CVEs for keyword "${keyword}"`);
+        logger.info(`[${requestId}] [SCAN-VULNS] Found ${cves.length} CVEs for keyword "${keyword}"`);
         
         // Match CVEs to installed software
         for (const cve of cves) {
@@ -369,12 +370,12 @@ serveTenant(async (req, ctx) => {
 
     // 4. If no CVEs found in cache, fall back to hardcoded known vulnerabilities
     if (vulnerabilities.length === 0) {
-      console.log(`[${requestId}] [SCAN-VULNS] No dynamic CVEs found, using fallback detection`);
+      logger.info(`[${requestId}] [SCAN-VULNS] No dynamic CVEs found, using fallback detection`);
       const fallbackVulns = await scanWithFallback(software as SoftwareItem[], agent_id, tenant_id);
       vulnerabilities.push(...fallbackVulns);
     }
 
-    console.log(`[${requestId}] [SCAN-VULNS] Found ${vulnerabilities.length} total vulnerabilities`);
+    logger.info(`[${requestId}] [SCAN-VULNS] Found ${vulnerabilities.length} total vulnerabilities`);
 
     // 5. Store findings in database
     if (vulnerabilities.length > 0) {
@@ -389,11 +390,11 @@ serveTenant(async (req, ctx) => {
         .insert(vulnerabilities);
 
       if (insertError) {
-        console.error(`[${requestId}] [SCAN-VULNS] Error inserting vulnerabilities:`, insertError);
+        logger.error(`[${requestId}] [SCAN-VULNS] Error inserting vulnerabilities:`, insertError);
         throw insertError;
       }
 
-      console.log(`[${requestId}] [SCAN-VULNS] Successfully stored ${vulnerabilities.length} vulnerability findings`);
+      logger.info(`[${requestId}] [SCAN-VULNS] Successfully stored ${vulnerabilities.length} vulnerability findings`);
     }
 
     return new Response(
@@ -418,7 +419,7 @@ serveTenant(async (req, ctx) => {
       : (typeof error === 'object' && error !== null && 'message' in error) 
         ? String((error as any).message)
         : JSON.stringify(error) || 'Unknown error';
-    console.error(`[${requestId}] [SCAN-VULNS] Error:`, message);
+    logger.error(`[${requestId}] [SCAN-VULNS] Error:`, message);
     return new Response(
       JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

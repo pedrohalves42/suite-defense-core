@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,7 +40,7 @@ serve(async (req) => {
     );
 
     if (authError || !user) {
-      console.error('Auth error:', authError);
+      logger.error('Auth error:', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -57,7 +58,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (roleError || !userRole) {
-      console.error('Role error:', roleError);
+      logger.error('Role error:', roleError);
       return new Response(
         JSON.stringify({ error: 'Access denied - admin/operator role required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -74,7 +75,7 @@ serve(async (req) => {
       .eq('is_active', true);
 
     if (blockedError) {
-      console.error('Error fetching blocked websites:', blockedError);
+      logger.error('Error fetching blocked websites:', blockedError);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch blocked websites' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -82,7 +83,7 @@ serve(async (req) => {
     }
 
     const blockedDomains = blockedSites?.map(s => s.domain_pattern) || [];
-    console.log(`[sync-blocked-websites] Found ${blockedDomains.length} blocked domains for tenant ${tenantId}`);
+    logger.info(`[sync-blocked-websites] Found ${blockedDomains.length} blocked domains for tenant ${tenantId}`);
 
     // Fetch all online agents (last heartbeat within 30 minutes - unified threshold)
     const fiveMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
@@ -93,7 +94,7 @@ serve(async (req) => {
       .gt('last_heartbeat', fiveMinutesAgo);
 
     if (agentsError) {
-      console.error('Error fetching agents:', agentsError);
+      logger.error('Error fetching agents:', agentsError);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch agents' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -111,7 +112,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[sync-blocked-websites] Creating jobs for ${agents.length} online agents`);
+    logger.info(`[sync-blocked-websites] Creating jobs for ${agents.length} online agents`);
 
     // Cancel any existing pending/queued/delivered sync jobs for these agents to avoid dedup constraint
     const agentIds = agents.map(a => a.id);
@@ -124,7 +125,7 @@ serve(async (req) => {
       .in('status', ['pending', 'queued', 'delivered']);
 
     if (cancelError) {
-      console.warn('[sync-blocked-websites] Error cancelling old jobs:', cancelError);
+      logger.warn('[sync-blocked-websites] Error cancelling old jobs:', cancelError);
     }
 
     // Create sync_blocked_websites job for each online agent
@@ -151,14 +152,14 @@ serve(async (req) => {
       .select('id');
 
     if (jobsError) {
-      console.error('Error creating jobs:', jobsError);
+      logger.error('Error creating jobs:', jobsError);
       return new Response(
         JSON.stringify({ error: 'Failed to create sync jobs' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[sync-blocked-websites] Created ${createdJobs?.length || 0} jobs successfully`);
+    logger.info(`[sync-blocked-websites] Created ${createdJobs?.length || 0} jobs successfully`);
 
     return new Response(
       JSON.stringify({ 
@@ -172,7 +173,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[sync-blocked-websites] Error:', error);
+    logger.error('[sync-blocked-websites] Error:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

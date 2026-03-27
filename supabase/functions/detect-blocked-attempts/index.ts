@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -13,7 +14,7 @@ Deno.serve(async (req) => {
 
   const requestId = crypto.randomUUID().slice(0, 8)
   const startedAt = Date.now()
-  console.log(`[${requestId}] detect-blocked-attempts: Starting correlation...`)
+  logger.info(`[${requestId}] detect-blocked-attempts: Starting correlation...`)
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -32,7 +33,7 @@ Deno.serve(async (req) => {
 
     if (error) {
       const isTimeout = error.code === '57014' || error.message?.includes('timeout');
-      console.error(`[${requestId}] Detection ${isTimeout ? 'timed out' : 'failed'}:`, error);
+      logger.error(`[${requestId}] Detection ${isTimeout ? 'timed out' : 'failed'}:`, error);
 
       // Log observability even on failure
       try {
@@ -45,7 +46,7 @@ Deno.serve(async (req) => {
           p_processed_count: 0,
           p_job_source: 'cron'
         });
-      } catch (e) { console.warn('[detect-blocked-attempts] Failed to log job run:', e); }
+      } catch (e) { logger.warn('[detect-blocked-attempts] Failed to log job run:', e); }
 
       return new Response(
         JSON.stringify({ 
@@ -59,7 +60,7 @@ Deno.serve(async (req) => {
     }
 
     const insertedCount = data?.[0]?.inserted_count ?? 0
-    console.log(`[${requestId}] Detected ${insertedCount} new blocked attempts in ${Date.now() - startedAt}ms`)
+    logger.info(`[${requestId}] Detected ${insertedCount} new blocked attempts in ${Date.now() - startedAt}ms`)
 
     try {
       await supabase.rpc('log_scheduled_job_run', {
@@ -70,7 +71,7 @@ Deno.serve(async (req) => {
         p_processed_count: insertedCount,
         p_job_source: 'cron'
       });
-    } catch (e) { console.warn('[detect-blocked-attempts] Failed to log job run:', e); }
+    } catch (e) { logger.warn('[detect-blocked-attempts] Failed to log job run:', e); }
 
     return new Response(
       JSON.stringify({ 
@@ -85,7 +86,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     const errMsg = String(err);
     const isTimeout = errMsg.includes('timeout') || errMsg.includes('20s');
-    console.error(`[${requestId}] ${isTimeout ? 'Timeout' : 'Exception'}:`, err)
+    logger.error(`[${requestId}] ${isTimeout ? 'Timeout' : 'Exception'}:`, err)
     
     // Log error observability
     try {
@@ -98,7 +99,7 @@ Deno.serve(async (req) => {
         p_processed_count: 0,
         p_job_source: 'cron'
       })
-    } catch (e) { console.warn('[detect-blocked-attempts] Failed to log error run:', e); }
+    } catch (e) { logger.warn('[detect-blocked-attempts] Failed to log error run:', e); }
     
     return new Response(
       JSON.stringify({ 

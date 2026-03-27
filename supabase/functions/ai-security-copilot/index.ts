@@ -1,5 +1,6 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from '../_shared/logger.ts';
 
 const SYSTEM_PROMPT = `You are CyberShield Security Copilot — an expert cybersecurity analyst assistant embedded in the CyberShield platform.
 
@@ -99,7 +100,7 @@ serveTenant(async (req, ctx) => {
       });
     }
     const errText = await response.text();
-    console.error('AI gateway error:', response.status, errText);
+    logger.error('AI gateway error:', response.status, errText);
     return new Response(JSON.stringify({ error: 'AI service error' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });

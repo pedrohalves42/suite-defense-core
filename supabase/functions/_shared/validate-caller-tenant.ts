@@ -1,5 +1,6 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { timingSafeEqual } from './crypto-utils.ts';
+import { logger } from './logger.ts';
 
 interface CallerValidationResult {
   authorized: boolean;
@@ -71,7 +72,7 @@ export async function validateCallerTenant(
     .maybeSingle();
 
   if (!userRole) {
-    console.warn(`[SECURITY] User ${user.id} attempted access to unauthorized tenant ${tenantId}`);
+    logger.warn(`[SECURITY] User ${user.id} attempted access to unauthorized tenant ${tenantId}`);
     return { 
       authorized: false, 
       isInternalCall: false, 

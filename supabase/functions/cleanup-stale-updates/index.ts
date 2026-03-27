@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * cleanup-stale-updates
@@ -46,7 +47,7 @@ Deno.serve(async (req) => {
       .gte('force_update_delivery_count', MAX_DELIVERY_COUNT);
 
     if (err1 || err2) {
-      console.error(`[${requestId}] Query errors:`, err1, err2);
+      logger.error(`[${requestId}] Query errors:`, err1, err2);
     }
 
     // Merge and deduplicate
@@ -62,7 +63,7 @@ Deno.serve(async (req) => {
         agent.force_update_reason === 'auto_retrigger_72h_offline' &&
         (agent.force_update_delivery_count || 0) === 0
       ) {
-        console.log(`[${requestId}] Skipping ${agent.agent_name}: re-triggered but not yet delivered (waiting for agent to come online)`);
+        logger.info(`[${requestId}] Skipping ${agent.agent_name}: re-triggered but not yet delivered (waiting for agent to come online)`);
         return false;
       }
       return true;
@@ -74,7 +75,7 @@ Deno.serve(async (req) => {
       }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    console.log(`[${requestId}] Found ${staleAgents.length} agents with stale force_update flags`);
+    logger.info(`[${requestId}] Found ${staleAgents.length} agents with stale force_update flags`);
 
     let cleaned = 0;
     for (const agent of staleAgents) {
@@ -82,7 +83,7 @@ Deno.serve(async (req) => {
         ? `Loop detected: ${agent.force_update_delivery_count} deliveries without confirmation`
         : `Stale: force_update_at ${agent.force_update_at} exceeds ${MAX_STALE_HOURS}h threshold`;
 
-      console.log(`[${requestId}] Cleaning: ${agent.agent_name} (${agent.force_update_version}) - ${reason}`);
+      logger.info(`[${requestId}] Cleaning: ${agent.agent_name} (${agent.force_update_version}) - ${reason}`);
 
       // Clear force_update flags
       const { error: updateErr } = await supabase
@@ -96,7 +97,7 @@ Deno.serve(async (req) => {
         .eq('id', agent.id);
 
       if (updateErr) {
-        console.error(`[${requestId}] Failed to clean ${agent.agent_name}:`, updateErr);
+        logger.error(`[${requestId}] Failed to clean ${agent.agent_name}:`, updateErr);
         continue;
       }
 
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
       cleaned++;
     }
 
-    console.log(`[${requestId}] Cleanup complete: ${cleaned}/${staleAgents.length} agents cleaned`);
+    logger.info(`[${requestId}] Cleanup complete: ${cleaned}/${staleAgents.length} agents cleaned`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -137,7 +138,7 @@ Deno.serve(async (req) => {
     }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
-    console.error(`[${requestId}] Error:`, (error as Error).message);
+    logger.error(`[${requestId}] Error:`, (error as Error).message);
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

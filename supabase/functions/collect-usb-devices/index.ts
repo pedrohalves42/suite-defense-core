@@ -8,6 +8,7 @@
  */
 
 import { serveAgent } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface UsbDevicePayload {
   device_id: string;
@@ -31,7 +32,7 @@ serveAgent(async (_req, ctx) => {
     );
   }
 
-  console.log(`[${requestId}] [collect-usb] Agent ${agentName}: ${devices.length} USB devices`);
+  logger.info(`[${requestId}] [collect-usb] Agent ${agentName}: ${devices.length} USB devices`);
 
   // Load block policies for this tenant
   const { data: blockPolicies } = await supabase
@@ -92,7 +93,7 @@ serveAgent(async (_req, ctx) => {
       );
 
     if (error) {
-      console.warn(`[${requestId}] [collect-usb] Upsert error for ${device.device_id}:`, error.message);
+      logger.warn(`[${requestId}] [collect-usb] Upsert error for ${device.device_id}:`, error.message);
     } else {
       processedCount++;
     }
@@ -128,7 +129,7 @@ serveAgent(async (_req, ctx) => {
     });
   } catch (_) { /* non-critical */ }
 
-  console.log(`[${requestId}] [collect-usb] Done: ${processedCount} processed, ${blockedCount} blocked in ${durationMs}ms`);
+  logger.info(`[${requestId}] [collect-usb] Done: ${processedCount} processed, ${blockedCount} blocked in ${durationMs}ms`);
 
   return {
     success: true,

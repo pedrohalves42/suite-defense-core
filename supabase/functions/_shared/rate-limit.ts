@@ -1,4 +1,5 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from './logger.ts';
 
 interface RateLimitConfig {
   maxRequests: number;
@@ -33,7 +34,7 @@ export async function checkRateLimit(
   if (error) {
     // FAIL CLOSED: Block requests when rate-limit check fails
     // Prevents DDoS amplification when DB is under stress
-    console.error('[RateLimit] RPC error, failing CLOSED for safety:', error.message);
+    logger.error('[RateLimit] RPC error, failing CLOSED for safety:', error.message);
     return { allowed: false, resetAt: new Date(Date.now() + 60_000) };
   }
 

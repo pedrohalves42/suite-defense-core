@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * CONSOLIDATED health-monitor (COST-OPT v10)
@@ -78,7 +79,7 @@ Deno.serve(async (req) => {
           .eq('status', 'delivered')
           .lt('delivered_at', cutoff)
           .limit(200);
-        if (error) { console.error('[health-monitor] stuck-jobs query error:', error.message); return; }
+        if (error) { logger.error('[health-monitor] stuck-jobs query error:', error.message); return; }
         if (!data?.length) return;
         result.stuck_jobs.count = data.length;
         // Mark as failed
@@ -99,7 +100,7 @@ Deno.serve(async (req) => {
           .is('last_heartbeat', null)
           .lt('enrolled_at', cutoff)
           .limit(100);
-        if (error) { console.error('[health-monitor] pending-agents error:', error.message); return; }
+        if (error) { logger.error('[health-monitor] pending-agents error:', error.message); return; }
         result.pending_agents.count = data?.length || 0;
       })(),
 
@@ -111,7 +112,7 @@ Deno.serve(async (req) => {
           .select('id, agent_name, tenant_id, last_heartbeat')
           .eq('status', 'active')
           .lt('last_heartbeat', offlineCutoff);
-        if (error) { console.error('[health-monitor] agent-health error:', error.message); return; }
+        if (error) { logger.error('[health-monitor] agent-health error:', error.message); return; }
         result.agent_health.offline = data?.length || 0;
         // Count total active
         const { count } = await supabase
@@ -128,7 +129,7 @@ Deno.serve(async (req) => {
           .select('id, tenant_id, failure_class')
           .eq('status', 'exhausted')
           .limit(100);
-        if (error) { console.error('[health-monitor] dlq error:', error.message); return; }
+        if (error) { logger.error('[health-monitor] dlq error:', error.message); return; }
         result.dlq_exhaustion.exhausted = data?.length || 0;
         if (data?.length) {
           // Check existing alerts to avoid duplicates
@@ -160,7 +161,7 @@ Deno.serve(async (req) => {
           .select('id', { count: 'exact', head: true })
           .gt('duration_ms', 2000)
           .gte('created_at', fiveMinAgo);
-        if (error) { console.error('[health-monitor] slow-ops error:', error.message); return; }
+        if (error) { logger.error('[health-monitor] slow-ops error:', error.message); return; }
         result.slow_operations.count = count || 0;
       })(),
 
@@ -173,7 +174,7 @@ Deno.serve(async (req) => {
           .eq('status', 'pending')
           .is('last_heartbeat', null)
           .lt('enrolled_at', cutoff);
-        if (error) { console.error('[health-monitor] stuck-agents error:', error.message); return; }
+        if (error) { logger.error('[health-monitor] stuck-agents error:', error.message); return; }
         result.stuck_agents.count = data?.length || 0;
         if (data?.length) {
           const alerts = data.map(a => ({
@@ -194,7 +195,7 @@ Deno.serve(async (req) => {
           .select('agent_id, tenant_id, agent_name')
           .eq('is_stuck', true)
           .limit(100);
-        if (error) { console.error('[health-monitor] stuck-install error:', error.message); return; }
+        if (error) { logger.error('[health-monitor] stuck-install error:', error.message); return; }
         result.stuck_installations.count = data?.length || 0;
       })(),
     ]);
@@ -202,7 +203,7 @@ Deno.serve(async (req) => {
     // Log any rejected promises
     [stuckJobsResult, pendingAgentsResult, agentHealthResult, dlqResult, slowOpsResult, stuckAgentsResult, stuckInstallResult]
       .forEach((r, i) => {
-        if (r.status === 'rejected') console.error(`[health-monitor] Check ${i} failed:`, r.reason);
+        if (r.status === 'rejected') logger.error(`[health-monitor] Check ${i} failed:`, r.reason);
       });
 
     result.duration_ms = Date.now() - startedAt;
@@ -216,14 +217,14 @@ Deno.serve(async (req) => {
       });
     } catch (_) { /* best effort */ }
 
-    console.log(`[health-monitor] Completed in ${result.duration_ms}ms`, JSON.stringify(result));
+    logger.info(`[health-monitor] Completed in ${result.duration_ms}ms`, JSON.stringify(result));
 
     return new Response(JSON.stringify({ success: true, ...result }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
     const msg = (e as Error).message;
-    console.error('[health-monitor] Fatal:', msg);
+    logger.error('[health-monitor] Fatal:', msg);
     try {
       await supabase.rpc('update_cron_health', {
         p_cron_name: 'health-monitor',

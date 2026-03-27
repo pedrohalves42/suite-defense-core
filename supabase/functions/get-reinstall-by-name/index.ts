@@ -20,6 +20,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { hashToken } from '../_shared/token-hash.ts';
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -83,7 +84,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (ekError || !ek) {
-        console.error(`[${requestId}] Invalid enrollment key`);
+        logger.error(`[${requestId}] Invalid enrollment key`);
         return new Response(
           '# ERROR: Invalid or expired enrollment key\n# Tip: use an ACTIVE Enrollment Key from Chaves de Instalação (not JWT)\nWrite-Host "ERROR: Invalid key" -ForegroundColor Red\n',
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
@@ -148,7 +149,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[${requestId}] Reinstall-by-name for agent: ${agentName}, tenant: ${tenantId}`);
+    logger.info(`[${requestId}] Reinstall-by-name for agent: ${agentName}, tenant: ${tenantId}`);
 
     // Find agent
     const { data: agent, error: agentError } = await adminClient
@@ -159,7 +160,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (agentError || !agent) {
-      console.warn(`[${requestId}] Agent not found: ${agentName}`);
+      logger.warn(`[${requestId}] Agent not found: ${agentName}`);
       return new Response(
         `# ERROR: Agent "${agentName}" not found in your tenant\nWrite-Host "ERROR: Agent not found: ${agentName}" -ForegroundColor Red\n`,
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
@@ -190,7 +191,7 @@ Deno.serve(async (req) => {
       });
 
     if (tokenError) {
-      console.error(`[${requestId}] Token creation failed:`, tokenError);
+      logger.error(`[${requestId}] Token creation failed:`, tokenError);
       return new Response(
         '# ERROR: Failed to generate credentials\nWrite-Host "ERROR: Token creation failed" -ForegroundColor Red\n',
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
@@ -231,7 +232,7 @@ Deno.serve(async (req) => {
     const hmacSecret = agent.hmac_secret || '';
     const scriptVersion = release.version || 'unknown';
 
-    console.log(`[${requestId}] Generating preserve script for ${agentName} v${scriptVersion} (token prefix: ${tokenPrefix})`);
+    logger.info(`[${requestId}] Generating preserve script for ${agentName} v${scriptVersion} (token prefix: ${tokenPrefix})`);
 
     // Build self-contained preserve-reinstall script
     const script = `# CyberShield - Auto-Recover Reinstall for: ${agentName}
@@ -451,7 +452,7 @@ Start-Sleep -Seconds 15
     });
 
   } catch (error) {
-    console.error(`[${requestId}] Error:`, error);
+    logger.error(`[${requestId}] Error:`, error);
     return new Response(
       `# ERROR: ${error instanceof Error ? error.message : 'Internal error'}\nWrite-Host "ERROR: Internal server error" -ForegroundColor Red\n`,
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }

@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { hashToken } from '../_shared/token-hash.ts';
 import { normalizeEvidenceEntry } from './normalization.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -91,7 +92,7 @@ Deno.serve(async (req) => {
       .select('id');
 
     if (insertError) {
-      console.error('[submit-agent-evidence] Insert error:', insertError.message);
+      logger.error('[submit-agent-evidence] Insert error:', insertError.message);
       return new Response(
         JSON.stringify({ error: 'Failed to store evidence' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -107,7 +108,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[submit-agent-evidence] Error:', error);
+    logger.error('[submit-agent-evidence] Error:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

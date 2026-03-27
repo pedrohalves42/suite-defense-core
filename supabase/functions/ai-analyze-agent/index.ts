@@ -7,6 +7,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { sanitizeForAI } from '../_shared/ai-sanitizer.ts';
 import { callAIJson } from '../_shared/ai-provider-helper.ts';
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from '../_shared/ai-evidence-types.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface AgentContext {
   metrics: {
@@ -89,7 +90,7 @@ serveTenant(async (_req, ctx) => {
   const rawContextSummary = buildContextSummary(agent, context);
   const sanitizeResult = sanitizeForAI(rawContextSummary);
   if (sanitizeResult.blocked) {
-    console.warn('[ai-analyze-agent] Prompt injection attempt blocked:', sanitizeResult.blockedPatterns);
+    logger.warn('[ai-analyze-agent] Prompt injection attempt blocked:', sanitizeResult.blockedPatterns);
   }
   const contextSummary = sanitizeResult.sanitized;
 
@@ -124,7 +125,7 @@ Responda APENAS com JSON valido no formato:
   }>(systemPrompt, contextSummary, { maxTokens: 1024, functionName: 'ai-analyze-agent' });
 
   if (!aiResult.success || !parsedAnalysis) {
-    console.warn('[ai-analyze-agent] AI call failed, using basic analysis:', aiResult.error);
+    logger.warn('[ai-analyze-agent] AI call failed, using basic analysis:', aiResult.error);
     const basicAnalysis = generateBasicAnalysis(context, evidence);
     return { ...basicAnalysis, aiProvider: aiResult.provider, aiError: aiResult.error };
   }

@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,7 +33,7 @@ interface HealthCheckResponse {
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[STRIPE-HEALTH-CHECK] ${step}${detailsStr}`);
+  logger.info(`[STRIPE-HEALTH-CHECK] ${step}${detailsStr}`);
 };
 
 Deno.serve(async (req) => {

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
+import { logger } from '../_shared/logger.ts';
 
 /**
  * FIDO2/WebAuthn Authentication Edge Function
@@ -95,7 +96,7 @@ Deno.serve(async (req) => {
         timeout: 60000,
       }
 
-      console.log(`[fido2-authenticate] Begin authentication for ${email}, ${credentials.length} key(s) available`)
+      logger.info(`[fido2-authenticate] Begin authentication for ${email}, ${credentials.length} key(s) available`)
       return new Response(JSON.stringify(options), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -166,7 +167,7 @@ Deno.serve(async (req) => {
 
         // Verify origin matches
         if (clientData.origin !== ORIGIN) {
-          console.warn(`[fido2-authenticate] Origin mismatch: ${clientData.origin} vs ${ORIGIN}`)
+          logger.warn(`[fido2-authenticate] Origin mismatch: ${clientData.origin} vs ${ORIGIN}`)
           // Allow lovable preview origins in dev
           if (!clientData.origin.includes('lovable.app')) {
             throw new Error('Origin mismatch')
@@ -185,7 +186,7 @@ Deno.serve(async (req) => {
           }
         }
       } catch (verifyError) {
-        console.error('[fido2-authenticate] ClientData verification failed:', verifyError)
+        logger.error('[fido2-authenticate] ClientData verification failed:', verifyError)
         return new Response(JSON.stringify({ error: `Authentication verification failed: ${(verifyError as Error).message}` }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
@@ -214,7 +215,7 @@ Deno.serve(async (req) => {
 
       // Check for cloned authenticator (sign count should increase)
       if (credential.sign_count > 0 && signCount <= credential.sign_count) {
-        console.error(`[fido2-authenticate] SECURITY: Possible cloned authenticator for credential ${credential.credential_id}. ` +
+        logger.error(`[fido2-authenticate] SECURITY: Possible cloned authenticator for credential ${credential.credential_id}. ` +
           `Expected sign_count > ${credential.sign_count}, got ${signCount}`)
 
         await supabase.from('security_events').insert({
@@ -253,7 +254,7 @@ Deno.serve(async (req) => {
       })
 
       if (linkError || !linkData) {
-        console.error('[fido2-authenticate] Failed to generate session link:', linkError)
+        logger.error('[fido2-authenticate] Failed to generate session link:', linkError)
         return new Response(JSON.stringify({ error: 'Failed to create session' }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
@@ -283,7 +284,7 @@ Deno.serve(async (req) => {
         })
       }
 
-      console.log(`[fido2-authenticate] Authentication successful for ${email}, credential: ${credential.credential_id}`)
+      logger.info(`[fido2-authenticate] Authentication successful for ${email}, credential: ${credential.credential_id}`)
 
       // Return the magic link properties so the client can exchange them for a session
       return new Response(JSON.stringify({
@@ -300,7 +301,7 @@ Deno.serve(async (req) => {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   } catch (error) {
-    console.error('[fido2-authenticate] Error:', error)
+    logger.error('[fido2-authenticate] Error:', error)
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })

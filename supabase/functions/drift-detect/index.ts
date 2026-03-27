@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
+import { logger } from '../_shared/logger.ts';
 
 /**
  * Compliance Drift Detection — CMP-004
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
           scanned++
         }
 
-        console.log(`[drift-detect] Scheduled scan completed: ${scanned} tenants`)
+        logger.info(`[drift-detect] Scheduled scan completed: ${scanned} tenants`)
         return new Response(JSON.stringify({ scanned }), { headers })
       }
 
@@ -98,7 +99,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers })
   } catch (error) {
-    console.error('[drift-detect] Error:', error)
+    logger.error('[drift-detect] Error:', error)
     return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500, headers })
   }
 })
@@ -136,7 +137,7 @@ async function scanTenant(supabase: any, tenantId: string) {
     })
   }
 
-  console.log(`[drift-detect] Tenant ${tenantId}: score=${drift.score}, severity=${drift.severity}`)
+  logger.info(`[drift-detect] Tenant ${tenantId}: score=${drift.score}, severity=${drift.severity}`)
 }
 
 async function collectMetrics(supabase: any, tenantId: string): Promise<ComplianceMetrics> {

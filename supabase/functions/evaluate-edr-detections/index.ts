@@ -9,6 +9,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const BATCH_SIZE = 500;
 
@@ -231,7 +232,7 @@ Deno.serve(async (req: Request) => {
 
       if (newDetections.length > 0) {
         const { error } = await supabase.from('endpoint_detection_events').insert(newDetections);
-        if (error) console.error(`[evaluate-edr] Insert error:`, error.message);
+        if (error) logger.error(`[evaluate-edr] Insert error:`, error.message);
         else stats.detections += newDetections.length;
       }
 
@@ -240,7 +241,7 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  console.log(`[evaluate-edr-detections] Evaluated=${stats.evaluated} Detections=${stats.detections}`);
+  logger.info(`[evaluate-edr-detections] Evaluated=${stats.evaluated} Detections=${stats.detections}`);
 
   return new Response(JSON.stringify({ success: true, stats }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },

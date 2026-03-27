@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,7 +44,7 @@ serve(async (req) => {
     });
 
     if (roleError || !isSuperAdmin) {
-      console.error('[create-custom-trial] Access denied - not super admin:', user.id);
+      logger.error('[create-custom-trial] Access denied - not super admin:', user.id);
       return new Response(JSON.stringify({ error: 'Super admin access required' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -98,7 +99,7 @@ serve(async (req) => {
     });
 
     if (createUserError || !newUser.user) {
-      console.error('[create-custom-trial] Failed to create user:', createUserError);
+      logger.error('[create-custom-trial] Failed to create user:', createUserError);
       return new Response(JSON.stringify({ error: 'Failed to create user', details: createUserError?.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -116,7 +117,7 @@ serve(async (req) => {
       .single();
 
     if (roleQueryError || !userRole?.tenant_id) {
-      console.error('[create-custom-trial] Failed to get tenant:', roleQueryError);
+      logger.error('[create-custom-trial] Failed to get tenant:', roleQueryError);
       return new Response(JSON.stringify({ error: 'Failed to get tenant' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -160,7 +161,7 @@ serve(async (req) => {
       .single();
 
     if (trialError) {
-      console.error('[create-custom-trial] Failed to record trial:', trialError);
+      logger.error('[create-custom-trial] Failed to record trial:', trialError);
     }
 
     // Configure tenant features for trial (starter plan)
@@ -170,7 +171,7 @@ serve(async (req) => {
       p_device_quantity: 30,
     });
 
-    console.log(`[create-custom-trial] Created ${trial_days}-day trial for ${company_name} (${email})`);
+    logger.info(`[create-custom-trial] Created ${trial_days}-day trial for ${company_name} (${email})`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -187,7 +188,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('[create-custom-trial] Error:', error);
+    logger.error('[create-custom-trial] Error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ error: message }), {
       status: 500,

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { runQualityCheck, createQualityAlert, logQualityCheck } from '../_shared/ai-quality-monitor.ts';
 import { AIPromptRegistry } from '../_shared/ai-prompt-registry.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -202,7 +203,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('[AI Quality Check] Error:', error);
+    logger.error('[AI Quality Check] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

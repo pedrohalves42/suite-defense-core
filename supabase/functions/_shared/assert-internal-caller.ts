@@ -20,6 +20,7 @@
 
 import { corsHeaders } from './cors.ts';
 import { timingSafeEqual } from './crypto-utils.ts';
+import { logger } from './logger.ts';
 
 export async function assertInternalCaller(req: Request, options?: { allowAuthenticatedUsers?: boolean }): Promise<Response | null> {
   const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');
@@ -30,25 +31,25 @@ export async function assertInternalCaller(req: Request, options?: { allowAuthen
 
   // 1. X-Internal-Secret match (timing-safe)
   if (internalSecret && expectedSecret && await timingSafeEqual(internalSecret, expectedSecret)) {
-    console.log('[assert-internal-caller] Authorized via X-Internal-Secret');
+    logger.info('[assert-internal-caller] Authorized via X-Internal-Secret');
     return null;
   }
 
   // 2. service_role key in Authorization header (timing-safe)
   if (authHeader && serviceRoleKey && await timingSafeEqual(authHeader, `Bearer ${serviceRoleKey}`)) {
-    console.log('[assert-internal-caller] Authorized via service_role key');
+    logger.info('[assert-internal-caller] Authorized via service_role key');
     return null;
   }
 
   // 3. Scheduled cron invocation via anon key (timing-safe)
   if (authHeader && anonKey && await timingSafeEqual(authHeader, `Bearer ${anonKey}`)) {
-    console.log('[assert-internal-caller] Authorized via cron anon key');
+    logger.info('[assert-internal-caller] Authorized via cron anon key');
     return null;
   }
 
   // 4. Direct scheduled invocation without headers
   if (!authHeader && !internalSecret) {
-    console.log('[assert-internal-caller] Authorized via scheduled invocation without headers');
+    logger.info('[assert-internal-caller] Authorized via scheduled invocation without headers');
     return null;
   }
 
@@ -57,11 +58,11 @@ export async function assertInternalCaller(req: Request, options?: { allowAuthen
     // The JWT is present but doesn't match service_role or anon key,
     // so it's likely a user JWT. Let it through — the calling function
     // is responsible for verifying admin role via Supabase auth.getUser().
-    console.log('[assert-internal-caller] Authorized via user JWT (allowAuthenticatedUsers)');
+    logger.info('[assert-internal-caller] Authorized via user JWT (allowAuthenticatedUsers)');
     return null;
   }
 
-  console.warn('[SECURITY] Unauthorized access attempt to internal/cron function', {
+  logger.warn('[SECURITY] Unauthorized access attempt to internal/cron function', {
     hasAuthHeader: !!authHeader,
     hasInternalSecret: !!internalSecret,
   });

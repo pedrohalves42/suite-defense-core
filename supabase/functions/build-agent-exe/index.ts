@@ -22,7 +22,7 @@ const BUILD_GH_REPOSITORY = Deno.env.get('BUILD_GH_REPOSITORY'); // e.g., "usern
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   
-  console.log('[build-agent-exe] Function started', { 
+  logger.info('[build-agent-exe] Function started', { 
     timestamp: new Date().toISOString(), 
     requestId,
     method: req.method 

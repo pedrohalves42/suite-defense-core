@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit } from "../_shared/rate-limit.ts";
+import { logger } from '../_shared/logger.ts';
 
 const ValidateHmacSchema = {
   parse: (data: any) => {
@@ -55,7 +56,7 @@ serve(async (req) => {
     );
     
     if (!rateLimitResult.allowed) {
-      console.warn(`[${requestId}] Rate limit exceeded for IP: ${clientIP}`);
+      logger.warn(`[${requestId}] Rate limit exceeded for IP: ${clientIP}`);
       return new Response(JSON.stringify({
         valid: false,
         error: "Rate limit exceeded",
@@ -134,7 +135,7 @@ serve(async (req) => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
     
-    console.log(`[${requestId}] [OK]  HMAC validation successful`);
+    logger.info(`[${requestId}] [OK]  HMAC validation successful`);
     
     return new Response(JSON.stringify({
       valid: true,
@@ -149,7 +150,7 @@ serve(async (req) => {
     });
     
   } catch (error: any) {
-    console.error(`[${requestId}] Unexpected error during HMAC validation:`, error);
+    logger.error(`[${requestId}] Unexpected error during HMAC validation:`, error);
     
     return new Response(JSON.stringify({
       valid: false,

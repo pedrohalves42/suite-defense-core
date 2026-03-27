@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { recordMetric } from '../_shared/apm.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -13,7 +14,7 @@ Deno.serve(async (req) => {
   if (authError) return authError;
 
   try {
-    console.log("[RESET-DAILY-QUOTAS] Starting daily quota reset");
+    logger.info("[RESET-DAILY-QUOTAS] Starting daily quota reset");
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -29,7 +30,7 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
-    console.log("[RESET-DAILY-QUOTAS] Daily quotas reset successfully");
+    logger.info("[RESET-DAILY-QUOTAS] Daily quotas reset successfully");
 
     // APM metric
     recordMetric({
@@ -37,7 +38,7 @@ Deno.serve(async (req) => {
       operation_type: 'edge_function',
       duration_ms: Date.now() - Date.now(),
       status_code: 200,
-    }).catch((e) => console.warn('[reset-daily-quotas] APM metric failed:', e));
+    }).catch((e) => logger.warn('[reset-daily-quotas] APM metric failed:', e));
 
     return new Response(
       JSON.stringify({ success: true, message: "Daily quotas reset successfully" }),
@@ -45,7 +46,7 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("[RESET-DAILY-QUOTAS] Error:", errorMessage);
+    logger.error("[RESET-DAILY-QUOTAS] Error:", errorMessage);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }

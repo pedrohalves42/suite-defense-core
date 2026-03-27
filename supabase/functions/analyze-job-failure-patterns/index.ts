@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validateCallerTenant } from '../_shared/validate-caller-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,7 +49,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Analyzing job failure patterns for ${tenant_id || 'all tenants'}, last ${hours_back}h`);
+    logger.info(`Analyzing job failure patterns for ${tenant_id || 'all tenants'}, last ${hours_back}h`);
 
     const cutoffTime = new Date(Date.now() - hours_back * 60 * 60 * 1000).toISOString();
 
@@ -76,7 +77,7 @@ serve(async (req) => {
     const { data: jobs, error: jobsError } = await jobsQuery;
 
     if (jobsError) {
-      console.error('Error fetching jobs:', jobsError);
+      logger.error('Error fetching jobs:', jobsError);
       throw jobsError;
     }
 
@@ -255,7 +256,7 @@ serve(async (req) => {
 
         if (!existing || existing.length === 0) {
           await supabase.from('ai_insights').insert(insight);
-          console.log(`Created insight for ${insight.affected_entity_id}`);
+          logger.info(`Created insight for ${insight.affected_entity_id}`);
         }
       }
     }
@@ -274,12 +275,12 @@ serve(async (req) => {
 
         if (!existing || existing.length === 0) {
           await supabase.from('system_alerts').insert(alert);
-          console.log(`Created alert for tenant ${alert.tenant_id}`);
+          logger.info(`Created alert for tenant ${alert.tenant_id}`);
         }
       }
     }
 
-    console.log(`Analysis complete: ${tenantAnalyses.length} tenants, ${insightsToCreate.length} insights, ${alertsToCreate.length} alerts`);
+    logger.info(`Analysis complete: ${tenantAnalyses.length} tenants, ${insightsToCreate.length} insights, ${alertsToCreate.length} alerts`);
 
     return new Response(JSON.stringify({
       analyses: tenantAnalyses,
@@ -292,7 +293,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error analyzing job failure patterns:', error);
+    logger.error('Error analyzing job failure patterns:', error);
     return new Response(JSON.stringify({ 
       error: error instanceof Error ? error.message : 'Unknown error' 
     }), {

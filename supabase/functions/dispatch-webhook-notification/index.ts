@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +17,7 @@ Deno.serve(async (req) => {
     const callerSecret = req.headers.get('x-internal-secret');
     
     if (internalSecret && callerSecret !== internalSecret) {
-      console.warn('[dispatch-webhook] Unauthorized call attempt');
+      logger.warn('[dispatch-webhook] Unauthorized call attempt');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -67,7 +68,7 @@ Deno.serve(async (req) => {
     }
 
     if (allWebhooks.length === 0) {
-      console.log('[dispatch-webhook] No active webhook destinations for tenant');
+      logger.info('[dispatch-webhook] No active webhook destinations for tenant');
       return new Response(JSON.stringify({ dispatched: 0, message: 'No active webhook destinations' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -137,11 +138,11 @@ Deno.serve(async (req) => {
         if (response.ok) {
           dispatched++;
         } else {
-          console.warn(`[dispatch-webhook] ${webhook.name}: HTTP ${response.status}`);
+          logger.warn(`[dispatch-webhook] ${webhook.name}: HTTP ${response.status}`);
           failed++;
         }
       } catch (fetchError) {
-        console.error(`[dispatch-webhook] ${webhook.name}: ${String(fetchError)}`);
+        logger.error(`[dispatch-webhook] ${webhook.name}: ${String(fetchError)}`);
         
         await supabase
           .from('notification_deliveries')
@@ -160,13 +161,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[dispatch-webhook] Dispatched: ${dispatched}, Failed: ${failed}`);
+    logger.info(`[dispatch-webhook] Dispatched: ${dispatched}, Failed: ${failed}`);
 
     return new Response(JSON.stringify({ dispatched, failed }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('[dispatch-webhook] Fatal error:', String(error));
+    logger.error('[dispatch-webhook] Fatal error:', String(error));
     return new Response(JSON.stringify({ error: String(error) }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

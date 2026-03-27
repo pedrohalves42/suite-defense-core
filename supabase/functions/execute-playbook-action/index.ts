@@ -1,5 +1,6 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { 
+import { logger } from '../_shared/logger.ts';
   isProcessProtected, 
   isServiceProtected 
 } from '../_shared/protected-targets.ts';
@@ -38,7 +39,7 @@ serveTenant(async (req, ctx) => {
     });
   }
 
-  console.log(`[execute-playbook-action] Executing ${execution_id}, action_index: ${action_index}`);
+  logger.info(`[execute-playbook-action] Executing ${execution_id}, action_index: ${action_index}`);
 
   // ✅ V-11007: Role check — user must be admin/super_admin/operator in this tenant
   const { data: userRole } = await supabase
@@ -66,7 +67,7 @@ serveTenant(async (req, ctx) => {
       .single();
 
     if (execError || !execution) {
-      console.error('[execute-playbook-action] Execution not found:', execError);
+      logger.error('[execute-playbook-action] Execution not found:', execError);
       return new Response(JSON.stringify({ error: 'Execution not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -127,7 +128,7 @@ serveTenant(async (req, ctx) => {
           .eq('status', 'pending')
           .single();
 
-        console.log(`[execute-playbook-action] BLOCKED: Semi-automatic playbook requires approval`);
+        logger.info(`[execute-playbook-action] BLOCKED: Semi-automatic playbook requires approval`);
         
         await supabase.from('audit_logs').insert({
           user_id: userId,
@@ -158,7 +159,7 @@ serveTenant(async (req, ctx) => {
         });
       }
 
-      console.log(`[execute-playbook-action] Semi-automatic approval verified: ${approvalRequest.id}`);
+      logger.info(`[execute-playbook-action] Semi-automatic approval verified: ${approvalRequest.id}`);
     }
 
     if (executionMode === 'assistive') {
@@ -167,7 +168,7 @@ serveTenant(async (req, ctx) => {
       );
       
       if (destructiveActions.length > 0) {
-        console.log(`[execute-playbook-action] BLOCKED: Destructive actions in assistive mode`);
+        logger.info(`[execute-playbook-action] BLOCKED: Destructive actions in assistive mode`);
         
         // Registrar tentativa bloqueada no audit log
         await supabase.from('audit_logs').insert({
@@ -204,7 +205,7 @@ serveTenant(async (req, ctx) => {
       }
     }
 
-    console.log(`[execute-playbook-action] Using immutable snapshot v${playbookSnapshot.version} with ${actionsSnapshot.length} actions (mode: ${executionMode})`);
+    logger.info(`[execute-playbook-action] Using immutable snapshot v${playbookSnapshot.version} with ${actionsSnapshot.length} actions (mode: ${executionMode})`);
 
     // Atualizar status para in_progress
     await supabase
@@ -237,7 +238,7 @@ serveTenant(async (req, ctx) => {
     for (const action of actionsToExecute) {
       if (!action) continue;
 
-      console.log(`[execute-playbook-action] Executing action from snapshot: ${action.action_type} - ${action.label}`);
+      logger.info(`[execute-playbook-action] Executing action from snapshot: ${action.action_type} - ${action.label}`);
       
       try {
         const result = await executeAction(
@@ -263,7 +264,7 @@ serveTenant(async (req, ctx) => {
         }
 
       } catch (actionError) {
-        console.error(`[execute-playbook-action] Action failed:`, actionError);
+        logger.error(`[execute-playbook-action] Action failed:`, actionError);
         
         actionResults.push({
           action_id: action.id,
@@ -312,7 +313,7 @@ serveTenant(async (req, ctx) => {
       },
     });
 
-    console.log(`[execute-playbook-action] Completed in ${Date.now() - startTime}ms (snapshot v${playbookSnapshot.version})`);
+    logger.info(`[execute-playbook-action] Completed in ${Date.now() - startTime}ms (snapshot v${playbookSnapshot.version})`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -574,7 +575,7 @@ async function executeAction(
         const diffMs = Date.now() - new Date(agent.last_heartbeat).getTime();
         const diffMins = diffMs / (1000 * 60);
         if (diffMins > 5) {
-          console.warn(`[execute-playbook-action] Agent ${agentId} may be offline (last heartbeat: ${diffMins.toFixed(1)} min ago). Job will be queued.`);
+          logger.warn(`[execute-playbook-action] Agent ${agentId} may be offline (last heartbeat: ${diffMins.toFixed(1)} min ago). Job will be queued.`);
         }
       }
 
@@ -625,7 +626,7 @@ async function executeAction(
         },
       });
 
-      console.log(`[execute-playbook-action] Created kill_process job for ${processName}`);
+      logger.info(`[execute-playbook-action] Created kill_process job for ${processName}`);
       return { job_id: job?.id, process_name: processName };
     }
 
@@ -649,7 +650,7 @@ async function executeAction(
         const diffMs = Date.now() - new Date(agent.last_heartbeat).getTime();
         const diffMins = diffMs / (1000 * 60);
         if (diffMins > 5) {
-          console.warn(`[execute-playbook-action] Agent ${agentId} may be offline. Job will be queued.`);
+          logger.warn(`[execute-playbook-action] Agent ${agentId} may be offline. Job will be queued.`);
         }
       }
 
@@ -697,7 +698,7 @@ async function executeAction(
         },
       });
 
-      console.log(`[execute-playbook-action] Created stop_service job for ${serviceName}`);
+      logger.info(`[execute-playbook-action] Created stop_service job for ${serviceName}`);
       return { job_id: job?.id, service_name: serviceName };
     }
 
@@ -721,7 +722,7 @@ async function executeAction(
         const diffMs = Date.now() - new Date(agent.last_heartbeat).getTime();
         const diffMins = diffMs / (1000 * 60);
         if (diffMins > 5) {
-          console.warn(`[execute-playbook-action] Agent ${agentId} may be offline. Job will be queued.`);
+          logger.warn(`[execute-playbook-action] Agent ${agentId} may be offline. Job will be queued.`);
         }
       }
 
@@ -769,7 +770,7 @@ async function executeAction(
         },
       });
 
-      console.log(`[execute-playbook-action] Created disable_service job for ${serviceName}`);
+      logger.info(`[execute-playbook-action] Created disable_service job for ${serviceName}`);
       return { job_id: job?.id, service_name: serviceName };
     }
 
@@ -793,7 +794,7 @@ async function executeAction(
         const diffMs = Date.now() - new Date(agent.last_heartbeat).getTime();
         const diffMins = diffMs / (1000 * 60);
         if (diffMins > 5) {
-          console.warn(`[execute-playbook-action] Agent ${agentId} may be offline. Job will be queued.`);
+          logger.warn(`[execute-playbook-action] Agent ${agentId} may be offline. Job will be queued.`);
         }
       }
 
@@ -804,7 +805,7 @@ async function executeAction(
       // Restart service NÃO valida proteção - usado para reiniciar o próprio agente
       // Apenas log de warning para serviços críticos
       if (isServiceProtected(serviceName)) {
-        console.warn(`[execute-playbook-action] Warning: restarting protected service ${serviceName}`);
+        logger.warn(`[execute-playbook-action] Warning: restarting protected service ${serviceName}`);
       }
 
       const { data: job } = await supabase
@@ -842,7 +843,7 @@ async function executeAction(
         },
       });
 
-      console.log(`[execute-playbook-action] Created restart_service job for ${serviceName}`);
+      logger.info(`[execute-playbook-action] Created restart_service job for ${serviceName}`);
       return { job_id: job?.id, service_name: serviceName };
     }
 

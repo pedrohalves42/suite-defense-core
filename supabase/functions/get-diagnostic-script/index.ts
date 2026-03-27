@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -335,7 +336,7 @@ serve(async (req) => {
 
     if (!allowed) {
       const retryAfter = resetAt ? Math.ceil((resetAt.getTime() - Date.now()) / 1000) : 900;
-      console.warn(`[get-diagnostic-script] Rate limit exceeded for IP: ${clientIP}`);
+      logger.warn(`[get-diagnostic-script] Rate limit exceeded for IP: ${clientIP}`);
       
       return new Response(JSON.stringify({ 
         error: 'Rate limit exceeded', 
@@ -350,10 +351,10 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[get-diagnostic-script] Access from IP: ${clientIP}, UA: ${userAgent.slice(0, 50)}, remaining: ${remainingRequests}`);
+    logger.info(`[get-diagnostic-script] Access from IP: ${clientIP}, UA: ${userAgent.slice(0, 50)}, remaining: ${remainingRequests}`);
   } catch (rateLimitError) {
     // If rate limiting fails, log and continue (don't block legitimate requests)
-    console.error('[get-diagnostic-script] Rate limit check failed:', rateLimitError);
+    logger.error('[get-diagnostic-script] Rate limit check failed:', rateLimitError);
   }
 
   return new Response(DIAGNOSTIC_SCRIPT, {

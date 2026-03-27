@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,7 +46,7 @@ Deno.serve(async (req) => {
       throw new Error("Forbidden: Super Admin access required");
     }
 
-    console.log(`[SALES-PIPELINE] Request ${req.method} from super admin ${userData.user.id}`);
+    logger.info(`[SALES-PIPELINE] Request ${req.method} from super admin ${userData.user.id}`);
 
     // GET - List all deals with metrics
     if (req.method === 'GET') {
@@ -118,7 +119,7 @@ Deno.serve(async (req) => {
 
       if (createError) throw createError;
 
-      console.log(`[SALES-PIPELINE] Created deal: ${newDeal.id}`);
+      logger.info(`[SALES-PIPELINE] Created deal: ${newDeal.id}`);
 
       return new Response(JSON.stringify(newDeal), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -149,7 +150,7 @@ Deno.serve(async (req) => {
 
       if (updateError) throw updateError;
 
-      console.log(`[SALES-PIPELINE] Updated deal: ${body.id}`);
+      logger.info(`[SALES-PIPELINE] Updated deal: ${body.id}`);
 
       return new Response(JSON.stringify(updatedDeal), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -171,7 +172,7 @@ Deno.serve(async (req) => {
 
       if (deleteError) throw deleteError;
 
-      console.log(`[SALES-PIPELINE] Deleted deal: ${dealId}`);
+      logger.info(`[SALES-PIPELINE] Deleted deal: ${dealId}`);
 
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -181,7 +182,7 @@ Deno.serve(async (req) => {
 
     throw new Error("Method not allowed");
   } catch (error) {
-    console.error("[SALES-PIPELINE] Error:", error);
+    logger.error("[SALES-PIPELINE] Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       {

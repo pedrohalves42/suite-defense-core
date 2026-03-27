@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * Get Latest Agent Script (Public Endpoint)
@@ -76,7 +77,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[${requestId}] Fetching latest ${platform} agent script`);
+    logger.info(`[${requestId}] Fetching latest ${platform} agent script`);
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -92,7 +93,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (releaseError || !release) {
-      console.error(`[${requestId}] No active release found:`, releaseError);
+      logger.error(`[${requestId}] No active release found:`, releaseError);
       return new Response(
         JSON.stringify({
           error: 'No active release found',
@@ -109,7 +110,7 @@ Deno.serve(async (req) => {
       try {
         const decoded = atob(releaseScriptContent);
         if (decoded.includes('[CmdletBinding()]') || decoded.startsWith('<#')) {
-          console.log(`[${requestId}] Decoded base64 script_content (${releaseScriptContent.length} -> ${decoded.length} chars)`);
+          logger.info(`[${requestId}] Decoded base64 script_content (${releaseScriptContent.length} -> ${decoded.length} chars)`);
           releaseScriptContent = decoded;
         }
       } catch {
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
       const hotfix = applyWindowsScriptHotfix(releaseScriptContent);
       if (hotfix.changed) {
         releaseScriptContent = hotfix.content;
-        console.warn(`[${requestId}] Applied Windows ECDSA hotfix at serve-time`, {
+        logger.warn(`[${requestId}] Applied Windows ECDSA hotfix at serve-time`, {
           releaseVersion: release.version,
           reasons: hotfix.reasons,
         });
@@ -135,21 +136,21 @@ Deno.serve(async (req) => {
             .eq('id', release.id);
 
           if (persistError) {
-            console.warn(`[${requestId}] Could not persist hotfixed script_content`, {
+            logger.warn(`[${requestId}] Could not persist hotfixed script_content`, {
               error: persistError.message,
               releaseId: release.id,
             });
           }
         } catch (persistErr) {
           const err = persistErr as Error;
-          console.warn(`[${requestId}] Exception persisting hotfix: ${err.message}`);
+          logger.warn(`[${requestId}] Exception persisting hotfix: ${err.message}`);
         }
       }
     }
 
     // Validate script content
     if (!releaseScriptContent || releaseScriptContent.length < 5000) {
-      console.error(`[${requestId}] Script content too short: ${releaseScriptContent?.length || 0} bytes`);
+      logger.error(`[${requestId}] Script content too short: ${releaseScriptContent?.length || 0} bytes`);
       return new Response(
         JSON.stringify({
           error: 'Invalid script content',
@@ -164,7 +165,7 @@ Deno.serve(async (req) => {
     const declaredVersion = normalizeVersion(release.version);
     const embeddedVersion = extractScriptVersion(releaseScriptContent);
     if (embeddedVersion && normalizeVersion(embeddedVersion) !== declaredVersion) {
-      console.warn(`[${requestId}] Release/script version mismatch (non-blocking)`, {
+      logger.warn(`[${requestId}] Release/script version mismatch (non-blocking)`, {
         releaseVersion: release.version,
         embeddedVersion,
         platform,
@@ -190,7 +191,7 @@ Deno.serve(async (req) => {
 
     // Option: serve as plain text (avoids huge JSON parsing issues in older PowerShell)
     if (format === 'plain' || format === 'ps1' || format === 'text') {
-      console.log(`[${requestId}] Serving ${platform} script v${release.version} as text/plain (${scriptBytes.length} bytes)`);
+      logger.info(`[${requestId}] Serving ${platform} script v${release.version} as text/plain (${scriptBytes.length} bytes)`);
 
       return new Response(normalizedScript, {
         status: 200,
@@ -214,7 +215,7 @@ Deno.serve(async (req) => {
     }
     const base64Script = btoa(base64Chunks.join(''));
 
-    console.log(`[${requestId}] Serving ${platform} script v${release.version} (${scriptBytes.length} bytes)`);
+    logger.info(`[${requestId}] Serving ${platform} script v${release.version} (${scriptBytes.length} bytes)`);
 
     const responsePayload: Record<string, unknown> = {
       version: release.version,
@@ -244,7 +245,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     const err = error as Error;
-    console.error(`[${requestId}] Error:`, err.message);
+    logger.error(`[${requestId}] Error:`, err.message);
     
     return new Response(
       JSON.stringify({

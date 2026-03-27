@@ -9,6 +9,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -164,7 +165,7 @@ Deno.serve(async (req: Request) => {
     }
   } // end tenant loop
 
-  console.log(`[correlate-edr-events] Created ${incidentsCreated} incidents`);
+  logger.info(`[correlate-edr-events] Created ${incidentsCreated} incidents`);
 
   return new Response(JSON.stringify({ success: true, incidents_created: incidentsCreated }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -194,7 +195,7 @@ async function createIncident(
     .maybeSingle();
 
   if (existingIncident) {
-    console.log(`[correlate-edr] Skipping duplicate incident for rule "${rule.rule_name}" on agent ${agentId}`);
+    logger.info(`[correlate-edr] Skipping duplicate incident for rule "${rule.rule_name}" on agent ${agentId}`);
     return;
   }
 
@@ -218,7 +219,7 @@ async function createIncident(
     .single();
 
   if (error || !incident) {
-    console.error('[correlate-edr] Failed to create incident:', error?.message);
+    logger.error('[correlate-edr] Failed to create incident:', error?.message);
     return;
   }
 

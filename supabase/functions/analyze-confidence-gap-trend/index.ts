@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,7 +33,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('[analyze-confidence-gap-trend] Starting trend analysis...');
+    logger.info('[analyze-confidence-gap-trend] Starting trend analysis...');
 
     // Get all tenants
     const { data: tenants, error: tenantsError } = await supabase
@@ -44,7 +45,7 @@ serve(async (req) => {
     const analyses: GapTrendAnalysis[] = [];
 
     for (const tenant of tenants || []) {
-      console.log(`[analyze-confidence-gap-trend] Analyzing tenant: ${tenant.id}`);
+      logger.info(`[analyze-confidence-gap-trend] Analyzing tenant: ${tenant.id}`);
 
       // Get gap history for last 30 days
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -57,12 +58,12 @@ serve(async (req) => {
         .order('calculated_at', { ascending: false });
 
       if (gapError) {
-        console.error(`Error fetching gap history for tenant ${tenant.id}:`, gapError);
+        logger.error(`Error fetching gap history for tenant ${tenant.id}:`, gapError);
         continue;
       }
 
       if (!gapHistory || gapHistory.length === 0) {
-        console.log(`No gap history for tenant ${tenant.id}`);
+        logger.info(`No gap history for tenant ${tenant.id}`);
         continue;
       }
 
@@ -150,11 +151,11 @@ serve(async (req) => {
           suggested_action: suggestedAction,
         });
 
-        console.log(`[analyze-confidence-gap-trend] Alert created for tenant ${tenant.id}`);
+        logger.info(`[analyze-confidence-gap-trend] Alert created for tenant ${tenant.id}`);
       }
     }
 
-    console.log('[analyze-confidence-gap-trend] Analysis complete:', {
+    logger.info('[analyze-confidence-gap-trend] Analysis complete:', {
       tenantsAnalyzed: analyses.length,
       alertsTriggered: analyses.filter(a => a.alert_triggered).length,
     });
@@ -174,7 +175,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[analyze-confidence-gap-trend] Error:', error);
+    logger.error('[analyze-confidence-gap-trend] Error:', error);
     
     return new Response(
       JSON.stringify({ success: false, error: (error as Error).message }),

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -11,14 +12,14 @@ Deno.serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] Setup agent script in storage`);
+  logger.info(`[${requestId}] Setup agent script in storage`);
 
   try {
     // Create Supabase client with service role
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // FASE 1 CRITICO: Fetch agent script from storage
-    console.log(`[${requestId}] Fetching agent script from storage`);
+    logger.info(`[${requestId}] Fetching agent script from storage`);
     
     const { validateAgentScriptContent } = await import('../_shared/agent-script-validator.ts');
     
@@ -28,7 +29,7 @@ Deno.serve(async (req) => {
       .download('scripts/cybershield-agent-windows-v3.ps1');
     
     if (storageError || !fileData) {
-      console.error(`[${requestId}] Failed to fetch script from storage:`, storageError);
+      logger.error(`[${requestId}] Failed to fetch script from storage:`, storageError);
       return new Response(
         JSON.stringify({
           error: 'Agent script not found',
@@ -45,7 +46,7 @@ Deno.serve(async (req) => {
     const scriptContent = await fileData.text();
     
     if (!validateAgentScriptContent(scriptContent)) {
-      console.error(`[${requestId}] CRITICAL: Script validation failed`);
+      logger.error(`[${requestId}] CRITICAL: Script validation failed`);
       return new Response(
         JSON.stringify({
           error: 'Agent script validation failed',
@@ -59,7 +60,7 @@ Deno.serve(async (req) => {
       );
     }
     
-    console.log(`[${requestId}] Agent script validated`, { 
+    logger.info(`[${requestId}] Agent script validated`, { 
       size: scriptContent.length,
       sizeKB: (scriptContent.length / 1024).toFixed(2)
     });
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
       });
 
     if (error) {
-      console.error(`[${requestId}] Storage upload failed:`, error);
+      logger.error(`[${requestId}] Storage upload failed:`, error);
       return new Response(
         JSON.stringify({ 
           error: 'Failed to upload to storage',
@@ -91,9 +92,9 @@ Deno.serve(async (req) => {
     const { calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
     const hash = await calculateScriptHash(scriptContent);
 
-    console.log(`[${requestId}] Agent script uploaded successfully`);
-    console.log(`[${requestId}] Size: ${scriptContent.length} bytes`);
-    console.log(`[${requestId}] SHA256: ${hash}`);
+    logger.info(`[${requestId}] Agent script uploaded successfully`);
+    logger.info(`[${requestId}] Size: ${scriptContent.length} bytes`);
+    logger.info(`[${requestId}] SHA256: ${hash}`);
 
     // Generate signed URL (valid for 15 minutes) instead of public URL
     const { data: signedUrlData } = await supabase.storage
@@ -118,7 +119,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error(`[${requestId}] Setup failed:`, error);
+    logger.error(`[${requestId}] Setup failed:`, error);
     return new Response(
       JSON.stringify({
         error: 'Setup failed',

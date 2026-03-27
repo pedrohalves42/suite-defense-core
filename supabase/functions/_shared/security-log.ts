@@ -1,4 +1,5 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from './logger.ts';
 
 export interface SecurityLogParams {
   supabase: SupabaseClient;
@@ -49,7 +50,7 @@ export async function logSecurityEvent(params: SecurityLogParams): Promise<void>
       });
 
     // Log tambem no console para monitoramento
-    console.log(`[SECURITY] ${severity.toUpperCase()} - ${attackType} blocked at ${endpoint} from ${ipAddress}`);
+    logger.info(`[SECURITY] ${severity.toUpperCase()} - ${attackType} blocked at ${endpoint} from ${ipAddress}`);
 
     // Enviar email para admins se for evento critico
     if (severity === 'critical' || severity === 'high') {
@@ -84,12 +85,12 @@ export async function logSecurityEvent(params: SecurityLogParams): Promise<void>
           });
         }
       } catch (emailError) {
-        console.error('[SECURITY-LOG] Failed to send email alert:', emailError);
+        logger.error('[SECURITY-LOG] Failed to send email alert:', emailError);
       }
     }
   } catch (error) {
     // Nao falhar a requisicao se nao conseguir logar
-    console.error('[SECURITY-LOG] Failed to log security event:', error);
+    logger.error('[SECURITY-LOG] Failed to log security event:', error);
   }
 }
 

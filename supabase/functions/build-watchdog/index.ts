@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
         p_processed_count: 0,
         p_job_source: 'cron'
       });
-    } catch (e) { console.warn('[build-watchdog] Failed to log job run:', e); }
+    } catch (e) { logger.warn('[build-watchdog] Failed to log job run:', e); }
     
     return new Response(
       JSON.stringify({

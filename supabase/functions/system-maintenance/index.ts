@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * system-maintenance — Consolidated cleanup function
@@ -349,7 +350,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[system-maintenance][${requestId}] Running ${tasks.length} tasks: ${tasks.join(', ')}`);
+    logger.info(`[system-maintenance][${requestId}] Running ${tasks.length} tasks: ${tasks.join(', ')}`);
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -362,7 +363,7 @@ Deno.serve(async (req) => {
         const fn = TASK_MAP[task];
         if (!fn) return { task, processed: 0, cleaned: 0, errors: ['Unknown task'], duration_ms: 0 };
         const taskResult = await fn(supabase);
-        console.log(`[system-maintenance][${requestId}] ${task}: cleaned=${taskResult.cleaned} errors=${taskResult.errors.length}`);
+        logger.info(`[system-maintenance][${requestId}] ${task}: cleaned=${taskResult.cleaned} errors=${taskResult.errors.length}`);
         return taskResult;
       })
     );
@@ -394,7 +395,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {
-    console.error(`[system-maintenance][${requestId}] Fatal:`, error);
+    logger.error(`[system-maintenance][${requestId}] Fatal:`, error);
     return new Response(
       JSON.stringify({ error: 'Internal error', message: String(error), requestId }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

@@ -1,4 +1,5 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from './logger.ts';
 
 /**
  * Create an audit log entry
@@ -27,7 +28,7 @@ export async function createAuditLog({
 }) {
   // ADR-029 HIGH-06: Validate tenantId is provided
   if (!tenantId || tenantId === 'unknown') {
-    console.error('[createAuditLog] CRITICAL: tenantId is required for compliance audit');
+    logger.error('[createAuditLog] CRITICAL: tenantId is required for compliance audit');
     // Still insert for forensic purposes, but flag it
     await supabase.from('audit_logs').insert({
       user_id: userId,

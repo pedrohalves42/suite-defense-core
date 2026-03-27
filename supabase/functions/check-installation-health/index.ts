@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { withTimeout } from '../_shared/timeout.ts'
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   const supabase = createClient(
@@ -11,7 +12,7 @@ Deno.serve(async (req) => {
 
   try {
     await withTimeout(async () => {
-      console.log('[check-installation-health] Verificando taxa de falha por tenant...')
+      logger.info('[check-installation-health] Verificando taxa de falha por tenant...')
 
       // Get all active tenants
       const { data: tenants, error: tenantsError } = await supabase
@@ -19,16 +20,16 @@ Deno.serve(async (req) => {
         .select('id, name')
 
       if (tenantsError) {
-        console.error('[check-installation-health] Erro ao buscar tenants:', tenantsError)
+        logger.error('[check-installation-health] Erro ao buscar tenants:', tenantsError)
         return
       }
 
       if (!tenants || tenants.length === 0) {
-        console.log('[check-installation-health] Nenhum tenant encontrado')
+        logger.info('[check-installation-health] Nenhum tenant encontrado')
         return
       }
 
-      console.log(`[check-installation-health] Verificando ${tenants.length} tenants`)
+      logger.info(`[check-installation-health] Verificando ${tenants.length} tenants`)
 
       for (const tenant of tenants) {
         // Query para taxa de falha nas ultimas 24h para este tenant
@@ -36,12 +37,12 @@ Deno.serve(async (req) => {
           .rpc('get_installation_health_status', { p_tenant_id: tenant.id })
 
         if (error) {
-          console.error(`[check-installation-health] Erro ao buscar health status para tenant ${tenant.id}:`, error)
+          logger.error(`[check-installation-health] Erro ao buscar health status para tenant ${tenant.id}:`, error)
           continue
         }
 
         if (!failureRate || failureRate.length === 0) {
-          console.log(`[check-installation-health] Tenant ${tenant.name}: nenhum dado de instalacao`)
+          logger.info(`[check-installation-health] Tenant ${tenant.name}: nenhum dado de instalacao`)
           continue
         }
 
@@ -49,11 +50,11 @@ Deno.serve(async (req) => {
         const failureRatePct = healthData.failure_rate_pct || 0
         const threshold = healthData.threshold || 30
 
-        console.log(`[check-installation-health] Tenant ${tenant.name}: ${failureRatePct}% (threshold: ${threshold}%)`)
+        logger.info(`[check-installation-health] Tenant ${tenant.name}: ${failureRatePct}% (threshold: ${threshold}%)`)
 
         // Criar alerta se exceder threshold
         if (failureRatePct > threshold) {
-          console.log(`[check-installation-health] ALERTA: Tenant ${tenant.name} - Taxa de falha excedeu threshold!`)
+          logger.info(`[check-installation-health] ALERTA: Tenant ${tenant.name} - Taxa de falha excedeu threshold!`)
 
           const { error: alertError } = await supabase
             .from('system_alerts')
@@ -67,15 +68,15 @@ Deno.serve(async (req) => {
             })
 
           if (alertError) {
-            console.error(`[check-installation-health] Erro ao criar alerta para tenant ${tenant.id}:`, alertError)
+            logger.error(`[check-installation-health] Erro ao criar alerta para tenant ${tenant.id}:`, alertError)
           } else {
             alertsCreated++
-            console.log(`[check-installation-health] Alerta criado para tenant ${tenant.name}`)
+            logger.info(`[check-installation-health] Alerta criado para tenant ${tenant.name}`)
           }
         }
       }
 
-      console.log('[check-installation-health] Verificacao concluida')
+      logger.info('[check-installation-health] Verificacao concluida')
     }, { timeoutMs: 60000 }) // Increased timeout for multi-tenant processing
 
     // Log observability
@@ -94,7 +95,7 @@ Deno.serve(async (req) => {
     )
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[check-installation-health] Erro:', errorMessage)
+    logger.error('[check-installation-health] Erro:', errorMessage)
     
     // Log error observability
     try {
@@ -107,7 +108,7 @@ Deno.serve(async (req) => {
         p_processed_count: 0,
         p_job_source: 'cron'
       })
-    } catch (e) { console.warn('[check-installation-health] Failed to log job run:', e); }
+    } catch (e) { logger.warn('[check-installation-health] Failed to log job run:', e); }
     
     return new Response(
       JSON.stringify({ error: errorMessage }),

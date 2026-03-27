@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,7 +36,7 @@ async function checkDnsActivity(
     .limit(10);
 
   if (error) {
-    console.error('Error checking DNS activity:', error);
+    logger.error('Error checking DNS activity:', error);
     return { status: 'unknown', evidence: { error: error.message }, reason: 'Query failed' };
   }
 
@@ -241,7 +242,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    console.log('[check-action-effectiveness] Starting verification run');
+    logger.info('[check-action-effectiveness] Starting verification run');
 
     // Get actions pending verification (executed > 10 minutes ago)
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
@@ -268,11 +269,11 @@ serve(async (req) => {
       .limit(20);
 
     if (fetchError) {
-      console.error('[check-action-effectiveness] Error fetching actions:', fetchError);
+      logger.error('[check-action-effectiveness] Error fetching actions:', fetchError);
       throw fetchError;
     }
 
-    console.log(`[check-action-effectiveness] Found ${actions?.length || 0} actions to verify`);
+    logger.info(`[check-action-effectiveness] Found ${actions?.length || 0} actions to verify`);
 
     const results: Array<{ actionId: string; status: string; reason: string }> = [];
 
@@ -290,7 +291,7 @@ serve(async (req) => {
 
       let result: EffectivenessResult;
 
-      console.log(`[check-action-effectiveness] Checking ${insight_type} for agent ${agent_id}`);
+      logger.info(`[check-action-effectiveness] Checking ${insight_type} for agent ${agent_id}`);
 
       switch (insight_type) {
         case 'dns_malicious_activity':
@@ -340,7 +341,7 @@ serve(async (req) => {
         .eq('id', action.id);
 
       if (updateActionError) {
-        console.error(`[check-action-effectiveness] Error updating action ${action.id}:`, updateActionError);
+        logger.error(`[check-action-effectiveness] Error updating action ${action.id}:`, updateActionError);
       }
 
       // Update ai_insights.final_outcome
@@ -352,7 +353,7 @@ serve(async (req) => {
           .eq('id', insight.id);
 
         if (updateInsightError) {
-          console.error(`[check-action-effectiveness] Error updating insight ${insight.id}:`, updateInsightError);
+          logger.error(`[check-action-effectiveness] Error updating insight ${insight.id}:`, updateInsightError);
         }
       }
 
@@ -362,7 +363,7 @@ serve(async (req) => {
         reason: result.reason
       });
 
-      console.log(`[check-action-effectiveness] Action ${action.id}: ${result.status} - ${result.reason}`);
+      logger.info(`[check-action-effectiveness] Action ${action.id}: ${result.status} - ${result.reason}`);
     }
 
     // Log job execution with standardized RPC
@@ -382,7 +383,7 @@ serve(async (req) => {
       p_job_source: 'cron'
     });
 
-    console.log(`[check-action-effectiveness] Completed. Checked ${results.length} actions in ${durationMs}ms`);
+    logger.info(`[check-action-effectiveness] Completed. Checked ${results.length} actions in ${durationMs}ms`);
 
     return new Response(
       JSON.stringify({ 
@@ -396,7 +397,7 @@ serve(async (req) => {
 
   } catch (error) {
     const durationMs = Date.now() - startedAt;
-    console.error('[check-action-effectiveness] Error:', error);
+    logger.error('[check-action-effectiveness] Error:', error);
 
     // Log failure
     try {
@@ -414,7 +415,7 @@ serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch (logError) {
-      console.error('[check-action-effectiveness] Failed to log error:', logError);
+      logger.error('[check-action-effectiveness] Failed to log error:', logError);
     }
 
     return new Response(

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,7 +27,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('[verify-log-integrity] Starting integrity verification...');
+    logger.info('[verify-log-integrity] Starting integrity verification...');
 
     // Get all tenants
     const { data: tenants, error: tenantsError } = await supabase
@@ -39,7 +40,7 @@ serve(async (req) => {
     const alerts: Array<{ tenant_id: string; message: string }> = [];
 
     for (const tenant of tenants || []) {
-      console.log(`[verify-log-integrity] Checking tenant: ${tenant.id}`);
+      logger.info(`[verify-log-integrity] Checking tenant: ${tenant.id}`);
 
       // Get audit logs ordered by created_at
       const { data: logs, error: logsError } = await supabase
@@ -50,7 +51,7 @@ serve(async (req) => {
         .limit(1000);
 
       if (logsError) {
-        console.error(`[verify-log-integrity] Error fetching logs for tenant ${tenant.id}:`, logsError);
+        logger.error(`[verify-log-integrity] Error fetching logs for tenant ${tenant.id}:`, logsError);
         continue;
       }
 
@@ -104,7 +105,7 @@ serve(async (req) => {
         });
 
       if (insertError) {
-        console.error(`[verify-log-integrity] Error recording check:`, insertError);
+        logger.error(`[verify-log-integrity] Error recording check:`, insertError);
       }
 
       // Create alert if integrity issue found
@@ -143,7 +144,7 @@ serve(async (req) => {
           suggested_action: 'Revisar logs de acesso, verificar permissões de banco de dados e investigar possíveis acessos não autorizados.',
         });
 
-        console.log(`[verify-log-integrity] CRITICAL: Integrity issue found for tenant ${tenant.id}`);
+        logger.info(`[verify-log-integrity] CRITICAL: Integrity issue found for tenant ${tenant.id}`);
       }
     }
 
@@ -167,7 +168,7 @@ serve(async (req) => {
       p_job_source: 'cron'
     });
 
-    console.log('[verify-log-integrity] Verification complete:', {
+    logger.info('[verify-log-integrity] Verification complete:', {
       tenantsChecked: tenants?.length || 0,
       alertsCreated: alerts.length,
     });
@@ -187,7 +188,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[verify-log-integrity] Error:', error);
+    logger.error('[verify-log-integrity] Error:', error);
     
     return new Response(
       JSON.stringify({ success: false, error: (error as Error).message }),

@@ -39,7 +39,7 @@ import { timingSafeEqual } from './crypto-utils.ts';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export interface TenantContext {
+export interface TenantContext<T = unknown> {
   /** Validated tenant ID — guaranteed to be authorized */
   tenantId: string;
   /** User ID from JWT (null for internal/service calls) */
@@ -50,8 +50,8 @@ export interface TenantContext {
   supabase: SupabaseClient;
   /** Request ID for tracing */
   requestId: string;
-  /** Parsed request body (cached to avoid double-read) */
-  body: any;
+  /** Parsed request body (typed via generic, defaults to unknown) */
+  body: T;
   /** Original request */
   req: Request;
 }
@@ -85,11 +85,11 @@ export interface ServeOptions {
   skipTenantValidation?: boolean;
 }
 
-type TenantHandler = (req: Request, ctx: TenantContext) => Promise<any>;
+type TenantHandler<T = unknown> = (req: Request, ctx: TenantContext<T>) => Promise<Response | Record<string, unknown> | unknown>;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function jsonResponse(data: any, status = 200, extraHeaders?: Record<string, string>) {
+function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json', ...extraHeaders },
@@ -127,7 +127,7 @@ async function verifyUserTenantAccess(supabase: SupabaseClient, userId: string, 
 
 // ─── Main Middleware ─────────────────────────────────────────────────────────
 
-export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
+export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: ServeOptions) {
   const {
     tenantSource = 'auto',
     allowFallback = true,
@@ -159,7 +159,7 @@ export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
       const expectedInternalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
 
       // 3. Parse body (only for methods that have body)
-      let body: any = {};
+      let body: unknown = {};
       if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
         try {
           body = await req.json();
@@ -201,7 +201,8 @@ export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
       let tenantId: string | null = null;
 
       if (tenantSource === 'body' || tenantSource === 'auto') {
-        tenantId = body?.tenant_id || null;
+        const bodyObj = body as Record<string, unknown> | null;
+        tenantId = (bodyObj?.tenant_id as string) || null;
       }
       if (!tenantId && (tenantSource === 'header' || tenantSource === 'auto')) {
         tenantId = req.headers.get('x-tenant-id') || null;
@@ -240,13 +241,13 @@ export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
       }
 
       // 7. Build context and call handler
-      const ctx: TenantContext = {
+      const ctx: TenantContext<T> = {
         tenantId: tenantId!,
         userId,
         isInternal,
         supabase,
         requestId,
-        body,
+        body: body as T,
         req,
       };
 
@@ -275,7 +276,7 @@ export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
 
 // ─── servePublic: For webhooks and unauthenticated endpoints ─────────────────
 
-export type PublicHandler = (req: Request, ctx: { supabase: SupabaseClient; requestId: string; body: any }) => Promise<any>;
+export type PublicHandler = (req: Request, ctx: { supabase: SupabaseClient; requestId: string; body: unknown }) => Promise<Response | Record<string, unknown> | unknown>;
 
 export function servePublic(handler: PublicHandler) {
   Deno.serve(async (req: Request) => {
@@ -291,7 +292,7 @@ export function servePublic(handler: PublicHandler) {
         requireEnv('SUPABASE_SERVICE_ROLE_KEY')
       );
 
-      let body: any = {};
+      let body: unknown = {};
       if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
         try { body = await req.json(); } catch { body = {}; }
       }
@@ -319,11 +320,11 @@ export interface AgentContext {
   agentData: Record<string, unknown>;
   supabase: SupabaseClient;
   requestId: string;
-  body: any;
+  body: unknown;
   req: Request;
 }
 
-export type AgentHandler = (req: Request, ctx: AgentContext) => Promise<any>;
+export type AgentHandler = (req: Request, ctx: AgentContext) => Promise<Response | Record<string, unknown> | unknown>;
 
 export interface ServeAgentOptions {
   /** Additional columns to select from the agents table beyond the defaults */
@@ -360,7 +361,7 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
         return authResult.response;
       }
 
-      let body: any = {};
+      let body: unknown = {};
       if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
         try {
           const contentEncoding = req.headers.get('Content-Encoding');

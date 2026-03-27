@@ -9,6 +9,7 @@
  */
 
 import { serveAgent } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 // Known suspicious parent-child process patterns (EDR heuristics)
 const SUSPICIOUS_PATTERNS: Array<{ parent: string; child: string; reason: string }> = [
@@ -102,7 +103,7 @@ serveAgent(async (_req, ctx) => {
     return { success: true, message: 'No processes to record', inserted: 0 };
   }
 
-  console.log(`[${requestId}] [submit-process-lineage] Received ${processes.length} processes from ${agentName}`);
+  logger.info(`[${requestId}] [submit-process-lineage] Received ${processes.length} processes from ${agentName}`);
 
   // Cap at 500 processes per submission
   const cappedProcesses = processes.slice(0, 500);
@@ -146,7 +147,7 @@ serveAgent(async (_req, ctx) => {
       .insert(batch);
 
     if (error) {
-      console.error(`[${requestId}] Error inserting process batch:`, error.message);
+      logger.error(`[${requestId}] Error inserting process batch:`, error.message);
     } else {
       insertedCount += batch.length;
     }
@@ -172,7 +173,7 @@ serveAgent(async (_req, ctx) => {
         total_processes: records.length,
         suspicious_count: suspiciousCount,
       },
-    }).catch(e => console.error(`[${requestId}] Error creating alert:`, e));
+    }).catch(e => logger.error(`[${requestId}] Error creating alert:`, e));
   }
 
   const result = {
@@ -182,6 +183,6 @@ serveAgent(async (_req, ctx) => {
     total_received: cappedProcesses.length,
   };
 
-  console.log(`[${requestId}] [submit-process-lineage] Done:`, JSON.stringify(result));
+  logger.info(`[${requestId}] [submit-process-lineage] Done:`, JSON.stringify(result));
   return result;
 });

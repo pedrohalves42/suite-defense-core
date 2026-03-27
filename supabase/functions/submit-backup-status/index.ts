@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * submit-backup-status: Receives backup monitoring data from agents
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
         });
 
       if (upsertError) {
-        console.error(`[${requestId}] Upsert error:`, upsertError);
+        logger.error(`[${requestId}] Upsert error:`, upsertError);
       } else {
         upsertedCount++;
       }
@@ -139,7 +140,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[${requestId}] Backup status updated: ${upsertedCount} records, ${alertsCreated} alerts`);
+    logger.info(`[${requestId}] Backup status updated: ${upsertedCount} records, ${alertsCreated} alerts`);
 
     return new Response(
       JSON.stringify({
@@ -153,7 +154,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error(`[${requestId}] Error:`, error);
+    logger.error(`[${requestId}] Error:`, error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       {

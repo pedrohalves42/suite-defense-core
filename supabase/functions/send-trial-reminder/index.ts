@@ -1,5 +1,6 @@
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -124,7 +125,7 @@ Deno.serve(async (req) => {
   try {
     const { tenant_id, tenant_name, owner_user_id, trial_end, days_remaining } = await req.json();
 
-    console.log(`[SEND-TRIAL-REMINDER] Sending ${days_remaining}-day reminder for tenant: ${tenant_id}`);
+    logger.info(`[SEND-TRIAL-REMINDER] Sending ${days_remaining}-day reminder for tenant: ${tenant_id}`);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -223,18 +224,18 @@ Deno.serve(async (req) => {
     });
 
     if (emailError) {
-      console.error("[SEND-TRIAL-REMINDER] Email error:", emailError);
+      logger.error("[SEND-TRIAL-REMINDER] Email error:", emailError);
       throw emailError;
     }
 
-    console.log(`[SEND-TRIAL-REMINDER] Email sent successfully:`, emailData);
+    logger.info(`[SEND-TRIAL-REMINDER] Email sent successfully:`, emailData);
 
     return new Response(
       JSON.stringify({ success: true, email_id: emailData?.id }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
-    console.error("[SEND-TRIAL-REMINDER] Error:", error);
+    logger.error("[SEND-TRIAL-REMINDER] Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }

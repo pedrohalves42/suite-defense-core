@@ -15,6 +15,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { shouldProcessAlertsForTenant } from '../_shared/business-hours.ts';
+import { logger } from '../_shared/logger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -49,7 +50,7 @@ Deno.serve(async (req) => {
     );
   }
 
-  console.log(`[${requestId}] Starting agent integrity check with immediate alerts`);
+  logger.info(`[${requestId}] Starting agent integrity check with immediate alerts`);
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -74,7 +75,7 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to query agents: ${queryError.message}`);
     }
 
-    console.log(`[${requestId}] Found ${problematicAgents?.length || 0} agents with potential integrity issues`);
+    logger.info(`[${requestId}] Found ${problematicAgents?.length || 0} agents with potential integrity issues`);
 
     const issues: IntegrityCheckResult[] = [];
     const alertsToCreate: any[] = [];
@@ -104,7 +105,7 @@ Deno.serve(async (req) => {
       
       if (!shouldProcess) {
         skippedDueToBusinessHours.push(agent.agent_name);
-        console.log(`[${requestId}] Skipping integrity check for ${agent.agent_name} - ${reason}`);
+        logger.info(`[${requestId}] Skipping integrity check for ${agent.agent_name} - ${reason}`);
         continue;
       }
 
@@ -239,9 +240,9 @@ Deno.serve(async (req) => {
           .update({ last_alert_sent_at: new Date().toISOString() })
           .eq('id', immediateAlert.alertId);
 
-        console.log(`[${requestId}] Sent immediate alert for ${immediateAlert.agent.agent_name}`);
+        logger.info(`[${requestId}] Sent immediate alert for ${immediateAlert.agent.agent_name}`);
       } catch (alertError) {
-        console.warn(`[${requestId}] Failed to send immediate alert:`, alertError);
+        logger.warn(`[${requestId}] Failed to send immediate alert:`, alertError);
       }
     }
 
@@ -263,11 +264,11 @@ Deno.serve(async (req) => {
             .insert(alert);
 
           if (alertError) {
-            console.warn(`[${requestId}] Error creating alert for ${alert.agent_id}:`, alertError.message);
+            logger.warn(`[${requestId}] Error creating alert for ${alert.agent_id}:`, alertError.message);
           }
         }
       }
-      console.log(`[${requestId}] Processed ${alertsToCreate.length} integrity alerts`);
+      logger.info(`[${requestId}] Processed ${alertsToCreate.length} integrity alerts`);
     }
 
     // 6. Atualizar status dos agentes com problemas graves para 'inactive'
@@ -282,9 +283,9 @@ Deno.serve(async (req) => {
         .in('id', agentsToDeactivate);
 
       if (updateError) {
-        console.warn(`[${requestId}] Error updating agent status:`, updateError.message);
+        logger.warn(`[${requestId}] Error updating agent status:`, updateError.message);
       } else {
-        console.log(`[${requestId}] Marked ${agentsToDeactivate.length} agents as inactive`);
+        logger.info(`[${requestId}] Marked ${agentsToDeactivate.length} agents as inactive`);
       }
     }
 
@@ -306,7 +307,7 @@ Deno.serve(async (req) => {
     }
 
     if (skippedDueToBusinessHours.length > 0) {
-      console.log(`[${requestId}] Skipped ${skippedDueToBusinessHours.length} agents due to business hours`);
+      logger.info(`[${requestId}] Skipped ${skippedDueToBusinessHours.length} agents due to business hours`);
     }
 
     const summary = {
@@ -334,10 +335,10 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch (logErr) {
-      console.warn(`[${requestId}] Failed to log job run:`, logErr);
+      logger.warn(`[${requestId}] Failed to log job run:`, logErr);
     }
 
-    console.log(`[${requestId}] Integrity check completed in ${durationMs}ms:`, summary);
+    logger.info(`[${requestId}] Integrity check completed in ${durationMs}ms:`, summary);
 
     return new Response(
       JSON.stringify({
@@ -356,7 +357,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     const durationMs = Date.now() - startedAt;
-    console.error(`[${requestId}] Error in integrity check:`, error);
+    logger.error(`[${requestId}] Error in integrity check:`, error);
 
     // Log failed job execution
     try {
@@ -371,7 +372,7 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch (logErr) {
-      console.warn(`[${requestId}] Failed to log error:`, logErr);
+      logger.warn(`[${requestId}] Failed to log error:`, logErr);
     }
     
     return new Response(

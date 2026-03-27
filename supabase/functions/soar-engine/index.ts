@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * SOAR Lite Engine — Automated Security Response
@@ -184,7 +185,7 @@ Deno.serve(async (req: Request) => {
             .gte('created_at', cooldownStart);
 
           if ((count || 0) > 0) {
-            console.log(`[${requestId}] [SOAR] Cooldown active for ${rule.name} on ${event.agent_name}`);
+            logger.info(`[${requestId}] [SOAR] Cooldown active for ${rule.name} on ${event.agent_name}`);
             results.push({ event_type: event.event_type, rule: rule.name, action: rule.action_type, status: 'cooldown' });
             continue;
           }
@@ -199,13 +200,13 @@ Deno.serve(async (req: Request) => {
           });
 
           if (blastCheck && !blastCheck.allowed) {
-            console.warn(`[${requestId}] [SOAR] Blast radius exceeded for ${rule.name}: ${blastCheck.affected_percent}%`);
+            logger.warn(`[${requestId}] [SOAR] Blast radius exceeded for ${rule.name}: ${blastCheck.affected_percent}%`);
             results.push({ event_type: event.event_type, rule: rule.name, action: rule.action_type, status: 'blast_radius_blocked' });
             continue;
           }
         } catch (e) {
           // Fail-open for blast radius check
-          console.warn(`[${requestId}] [SOAR] Blast radius check failed (fail-open):`, e);
+          logger.warn(`[${requestId}] [SOAR] Blast radius check failed (fail-open):`, e);
         }
 
         if (rule.requires_approval) {
@@ -228,7 +229,7 @@ Deno.serve(async (req: Request) => {
             });
 
           if (approvalError) {
-            console.error(`[${requestId}] [SOAR] Failed to create approval:`, approvalError);
+            logger.error(`[${requestId}] [SOAR] Failed to create approval:`, approvalError);
           }
 
           results.push({ event_type: event.event_type, rule: rule.name, action: rule.action_type, status: 'pending_approval' });
@@ -248,14 +249,14 @@ Deno.serve(async (req: Request) => {
             });
 
             if (remError) {
-              console.error(`[${requestId}] [SOAR] Remediation failed for ${rule.name}:`, remError);
+              logger.error(`[${requestId}] [SOAR] Remediation failed for ${rule.name}:`, remError);
               results.push({ event_type: event.event_type, rule: rule.name, action: rule.action_type, status: 'error' });
             } else {
-              console.log(`[${requestId}] [SOAR] Executed ${rule.name} on ${event.agent_name}`);
+              logger.info(`[${requestId}] [SOAR] Executed ${rule.name} on ${event.agent_name}`);
               results.push({ event_type: event.event_type, rule: rule.name, action: rule.action_type, status: 'executed' });
             }
           } catch (execErr) {
-            console.error(`[${requestId}] [SOAR] Execution error:`, execErr);
+            logger.error(`[${requestId}] [SOAR] Execution error:`, execErr);
             results.push({ event_type: event.event_type, rule: rule.name, action: rule.action_type, status: 'error' });
           }
         }
@@ -277,7 +278,7 @@ Deno.serve(async (req: Request) => {
           })),
         );
       } catch (auditErr) {
-        console.warn(`[${requestId}] [SOAR] Failed to write audit logs:`, auditErr);
+        logger.warn(`[${requestId}] [SOAR] Failed to write audit logs:`, auditErr);
       }
     }
 
@@ -291,7 +292,7 @@ Deno.serve(async (req: Request) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {
-    console.error(`[${requestId}] [SOAR] Fatal error:`, error);
+    logger.error(`[${requestId}] [SOAR] Fatal error:`, error);
     return new Response(
       JSON.stringify({ success: false, error: String(error), request_id: requestId }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

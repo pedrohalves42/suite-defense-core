@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 /**
  * SSA-004: Ed25519 Payload Signing
  * 
@@ -45,7 +46,7 @@ export async function signPayload(payload: string, privateKeyBase64: string): Pr
     // Return Base64-encoded signature
     return arrayBufferToBase64(signature)
   } catch (error) {
-    console.error('[CRYPTO] Ed25519 signing failed:', error)
+    logger.error('[CRYPTO] Ed25519 signing failed:', error)
     throw new Error(`Ed25519 signing failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
@@ -91,7 +92,7 @@ export async function verifySignature(
     
     return isValid
   } catch (error) {
-    console.error('[CRYPTO] Ed25519 verification failed:', error)
+    logger.error('[CRYPTO] Ed25519 verification failed:', error)
     return false
   }
 }

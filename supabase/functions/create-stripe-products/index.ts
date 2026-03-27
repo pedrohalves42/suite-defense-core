@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +13,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log("[CREATE-STRIPE-PRODUCTS] Starting V4 product creation");
+    logger.info("[CREATE-STRIPE-PRODUCTS] Starting V4 product creation");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
@@ -82,7 +83,7 @@ Deno.serve(async (req) => {
     const createdProducts: Record<string, { product_id: string; price_id: string }> = {};
 
     for (const plan of products) {
-      console.log(`[CREATE-STRIPE-PRODUCTS] Creating ${plan.name} product`);
+      logger.info(`[CREATE-STRIPE-PRODUCTS] Creating ${plan.name} product`);
       
       const product = await stripe.products.create({
         name: plan.stripeName,
@@ -108,11 +109,11 @@ Deno.serve(async (req) => {
         price_id: price.id,
       };
 
-      console.log(`[CREATE-STRIPE-PRODUCTS] ${plan.name}: ${price.id}`);
+      logger.info(`[CREATE-STRIPE-PRODUCTS] ${plan.name}: ${price.id}`);
     }
 
     // Create annual discount coupon (2 months free = 16.67%)
-    console.log("[CREATE-STRIPE-PRODUCTS] Creating annual discount coupon");
+    logger.info("[CREATE-STRIPE-PRODUCTS] Creating annual discount coupon");
     const annualCoupon = await stripe.coupons.create({
       percent_off: 16.67,
       duration: 'forever',
@@ -120,7 +121,7 @@ Deno.serve(async (req) => {
       metadata: { type: 'annual_discount' }
     });
 
-    console.log("[CREATE-STRIPE-PRODUCTS] All products created successfully");
+    logger.info("[CREATE-STRIPE-PRODUCTS] All products created successfully");
 
     return new Response(
       JSON.stringify({
@@ -132,7 +133,7 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("[CREATE-STRIPE-PRODUCTS] Error:", errorMessage);
+    logger.error("[CREATE-STRIPE-PRODUCTS] Error:", errorMessage);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }

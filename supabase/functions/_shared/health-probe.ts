@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 /**
  * Edge Function Health Probe
  * 
@@ -36,14 +37,14 @@ export async function isEmergencyMode(supabase: SupabaseClient): Promise<boolean
     const { data, error } = await supabase.rpc('is_emergency_mode');
     
     if (error) {
-      console.error('[health-probe] Failed to check emergency mode:', error);
+      logger.error('[health-probe] Failed to check emergency mode:', error);
       // Fail open - don't block if we can't check
       return false;
     }
     
     return Boolean(data);
   } catch (err) {
-    console.error('[health-probe] Emergency mode check exception:', err);
+    logger.error('[health-probe] Emergency mode check exception:', err);
     return false;
   }
 }
@@ -56,13 +57,13 @@ export async function getSystemMode(supabase: SupabaseClient): Promise<string> {
     const { data, error } = await supabase.rpc('get_system_mode_safe');
     
     if (error) {
-      console.error('[health-probe] Failed to get system mode:', error);
+      logger.error('[health-probe] Failed to get system mode:', error);
       return 'unknown';
     }
     
     return data as string || 'unknown';
   } catch (err) {
-    console.error('[health-probe] System mode check exception:', err);
+    logger.error('[health-probe] System mode check exception:', err);
     return 'unknown';
   }
 }
@@ -183,14 +184,14 @@ export async function healthProbeMiddleware(
   // Check emergency mode
   const emergency = await isEmergencyMode(supabase);
   if (emergency) {
-    console.warn('[health-probe] System in emergency mode, returning 503');
+    logger.warn('[health-probe] System in emergency mode, returning 503');
     return emergencyModeResponse(corsHeaders);
   }
   
   // Validate schema
   const schema = await validateSchema(supabase);
   if (!schema.valid) {
-    console.error('[health-probe] Schema drift detected:', schema.missingTables);
+    logger.error('[health-probe] Schema drift detected:', schema.missingTables);
     return schemaDriftResponse(schema.missingTables, corsHeaders);
   }
   
@@ -212,6 +213,6 @@ export async function updateJobHeartbeat(
       p_expected_interval: expectedInterval,
     });
   } catch (err) {
-    console.error('[health-probe] Failed to update job heartbeat:', err);
+    logger.error('[health-probe] Failed to update job heartbeat:', err);
   }
 }

@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { signPayload } from '../_shared/crypto-utils.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -229,7 +230,7 @@ Deno.serve(async (req) => {
         };
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : JSON.stringify(error);
-        console.error(`[promote-agent-v5] ${platform} failed:`, errMsg);
+        logger.error(`[promote-agent-v5] ${platform} failed:`, errMsg);
         results[platform] = {
           success: false,
           error: errMsg,

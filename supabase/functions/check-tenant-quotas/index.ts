@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface QuotaAlert {
   tenant_id: string;
@@ -24,7 +25,7 @@ Deno.serve(async (req) => {
   const hasJWT = authHeader && authHeader.startsWith('Bearer ');
   
   if (!hasValidSecret && !hasJWT) {
-    console.error('[Quota Check] Unauthorized access attempt');
+    logger.error('[Quota Check] Unauthorized access attempt');
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -32,7 +33,7 @@ Deno.serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] Starting quota monitoring`);
+  logger.info(`[${requestId}] Starting quota monitoring`);
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -53,11 +54,11 @@ Deno.serve(async (req) => {
       .gt('quota_limit', 0);
 
     if (featuresError) {
-      console.error(`[${requestId}] Error fetching features:`, featuresError);
+      logger.error(`[${requestId}] Error fetching features:`, featuresError);
       throw featuresError;
     }
 
-    console.log(`[${requestId}] Checking ${features?.length || 0} quota features`);
+    logger.info(`[${requestId}] Checking ${features?.length || 0} quota features`);
 
     const alerts: QuotaAlert[] = [];
 
@@ -78,7 +79,7 @@ Deno.serve(async (req) => {
           usage_percentage: Math.round(usagePercentage * 100) / 100,
         });
 
-        console.log(`[${requestId}] Quota alert for ${tenant.name}: ${feature.feature_key} at ${usagePercentage.toFixed(1)}%`);
+        logger.info(`[${requestId}] Quota alert for ${tenant.name}: ${feature.feature_key} at ${usagePercentage.toFixed(1)}%`);
       }
     }
 
@@ -113,7 +114,7 @@ Deno.serve(async (req) => {
         });
 
         if (alertError) {
-          console.error(`[${requestId}] Error sending alert for tenant ${alert.tenant_id}:`, alertError);
+          logger.error(`[${requestId}] Error sending alert for tenant ${alert.tenant_id}:`, alertError);
           alertResults.push({
             tenant_id: alert.tenant_id,
             feature_key: alert.feature_key,
@@ -121,7 +122,7 @@ Deno.serve(async (req) => {
             error: alertError.message
           });
         } else {
-          console.log(`[${requestId}] Alert sent successfully for ${alert.tenant_name}`);
+          logger.info(`[${requestId}] Alert sent successfully for ${alert.tenant_name}`);
           alertResults.push({
             tenant_id: alert.tenant_id,
             feature_key: alert.feature_key,
@@ -130,7 +131,7 @@ Deno.serve(async (req) => {
           });
         }
       } catch (error) {
-        console.error(`[${requestId}] Error processing alert:`, error);
+        logger.error(`[${requestId}] Error processing alert:`, error);
         alertResults.push({
           tenant_id: alert.tenant_id,
           feature_key: alert.feature_key,
@@ -149,7 +150,7 @@ Deno.serve(async (req) => {
       timestamp: new Date().toISOString()
     };
 
-    console.log(`[${requestId}] Quota monitoring completed:`, result);
+    logger.info(`[${requestId}] Quota monitoring completed:`, result);
 
     return new Response(
       JSON.stringify(result),
@@ -160,7 +161,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error(`[${requestId}] Fatal error:`, error);
+    logger.error(`[${requestId}] Fatal error:`, error);
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     

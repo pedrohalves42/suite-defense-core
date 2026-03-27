@@ -2,6 +2,7 @@
 // ZERO-GAP FIX: delivered→failed (not queued) to comply with FSM trigger
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
+import { logger } from '../_shared/logger.ts';
 
 const MAX_DELIVERY_ATTEMPTS = 5
 const STUCK_TIMEOUT_MINUTES = 10
@@ -25,7 +26,7 @@ Deno.serve(async (req) => {
   const isInternal = INTERNAL_SECRET && providedSecret === INTERNAL_SECRET
   
   if (!isScheduled && !isInternal && !isCronCall) {
-    console.warn(`[${requestId}] Unauthorized access attempt to cleanup-stuck-jobs`)
+    logger.warn(`[${requestId}] Unauthorized access attempt to cleanup-stuck-jobs`)
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
   }
   
   const callType = isCronCall ? 'cron' : isScheduled ? 'scheduled' : 'internal'
-  console.log(`[${requestId}] Authorized call type: ${callType}`)
+  logger.info(`[${requestId}] Authorized call type: ${callType}`)
 
   const startedAt = Date.now()
   
@@ -45,7 +46,7 @@ Deno.serve(async (req) => {
     const cutoffTime = new Date(Date.now() - STUCK_TIMEOUT_MINUTES * 60 * 1000).toISOString()
     const now = new Date().toISOString()
 
-    console.log(`[cleanup-stuck-jobs] Starting cleanup at ${now}`)
+    logger.info(`[cleanup-stuck-jobs] Starting cleanup at ${now}`)
 
     // FASE 1: Jobs delivered travados > timeout → FAILED (não queued!)
     // O trigger enforce_job_state_transitions bloqueia delivered→queued.
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
       .lt('delivered_at', cutoffTime)
 
     if (stuckError) {
-      console.error('[cleanup-stuck-jobs] Error fetching stuck delivered jobs:', stuckError)
+      logger.error('[cleanup-stuck-jobs] Error fetching stuck delivered jobs:', stuckError)
     }
 
     let failedDeliveredCount = 0
@@ -90,7 +91,7 @@ Deno.serve(async (req) => {
           .in('id', allIds)
 
         if (failError) {
-          console.error('[cleanup-stuck-jobs] Error failing stuck delivered jobs:', failError)
+          logger.error('[cleanup-stuck-jobs] Error failing stuck delivered jobs:', failError)
         } else {
           failedDeliveredCount = allIds.length
         }
@@ -128,13 +129,13 @@ Deno.serve(async (req) => {
           } else {
             // Dedup index may block — that's fine, means there's already an active job
             if (!insertError.message?.includes('idx_jobs_dedup_active')) {
-              console.error(`[cleanup-stuck-jobs] Error recreating job for ${job.agent_name}:`, insertError.message)
+              logger.error(`[cleanup-stuck-jobs] Error recreating job for ${job.agent_name}:`, insertError.message)
             }
           }
         }
       }
 
-      console.log(`[cleanup-stuck-jobs] Stuck delivered: ${failedDeliveredCount} failed, ${recreatedCount} recreated as new jobs, ${exhausted.length} exhausted`)
+      logger.info(`[cleanup-stuck-jobs] Stuck delivered: ${failedDeliveredCount} failed, ${recreatedCount} recreated as new jobs, ${exhausted.length} exhausted`)
     }
 
     // FASE 2: Cleanup zombie job_executions (orphaned running)
@@ -142,9 +143,9 @@ Deno.serve(async (req) => {
     try {
       const { data: zombieResult } = await supabase.rpc('cleanup_zombie_executions')
       if (zombieResult) zombieCleaned = zombieResult as any
-      console.log(`[cleanup-stuck-jobs] Zombie executions cleaned: ${zombieCleaned.total}`)
+      logger.info(`[cleanup-stuck-jobs] Zombie executions cleaned: ${zombieCleaned.total}`)
     } catch (e) {
-      console.error('[cleanup-stuck-jobs] Error cleaning zombie executions:', e)
+      logger.error('[cleanup-stuck-jobs] Error cleaning zombie executions:', e)
     }
 
     // FASE 3: Jobs expirados (TTL exceeded) — queued or delivered
@@ -155,7 +156,7 @@ Deno.serve(async (req) => {
       .lt('expires_at', now)
 
     if (expiredError) {
-      console.error('[cleanup-stuck-jobs] Error fetching expired jobs:', expiredError)
+      logger.error('[cleanup-stuck-jobs] Error fetching expired jobs:', expiredError)
     }
 
     let expiredCount = 0
@@ -171,7 +172,7 @@ Deno.serve(async (req) => {
         .in('id', expiredJobs.map(j => j.id))
 
       if (expireError) {
-        console.error('[cleanup-stuck-jobs] Error failing expired jobs:', expireError)
+        logger.error('[cleanup-stuck-jobs] Error failing expired jobs:', expireError)
       } else {
         expiredCount = expiredJobs.length
       }
@@ -190,7 +191,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[cleanup-stuck-jobs] Summary: ${failedDeliveredCount} delivered→failed, ${zombieCleaned.total} zombie executions, ${expiredCount} expired→failed`)
+    logger.info(`[cleanup-stuck-jobs] Summary: ${failedDeliveredCount} delivered→failed, ${zombieCleaned.total} zombie executions, ${expiredCount} expired→failed`)
 
     // Log observability
     try {
@@ -202,7 +203,7 @@ Deno.serve(async (req) => {
         p_processed_count: failedDeliveredCount + expiredCount,
         p_job_source: 'cron'
       })
-    } catch (e) { console.warn('[cleanup-stuck-jobs] Failed to log job run:', e); }
+    } catch (e) { logger.warn('[cleanup-stuck-jobs] Failed to log job run:', e); }
 
     // Report cron health
     try {
@@ -211,14 +212,14 @@ Deno.serve(async (req) => {
         p_success: true,
         p_error_message: null
       })
-    } catch (e) { console.warn('[cleanup-stuck-jobs] Failed to update cron health:', e); }
+    } catch (e) { logger.warn('[cleanup-stuck-jobs] Failed to update cron health:', e); }
 
     return new Response(
       JSON.stringify(summary),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error('[cleanup-stuck-jobs] Unexpected error:', error)
+    logger.error('[cleanup-stuck-jobs] Unexpected error:', error)
     
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -229,7 +230,7 @@ Deno.serve(async (req) => {
         p_success: false,
         p_error_message: error instanceof Error ? error.message : 'Unknown error'
       })
-    } catch (e) { console.warn('[cleanup-stuck-jobs] Failed to update cron health on error:', e); }
+    } catch (e) { logger.warn('[cleanup-stuck-jobs] Failed to update cron health on error:', e); }
     
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),

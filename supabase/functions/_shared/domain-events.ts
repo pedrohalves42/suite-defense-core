@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from './logger.ts';
 
 /**
  * Domain Event Dispatcher for Edge Functions.
@@ -26,11 +27,11 @@ export class EdgeDomainEventDispatcher {
       });
 
       if (error) {
-        console.error('[DomainEventDispatcher] Failed to persist event:', error.message);
+        logger.error('[DomainEventDispatcher] Failed to persist event:', error.message);
       }
     } catch (err) {
       // Domain events are best-effort - don't break business logic
-      console.error('[DomainEventDispatcher] Exception:', (err as Error).message);
+      logger.error('[DomainEventDispatcher] Exception:', (err as Error).message);
     }
   }
 

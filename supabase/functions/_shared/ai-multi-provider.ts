@@ -23,6 +23,7 @@ import { SupabaseAICacheAdapter } from './hexagonal/ai-cache-adapter.ts';
 import { AICacheUseCase } from './hexagonal/ai-cache-use-case.ts';
 import { SupabaseSmartRouterAdapter } from './hexagonal/smart-router-adapter.ts';
 import { SmartRouterUseCase } from './hexagonal/smart-router-use-case.ts';
+import { logger } from './logger.ts';
 
 // ============ PROVIDER CONFIGURATION ============
 
@@ -131,7 +132,7 @@ function getSmartRouter(): SmartRouterUseCase | null {
       const client = createClient(url, key);
       smartRouterInstance = new SmartRouterUseCase(new SupabaseSmartRouterAdapter(client));
     }
-  } catch (e) { console.warn('[ai-multi-provider] SmartRouter init failed:', e); }
+  } catch (e) { logger.warn('[ai-multi-provider] SmartRouter init failed:', e); }
   return smartRouterInstance;
 }
 
@@ -238,7 +239,7 @@ function isProviderAvailable(provider: AIProviderName): boolean {
   if (!circuit.isOpen) return true;
   
   if (Date.now() - circuit.lastFailure > CIRCUIT_RESET_MS) {
-    console.log(`[multi-provider] ${provider} circuit entering half-open state`);
+    logger.info(`[multi-provider] ${provider} circuit entering half-open state`);
     return true;
   }
   
@@ -248,7 +249,7 @@ function isProviderAvailable(provider: AIProviderName): boolean {
 function recordProviderSuccess(provider: AIProviderName): void {
   const circuit = providerCircuits[provider];
   if (circuit.isOpen) {
-    console.log(`[multi-provider] ${provider} circuit CLOSED after success`);
+    logger.info(`[multi-provider] ${provider} circuit CLOSED after success`);
   }
   circuit.failures = 0;
   circuit.isOpen = false;
@@ -261,9 +262,9 @@ function recordProviderFailure(provider: AIProviderName, error: string): void {
   
   if (circuit.failures >= CIRCUIT_FAILURE_THRESHOLD) {
     circuit.isOpen = true;
-    console.warn(`[multi-provider] ${provider} circuit OPENED after ${circuit.failures} failures: ${error}`);
+    logger.warn(`[multi-provider] ${provider} circuit OPENED after ${circuit.failures} failures: ${error}`);
   } else {
-    console.warn(`[multi-provider] ${provider} failure ${circuit.failures}/${CIRCUIT_FAILURE_THRESHOLD}: ${error}`);
+    logger.warn(`[multi-provider] ${provider} failure ${circuit.failures}/${CIRCUIT_FAILURE_THRESHOLD}: ${error}`);
   }
 }
 
@@ -405,7 +406,7 @@ function selectBestProviderByScore(): AIProviderConfig | null {
     .map(p => ({ provider: p, score: calculateProviderScore(p) }))
     .sort((a, b) => a.score - b.score);
 
-  console.log('[AI Router] Provider scores:', scored.map(s => 
+  logger.info('[AI Router] Provider scores:', scored.map(s => 
     `${s.provider.displayName}: ${s.score}`
   ).join(', '));
 
@@ -494,13 +495,13 @@ async function selectSmartProvider(
     const config = PROVIDERS.find((p) => p.name === decision.selectedProvider);
 
     if (config) {
-      console.log(
+      logger.info(
         `[AI SmartRouter] Selected ${config.displayName} for ${decision.complexity} task (score: ${decision.score}, reason: ${decision.reason})`,
       );
       return config;
     }
   } catch (err) {
-    console.warn('[AI SmartRouter] Fallback to legacy routing:', err);
+    logger.warn('[AI SmartRouter] Fallback to legacy routing:', err);
   }
 
   return selectNextProvider();
@@ -544,7 +545,7 @@ async function persistAIMetricsWithProvider(data: {
       created_at: new Date().toISOString(),
     });
   } catch (err) {
-    console.warn('[AI Metrics] Failed to persist:', err);
+    logger.warn('[AI Metrics] Failed to persist:', err);
   }
 }
 
@@ -575,7 +576,7 @@ export async function aiComplete(
 
       if (cacheResult.hit && cacheResult.cached) {
         const latencyMs = Date.now() - startTime;
-        console.log(`[AI Router] Cache HIT for ${functionName} (${latencyMs}ms)`);
+        logger.info(`[AI Router] Cache HIT for ${functionName} (${latencyMs}ms)`);
 
         // Persist cache-hit metric
         persistAIMetricsWithProvider({
@@ -601,7 +602,7 @@ export async function aiComplete(
       }
     }
   } catch (cacheErr) {
-    console.warn('[AI Router] Cache lookup failed, proceeding without cache:', cacheErr);
+    logger.warn('[AI Router] Cache lookup failed, proceeding without cache:', cacheErr);
   }
 
   // ─── Smart Provider Routing ──────────────────────────
@@ -616,7 +617,7 @@ export async function aiComplete(
     
     try {
       const score = calculateProviderScore(provider);
-      console.log(`[AI Router] Trying ${provider.displayName} (score: ${score}, weight: ${provider.weight})`);
+      logger.info(`[AI Router] Trying ${provider.displayName} (score: ${score}, weight: ${provider.weight})`);
       
       const result = await callProvider(provider, messages, Math.min(maxTokens, provider.maxTokens));
       const latencyMs = Date.now() - startTime;
@@ -656,7 +657,7 @@ export async function aiComplete(
           tenantId,
           functionName,
           latencyMs,
-        }).catch((err) => console.warn('[AI Router] Cache store failed:', err));
+        }).catch((err) => logger.warn('[AI Router] Cache store failed:', err));
       }
       
       return {
@@ -671,7 +672,7 @@ export async function aiComplete(
       lastError = error instanceof Error ? error.message : String(error);
       recordProviderFailure(provider.name, lastError);
       recordStatsFailure(provider.name);
-      console.warn(`[AI Router] ${provider.displayName} failed: ${lastError}`);
+      logger.warn(`[AI Router] ${provider.displayName} failed: ${lastError}`);
       
       // Select next available provider not yet attempted
       const remaining = getAvailableProviders()
@@ -730,13 +731,13 @@ export function getProviderStatus(): Record<AIProviderName, {
 export function resetProviderCircuit(provider: AIProviderName): void {
   const circuit = providerCircuits[provider];
   if (!circuit) {
-    console.warn(`[multi-provider] Unknown provider: ${provider}`);
+    logger.warn(`[multi-provider] Unknown provider: ${provider}`);
     return;
   }
   circuit.failures = 0;
   circuit.isOpen = false;
   circuit.lastFailure = 0;
-  console.log(`[multi-provider] ${provider} circuit manually reset`);
+  logger.info(`[multi-provider] ${provider} circuit manually reset`);
 }
 
 export function getActiveProviders(): AIProviderName[] {
@@ -777,7 +778,7 @@ export function getProviderScores(): Array<{
 
 export function setScoreBasedRouting(enabled: boolean): void {
   useScoreBasedRouting = enabled;
-  console.log(`[AI Router] Score-based routing ${enabled ? 'ENABLED' : 'DISABLED'}`);
+  logger.info(`[AI Router] Score-based routing ${enabled ? 'ENABLED' : 'DISABLED'}`);
 }
 
 // ============ CONVENIENCE WRAPPERS ============
@@ -825,7 +826,7 @@ export async function aiJsonComplete<T>(
     const data = JSON.parse(jsonStr) as T;
     return { data, response };
   } catch (parseError) {
-    console.warn('[multi-provider] Failed to parse JSON response:', parseError);
+    logger.warn('[multi-provider] Failed to parse JSON response:', parseError);
     return {
       data: null,
       response: {

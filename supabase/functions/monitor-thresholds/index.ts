@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface TenantAlert {
   tenant_id: string;
@@ -30,14 +31,14 @@ Deno.serve(async (req) => {
   const providedSecret = req.headers.get('X-Internal-Secret');
 
   if (!INTERNAL_SECRET || providedSecret !== INTERNAL_SECRET) {
-    console.warn(`[${requestId}] Unauthorized access attempt to monitor-thresholds`);
+    logger.warn(`[${requestId}] Unauthorized access attempt to monitor-thresholds`);
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 
-  console.log(`[${requestId}] Starting threshold monitoring`);
+  logger.info(`[${requestId}] Starting threshold monitoring`);
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -66,18 +67,18 @@ Deno.serve(async (req) => {
       `);
 
     if (tenantsError) {
-      console.error(`[${requestId}] Error fetching tenants:`, tenantsError);
+      logger.error(`[${requestId}] Error fetching tenants:`, tenantsError);
       throw tenantsError;
     }
 
-    console.log(`[${requestId}] Monitoring ${tenants?.length || 0} tenants`);
+    logger.info(`[${requestId}] Monitoring ${tenants?.length || 0} tenants`);
 
     const alerts: TenantAlert[] = [];
 
     for (const tenant of tenants || []) {
       // Skip if no settings configured
       if (!tenant.tenant_settings || tenant.tenant_settings.length === 0) {
-        console.log(`[${requestId}] No settings found for tenant ${tenant.name}, skipping`);
+        logger.info(`[${requestId}] No settings found for tenant ${tenant.name}, skipping`);
         continue;
       }
 
@@ -85,7 +86,7 @@ Deno.serve(async (req) => {
       
       // Skip if settings object is invalid
       if (!settings || typeof settings !== 'object') {
-        console.log(`[${requestId}] Invalid settings for tenant ${tenant.name}, skipping`);
+        logger.info(`[${requestId}] Invalid settings for tenant ${tenant.name}, skipping`);
         continue;
       }
 
@@ -103,7 +104,7 @@ Deno.serve(async (req) => {
         .gte('scanned_at', last24Hours);
 
       if (virusError) {
-        console.error(`[${requestId}] Error counting virus scans for tenant ${tenant.id}:`, virusError);
+        logger.error(`[${requestId}] Error counting virus scans for tenant ${tenant.id}:`, virusError);
         continue;
       }
 
@@ -116,7 +117,7 @@ Deno.serve(async (req) => {
         .gte('created_at', last24Hours);
 
       if (failedJobsError) {
-        console.error(`[${requestId}] Error counting failed jobs for tenant ${tenant.id}:`, failedJobsError);
+        logger.error(`[${requestId}] Error counting failed jobs for tenant ${tenant.id}:`, failedJobsError);
         continue;
       }
 
@@ -130,7 +131,7 @@ Deno.serve(async (req) => {
         .lt('last_heartbeat', last5Minutes);
 
       if (offlineAgentsError) {
-        console.error(`[${requestId}] Error counting offline agents for tenant ${tenant.id}:`, offlineAgentsError);
+        logger.error(`[${requestId}] Error counting offline agents for tenant ${tenant.id}:`, offlineAgentsError);
         continue;
       }
 
@@ -153,7 +154,7 @@ Deno.serve(async (req) => {
           settings
         });
 
-        console.log(`[${requestId}] Alert triggered for tenant ${tenant.name}:`, {
+        logger.info(`[${requestId}] Alert triggered for tenant ${tenant.name}:`, {
           virus,
           failed,
           offline,
@@ -212,14 +213,14 @@ Deno.serve(async (req) => {
         });
 
         if (alertError) {
-          console.error(`[${requestId}] Error sending alert for tenant ${alert.tenant_id}:`, alertError);
+          logger.error(`[${requestId}] Error sending alert for tenant ${alert.tenant_id}:`, alertError);
           alertResults.push({
             tenant_id: alert.tenant_id,
             success: false,
             error: alertError.message
           });
         } else {
-          console.log(`[${requestId}] Alert sent successfully for tenant ${alert.tenant_name}`);
+          logger.info(`[${requestId}] Alert sent successfully for tenant ${alert.tenant_name}`);
           alertResults.push({
             tenant_id: alert.tenant_id,
             success: true,
@@ -227,7 +228,7 @@ Deno.serve(async (req) => {
           });
         }
       } catch (error) {
-        console.error(`[${requestId}] Error processing alert for tenant ${alert.tenant_id}:`, error);
+        logger.error(`[${requestId}] Error processing alert for tenant ${alert.tenant_id}:`, error);
         alertResults.push({
           tenant_id: alert.tenant_id,
           success: false,
@@ -245,7 +246,7 @@ Deno.serve(async (req) => {
       timestamp: now.toISOString()
     };
 
-    console.log(`[${requestId}] Monitoring completed:`, result);
+    logger.info(`[${requestId}] Monitoring completed:`, result);
 
     return new Response(
       JSON.stringify(result),
@@ -256,7 +257,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error(`[${requestId}] Fatal error:`, error);
+    logger.error(`[${requestId}] Fatal error:`, error);
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     

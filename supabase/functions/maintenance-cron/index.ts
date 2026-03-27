@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from "../_shared/cors.ts"
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
 import { recordMetric } from '../_shared/apm.ts'
+import { logger } from '../_shared/logger.ts';
 
 /**
  * CONSOLIDATED maintenance-cron (COST-OPT v9)
@@ -79,9 +80,9 @@ Deno.serve(async (req) => {
         p_expire_limit: 500,
         p_archive_limit: 1000,
       });
-      if (error) console.error('[maintenance] run_maintenance_v2 failed:', error.message);
+      if (error) logger.error('[maintenance] run_maintenance_v2 failed:', error.message);
       else result.maintenance_rpc = data || {};
-    } catch (e) { console.warn('[maintenance] Phase 1 error:', e); }
+    } catch (e) { logger.warn('[maintenance] Phase 1 error:', e); }
 
     // ═══════════════════════════════════════════
     // PHASE 2: Stuck delivered jobs → failed
@@ -135,7 +136,7 @@ Deno.serve(async (req) => {
             agentCheck.last_heartbeat > twoHoursAgo;
           
           if (!isOnline) {
-            console.log(`[maintenance-cron] Skipping job recreation for offline agent ${job.agent_name}`);
+            logger.info(`[maintenance-cron] Skipping job recreation for offline agent ${job.agent_name}`);
             continue;
           }
           
@@ -180,7 +181,7 @@ Deno.serve(async (req) => {
         const { data: zombieResult } = await supabase.rpc('cleanup_zombie_executions');
         if (zombieResult) result.stuck_jobs.zombies = (zombieResult as any).total || 0;
       } catch { /* non-critical */ }
-    } catch (e) { console.warn('[maintenance] Phase 2 error:', e); }
+    } catch (e) { logger.warn('[maintenance] Phase 2 error:', e); }
 
     // ═══════════════════════════════════════════
     // PHASE 3: Auto cleanup old jobs
@@ -218,7 +219,7 @@ Deno.serve(async (req) => {
 
         result.auto_cleanup.delivered_failed = failed?.length ?? 0;
       }
-    } catch (e) { console.warn('[maintenance] Phase 3 error:', e); }
+    } catch (e) { logger.warn('[maintenance] Phase 3 error:', e); }
 
     // ═══════════════════════════════════════════
     // PHASE 4: Offline agents jobs cleanup
@@ -228,7 +229,7 @@ Deno.serve(async (req) => {
       const { data } = await supabase.rpc('cleanup_offline_agents_jobs');
       const r = data?.[0] || data;
       result.offline_agents.cleaned = r?.cleaned_count || 0;
-    } catch (e) { console.warn('[maintenance] Phase 4 error:', e); }
+    } catch (e) { logger.warn('[maintenance] Phase 4 error:', e); }
 
     // ═══════════════════════════════════════════
     // PHASE 5: Stale playbook executions
@@ -253,7 +254,7 @@ Deno.serve(async (req) => {
           .in('id', staleExecs.map(e => e.id));
         if (!error) result.stale_playbooks.cleaned = staleExecs.length;
       }
-    } catch (e) { console.warn('[maintenance] Phase 5 error:', e); }
+    } catch (e) { logger.warn('[maintenance] Phase 5 error:', e); }
 
     // ═══════════════════════════════════════════
     // PHASE 6: Stale security reports
@@ -278,7 +279,7 @@ Deno.serve(async (req) => {
           .in('id', staleReports.map(r => r.id));
         if (!error) result.stale_reports.cleaned = staleReports.length;
       }
-    } catch (e) { console.warn('[maintenance] Phase 6 error:', e); }
+    } catch (e) { logger.warn('[maintenance] Phase 6 error:', e); }
 
     // ═══════════════════════════════════════════
     // PHASE 7: Stale force_update flags
@@ -325,7 +326,7 @@ Deno.serve(async (req) => {
           });
         }
       }
-    } catch (e) { console.warn('[maintenance] Phase 7 error:', e); }
+    } catch (e) { logger.warn('[maintenance] Phase 7 error:', e); }
 
     // ═══════════════════════════════════════════
     // PHASE 8: Stuck builds
@@ -335,7 +336,7 @@ Deno.serve(async (req) => {
       const { data } = await supabase.rpc('cleanup_stuck_builds');
       const r = Array.isArray(data) && data.length > 0 ? data[0] : data;
       result.stuck_builds.cleaned = r?.cleaned_count || 0;
-    } catch (e) { console.warn('[maintenance] Phase 8 error:', e); }
+    } catch (e) { logger.warn('[maintenance] Phase 8 error:', e); }
 
     // ═══════════════════════════════════════════
     // PHASE 9: Telemetry cleanup & summarization
@@ -359,19 +360,19 @@ Deno.serve(async (req) => {
           batch.map(tenantId =>
             supabase.rpc('summarize_telemetry_hourly', { p_tenant_id: tenantId, p_hours_ago: 2 })
               .then(() => { result.telemetry.tenants_summarized++; })
-              .catch((e: any) => console.warn(`[maintenance] Telemetry summary error for ${tenantId}:`, e))
+              .catch((e: any) => logger.warn(`[maintenance] Telemetry summary error for ${tenantId}:`, e))
           )
         );
       }
-    } catch (e) { console.warn('[maintenance] Phase 9 error:', e); }
+    } catch (e) { logger.warn('[maintenance] Phase 9 error:', e); }
 
     // ═══════════════════════════════════════════
     // PHASE 10: Session store cleanup + token rotation flags
     // ═══════════════════════════════════════════
     try {
       await supabase.rpc('cleanup_expired_sessions');
-      console.log('[maintenance] Phase 10: expired sessions cleaned');
-    } catch (e) { console.warn('[maintenance] Phase 10 error:', e); }
+      logger.info('[maintenance] Phase 10: expired sessions cleaned');
+    } catch (e) { logger.warn('[maintenance] Phase 10 error:', e); }
 
     // ═══════════════════════════════════════════
     // FINALIZE
@@ -386,7 +387,7 @@ Deno.serve(async (req) => {
       result.stale_updates.cleaned +
       result.stuck_builds.cleaned;
 
-    console.log(`[maintenance-cron] Completed in ${result.duration_ms}ms: ${result.total_operations} operations`);
+    logger.info(`[maintenance-cron] Completed in ${result.duration_ms}ms: ${result.total_operations} operations`);
 
     // APM metric
     recordMetric({
@@ -423,7 +424,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     const err = error as Error;
-    console.error('[maintenance-cron] Fatal error:', err.message);
+    logger.error('[maintenance-cron] Fatal error:', err.message);
     result.duration_ms = Date.now() - startTime;
 
     try {

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -45,9 +46,9 @@ serve(async (req: Request): Promise<Response> => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    console.log("Starting scheduled report generation...");
+    logger.info("Starting scheduled report generation...");
 
-    console.log("Starting scheduled report generation...");
+    logger.info("Starting scheduled report generation...");
 
     // Get all active tenants with their subscription plans
     const { data: tenants, error: tenantsError } = await supabase
@@ -64,7 +65,7 @@ serve(async (req: Request): Promise<Response> => {
       .in("status", ["active", "trialing"]);
 
     if (tenantsError) {
-      console.error("Error fetching tenants:", tenantsError);
+      logger.error("Error fetching tenants:", tenantsError);
       throw tenantsError;
     }
 
@@ -79,7 +80,7 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    console.log(`Found ${tenants.length} active tenants`);
+    logger.info(`Found ${tenants.length} active tenants`);
 
     let generatedCount = 0;
     let skippedCount = 0;
@@ -149,12 +150,12 @@ serve(async (req: Request): Promise<Response> => {
         }
 
       } catch (tenantError: any) {
-        console.error(`Error processing tenant ${tenant.tenant_id}:`, tenantError);
+        logger.error(`Error processing tenant ${tenant.tenant_id}:`, tenantError);
         errors.push(`${tenant.tenant_id}: ${tenantError.message}`);
       }
     }
 
-    console.log(`Scheduled report generation complete: generated=${generatedCount}, skipped=${skippedCount}`);
+    logger.info(`Scheduled report generation complete: generated=${generatedCount}, skipped=${skippedCount}`);
 
     const result = {
       success: true,
@@ -180,7 +181,7 @@ serve(async (req: Request): Promise<Response> => {
     });
 
   } catch (error: any) {
-    console.error("Error in scheduled-report-generator:", error);
+    logger.error("Error in scheduled-report-generator:", error);
     
     // Log error observability
     try {
@@ -193,7 +194,7 @@ serve(async (req: Request): Promise<Response> => {
         p_processed_count: 0,
         p_job_source: 'cron'
       });
-    } catch (e) { console.warn('[scheduled-report-generator] Failed to log job run:', e); }
+    } catch (e) { logger.warn('[scheduled-report-generator] Failed to log job run:', e); }
     
     return new Response(JSON.stringify({
       success: false,
@@ -210,7 +211,7 @@ async function generateTenantReport(
   tenantId: string, 
   triggerType: string
 ): Promise<void> {
-  console.log(`Generating ${triggerType} report for tenant ${tenantId}`);
+  logger.info(`Generating ${triggerType} report for tenant ${tenantId}`);
 
   // Get all active agents for this tenant
   const { data: agents } = await supabase
@@ -220,7 +221,7 @@ async function generateTenantReport(
     .eq("status", "active");
 
   if (!agents || agents.length === 0) {
-    console.log(`No active agents for tenant ${tenantId}, skipping report`);
+    logger.info(`No active agents for tenant ${tenantId}, skipping report`);
     return;
   }
 
@@ -332,11 +333,11 @@ async function generateTenantReport(
     .single();
 
   if (reportError) {
-    console.error("Error creating report:", reportError);
+    logger.error("Error creating report:", reportError);
     throw reportError;
   }
 
-  console.log(`Created report ${report.id} for tenant ${tenantId}`);
+  logger.info(`Created report ${report.id} for tenant ${tenantId}`);
 
   // Registrar execução na tabela report_executions
   const { error: execError } = await supabase
@@ -357,7 +358,7 @@ async function generateTenantReport(
     });
 
   if (execError) {
-    console.error("Error logging report execution:", execError);
+    logger.error("Error logging report execution:", execError);
     // Não lançar erro, apenas logar - o relatório já foi criado
   }
 
@@ -371,6 +372,6 @@ async function generateTenantReport(
       message_content: commercialSummary,
       scheduled_for: new Date().toISOString(),
     });
-    console.log(`Queued high-priority notification for report ${report.id}`);
+    logger.info(`Queued high-priority notification for report ${report.id}`);
   }
 }

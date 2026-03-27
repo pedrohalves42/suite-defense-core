@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * Sync Storage Bucket
@@ -22,7 +23,7 @@ Deno.serve(async (req) => {
     );
   }
 
-  console.log(`[${requestId}] Starting storage bucket sync...`);
+  logger.info(`[${requestId}] Starting storage bucket sync...`);
 
   try {
     // Parse request body
@@ -46,7 +47,7 @@ Deno.serve(async (req) => {
     if (internalSecret) {
       if (authHeader === `Bearer ${internalSecret}` || authHeader === internalSecret) {
         isAuthorized = true;
-        console.log(`[${requestId}] Authorized via internal secret`);
+        logger.info(`[${requestId}] Authorized via internal secret`);
       }
     }
     
@@ -71,7 +72,7 @@ Deno.serve(async (req) => {
         
         if (isSuperAdmin) {
           isAuthorized = true;
-          console.log(`[${requestId}] Authorized via super_admin role`);
+          logger.info(`[${requestId}] Authorized via super_admin role`);
         }
       }
     }
@@ -88,7 +89,7 @@ Deno.serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch active release from agent_releases
-    console.log(`[${requestId}] Fetching active ${platform} release from database...`);
+    logger.info(`[${requestId}] Fetching active ${platform} release from database...`);
     
     const { data: releaseData, error: releaseError } = await supabaseAdmin
       .from('agent_releases')
@@ -100,7 +101,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (releaseError || !releaseData?.script_content) {
-      console.error(`[${requestId}] No active release found:`, releaseError);
+      logger.error(`[${requestId}] No active release found:`, releaseError);
       return new Response(
         JSON.stringify({ 
           error: `No active ${platform} release found in agent_releases`,
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
 
     const { script_content, version, sha256: dbSha256 } = releaseData;
     
-    console.log(`[${requestId}] Found active release: ${version} (${script_content.length} bytes)`);
+    logger.info(`[${requestId}] Found active release: ${version} (${script_content.length} bytes)`);
 
     // Calculate SHA256 of script content
     const encoder = new TextEncoder();
@@ -146,11 +147,11 @@ Deno.serve(async (req) => {
           const currentArray = Array.from(new Uint8Array(currentBuffer));
           currentStorageHash = currentArray.map(b => b.toString(16).padStart(2, '0')).join('');
           
-          console.log(`[${requestId}] Current storage hash: ${currentStorageHash.substring(0, 16)}...`);
-          console.log(`[${requestId}] Database release hash: ${calculatedSha256.substring(0, 16)}...`);
+          logger.info(`[${requestId}] Current storage hash: ${currentStorageHash.substring(0, 16)}...`);
+          logger.info(`[${requestId}] Database release hash: ${calculatedSha256.substring(0, 16)}...`);
           
           if (currentStorageHash === calculatedSha256) {
-            console.log(`[${requestId}] Storage already synced with version ${version}`);
+            logger.info(`[${requestId}] Storage already synced with version ${version}`);
             return new Response(
               JSON.stringify({
                 success: true,
@@ -166,14 +167,14 @@ Deno.serve(async (req) => {
           }
           
           needsUpdate = true;
-          console.log(`[${requestId}] Hash mismatch - sync required`);
+          logger.info(`[${requestId}] Hash mismatch - sync required`);
         } else {
           needsUpdate = true;
-          console.log(`[${requestId}] File not in storage or error - upload required`);
+          logger.info(`[${requestId}] File not in storage or error - upload required`);
         }
       } catch (e) {
         needsUpdate = true;
-        console.log(`[${requestId}] Error checking storage: ${e}`);
+        logger.info(`[${requestId}] Error checking storage: ${e}`);
       }
     }
 
@@ -191,7 +192,7 @@ Deno.serve(async (req) => {
     }
 
     // Upload to storage bucket
-    console.log(`[${requestId}] Uploading ${version} to storage bucket (${script_content.length} bytes)...`);
+    logger.info(`[${requestId}] Uploading ${version} to storage bucket (${script_content.length} bytes)...`);
     
     const { error: uploadError } = await supabaseAdmin.storage
       .from('agent-installers')
@@ -201,14 +202,14 @@ Deno.serve(async (req) => {
       });
 
     if (uploadError) {
-      console.error(`[${requestId}] Upload failed:`, uploadError);
+      logger.error(`[${requestId}] Upload failed:`, uploadError);
       throw uploadError;
     }
 
-    console.log(`[${requestId}] ✅ Storage bucket synced successfully!`);
-    console.log(`[${requestId}] Version: ${version}`);
-    console.log(`[${requestId}] Size: ${script_content.length} bytes`);
-    console.log(`[${requestId}] SHA256: ${calculatedSha256.substring(0, 32)}...`);
+    logger.info(`[${requestId}] ✅ Storage bucket synced successfully!`);
+    logger.info(`[${requestId}] Version: ${version}`);
+    logger.info(`[${requestId}] Size: ${script_content.length} bytes`);
+    logger.info(`[${requestId}] SHA256: ${calculatedSha256.substring(0, 32)}...`);
 
     return new Response(
       JSON.stringify({
@@ -227,7 +228,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error(`[${requestId}] Error:`, error);
+    logger.error(`[${requestId}] Error:`, error);
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : 'Internal server error',

@@ -8,6 +8,7 @@
  */
 
 import { serveAgent } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface CertificatePayload {
   thumbprint: string;
@@ -36,7 +37,7 @@ serveAgent(async (_req, ctx) => {
     );
   }
 
-  console.log(`[${requestId}] [collect-certs] Agent ${agentName}: ${certificates.length} certificates`);
+  logger.info(`[${requestId}] [collect-certs] Agent ${agentName}: ${certificates.length} certificates`);
 
   const now = new Date();
   const nowIso = now.toISOString();
@@ -78,7 +79,7 @@ serveAgent(async (_req, ctx) => {
   if (rows.length > 0) {
     const { error } = await supabase.from('agent_certificates').insert(rows);
     if (error) {
-      console.error(`[${requestId}] [collect-certs] Insert error:`, error.message);
+      logger.error(`[${requestId}] [collect-certs] Insert error:`, error.message);
     } else {
       processedCount = rows.length;
     }
@@ -131,7 +132,7 @@ serveAgent(async (_req, ctx) => {
     });
   } catch (_) { /* non-critical */ }
 
-  console.log(`[${requestId}] [collect-certs] Done: ${processedCount} certs, ${expiredCount} expired, ${expiringSoon} expiring in ${durationMs}ms`);
+  logger.info(`[${requestId}] [collect-certs] Done: ${processedCount} certs, ${expiredCount} expired, ${expiringSoon} expiring in ${durationMs}ms`);
 
   return {
     success: true,

@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from './logger.ts';
 
 export interface ApiAuthResult {
   success: boolean;
@@ -40,7 +41,7 @@ export async function authenticateApiKey(
       .maybeSingle();
 
     if (keyError) {
-      console.error('Error looking up API key:', keyError);
+      logger.error('Error looking up API key:', keyError);
       return { success: false, error: 'Invalid API key' };
     }
 
@@ -69,7 +70,7 @@ export async function authenticateApiKey(
       scopes: apiKeyData.scopes,
     };
   } catch (error) {
-    console.error('Error authenticating API key:', error);
+    logger.error('Error authenticating API key:', error);
     return { success: false, error: 'Authentication failed' };
   }
 }
@@ -118,6 +119,6 @@ export async function logApiRequest(
       user_agent: userAgent,
     });
   } catch (error) {
-    console.error('Error logging API request:', error);
+    logger.error('Error logging API request:', error);
   }
 }

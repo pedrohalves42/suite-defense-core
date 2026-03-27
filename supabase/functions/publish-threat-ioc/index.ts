@@ -17,6 +17,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface ThreatIoC {
   type: 'file_hash_sha256' | 'file_hash_md5' | 'domain' | 'ip_address' | 'url';
@@ -48,7 +49,7 @@ Deno.serve(async (req) => {
     const expectedSecret = Deno.env.get('INTERNAL_SECRET');
     
     if (!expectedSecret || internalSecret !== expectedSecret) {
-      console.warn(`[${requestId}] [publish-threat-ioc] Unauthorized access attempt`);
+      logger.warn(`[${requestId}] [publish-threat-ioc] Unauthorized access attempt`);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -71,7 +72,7 @@ Deno.serve(async (req) => {
 
     // Cap at 100 IoCs per request
     const iocs = body.iocs.slice(0, 100);
-    console.log(`[${requestId}] [publish-threat-ioc] Publishing ${iocs.length} IoCs from ${body.detection_type}`);
+    logger.info(`[${requestId}] [publish-threat-ioc] Publishing ${iocs.length} IoCs from ${body.detection_type}`);
 
     let reputationUpserted = 0;
     let indicatorsPublished = 0;
@@ -101,7 +102,7 @@ Deno.serve(async (req) => {
         });
 
       if (repError) {
-        console.error(`[${requestId}] Error upserting reputation:`, repError.message);
+        logger.error(`[${requestId}] Error upserting reputation:`, repError.message);
       } else {
         reputationUpserted++;
       }
@@ -125,7 +126,7 @@ Deno.serve(async (req) => {
       .eq('is_active', true);
 
     if (tenantsError) {
-      console.error(`[${requestId}] Error fetching tenants:`, tenantsError.message);
+      logger.error(`[${requestId}] Error fetching tenants:`, tenantsError.message);
     } else if (tenants && tenants.length > 0) {
       // Build batch insert for all tenants
       const indicatorRows: Array<Record<string, unknown>> = [];
@@ -167,7 +168,7 @@ Deno.serve(async (req) => {
           });
 
         if (upsertError) {
-          console.error(`[${requestId}] Error publishing indicators batch:`, upsertError.message);
+          logger.error(`[${requestId}] Error publishing indicators batch:`, upsertError.message);
         } else {
           indicatorsPublished += batch.length;
         }
@@ -183,7 +184,7 @@ Deno.serve(async (req) => {
       tenants_notified: tenants?.length || 0,
     };
 
-    console.log(`[${requestId}] [publish-threat-ioc] Done:`, JSON.stringify(result));
+    logger.info(`[${requestId}] [publish-threat-ioc] Done:`, JSON.stringify(result));
 
     return new Response(JSON.stringify(result), {
       status: 200,
@@ -192,7 +193,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[${requestId}] [publish-threat-ioc] Fatal:`, errorMsg);
+    logger.error(`[${requestId}] [publish-threat-ioc] Fatal:`, errorMsg);
     return new Response(
       JSON.stringify({ success: false, error: errorMsg }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

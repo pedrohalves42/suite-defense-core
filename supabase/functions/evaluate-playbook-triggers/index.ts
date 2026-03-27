@@ -3,6 +3,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -75,7 +76,7 @@ serve(async (req) => {
     // Se não é interno, exigir autenticação JWT
     if (!isInternalCall) {
       if (!authHeader) {
-        console.error('[SECURITY] evaluate-playbook-triggers called without auth or internal secret');
+        logger.error('[SECURITY] evaluate-playbook-triggers called without auth or internal secret');
         return new Response(JSON.stringify({ 
           error: 'Unauthorized: Authentication required' 
         }), { 
@@ -103,7 +104,7 @@ serve(async (req) => {
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
       
       if (authError || !user) {
-        console.error('[SECURITY] Invalid JWT token in evaluate-playbook-triggers');
+        logger.error('[SECURITY] Invalid JWT token in evaluate-playbook-triggers');
         return new Response(JSON.stringify({ 
           error: 'Invalid token' 
         }), { 
@@ -121,7 +122,7 @@ serve(async (req) => {
         .maybeSingle();
         
       if (!userRole) {
-        console.error(`[SECURITY] User ${user.id} attempted to trigger playbook for unauthorized tenant ${tenant_id}`);
+        logger.error(`[SECURITY] User ${user.id} attempted to trigger playbook for unauthorized tenant ${tenant_id}`);
         return new Response(JSON.stringify({ 
           error: 'Access denied: You do not have access to this tenant' 
         }), { 
@@ -132,7 +133,7 @@ serve(async (req) => {
       
       // Apenas admins podem disparar playbooks manualmente
       if (!['admin', 'super_admin'].includes(userRole.role)) {
-        console.error(`[SECURITY] User ${user.id} with role ${userRole.role} attempted to trigger playbook`);
+        logger.error(`[SECURITY] User ${user.id} with role ${userRole.role} attempted to trigger playbook`);
         return new Response(JSON.stringify({ 
           error: 'Forbidden: Only admins can trigger playbooks' 
         }), { 
@@ -142,7 +143,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`[evaluate-playbook-triggers] Evaluating ${trigger_type} for tenant ${tenant_id} (internal: ${isInternalCall})`);
+    logger.info(`[evaluate-playbook-triggers] Evaluating ${trigger_type} for tenant ${tenant_id} (internal: ${isInternalCall})`);
 
     // ✅ PHASE 3: Verificar se Shadow Mode (dry-run) está ativado para o tenant
     const { data: tenantSettings } = await supabase
@@ -154,7 +155,7 @@ serve(async (req) => {
     const isDryRun = (tenantSettings as TenantSettings)?.enable_dry_run_mode ?? false;
     
     if (isDryRun) {
-      console.log(`[evaluate-playbook-triggers] Shadow Mode ACTIVE for tenant ${tenant_id} - no auto-execution will occur`);
+      logger.info(`[evaluate-playbook-triggers] Shadow Mode ACTIVE for tenant ${tenant_id} - no auto-execution will occur`);
     }
 
     // Buscar playbooks ativos que match o trigger
@@ -170,12 +171,12 @@ serve(async (req) => {
       .order('is_system', { ascending: true }); // Tenant-specific primeiro
 
     if (pbError) {
-      console.error('[evaluate-playbook-triggers] Error fetching playbooks:', pbError);
+      logger.error('[evaluate-playbook-triggers] Error fetching playbooks:', pbError);
       throw pbError;
     }
 
     if (!playbooks || playbooks.length === 0) {
-      console.log(`[evaluate-playbook-triggers] No active playbooks for ${trigger_type}`);
+      logger.info(`[evaluate-playbook-triggers] No active playbooks for ${trigger_type}`);
       return new Response(JSON.stringify({ 
         triggered: false,
         reason: 'No active playbooks for this trigger type',
@@ -197,7 +198,7 @@ serve(async (req) => {
     });
 
     if (hasRecentExec) {
-      console.log(`[evaluate-playbook-triggers] Cooldown active for playbook ${playbook.id} (${cooldownMinutes}min)`);
+      logger.info(`[evaluate-playbook-triggers] Cooldown active for playbook ${playbook.id} (${cooldownMinutes}min)`);
       return new Response(JSON.stringify({
         triggered: false,
         reason: 'Cooldown active - recent execution exists',
@@ -212,7 +213,7 @@ serve(async (req) => {
     const conditionsMet = evaluateConditions(trigger_type, conditions, context);
 
     if (!conditionsMet) {
-      console.log(`[evaluate-playbook-triggers] Conditions not met for playbook ${playbook.id}`);
+      logger.info(`[evaluate-playbook-triggers] Conditions not met for playbook ${playbook.id}`);
       return new Response(JSON.stringify({
         triggered: false,
         reason: 'Trigger conditions not met',
@@ -240,7 +241,7 @@ serve(async (req) => {
       decision_reason: 'risk_calculation_failed'
     } : riskData as RiskAnalysis;
 
-    console.log(`[evaluate-playbook-triggers] Risk analysis: score=${riskAnalysis.risk_score}, auto_execute=${riskAnalysis.should_auto_execute}, reason=${riskAnalysis.decision_reason}`);
+    logger.info(`[evaluate-playbook-triggers] Risk analysis: score=${riskAnalysis.risk_score}, auto_execute=${riskAnalysis.should_auto_execute}, reason=${riskAnalysis.decision_reason}`);
 
     // Buscar informações do agente se fornecido
     let agentInfo = null;
@@ -333,11 +334,11 @@ serve(async (req) => {
       .single();
 
     if (execError) {
-      console.error('[evaluate-playbook-triggers] Error creating execution:', execError);
+      logger.error('[evaluate-playbook-triggers] Error creating execution:', execError);
       throw execError;
     }
 
-    console.log(`[evaluate-playbook-triggers] Created execution ${execution.id} with immutable snapshots (v${playbook.version}), auto_executed=${shouldAutoExecute}, risk_score=${riskAnalysis.risk_score}, dry_run=${isDryRun}`);
+    logger.info(`[evaluate-playbook-triggers] Created execution ${execution.id} with immutable snapshots (v${playbook.version}), auto_executed=${shouldAutoExecute}, risk_score=${riskAnalysis.risk_score}, dry_run=${isDryRun}`);
 
     // ✅ PHASE 3: Log decisão no risk_decision_log
     const { error: logError } = await supabase
@@ -365,7 +366,7 @@ serve(async (req) => {
       });
 
     if (logError) {
-      console.error('[evaluate-playbook-triggers] Error logging risk decision:', logError);
+      logger.error('[evaluate-playbook-triggers] Error logging risk decision:', logError);
       // Não falhar a operação por causa do log
     }
 
@@ -373,7 +374,7 @@ serve(async (req) => {
     const executionMode = playbook.execution_mode || 'assistive';
     
     if (executionMode === 'semi_automatic') {
-      console.log(`[evaluate-playbook-triggers] SEMI_AUTOMATIC: Creating approval request for ${playbook.name}`);
+      logger.info(`[evaluate-playbook-triggers] SEMI_AUTOMATIC: Creating approval request for ${playbook.name}`);
       
       // ✅ P1 RED TEAM FIX: Rate limit global de approvals pendentes por tenant
       const MAX_PENDING_APPROVALS_PER_TENANT = 10;
@@ -386,7 +387,7 @@ serve(async (req) => {
         .gt('expires_at', new Date().toISOString());
       
       if (!countError && (pendingCount || 0) >= MAX_PENDING_APPROVALS_PER_TENANT) {
-        console.warn(`[SECURITY] Tenant ${tenant_id} exceeded pending approval limit (${pendingCount}/${MAX_PENDING_APPROVALS_PER_TENANT})`);
+        logger.warn(`[SECURITY] Tenant ${tenant_id} exceeded pending approval limit (${pendingCount}/${MAX_PENDING_APPROVALS_PER_TENANT})`);
         
         // Registrar tentativa bloqueada no audit log
         await supabase.from('audit_logs').insert({
@@ -425,7 +426,7 @@ serve(async (req) => {
       tokenExpiresAt.setHours(tokenExpiresAt.getHours() + 24); // Token também expira em 24h
       
       // ✅ P1 RED TEAM FIX: NÃO logar o token de aprovação (reduz entropia se logs vazarem)
-      console.log(`[evaluate-playbook-triggers] Generated secure approval token for execution ${execution.id}`);
+      logger.info(`[evaluate-playbook-triggers] Generated secure approval token for execution ${execution.id}`);
       
       const { data: approvalRequest, error: approvalError } = await supabase
         .from('approval_requests')
@@ -459,9 +460,9 @@ serve(async (req) => {
         .single();
       
       if (approvalError) {
-        console.error('[evaluate-playbook-triggers] Error creating approval request:', approvalError);
+        logger.error('[evaluate-playbook-triggers] Error creating approval request:', approvalError);
       } else {
-        console.log(`[evaluate-playbook-triggers] Created approval request ${approvalRequest?.id} with 24h timeout`);
+        logger.info(`[evaluate-playbook-triggers] Created approval request ${approvalRequest?.id} with 24h timeout`);
         
         // Create system alert to notify admins
         await supabase.from('system_alerts').insert({
@@ -525,16 +526,16 @@ serve(async (req) => {
             }),
           });
           
-          console.log(`[evaluate-playbook-triggers] Email notification sent with one-click approval link for request ${approvalRequest?.id}`);
+          logger.info(`[evaluate-playbook-triggers] Email notification sent with one-click approval link for request ${approvalRequest?.id}`);
         } catch (notifyError) {
-          console.error('[evaluate-playbook-triggers] Failed to send email notification:', notifyError);
+          logger.error('[evaluate-playbook-triggers] Failed to send email notification:', notifyError);
           // Don't fail the operation if notification fails
         }
       }
     }
     // Se deve auto-executar (baseado no motor de risco E NÃO estiver em dry_run), executar automaticamente
     else if (shouldAutoExecute) {
-      console.log(`[evaluate-playbook-triggers] Risk-based auto-execution: ${playbook.name} (score: ${riskAnalysis.risk_score}, threshold: ${riskAnalysis.threshold})`);
+      logger.info(`[evaluate-playbook-triggers] Risk-based auto-execution: ${playbook.name} (score: ${riskAnalysis.risk_score}, threshold: ${riskAnalysis.threshold})`);
       
       try {
         const executeUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/execute-playbook-action`;
@@ -547,10 +548,10 @@ serve(async (req) => {
           body: JSON.stringify({ execution_id: execution.id }),
         });
       } catch (autoExecError) {
-        console.error('[evaluate-playbook-triggers] Auto-execute error:', autoExecError);
+        logger.error('[evaluate-playbook-triggers] Auto-execute error:', autoExecError);
       }
     } else if (isDryRun && wouldAutoExecute) {
-      console.log(`[evaluate-playbook-triggers] DRY RUN: Would have auto-executed ${playbook.name} (score: ${riskAnalysis.risk_score}, threshold: ${riskAnalysis.threshold})`);
+      logger.info(`[evaluate-playbook-triggers] DRY RUN: Would have auto-executed ${playbook.name} (score: ${riskAnalysis.risk_score}, threshold: ${riskAnalysis.threshold})`);
     }
 
     // Log de segurança com informações de risco
@@ -610,7 +611,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('[evaluate-playbook-triggers] Error:', error);
+    logger.error('[evaluate-playbook-triggers] Error:', error);
     return new Response(JSON.stringify({
       error: error instanceof Error ? error.message : 'Internal server error',
     }), {

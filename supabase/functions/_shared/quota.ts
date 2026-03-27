@@ -1,4 +1,5 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from './logger.ts';
 
 interface QuotaCheckResult {
   allowed: boolean;
@@ -32,7 +33,7 @@ export async function checkQuotaAvailable(
 
     if (error || !feature) {
       // If feature doesn't exist, assume no quota limit (allowed)
-      console.log(`[QUOTA] Feature ${featureKey} not found for tenant ${tenantId}, allowing by default`);
+      logger.info(`[QUOTA] Feature ${featureKey} not found for tenant ${tenantId}, allowing by default`);
       return { allowed: true };
     }
 
@@ -69,7 +70,7 @@ export async function checkQuotaAvailable(
       limit: quotaLimit,
     };
   } catch (error) {
-    console.error('[QUOTA] Error checking quota:', error);
+    logger.error('[QUOTA] Error checking quota:', error);
     // On error, fail open (allow operation) to prevent blocking legitimate requests
     return { allowed: true };
   }

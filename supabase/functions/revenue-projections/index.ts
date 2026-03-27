@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
       throw new Error("Forbidden: Super Admin access required");
     }
 
-    console.log(`[REVENUE-PROJECTIONS] Calculating projections for super admin ${userData.user.id}`);
+    logger.info(`[REVENUE-PROJECTIONS] Calculating projections for super admin ${userData.user.id}`);
 
     // Get current MRR
     const { data: subscriptions, error: subsError } = await supabase
@@ -182,14 +183,14 @@ Deno.serve(async (req) => {
       })),
     };
 
-    console.log(`[REVENUE-PROJECTIONS] Success: Current MRR=${currentMrr}, Customers=${currentCustomers}`);
+    logger.info(`[REVENUE-PROJECTIONS] Success: Current MRR=${currentMrr}, Customers=${currentCustomers}`);
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    console.error("[REVENUE-PROJECTIONS] Error:", error);
+    logger.error("[REVENUE-PROJECTIONS] Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       {

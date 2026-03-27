@@ -6,6 +6,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { callAISimple } from '../_shared/ai-provider-helper.ts';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
+import { logger } from '../_shared/logger.ts';
 
 const SUPABASE_URL = requireEnv('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
@@ -64,9 +65,9 @@ Regras:
       return aiResult.content;
     }
     
-    console.warn('[generate-executive-report] AI call failed, using fallback:', aiResult.error);
+    logger.warn('[generate-executive-report] AI call failed, using fallback:', aiResult.error);
   } catch (error) {
-    console.error('AI generation failed:', error);
+    logger.error('AI generation failed:', error);
   }
 
   return generateFallbackSummary(data);
@@ -138,14 +139,14 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     
     if (!isInternalCall && !authHeader) {
-      console.log('[generate-executive-report] Unauthorized: No valid origin');
+      logger.info('[generate-executive-report] Unauthorized: No valid origin');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[generate-executive-report] Authorized call from: ${isInternalCall ? 'internal' : 'jwt'}`);
+    logger.info(`[generate-executive-report] Authorized call from: ${isInternalCall ? 'internal' : 'jwt'}`);
     
     const tenantId = body.tenantId;
     const targetDate = body.date || new Date().toISOString().split('T')[0];
@@ -278,13 +279,13 @@ Deno.serve(async (req) => {
           });
 
         if (upsertError) {
-          console.error(`Failed to upsert snapshot for tenant ${tid}:`, upsertError);
+          logger.error(`Failed to upsert snapshot for tenant ${tid}:`, upsertError);
           results.push({ tenantId: tid, success: false, error: upsertError.message });
         } else {
           results.push({ tenantId: tid, success: true, summary });
         }
       } catch (error) {
-        console.error(`Error processing tenant ${tid}:`, error);
+        logger.error(`Error processing tenant ${tid}:`, error);
         results.push({ tenantId: tid, success: false, error: String(error) });
       }
     }
@@ -311,7 +312,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error:', error);
+    logger.error('Error:', error);
     
     // Log error observability
     try {
@@ -324,7 +325,7 @@ Deno.serve(async (req) => {
         p_processed_count: 0,
         p_job_source: 'cron'
       });
-    } catch (e) { console.warn('[generate-executive-report] Failed to log job run:', e); }
+    } catch (e) { logger.warn('[generate-executive-report] Failed to log job run:', e); }
     
     return new Response(
       JSON.stringify({ success: false, error: String(error) }),

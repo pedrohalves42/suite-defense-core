@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
 import { safeParseJSON, createFallbackAudit } from "../_shared/json-parser.ts";
 import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -77,14 +78,14 @@ serve(async (req) => {
       }
     }
     
-    console.log(`[ai-system-audit] Starting audit for tenant ${tenantId}`);
+    logger.info(`[ai-system-audit] Starting audit for tenant ${tenantId}`);
 
     // Get prompts from registry (versioned, hashed)
     const personaPrompt = await AIPromptRegistry.getPromptWithMetadata('ana-auditor-persona');
     const analysisTemplate = await AIPromptRegistry.getPromptWithMetadata('ana-analysis-template');
 
     if (!personaPrompt || !analysisTemplate) {
-      console.error('Failed to load prompts from registry');
+      logger.error('Failed to load prompts from registry');
       return new Response(
         JSON.stringify({ error: 'Prompt configuration error' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -100,7 +101,7 @@ serve(async (req) => {
       .rpc('get_audit_raw_metrics', { p_tenant_id: tenantId });
 
     if (metricsError) {
-      console.error('Error fetching metrics:', metricsError);
+      logger.error('Error fetching metrics:', metricsError);
       return new Response(
         JSON.stringify({
           error: 'Failed to fetch system metrics',
@@ -114,7 +115,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('[ai-system-audit] Metrics collected:', JSON.stringify(metrics));
+    logger.info('[ai-system-audit] Metrics collected:', JSON.stringify(metrics));
 
     // Build analysis prompt with metrics
     const analysisPrompt = analysisTemplate.content.replace('{metrics}', JSON.stringify(metrics, null, 2));
@@ -132,7 +133,7 @@ serve(async (req) => {
     });
 
     if (!aiResult.success || !aiResult.content) {
-      console.error('AI call failed:', aiResult.error);
+      logger.error('AI call failed:', aiResult.error);
       
       // Check for rate limit / credits exhausted patterns in error
       if (aiResult.error?.includes('429') || aiResult.error?.toLowerCase().includes('rate limit')) {
@@ -164,9 +165,9 @@ serve(async (req) => {
     try {
       analysisResult = safeParseJSON(aiContent, 'ai-system-audit');
     } catch (parseError) {
-      console.error('[ai-system-audit] Parse failed, using fallback');
-      console.error('[ai-system-audit] Error:', parseError);
-      console.error('[ai-system-audit] Content length:', aiContent.length);
+      logger.error('[ai-system-audit] Parse failed, using fallback');
+      logger.error('[ai-system-audit] Error:', parseError);
+      logger.error('[ai-system-audit] Content length:', aiContent.length);
       
       // Use fallback - pipeline continues with partial result
       analysisResult = createFallbackAudit('AI_JSON_PARSE_ERROR');
@@ -225,11 +226,11 @@ serve(async (req) => {
       .single();
 
     if (saveError) {
-      console.error('Error saving audit:', saveError);
+      logger.error('Error saving audit:', saveError);
       // Return result anyway, just log the save error
     }
 
-    console.log(`[ai-system-audit] Audit completed. Score: ${analysisResult.overall_score}, Recommendation: ${analysisResult.recommendation}, Provider: ${aiResult.provider}, Fallback: ${aiResult.usedFallback}`);
+    logger.info(`[ai-system-audit] Audit completed. Score: ${analysisResult.overall_score}, Recommendation: ${analysisResult.recommendation}, Provider: ${aiResult.provider}, Fallback: ${aiResult.usedFallback}`);
 
     return new Response(
       JSON.stringify({
@@ -254,7 +255,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[ai-system-audit] Error:', error);
+    logger.error('[ai-system-audit] Error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

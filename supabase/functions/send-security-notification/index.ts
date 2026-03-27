@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { Resend } from 'https://esm.sh/resend@4.0.0';
 import { corsSecurityHeaders, secureCorsPreflightResponse, secureJsonResponse, secureErrorResponse } from '../_shared/security-headers.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * Multi-channel Security Notification System
@@ -41,7 +42,7 @@ Deno.serve(async (req) => {
   const providedSecret = req.headers.get('X-Internal-Secret');
   
   if (providedSecret !== INTERNAL_SECRET) {
-    console.error('[Security Notification] Unauthorized access attempt');
+    logger.error('[Security Notification] Unauthorized access attempt');
     return secureErrorResponse('Unauthorized', 401);
   }
 
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
         created_at: new Date().toISOString()
       });
     } catch (logErr) {
-      console.warn('[Notification] Failed to log notification:', logErr);
+      logger.warn('[Notification] Failed to log notification:', logErr);
     }
 
     const allSuccessful = results.every(r => r.success);
@@ -125,7 +126,7 @@ Deno.serve(async (req) => {
     }, allSuccessful ? 200 : (anySuccessful ? 207 : 500));
 
   } catch (error) {
-    console.error('[Security Notification] Error:', error);
+    logger.error('[Security Notification] Error:', error);
     return secureErrorResponse(
       error instanceof Error ? error.message : 'Unknown error',
       500
@@ -304,7 +305,7 @@ async function sendEmailNotification(
     };
 
   } catch (error) {
-    console.error('[Email Notification] Error:', error);
+    logger.error('[Email Notification] Error:', error);
     return {
       channel: 'email',
       success: false,
@@ -372,7 +373,7 @@ async function sendWebhookNotification(
     };
 
   } catch (error) {
-    console.error('[Webhook Notification] Error:', error);
+    logger.error('[Webhook Notification] Error:', error);
     return {
       channel: 'webhook',
       success: false,

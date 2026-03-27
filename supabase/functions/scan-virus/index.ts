@@ -5,6 +5,7 @@ import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { checkQuotaAvailable } from '../_shared/quota.ts';
 import { hashToken } from '../_shared/token-hash.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface ScanRequest {
   filePath: string;
@@ -24,7 +25,7 @@ interface ScanResult {
 // Hybrid Analysis API scan
 async function scanWithHybridAnalysis(fileHash: string, apiKey: string): Promise<ScanResult | null> {
   try {
-    console.log(`[Hybrid Analysis] Scanning hash: ${fileHash}`);
+    logger.info(`[Hybrid Analysis] Scanning hash: ${fileHash}`);
     
     // Query for existing scan report
     const reportResponse = await fetch(
@@ -38,13 +39,13 @@ async function scanWithHybridAnalysis(fileHash: string, apiKey: string): Promise
     );
 
     if (reportResponse.status === 404) {
-      console.log('[Hybrid Analysis] File not found in database');
+      logger.info('[Hybrid Analysis] File not found in database');
       return null;
     }
 
     if (!reportResponse.ok) {
       const error = await reportResponse.text();
-      console.error(`[Hybrid Analysis] API error: ${reportResponse.status} - ${error}`);
+      logger.error(`[Hybrid Analysis] API error: ${reportResponse.status} - ${error}`);
       return null;
     }
 
@@ -55,7 +56,7 @@ async function scanWithHybridAnalysis(fileHash: string, apiKey: string): Promise
     const verdict = reportData.verdict || 'no specific threat';
     const isMalicious = threatScore >= 50 || verdict.includes('malicious');
     
-    console.log(`[Hybrid Analysis] Result: ${verdict} (score: ${threatScore})`);
+    logger.info(`[Hybrid Analysis] Result: ${verdict} (score: ${threatScore})`);
     
     return {
       isMalicious,
@@ -67,7 +68,7 @@ async function scanWithHybridAnalysis(fileHash: string, apiKey: string): Promise
       scannerUsed: 'hybrid_analysis'
     };
   } catch (error) {
-    console.error('[Hybrid Analysis] Scan failed:', error);
+    logger.error('[Hybrid Analysis] Scan failed:', error);
     return null;
   }
 }
@@ -75,14 +76,14 @@ async function scanWithHybridAnalysis(fileHash: string, apiKey: string): Promise
 // VirusTotal API scan
 async function scanWithVirusTotal(fileHash: string, apiKey: string): Promise<ScanResult | null> {
   try {
-    console.log(`[VirusTotal] Scanning hash: ${fileHash}`);
+    logger.info(`[VirusTotal] Scanning hash: ${fileHash}`);
     
     const vtResponse = await fetch(
       `https://www.virustotal.com/vtapi/v2/file/report?apikey=${apiKey}&resource=${fileHash}`
     );
 
     if (!vtResponse.ok) {
-      console.error(`[VirusTotal] API error: ${vtResponse.status}`);
+      logger.error(`[VirusTotal] API error: ${vtResponse.status}`);
       return null;
     }
 
@@ -90,12 +91,12 @@ async function scanWithVirusTotal(fileHash: string, apiKey: string): Promise<Sca
 
     // response_code: 1 = found, 0 = not found, -2 = queued
     if (vtData.response_code === 0) {
-      console.log('[VirusTotal] File not found in database');
+      logger.info('[VirusTotal] File not found in database');
       return null;
     }
 
     if (vtData.response_code === -2) {
-      console.log('[VirusTotal] Analysis queued');
+      logger.info('[VirusTotal] Analysis queued');
       return null;
     }
 
@@ -103,7 +104,7 @@ async function scanWithVirusTotal(fileHash: string, apiKey: string): Promise<Sca
     const total = vtData.total || 0;
     const isMalicious = positives > 0;
 
-    console.log(`[VirusTotal] Result: ${positives}/${total} detections`);
+    logger.info(`[VirusTotal] Result: ${positives}/${total} detections`);
 
     return {
       isMalicious,
@@ -115,7 +116,7 @@ async function scanWithVirusTotal(fileHash: string, apiKey: string): Promise<Sca
       scannerUsed: 'virustotal'
     };
   } catch (error) {
-    console.error('[VirusTotal] Scan failed:', error);
+    logger.error('[VirusTotal] Scan failed:', error);
     return null;
   }
 }
@@ -181,7 +182,7 @@ Deno.serve(async (req) => {
     
     // Validar tenant_id existe
     if (!agent.tenant_id) {
-      console.error(`[${requestId}] Agent ${agent.agent_name} has no tenant_id`);
+      logger.error(`[${requestId}] Agent ${agent.agent_name} has no tenant_id`);
       return new Response(
         JSON.stringify({ error: 'Configuracao invalida do agente' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -237,13 +238,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[${agent.agent_name}] Scanning file: ${filePath} (${fileHash})`);
+    logger.info(`[${agent.agent_name}] Scanning file: ${filePath} (${fileHash})`);
 
     // Check scan quota before proceeding
     const quotaCheck = await checkQuotaAvailable(supabase, agent.tenant_id, 'max_scans_per_month');
     
     if (!quotaCheck.allowed) {
-      console.log(`[${agent.agent_name}] Scan quota exceeded: ${quotaCheck.current}/${quotaCheck.limit}`);
+      logger.info(`[${agent.agent_name}] Scan quota exceeded: ${quotaCheck.current}/${quotaCheck.limit}`);
       return new Response(
         JSON.stringify({ 
           error: quotaCheck.error || 'Quota de scans excedida',
@@ -258,7 +259,7 @@ Deno.serve(async (req) => {
     const dailyQuotaCheck = await checkQuotaAvailable(supabase, agent.tenant_id, 'advanced_scans_daily');
     
     if (!dailyQuotaCheck.allowed) {
-      console.log(`[${agent.agent_name}] Daily advanced scan quota exceeded: ${dailyQuotaCheck.current}/${dailyQuotaCheck.limit}`);
+      logger.info(`[${agent.agent_name}] Daily advanced scan quota exceeded: ${dailyQuotaCheck.current}/${dailyQuotaCheck.limit}`);
       return new Response(
         JSON.stringify({ 
           error: 'Limite diario de scans avancados atingido',
@@ -298,13 +299,13 @@ Deno.serve(async (req) => {
     let scanResult: ScanResult | null = null;
     
     if (hybridAnalysisApiKey) {
-      console.log(`[${agent.agent_name}] Trying Hybrid Analysis first...`);
+      logger.info(`[${agent.agent_name}] Trying Hybrid Analysis first...`);
       scanResult = await scanWithHybridAnalysis(fileHash, hybridAnalysisApiKey);
     }
     
     // Fallback to VirusTotal if Hybrid Analysis failed or not configured
     if (!scanResult && virusTotalApiKey) {
-      console.log(`[${agent.agent_name}] Falling back to VirusTotal...`);
+      logger.info(`[${agent.agent_name}] Falling back to VirusTotal...`);
       scanResult = await scanWithVirusTotal(fileHash, virusTotalApiKey);
     }
     
@@ -339,7 +340,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (scanError) {
-      console.error('[SCAN-VIRUS] Error storing scan result:', scanError);
+      logger.error('[SCAN-VIRUS] Error storing scan result:', scanError);
     }
 
     // Increment daily scan quota usage
@@ -348,11 +349,11 @@ Deno.serve(async (req) => {
       p_feature_key: 'advanced_scans_daily',
       p_delta: 1
     });
-    console.log(`[${agent.agent_name}] Advanced scan quota incremented`);
+    logger.info(`[${agent.agent_name}] Advanced scan quota incremented`);
 
     // Auto-quarantine if malicious and enabled
     if (scanResult.isMalicious && scanRecord) {
-      console.log(`[SCAN-VIRUS] Malware detected by ${scanResult.scannerUsed}, triggering auto-quarantine`);
+      logger.info(`[SCAN-VIRUS] Malware detected by ${scanResult.scannerUsed}, triggering auto-quarantine`);
       
       try {
         const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
@@ -371,7 +372,7 @@ Deno.serve(async (req) => {
           }
         });
       } catch (quarantineError) {
-        console.error('[SCAN-VIRUS] Auto-quarantine failed:', quarantineError);
+        logger.error('[SCAN-VIRUS] Auto-quarantine failed:', quarantineError);
         // Don't fail the scan if quarantine fails
       }
     }

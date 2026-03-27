@@ -1,4 +1,5 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from './logger.ts';
 
 /**
  * Get the tenant_id for a given user
@@ -20,7 +21,7 @@ export async function getTenantIdForUser(
     .maybeSingle();
 
   if (error) {
-    console.error('[getTenantIdForUser] Error:', error);
+    logger.error('[getTenantIdForUser] Error:', error);
     return null;
   }
 
@@ -49,7 +50,7 @@ export async function verifyUserTenant(
     .maybeSingle();
 
   if (error) {
-    console.error('[verifyUserTenant] Error:', error);
+    logger.error('[verifyUserTenant] Error:', error);
     return false;
   }
 
@@ -70,7 +71,7 @@ export async function getValidatedTenantId(
   userId: string,
   requestedTenantId?: string
 ): Promise<string | null> {
-  console.log('[getValidatedTenantId] Starting validation:', {
+  logger.info('[getValidatedTenantId] Starting validation:', {
     userId,
     requestedTenantId: requestedTenantId || 'not provided'
   });
@@ -78,20 +79,20 @@ export async function getValidatedTenantId(
   // If tenant_id was provided, validate user has access
   if (requestedTenantId) {
     const hasAccess = await verifyUserTenant(supabase, userId, requestedTenantId);
-    console.log('[getValidatedTenantId] Access check result:', {
+    logger.info('[getValidatedTenantId] Access check result:', {
       requestedTenantId,
       hasAccess
     });
     
     if (hasAccess) {
-      console.log('[getValidatedTenantId] Using requested tenant:', requestedTenantId);
+      logger.info('[getValidatedTenantId] Using requested tenant:', requestedTenantId);
       return requestedTenantId;
     }
-    console.warn('[getValidatedTenantId] Access DENIED to tenant:', requestedTenantId);
+    logger.warn('[getValidatedTenantId] Access DENIED to tenant:', requestedTenantId);
   }
   
   // Fallback to first tenant (backwards compatibility)
   const fallbackTenantId = await getTenantIdForUser(supabase, userId);
-  console.log('[getValidatedTenantId] Using FALLBACK tenant:', fallbackTenantId);
+  logger.info('[getValidatedTenantId] Using FALLBACK tenant:', fallbackTenantId);
   return fallbackTenantId;
 }

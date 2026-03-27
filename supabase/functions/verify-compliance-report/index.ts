@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,8 +58,8 @@ Deno.serve(async (req) => {
 
   try {
     const requestId = crypto.randomUUID().substring(0, 8);
-    console.log(`[verify-compliance-report][${requestId}] === INICIANDO VERIFICAÇÃO ===`);
-    console.log(`[verify-compliance-report][${requestId}] Method: ${req.method}`);
+    logger.info(`[verify-compliance-report][${requestId}] === INICIANDO VERIFICAÇÃO ===`);
+    logger.info(`[verify-compliance-report][${requestId}] Method: ${req.method}`);
     
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -70,15 +71,15 @@ Deno.serve(async (req) => {
     if (req.method === "GET") {
       const url = new URL(req.url);
       auditId = url.searchParams.get("audit_id");
-      console.log(`[verify-compliance-report][${requestId}] GET audit_id from query: ${auditId}`);
+      logger.info(`[verify-compliance-report][${requestId}] GET audit_id from query: ${auditId}`);
     } else if (req.method === "POST") {
       const body = await req.json();
       auditId = body.audit_id;
-      console.log(`[verify-compliance-report][${requestId}] POST audit_id from body: ${auditId}`);
+      logger.info(`[verify-compliance-report][${requestId}] POST audit_id from body: ${auditId}`);
     }
 
     if (!auditId) {
-      console.log(`[verify-compliance-report][${requestId}] ERROR: audit_id não fornecido`);
+      logger.info(`[verify-compliance-report][${requestId}] ERROR: audit_id não fornecido`);
       return new Response(JSON.stringify({ 
         success: false, 
         error: "audit_id is required",
@@ -86,7 +87,7 @@ Deno.serve(async (req) => {
       }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    console.log(`[verify-compliance-report][${requestId}] Buscando relatório com audit_id: "${auditId}"`);
+    logger.info(`[verify-compliance-report][${requestId}] Buscando relatório com audit_id: "${auditId}"`);
 
     // Fetch report by audit_id
     const { data: report, error: fetchError } = await supabase
@@ -95,7 +96,7 @@ Deno.serve(async (req) => {
       .eq("audit_id", auditId)
       .single();
 
-    console.log(`[verify-compliance-report][${requestId}] Resultado da busca:`, {
+    logger.info(`[verify-compliance-report][${requestId}] Resultado da busca:`, {
       found: !!report,
       error: fetchError?.message || null,
       report_id: report?.id || null,
@@ -103,7 +104,7 @@ Deno.serve(async (req) => {
     });
 
     if (fetchError || !report) {
-      console.log(`[verify-compliance-report][${requestId}] ERRO: Relatório NÃO encontrado para audit_id: "${auditId}"`);
+      logger.info(`[verify-compliance-report][${requestId}] ERRO: Relatório NÃO encontrado para audit_id: "${auditId}"`);
       
       // Lista os audit_ids existentes para debug
       const { data: existingReports } = await supabase
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(5);
       
-      console.log(`[verify-compliance-report][${requestId}] Últimos 5 audit_ids no banco:`, existingReports?.map(r => r.audit_id) || []);
+      logger.info(`[verify-compliance-report][${requestId}] Últimos 5 audit_ids no banco:`, existingReports?.map(r => r.audit_id) || []);
       
       return new Response(JSON.stringify({ 
         success: false, 
@@ -126,7 +127,7 @@ Deno.serve(async (req) => {
       }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     
-    console.log(`[verify-compliance-report][${requestId}] SUCESSO: Relatório encontrado!`, {
+    logger.info(`[verify-compliance-report][${requestId}] SUCESSO: Relatório encontrado!`, {
       id: report.id,
       audit_id: report.audit_id,
       title: report.title,
@@ -139,7 +140,7 @@ Deno.serve(async (req) => {
     // Get HMAC secret for verification
     const hmacSecret = Deno.env.get("COMPLIANCE_HMAC_SECRET");
     if (!hmacSecret) {
-      console.error("[verify-compliance-report] COMPLIANCE_HMAC_SECRET not configured!");
+      logger.error("[verify-compliance-report] COMPLIANCE_HMAC_SECRET not configured!");
       return new Response(JSON.stringify({ 
         success: false, 
         error: "Server configuration error",
@@ -197,7 +198,7 @@ Deno.serve(async (req) => {
       });
 
     if (logError) {
-      console.error("[verify-compliance-report] Failed to log verification:", logError);
+      logger.error("[verify-compliance-report] Failed to log verification:", logError);
     }
 
     // Update report with last verification time if valid
@@ -215,7 +216,7 @@ Deno.serve(async (req) => {
       .eq("id", typedReport.tenant_id)
       .single();
 
-    console.log(`[verify-compliance-report] Verification for ${auditId}: SHA256=${sha256Match}, HMAC=${hmacValid}, IP=${clientIp}`);
+    logger.info(`[verify-compliance-report] Verification for ${auditId}: SHA256=${sha256Match}, HMAC=${hmacValid}, IP=${clientIp}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -255,8 +256,8 @@ Deno.serve(async (req) => {
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error) {
-    console.error("[verify-compliance-report] ERROR CRÍTICO:", error);
-    console.error("[verify-compliance-report] Stack:", error instanceof Error ? error.stack : "N/A");
+    logger.error("[verify-compliance-report] ERROR CRÍTICO:", error);
+    logger.error("[verify-compliance-report] Stack:", error instanceof Error ? error.stack : "N/A");
     return new Response(JSON.stringify({ 
       success: false, 
       error: "Internal server error",

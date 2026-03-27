@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,7 +29,7 @@ Deno.serve(async (req) => {
     );
 
     if (suspensionError) {
-      console.error("Suspension processing error:", suspensionError);
+      logger.error("Suspension processing error:", suspensionError);
       return new Response(
         JSON.stringify({ error: suspensionError.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
       .limit(10);
 
     if (tenantsError) {
-      console.error("Error fetching suspended tenants:", tenantsError);
+      logger.error("Error fetching suspended tenants:", tenantsError);
     }
 
     const cleanupResults = [];
@@ -55,7 +56,7 @@ Deno.serve(async (req) => {
         );
 
         if (cleanupError) {
-          console.error(`Cleanup error for tenant ${tenant.id}:`, cleanupError);
+          logger.error(`Cleanup error for tenant ${tenant.id}:`, cleanupError);
           cleanupResults.push({
             tenant_id: tenant.id,
             status: "error",
@@ -80,13 +81,13 @@ Deno.serve(async (req) => {
       processed_at: new Date().toISOString(),
     };
 
-    console.log("Tenant suspension processing completed:", JSON.stringify(result));
+    logger.info("Tenant suspension processing completed:", JSON.stringify(result));
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Unexpected error:", error);
+    logger.error("Unexpected error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

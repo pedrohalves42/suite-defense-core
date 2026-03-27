@@ -4,6 +4,7 @@
  */
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 const SCIM_SCHEMAS = {
   USER: 'urn:ietf:params:scim:schemas:core:2.0:User',
@@ -576,7 +577,7 @@ Deno.serve(async (req: Request) => {
 
     return scimError(404, 'Resource not found');
   } catch (error) {
-    console.error('[scim-provisioning] Error:', error);
+    logger.error('[scim-provisioning] Error:', error);
     return scimError(500, error instanceof Error ? error.message : 'Internal server error');
   }
 });

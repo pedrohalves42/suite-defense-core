@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { Resend } from 'https://esm.sh/resend@2.0.0';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -49,7 +50,7 @@ serve(async (req: Request) => {
   try {
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     if (!resendApiKey) {
-      console.error('[send-scheduled-report] RESEND_API_KEY not configured');
+      logger.error('[send-scheduled-report] RESEND_API_KEY not configured');
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'RESEND_API_KEY not configured' 
@@ -107,14 +108,14 @@ serve(async (req: Request) => {
         .or(`schedule.eq.daily,and(schedule.eq.weekly,day_of_week.eq.${saoPauloDayOfWeek})`);
 
       if (error) {
-        console.error('[send-scheduled-report] Error fetching reports:', error);
+        logger.error('[send-scheduled-report] Error fetching reports:', error);
         throw error;
       }
 
       reports = data || [];
     }
 
-    console.log(`[send-scheduled-report] Processing ${reports.length} reports`);
+    logger.info(`[send-scheduled-report] Processing ${reports.length} reports`);
 
     const results = [];
 
@@ -145,7 +146,7 @@ serve(async (req: Request) => {
           });
 
           if (emailError) {
-            console.error(`[send-scheduled-report] Failed to send to ${recipient}:`, emailError);
+            logger.error(`[send-scheduled-report] Failed to send to ${recipient}:`, emailError);
             
             await supabase.from('notification_log').insert({
               tenant_id: report.tenant_id,
@@ -156,7 +157,7 @@ serve(async (req: Request) => {
               error_message: emailError.message
             });
           } else {
-            console.log(`[send-scheduled-report] Sent to ${recipient}:`, emailData?.id);
+            logger.info(`[send-scheduled-report] Sent to ${recipient}:`, emailData?.id);
             
             await supabase.from('notification_log').insert({
               tenant_id: report.tenant_id,
@@ -183,7 +184,7 @@ serve(async (req: Request) => {
         results.push({ report_id: report.id, success: true, recipients: report.recipients.length });
 
       } catch (error) {
-        console.error(`[send-scheduled-report] Error processing report ${report.id}:`, error);
+        logger.error(`[send-scheduled-report] Error processing report ${report.id}:`, error);
         results.push({ report_id: report.id, success: false, error: String(error) });
       }
     }
@@ -198,7 +199,7 @@ serve(async (req: Request) => {
 
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[send-scheduled-report] Fatal error:', errorMsg);
+    logger.error('[send-scheduled-report] Fatal error:', errorMsg);
     
     return new Response(JSON.stringify({ 
       success: false, 

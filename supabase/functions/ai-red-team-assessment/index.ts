@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
 import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,7 +34,7 @@ serve(async (req) => {
     if (internalSecret && INTERNAL_FUNCTION_SECRET && internalSecret === INTERNAL_FUNCTION_SECRET) {
       // Internal call - use service role, get tenant_id from body
       isInternalCall = true;
-      console.log('[ai-red-team-assessment] Internal call detected');
+      logger.info('[ai-red-team-assessment] Internal call detected');
       
       try {
         const body = await req.clone().json();
@@ -50,7 +51,7 @@ serve(async (req) => {
         tenantId = tenants?.[0]?.id;
       }
       
-      console.log('[ai-red-team-assessment] Internal call for tenant:', tenantId);
+      logger.info('[ai-red-team-assessment] Internal call for tenant:', tenantId);
     } else if (authHeader) {
       // User call - validate token and get tenant from roles
       userClient = createClient(supabaseUrl, supabaseAnonKey, {
@@ -105,14 +106,14 @@ serve(async (req) => {
       );
     }
     
-    console.log(`[ai-red-team-assessment] Starting Red Team assessment for tenant ${tenantId}`);
+    logger.info(`[ai-red-team-assessment] Starting Red Team assessment for tenant ${tenantId}`);
 
     // Get prompts from registry
     const personaPrompt = await AIPromptRegistry.getPromptWithMetadata('red-team-persona');
     const analysisTemplate = await AIPromptRegistry.getPromptWithMetadata('red-team-analysis-template');
 
     if (!personaPrompt || !analysisTemplate) {
-      console.error('Failed to load Red Team prompts from registry');
+      logger.error('Failed to load Red Team prompts from registry');
       return new Response(
         JSON.stringify({ error: 'Prompt configuration error' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -129,7 +130,7 @@ serve(async (req) => {
       .rpc('get_audit_raw_metrics', { p_tenant_id: tenantId });
 
     if (metricsError) {
-      console.error('Error fetching metrics:', metricsError);
+      logger.error('Error fetching metrics:', metricsError);
       return new Response(
         JSON.stringify({
           error: 'Failed to fetch system metrics',
@@ -159,7 +160,7 @@ serve(async (req) => {
       anaSummary = 'Nenhuma auditoria anterior disponível.';
     }
 
-    console.log('[ai-red-team-assessment] Metrics collected, Ana summary available');
+    logger.info('[ai-red-team-assessment] Metrics collected, Ana summary available');
 
     // Build analysis prompt
     const analysisPrompt = analysisTemplate.content
@@ -179,7 +180,7 @@ serve(async (req) => {
     });
 
     if (!aiResult.success || !aiResult.content) {
-      console.error('AI call failed:', aiResult.error);
+      logger.error('AI call failed:', aiResult.error);
 
       // Check for rate limit
       if (aiResult.error?.includes('429') || aiResult.error?.toLowerCase().includes('rate limit')) {
@@ -191,7 +192,7 @@ serve(async (req) => {
 
       // GRACEFUL FALLBACK: For 402 (credits exhausted) or total provider failure, return deterministic assessment
       if (aiResult.error?.includes('402') || aiResult.error?.toLowerCase().includes('credits') || aiResult.error?.includes('All AI providers failed')) {
-        console.warn('[ai-red-team-assessment] AI unavailable. Creating deterministic fallback.');
+        logger.warn('[ai-red-team-assessment] AI unavailable. Creating deterministic fallback.');
         
         // Calculate deterministic binary criteria from metrics
         const binaryCriteria = {
@@ -261,7 +262,7 @@ serve(async (req) => {
           .select()
           .single();
         
-        console.log(`[ai-red-team-assessment] Deterministic fallback saved. Threat level: ${threatLevel}, Red score: ${redScore}`);
+        logger.info(`[ai-red-team-assessment] Deterministic fallback saved. Threat level: ${threatLevel}, Red score: ${redScore}`);
         
         return new Response(
           JSON.stringify({
@@ -298,7 +299,7 @@ serve(async (req) => {
       }
       analysisResult = JSON.parse(jsonContent.trim());
     } catch (parseError) {
-      console.error('Failed to parse AI response:', aiContent);
+      logger.error('Failed to parse AI response:', aiContent);
       return new Response(
         JSON.stringify({ error: 'Failed to parse AI analysis', raw: aiContent }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -337,10 +338,10 @@ serve(async (req) => {
       .single();
 
     if (saveError) {
-      console.error('Error saving Red Team assessment:', saveError);
+      logger.error('Error saving Red Team assessment:', saveError);
     }
 
-    console.log(`[ai-red-team-assessment] Assessment completed. Threat level: ${analysisResult.threat_level}, Red score: ${analysisResult.red_score}, Provider: ${aiResult.provider}, Fallback: ${aiResult.usedFallback}`);
+    logger.info(`[ai-red-team-assessment] Assessment completed. Threat level: ${analysisResult.threat_level}, Red score: ${analysisResult.red_score}, Provider: ${aiResult.provider}, Fallback: ${aiResult.usedFallback}`);
 
     return new Response(
       JSON.stringify({
@@ -365,7 +366,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[ai-red-team-assessment] Error:', error);
+    logger.error('[ai-red-team-assessment] Error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

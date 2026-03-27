@@ -3,6 +3,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -14,7 +15,7 @@ Deno.serve(async (req) => {
   if (authError) return authError
 
   const requestId = crypto.randomUUID()
-  console.log(`[${requestId}] cleanup-offline-agents-jobs: Starting scheduled cleanup`)
+  logger.info(`[${requestId}] cleanup-offline-agents-jobs: Starting scheduled cleanup`)
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -25,7 +26,7 @@ Deno.serve(async (req) => {
     const { data, error } = await supabase.rpc('cleanup_offline_agents_jobs')
 
     if (error) {
-      console.error(`[${requestId}] Error calling cleanup_offline_agents_jobs:`, error)
+      logger.error(`[${requestId}] Error calling cleanup_offline_agents_jobs:`, error)
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -38,7 +39,7 @@ Deno.serve(async (req) => {
 
     const result = data?.[0] || { cleaned_count: 0, agent_ids: [], job_ids: [] }
     
-    console.log(`[${requestId}] Cleanup completed:`, {
+    logger.info(`[${requestId}] Cleanup completed:`, {
       cleanedCount: result.cleaned_count,
       agentIds: result.agent_ids,
       jobIds: result.job_ids
@@ -46,11 +47,11 @@ Deno.serve(async (req) => {
 
     // Log detalhado se jobs foram cancelados
     if (result.cleaned_count > 0) {
-      console.log(`[${requestId}] SUCCESS: Cancelled ${result.cleaned_count} orphaned jobs`)
-      console.log(`[${requestId}] Affected agents: ${result.agent_ids?.join(', ')}`)
-      console.log(`[${requestId}] Cancelled job IDs: ${result.job_ids?.join(', ')}`)
+      logger.info(`[${requestId}] SUCCESS: Cancelled ${result.cleaned_count} orphaned jobs`)
+      logger.info(`[${requestId}] Affected agents: ${result.agent_ids?.join(', ')}`)
+      logger.info(`[${requestId}] Cancelled job IDs: ${result.job_ids?.join(', ')}`)
     } else {
-      console.log(`[${requestId}] No orphaned jobs found - system healthy`)
+      logger.info(`[${requestId}] No orphaned jobs found - system healthy`)
     }
 
     return new Response(
@@ -65,7 +66,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error(`[${requestId}] Unexpected error:`, error)
+    logger.error(`[${requestId}] Unexpected error:`, error)
     return new Response(
       JSON.stringify({ 
         success: false, 

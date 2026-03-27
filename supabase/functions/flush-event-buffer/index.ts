@@ -15,6 +15,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 const BATCH_SIZE = 5000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -57,7 +58,7 @@ async function loadThreatIntel(supabase: any): Promise<{
       }
     }
   } catch (e) {
-    console.warn('[flush-event-buffer] Failed to load threat intel (non-blocking):', e);
+    logger.warn('[flush-event-buffer] Failed to load threat intel (non-blocking):', e);
   }
 
   return { ips, hashes, domains };
@@ -92,7 +93,7 @@ async function loadBaselines(supabase: any): Promise<Map<string, BaselineData>> 
       }
     }
   } catch (e) {
-    console.warn('[flush-event-buffer] Failed to load baselines (non-blocking):', e);
+    logger.warn('[flush-event-buffer] Failed to load baselines (non-blocking):', e);
   }
   return baselines;
 }
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
     });
 
     if (claimError) {
-      console.error('[flush-event-buffer] claim error:', claimError.message);
+      logger.error('[flush-event-buffer] claim error:', claimError.message);
       return new Response(JSON.stringify({ error: claimError.message }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -273,7 +274,7 @@ Deno.serve(async (req) => {
           break;
 
         default:
-          console.warn(`[flush-event-buffer] Unknown category: ${row.event_category}`);
+          logger.warn(`[flush-event-buffer] Unknown category: ${row.event_category}`);
       }
     }
 
@@ -384,7 +385,7 @@ Deno.serve(async (req) => {
     const failures = results.filter(r => r.error);
     if (failures.length > 0) {
       for (const f of failures) {
-        console.error(`[flush-event-buffer] ${f.table} insert failed:`, f.error);
+        logger.error(`[flush-event-buffer] ${f.table} insert failed:`, f.error);
       }
       const successTables = new Set(results.filter(r => !r.error).map(r => r.table));
       const successIds = rows
@@ -428,13 +429,13 @@ Deno.serve(async (req) => {
       elapsed_ms: elapsed,
     };
 
-    console.log(`[flush-event-buffer] Flushed ${stats.flushed} events in ${elapsed}ms (proc=${stats.process} file=${stats.file} net=${stats.network} reg=${stats.registry} threats=${stats.threat_matches} anomalies=${stats.anomaly_alerts})`);
+    logger.info(`[flush-event-buffer] Flushed ${stats.flushed} events in ${elapsed}ms (proc=${stats.process} file=${stats.file} net=${stats.network} reg=${stats.registry} threats=${stats.threat_matches} anomalies=${stats.anomaly_alerts})`);
 
     return new Response(JSON.stringify(stats), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    console.error('[flush-event-buffer] Unexpected error:', err);
+    logger.error('[flush-event-buffer] Unexpected error:', err);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

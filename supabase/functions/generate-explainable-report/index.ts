@@ -7,6 +7,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
+import { logger } from '../_shared/logger.ts';
 
 interface ReportRequest {
   tenant_id: string;
@@ -86,7 +87,7 @@ Deno.serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] generate-explainable-report started`);
+  logger.info(`[${requestId}] generate-explainable-report started`);
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -261,7 +262,7 @@ Deno.serve(async (req) => {
       evidence_hashes: evidenceHashes,
     };
 
-    console.log(`[${requestId}] Report generated: ${totalDecisions} decisions`);
+    logger.info(`[${requestId}] Report generated: ${totalDecisions} decisions`);
 
     // CICLO 7: Calcular hash de integridade e persistir relatório
     const reportStr = JSON.stringify(report);
@@ -290,9 +291,9 @@ Deno.serve(async (req) => {
       });
 
     if (persistError) {
-      console.warn(`[${requestId}] Failed to persist report (non-fatal):`, persistError);
+      logger.warn(`[${requestId}] Failed to persist report (non-fatal):`, persistError);
     } else {
-      console.log(`[${requestId}] Report persisted with hash: ${integrityHash.slice(0, 16)}...`);
+      logger.info(`[${requestId}] Report persisted with hash: ${integrityHash.slice(0, 16)}...`);
     }
 
     // Return as HTML if requested
@@ -309,7 +310,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error(`[${requestId}] Error:`, error);
+    logger.error(`[${requestId}] Error:`, error);
     return new Response(
       JSON.stringify({ 
         success: false, 

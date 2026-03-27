@@ -13,6 +13,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
 import { validateCallerTenant } from '../_shared/validate-caller-tenant.ts'
+import { logger } from '../_shared/logger.ts';
 
 interface PolicyRequest {
   tenant_id: string;
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID()
-  console.log(`[${requestId}] resolve-action-policy started`)
+  logger.info(`[${requestId}] resolve-action-policy started`)
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -113,7 +114,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log(`[${requestId}] Resolving policy for tenant=${tenant_id}, insight_type=${insight_type}`)
+    logger.info(`[${requestId}] Resolving policy for tenant=${tenant_id}, insight_type=${insight_type}`)
 
     /**
      * 1️⃣ Buscar política específica do tenant para este insight_type
@@ -126,7 +127,7 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (policyError) {
-      console.error(`[${requestId}] Error fetching tenant policy:`, policyError)
+      logger.error(`[${requestId}] Error fetching tenant policy:`, policyError)
       throw policyError
     }
 
@@ -137,7 +138,7 @@ Deno.serve(async (req) => {
         .update({ last_applied_at: new Date().toISOString() })
         .eq('id', tenantPolicy.id)
 
-      console.log(`[${requestId}] Using tenant policy: ${tenantPolicy.execution_mode}`)
+      logger.info(`[${requestId}] Using tenant policy: ${tenantPolicy.execution_mode}`)
       
       const response: PolicyResponse = {
         source: 'tenant_policy',
@@ -159,7 +160,7 @@ Deno.serve(async (req) => {
     const defaultMode = DEFAULT_MAPPINGS[insight_type]
     
     if (defaultMode) {
-      console.log(`[${requestId}] Using default mapping: ${defaultMode}`)
+      logger.info(`[${requestId}] Using default mapping: ${defaultMode}`)
       
       const response: PolicyResponse = {
         source: 'default_mapping',
@@ -185,7 +186,7 @@ Deno.serve(async (req) => {
       .single()
 
     if (tenantError) {
-      console.error(`[${requestId}] Error fetching tenant:`, tenantError)
+      logger.error(`[${requestId}] Error fetching tenant:`, tenantError)
       // Default to approval if tenant not found
       const response: PolicyResponse = {
         source: 'tenant_fallback',
@@ -209,7 +210,7 @@ Deno.serve(async (req) => {
     }
     // 'suggest' and undefined default to 'approval'
 
-    console.log(`[${requestId}] Using tenant fallback: ${fallbackMode} (from ${tenant?.auto_action_mode})`)
+    logger.info(`[${requestId}] Using tenant fallback: ${fallbackMode} (from ${tenant?.auto_action_mode})`)
     
     const response: PolicyResponse = {
       source: 'tenant_fallback',
@@ -225,7 +226,7 @@ Deno.serve(async (req) => {
     )
 
   } catch (error) {
-    console.error(`[${requestId}] Error:`, error)
+    logger.error(`[${requestId}] Error:`, error)
     return new Response(
       JSON.stringify({ 
         error: 'policy_resolution_failed',

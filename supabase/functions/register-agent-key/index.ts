@@ -17,6 +17,7 @@ import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 import { hashToken } from '../_shared/token-hash.ts'
 import { logSecurityEvent } from '../_shared/security-log.ts'
+import { logger } from '../_shared/logger.ts';
 
 interface RegisterKeyRequest {
   public_key: string           // PEM or Base64 encoded public key
@@ -89,7 +90,7 @@ Deno.serve(async (req) => {
 
     // 3. Verify HMAC (mandatory)
     if (!agent.hmac_secret) {
-      console.error('[register-agent-key] CRITICAL: Agent without HMAC secret:', agent.agent_name)
+      logger.error('[register-agent-key] CRITICAL: Agent without HMAC secret:', agent.agent_name)
       return new Response(
         JSON.stringify({ error: 'HMAC secret not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -164,7 +165,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('[register-agent-key] Processing key registration:', {
+    logger.info('[register-agent-key] Processing key registration:', {
       agent: agent.agent_name,
       agentId: agent.id,
       algorithm,
@@ -179,7 +180,7 @@ Deno.serve(async (req) => {
     if (!matchedFingerprint) {
       const computedPreview = computedFingerprints[0]?.fingerprint.substring(0, 16) || 'none'
 
-      console.warn('[register-agent-key] Fingerprint mismatch (all methods failed):', {
+      logger.warn('[register-agent-key] Fingerprint mismatch (all methods failed):', {
         agent: agent.agent_name,
         provided_preview: providedFp.substring(0, 16),
         computed_preview: computedPreview,
@@ -215,7 +216,7 @@ Deno.serve(async (req) => {
       )
     }
     
-    console.log('[register-agent-key] Fingerprint verified:', {
+    logger.info('[register-agent-key] Fingerprint verified:', {
       agent: agent.agent_name,
       mode_used: matchedFingerprint.mode
     })
@@ -241,7 +242,7 @@ Deno.serve(async (req) => {
       }
       
       // Key already registered and active - return success with existing info
-      console.log('[register-agent-key] Key already registered:', {
+      logger.info('[register-agent-key] Key already registered:', {
         agent: agent.agent_name,
         keyId: existingKey.id,
         version: existingKey.version
@@ -272,7 +273,7 @@ Deno.serve(async (req) => {
 
       if (!orphanError && orphanKeys && orphanKeys.length > 0) {
         const orphanIds = orphanKeys.map(k => k.id)
-        console.log('[register-agent-key] BUG 6: Deactivating orphan keys before new registration:', {
+        logger.info('[register-agent-key] BUG 6: Deactivating orphan keys before new registration:', {
           agent: agent.agent_name,
           orphanCount: orphanIds.length,
           orphanFingerprints: orphanKeys.map(k => k.key_fingerprint?.substring(0, 16) + '...')
@@ -292,13 +293,13 @@ Deno.serve(async (req) => {
               .update({ is_active: false, valid_until: new Date().toISOString() })
               .in('id', toDeactivate)
             
-            console.log('[register-agent-key] BUG 6: Deactivated', toDeactivate.length, 'orphan keys for', agent.agent_name)
+            logger.info('[register-agent-key] BUG 6: Deactivated', toDeactivate.length, 'orphan keys for', agent.agent_name)
           }
         }
       }
     } catch (orphanCleanupErr) {
       // Non-fatal: log and continue with registration
-      console.warn('[register-agent-key] BUG 6: Orphan cleanup failed (non-fatal):', orphanCleanupErr)
+      logger.warn('[register-agent-key] BUG 6: Orphan cleanup failed (non-fatal):', orphanCleanupErr)
     }
 
     // 8. Register new key using the RPC function
@@ -311,7 +312,7 @@ Deno.serve(async (req) => {
       })
 
     if (registerError) {
-      console.error('[register-agent-key] Error registering key:', registerError)
+      logger.error('[register-agent-key] Error registering key:', registerError)
       return new Response(
         JSON.stringify({ error: 'Failed to register key', details: registerError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -320,14 +321,14 @@ Deno.serve(async (req) => {
 
     const result = registerResult[0] || registerResult
 
-    console.log('[register-agent-key] Key registered successfully:', {
+    logger.info('[register-agent-key] Key registered successfully:', {
       agent: agent.agent_name,
       keyId: result.key_id,
       version: result.version
     })
 
     // 9. Log in audit_logs instead of security_logs (not an attack)
-    console.log('[register-agent-key] Key registered - audit log:', {
+    logger.info('[register-agent-key] Key registered - audit log:', {
       agent_name: agent.agent_name,
       key_id: result.key_id,
       key_version: result.version,
@@ -347,7 +348,7 @@ Deno.serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('[register-agent-key] Unexpected error:', error)
+    logger.error('[register-agent-key] Unexpected error:', error)
     return handleException(error, crypto.randomUUID(), 'register-agent-key')
   }
 })

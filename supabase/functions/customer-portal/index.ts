@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { serveTenant } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, requestId } = ctx;
@@ -32,7 +33,7 @@ serveTenant(async (req, ctx) => {
     const now = new Date();
     if (periodEndDate > now) {
       const daysRemaining = Math.ceil((periodEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-      console.log(`[CUSTOMER-PORTAL] Prepaid plan (${billingPeriod}), ${daysRemaining} days remaining`);
+      logger.info(`[CUSTOMER-PORTAL] Prepaid plan (${billingPeriod}), ${daysRemaining} days remaining`);
     }
   }
 
@@ -52,7 +53,7 @@ serveTenant(async (req, ctx) => {
     return_url: `${origin}/admin/subscriptions`,
   });
 
-  console.log(`[CUSTOMER-PORTAL] Portal session created for customer ${subscription.stripe_customer_id}`);
+  logger.info(`[CUSTOMER-PORTAL] Portal session created for customer ${subscription.stripe_customer_id}`);
 
   return {
     url: session.url,

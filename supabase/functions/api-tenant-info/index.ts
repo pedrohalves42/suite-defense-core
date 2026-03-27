@@ -3,6 +3,7 @@ import { z } from 'https://esm.sh/zod@3.23.8';
 import { corsHeaders } from '../_shared/cors.ts';
 import { authenticateApiKey, logApiRequest } from '../_shared/api-auth.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { logger } from '../_shared/logger.ts';
 
 // Validation schemas
 const ApiKeySchema = z.string()
@@ -48,7 +49,7 @@ Deno.serve(async (req) => {
     // Validate API key format
     const apiKeyValidation = ApiKeySchema.safeParse(rawApiKey);
     if (!apiKeyValidation.success) {
-      console.warn('Invalid API key format received');
+      logger.warn('Invalid API key format received');
       return new Response(
         JSON.stringify({ error: 'Invalid API key format' }),
         {
@@ -100,7 +101,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (error) {
-      console.error('Database error in api-tenant-info:', error.message);
+      logger.error('Database error in api-tenant-info:', error.message);
       throw new Error('Failed to fetch tenant info');
     }
 
@@ -132,7 +133,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error in api-tenant-info:', error);
+    logger.error('Error in api-tenant-info:', error);
     return new Response(
       JSON.stringify({ error: 'An error occurred. Please try again.' }),
       {

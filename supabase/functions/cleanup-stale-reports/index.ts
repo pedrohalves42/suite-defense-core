@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const STALE_HOURS = 24;
 
@@ -29,7 +30,7 @@ Deno.serve(async (req) => {
   };
 
   try {
-    console.log('[cleanup-stale-reports] Starting cleanup...');
+    logger.info('[cleanup-stale-reports] Starting cleanup...');
 
     const cutoffTime = new Date(Date.now() - STALE_HOURS * 60 * 60 * 1000).toISOString();
 
@@ -45,7 +46,7 @@ Deno.serve(async (req) => {
     }
 
     if (!staleReports || staleReports.length === 0) {
-      console.log('[cleanup-stale-reports] No stale reports found');
+      logger.info('[cleanup-stale-reports] No stale reports found');
       
       // Log observability using RPC with job_key
       await supabase.rpc('log_scheduled_job_run', {
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[cleanup-stale-reports] Found ${staleReports.length} stale reports`);
+    logger.info(`[cleanup-stale-reports] Found ${staleReports.length} stale reports`);
 
     for (const report of staleReports) {
       results.processed++;
@@ -125,7 +126,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log('[cleanup-stale-reports] Cleanup complete:', results);
+    logger.info('[cleanup-stale-reports] Cleanup complete:', results);
 
     // Log observability - success using RPC with job_key
     await supabase.rpc('log_scheduled_job_run', {
@@ -142,7 +143,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[cleanup-stale-reports] Error:', error);
+    logger.error('[cleanup-stale-reports] Error:', error);
 
     // Log observability - failure using RPC with job_key
     await supabase.rpc('log_scheduled_job_run', {

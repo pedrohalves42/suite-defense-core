@@ -4,6 +4,7 @@
  */
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { logger } from './logger.ts';
 
 /**
  * Extract client IP from request headers
@@ -41,7 +42,7 @@ export async function enforceIPAllowlist(
     .eq('is_active', true)
 
   if (error) {
-    console.error('[ip-allowlist] Error fetching allowlist:', error.message)
+    logger.error('[ip-allowlist] Error fetching allowlist:', error.message)
     // Fail open on DB error to avoid locking admins out
     return null
   }
@@ -74,7 +75,7 @@ export async function enforceIPAllowlist(
   }
 
   // Blocked — log security event
-  console.warn(`[SECURITY] IP ${ip} denied access for user ${userId} on tenant ${tenantId}`)
+  logger.warn(`[SECURITY] IP ${ip} denied access for user ${userId} on tenant ${tenantId}`)
 
   await supabase.from('audit_logs').insert({
     tenant_id: tenantId,

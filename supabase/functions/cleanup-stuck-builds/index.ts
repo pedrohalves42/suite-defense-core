@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
           p_processed_count: 0,
           p_job_source: callType
         });
-      } catch (e) { console.warn('[cleanup-stuck-builds] Failed to log job run:', e); }
+      } catch (e) { logger.warn('[cleanup-stuck-builds] Failed to log job run:', e); }
       
       return new Response(
         JSON.stringify({
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
         p_processed_count: 0,
         p_job_source: 'unknown'
       });
-    } catch (e) { console.warn('[cleanup-stuck-builds] Failed to log error run:', e); }
+    } catch (e) { logger.warn('[cleanup-stuck-builds] Failed to log error run:', e); }
     
     return new Response(
       JSON.stringify({

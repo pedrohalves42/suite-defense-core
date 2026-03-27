@@ -28,6 +28,7 @@ import {
 import { sanitizeForAI, sanitizeObjectForAI } from './ai-sanitizer.ts';
 import { createMetricsLogger, extractTokenUsage, type AIInferenceMetrics } from './ai-metrics.ts';
 import { persistAIMetrics } from './ai-metrics-persistence.ts';
+import { logger } from './logger.ts';
 
 export interface AICallOptions {
   model?: string;          // Ignored - multi-provider selects automatically
@@ -85,7 +86,7 @@ export async function callAI(
     
     // Fire and forget - don't await
     persistAIMetrics(metrics).catch(err => 
-      console.warn('[ai-provider-helper] Failed to persist metrics:', err)
+      logger.warn('[ai-provider-helper] Failed to persist metrics:', err)
     );
   }
   
@@ -150,7 +151,7 @@ export async function callAIJson<T = unknown>(
     const data = JSON.parse(jsonStr) as T;
     return { data, result };
   } catch (parseError) {
-    console.warn('[ai-provider-helper] Failed to parse JSON response:', parseError);
+    logger.warn('[ai-provider-helper] Failed to parse JSON response:', parseError);
     return {
       data: null,
       result: {
@@ -172,7 +173,7 @@ export async function callAISanitized(
   const sanitizeResult = sanitizeForAI(userPromptRaw);
   
   if (sanitizeResult.blocked) {
-    console.warn(`[ai-provider-helper] Prompt injection blocked in ${options.functionName}:`, 
+    logger.warn(`[ai-provider-helper] Prompt injection blocked in ${options.functionName}:`, 
       sanitizeResult.blockedPatterns);
   }
   

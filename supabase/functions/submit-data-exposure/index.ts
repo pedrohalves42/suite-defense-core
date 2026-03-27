@@ -8,6 +8,7 @@
  */
 
 import { serveAgent } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 // Severity mapping by data category
 const CATEGORY_SEVERITY: Record<string, string> = {
@@ -80,7 +81,7 @@ serveAgent(async (_req, ctx) => {
       .insert(record);
 
     if (insertError) {
-      console.error(`[${requestId}] Insert error:`, insertError);
+      logger.error(`[${requestId}] Insert error:`, insertError);
     } else {
       insertedCount++;
     }
@@ -114,7 +115,7 @@ serveAgent(async (_req, ctx) => {
     }
   }
 
-  console.log(`[${requestId}] Data exposure: ${insertedCount} findings, ${alertsCreated} alerts for agent ${agentName}`);
+  logger.info(`[${requestId}] Data exposure: ${insertedCount} findings, ${alertsCreated} alerts for agent ${agentName}`);
 
   return { success: true, inserted: insertedCount, alerts_created: alertsCreated };
 });

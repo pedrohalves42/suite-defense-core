@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,7 +20,7 @@ serve(async (req) => {
   const startedAt = Date.now();
 
   try {
-    console.log('[evaluate-job-slo] Starting SLO evaluation...');
+    logger.info('[evaluate-job-slo] Starting SLO evaluation...');
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -30,7 +31,7 @@ serve(async (req) => {
     const { data, error } = await supabase.rpc('evaluate_job_slo');
 
     if (error) {
-      console.error('[evaluate-job-slo] Error evaluating SLO:', error);
+      logger.error('[evaluate-job-slo] Error evaluating SLO:', error);
       
       // Log failure with observability
       await supabase.rpc('log_scheduled_job_run', {
@@ -60,7 +61,7 @@ serve(async (req) => {
     const tasksCreated = results.filter((r: any) => r.out_task_created).length;
     const highBurnRates = results.filter((r: any) => r.out_burn_rate >= 2);
 
-    console.log(`[evaluate-job-slo] Evaluation complete:`, {
+    logger.info(`[evaluate-job-slo] Evaluation complete:`, {
       tenantsEvaluated: results.length,
       tasksCreated,
       highBurnRates: highBurnRates.length,
@@ -69,7 +70,7 @@ serve(async (req) => {
 
     // Log high burn rate warnings
     for (const result of highBurnRates) {
-      console.warn(`[evaluate-job-slo] HIGH BURN RATE detected:`, {
+      logger.warn(`[evaluate-job-slo] HIGH BURN RATE detected:`, {
         tenantId: result.out_tenant_id,
         burnRate: result.out_burn_rate,
         errorRate: result.out_error_rate,
@@ -116,7 +117,7 @@ serve(async (req) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[evaluate-job-slo] Unexpected error:', error);
+    logger.error('[evaluate-job-slo] Unexpected error:', error);
     
     // Try to log failure
     try {
@@ -135,7 +136,7 @@ serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch {
-      console.error('[evaluate-job-slo] Failed to log error');
+      logger.error('[evaluate-job-slo] Failed to log error');
     }
 
     return new Response(

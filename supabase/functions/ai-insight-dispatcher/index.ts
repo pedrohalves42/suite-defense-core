@@ -2,6 +2,7 @@ import { requireEnv } from '../_shared/env.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,7 +52,7 @@ async function checkAutoExecutionRateLimit(
     .gte('executed_at', today.toISOString());
 
   if (error) {
-    console.error('[ai-insight-dispatcher] Rate limit check error:', error);
+    logger.error('[ai-insight-dispatcher] Rate limit check error:', error);
     return false;
   }
 
@@ -70,7 +71,7 @@ async function isActionWhitelisted(
     .maybeSingle();
 
   if (error) {
-    console.error('[ai-insight-dispatcher] Whitelist check error:', error);
+    logger.error('[ai-insight-dispatcher] Whitelist check error:', error);
     return false;
   }
 
@@ -119,7 +120,7 @@ serve(async (req) => {
     
     // PHASE 4: Validate required fields to prevent 400 errors
     if (!insightData.id || !insightData.tenant_id || !insightData.insight_type) {
-      console.warn('[ai-insight-dispatcher] Missing required fields:', {
+      logger.warn('[ai-insight-dispatcher] Missing required fields:', {
         hasId: !!insightData.id,
         hasTenantId: !!insightData.tenant_id,
         hasInsightType: !!insightData.insight_type,
@@ -138,7 +139,7 @@ serve(async (req) => {
       );
     }
     
-    console.log('[ai-insight-dispatcher] Processing insight:', {
+    logger.info('[ai-insight-dispatcher] Processing insight:', {
       id: insightData.id,
       type: insightData.insight_type,
       severity: insightData.severity,
@@ -150,7 +151,7 @@ serve(async (req) => {
     switch (insightData.auto_action_mode) {
       case 'none':
         // Just log it, no action needed
-        console.log('[ai-insight-dispatcher] Mode=none, skipping action');
+        logger.info('[ai-insight-dispatcher] Mode=none, skipping action');
         return new Response(
           JSON.stringify({ success: true, action: 'none' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -158,7 +159,7 @@ serve(async (req) => {
 
       case 'suggest':
         // Insight is already in the Action Center via v_action_center view
-        console.log('[ai-insight-dispatcher] Mode=suggest, insight visible in Action Center');
+        logger.info('[ai-insight-dispatcher] Mode=suggest, insight visible in Action Center');
         return new Response(
           JSON.stringify({ success: true, action: 'suggested' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -175,7 +176,7 @@ serve(async (req) => {
         const isWhitelisted = await isActionWhitelisted(supabase, actionType);
         const withinRateLimit = await checkAutoExecutionRateLimit(supabase, insightData.tenant_id);
 
-        console.log('[ai-insight-dispatcher] Auto-execute checks:', {
+        logger.info('[ai-insight-dispatcher] Auto-execute checks:', {
           actionType,
           isLowRisk,
           isWhitelisted,
@@ -203,7 +204,7 @@ serve(async (req) => {
             );
 
             if (execError) {
-              console.error('[ai-insight-dispatcher] Auto-execute error:', execError);
+              logger.error('[ai-insight-dispatcher] Auto-execute error:', execError);
               // Fall back to manual approval
               break;
             }
@@ -218,22 +219,22 @@ serve(async (req) => {
               .eq('id', insightData.id);
 
             if (updateError) {
-              console.error('[ai-insight-dispatcher] Update error:', updateError);
+              logger.error('[ai-insight-dispatcher] Update error:', updateError);
             }
 
-            console.log('[ai-insight-dispatcher] Auto-executed successfully:', execResult);
+            logger.info('[ai-insight-dispatcher] Auto-executed successfully:', execResult);
 
             return new Response(
               JSON.stringify({ success: true, action: 'auto_executed', result: execResult }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           } catch (execErr) {
-            console.error('[ai-insight-dispatcher] Execution exception:', execErr);
+            logger.error('[ai-insight-dispatcher] Execution exception:', execErr);
           }
         }
 
         // If can't auto-execute, fall through to suggest
-        console.log('[ai-insight-dispatcher] Cannot auto-execute, suggesting instead');
+        logger.info('[ai-insight-dispatcher] Cannot auto-execute, suggesting instead');
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -245,7 +246,7 @@ serve(async (req) => {
 
       case 'auto_with_approval':
         // Create a pending playbook execution for approval
-        console.log('[ai-insight-dispatcher] Creating pending playbook for approval');
+        logger.info('[ai-insight-dispatcher] Creating pending playbook for approval');
 
         // Find or create a playbook for this insight type
         const { data: playbook, error: playbookError } = await supabase
@@ -257,7 +258,7 @@ serve(async (req) => {
           .maybeSingle();
 
         if (playbookError) {
-          console.error('[ai-insight-dispatcher] Playbook lookup error:', playbookError);
+          logger.error('[ai-insight-dispatcher] Playbook lookup error:', playbookError);
         }
 
         if (playbook) {
@@ -281,9 +282,9 @@ serve(async (req) => {
             });
 
           if (execCreateError) {
-            console.error('[ai-insight-dispatcher] Create execution error:', execCreateError);
+            logger.error('[ai-insight-dispatcher] Create execution error:', execCreateError);
           } else {
-            console.log('[ai-insight-dispatcher] Pending execution created');
+            logger.info('[ai-insight-dispatcher] Pending execution created');
           }
         }
 
@@ -297,7 +298,7 @@ serve(async (req) => {
         );
 
       default:
-        console.log('[ai-insight-dispatcher] Unknown mode:', insightData.auto_action_mode);
+        logger.info('[ai-insight-dispatcher] Unknown mode:', insightData.auto_action_mode);
         return new Response(
           JSON.stringify({ success: true, action: 'none' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -310,7 +311,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[ai-insight-dispatcher] Error:', error);
+    logger.error('[ai-insight-dispatcher] Error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: message }),

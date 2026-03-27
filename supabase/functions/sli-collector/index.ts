@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
+import { logger } from '../_shared/logger.ts';
 
 /**
  * SLI/SLO Collection Service
@@ -207,7 +208,7 @@ Deno.serve(async (req) => {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   } catch (error) {
-    console.error('[sli-collector] Error:', error)
+    logger.error('[sli-collector] Error:', error)
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })

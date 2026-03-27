@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,17 +21,17 @@ Deno.serve(async (req) => {
   const isJwtAuth = authHeader?.startsWith('Bearer ') && authHeader.length > 10;
 
   if (!isInternalAuth && !isJwtAuth) {
-    console.warn("[SYNC-STRIPE-SUBSCRIPTIONS] Unauthorized access attempt");
+    logger.warn("[SYNC-STRIPE-SUBSCRIPTIONS] Unauthorized access attempt");
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
     );
   }
 
-  console.log(`[SYNC-STRIPE-SUBSCRIPTIONS] Authorized via ${isInternalAuth ? 'internal-secret' : 'jwt'}`);
+  logger.info(`[SYNC-STRIPE-SUBSCRIPTIONS] Authorized via ${isInternalAuth ? 'internal-secret' : 'jwt'}`);
 
   try {
-    console.log("[SYNC-STRIPE-SUBSCRIPTIONS] Starting sync");
+    logger.info("[SYNC-STRIPE-SUBSCRIPTIONS] Starting sync");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
@@ -94,16 +95,16 @@ Deno.serve(async (req) => {
             p_device_quantity: quantity,
           });
 
-          console.log(`[SYNC-STRIPE-SUBSCRIPTIONS] Synced ${sub.tenant_id}: ${sub.status} -> ${status}`);
+          logger.info(`[SYNC-STRIPE-SUBSCRIPTIONS] Synced ${sub.tenant_id}: ${sub.status} -> ${status}`);
           syncedCount++;
         }
       } catch (err) {
-        console.error(`[SYNC-STRIPE-SUBSCRIPTIONS] Error syncing ${sub.tenant_id}:`, err);
+        logger.error(`[SYNC-STRIPE-SUBSCRIPTIONS] Error syncing ${sub.tenant_id}:`, err);
         errorCount++;
       }
     }
 
-    console.log(`[SYNC-STRIPE-SUBSCRIPTIONS] Sync complete: ${syncedCount} synced, ${errorCount} errors`);
+    logger.info(`[SYNC-STRIPE-SUBSCRIPTIONS] Sync complete: ${syncedCount} synced, ${errorCount} errors`);
 
     return new Response(
       JSON.stringify({ success: true, synced: syncedCount, errors: errorCount }),
@@ -111,7 +112,7 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("[SYNC-STRIPE-SUBSCRIPTIONS] Error:", errorMessage);
+    logger.error("[SYNC-STRIPE-SUBSCRIPTIONS] Error:", errorMessage);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }

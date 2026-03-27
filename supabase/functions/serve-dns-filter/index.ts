@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { hashToken } from '../_shared/token-hash.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,14 +22,14 @@ Deno.serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID().slice(0, 8);
-  console.log(`[${requestId}] serve-dns-filter: Request received`);
+  logger.info(`[${requestId}] serve-dns-filter: Request received`);
 
   try {
     // Validate auth headers
     const agentToken = req.headers.get('x-agent-token');
 
     if (!agentToken) {
-      console.warn(`[${requestId}] Missing agent token`);
+      logger.warn(`[${requestId}] Missing agent token`);
       return new Response(
         JSON.stringify({ error: 'Missing authentication headers' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -52,7 +53,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (tokenError || !tokenData) {
-      console.warn(`[${requestId}] Invalid agent token`);
+      logger.warn(`[${requestId}] Invalid agent token`);
       return new Response(
         JSON.stringify({ error: 'Invalid agent token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -66,14 +67,14 @@ Deno.serve(async (req) => {
     const hmacResult = await verifyHmacSignature(supabase, req, agentInfo.agent_name, agentInfo.hmac_secret);
 
     if (!hmacResult.valid) {
-      console.warn(`[${requestId}] Invalid HMAC signature for agent ${agentInfo.agent_name}: ${hmacResult.errorMessage}`);
+      logger.warn(`[${requestId}] Invalid HMAC signature for agent ${agentInfo.agent_name}: ${hmacResult.errorMessage}`);
       return new Response(
         JSON.stringify({ error: 'Invalid HMAC signature', details: hmacResult.errorMessage }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[${requestId}] Authenticated agent: ${agentInfo.agent_name}`);
+    logger.info(`[${requestId}] Authenticated agent: ${agentInfo.agent_name}`);
 
     // Check if tenant has DNS filter enabled (feature flag)
     const { data: tenantSettings } = await supabase
@@ -83,7 +84,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (!tenantSettings?.dns_local_filter_enabled) {
-      console.log(`[${requestId}] DNS filter not enabled for tenant`);
+      logger.info(`[${requestId}] DNS filter not enabled for tenant`);
       return new Response(
         JSON.stringify({ 
           error: 'DNS filter not enabled for this tenant',
@@ -113,7 +114,7 @@ Deno.serve(async (req) => {
         blockedDomains = policies.map((p: { domain: string }) => p.domain).filter(Boolean);
       }
     } catch (policyErr) {
-      console.warn(`[${requestId}] Failed to fetch DNS policies: ${(policyErr as Error).message}`);
+      logger.warn(`[${requestId}] Failed to fetch DNS policies: ${(policyErr as Error).message}`);
     }
 
     // Also check blocked_websites table if it exists
@@ -136,7 +137,7 @@ Deno.serve(async (req) => {
       // blocked_websites table may not exist - that's OK
     }
 
-    console.log(`[${requestId}] Serving ${blockedDomains.length} blocked domains to ${agentInfo.agent_name}`);
+    logger.info(`[${requestId}] Serving ${blockedDomains.length} blocked domains to ${agentInfo.agent_name}`);
 
     // Return blocklist in the format expected by the v5 agent scripts
     return new Response(
@@ -157,7 +158,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error(`[${requestId}] Error:`, error);
+    logger.error(`[${requestId}] Error:`, error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

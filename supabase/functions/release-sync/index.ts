@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 /**
  * release-sync — Consolidated release sync function
@@ -65,7 +66,7 @@ Deno.serve(async (req) => {
     const platform = body.platform;
     const version = body.version;
 
-    console.log(`[release-sync][${requestId}] action=${action} platform=${platform || 'all'} version=${version || 'latest'}`);
+    logger.info(`[release-sync][${requestId}] action=${action} platform=${platform || 'all'} version=${version || 'latest'}`);
 
     const result: SyncResult = {
       action,
@@ -93,7 +94,7 @@ Deno.serve(async (req) => {
     }
 
     if (!releases || releases.length === 0) {
-      console.log(`[release-sync][${requestId}] No matching releases found`);
+      logger.info(`[release-sync][${requestId}] No matching releases found`);
       result.success = true;
       return respond(result, requestId, startedAt);
     }
@@ -179,7 +180,7 @@ Deno.serve(async (req) => {
 
     return respond(result, requestId, startedAt);
   } catch (error) {
-    console.error(`[release-sync][${requestId}] Fatal:`, error);
+    logger.error(`[release-sync][${requestId}] Fatal:`, error);
     return new Response(
       JSON.stringify({ error: 'Internal error', message: String(error), requestId }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

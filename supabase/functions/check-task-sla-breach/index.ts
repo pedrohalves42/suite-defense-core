@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,7 +23,7 @@ serve(async (req) => {
   const startedAt = Date.now();
 
   try {
-    console.log('[check-task-sla-breach] Starting SLA breach check...');
+    logger.info('[check-task-sla-breach] Starting SLA breach check...');
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -34,7 +35,7 @@ serve(async (req) => {
       .rpc('check_task_sla_breach');
 
     if (checkError) {
-      console.error('[check-task-sla-breach] Error checking SLA breaches:', checkError);
+      logger.error('[check-task-sla-breach] Error checking SLA breaches:', checkError);
       
       // Log failure with observability
       await supabase.rpc('log_scheduled_job_run', {
@@ -61,7 +62,7 @@ serve(async (req) => {
 
     const tasksBreached = breachedCount || 0;
     
-    console.log(`[check-task-sla-breach] SLA check complete:`, {
+    logger.info(`[check-task-sla-breach] SLA check complete:`, {
       tasksBreached,
       timestamp: new Date().toISOString(),
       durationMs: Date.now() - startedAt
@@ -72,7 +73,7 @@ serve(async (req) => {
       .rpc('check_job_health_anomalies_and_alert');
     
     if (anomalyError) {
-      console.warn('[check-task-sla-breach] Error checking job anomalies:', anomalyError);
+      logger.warn('[check-task-sla-breach] Error checking job anomalies:', anomalyError);
     }
 
     // Log success with observability
@@ -103,7 +104,7 @@ serve(async (req) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[check-task-sla-breach] Unexpected error:', error);
+    logger.error('[check-task-sla-breach] Unexpected error:', error);
     
     // Try to log failure
     try {
@@ -122,7 +123,7 @@ serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch {
-      console.error('[check-task-sla-breach] Failed to log error');
+      logger.error('[check-task-sla-breach] Failed to log error');
     }
 
     return new Response(

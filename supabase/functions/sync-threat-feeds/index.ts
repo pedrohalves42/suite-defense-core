@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,7 +33,7 @@ async function fetchMalwareBazaarRecent(): Promise<RawIndicator[]> {
     });
 
     if (!resp.ok) {
-      console.log(`MalwareBazaar JSON API unavailable (${resp.status}), using CSV fallback`);
+      logger.info(`MalwareBazaar JSON API unavailable (${resp.status}), using CSV fallback`);
       await resp.text(); // consume body
       return await fetchMalwareBazaarCSV();
     }
@@ -42,11 +43,11 @@ async function fetchMalwareBazaarRecent(): Promise<RawIndicator[]> {
     try {
       data = JSON.parse(text);
     } catch {
-      console.warn('MalwareBazaar returned non-JSON:', text.substring(0, 200));
+      logger.warn('MalwareBazaar returned non-JSON:', text.substring(0, 200));
       return await fetchMalwareBazaarCSV();
     }
 
-    console.log('MalwareBazaar response status:', data.query_status, 'data count:', data.data?.length ?? 0);
+    logger.info('MalwareBazaar response status:', data.query_status, 'data count:', data.data?.length ?? 0);
 
     if (data.query_status === 'ok' && Array.isArray(data.data)) {
       for (const entry of data.data) {
@@ -68,10 +69,10 @@ async function fetchMalwareBazaarRecent(): Promise<RawIndicator[]> {
         });
       }
     } else if (data.query_status === 'no_results') {
-      console.log('MalwareBazaar: no recent results');
+      logger.info('MalwareBazaar: no recent results');
     }
   } catch (err) {
-    console.error('MalwareBazaar fetch error:', err);
+    logger.error('MalwareBazaar fetch error:', err);
   }
   return indicators;
 }
@@ -84,7 +85,7 @@ async function fetchMalwareBazaarCSV(): Promise<RawIndicator[]> {
       method: 'GET',
     });
     if (!resp.ok) {
-      console.warn(`MalwareBazaar CSV HTTP ${resp.status}`);
+      logger.warn(`MalwareBazaar CSV HTTP ${resp.status}`);
       return indicators;
     }
     const text = await resp.text();
@@ -112,9 +113,9 @@ async function fetchMalwareBazaarCSV(): Promise<RawIndicator[]> {
         },
       });
     }
-    console.log(`MalwareBazaar CSV fallback: ${indicators.length} indicators`);
+    logger.info(`MalwareBazaar CSV fallback: ${indicators.length} indicators`);
   } catch (err) {
-    console.error('MalwareBazaar CSV fetch error:', err);
+    logger.error('MalwareBazaar CSV fetch error:', err);
   }
   return indicators;
 }
@@ -132,7 +133,7 @@ async function fetchURLhaus(): Promise<RawIndicator[]> {
     });
 
     if (!resp.ok) {
-      console.log(`URLhaus JSON API unavailable (${resp.status}), using CSV fallback`);
+      logger.info(`URLhaus JSON API unavailable (${resp.status}), using CSV fallback`);
       await resp.text(); // consume body
       return await fetchURLhausCSV();
     }
@@ -142,11 +143,11 @@ async function fetchURLhaus(): Promise<RawIndicator[]> {
     try {
       data = JSON.parse(text);
     } catch {
-      console.warn('URLhaus returned non-JSON:', text.substring(0, 200));
+      logger.warn('URLhaus returned non-JSON:', text.substring(0, 200));
       return await fetchURLhausCSV();
     }
 
-    console.log('URLhaus response status:', data.query_status, 'urls count:', data.urls?.length ?? 0);
+    logger.info('URLhaus response status:', data.query_status, 'urls count:', data.urls?.length ?? 0);
 
     if (data.query_status === 'ok' && Array.isArray(data.urls)) {
       for (const entry of data.urls) {
@@ -166,10 +167,10 @@ async function fetchURLhaus(): Promise<RawIndicator[]> {
         });
       }
     } else if (data.query_status === 'no_results') {
-      console.log('URLhaus: no recent results');
+      logger.info('URLhaus: no recent results');
     }
   } catch (err) {
-    console.error('URLhaus fetch error:', err);
+    logger.error('URLhaus fetch error:', err);
   }
   return indicators;
 }
@@ -179,7 +180,7 @@ async function fetchURLhausCSV(): Promise<RawIndicator[]> {
   try {
     const resp = await fetch('https://urlhaus.abuse.ch/downloads/csv_recent/');
     if (!resp.ok) {
-      console.warn(`URLhaus CSV HTTP ${resp.status}`);
+      logger.warn(`URLhaus CSV HTTP ${resp.status}`);
       return indicators;
     }
     const text = await resp.text();
@@ -205,9 +206,9 @@ async function fetchURLhausCSV(): Promise<RawIndicator[]> {
         },
       });
     }
-    console.log(`URLhaus CSV fallback: ${indicators.length} indicators`);
+    logger.info(`URLhaus CSV fallback: ${indicators.length} indicators`);
   } catch (err) {
-    console.error('URLhaus CSV fetch error:', err);
+    logger.error('URLhaus CSV fetch error:', err);
   }
   return indicators;
 }
@@ -218,7 +219,7 @@ async function fetchFeodoTracker(): Promise<RawIndicator[]> {
     const resp = await fetch('https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.json');
     
     if (!resp.ok) {
-      console.warn(`Feodo Tracker HTTP ${resp.status}`);
+      logger.warn(`Feodo Tracker HTTP ${resp.status}`);
       return indicators;
     }
 
@@ -227,12 +228,12 @@ async function fetchFeodoTracker(): Promise<RawIndicator[]> {
     try {
       data = JSON.parse(text);
     } catch {
-      console.warn('Feodo Tracker returned non-JSON');
+      logger.warn('Feodo Tracker returned non-JSON');
       return indicators;
     }
 
     const entries = Array.isArray(data) ? data : [];
-    console.log(`Feodo Tracker: ${entries.length} entries`);
+    logger.info(`Feodo Tracker: ${entries.length} entries`);
 
     for (const entry of entries) {
       const ip = entry.ip_address || entry.dst_ip;
@@ -253,7 +254,7 @@ async function fetchFeodoTracker(): Promise<RawIndicator[]> {
       });
     }
   } catch (err) {
-    console.error('Feodo Tracker fetch error:', err);
+    logger.error('Feodo Tracker fetch error:', err);
   }
   return indicators;
 }
@@ -375,7 +376,7 @@ serve(async (req: Request) => {
                 .select('id, created_at, updated_at');
 
               if (upsertErr) {
-                console.error(`Upsert error for ${feed.name}:`, upsertErr.message);
+                logger.error(`Upsert error for ${feed.name}:`, upsertErr.message);
                 continue;
               }
 
@@ -429,7 +430,7 @@ serve(async (req: Request) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    console.error('Sync threat feeds error:', err);
+    logger.error('Sync threat feeds error:', err);
     return new Response(
       JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

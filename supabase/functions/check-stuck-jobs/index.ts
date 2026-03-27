@@ -4,6 +4,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface StuckJob {
   id: string;
@@ -29,7 +30,7 @@ Deno.serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] Starting stuck jobs check (adaptive thresholds)`);
+  logger.info(`[${requestId}] Starting stuck jobs check (adaptive thresholds)`);
 
   const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
   const providedSecret = req.headers.get('X-Internal-Secret');
@@ -59,7 +60,7 @@ Deno.serve(async (req) => {
     if (fetchError) throw fetchError;
 
     if (!deliveredJobs || deliveredJobs.length === 0) {
-      console.log(`[${requestId}] No delivered jobs found`);
+      logger.info(`[${requestId}] No delivered jobs found`);
       return new Response(
         JSON.stringify({ success: true, stuck_jobs: 0, alerts_created: 0, auto_failed: 0, timestamp: new Date().toISOString() }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -99,18 +100,18 @@ Deno.serve(async (req) => {
         .eq('status', 'delivered');
       
       autoFailedCount = count || autoFailIds.length;
-      console.log(`[${requestId}] Auto-failed ${autoFailedCount} zombie jobs`);
+      logger.info(`[${requestId}] Auto-failed ${autoFailedCount} zombie jobs`);
     }
 
     if (stuckJobs.length === 0) {
-      console.log(`[${requestId}] No stuck jobs after per-type threshold filtering`);
+      logger.info(`[${requestId}] No stuck jobs after per-type threshold filtering`);
       return new Response(
         JSON.stringify({ success: true, stuck_jobs: 0, alerts_created: 0, auto_failed: autoFailedCount, timestamp: new Date().toISOString() }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[${requestId}] Found ${stuckJobs.length} stuck jobs (${autoFailIds.length} auto-failed)`);
+    logger.info(`[${requestId}] Found ${stuckJobs.length} stuck jobs (${autoFailIds.length} auto-failed)`);
 
     // Group by tenant and create alerts
     const jobsByTenant: Record<string, StuckJob[]> = {};
@@ -150,7 +151,7 @@ Deno.serve(async (req) => {
 
         if (!alertError) alertsCreated++;
       } catch (error) {
-        console.error(`[${requestId}] Error processing tenant ${tenantId}:`, error);
+        logger.error(`[${requestId}] Error processing tenant ${tenantId}:`, error);
       }
     }
 
@@ -163,7 +164,7 @@ Deno.serve(async (req) => {
       timestamp: new Date().toISOString()
     };
 
-    console.log(`[${requestId}] Check completed:`, result);
+    logger.info(`[${requestId}] Check completed:`, result);
 
     await supabase.rpc('log_scheduled_job_run', {
       p_job_key: 'check-stuck-jobs',
@@ -180,7 +181,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error(`[${requestId}] Fatal error:`, error);
+    logger.error(`[${requestId}] Fatal error:`, error);
     
     try {
       const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
@@ -193,7 +194,7 @@ Deno.serve(async (req) => {
         p_processed_count: 0,
         p_job_source: 'cron'
       });
-    } catch (e) { console.warn('[check-stuck-jobs] Failed to log job run:', e); }
+    } catch (e) { logger.warn('[check-stuck-jobs] Failed to log job run:', e); }
     
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error', timestamp: new Date().toISOString() }),

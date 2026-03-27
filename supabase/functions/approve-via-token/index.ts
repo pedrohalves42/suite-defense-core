@@ -1,6 +1,7 @@
 // SECURITY FIX: Removed deprecated std/http/server import (bundling risk)
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -67,7 +68,7 @@ Deno.serve(async (req) => {
   );
 
   if (!rateLimitResult.allowed) {
-    console.log(`[approve-via-token] Rate limited - IP: ${clientIp} - resetAt: ${rateLimitResult.resetAt} - requestId: ${requestId}`);
+    logger.info(`[approve-via-token] Rate limited - IP: ${clientIp} - resetAt: ${rateLimitResult.resetAt} - requestId: ${requestId}`);
     return generateHtmlResponse({
       success: false,
       message: `Muitas tentativas. Tente novamente após ${rateLimitResult.resetAt?.toLocaleString('pt-BR')}`,
@@ -93,7 +94,7 @@ Deno.serve(async (req) => {
     }
 
     if (!token) {
-      console.log(`[approve-via-token] Missing token - requestId: ${requestId}`);
+      logger.info(`[approve-via-token] Missing token - requestId: ${requestId}`);
       return generateHtmlResponse({
         success: false,
         message: 'Token de aprovação não fornecido',
@@ -101,7 +102,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`[approve-via-token] Processing approval - token: ${token.substring(0, 8)}... - requestId: ${requestId}`);
+    logger.info(`[approve-via-token] Processing approval - token: ${token.substring(0, 8)}... - requestId: ${requestId}`);
 
     // Find approval request by token
     const { data: approvalRequest, error: findError } = await supabase
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (findError || !approvalRequest) {
-      console.log(`[approve-via-token] Token not found or invalid - requestId: ${requestId}`);
+      logger.info(`[approve-via-token] Token not found or invalid - requestId: ${requestId}`);
       return generateHtmlResponse({
         success: false,
         message: 'Token de aprovação inválido ou não encontrado',
@@ -132,7 +133,7 @@ Deno.serve(async (req) => {
 
     // Validate status
     if (approvalRequest.status !== 'pending') {
-      console.log(`[approve-via-token] Request already processed - status: ${approvalRequest.status} - requestId: ${requestId}`);
+      logger.info(`[approve-via-token] Request already processed - status: ${approvalRequest.status} - requestId: ${requestId}`);
       return generateHtmlResponse({
         success: false,
         message: `Esta solicitação já foi processada (status: ${approvalRequest.status})`,
@@ -143,7 +144,7 @@ Deno.serve(async (req) => {
     // Validate token expiration
     const now = new Date();
     if (approvalRequest.approval_token_expires_at && new Date(approvalRequest.approval_token_expires_at) < now) {
-      console.log(`[approve-via-token] Token expired - requestId: ${requestId}`);
+      logger.info(`[approve-via-token] Token expired - requestId: ${requestId}`);
       return generateHtmlResponse({
         success: false,
         message: 'O link de aprovação expirou',
@@ -153,7 +154,7 @@ Deno.serve(async (req) => {
 
     // Validate request expiration
     if (approvalRequest.expires_at && new Date(approvalRequest.expires_at) < now) {
-      console.log(`[approve-via-token] Request expired - requestId: ${requestId}`);
+      logger.info(`[approve-via-token] Request expired - requestId: ${requestId}`);
       return generateHtmlResponse({
         success: false,
         message: 'A solicitação de aprovação expirou',
@@ -179,7 +180,7 @@ Deno.serve(async (req) => {
       .eq('id', approvalRequest.id);
 
     if (updateError) {
-      console.error(`[approve-via-token] Failed to update request - error: ${updateError.message} - requestId: ${requestId}`);
+      logger.error(`[approve-via-token] Failed to update request - error: ${updateError.message} - requestId: ${requestId}`);
       return generateHtmlResponse({
         success: false,
         message: 'Erro ao processar aprovação',
@@ -187,7 +188,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`[approve-via-token] Request approved successfully - id: ${approvalRequest.id} - requestId: ${requestId}`);
+    logger.info(`[approve-via-token] Request approved successfully - id: ${approvalRequest.id} - requestId: ${requestId}`);
 
     // Create audit log entry
     await supabase.from('audit_logs').insert({
@@ -249,7 +250,7 @@ Deno.serve(async (req) => {
         .eq('id', executionId);
     }
 
-    console.log(`[approve-via-token] Approval complete - execution: ${executionId} - time: ${Date.now() - startTime}ms - requestId: ${requestId}`);
+    logger.info(`[approve-via-token] Approval complete - execution: ${executionId} - time: ${Date.now() - startTime}ms - requestId: ${requestId}`);
 
     return generateHtmlResponse({
       success: true,
@@ -259,7 +260,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error(`[approve-via-token] Error: ${error} - requestId: ${requestId}`);
+    logger.error(`[approve-via-token] Error: ${error} - requestId: ${requestId}`);
     return generateHtmlResponse({
       success: false,
       message: 'Erro interno ao processar aprovação',

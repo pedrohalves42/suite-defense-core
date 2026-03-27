@@ -3,6 +3,7 @@
 
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { logger } from '../_shared/logger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -86,7 +87,7 @@ Deno.serve(async (req) => {
     }
 
     if (!tenantId) {
-      console.error('No tenant found for user:', user.id);
+      logger.error('No tenant found for user:', user.id);
       return new Response(
         JSON.stringify({ success: false, error: 'No tenant found for this user' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -275,7 +276,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertError) {
-      console.error('Failed to save bundle record:', insertError);
+      logger.error('Failed to save bundle record:', insertError);
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to save bundle record' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -318,7 +319,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error:', error);
+    logger.error('Error:', error);
     return new Response(
       JSON.stringify({ success: false, error: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
