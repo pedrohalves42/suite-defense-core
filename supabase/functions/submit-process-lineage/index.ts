@@ -5,13 +5,10 @@
  * Detects suspicious patterns: unusual parent-child relationships, 
  * known attack patterns (e.g., cmd.exe spawned by Word).
  * 
- * Authentication: X-Agent-Token (agent-auth)
+ * Migrated to serveAgent middleware (Phase 2, Step 2.4)
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
-import { authenticateAgent } from '../_shared/agent-auth.ts';
-import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { serveAgent } from '../_shared/serve-tenant.ts';
 
 // Known suspicious parent-child process patterns (EDR heuristics)
 const SUSPICIOUS_PATTERNS: Array<{ parent: string; child: string; reason: string }> = [
@@ -96,141 +93,95 @@ function detectSuspicious(proc: ProcessEntry): { suspicious: boolean; reasons: s
   return { suspicious: reasons.length > 0, reasons };
 }
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+serveAgent(async (_req, ctx) => {
+  const { supabase, agentId, agentName, tenantId, requestId, body } = ctx;
+
+  const processes: ProcessEntry[] = body.processes || [];
+
+  if (!Array.isArray(processes) || processes.length === 0) {
+    return { success: true, message: 'No processes to record', inserted: 0 };
   }
 
-  const requestId = crypto.randomUUID().slice(0, 8);
+  console.log(`[${requestId}] [submit-process-lineage] Received ${processes.length} processes from ${agentName}`);
 
-  try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+  // Cap at 500 processes per submission
+  const cappedProcesses = processes.slice(0, 500);
 
-    // Authenticate agent
-    const authResult = await authenticateAgent(supabase, req, 'submit-process-lineage');
-    if (!authResult.success) return authResult.response;
-    const { agent } = authResult;
+  // Detect suspicious patterns and prepare records
+  const records: Array<Record<string, unknown>> = [];
+  let suspiciousCount = 0;
 
-    // Rate limiting
-    const rateLimitKey = `process-lineage:${agent.agent_name}`;
-    const rlResult = await checkRateLimit(supabase, rateLimitKey, 'submit-process-lineage', {
-      maxRequests: 10,
-      windowMinutes: 60,
+  for (const proc of cappedProcesses) {
+    if (!proc.name || typeof proc.pid !== 'number') continue;
+
+    const { suspicious, reasons } = detectSuspicious(proc);
+    if (suspicious) suspiciousCount++;
+
+    records.push({
+      agent_id: agentId,
+      tenant_id: tenantId,
+      process_name: proc.name.substring(0, 255),
+      process_id: proc.pid,
+      parent_process_id: proc.ppid || null,
+      parent_process_name: proc.parent_name?.substring(0, 255) || null,
+      command_line: proc.cmd?.substring(0, 2048) || null,
+      user_name: proc.user?.substring(0, 255) || null,
+      start_time: proc.start_time || null,
+      path: proc.path?.substring(0, 1024) || null,
+      hash_sha256: proc.hash || null,
+      is_suspicious: suspicious,
+      suspicion_reasons: reasons.length > 0 ? reasons : null,
+      collected_at: new Date().toISOString(),
     });
-    if (!rlResult.allowed) {
-      return new Response(
-        JSON.stringify({ error: 'Rate limit exceeded' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const body = await req.json();
-    const processes: ProcessEntry[] = body.processes || [];
-
-    if (!Array.isArray(processes) || processes.length === 0) {
-      return new Response(
-        JSON.stringify({ success: true, message: 'No processes to record', inserted: 0 }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log(`[${requestId}] [submit-process-lineage] Received ${processes.length} processes from ${agent.agent_name}`);
-
-    // Cap at 500 processes per submission
-    const cappedProcesses = processes.slice(0, 500);
-
-    // Detect suspicious patterns and prepare records
-    const records: Array<Record<string, unknown>> = [];
-    let suspiciousCount = 0;
-
-    for (const proc of cappedProcesses) {
-      // Validate required fields
-      if (!proc.name || typeof proc.pid !== 'number') continue;
-
-      const { suspicious, reasons } = detectSuspicious(proc);
-      if (suspicious) suspiciousCount++;
-
-      records.push({
-        agent_id: agent.id,
-        tenant_id: agent.tenant_id,
-        process_name: proc.name.substring(0, 255),
-        process_id: proc.pid,
-        parent_process_id: proc.ppid || null,
-        parent_process_name: proc.parent_name?.substring(0, 255) || null,
-        command_line: proc.cmd?.substring(0, 2048) || null,
-        user_name: proc.user?.substring(0, 255) || null,
-        start_time: proc.start_time || null,
-        path: proc.path?.substring(0, 1024) || null,
-        hash_sha256: proc.hash || null,
-        is_suspicious: suspicious,
-        suspicion_reasons: reasons.length > 0 ? reasons : null,
-        collected_at: new Date().toISOString(),
-      });
-    }
-
-    // Batch insert
-    const batchSize = 100;
-    let insertedCount = 0;
-
-    for (let i = 0; i < records.length; i += batchSize) {
-      const batch = records.slice(i, i + batchSize);
-      const { error } = await supabase
-        .from('agent_process_lineage')
-        .insert(batch);
-
-      if (error) {
-        console.error(`[${requestId}] Error inserting process batch:`, error.message);
-      } else {
-        insertedCount += batch.length;
-      }
-    }
-
-    // If suspicious processes found, create system alert
-    if (suspiciousCount > 0) {
-      const suspiciousProcs = records.filter(r => r.is_suspicious);
-      await supabase.from('system_alerts').insert({
-        tenant_id: agent.tenant_id,
-        agent_id: agent.id,
-        alert_type: 'suspicious_process',
-        severity: suspiciousCount >= 3 ? 'critical' : 'high',
-        title: `${suspiciousCount} processo(s) suspeito(s) detectado(s)`,
-        description: `Agente ${agent.agent_name} reportou ${suspiciousCount} processos com padrões suspeitos: ${suspiciousProcs.map(p => p.process_name).join(', ')}`,
-        metadata: {
-          suspicious_processes: suspiciousProcs.slice(0, 10).map(p => ({
-            name: p.process_name,
-            parent: p.parent_process_name,
-            reasons: p.suspicion_reasons,
-            cmd: (p.command_line as string)?.substring(0, 200),
-          })),
-          total_processes: records.length,
-          suspicious_count: suspiciousCount,
-        },
-      }).catch(e => console.error(`[${requestId}] Error creating alert:`, e));
-    }
-
-    const result = {
-      success: true,
-      inserted: insertedCount,
-      suspicious_detected: suspiciousCount,
-      total_received: cappedProcesses.length,
-    };
-
-    console.log(`[${requestId}] [submit-process-lineage] Done:`, JSON.stringify(result));
-
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[${requestId}] [submit-process-lineage] Fatal:`, errorMsg);
-    return new Response(
-      JSON.stringify({ success: false, error: errorMsg }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
   }
+
+  // Batch insert
+  const batchSize = 100;
+  let insertedCount = 0;
+
+  for (let i = 0; i < records.length; i += batchSize) {
+    const batch = records.slice(i, i + batchSize);
+    const { error } = await supabase
+      .from('agent_process_lineage')
+      .insert(batch);
+
+    if (error) {
+      console.error(`[${requestId}] Error inserting process batch:`, error.message);
+    } else {
+      insertedCount += batch.length;
+    }
+  }
+
+  // If suspicious processes found, create system alert
+  if (suspiciousCount > 0) {
+    const suspiciousProcs = records.filter(r => r.is_suspicious);
+    await supabase.from('system_alerts').insert({
+      tenant_id: tenantId,
+      agent_id: agentId,
+      alert_type: 'suspicious_process',
+      severity: suspiciousCount >= 3 ? 'critical' : 'high',
+      title: `${suspiciousCount} processo(s) suspeito(s) detectado(s)`,
+      description: `Agente ${agentName} reportou ${suspiciousCount} processos com padrões suspeitos: ${suspiciousProcs.map(p => p.process_name).join(', ')}`,
+      metadata: {
+        suspicious_processes: suspiciousProcs.slice(0, 10).map(p => ({
+          name: p.process_name,
+          parent: p.parent_process_name,
+          reasons: p.suspicion_reasons,
+          cmd: (p.command_line as string)?.substring(0, 200),
+        })),
+        total_processes: records.length,
+        suspicious_count: suspiciousCount,
+      },
+    }).catch(e => console.error(`[${requestId}] Error creating alert:`, e));
+  }
+
+  const result = {
+    success: true,
+    inserted: insertedCount,
+    suspicious_detected: suspiciousCount,
+    total_received: cappedProcesses.length,
+  };
+
+  console.log(`[${requestId}] [submit-process-lineage] Done:`, JSON.stringify(result));
+  return result;
 });
