@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -59,14 +60,14 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     
     if (!isCronCall && !isInternalCall && !authHeader) {
-      console.log('[autonomous-safe-mode] Unauthorized: No valid origin');
+      logger.warn('[autonomous-safe-mode] Unauthorized: No valid origin');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[autonomous-safe-mode] Authorized call from: ${isCronCall ? 'cron' : isInternalCall ? 'internal' : 'jwt'}`);
+    logger.debug(`[autonomous-safe-mode] Authorized call from: ${isCronCall ? 'cron' : isInternalCall ? 'internal' : 'jwt'}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -76,7 +77,7 @@ Deno.serve(async (req) => {
     // KILL SWITCH CHECK (ADR-FINAL) - Halt all automation if system is in halt_jobs mode
     const { data: systemMode } = await supabase.rpc('get_system_mode_safe');
     if (systemMode === 'halt_jobs') {
-      console.log('[autonomous-safe-mode] SYSTEM_HALTED: Kill switch active, skipping rules evaluation');
+      logger.info('[autonomous-safe-mode] SYSTEM_HALTED: Kill switch active, skipping rules evaluation');
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -87,7 +88,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[rules-engine] Starting multi-rule evaluation...');
+    logger.debug('[rules-engine] Starting multi-rule evaluation...');
 
     // Fetch all enabled rules
     const { data: rules, error: rulesError } = await supabase
@@ -97,18 +98,18 @@ Deno.serve(async (req) => {
       .order('code');
 
     if (rulesError) {
-      console.error('[rules-engine] Error fetching rules:', rulesError);
+      logger.error('[rules-engine] Error fetching rules:', rulesError);
       throw rulesError;
     }
 
-    console.log(`[rules-engine] Found ${rules?.length || 0} enabled rules`);
+    logger.debug(`[rules-engine] Found ${rules?.length || 0} enabled rules`);
 
     const allResults: RuleResult[] = [];
     let totalActions = 0;
 
     // Process each rule
     for (const rule of rules || []) {
-      console.log(`[rules-engine] Evaluating rule: ${rule.code}`);
+      logger.debug(`[rules-engine] Evaluating rule: ${rule.code}`);
       
       try {
         switch (rule.code) {
@@ -209,10 +210,10 @@ Deno.serve(async (req) => {
             break;
             
           default:
-            console.log(`[rules-engine] Unknown rule code: ${rule.code}, skipping`);
+            logger.debug(`[rules-engine] Unknown rule code: ${rule.code}, skipping`);
         }
       } catch (ruleError) {
-        console.error(`[rules-engine] Error processing rule ${rule.code}:`, ruleError);
+        logger.error(`[rules-engine] Error processing rule ${rule.code}:`, ruleError);
       }
     }
 
@@ -225,7 +226,7 @@ Deno.serve(async (req) => {
       executed_at: new Date().toISOString()
     };
 
-    console.log(`[rules-engine] Completed. Evaluated ${rules?.length || 0} rules, executed ${totalActions} actions in ${durationMs}ms.`);
+    logger.info(`[rules-engine] Completed. Evaluated ${rules?.length || 0} rules, executed ${totalActions} actions in ${durationMs}ms.`);
 
     // Log successful job execution
     try {
@@ -242,7 +243,7 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch (logErr) {
-      console.error('[rules-engine] Failed to log job run:', logErr);
+      logger.warn('[rules-engine] Failed to log job run:', logErr);
     }
 
     return new Response(
@@ -252,7 +253,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     const durationMs = Date.now() - startedAt;
-    console.error('[rules-engine] Fatal error:', error);
+    logger.error('[rules-engine] Fatal error:', error);
 
     // Log failed job execution
     try {
@@ -269,7 +270,7 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch (logErr) {
-      console.error('[rules-engine] Failed to log error:', logErr);
+      logger.warn('[rules-engine] Failed to log error:', logErr);
     }
 
     return new Response(
@@ -294,7 +295,7 @@ async function processSafeModeRule(supabase: any, rule: any): Promise<RuleResult
   const timeWindowMinutes = conditions.time_window_minutes || 10;
   const minFailures = conditions.min_failures || 3;
 
-  console.log(`[SAFE_MODE_RULE_001] Detecting failure patterns (window: ${timeWindowMinutes}min, threshold: ${minFailures})`);
+  logger.debug(`[SAFE_MODE_RULE_001] Detecting failure patterns (window: ${timeWindowMinutes}min, threshold: ${minFailures})`);
 
   // Detect agents with critical failure patterns
   const { data: agentsWithFailures, error: detectError } = await supabase
@@ -304,11 +305,11 @@ async function processSafeModeRule(supabase: any, rule: any): Promise<RuleResult
     });
 
   if (detectError) {
-    console.error('[SAFE_MODE_RULE_001] Error detecting failure patterns:', detectError);
+    logger.error('[SAFE_MODE_RULE_001] Error detecting failure patterns:', detectError);
     throw detectError;
   }
 
-  console.log(`[SAFE_MODE_RULE_001] Found ${agentsWithFailures?.length || 0} candidates`);
+  logger.debug(`[SAFE_MODE_RULE_001] Found ${agentsWithFailures?.length || 0} candidates`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -327,7 +328,7 @@ async function processSafeModeRule(supabase: any, rule: any): Promise<RuleResult
       });
 
     if (entryError) {
-      console.error(`[SAFE_MODE_RULE_001] Error for ${agent.agent_name}:`, entryError);
+      logger.error(`[SAFE_MODE_RULE_001] Error for ${agent.agent_name}:`, entryError);
       continue;
     }
 
@@ -416,7 +417,7 @@ async function processThrottleRule(supabase: any, rule: any): Promise<RuleResult
   };
   const params = rule.definition?.parameters || { poll_interval_seconds: 300 };
 
-  console.log(`[AGENT_THROTTLE_002] Detecting throttle candidates`);
+  logger.debug(`[AGENT_THROTTLE_002] Detecting throttle candidates`);
 
   const { data: candidates, error } = await supabase
     .rpc('detect_throttle_candidates', {
@@ -425,11 +426,11 @@ async function processThrottleRule(supabase: any, rule: any): Promise<RuleResult
     });
 
   if (error) {
-    console.error('[AGENT_THROTTLE_002] Detection error:', error);
+    logger.error('[AGENT_THROTTLE_002] Detection error:', error);
     throw error;
   }
 
-  console.log(`[AGENT_THROTTLE_002] Found ${candidates?.length || 0} candidates`);
+  logger.debug(`[AGENT_THROTTLE_002] Found ${candidates?.length || 0} candidates`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -445,7 +446,7 @@ async function processThrottleRule(supabase: any, rule: any): Promise<RuleResult
       });
 
     if (throttleError) {
-      console.error(`[AGENT_THROTTLE_002] Error throttling ${candidate.agent_name}:`, throttleError);
+      logger.error(`[AGENT_THROTTLE_002] Error throttling ${candidate.agent_name}:`, throttleError);
       continue;
     }
 
@@ -477,7 +478,7 @@ async function processThrottleRule(supabase: any, rule: any): Promise<RuleResult
       reason: `${candidate.request_count} requests, ${candidate.error_rate}% taxa de erro`
     });
 
-    console.log(`[AGENT_THROTTLE_002] Throttled agent ${candidate.agent_name}`);
+    logger.debug(`[AGENT_THROTTLE_002] Throttled agent ${candidate.agent_name}`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
@@ -489,7 +490,7 @@ async function processIsolateRule(supabase: any, rule: any): Promise<RuleResult>
     time_window_minutes: 10
   };
 
-  console.log(`[AGENT_ISOLATE_003] Detecting isolation candidates`);
+  logger.debug(`[AGENT_ISOLATE_003] Detecting isolation candidates`);
 
   const { data: candidates, error } = await supabase
     .rpc('detect_isolation_candidates', {
@@ -498,11 +499,11 @@ async function processIsolateRule(supabase: any, rule: any): Promise<RuleResult>
     });
 
   if (error) {
-    console.error('[AGENT_ISOLATE_003] Detection error:', error);
+    logger.error('[AGENT_ISOLATE_003] Detection error:', error);
     throw error;
   }
 
-  console.log(`[AGENT_ISOLATE_003] Found ${candidates?.length || 0} candidates`);
+  logger.debug(`[AGENT_ISOLATE_003] Found ${candidates?.length || 0} candidates`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -517,7 +518,7 @@ async function processIsolateRule(supabase: any, rule: any): Promise<RuleResult>
       });
 
     if (isolateError) {
-      console.error(`[AGENT_ISOLATE_003] Error isolating ${candidate.agent_name}:`, isolateError);
+      logger.error(`[AGENT_ISOLATE_003] Error isolating ${candidate.agent_name}:`, isolateError);
       continue;
     }
 
@@ -567,7 +568,7 @@ async function processIsolateRule(supabase: any, rule: any): Promise<RuleResult>
       reason: `${candidate.event_count} eventos de segurança suspeitos`
     });
 
-    console.log(`[AGENT_ISOLATE_003] Isolated agent ${candidate.agent_name}`);
+    logger.debug(`[AGENT_ISOLATE_003] Isolated agent ${candidate.agent_name}`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
@@ -580,7 +581,7 @@ async function processVersionBlockRule(supabase: any, rule: any): Promise<RuleRe
     time_window_hours: 24
   };
 
-  console.log(`[UPDATE_BLOCK_004] Detecting problematic versions`);
+  logger.debug(`[UPDATE_BLOCK_004] Detecting problematic versions`);
 
   const { data: candidates, error } = await supabase
     .rpc('detect_version_block_candidates', {
@@ -590,11 +591,11 @@ async function processVersionBlockRule(supabase: any, rule: any): Promise<RuleRe
     });
 
   if (error) {
-    console.error('[UPDATE_BLOCK_004] Detection error:', error);
+    logger.error('[UPDATE_BLOCK_004] Detection error:', error);
     throw error;
   }
 
-  console.log(`[UPDATE_BLOCK_004] Found ${candidates?.length || 0} problematic versions`);
+  logger.debug(`[UPDATE_BLOCK_004] Found ${candidates?.length || 0} problematic versions`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -611,7 +612,7 @@ async function processVersionBlockRule(supabase: any, rule: any): Promise<RuleRe
       });
 
     if (blockError) {
-      console.error(`[UPDATE_BLOCK_004] Error blocking version ${candidate.version}:`, blockError);
+      logger.error(`[UPDATE_BLOCK_004] Error blocking version ${candidate.version}:`, blockError);
       continue;
     }
 
@@ -627,7 +628,7 @@ async function processVersionBlockRule(supabase: any, rule: any): Promise<RuleRe
       reason: `${candidate.failure_rate}% taxa de falha em ${candidate.total_agents} agentes`
     });
 
-    console.log(`[UPDATE_BLOCK_004] Blocked version ${candidate.version} for ${candidate.platform}`);
+    logger.debug(`[UPDATE_BLOCK_004] Blocked version ${candidate.version} for ${candidate.platform}`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
@@ -642,18 +643,18 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
     auto_revert_after_hours: 2
   };
 
-  console.log(`[AGENT_IMPRODUTIVE_005] Detecting improdutive agents`);
+  logger.debug(`[AGENT_IMPRODUTIVE_005] Detecting improdutive agents`);
 
   // Usar RPC que detecta agentes improdutivos
   const { data: candidates, error } = await supabase
     .rpc('detect_improdutive_agents');
 
   if (error) {
-    console.error('[AGENT_IMPRODUTIVE_005] Detection error:', error);
+    logger.error('[AGENT_IMPRODUTIVE_005] Detection error:', error);
     throw error;
   }
 
-  console.log(`[AGENT_IMPRODUTIVE_005] Found ${candidates?.length || 0} improdutive agents`);
+  logger.debug(`[AGENT_IMPRODUTIVE_005] Found ${candidates?.length || 0} improdutive agents`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -669,7 +670,7 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
       });
 
     if (throttleError) {
-      console.error(`[AGENT_IMPRODUTIVE_005] Error throttling ${candidate.agent_name}:`, throttleError);
+      logger.error(`[AGENT_IMPRODUTIVE_005] Error throttling ${candidate.agent_name}:`, throttleError);
       actionsExecuted.push({ type: 'APPLY_THROTTLE', success: false, error: throttleError.message });
       continue;
     }
@@ -729,7 +730,7 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
       reason: `Improdutivo: ${candidate.stale_queued_jobs || 0} jobs parados, ${Math.round(candidate.minutes_since_execution || 0)}min sem execução`
     });
 
-    console.log(`[AGENT_IMPRODUTIVE_005] Throttled improdutive agent ${candidate.agent_name}`);
+    logger.debug(`[AGENT_IMPRODUTIVE_005] Throttled improdutive agent ${candidate.agent_name}`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
@@ -739,17 +740,17 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
 // AUTO_REVERT_THROTTLE_006: Remove throttle após estabilização
 // =============================================================
 async function processAutoRevertThrottle(supabase: any, rule: any): Promise<RuleResult> {
-  console.log('[AUTO_REVERT_THROTTLE_006] Checking revert candidates');
+  logger.debug('[AUTO_REVERT_THROTTLE_006] Checking revert candidates');
 
   const { data: candidates, error } = await supabase
     .rpc('detect_throttle_revert_candidates');
 
   if (error) {
-    console.error('[AUTO_REVERT_THROTTLE_006] Detection error:', error);
+    logger.error('[AUTO_REVERT_THROTTLE_006] Detection error:', error);
     throw error;
   }
 
-  console.log(`[AUTO_REVERT_THROTTLE_006] Found ${candidates?.length || 0} revert candidates`);
+  logger.debug(`[AUTO_REVERT_THROTTLE_006] Found ${candidates?.length || 0} revert candidates`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -763,7 +764,7 @@ async function processAutoRevertThrottle(supabase: any, rule: any): Promise<Rule
       });
 
     if (revertError) {
-      console.error(`[AUTO_REVERT_THROTTLE_006] Error reverting ${candidate.agent_name}:`, revertError);
+      logger.error(`[AUTO_REVERT_THROTTLE_006] Error reverting ${candidate.agent_name}:`, revertError);
       actionsExecuted.push({ type: 'REMOVE_THROTTLE', success: false, error: revertError.message });
       continue;
     }
@@ -819,7 +820,7 @@ async function processAutoRevertThrottle(supabase: any, rule: any): Promise<Rule
       reason: 'Estabilização confirmada após cooldown de 2h'
     });
 
-    console.log(`[AUTO_REVERT_THROTTLE_006] Reverted throttle for ${candidate.agent_name}`);
+    logger.debug(`[AUTO_REVERT_THROTTLE_006] Reverted throttle for ${candidate.agent_name}`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
@@ -830,17 +831,17 @@ async function processAutoRevertThrottle(supabase: any, rule: any): Promise<Rule
 // Framework: DETECÇÃO + BLOQUEIO + PROVA AUTOMÁTICA
 // =============================================================
 async function processSilentFailureDetection(supabase: any, rule: any): Promise<RuleResult> {
-  console.log('[SILENT_FAILURE_007] Detecting silent job failures');
+  logger.debug('[SILENT_FAILURE_007] Detecting silent job failures');
 
   const { data: failures, error } = await supabase
     .rpc('detect_silent_job_failures');
 
   if (error) {
-    console.error('[SILENT_FAILURE_007] Detection error:', error);
+    logger.error('[SILENT_FAILURE_007] Detection error:', error);
     throw error;
   }
 
-  console.log(`[SILENT_FAILURE_007] Found ${failures?.length || 0} silent failures`);
+  logger.debug(`[SILENT_FAILURE_007] Found ${failures?.length || 0} silent failures`);
 
   const agents: RuleResult['agents'] = [];
   const processedTenants = new Map<string, typeof failures>();
@@ -934,7 +935,7 @@ async function processSilentFailureDetection(supabase: any, rule: any): Promise<
       });
     }
 
-    console.log(`[SILENT_FAILURE_007] Created alerts for tenant ${tenantId} with ${tenantFailures.length} violations`);
+    logger.debug(`[SILENT_FAILURE_007] Created alerts for tenant ${tenantId} with ${tenantFailures.length} violations`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
@@ -944,7 +945,7 @@ async function processSilentFailureDetection(supabase: any, rule: any): Promise<
 // JOB_SLOW_008: Detecta jobs sistematicamente lentos
 // =============================================================
 async function processSlowJobsRule(supabase: any, rule: any): Promise<RuleResult> {
-  console.log('[JOB_SLOW_008] Detecting systematically slow jobs');
+  logger.debug('[JOB_SLOW_008] Detecting systematically slow jobs');
 
   // Buscar jobs que consistentemente excedem o p95 de execução
   const { data: slowJobs, error } = await supabase.rpc('detect_slow_jobs', {
@@ -954,7 +955,7 @@ async function processSlowJobsRule(supabase: any, rule: any): Promise<RuleResult
 
   if (error) {
     // RPC might not exist yet, use fallback query
-    console.log('[JOB_SLOW_008] RPC not available, using fallback query');
+    logger.debug('[JOB_SLOW_008] RPC not available, using fallback query');
     
     const { data: fallbackData } = await supabase
       .from('jobs')
@@ -1014,7 +1015,7 @@ async function processSlowJobsRule(supabase: any, rule: any): Promise<RuleResult
     return { rule_code: rule.code, processed_count: slowTypes.length, agents: slowTypes };
   }
 
-  console.log(`[JOB_SLOW_008] Found ${slowJobs?.length || 0} slow job patterns`);
+  logger.debug(`[JOB_SLOW_008] Found ${slowJobs?.length || 0} slow job patterns`);
   return { rule_code: rule.code, processed_count: slowJobs?.length || 0, agents: [] };
 }
 
@@ -1022,7 +1023,7 @@ async function processSlowJobsRule(supabase: any, rule: any): Promise<RuleResult
 // INSIGHT_IGNORED_009: Escala insights críticos ignorados
 // =============================================================
 async function processIgnoredInsightsRule(supabase: any, rule: any): Promise<RuleResult> {
-  console.log('[INSIGHT_IGNORED_009] Checking ignored critical insights');
+  logger.debug('[INSIGHT_IGNORED_009] Checking ignored critical insights');
 
   // Buscar insights críticos não reconhecidos há mais de 72h
   const cutoffDate = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
@@ -1037,11 +1038,11 @@ async function processIgnoredInsightsRule(supabase: any, rule: any): Promise<Rul
     .limit(50);
 
   if (error) {
-    console.error('[INSIGHT_IGNORED_009] Query error:', error);
+    logger.error('[INSIGHT_IGNORED_009] Query error:', error);
     throw error;
   }
 
-  console.log(`[INSIGHT_IGNORED_009] Found ${ignoredInsights?.length || 0} ignored insights`);
+  logger.debug(`[INSIGHT_IGNORED_009] Found ${ignoredInsights?.length || 0} ignored insights`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -1057,7 +1058,7 @@ async function processIgnoredInsightsRule(supabase: any, rule: any): Promise<Rul
       .eq('id', insight.id);
 
     if (updateError) {
-      console.error(`[INSIGHT_IGNORED_009] Error escalating insight ${insight.id}:`, updateError);
+      logger.error(`[INSIGHT_IGNORED_009] Error escalating insight ${insight.id}:`, updateError);
       continue;
     }
 
@@ -1085,7 +1086,7 @@ async function processIgnoredInsightsRule(supabase: any, rule: any): Promise<Rul
       reason: `Ignorado por ${Math.round((Date.now() - new Date(insight.created_at).getTime()) / (60 * 60 * 1000))}h`
     });
 
-    console.log(`[INSIGHT_IGNORED_009] Escalated insight: ${insight.title}`);
+    logger.debug(`[INSIGHT_IGNORED_009] Escalated insight: ${insight.title}`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
@@ -1100,7 +1101,7 @@ async function processBlockedAccessPatternRule(supabase: any, rule: any): Promis
     time_window_minutes: 30
   };
 
-  console.log(`[BLOCKED_ACCESS_PATTERN_010] Detecting blocked access patterns`);
+  logger.debug(`[BLOCKED_ACCESS_PATTERN_010] Detecting blocked access patterns`);
 
   // Buscar agentes com muitas tentativas bloqueadas
   const cutoffTime = new Date(Date.now() - conditions.time_window_minutes * 60 * 1000).toISOString();
@@ -1112,7 +1113,7 @@ async function processBlockedAccessPatternRule(supabase: any, rule: any): Promis
     .limit(1000);
 
   if (error) {
-    console.error('[BLOCKED_ACCESS_PATTERN_010] Query error:', error);
+    logger.error('[BLOCKED_ACCESS_PATTERN_010] Query error:', error);
     // Table might not exist, return empty
     return { rule_code: rule.code, processed_count: 0, agents: [] };
   }
@@ -1132,7 +1133,7 @@ async function processBlockedAccessPatternRule(supabase: any, rule: any): Promis
   const suspiciousAgents = Array.from(agentAttempts.entries())
     .filter(([_, data]) => data.count >= conditions.min_blocked_attempts);
 
-  console.log(`[BLOCKED_ACCESS_PATTERN_010] Found ${suspiciousAgents.length} suspicious agents`);
+  logger.debug(`[BLOCKED_ACCESS_PATTERN_010] Found ${suspiciousAgents.length} suspicious agents`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -1219,7 +1220,7 @@ async function processAgentDivergentRule(supabase: any, rule: any): Promise<Rule
     comparison_window_hours: 24
   };
 
-  console.log('[AGENT_DIVERGENT_011] Detecting divergent agents');
+  logger.debug('[AGENT_DIVERGENT_011] Detecting divergent agents');
 
   // Buscar métricas recentes de todos os agentes
   const cutoffTime = new Date(Date.now() - conditions.comparison_window_hours * 60 * 60 * 1000).toISOString();
@@ -1231,7 +1232,7 @@ async function processAgentDivergentRule(supabase: any, rule: any): Promise<Rule
     .limit(5000);
 
   if (error) {
-    console.error('[AGENT_DIVERGENT_011] Query error:', error);
+    logger.error('[AGENT_DIVERGENT_011] Query error:', error);
     return { rule_code: rule.code, processed_count: 0, agents: [] };
   }
 
@@ -1291,7 +1292,7 @@ async function processAgentDivergentRule(supabase: any, rule: any): Promise<Rule
     }
   }
 
-  console.log(`[AGENT_DIVERGENT_011] Found ${divergentAgents.length} divergent agents`);
+  logger.debug(`[AGENT_DIVERGENT_011] Found ${divergentAgents.length} divergent agents`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -1358,7 +1359,7 @@ async function processProgressiveDegradationRule(supabase: any, rule: any): Prom
     degradation_threshold_percent: 20
   };
 
-  console.log('[PROGRESSIVE_DEGRADATION_012] Detecting progressive degradation');
+  logger.debug('[PROGRESSIVE_DEGRADATION_012] Detecting progressive degradation');
 
   // Comparar métricas de 12h atrás com métricas recentes
   const now = Date.now();
@@ -1412,7 +1413,7 @@ async function processProgressiveDegradationRule(supabase: any, rule: any): Prom
     }
   }
 
-  console.log(`[PROGRESSIVE_DEGRADATION_012] Found ${degradingAgents.length} degrading agents`);
+  logger.debug(`[PROGRESSIVE_DEGRADATION_012] Found ${degradingAgents.length} degrading agents`);
 
   const agents: RuleResult['agents'] = [];
 

@@ -1,4 +1,5 @@
 // Deno.serve() - no import needed
+import { logger } from '../_shared/logger.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { 
   healthProbeMiddleware, 
@@ -346,14 +347,14 @@ Deno.serve(async (req) => {
     );
 
     if (userError || !user) {
-      console.error('[action-center-feed] User auth error:', userError);
+      logger.error('[action-center-feed] User auth error:', userError);
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('[action-center-feed] User authenticated:', user.id);
+    logger.debug('[action-center-feed] User authenticated:', user.id);
 
     // Get tenant from header (sent by frontend) or fallback to user's tenant
     const requestedTenantId = req.headers.get('x-tenant-id');
@@ -369,14 +370,14 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (accessError) {
-        console.error('[action-center-feed] Access check error:', accessError);
+        logger.error('[action-center-feed] Access check error:', accessError);
       }
 
       if (hasAccess) {
         tenantId = requestedTenantId;
-        console.log('[action-center-feed] Using requested tenant:', tenantId);
+        logger.debug('[action-center-feed] Using requested tenant:', tenantId);
       } else {
-        console.warn('[action-center-feed] User has no access to requested tenant:', requestedTenantId);
+        logger.warn('[action-center-feed] User has no access to requested tenant:', requestedTenantId);
       }
     }
 
@@ -390,7 +391,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (roleError) {
-        console.error('[action-center-feed] Role query error:', roleError);
+        logger.error('[action-center-feed] Role query error:', roleError);
       }
 
       tenantId = userRole?.tenant_id || null;
@@ -398,7 +399,7 @@ Deno.serve(async (req) => {
 
     // If no tenant, return empty feed with warning
     if (!tenantId) {
-      console.warn('[action-center-feed] User has no tenant:', user.id);
+      logger.warn('[action-center-feed] User has no tenant:', user.id);
       
       const emptyFeed: ActionCenterFeed = {
         urgent: [],
@@ -417,7 +418,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[action-center-feed] Tenant resolved:', tenantId);
+    logger.debug('[action-center-feed] Tenant resolved:', tenantId);
 
     // Create client with user context for subsequent operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
@@ -439,7 +440,7 @@ Deno.serve(async (req) => {
       const healthyAgents = allAgents.filter(a => a.agent_state === 'healthy');
       const offlineAgents = allAgents.filter(a => a.agent_state === 'offline');
       
-      console.log('[action-center-feed] Agent stats:', {
+      logger.debug('[action-center-feed] Agent stats:', {
         total: totalAgents,
         healthy: healthyAgents.length,
         offline: offlineAgents.length,
@@ -495,7 +496,7 @@ Deno.serve(async (req) => {
         .limit(50);
 
       if (execError) {
-        console.error('[action-center-feed] Playbook query error:', execError);
+        logger.error('[action-center-feed] Playbook query error:', execError);
       } else {
         playbookItems = (executions || []).map((exec: any) => ({
           item_id: exec.id,
@@ -547,7 +548,7 @@ Deno.serve(async (req) => {
         .limit(50);
 
       if (insightsError) {
-        console.error('[action-center-feed] AI Insights query error:', insightsError);
+        logger.error('[action-center-feed] AI Insights query error:', insightsError);
       } else {
         // Get agent info for insights
         const agentIds = (insights || []).filter(i => i.agent_id).map(i => i.agent_id);
@@ -720,7 +721,7 @@ Deno.serve(async (req) => {
         generated_at: new Date().toISOString(),
       };
 
-      console.log('[action-center-feed] Feed generated:', {
+      logger.debug('[action-center-feed] Feed generated:', {
         urgent: feed.urgent.length,
         recommended: feed.recommended.length,
         informational: feed.informational.length,
@@ -747,7 +748,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      console.log('[action-center-feed] Executing action:', { item_id, source_type, action });
+      logger.debug('[action-center-feed] Executing action:', { item_id, source_type, action });
 
       if (source_type === 'playbook' && action === 'execute') {
         // Execute playbook via existing edge function
@@ -756,7 +757,7 @@ Deno.serve(async (req) => {
         });
 
         if (error) {
-          console.error('[action-center-feed] Execute playbook error:', error);
+          logger.error('[action-center-feed] Execute playbook error:', error);
           return new Response(
             JSON.stringify({ error: error.message }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -783,7 +784,7 @@ Deno.serve(async (req) => {
           .eq('tenant_id', tenantId);
 
         if (error) {
-          console.error('[action-center-feed] Ignore error:', error);
+          logger.error('[action-center-feed] Ignore error:', error);
           return new Response(
             JSON.stringify({ error: error.message }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -808,7 +809,7 @@ Deno.serve(async (req) => {
           .eq('tenant_id', tenantId);
 
         if (error) {
-          console.error('[action-center-feed] Acknowledge alert error:', error);
+          logger.error('[action-center-feed] Acknowledge alert error:', error);
           return new Response(
             JSON.stringify({ error: error.message }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -828,7 +829,7 @@ Deno.serve(async (req) => {
         
         // We could update the agent state or create an acknowledgment record
         // For now, just return success - the action is informational
-        console.log('[action-center-feed] Acknowledged offline agent:', agentId);
+        logger.debug('[action-center-feed] Acknowledged offline agent:', agentId);
         
         return new Response(
           JSON.stringify({ success: true, message: 'Offline status acknowledged' }),
@@ -852,7 +853,7 @@ Deno.serve(async (req) => {
           .eq('tenant_id', tenantId);
 
         if (error) {
-          console.error('[action-center-feed] Acknowledge insight error:', error);
+          logger.error('[action-center-feed] Acknowledge insight error:', error);
           return new Response(
             JSON.stringify({ error: error.message }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -884,14 +885,14 @@ Deno.serve(async (req) => {
           .eq('tenant_id', tenantId);
 
         if (error) {
-          console.error('[action-center-feed] Ignore insight error:', error);
+          logger.error('[action-center-feed] Ignore insight error:', error);
           return new Response(
             JSON.stringify({ error: error.message }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
-        console.log(`[action-center-feed] Insight ${item_id} ignored by user ${user.id}${reason ? ` - reason: ${reason}` : ''}`);
+        logger.debug(`[action-center-feed] Insight ${item_id} ignored by user ${user.id}${reason ? ` - reason: ${reason}` : ''}`);
 
         return new Response(
           JSON.stringify({ success: true, status: 'ignored' }),
@@ -922,7 +923,7 @@ Deno.serve(async (req) => {
           .single();
 
         if (insightError) {
-          console.error('[action-center-feed] Get insight for reject error:', insightError);
+          logger.error('[action-center-feed] Get insight for reject error:', insightError);
           return new Response(
             JSON.stringify({ error: 'Insight not found' }),
             { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -945,7 +946,7 @@ Deno.serve(async (req) => {
           .eq('tenant_id', tenantId);
 
         if (updateError) {
-          console.error('[action-center-feed] Reject insight error:', updateError);
+          logger.error('[action-center-feed] Reject insight error:', updateError);
           return new Response(
             JSON.stringify({ error: updateError.message }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -976,11 +977,11 @@ Deno.serve(async (req) => {
           });
 
         if (eventError) {
-          console.warn('[action-center-feed] Failed to create rejection event:', eventError);
+          logger.warn('[action-center-feed] Failed to create rejection event:', eventError);
           // Don't fail the request, the insight was already rejected
         }
 
-        console.log(`[action-center-feed] Insight ${item_id} REJECTED by user ${user.id} - reason: ${reason}`);
+        logger.debug(`[action-center-feed] Insight ${item_id} REJECTED by user ${user.id} - reason: ${reason}`);
 
         return new Response(
           JSON.stringify({ success: true, status: 'rejected' }),
@@ -991,7 +992,7 @@ Deno.serve(async (req) => {
       // Handle agent_offline execute action - create a reinstall/recovery job
       if (source_type === 'agent_offline' && action === 'execute') {
         const agentId = item_id.replace('offline_', '');
-        console.log('[action-center-feed] Execute recovery on offline agent:', agentId);
+        logger.debug('[action-center-feed] Execute recovery on offline agent:', agentId);
 
         // Get agent info
         const { data: agent } = await serviceClient
@@ -1024,7 +1025,7 @@ Deno.serve(async (req) => {
             .single();
 
           if (jobErr) {
-            console.warn('[action-center-feed] Failed to create recovery job:', jobErr);
+            logger.warn('[action-center-feed] Failed to create recovery job:', jobErr);
           }
 
           return new Response(
@@ -1046,7 +1047,7 @@ Deno.serve(async (req) => {
       // Handle agent_offline ignore action
       if (source_type === 'agent_offline' && action === 'ignore') {
         const agentId = item_id.replace('offline_', '');
-        console.log('[action-center-feed] Ignore offline agent:', agentId);
+        logger.debug('[action-center-feed] Ignore offline agent:', agentId);
         
         return new Response(
           JSON.stringify({ success: true, message: 'Offline status ignored' }),
@@ -1065,7 +1066,7 @@ Deno.serve(async (req) => {
           .single();
 
         if (alertFetchErr || !alert) {
-          console.error('[action-center-feed] Fetch alert error:', alertFetchErr);
+          logger.error('[action-center-feed] Fetch alert error:', alertFetchErr);
           return new Response(
             JSON.stringify({ error: 'Alert not found' }),
             { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -1104,9 +1105,9 @@ Deno.serve(async (req) => {
               },
             });
             remediationResult = data;
-            if (remErr) console.warn('[action-center-feed] Remediation invocation warning:', remErr);
+            if (remErr) logger.warn('[action-center-feed] Remediation invocation warning:', remErr);
           } catch (remExc) {
-            console.warn('[action-center-feed] Remediation exception (non-blocking):', remExc);
+            logger.warn('[action-center-feed] Remediation exception (non-blocking):', remExc);
           }
         }
 
@@ -1122,7 +1123,7 @@ Deno.serve(async (req) => {
           .eq('tenant_id', tenantId);
 
         if (error) {
-          console.error('[action-center-feed] Execute alert error:', error);
+          logger.error('[action-center-feed] Execute alert error:', error);
           return new Response(
             JSON.stringify({ error: error.message }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -1152,7 +1153,7 @@ Deno.serve(async (req) => {
           .eq('tenant_id', tenantId);
 
         if (error) {
-          console.error('[action-center-feed] Ignore alert error:', error);
+          logger.error('[action-center-feed] Ignore alert error:', error);
           return new Response(
             JSON.stringify({ error: error.message }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -1176,7 +1177,7 @@ Deno.serve(async (req) => {
           .single();
 
         if (insightError || !insight) {
-          console.error('[action-center-feed] Get insight error:', insightError);
+          logger.error('[action-center-feed] Get insight error:', insightError);
           return new Response(
             JSON.stringify({ error: 'Insight not found' }),
             { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -1202,7 +1203,7 @@ Deno.serve(async (req) => {
             })
             .eq('id', item_id);
 
-          console.log(`[action-center-feed] Insight ${item_id} acknowledged (no actions) by user ${user.id}`);
+          logger.debug(`[action-center-feed] Insight ${item_id} acknowledged (no actions) by user ${user.id}`);
 
           return new Response(
             JSON.stringify({ 
@@ -1232,7 +1233,7 @@ Deno.serve(async (req) => {
           .single();
 
         if (createError) {
-          console.error('[action-center-feed] Create action error:', createError);
+          logger.error('[action-center-feed] Create action error:', createError);
           return new Response(
             JSON.stringify({ error: createError.message }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -1246,7 +1247,7 @@ Deno.serve(async (req) => {
           });
 
           if (execError) {
-            console.error('[action-center-feed] Execute action error:', execError);
+            logger.error('[action-center-feed] Execute action error:', execError);
             // Action was created but execution failed - still return success with warning
             return new Response(
               JSON.stringify({ 
@@ -1271,14 +1272,14 @@ Deno.serve(async (req) => {
             })
             .eq('id', item_id);
 
-          console.log(`[action-center-feed] Insight ${item_id} resolved via execute by user ${user.id}`);
+          logger.debug(`[action-center-feed] Insight ${item_id} resolved via execute by user ${user.id}`);
 
           return new Response(
             JSON.stringify({ success: true, action_id: createdAction.id, result: execResult, status: 'resolved' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } catch (execErr) {
-          console.error('[action-center-feed] Execute action exception:', execErr);
+          logger.error('[action-center-feed] Execute action exception:', execErr);
           return new Response(
             JSON.stringify({ 
               success: true, 
@@ -1301,7 +1302,7 @@ Deno.serve(async (req) => {
       { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[action-center-feed] Error:', error);
+    logger.error('[action-center-feed] Error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: message }),

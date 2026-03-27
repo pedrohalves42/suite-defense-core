@@ -11,6 +11,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from '../_shared/logger.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
@@ -42,7 +43,7 @@ function validateNoPlaceholders(
 
   const placeholderList = remaining.join(', ');
 
-  console.error('[serve-installer] Placeholders nao substituidos', {
+  logger.error('[serve-installer] Placeholders nao substituidos', {
     scriptType,
     placeholders: placeholderList,
     count: remaining.length,
@@ -53,7 +54,7 @@ function validateNoPlaceholders(
   remaining.slice(0, 3).forEach((ph, idx) => {
     const pos = script.indexOf(ph);
     const context = script.substring(Math.max(0, pos - 120), pos + 120);
-    console.error(
+    logger.error(
       `[serve-installer] Contexto do placeholder ${idx + 1}:`,
       context.replace(/\n/g, '\\n').slice(0, 240),
     );
@@ -83,7 +84,7 @@ Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
   
-  console.log('[serve-installer] Function started', { 
+  logger.info('[serve-installer] Function started', { 
     timestamp: new Date().toISOString(), 
     requestId,
     method: req.method 
@@ -123,7 +124,7 @@ Deno.serve(async (req) => {
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('[serve-installer] CRITICAL: Missing environment variables', {
+    logger.error('[serve-installer] CRITICAL: Missing environment variables', {
       requestId,
       hasUrl: !!supabaseUrl,
       hasKey: !!supabaseServiceKey
@@ -145,8 +146,8 @@ Deno.serve(async (req) => {
   try {
     return await withTimeout(async () => {
       // Log da versao do installer template
-      console.log(`[${requestId}] ${getVersionInfo()}`);
-      console.log(`[${requestId}] Processing request - ${req.method} ${req.url}`);
+      logger.debug(`[${requestId}] ${getVersionInfo()}`);
+      logger.debug(`[${requestId}] Processing request - ${req.method} ${req.url}`);
 
       const url = new URL(req.url);
       const enrollmentKey = url.pathname.split('/').pop();
@@ -171,7 +172,7 @@ Deno.serve(async (req) => {
       );
       
       if (!rateLimitResult.allowed) {
-        console.warn(`[${requestId}] Rate limit exceeded for IP: ${clientIp}`, {
+        logger.warn(`[${requestId}] Rate limit exceeded for IP: ${clientIp}`, {
           resetAt: rateLimitResult.resetAt
         });
         return new Response(
@@ -195,7 +196,7 @@ Deno.serve(async (req) => {
       // Get mode: 'args' (default) or 'envvars'
       const mode = url.searchParams.get('mode') || 'args';
       if (mode !== 'args' && mode !== 'envvars') {
-        console.log(`[${requestId}] Invalid mode parameter: ${mode}`);
+        logger.debug(`[${requestId}] Invalid mode parameter: ${mode}`);
         return new Response(
           JSON.stringify({ 
             error: 'Invalid mode parameter. Use ?mode=args or ?mode=envvars' 
@@ -207,10 +208,10 @@ Deno.serve(async (req) => {
         );
       }
       
-      console.log(`[${requestId}] Mode: ${mode}, IP: ${clientIp}`);
+      logger.debug(`[${requestId}] Mode: ${mode}, IP: ${clientIp}`);
 
       if (!enrollmentKey) {
-      console.log(`[${requestId}] Missing enrollment key`);
+      logger.debug(`[${requestId}] Missing enrollment key`);
       return new Response('Enrollment key is required', { 
         status: 400,
         headers: corsHeaders
@@ -236,7 +237,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (enrollmentError || !enrollmentData) {
-      console.log(`[${requestId}] Invalid enrollment key: ${enrollmentError?.message}`);
+      logger.debug(`[${requestId}] Invalid enrollment key: ${enrollmentError?.message}`);
       return new Response('Invalid or expired enrollment key', { 
         status: 404,
         headers: corsHeaders
@@ -244,7 +245,7 @@ Deno.serve(async (req) => {
     }
 
     if (!enrollmentData.is_active) {
-      console.log(`[${requestId}] Enrollment key already used`);
+      logger.debug(`[${requestId}] Enrollment key already used`);
       return new Response('This enrollment key has been used', { 
         status: 410,
         headers: corsHeaders
@@ -252,7 +253,7 @@ Deno.serve(async (req) => {
     }
 
     if (new Date(enrollmentData.expires_at) < new Date()) {
-      console.log(`[${requestId}] Enrollment key expired`);
+      logger.debug(`[${requestId}] Enrollment key expired`);
       return new Response('This enrollment key has expired', { 
         status: 410,
         headers: corsHeaders
@@ -268,7 +269,7 @@ Deno.serve(async (req) => {
       const hostname = url.searchParams.get('hostname') || `agent-${crypto.randomUUID().substring(0, 8)}`;
       const osPlatform = url.searchParams.get('os_type') || 'windows';
       
-      console.log(`[${requestId}] Enrollment key has no agent_id - checking for existing agent with hostname: ${hostname}`);
+      logger.debug(`[${requestId}] Enrollment key has no agent_id - checking for existing agent with hostname: ${hostname}`);
       
       // DEDUP: Check if an agent with this hostname already exists in the same tenant
       const { data: existingByHostname } = await supabaseClient
@@ -298,7 +299,7 @@ Deno.serve(async (req) => {
             .eq('id', existingByHostname.id);
         }
         
-        console.log(`[${requestId}] DEDUP: Reusing existing agent`, {
+        logger.debug(`[${requestId}] DEDUP: Reusing existing agent`, {
           agentId: resolvedAgentId,
           agentName: hostname,
           previousStatus: existingByHostname.status,
@@ -306,7 +307,7 @@ Deno.serve(async (req) => {
         });
       } else {
         // === CREATE NEW AGENT ===
-        console.log(`[${requestId}] No existing agent found - creating new agent: ${hostname}`);
+        logger.debug(`[${requestId}] No existing agent found - creating new agent: ${hostname}`);
         
         // Generate HMAC secret (64 chars hex)
         const hmacBytes = new Uint8Array(32);
@@ -328,7 +329,7 @@ Deno.serve(async (req) => {
           .single();
         
         if (newAgentError || !newAgent) {
-          console.error(`[${requestId}] Failed to auto-provision agent`, newAgentError);
+          logger.error(`[${requestId}] Failed to auto-provision agent`, newAgentError);
           return new Response('Failed to create agent record', { 
             status: 500,
             headers: corsHeaders
@@ -338,7 +339,7 @@ Deno.serve(async (req) => {
         resolvedAgentId = newAgent.id;
         agentData = { agent_name: newAgent.agent_name, os_type: newAgent.os_type, hmac_secret: newAgent.hmac_secret };
         
-        console.log(`[${requestId}] Auto-provisioned new agent`, {
+        logger.debug(`[${requestId}] Auto-provisioned new agent`, {
           agentId: resolvedAgentId,
           agentName: hostname,
           tenantId: enrollmentData.tenant_id
@@ -348,9 +349,9 @@ Deno.serve(async (req) => {
       // Increment usage count on enrollment key
       try {
         const { error: rpcErr } = await supabaseClient.rpc('increment_enrollment_key_usage', { p_key_hash: enrollmentKeyHash });
-        if (rpcErr) console.warn(`[${requestId}] Failed to increment EK usage (non-critical):`, rpcErr);
+        if (rpcErr) logger.warn(`[${requestId}] Failed to increment EK usage (non-critical):`, rpcErr);
       } catch (e) {
-        console.warn(`[${requestId}] Failed to increment EK usage (non-critical):`, e);
+        logger.warn(`[${requestId}] Failed to increment EK usage (non-critical):`, e);
       }
     } else {
       // === EXISTING AGENT: Fetch agent info ===
@@ -363,7 +364,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (agentError || !existingAgent) {
-        console.log(`[${requestId}] Agent not found: ${agentError?.message}`);
+        logger.debug(`[${requestId}] Agent not found: ${agentError?.message}`);
         return new Response('Agent not found', { 
           status: 404,
           headers: corsHeaders
@@ -402,21 +403,21 @@ Deno.serve(async (req) => {
       });
 
     if (tokenInsertError) {
-      console.error(`[${requestId}] Failed to create fresh agent token`, tokenInsertError);
+      logger.error(`[${requestId}] Failed to create fresh agent token`, tokenInsertError);
       return new Response('Failed to generate agent credentials', { 
         status: 500,
         headers: corsHeaders
       });
     }
 
-    console.log(`[${requestId}] Fresh agent token generated`, {
+    logger.debug(`[${requestId}] Fresh agent token generated`, {
       tokenPrefix: freshTokenPrefix,
       agentId: resolvedAgentId
     });
 
     // CRITICAL FIX: Fetch Windows agent script from agent_releases table (same as Linux/macOS)
     // This ensures version synchronization - no more desync with storage bucket
-    console.log(`[${requestId}] Fetching Windows agent script from agent_releases database`);
+    logger.debug(`[${requestId}] Fetching Windows agent script from agent_releases database`);
     
     const { validateAgentScriptContent, calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
     
@@ -433,7 +434,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     
     if (windowsReleaseError || !windowsReleaseData?.script_content) {
-      console.error(`[${requestId}] No active Windows agent release found:`, windowsReleaseError);
+      logger.error(`[${requestId}] No active Windows agent release found:`, windowsReleaseError);
       return new Response(
         JSON.stringify({
           error: 'No active Windows agent release found',
@@ -448,7 +449,7 @@ Deno.serve(async (req) => {
     const registeredVersion = windowsReleaseData.version;
     
     if (!validateAgentScriptContent(agentScriptContent)) {
-      console.error(`[${requestId}] CRITICAL: Script validation failed for Windows release`);
+      logger.error(`[${requestId}] CRITICAL: Script validation failed for Windows release`);
       return new Response(
         'Failed to generate secure installer - script validation failed',
         {
@@ -462,14 +463,14 @@ Deno.serve(async (req) => {
     
     // Validate agent script content is valid
     if (!agentScriptContent || agentScriptContent.length < 5000) {
-      console.error(`[${requestId}] Agent script validation failed: invalid content length (${agentScriptContent?.length || 0} bytes)`);
+      logger.error(`[${requestId}] Agent script validation failed: invalid content length (${agentScriptContent?.length || 0} bytes)`);
       return new Response('Agent script validation failed: content too short or missing', { 
         status: 503,
         headers: corsHeaders
       });
     }
     
-    console.log(`[${requestId}] Windows agent script loaded from database`, { 
+    logger.debug(`[${requestId}] Windows agent script loaded from database`, { 
       size: agentScriptContent.length,
       sizeKB: (agentScriptContent.length / 1024).toFixed(2),
       hash: agentScriptHash,
@@ -486,7 +487,7 @@ Deno.serve(async (req) => {
     // Validate token is a valid UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!agentToken || !uuidRegex.test(agentToken)) {
-      console.error(`[${requestId}] Invalid agent token format: ${agentToken?.substring(0, 8)}...`);
+      logger.error(`[${requestId}] Invalid agent token format: ${agentToken?.substring(0, 8)}...`);
       return new Response('Invalid agent token format', { 
         status: 500,
         headers: corsHeaders
@@ -495,14 +496,14 @@ Deno.serve(async (req) => {
     
     // Validate HMAC secret is 64 characters hex (SHA256)
     if (!hmacSecret || hmacSecret.length !== 64 || !/^[0-9a-f]{64}$/i.test(hmacSecret)) {
-      console.error(`[${requestId}] Invalid HMAC secret format: length=${hmacSecret?.length}, valid_hex=${/^[0-9a-f]+$/i.test(hmacSecret || '')}`);
+      logger.error(`[${requestId}] Invalid HMAC secret format: length=${hmacSecret?.length}, valid_hex=${/^[0-9a-f]+$/i.test(hmacSecret || '')}`);
       return new Response('Invalid HMAC secret format', { 
         status: 500,
         headers: corsHeaders
       });
     }
     
-    console.log(`[${requestId}] Credentials validated:`, {
+    logger.debug(`[${requestId}] Credentials validated:`, {
       token_prefix: freshTokenPrefix,
       hmac_prefix: hmacSecret.substring(0, 8),
       token_format: 'UUID',
@@ -511,7 +512,7 @@ Deno.serve(async (req) => {
 
     // Determine platform
     const platform = agentData.os_type || 'windows';
-    console.log(`[${requestId}] Generating ${platform} installer for ${agentData.agent_name}`);
+    logger.debug(`[${requestId}] Generating ${platform} installer for ${agentData.agent_name}`);
 
     // Select template and agent script content based on platform and mode
     let templateContent: string;
@@ -523,7 +524,7 @@ Deno.serve(async (req) => {
       templateContent = WINDOWS_INSTALLER_TEMPLATE;
       agentScriptContentForPlatform = agentScriptContent;
       agentScriptUrl = ''; // Windows embeds script in installer
-      console.log('[' + requestId + '] Using Windows embedded template (' + agentScriptContentForPlatform.length + ' bytes)');
+      logger.debug('[' + requestId + '] Using Windows embedded template (' + agentScriptContentForPlatform.length + ' bytes)');
     } else if (platform === 'macos' || platform === 'linux') {
       // macOS/Linux: fetch script from agent_releases database (not placeholder files)
       const { data: releaseData, error: releaseError } = await supabaseClient
@@ -538,7 +539,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (releaseError || !releaseData?.script_content) {
-        console.error(`[${requestId}] No active ${platform} agent release found:`, releaseError);
+        logger.error(`[${requestId}] No active ${platform} agent release found:`, releaseError);
         return new Response(
           JSON.stringify({
             error: `No active ${platform} agent release found`,
@@ -563,14 +564,14 @@ Deno.serve(async (req) => {
           : LINUX_INSTALLER_TEMPLATE_V3_EMBEDDED;
       }
       
-      console.log(`[${requestId}] Loaded ${platform} agent script from database`, {
+      logger.debug(`[${requestId}] Loaded ${platform} agent script from database`, {
         version: releaseData.version,
         size: agentScriptContentForPlatform.length,
         mode: mode
       });
     } else {
       // Fallback for unsupported platforms
-      console.error(`[${requestId}] Unsupported platform: ${platform}`);
+      logger.error(`[${requestId}] Unsupported platform: ${platform}`);
       return new Response(
         JSON.stringify({
           error: 'Unsupported platform',
@@ -599,13 +600,13 @@ Deno.serve(async (req) => {
     // Final validation: ensure no placeholders remain
     if (templateContent.includes('{{')) {
       const remainingPlaceholders = templateContent.match(/\{\{[A-Z_]+\}\}/g) || [];
-      console.error(`[${requestId}] INCOMPLETE TEMPLATE - Found ${remainingPlaceholders.length} unresolved placeholders:`, remainingPlaceholders);
+      logger.error(`[${requestId}] INCOMPLETE TEMPLATE - Found ${remainingPlaceholders.length} unresolved placeholders:`, remainingPlaceholders);
       
       // Log context around first few placeholders for debugging
       remainingPlaceholders.slice(0, 3).forEach((placeholder, idx) => {
         const pos = templateContent.indexOf(placeholder);
         const context = templateContent.substring(Math.max(0, pos - 100), pos + 150);
-        console.error(`[${requestId}] Placeholder ${idx + 1} context:`, context.replace(/\n/g, '\\n'));
+        logger.error(`[${requestId}] Placeholder ${idx + 1} context:`, context.replace(/\n/g, '\\n'));
       });
       
       return new Response(
@@ -624,7 +625,7 @@ Deno.serve(async (req) => {
     const unsubstitutedCritical = criticalPlaceholders.filter(ph => templateContent.includes(ph));
     
     if (unsubstitutedCritical.length > 0) {
-      console.error(`[${requestId}] CRITICAL: Unsubstituted critical placeholders`, {
+      logger.error(`[${requestId}] CRITICAL: Unsubstituted critical placeholders`, {
         platform,
         agentName: agentData.agent_name,
         unsubstituted: unsubstitutedCritical
@@ -646,7 +647,7 @@ Deno.serve(async (req) => {
 
     // 1) Garantir que AGENT_SCRIPT_CONTENT foi substituido (especifico para Windows)
     if (platform === 'windows' && templateContent.includes('{{AGENT_SCRIPT_CONTENT}}')) {
-      console.error(`[${requestId}] CRITICAL: AGENT_SCRIPT_CONTENT placeholder not replaced`, {
+      logger.error(`[${requestId}] CRITICAL: AGENT_SCRIPT_CONTENT placeholder not replaced`, {
         platform,
         agentName: agentData.agent_name,
         scriptSize: agentScriptContentForPlatform?.length || 0
@@ -670,7 +671,7 @@ Deno.serve(async (req) => {
     const MIN_INSTALLER_SIZE = 10000; // ~10KB minimo para um instalador valido
 
     if (templateContent.length < MIN_INSTALLER_SIZE) {
-      console.error(`[${requestId}] CRITICAL: Generated installer too small`, {
+      logger.error(`[${requestId}] CRITICAL: Generated installer too small`, {
         platform,
         agentName: agentData.agent_name,
         installerSize: templateContent.length,
@@ -698,7 +699,7 @@ Deno.serve(async (req) => {
       const scriptContentMatch = templateContent.match(hereStringPattern);
       
       if (!scriptContentMatch || scriptContentMatch[1].trim().length < 5000) {
-        console.error(`[${requestId}] CRITICAL: Windows agent script content invalid or truncated`, {
+        logger.error(`[${requestId}] CRITICAL: Windows agent script content invalid or truncated`, {
           agentName: agentData.agent_name,
           embeddedScriptSize: scriptContentMatch?.[1]?.length || 0
         });
@@ -723,7 +724,7 @@ Deno.serve(async (req) => {
       const missingFunctions = criticalFunctions.filter(fn => !embeddedScript.includes(fn));
       
       if (missingFunctions.length > 0) {
-        console.error(`[${requestId}] CRITICAL: Missing critical functions in embedded agent script`, {
+        logger.error(`[${requestId}] CRITICAL: Missing critical functions in embedded agent script`, {
           agentName: agentData.agent_name,
           missingFunctions
         });
@@ -745,11 +746,11 @@ Deno.serve(async (req) => {
       // PHASE 4: StartedAt validation removed - v5.0.3 handles Jobs v3 internally
       // The StartedAt parameter is managed by the agent's job execution engine,
       // not required in the main script param() block.
-      console.log(`[${requestId}] [OK]  Script validation complete (StartedAt check skipped - handled by agent internally)`);
+      logger.debug(`[${requestId}] [OK]  Script validation complete (StartedAt check skipped - handled by agent internally)`);
     }
 
     // ? BUG FIX P3: Log consolidado de sucesso com TODAS as validacoes
-    console.log(`[${requestId}] [OK]  All installer validations passed`, {
+    logger.info(`[${requestId}] [OK]  All installer validations passed`, {
       installerSize: templateContent.length,
       installerSizeKB: (templateContent.length / 1024).toFixed(2),
       platform,
@@ -766,7 +767,7 @@ Deno.serve(async (req) => {
 
     // PHASE 3: Security validation - $headers indexing is legitimate PowerShell in agent scripts
     // Previous pattern checks caused false positives on valid PowerShell code
-    console.log(`[${requestId}] [OK] Script security validation passed (PowerShell patterns allowed)`);
+    logger.info(`[${requestId}] [OK] Script security validation passed (PowerShell patterns allowed)`);
 
     // Validacao final: garantir que nao sobrou nenhum {{PLACEHOLDER}}
     validateNoPlaceholders(templateContent, platform, requestId);
@@ -779,7 +780,7 @@ Deno.serve(async (req) => {
     const installerSha256 = installerHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     const installerSizeBytes = installerData.length;
 
-    console.log(`[${requestId}] Installer SHA256: ${installerSha256}, Size: ${installerSizeBytes} bytes`);
+    logger.info(`[${requestId}] Installer SHA256: ${installerSha256}, Size: ${installerSizeBytes} bytes`);
 
     // FASE 2: Persist installer hash to database
     try {
@@ -793,12 +794,12 @@ Deno.serve(async (req) => {
         .eq('key', enrollmentKey);
 
       if (updateError) {
-        console.error(`[${requestId}] Failed to persist installer hash:`, updateError);
+        logger.error(`[${requestId}] Failed to persist installer hash:`, updateError);
       } else {
-        console.log(`[${requestId}] Installer hash persisted to database`);
+        logger.debug(`[${requestId}] Installer hash persisted to database`);
       }
     } catch (dbError) {
-      console.error(`[${requestId}] Database error persisting hash:`, dbError);
+      logger.error(`[${requestId}] Database error persisting hash:`, dbError);
     }
 
     // Track "downloaded" event for installation analytics
@@ -823,12 +824,12 @@ Deno.serve(async (req) => {
         });
 
       if (telemetryError) {
-        console.warn(`[${requestId}] Failed to track downloaded event:`, telemetryError);
+        logger.warn(`[${requestId}] Failed to track downloaded event:`, telemetryError);
       } else {
-        console.log(`[${requestId}] Tracked 'downloaded' event for ${agentData.agent_name}`);
+        logger.debug(`[${requestId}] Tracked 'downloaded' event for ${agentData.agent_name}`);
       }
     } catch (telemetryErr) {
-      console.warn(`[${requestId}] Telemetry error:`, telemetryErr);
+      logger.warn(`[${requestId}] Telemetry error:`, telemetryErr);
     }
 
     // Return script
@@ -837,7 +838,7 @@ Deno.serve(async (req) => {
       : `install-${agentData.agent_name}-linux.sh`;
 
     const duration = Date.now() - startTime;
-    console.log(`[${requestId}] Completed successfully in ${duration}ms`);
+    logger.info(`[${requestId}] Completed successfully in ${duration}ms`);
 
       // FASE 2: Return script with SHA256 and version in headers
       // v4.1.6: Added Cache-Control: no-store to prevent proxy/browser caching
@@ -864,7 +865,7 @@ Deno.serve(async (req) => {
       return createTimeoutResponse(corsHeaders);
     }
     const duration = Date.now() - startTime;
-    console.error(`[${requestId}] Failed after ${duration}ms:`, error);
+    logger.error(`[${requestId}] Failed after ${duration}ms:`, error);
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Unknown error',
