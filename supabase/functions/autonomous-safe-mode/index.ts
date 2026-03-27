@@ -60,14 +60,14 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     
     if (!isCronCall && !isInternalCall && !authHeader) {
-      console.log('[autonomous-safe-mode] Unauthorized: No valid origin');
+      logger.warn('[autonomous-safe-mode] Unauthorized: No valid origin');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[autonomous-safe-mode] Authorized call from: ${isCronCall ? 'cron' : isInternalCall ? 'internal' : 'jwt'}`);
+    logger.debug(`[autonomous-safe-mode] Authorized call from: ${isCronCall ? 'cron' : isInternalCall ? 'internal' : 'jwt'}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
     // KILL SWITCH CHECK (ADR-FINAL) - Halt all automation if system is in halt_jobs mode
     const { data: systemMode } = await supabase.rpc('get_system_mode_safe');
     if (systemMode === 'halt_jobs') {
-      console.log('[autonomous-safe-mode] SYSTEM_HALTED: Kill switch active, skipping rules evaluation');
+      logger.info('[autonomous-safe-mode] SYSTEM_HALTED: Kill switch active, skipping rules evaluation');
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[rules-engine] Starting multi-rule evaluation...');
+    logger.debug('[rules-engine] Starting multi-rule evaluation...');
 
     // Fetch all enabled rules
     const { data: rules, error: rulesError } = await supabase
@@ -98,18 +98,18 @@ Deno.serve(async (req) => {
       .order('code');
 
     if (rulesError) {
-      console.error('[rules-engine] Error fetching rules:', rulesError);
+      logger.error('[rules-engine] Error fetching rules:', rulesError);
       throw rulesError;
     }
 
-    console.log(`[rules-engine] Found ${rules?.length || 0} enabled rules`);
+    logger.debug(`[rules-engine] Found ${rules?.length || 0} enabled rules`);
 
     const allResults: RuleResult[] = [];
     let totalActions = 0;
 
     // Process each rule
     for (const rule of rules || []) {
-      console.log(`[rules-engine] Evaluating rule: ${rule.code}`);
+      logger.debug(`[rules-engine] Evaluating rule: ${rule.code}`);
       
       try {
         switch (rule.code) {
@@ -210,10 +210,10 @@ Deno.serve(async (req) => {
             break;
             
           default:
-            console.log(`[rules-engine] Unknown rule code: ${rule.code}, skipping`);
+            logger.debug(`[rules-engine] Unknown rule code: ${rule.code}, skipping`);
         }
       } catch (ruleError) {
-        console.error(`[rules-engine] Error processing rule ${rule.code}:`, ruleError);
+        logger.error(`[rules-engine] Error processing rule ${rule.code}:`, ruleError);
       }
     }
 
@@ -226,7 +226,7 @@ Deno.serve(async (req) => {
       executed_at: new Date().toISOString()
     };
 
-    console.log(`[rules-engine] Completed. Evaluated ${rules?.length || 0} rules, executed ${totalActions} actions in ${durationMs}ms.`);
+    logger.info(`[rules-engine] Completed. Evaluated ${rules?.length || 0} rules, executed ${totalActions} actions in ${durationMs}ms.`);
 
     // Log successful job execution
     try {
@@ -243,7 +243,7 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch (logErr) {
-      console.error('[rules-engine] Failed to log job run:', logErr);
+      logger.warn('[rules-engine] Failed to log job run:', logErr);
     }
 
     return new Response(
@@ -253,7 +253,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     const durationMs = Date.now() - startedAt;
-    console.error('[rules-engine] Fatal error:', error);
+    logger.error('[rules-engine] Fatal error:', error);
 
     // Log failed job execution
     try {
@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
         p_job_source: 'cron'
       });
     } catch (logErr) {
-      console.error('[rules-engine] Failed to log error:', logErr);
+      logger.warn('[rules-engine] Failed to log error:', logErr);
     }
 
     return new Response(
