@@ -1,4 +1,5 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { timingSafeEqual } from './crypto-utils.ts';
 
 interface CallerValidationResult {
   authorized: boolean;

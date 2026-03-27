@@ -125,6 +125,23 @@ export async function signJob(
   }
 }
 
+/**
+ * Timing-safe string comparison for secret validation.
+ * Prevents timing side-channel attacks by ensuring constant-time comparison.
+ * If lengths differ, compares against self to maintain constant time, then returns false.
+ */
+export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const aBuf = encoder.encode(a);
+  const bBuf = encoder.encode(b);
+  if (aBuf.byteLength !== bBuf.byteLength) {
+    // Compare against self to burn the same CPU time, then return false
+    await crypto.subtle.timingSafeEqual(aBuf, aBuf);
+    return false;
+  }
+  return crypto.subtle.timingSafeEqual(aBuf, bBuf);
+}
+
 // Utility functions for Base64 conversion
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
