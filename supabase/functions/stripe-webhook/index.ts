@@ -8,7 +8,7 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
 
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
-console.log("[STRIPE-WEBHOOK] Function initialized");
+logger.info("[STRIPE-WEBHOOK] Function initialized");
 
 // V4: UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -31,7 +31,7 @@ async function findTenantByCustomerOrMetadata(
     .maybeSingle();
 
   if (tenantSub) {
-    console.log(`[STRIPE-WEBHOOK] Found tenant by customer_id: ${tenantSub.tenant_id}`);
+    logger.info(`[STRIPE-WEBHOOK] Found tenant by customer_id: ${tenantSub.tenant_id}`);
     return tenantSub;
   }
 
@@ -39,11 +39,11 @@ async function findTenantByCustomerOrMetadata(
   // V4: Validate tenant_id is a valid UUID before using
   if (metadata?.tenant_id) {
     if (!isValidUUID(metadata.tenant_id)) {
-      console.error(`[STRIPE-WEBHOOK] Invalid tenant_id format in metadata: ${metadata.tenant_id}`);
+      logger.error(`[STRIPE-WEBHOOK] Invalid tenant_id format in metadata: ${metadata.tenant_id}`);
       return null;
     }
     
-    console.log(`[STRIPE-WEBHOOK] Trying fallback by metadata.tenant_id: ${metadata.tenant_id}`);
+    logger.info(`[STRIPE-WEBHOOK] Trying fallback by metadata.tenant_id: ${metadata.tenant_id}`);
     
     const { data: tenantSubByMeta } = await supabase
       .from("tenant_subscriptions")
@@ -58,12 +58,12 @@ async function findTenantByCustomerOrMetadata(
         .update({ stripe_customer_id: customerId })
         .eq("tenant_id", metadata.tenant_id);
       
-      console.log(`[STRIPE-WEBHOOK] Linked customer ${customerId} to tenant ${metadata.tenant_id}`);
+      logger.info(`[STRIPE-WEBHOOK] Linked customer ${customerId} to tenant ${metadata.tenant_id}`);
       return tenantSubByMeta;
     }
   }
 
-  console.error(`[STRIPE-WEBHOOK] Tenant not found for customer: ${customerId}`);
+  logger.error(`[STRIPE-WEBHOOK] Tenant not found for customer: ${customerId}`);
   return null;
 }
 
@@ -71,7 +71,7 @@ Deno.serve(async (request) => {
   const signature = request.headers.get("Stripe-Signature");
 
   if (!signature) {
-    console.error("[STRIPE-WEBHOOK] No signature header");
+    logger.error("[STRIPE-WEBHOOK] No signature header");
     return new Response("No signature", { status: 400 });
   }
 
@@ -80,7 +80,7 @@ Deno.serve(async (request) => {
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
 
     if (!webhookSecret) {
-      console.error("[STRIPE-WEBHOOK] No webhook secret configured");
+      logger.error("[STRIPE-WEBHOOK] No webhook secret configured");
       return new Response("Webhook secret not configured", { status: 500 });
     }
 
@@ -92,7 +92,7 @@ Deno.serve(async (request) => {
       cryptoProvider
     );
 
-    console.log(`[STRIPE-WEBHOOK] Event received: ${event.type}`);
+    logger.info(`[STRIPE-WEBHOOK] Event received: ${event.type}`);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -103,7 +103,7 @@ Deno.serve(async (request) => {
       case "checkout.session.completed": {
         // Handle first-time checkout - link customer to tenant
         const session = event.data.object as Stripe.Checkout.Session;
-        console.log(`[STRIPE-WEBHOOK] Checkout completed: ${session.id}`);
+        logger.info(`[STRIPE-WEBHOOK] Checkout completed: ${session.id}`);
 
         const customerId = session.customer as string;
         const tenantId = session.metadata?.tenant_id;
@@ -129,9 +129,9 @@ Deno.serve(async (request) => {
             .eq("tenant_id", tenantId);
 
           if (updateError) {
-            console.error("[STRIPE-WEBHOOK] Error linking customer:", updateError);
+            logger.error("[STRIPE-WEBHOOK] Error linking customer:", updateError);
           } else {
-            console.log(`[STRIPE-WEBHOOK] Linked customer ${customerId} to tenant ${tenantId}`);
+            logger.info(`[STRIPE-WEBHOOK] Linked customer ${customerId} to tenant ${tenantId}`);
           }
         }
         break;
@@ -140,7 +140,7 @@ Deno.serve(async (request) => {
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
-        console.log(`[STRIPE-WEBHOOK] Processing subscription: ${subscription.id}`);
+        logger.info(`[STRIPE-WEBHOOK] Processing subscription: ${subscription.id}`);
 
         const customerId = subscription.customer as string;
         
@@ -151,7 +151,7 @@ Deno.serve(async (request) => {
           .eq("plan_type", "addon");
         
         const ADDON_PRICE_IDS = addonMappings?.map((m: any) => m.stripe_price_id) || [];
-        console.log(`[STRIPE-WEBHOOK] Loaded ${ADDON_PRICE_IDS.length} addon price IDs from DB`);
+        logger.info(`[STRIPE-WEBHOOK] Loaded ${ADDON_PRICE_IDS.length} addon price IDs from DB`);
         
         // V4: Process ALL line items to separate base plan from addons
         let baseDevices = 0;
@@ -165,17 +165,17 @@ Deno.serve(async (request) => {
           if (ADDON_PRICE_IDS.includes(priceId)) {
             // This is an addon - quantity IS the number of extra devices
             addonDevices += quantity;
-            console.log(`[STRIPE-WEBHOOK] Addon detected: ${priceId}, quantity: ${quantity}`);
+            logger.info(`[STRIPE-WEBHOOK] Addon detected: ${priceId}, quantity: ${quantity}`);
           } else {
             // This is the base plan
             basePriceId = priceId;
             baseDevices = quantity; // Usually 1 for base plan
-            console.log(`[STRIPE-WEBHOOK] Base plan detected: ${priceId}, quantity: ${quantity}`);
+            logger.info(`[STRIPE-WEBHOOK] Base plan detected: ${priceId}, quantity: ${quantity}`);
           }
         }
         
         const totalDevices = baseDevices + addonDevices;
-        console.log(`[STRIPE-WEBHOOK] Device breakdown: base=${baseDevices}, addon=${addonDevices}, total=${totalDevices}`);
+        logger.info(`[STRIPE-WEBHOOK] Device breakdown: base=${baseDevices}, addon=${addonDevices}, total=${totalDevices}`);
 
         const status = subscription.status;
         const trialEnd = subscription.trial_end 
@@ -190,7 +190,7 @@ Deno.serve(async (request) => {
         const tenantSub = await findTenantByCustomerOrMetadata(supabase, customerId, metadata);
 
         if (!tenantSub) {
-          console.error("[STRIPE-WEBHOOK] Could not find tenant for subscription");
+          logger.error("[STRIPE-WEBHOOK] Could not find tenant for subscription");
           break;
         }
 
@@ -209,9 +209,9 @@ Deno.serve(async (request) => {
           .eq("tenant_id", tenantSub.tenant_id);
 
         if (updateError) {
-          console.error("[STRIPE-WEBHOOK] Error updating subscription:", updateError);
+          logger.error("[STRIPE-WEBHOOK] Error updating subscription:", updateError);
         } else {
-          console.log(`[STRIPE-WEBHOOK] Subscription updated for tenant: ${tenantSub.tenant_id}`);
+          logger.info(`[STRIPE-WEBHOOK] Subscription updated for tenant: ${tenantSub.tenant_id}`);
           
           // Log subscription event for audit
           const eventType = event.type === "customer.subscription.created" ? "subscription_created" : "subscription_updated";
@@ -263,7 +263,7 @@ Deno.serve(async (request) => {
 
       case "customer.subscription.trial_will_end": {
         const subscription = event.data.object as Stripe.Subscription;
-        console.log(`[STRIPE-WEBHOOK] Trial ending soon: ${subscription.id}`);
+        logger.info(`[STRIPE-WEBHOOK] Trial ending soon: ${subscription.id}`);
 
         const customerId = subscription.customer as string;
         const metadata = subscription.metadata;
@@ -287,14 +287,14 @@ Deno.serve(async (request) => {
               },
             });
 
-          console.log(`[STRIPE-WEBHOOK] Trial ending alert created for tenant: ${tenantSub.tenant_id}`);
+          logger.info(`[STRIPE-WEBHOOK] Trial ending alert created for tenant: ${tenantSub.tenant_id}`);
         }
         break;
       }
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
-        console.log(`[STRIPE-WEBHOOK] Subscription deleted: ${subscription.id}`);
+        logger.info(`[STRIPE-WEBHOOK] Subscription deleted: ${subscription.id}`);
 
         const customerId = subscription.customer as string;
         const metadata = subscription.metadata;
@@ -312,7 +312,7 @@ Deno.serve(async (request) => {
           const pendingDowngradeTo = tenantSubscription?.pending_downgrade_to || metadata?.pending_downgrade_to;
           
           if (pendingDowngradeTo) {
-            console.log(`[STRIPE-WEBHOOK] Processing scheduled downgrade to: ${pendingDowngradeTo}`);
+            logger.info(`[STRIPE-WEBHOOK] Processing scheduled downgrade to: ${pendingDowngradeTo}`);
             
             // V4: Get target plan config from database
             const { data: targetPlanMapping } = await supabase
@@ -334,7 +334,7 @@ Deno.serve(async (request) => {
                 },
               });
               
-              console.log(`[STRIPE-WEBHOOK] Created new subscription for downgrade: ${newSubscription.id}`);
+              logger.info(`[STRIPE-WEBHOOK] Created new subscription for downgrade: ${newSubscription.id}`);
               
               // Get plan ID
               const { data: plan } = await supabase
@@ -375,9 +375,9 @@ Deno.serve(async (request) => {
                 stripe_event_id: event.id,
               });
               
-              console.log(`[STRIPE-WEBHOOK] Downgrade completed for tenant: ${tenantSub.tenant_id}`);
+              logger.info(`[STRIPE-WEBHOOK] Downgrade completed for tenant: ${tenantSub.tenant_id}`);
             } else {
-              console.error(`[STRIPE-WEBHOOK] Could not find plan mapping for: ${pendingDowngradeTo}`);
+              logger.error(`[STRIPE-WEBHOOK] Could not find plan mapping for: ${pendingDowngradeTo}`);
             }
           } else {
             // Normal cancellation - downgrade to free
@@ -408,7 +408,7 @@ Deno.serve(async (request) => {
                 p_device_quantity: 3,
               });
 
-              console.log(`[STRIPE-WEBHOOK] Downgraded to free plan: ${tenantSub.tenant_id}`);
+              logger.info(`[STRIPE-WEBHOOK] Downgraded to free plan: ${tenantSub.tenant_id}`);
             }
           }
         }
@@ -417,7 +417,7 @@ Deno.serve(async (request) => {
 
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
-        console.log(`[STRIPE-WEBHOOK] Payment failed for invoice: ${invoice.id}`);
+        logger.info(`[STRIPE-WEBHOOK] Payment failed for invoice: ${invoice.id}`);
 
         const customerId = invoice.customer as string;
 
@@ -447,13 +447,13 @@ Deno.serve(async (request) => {
               },
             });
 
-          console.log(`[STRIPE-WEBHOOK] Payment failure alert created for tenant: ${tenantSub.tenant_id}`);
+          logger.info(`[STRIPE-WEBHOOK] Payment failure alert created for tenant: ${tenantSub.tenant_id}`);
         }
         break;
       }
 
       default:
-        console.log(`[STRIPE-WEBHOOK] Unhandled event type: ${event.type}`);
+        logger.info(`[STRIPE-WEBHOOK] Unhandled event type: ${event.type}`);
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -461,7 +461,7 @@ Deno.serve(async (request) => {
       status: 200,
     });
   } catch (err) {
-    console.error("[STRIPE-WEBHOOK] Error:", err);
+    logger.error("[STRIPE-WEBHOOK] Error:", err);
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }),
       {

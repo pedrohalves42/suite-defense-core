@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
     }
     
     if (compareVersions(agentVersion, MIN_SUPPORTED_VERSION) < 0) {
-      console.warn('[submit-job-result] SSA-023: Rejecting job from outdated agent', {
+      logger.warn('[submit-job-result] SSA-023: Rejecting job from outdated agent', {
         agent: agent.agent_name,
         agentVersion,
         minRequired: MIN_SUPPORTED_VERSION
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
 
     // 2. Verificar HMAC obrigatorio
     if (!agent.hmac_secret) {
-      console.error('[submit-job-result] CRITICAL: Agent without HMAC secret:', agent.agent_name)
+      logger.error('[submit-job-result] CRITICAL: Agent without HMAC secret:', agent.agent_name)
       return new Response(
         JSON.stringify({ error: 'HMAC secret not configured for agent' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
     )
     if (!hmacResult.valid) {
       // DEBUG LOGGING: Enhanced error details
-      console.error('[submit-job-result] HMAC validation failed:', {
+      logger.error('[submit-job-result] HMAC validation failed:', {
         agent: agent.agent_name,
         error_code: hmacResult.errorCode,
         error_message: hmacResult.errorMessage,
@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
     }
     
     // DEBUG LOGGING: Log successful validation
-    console.log('[submit-job-result] HMAC validation SUCCESS for agent:', agent.agent_name);
+    logger.debug('[submit-job-result] HMAC validation SUCCESS for agent:', agent.agent_name);
 
     // 3. Rate limiting
     const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'submit-job-result', {
@@ -242,7 +242,7 @@ Deno.serve(async (req) => {
       let normalized = raw_execution_id
       if (raw_execution_id.startsWith('exec-')) {
         normalized = raw_execution_id.substring(5)
-        console.log('[submit-job-result] [P2.1] Normalized execution_id from agent format:', {
+        logger.debug('[submit-job-result] [P2.1] Normalized execution_id from agent format:', {
           original: raw_execution_id,
           normalized
         })
@@ -252,7 +252,7 @@ Deno.serve(async (req) => {
       if (uuidRegex.test(normalized)) {
         execution_id = normalized
       } else {
-        console.warn('[submit-job-result] [P2.1] execution_id is not a valid UUID after normalization:', {
+        logger.warn('[submit-job-result] [P2.1] execution_id is not a valid UUID after normalization:', {
           original: raw_execution_id,
           normalized,
           job_id
@@ -288,7 +288,7 @@ Deno.serve(async (req) => {
 
       // ? BUG FIX P1: Alertar se execution_time fornecido sem timestamps
       if (!started_at || !finished_at) {
-        console.warn('[submit-job-result] execution_time_seconds provided without timestamps', {
+        logger.warn('[submit-job-result] execution_time_seconds provided without timestamps', {
           job_id,
           agent: agent.agent_name,
           execution_time_seconds,
@@ -304,7 +304,7 @@ Deno.serve(async (req) => {
     // ============================================================
     const TRANSITION_DATE = new Date('2026-01-19T00:00:00Z')
     
-    console.log('[submit-job-result] Processing job result:', {
+    logger.debug('[submit-job-result] Processing job result:', {
       job_id,
       agent: agent.agent_name,
       status,
@@ -336,7 +336,7 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (fetchError) {
-      console.error('[submit-job-result] Database error fetching job:', job_id, fetchError.message)
+      logger.error('[submit-job-result] Database error fetching job:', job_id, fetchError.message)
       return new Response(
         JSON.stringify({ error: 'Erro ao buscar job', details: fetchError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -344,14 +344,14 @@ Deno.serve(async (req) => {
     }
 
     if (!job) {
-      console.error('[submit-job-result] Job not found in database:', job_id)
+      logger.error('[submit-job-result] Job not found in database:', job_id)
       return new Response(
         JSON.stringify({ error: 'Job nao encontrado' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
-    console.log('[submit-job-result] Job found:', { id: job.id, type: job.type, status: job.status })
+    logger.debug('[submit-job-result] Job found:', { id: job.id, type: job.type, status: job.status })
 
     // Validar que o job pertence ao agente
     if (job.agent_name !== agent.agent_name) {
@@ -371,7 +371,7 @@ Deno.serve(async (req) => {
         }
       })
       
-      console.error('[submit-job-result] Job ownership mismatch:', {
+      logger.error('[submit-job-result] Job ownership mismatch:', {
         job_id,
         job_agent: job.agent_name,
         requesting_agent: agent.agent_name
@@ -401,7 +401,7 @@ Deno.serve(async (req) => {
         }
       })
       
-      console.error('[submit-job-result] Cross-tenant access blocked:', {
+      logger.error('[submit-job-result] Cross-tenant access blocked:', {
         job_id,
         job_tenant: job.tenant_id,
         agent_tenant: agent.tenant_id
@@ -424,7 +424,7 @@ Deno.serve(async (req) => {
     // ============================================================
     const jobCreatedAt = new Date(job.created_at || 0)
     if (!execution_id && jobCreatedAt > TRANSITION_DATE) {
-      console.error('[submit-job-result] [V-203] Missing execution_id for recent job:', {
+      logger.error('[submit-job-result] [V-203] Missing execution_id for recent job:', {
         job_id,
         job_created_at: job.created_at,
         transition_date: TRANSITION_DATE.toISOString(),
@@ -467,9 +467,9 @@ Deno.serve(async (req) => {
         .maybeSingle()
       
       if (execFetchError) {
-        console.error('[submit-job-result] [P1] Error fetching execution payload_hash:', execFetchError)
+        logger.error('[submit-job-result] [P1] Error fetching execution payload_hash:', execFetchError)
       } else if (execution?.payload_hash && job.payload_hash !== execution.payload_hash) {
-        console.error('[submit-job-result] [SECURITY] [P1] PAYLOAD_TAMPERED:', {
+        logger.error('[submit-job-result] [SECURITY] [P1] PAYLOAD_TAMPERED:', {
           job_id,
           execution_id,
           job_payload_hash: job.payload_hash,
@@ -503,7 +503,7 @@ Deno.serve(async (req) => {
           { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       } else if (execution?.payload_hash) {
-        console.log('[submit-job-result] [P1] Payload integrity VERIFIED:', {
+        logger.debug('[submit-job-result] [P1] Payload integrity VERIFIED:', {
           job_id,
           execution_id,
           hash_match: true
@@ -513,7 +513,7 @@ Deno.serve(async (req) => {
 
     // SSA-006: Impedir que job seja processado duas vezes COM LOGGING
     if (['done', 'completed', 'failed'].includes(job.status)) {
-      console.log('[submit-job-result] Job already done - duplicate submission:', job_id)
+      logger.debug('[submit-job-result] Job already done - duplicate submission:', job_id)
       
       // SSA-006: Log duplicate submission attempt in security_logs
       await logSecurityEvent({
@@ -560,7 +560,7 @@ Deno.serve(async (req) => {
             outputData = parsed as Record<string, unknown>
           }
         } catch (parseErr) {
-          console.warn('[submit-job-result] Failed to parse output as JSON string:', {
+          logger.warn('[submit-job-result] Failed to parse output as JSON string:', {
             job_id: job.id,
             output_preview: String(output).substring(0, 200),
             error: parseErr instanceof Error ? parseErr.message : 'Unknown error'
@@ -581,7 +581,7 @@ Deno.serve(async (req) => {
       // PROCESS SOFTWARE INVENTORY (ANTES do update)
       if (job.type === 'software_inventory_collect' && (outputData.software || outputData.installed_software)) {
         try {
-          console.log('[submit-job-result] [ZERO_TRUST] Processing software inventory BEFORE marking completed...')
+          logger.debug('[submit-job-result] [ZERO_TRUST] Processing software inventory BEFORE marking completed...')
           const softwareList = outputData.software || outputData.installed_software || []
           
           if (Array.isArray(softwareList) && softwareList.length > 0) {
@@ -603,7 +603,7 @@ Deno.serve(async (req) => {
               new Map(rawRecords.map(r => [`${r.agent_id}|${r.name}|${r.version}`, r])).values()
             )
             
-            console.log(`[submit-job-result] Deduplicated software records: ${rawRecords.length} -> ${softwareRecords.length}`)
+            logger.debug(`[submit-job-result] Deduplicated software records: ${rawRecords.length} -> ${softwareRecords.length}`)
             
             // UPSERT em batches - evita race condition e duplicate key errors
             const batchSize = 100
@@ -618,13 +618,13 @@ Deno.serve(async (req) => {
                 })
               
               if (upsertError) {
-                console.error(`[submit-job-result] Error upserting software batch ${i}:`, upsertError)
+                logger.error(`[submit-job-result] Error upserting software batch ${i}:`, upsertError)
               } else {
                 upsertedCount += batch.length
               }
             }
             
-            console.log(`[submit-job-result] [ZERO_TRUST] Upserted ${upsertedCount}/${softwareRecords.length} software records`)
+            logger.debug(`[submit-job-result] [ZERO_TRUST] Upserted ${upsertedCount}/${softwareRecords.length} software records`)
             
             if (upsertedCount > 0) {
               sideEffectsInserted = true
@@ -632,14 +632,14 @@ Deno.serve(async (req) => {
             }
           }
         } catch (swErr) {
-          console.error('[submit-job-result] Error processing software inventory:', swErr)
+          logger.error('[submit-job-result] Error processing software inventory:', swErr)
         }
       }
       
       // PROCESS WEB ACTIVITY (ANTES do update)
       if (job.type === 'collect_web_activity') {
         try {
-          console.log('[submit-job-result] [ZERO_TRUST] Processing web activity BEFORE marking completed...')
+          logger.debug('[submit-job-result] [ZERO_TRUST] Processing web activity BEFORE marking completed...')
 
           const dnsCache = Array.isArray(outputData.dns_cache) ? outputData.dns_cache : []
 
@@ -772,30 +772,30 @@ Deno.serve(async (req) => {
                 .insert(batch)
 
               if (insertError) {
-                console.error(`[submit-job-result] Error inserting web activity batch ${i}:`, insertError)
+                logger.error(`[submit-job-result] Error inserting web activity batch ${i}:`, insertError)
               } else {
                 insertedCount += batch.length
               }
             }
 
-            console.log(`[submit-job-result] [ZERO_TRUST] Inserted ${insertedCount}/${activityRecords.length} web activity records`)
+            logger.debug(`[submit-job-result] [ZERO_TRUST] Inserted ${insertedCount}/${activityRecords.length} web activity records`)
 
             if (insertedCount > 0) {
               sideEffectsInserted = true
               insertedRecordsCount = insertedCount
             }
           } else {
-            console.log('[submit-job-result] [ZERO_TRUST] No web activity domains found in payload')
+            logger.debug('[submit-job-result] [ZERO_TRUST] No web activity domains found in payload')
           }
         } catch (webErr) {
-          console.error('[submit-job-result] Error processing web activity:', webErr)
+          logger.error('[submit-job-result] Error processing web activity:', webErr)
         }
       }
 
       // PROCESS ANTIVIRUS STATUS (ANTES do update)
       if (job.type === 'collect_antivirus_status' && outputData.antivirus_products) {
         try {
-          console.log('[submit-job-result] [ZERO_TRUST] Processing antivirus status BEFORE marking completed...')
+          logger.debug('[submit-job-result] [ZERO_TRUST] Processing antivirus status BEFORE marking completed...')
           const avProducts = outputData.antivirus_products as Array<Record<string, unknown>>
           
           if (Array.isArray(avProducts) && avProducts.length > 0) {
@@ -817,7 +817,7 @@ Deno.serve(async (req) => {
               .eq('agent_id', job.agent_id)
             
             if (deleteError) {
-              console.error('[submit-job-result] Error clearing old AV status:', deleteError)
+              logger.error('[submit-job-result] Error clearing old AV status:', deleteError)
             }
 
             const collectedAt = outputData.collected_at
@@ -844,23 +844,23 @@ Deno.serve(async (req) => {
               .insert(avRecords)
             
             if (insertError) {
-              console.error('[submit-job-result] Error inserting AV status:', insertError)
+              logger.error('[submit-job-result] Error inserting AV status:', insertError)
             } else {
-              console.log(`[submit-job-result] [ZERO_TRUST] Inserted ${avRecords.length} AV status records`)
+              logger.debug(`[submit-job-result] [ZERO_TRUST] Inserted ${avRecords.length} AV status records`)
               sideEffectsInserted = true
               insertedRecordsCount = avRecords.length
             }
           }
         } catch (avErr) {
-          console.error('[submit-job-result] Error processing antivirus status:', avErr)
+          logger.error('[submit-job-result] Error processing antivirus status:', avErr)
         }
       }
 
       // PROCESS NETWORK INFO (ANTES do update)
       if (job.type === 'collect_network_info' && (outputData.adapters || outputData.ip_addresses || outputData.network_adapters)) {
         try {
-          console.log('[submit-job-result] [ZERO_TRUST] Processing network info BEFORE marking completed...')
-          console.log('[submit-job-result] [NET-DEBUG] Output keys:', Object.keys(outputData))
+          logger.debug('[submit-job-result] [ZERO_TRUST] Processing network info BEFORE marking completed...')
+          logger.debug('[submit-job-result] [NET-DEBUG] Output keys:', Object.keys(outputData))
           
           const adapters = (outputData.adapters || []) as Array<Record<string, unknown>>
           const ipAddresses = (outputData.ip_addresses || []) as Array<Record<string, unknown>>
@@ -914,7 +914,7 @@ Deno.serve(async (req) => {
             collected_at: collectedAt,
           }
 
-          console.log('[submit-job-result] [NET-DEBUG] Network record summary:', {
+          logger.debug('[submit-job-result] [NET-DEBUG] Network record summary:', {
             adapters_count: networkAdapters.length,
             ips_count: ipAddresses.length,
             public_ip: derivedPublicIp,
@@ -927,9 +927,9 @@ Deno.serve(async (req) => {
             .insert(networkRecord)
           
           if (insertError) {
-            console.error('[submit-job-result] Error inserting network info:', insertError)
+            logger.error('[submit-job-result] Error inserting network info:', insertError)
           } else {
-            console.log('[submit-job-result] [ZERO_TRUST] Inserted network info record')
+            logger.debug('[submit-job-result] [ZERO_TRUST] Inserted network info record')
             sideEffectsInserted = true
             insertedRecordsCount += 1
           }
@@ -942,14 +942,14 @@ Deno.serve(async (req) => {
             .lt('collected_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
 
         } catch (netErr) {
-          console.error('[submit-job-result] Error processing network info:', netErr)
+          logger.error('[submit-job-result] Error processing network info:', netErr)
         }
       }
 
       // PROCESS CERTIFICATES (ANTES do update)
       if (job.type === 'collect_certificates' && (outputData.certificates || outputData.cert_store)) {
         try {
-          console.log('[submit-job-result] [ZERO_TRUST] Processing certificates BEFORE marking completed...')
+          logger.debug('[submit-job-result] [ZERO_TRUST] Processing certificates BEFORE marking completed...')
           const certs = (outputData.certificates || outputData.cert_store || []) as Array<Record<string, unknown>>
           
           if (Array.isArray(certs) && certs.length > 0) {
@@ -988,22 +988,22 @@ Deno.serve(async (req) => {
               .insert(uniqueCerts)
             
             if (insertError) {
-              console.error('[submit-job-result] Error inserting certificates:', insertError)
+              logger.error('[submit-job-result] Error inserting certificates:', insertError)
             } else {
-              console.log(`[submit-job-result] [ZERO_TRUST] Inserted ${uniqueCerts.length} certificate records`)
+              logger.debug(`[submit-job-result] [ZERO_TRUST] Inserted ${uniqueCerts.length} certificate records`)
               sideEffectsInserted = true
               insertedRecordsCount += uniqueCerts.length
             }
           }
         } catch (certErr) {
-          console.error('[submit-job-result] Error processing certificates:', certErr)
+          logger.error('[submit-job-result] Error processing certificates:', certErr)
         }
       }
 
       // PROCESS DISK METRICS (ANTES do update)
       if (job.type === 'collect_disk_metrics' && (outputData.drives || outputData.disks || outputData.disk_metrics)) {
         try {
-          console.log('[submit-job-result] [ZERO_TRUST] Processing disk metrics BEFORE marking completed...')
+          logger.debug('[submit-job-result] [ZERO_TRUST] Processing disk metrics BEFORE marking completed...')
           const drives = (outputData.drives || outputData.disks || outputData.disk_metrics || []) as Array<Record<string, unknown>>
           
           if (Array.isArray(drives) && drives.length > 0) {
@@ -1043,15 +1043,15 @@ Deno.serve(async (req) => {
               .insert(diskRecords)
             
             if (insertError) {
-              console.error('[submit-job-result] Error inserting disk metrics:', insertError)
+              logger.error('[submit-job-result] Error inserting disk metrics:', insertError)
             } else {
-              console.log(`[submit-job-result] [ZERO_TRUST] Inserted ${diskRecords.length} disk metric records`)
+              logger.debug(`[submit-job-result] [ZERO_TRUST] Inserted ${diskRecords.length} disk metric records`)
               sideEffectsInserted = true
               insertedRecordsCount += diskRecords.length
             }
           }
         } catch (diskErr) {
-          console.error('[submit-job-result] Error processing disk metrics:', diskErr)
+          logger.error('[submit-job-result] Error processing disk metrics:', diskErr)
         }
       }
     }
@@ -1076,7 +1076,7 @@ Deno.serve(async (req) => {
     let signatureVerificationDetails: Record<string, unknown> = {}
     
     if (result_signature && execution_id && nonce) {
-      console.log('[submit-job-result] [P1_SIGNATURE] Verifying result signature:', {
+      logger.debug('[submit-job-result] [P1_SIGNATURE] Verifying result signature:', {
         job_id,
         execution_id,
         algorithm: signature_algorithm || 'ECDSA-P256-SHA256',
@@ -1112,14 +1112,14 @@ Deno.serve(async (req) => {
         }
         
         if (verifyResult.valid) {
-          console.log('[submit-job-result] [P1_SIGNATURE] Signature VERIFIED:', {
+          logger.debug('[submit-job-result] [P1_SIGNATURE] Signature VERIFIED:', {
             job_id,
             execution_id,
             keyVersion: verifyResult.keyVersion,
             isCurrent: verifyResult.isCurrent
           })
         } else {
-          console.warn('[submit-job-result] [P1_SIGNATURE] Signature INVALID:', {
+          logger.warn('[submit-job-result] [P1_SIGNATURE] Signature INVALID:', {
             job_id,
             execution_id,
             errorCode: verifyResult.errorCode,
@@ -1145,7 +1145,7 @@ Deno.serve(async (req) => {
           })
         }
       } catch (sigError) {
-        console.error('[submit-job-result] [P1_SIGNATURE] Verification error:', sigError)
+        logger.error('[submit-job-result] [P1_SIGNATURE] Verification error:', sigError)
         signatureVerificationDetails = {
           verified: false,
           error: sigError instanceof Error ? sigError.message : 'Unknown error'
@@ -1153,7 +1153,7 @@ Deno.serve(async (req) => {
       }
     } else if (result_signature) {
       // Signature provided but missing execution_id or nonce
-      console.warn('[submit-job-result] [P1_SIGNATURE] Signature provided but missing context:', {
+      logger.warn('[submit-job-result] [P1_SIGNATURE] Signature provided but missing context:', {
         job_id,
         has_execution_id: !!execution_id,
         has_nonce: !!nonce
@@ -1167,7 +1167,7 @@ Deno.serve(async (req) => {
     // Tentar finalizar a execução via RPC se execution_id foi fornecido
     let executionFinalized = false
     if (execution_id) {
-      console.log('[submit-job-result] [AUDIT_TRAIL] Finalizing job execution:', {
+      logger.debug('[submit-job-result] [AUDIT_TRAIL] Finalizing job execution:', {
         job_id,
         execution_id,
         status,
@@ -1199,7 +1199,7 @@ Deno.serve(async (req) => {
         })
       
       if (execError) {
-        console.error('[submit-job-result] [AUDIT_TRAIL] [P2.1] Error finalizing execution:', {
+        logger.error('[submit-job-result] [AUDIT_TRAIL] [P2.1] Error finalizing execution:', {
           error: execError.message,
           error_code: execError.code,
           error_details: execError.details,
@@ -1210,7 +1210,7 @@ Deno.serve(async (req) => {
         // Continuar mesmo se falhar - o current_execution_id será limpo no UPDATE abaixo
       } else if (execResult?.success) {
         executionFinalized = true
-        console.log('[submit-job-result] [AUDIT_TRAIL] [P2.1] Execution finalized successfully:', {
+        logger.debug('[submit-job-result] [AUDIT_TRAIL] [P2.1] Execution finalized successfully:', {
           ...execResult,
           job_id,
           execution_id,
@@ -1219,7 +1219,7 @@ Deno.serve(async (req) => {
           execution_hash: execution_hash ? execution_hash.substring(0, 16) + '...' : 'NOT_PROVIDED'
         })
       } else if (execResult?.error) {
-        console.warn('[submit-job-result] [AUDIT_TRAIL] [P2.1] Execution finalization failed:', {
+        logger.warn('[submit-job-result] [AUDIT_TRAIL] [P2.1] Execution finalization failed:', {
           result: execResult,
           job_id,
           execution_id,
@@ -1230,7 +1230,7 @@ Deno.serve(async (req) => {
     } else {
       // Backward compatibility: agentes antigos não enviam execution_id
       // Tentar buscar a execution mais recente para este job
-      console.log('[submit-job-result] [AUDIT_TRAIL] No execution_id provided, attempting fallback lookup')
+      logger.debug('[submit-job-result] [AUDIT_TRAIL] No execution_id provided, attempting fallback lookup')
       
       // FIX 2026-01-19: Search for 'running' status (new RPC) OR 'claimed' (legacy)
       const { data: existingExecution } = await supabase
@@ -1244,7 +1244,7 @@ Deno.serve(async (req) => {
         .maybeSingle()
       
       if (existingExecution?.id) {
-        console.log('[submit-job-result] [AUDIT_TRAIL] Found existing execution for fallback:', existingExecution.id)
+        logger.debug('[submit-job-result] [AUDIT_TRAIL] Found existing execution for fallback:', existingExecution.id)
         
         const { data: execResult, error: execError } = await supabase
           .rpc('finalize_job_execution', {
@@ -1263,11 +1263,11 @@ Deno.serve(async (req) => {
         
         if (!execError && execResult?.success) {
           executionFinalized = true
-          console.log('[submit-job-result] [AUDIT_TRAIL] Fallback execution finalized:', execResult)
+          logger.debug('[submit-job-result] [AUDIT_TRAIL] Fallback execution finalized:', execResult)
         }
       } else {
         // FIX 2026-01-19: Create retroactive execution for jobs claimed before RPC fix
-        console.log('[submit-job-result] [AUDIT_TRAIL] No execution found - creating retroactive execution')
+        logger.debug('[submit-job-result] [AUDIT_TRAIL] No execution found - creating retroactive execution')
         
         const retroNonce = crypto.randomUUID()
         const retroExecutionId = crypto.randomUUID()
@@ -1294,10 +1294,10 @@ Deno.serve(async (req) => {
           })
         
         if (insertError) {
-          console.error('[submit-job-result] [AUDIT_TRAIL] Failed to create retroactive execution:', insertError)
+          logger.error('[submit-job-result] [AUDIT_TRAIL] Failed to create retroactive execution:', insertError)
         } else {
           executionFinalized = true
-          console.log('[submit-job-result] [AUDIT_TRAIL] Created retroactive execution:', {
+          logger.debug('[submit-job-result] [AUDIT_TRAIL] Created retroactive execution:', {
             execution_id: retroExecutionId,
             job_id,
             note: 'Job was claimed before RPC fix (2026-01-19)'
@@ -1320,7 +1320,7 @@ Deno.serve(async (req) => {
       current_execution_id: null
     }
     
-    console.log('[submit-job-result] [P2.1_CLEANUP] Setting current_execution_id = NULL for completed job:', {
+    logger.debug('[submit-job-result] [P2.1_CLEANUP] Setting current_execution_id = NULL for completed job:', {
       job_id,
       status,
       executionFinalized
@@ -1342,7 +1342,7 @@ Deno.serve(async (req) => {
     }
     
     // FASE 4: Log se execution foi finalizada
-    console.log('[submit-job-result] [AUDIT_TRAIL] Execution status before job update:', {
+    logger.debug('[submit-job-result] [AUDIT_TRAIL] Execution status before job update:', {
       job_id,
       executionFinalized,
       execution_id: execution_id || 'NOT_PROVIDED'
@@ -1355,7 +1355,7 @@ Deno.serve(async (req) => {
       const enforcementMethod = String(outputData.enforcement_method || 'none')
       const dnsFilterRunning = outputData.dns_filter_running === true
       
-      console.log('[submit-job-result] [GOVERNANCE] sync_blocked_websites enforcement check:', {
+      logger.debug('[submit-job-result] [GOVERNANCE] sync_blocked_websites enforcement check:', {
         job_id,
         agent: agent.agent_name,
         blocked_domains_count: blockedDomainsCount,
@@ -1371,7 +1371,7 @@ Deno.serve(async (req) => {
         // Domínios para bloquear mas nenhum enforcement - use 'completed' (valid transition) with warning in error_message
         updateData.status = 'completed'
         updateData.error_message = `[WARNING] ${blockedDomainsCount} domínios para bloquear mas enforcement_method=${enforcementMethod}. Nenhuma modificação real aplicada.`
-        console.warn('[submit-job-result] [GOVERNANCE] ENFORCEMENT FALHOU: sites salvos mas nao bloqueados', {
+        logger.warn('[submit-job-result] [GOVERNANCE] ENFORCEMENT FALHOU: sites salvos mas nao bloqueados', {
           job_id,
           agent: agent.agent_name,
           blocked_domains_count: blockedDomainsCount,
@@ -1380,10 +1380,10 @@ Deno.serve(async (req) => {
         })
       } else if (blockedDomainsCount === 0) {
         // Nenhum domínio para bloquear - isso é OK
-        console.log('[submit-job-result] [GOVERNANCE] Nenhum domínio para bloquear (lista vazia ou tenant sem bloqueios configurados)')
+        logger.debug('[submit-job-result] [GOVERNANCE] Nenhum domínio para bloquear (lista vazia ou tenant sem bloqueios configurados)')
       } else {
         // Enforcement real confirmado
-        console.log('[submit-job-result] [GOVERNANCE] ENFORCEMENT CONFIRMADO:', {
+        logger.debug('[submit-job-result] [GOVERNANCE] ENFORCEMENT CONFIRMADO:', {
           job_id,
           agent: agent.agent_name,
           enforcement_method: enforcementMethod,
@@ -1400,12 +1400,12 @@ Deno.serve(async (req) => {
           .eq('id', agent.id)
         
         if (syncUpdateError) {
-          console.error('[submit-job-result] Failed to update last_block_sync_at:', syncUpdateError)
+          logger.error('[submit-job-result] Failed to update last_block_sync_at:', syncUpdateError)
         } else {
-          console.log('[submit-job-result] Updated last_block_sync_at for agent:', agent.agent_name)
+          logger.debug('[submit-job-result] Updated last_block_sync_at for agent:', agent.agent_name)
         }
       } else {
-        console.warn('[submit-job-result] [GOVERNANCE] last_block_sync_at NAO atualizado - enforcement nao confirmado')
+        logger.warn('[submit-job-result] [GOVERNANCE] last_block_sync_at NAO atualizado - enforcement nao confirmado')
       }
     }
 
@@ -1413,13 +1413,13 @@ Deno.serve(async (req) => {
     if (job.type === 'collect_web_activity' && status === 'completed' && !sideEffectsInserted) {
       updateData.status = 'completed'
       updateData.error_message = '[WARNING] Coleta web concluída sem histórico disponível no endpoint (sem DNS cache/browser history neste ciclo).'
-      console.warn('[submit-job-result] [WEB_ACTIVITY_EMPTY] Completed sem dados de atividade web', {
+      logger.warn('[submit-job-result] [WEB_ACTIVITY_EMPTY] Completed sem dados de atividade web', {
         job_id,
         agent: agent.agent_name
       })
     }
 
-    console.log('[submit-job-result] [ZERO_TRUST] Updating job with data:', {
+    logger.debug('[submit-job-result] [ZERO_TRUST] Updating job with data:', {
       job_id,
       status: updateData.status,
       sideEffectsInserted,
@@ -1437,7 +1437,7 @@ Deno.serve(async (req) => {
       // ZERO TRUST: Se o erro for JOB_INTEGRITY_VIOLATION, logar claramente
       const isIntegrityViolation = updateError.message?.includes('JOB_INTEGRITY_VIOLATION')
       
-      console.error('[submit-job-result] Database update failed:', {
+      logger.error('[submit-job-result] Database update failed:', {
         job_id,
         error: updateError.message,
         error_code: updateError.code,
@@ -1447,7 +1447,7 @@ Deno.serve(async (req) => {
       })
       
       if (isIntegrityViolation) {
-        console.error('[submit-job-result] [ZERO_TRUST_BLOCKED] Trigger blocked completed without side effects!', {
+        logger.error('[submit-job-result] [ZERO_TRUST_BLOCKED] Trigger blocked completed without side effects!', {
           job_id,
           job_type: job.type,
           agent: agent.agent_name
@@ -1466,7 +1466,7 @@ Deno.serve(async (req) => {
 
     // [JOB_INTEGRITY_OK] - Log explícito de sucesso (prova de vida)
     if (status === 'completed') {
-      console.info('[JOB_INTEGRITY_OK]', {
+      logger.info('[JOB_INTEGRITY_OK]', {
         job_id: job.id,
         type: job.type,
         agent_id: job.agent_id,
@@ -1476,7 +1476,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    console.log('[submit-job-result] Job updated successfully:', {
+    logger.debug('[submit-job-result] Job updated successfully:', {
       job_id,
       agent: agent.agent_name,
       final_status: status,
@@ -1510,7 +1510,7 @@ Deno.serve(async (req) => {
       const isStillLegacy = legacyVersions.some(v => currentVersion.includes(v))
       
       if (isStillLegacy && targetVersion) {
-        console.warn('[submit-job-result] HARDENING WARNING: update_agent completed but agent still on legacy version', {
+        logger.warn('[submit-job-result] HARDENING WARNING: update_agent completed but agent still on legacy version', {
           job_id,
           agent: agent.agent_name,
           current_version: currentVersion,
@@ -1541,7 +1541,7 @@ Deno.serve(async (req) => {
     
     if (status === 'completed' && job.type && reportTriggerJobTypes.includes(job.type)) {
       try {
-        console.log('[submit-job-result] Triggering auto-generate-report for job type:', job.type)
+        logger.debug('[submit-job-result] Triggering auto-generate-report for job type:', job.type)
         
         const { error: reportError } = await supabase.functions.invoke('auto-generate-report', {
           body: {
@@ -1555,19 +1555,19 @@ Deno.serve(async (req) => {
         })
         
         if (reportError) {
-          console.error('[submit-job-result] Failed to trigger auto-generate-report:', reportError)
+          logger.error('[submit-job-result] Failed to trigger auto-generate-report:', reportError)
         } else {
-          console.log('[submit-job-result] Auto-generate-report triggered successfully')
+          logger.debug('[submit-job-result] Auto-generate-report triggered successfully')
         }
       } catch (reportErr) {
-        console.error('[submit-job-result] Exception triggering auto-generate-report:', reportErr)
+        logger.error('[submit-job-result] Exception triggering auto-generate-report:', reportErr)
       }
     }
 
     // FASE 3 - EVIDÊNCIA AUDITÁVEL: Detectar tentativas de acesso a sites bloqueados via DNS cache
     if (status === 'completed' && job.type === 'collect_web_activity' && output) {
       try {
-        console.log('[submit-job-result] Analyzing web activity for blocked access attempts...')
+        logger.debug('[submit-job-result] Analyzing web activity for blocked access attempts...')
         
         // Extrair domínios do DNS cache, browser history e payload web_activity v2
         const outputData = typeof output === 'object' ? output as Record<string, unknown> : {}
@@ -1631,9 +1631,9 @@ Deno.serve(async (req) => {
         }
         
         if (accessedDomains.size === 0) {
-          console.log('[submit-job-result] No domains found in web activity data')
+          logger.debug('[submit-job-result] No domains found in web activity data')
         } else {
-          console.log(`[submit-job-result] Found ${accessedDomains.size} unique domains to check against blocked list`)
+          logger.debug(`[submit-job-result] Found ${accessedDomains.size} unique domains to check against blocked list`)
           
           // Buscar lista de sites bloqueados do tenant
           const { data: blockedSites, error: blockedError } = await supabase
@@ -1643,9 +1643,9 @@ Deno.serve(async (req) => {
             .eq('is_active', true)
           
           if (blockedError) {
-            console.error('[submit-job-result] Error fetching blocked websites:', blockedError)
+            logger.error('[submit-job-result] Error fetching blocked websites:', blockedError)
           } else if (blockedSites && blockedSites.length > 0) {
-            console.log(`[submit-job-result] Checking against ${blockedSites.length} blocked patterns`)
+            logger.debug(`[submit-job-result] Checking against ${blockedSites.length} blocked patterns`)
             
             const blockedAttempts: Array<{
               domain: string
@@ -1678,7 +1678,7 @@ Deno.serve(async (req) => {
             }
             
             if (blockedAttempts.length > 0) {
-              console.log(`[submit-job-result] Found ${blockedAttempts.length} blocked access attempts`)
+              logger.debug(`[submit-job-result] Found ${blockedAttempts.length} blocked access attempts`)
               
               // DEDUP: Check which domains were already recorded in last 24h for this agent
               const cutoff24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
@@ -1693,9 +1693,9 @@ Deno.serve(async (req) => {
               const newAttempts = blockedAttempts.filter(a => !existingDomains.has(a.domain))
               
               if (newAttempts.length === 0) {
-                console.log(`[submit-job-result] All ${blockedAttempts.length} blocked domains already recorded in last 24h, skipping`)
+                logger.debug(`[submit-job-result] All ${blockedAttempts.length} blocked domains already recorded in last 24h, skipping`)
               } else {
-                console.log(`[submit-job-result] ${newAttempts.length} new blocked attempts (${blockedAttempts.length - newAttempts.length} deduped)`)
+                logger.debug(`[submit-job-result] ${newAttempts.length} new blocked attempts (${blockedAttempts.length - newAttempts.length} deduped)`)
                 
                 const attemptsToInsert = newAttempts.map(attempt => ({
                   tenant_id: agent.tenant_id,
@@ -1713,65 +1713,65 @@ Deno.serve(async (req) => {
                   .insert(attemptsToInsert)
                 
                 if (insertError) {
-                  console.error('[submit-job-result] Error inserting blocked attempts:', insertError)
+                  logger.error('[submit-job-result] Error inserting blocked attempts:', insertError)
                 } else {
-                  console.log(`[submit-job-result] Successfully recorded ${newAttempts.length} blocked access attempts`)
+                  logger.debug(`[submit-job-result] Successfully recorded ${newAttempts.length} blocked access attempts`)
                 }
               }
             } else {
-              console.log('[submit-job-result] No blocked access attempts detected')
+              logger.debug('[submit-job-result] No blocked access attempts detected')
             }
           }
         }
       } catch (blockedErr) {
-        console.error('[submit-job-result] Error analyzing blocked attempts:', blockedErr)
+        logger.error('[submit-job-result] Error analyzing blocked attempts:', blockedErr)
       }
     }
 
     // FASE 4 - DNS LOCAL: Processar eventos de bloqueio do DNS Filter local
     if (status === 'completed' && job.type === 'collect_dns_blocks' && output) {
       try {
-        console.log('[submit-job-result] Processing DNS filter blocked events...')
+        logger.debug('[submit-job-result] Processing DNS filter blocked events...')
         
         const outputData = typeof output === 'object' ? output : {}
         const rawBlockedEvents = outputData.blocked_events || []
         
         if (!Array.isArray(rawBlockedEvents) || rawBlockedEvents.length === 0) {
-          console.log('[submit-job-result] No DNS blocked events to process')
+          logger.debug('[submit-job-result] No DNS blocked events to process')
         } else {
-          console.log(`[submit-job-result] Processing ${rawBlockedEvents.length} DNS blocked events`)
+          logger.debug(`[submit-job-result] Processing ${rawBlockedEvents.length} DNS blocked events`)
           
           // P1 QUAL-01: Validação Zod para eventos DNS bloqueados
           const validQueryTypes = ['A', 'AAAA', 'HTTPS', 'MX', 'TXT', 'CNAME', 'PTR', 'SRV', 'NS', 'SOA']
           const blockedEvents = rawBlockedEvents.filter((event: unknown) => {
             if (!event || typeof event !== 'object') {
-              console.warn('[submit-job-result] Invalid blocked event (not an object):', event)
+              logger.warn('[submit-job-result] Invalid blocked event (not an object):', event)
               return false
             }
             const e = event as Record<string, unknown>
             
             // domain é obrigatório e deve ser string não vazia
             if (typeof e.domain !== 'string' || e.domain.trim().length === 0) {
-              console.warn('[submit-job-result] Invalid blocked event (missing/empty domain):', e)
+              logger.warn('[submit-job-result] Invalid blocked event (missing/empty domain):', e)
               return false
             }
             
             // ts deve ser string ISO se presente
             if (e.ts !== undefined && (typeof e.ts !== 'string' || isNaN(Date.parse(e.ts)))) {
-              console.warn('[submit-job-result] Invalid blocked event (invalid ts):', e)
+              logger.warn('[submit-job-result] Invalid blocked event (invalid ts):', e)
               return false
             }
             
             // query_type deve estar na lista permitida se presente
             if (e.query_type !== undefined && !validQueryTypes.includes(String(e.query_type))) {
-              console.warn('[submit-job-result] Invalid blocked event (unknown query_type):', e)
+              logger.warn('[submit-job-result] Invalid blocked event (unknown query_type):', e)
               return false
             }
             
             return true
           })
           
-          console.log(`[submit-job-result] Validated ${blockedEvents.length}/${rawBlockedEvents.length} DNS blocked events`)
+          logger.debug(`[submit-job-result] Validated ${blockedEvents.length}/${rawBlockedEvents.length} DNS blocked events`)
           
           // Buscar políticas ativas para correlação
           const { data: blockedSites, error: sitesError } = await supabase
@@ -1781,7 +1781,7 @@ Deno.serve(async (req) => {
             .eq('is_active', true)
           
           if (sitesError) {
-            console.error('[submit-job-result] Error fetching blocked websites for DNS correlation:', sitesError)
+            logger.error('[submit-job-result] Error fetching blocked websites for DNS correlation:', sitesError)
           }
           
           const attemptsToInsert: Array<{
@@ -1846,9 +1846,9 @@ Deno.serve(async (req) => {
             const newAttempts = attemptsToInsert.filter(a => !existingDomains.has(a.domain))
             
             if (newAttempts.length === 0) {
-              console.log(`[submit-job-result] All ${attemptsToInsert.length} DNS blocked domains already recorded in last 24h, skipping`)
+              logger.debug(`[submit-job-result] All ${attemptsToInsert.length} DNS blocked domains already recorded in last 24h, skipping`)
             } else {
-              console.log(`[submit-job-result] ${newAttempts.length} new DNS blocked attempts (${attemptsToInsert.length - newAttempts.length} deduped)`)
+              logger.debug(`[submit-job-result] ${newAttempts.length} new DNS blocked attempts (${attemptsToInsert.length - newAttempts.length} deduped)`)
               
               const batchSize = 100
               let insertedCount = 0
@@ -1861,18 +1861,18 @@ Deno.serve(async (req) => {
                   .insert(batch)
                 
                 if (insertError) {
-                  console.error(`[submit-job-result] Error inserting DNS blocked batch ${i}-${i + batch.length}:`, insertError)
+                  logger.error(`[submit-job-result] Error inserting DNS blocked batch ${i}-${i + batch.length}:`, insertError)
                 } else {
                   insertedCount += batch.length
                 }
               }
               
-              console.log(`[submit-job-result] Successfully recorded ${insertedCount}/${newAttempts.length} DNS blocked events`)
+              logger.debug(`[submit-job-result] Successfully recorded ${insertedCount}/${newAttempts.length} DNS blocked events`)
             }
           }
         }
       } catch (dnsErr) {
-        console.error('[submit-job-result] Error processing DNS blocked events:', dnsErr)
+        logger.error('[submit-job-result] Error processing DNS blocked events:', dnsErr)
       }
     }
 

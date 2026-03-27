@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsSecurityHeaders, secureJsonResponse, secureErrorResponse, secureCorsPreflightResponse } from '../_shared/security-headers.ts';
+import { logger } from '../_shared/logger.ts';
 import { hashToken } from '../_shared/token-hash.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -126,7 +127,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in get-agent-config:', error);
+    logger.error('Error in get-agent-config:', error);
     return secureErrorResponse(
       error instanceof Error ? error.message : 'Unknown error',
       500
