@@ -39,7 +39,7 @@ import { timingSafeEqual } from './crypto-utils.ts';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export interface TenantContext {
+export interface TenantContext<T = unknown> {
   /** Validated tenant ID — guaranteed to be authorized */
   tenantId: string;
   /** User ID from JWT (null for internal/service calls) */
@@ -50,8 +50,8 @@ export interface TenantContext {
   supabase: SupabaseClient;
   /** Request ID for tracing */
   requestId: string;
-  /** Parsed request body (cached to avoid double-read) */
-  body: any;
+  /** Parsed request body (typed via generic, defaults to unknown) */
+  body: T;
   /** Original request */
   req: Request;
 }
@@ -85,7 +85,7 @@ export interface ServeOptions {
   skipTenantValidation?: boolean;
 }
 
-type TenantHandler = (req: Request, ctx: TenantContext) => Promise<any>;
+type TenantHandler<T = unknown> = (req: Request, ctx: TenantContext<T>) => Promise<Response | Record<string, unknown> | unknown>;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
