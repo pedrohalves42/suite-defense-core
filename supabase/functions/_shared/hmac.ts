@@ -1,4 +1,5 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from './logger.ts';
 
 export interface HmacVerificationResult {
   valid: boolean;
@@ -259,14 +260,19 @@ export async function verifyHmacSignature(
             .map((b) => b.toString(16).padStart(2, '0'))
             .join('')
 
-          if (signature === expectedSignature) {
+          // SECURITY FIX: timing-safe comparison to prevent timing attacks
+          const encoder2 = new TextEncoder();
+          const sigBuf = encoder2.encode(signature);
+          const expectedBuf = encoder2.encode(expectedSignature);
+          const isMatch = sigBuf.length === expectedBuf.length && crypto.subtle.timingSafeEqual(sigBuf, expectedBuf);
+          if (isMatch) {
             const { error: insertError } = await supabase.from('hmac_signatures').insert({
               signature,
               agent_name: agentName,
             })
 
             if (insertError) {
-              console.error(`[HMAC] CRITICAL: Failed to store signature for agent ${agentName}:`, {
+              logger.error(`[HMAC] CRITICAL: Failed to store signature for agent ${agentName}`, {
                 error: insertError.message,
                 code: insertError.code,
               })
@@ -285,7 +291,7 @@ export async function verifyHmacSignature(
                 },
                 { onConflict: 'agent_id' }
               ).then(({ error }) => {
-                if (error) console.warn('[HMAC] Cache update failed:', error.message)
+                if (error) logger.warn('[HMAC] Cache update failed', { error: error.message })
               })
             }
 
@@ -323,7 +329,7 @@ export async function verifyHmacSignature(
     }
   }
 
-  console.error('[HMAC] Signature verification failed', {
+  logger.error('[HMAC] Signature verification failed', {
     agent: agentName,
     error_code: 'AUTH_INVALID_SIGNATURE',
     has_timestamp_hmac: !!request.headers.get('X-HMAC-Timestamp'),
@@ -429,9 +435,9 @@ async function logAuthFailure(supabase: SupabaseClient, data: AuthFailureLogData
     });
     
     authFailureCache.set(cacheKey, now);
-    console.log(`[HMAC] Auth failure logged for ${data.agentName}: ${data.errorCode}`);
+    logger.info(`[HMAC] Auth failure logged for ${data.agentName}: ${data.errorCode}`);
   } catch (error) {
     // Non-blocking - don't fail the request if logging fails
-    console.warn('[HMAC] Failed to log auth failure (non-blocking):', error);
+    logger.warn('[HMAC] Failed to log auth failure (non-blocking)', error);
   }
 }

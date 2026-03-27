@@ -33,6 +33,8 @@
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from './cors.ts';
 import { securityHeaders } from './security-headers.ts';
+import { requireEnv } from './env.ts';
+import { logger } from './logger.ts';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -147,8 +149,8 @@ export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
     }
 
     try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabaseUrl = requireEnv('SUPABASE_URL');
+      const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
       const supabase = createClient(supabaseUrl, serviceRoleKey);
 
       const authHeader = req.headers.get('Authorization');
@@ -184,7 +186,7 @@ export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
         
         if (authError || !authUser) {
-          console.warn(`[serveTenant][${requestId}] Invalid JWT`);
+        logger.warn(`[serveTenant][${requestId}] Invalid JWT`);
           return errorResponse('Invalid or expired token', 401, requestId);
         }
         userId = authUser.id;
@@ -216,7 +218,7 @@ export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
           if (tenantId) {
             const hasAccess = await verifyUserTenantAccess(supabase, userId, tenantId);
             if (!hasAccess) {
-              console.warn(`[SECURITY][${requestId}] User ${userId} denied access to tenant ${tenantId}`);
+              logger.warn(`[SECURITY][${requestId}] User ${userId} denied access to tenant ${tenantId}`);
               return errorResponse('Access denied: unauthorized tenant', 403, requestId);
             }
           } else if (allowFallback) {
@@ -232,7 +234,7 @@ export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
         // V-11004 FIX: When skipTenantValidation is true and no tenantId,
         // set a safe default instead of passing null as non-null assertion
         if (!tenantId) {
-          console.warn(`[serveTenant][${requestId}] skipTenantValidation=true but no tenant_id provided`);
+          logger.warn(`[serveTenant][${requestId}] skipTenantValidation=true but no tenant_id provided`);
         }
       }
 
@@ -264,7 +266,7 @@ export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
 
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
-      console.error(`[serveTenant][${requestId}] Error:`, msg);
+      logger.error(`[serveTenant][${requestId}] Error`, { message: msg });
       return errorResponse(msg, 500, requestId);
     }
   });
@@ -284,8 +286,8 @@ export function servePublic(handler: PublicHandler) {
 
     try {
       const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        requireEnv('SUPABASE_URL'),
+        requireEnv('SUPABASE_SERVICE_ROLE_KEY')
       );
 
       let body: any = {};
@@ -299,7 +301,7 @@ export function servePublic(handler: PublicHandler) {
       return jsonResponse(result, 200, { 'X-Request-ID': requestId });
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
-      console.error(`[servePublic][${requestId}] Error:`, msg);
+      logger.error(`[servePublic][${requestId}] Error`, { message: msg });
       return errorResponse(msg, 500, requestId);
     }
   });
@@ -334,8 +336,8 @@ export function serveAgent(handler: AgentHandler) {
 
     try {
       const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        requireEnv('SUPABASE_URL'),
+        requireEnv('SUPABASE_SERVICE_ROLE_KEY')
       );
 
       // Import agent auth dynamically to avoid circular deps
@@ -380,7 +382,7 @@ export function serveAgent(handler: AgentHandler) {
       return jsonResponse(result, 200, { 'X-Request-ID': requestId });
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
-      console.error(`[serveAgent][${requestId}] Error:`, msg);
+      logger.error(`[serveAgent][${requestId}] Error`, { message: msg });
       return errorResponse(msg, 500, requestId);
     }
   });
