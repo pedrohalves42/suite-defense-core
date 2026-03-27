@@ -1,3 +1,4 @@
+import { requireEnv } from '../_shared/env.ts';
 // Edge Function: Generate Executive Report (Daily Risk Delta Narrative)
 // Fase 2: Narrativa Executiva Contínua
 
@@ -6,8 +7,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { callAISimple } from '../_shared/ai-provider-helper.ts';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const SUPABASE_URL = requireEnv('SUPABASE_URL');
+const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 
 interface RiskDelta {
   tenantId: string;

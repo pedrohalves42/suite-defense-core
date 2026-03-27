@@ -1,3 +1,4 @@
+import { requireEnv } from '../_shared/env.ts';
 /**
  * Run RLS Tests
  * 
@@ -19,8 +20,8 @@ import {
 } from '../_shared/health-probe.ts';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabaseUrl = requireEnv('SUPABASE_URL');
+const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 
 interface RlsTestResult {
   test_name: string;
@@ -139,7 +140,7 @@ Deno.serve(async (req: Request) => {
     const criticalTables = ['enrollment_keys', 'api_keys', 'agent_signing_keys'];
     for (const table of criticalTables) {
       // Try to read without auth (should fail or return empty)
-      const anonClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!);
+      const anonClient = createClient(supabaseUrl, requireEnv('SUPABASE_ANON_KEY'));
       const { data, error } = await anonClient
         .from(table)
         .select('id')
@@ -157,7 +158,7 @@ Deno.serve(async (req: Request) => {
 
     // Test 5: Verify security_logs is append-only for anon
     // Strategy: Get a real record ID and try to delete it - RLS should block
-    const anonClient2 = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!);
+    const anonClient2 = createClient(supabaseUrl, requireEnv('SUPABASE_ANON_KEY'));
     
     // First, get a real security_log ID using service role
     const { data: sampleLog } = await supabase

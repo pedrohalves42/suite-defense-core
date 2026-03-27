@@ -1,3 +1,4 @@
+import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
 import { timingSafeEqual } from '../_shared/crypto-utils.ts'
@@ -47,8 +48,8 @@ Deno.serve(async (req) => {
   console.log(`[integrity-sentinel] Authorized call from: ${isInternalCall ? 'internal' : 'jwt'}`);
 
   const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    requireEnv('SUPABASE_URL'),
+    requireEnv('SUPABASE_SERVICE_ROLE_KEY')
   )
 
   const startTime = Date.now()
