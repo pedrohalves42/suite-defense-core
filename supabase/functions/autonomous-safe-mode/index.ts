@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       await timingSafeEqual(internalSecret, expectedSecret);
     const authHeader = req.headers.get('Authorization');
     
-    if (!isCronCall && !isInternalCall && !authHeader) {
+    if (!isInternalCall && !authHeader) {
       logger.warn('[autonomous-safe-mode] Unauthorized: No valid origin');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    logger.debug(`[autonomous-safe-mode] Authorized call from: ${isCronCall ? 'cron' : isInternalCall ? 'internal' : 'jwt'}`);
+    logger.debug(`[autonomous-safe-mode] Authorized call from: ${isInternalCall ? 'internal' : 'jwt'}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
