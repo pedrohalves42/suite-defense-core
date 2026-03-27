@@ -17,6 +17,7 @@ import {
   updateJobHeartbeat,
   EDGE_VERSION 
 } from '../_shared/health-probe.ts';
+import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -44,8 +45,8 @@ Deno.serve(async (req: Request) => {
     const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
     const serviceRoleKeyValue = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
-    const isInternalCall = (internalSecret && expectedSecret && internalSecret === expectedSecret) ||
-      (authHeader && serviceRoleKeyValue && authHeader === `Bearer ${serviceRoleKeyValue}`);
+    const isInternalCall = (internalSecret && expectedSecret && await timingSafeEqual(internalSecret, expectedSecret)) ||
+      (authHeader && serviceRoleKeyValue && await timingSafeEqual(authHeader, `Bearer ${serviceRoleKeyValue}`));
     
     if (!isInternalCall && !authHeader) {
       console.log(`[${requestId}] Rejected: No valid auth`);

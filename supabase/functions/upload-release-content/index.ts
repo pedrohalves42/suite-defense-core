@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 
 /**
  * upload-release-content
@@ -57,8 +58,8 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     const expectedSecret = Deno.env.get('INTERNAL_SECRET');
     
-    const isInternalAuth = expectedSecret && internalSecret === expectedSecret;
-    const isServiceRole = authHeader?.includes(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '___never___');
+    const isInternalAuth = expectedSecret && internalSecret && await timingSafeEqual(internalSecret, expectedSecret);
+    const isServiceRole = authHeader && Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') && await timingSafeEqual(authHeader, `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`);
     
     if (!isInternalAuth && !isServiceRole) {
       console.warn('[upload-release-content] No internal auth, proceeding with caution');
