@@ -63,10 +63,10 @@ export function InstallationHealthCard() {
   useEffect(() => {
     fetchHealth();
 
-    // Auto-refresh a cada 60s
+    // Auto-refresh a cada 5min (COST-OPT: 60s → 5min)
     const interval = setInterval(() => {
       fetchHealth();
-    }, 60000);
+    }, 300_000);
 
     return () => clearInterval(interval);
   }, []);

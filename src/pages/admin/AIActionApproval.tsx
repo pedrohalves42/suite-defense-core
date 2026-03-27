@@ -105,7 +105,7 @@ export default function AIActionApproval() {
       return data as AIAction[];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 120000,
+    refetchInterval: 300_000,
     refetchIntervalInBackground: false,
   });
 

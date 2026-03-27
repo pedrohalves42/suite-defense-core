@@ -123,8 +123,8 @@ export const useSessionTimeout = () => {
       document.addEventListener(event, handleActivity, { passive: true })
     );
 
-    // Check timeout every 30 seconds
-    timeoutRef.current = setInterval(checkTimeout, 30000);
+    // Check timeout every 2 minutes (COST-OPT: 30s → 120s)
+    timeoutRef.current = setInterval(checkTimeout, 120_000);
 
     // Initial activity timestamp
     resetTimer();

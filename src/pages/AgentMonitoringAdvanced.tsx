@@ -137,7 +137,7 @@ export default function AgentMonitoringAdvanced() {
 
   useEffect(() => {
     if (!tenant?.id) return;
-    const refreshInterval = setInterval(fetchDashboardData, 30000);
+    const refreshInterval = setInterval(fetchDashboardData, 300_000); // COST-OPT: 30s → 5min
     return () => {
       clearInterval(refreshInterval);
     };

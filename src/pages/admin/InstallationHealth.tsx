@@ -136,8 +136,8 @@ export default function InstallationHealth() {
   useEffect(() => {
     if (!tenantLoading && isFetched && activeTenant?.id) {
       fetchData();
-      // Auto-refresh a cada 2 minutos
-      const interval = setInterval(fetchData, 120000);
+      // Auto-refresh a cada 5 minutos (COST-OPT: 2min → 5min)
+      const interval = setInterval(fetchData, 300_000);
       return () => clearInterval(interval);
     }
   }, [activeTenant?.id, tenantLoading, isFetched]);

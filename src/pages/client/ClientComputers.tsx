@@ -118,7 +118,7 @@ export const ClientComputers = () => {
       })) || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 120000,
+    refetchInterval: 300_000,
     refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
   });
 

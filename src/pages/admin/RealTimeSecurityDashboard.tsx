@@ -148,7 +148,8 @@ export default function RealTimeSecurityDashboard() {
         pending: data?.filter(e => e.status === 'pending').length || 0,
       };
     },
-    enabled: !!tenant?.id, refetchInterval: 120000,
+    enabled: !!tenant?.id, refetchInterval: 300_000, // COST-OPT: 2min → 5min
+    staleTime: 120_000,
     refetchIntervalInBackground: false,
   });
 
@@ -161,7 +162,8 @@ export default function RealTimeSecurityDashboard() {
         .eq('tenant_id', tenant.id).gte('created_at', today.toISOString());
       return { today: count || 0 };
     },
-    enabled: !!tenant?.id, refetchInterval: 120000,
+    enabled: !!tenant?.id, refetchInterval: 300_000, // COST-OPT: 2min → 5min
+    staleTime: 120_000,
     refetchIntervalInBackground: false,
   });
 
@@ -179,7 +181,8 @@ export default function RealTimeSecurityDashboard() {
         expired: data?.filter(a => a.status === 'expired').length || 0,
       };
     },
-    enabled: !!tenant?.id, refetchInterval: 120000,
+    enabled: !!tenant?.id, refetchInterval: 300_000, // COST-OPT: 2min → 5min
+    staleTime: 120_000,
     refetchIntervalInBackground: false,
   });
 
@@ -207,8 +210,8 @@ export default function RealTimeSecurityDashboard() {
       return { total, protected: protectedCount, isolated, offline };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 120_000, // TUNING v11: 60s → 2min (realtime uses channels, polling is backup)
-    staleTime: 60_000,
+    refetchInterval: 300_000, // COST-OPT: 2min → 5min
+    staleTime: 120_000,
     refetchIntervalInBackground: false,
   });
 
@@ -220,7 +223,8 @@ export default function RealTimeSecurityDashboard() {
         .eq('tenant_id', tenant.id).order('created_at', { ascending: false }).limit(50);
       return data || [];
     },
-    enabled: !!tenant?.id, refetchInterval: 120000,
+    enabled: !!tenant?.id, refetchInterval: 300_000, // COST-OPT: 2min → 5min
+    staleTime: 120_000,
     refetchIntervalInBackground: false,
   });
 

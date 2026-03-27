@@ -72,8 +72,9 @@ export function useDataExposure() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 60_000,
+    refetchInterval: 300_000, // COST-OPT: 60s → 5min
     refetchIntervalInBackground: false,
+    staleTime: 120_000,
   });
 
   const updateStatus = useMutation({
