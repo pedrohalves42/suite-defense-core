@@ -1113,7 +1113,7 @@ async function processBlockedAccessPatternRule(supabase: any, rule: any): Promis
     .limit(1000);
 
   if (error) {
-    console.error('[BLOCKED_ACCESS_PATTERN_010] Query error:', error);
+    logger.error('[BLOCKED_ACCESS_PATTERN_010] Query error:', error);
     // Table might not exist, return empty
     return { rule_code: rule.code, processed_count: 0, agents: [] };
   }
@@ -1133,7 +1133,7 @@ async function processBlockedAccessPatternRule(supabase: any, rule: any): Promis
   const suspiciousAgents = Array.from(agentAttempts.entries())
     .filter(([_, data]) => data.count >= conditions.min_blocked_attempts);
 
-  console.log(`[BLOCKED_ACCESS_PATTERN_010] Found ${suspiciousAgents.length} suspicious agents`);
+  logger.debug(`[BLOCKED_ACCESS_PATTERN_010] Found ${suspiciousAgents.length} suspicious agents`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -1220,7 +1220,7 @@ async function processAgentDivergentRule(supabase: any, rule: any): Promise<Rule
     comparison_window_hours: 24
   };
 
-  console.log('[AGENT_DIVERGENT_011] Detecting divergent agents');
+  logger.debug('[AGENT_DIVERGENT_011] Detecting divergent agents');
 
   // Buscar métricas recentes de todos os agentes
   const cutoffTime = new Date(Date.now() - conditions.comparison_window_hours * 60 * 60 * 1000).toISOString();
@@ -1232,7 +1232,7 @@ async function processAgentDivergentRule(supabase: any, rule: any): Promise<Rule
     .limit(5000);
 
   if (error) {
-    console.error('[AGENT_DIVERGENT_011] Query error:', error);
+    logger.error('[AGENT_DIVERGENT_011] Query error:', error);
     return { rule_code: rule.code, processed_count: 0, agents: [] };
   }
 
@@ -1292,7 +1292,7 @@ async function processAgentDivergentRule(supabase: any, rule: any): Promise<Rule
     }
   }
 
-  console.log(`[AGENT_DIVERGENT_011] Found ${divergentAgents.length} divergent agents`);
+  logger.debug(`[AGENT_DIVERGENT_011] Found ${divergentAgents.length} divergent agents`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -1359,7 +1359,7 @@ async function processProgressiveDegradationRule(supabase: any, rule: any): Prom
     degradation_threshold_percent: 20
   };
 
-  console.log('[PROGRESSIVE_DEGRADATION_012] Detecting progressive degradation');
+  logger.debug('[PROGRESSIVE_DEGRADATION_012] Detecting progressive degradation');
 
   // Comparar métricas de 12h atrás com métricas recentes
   const now = Date.now();
@@ -1413,7 +1413,7 @@ async function processProgressiveDegradationRule(supabase: any, rule: any): Prom
     }
   }
 
-  console.log(`[PROGRESSIVE_DEGRADATION_012] Found ${degradingAgents.length} degrading agents`);
+  logger.debug(`[PROGRESSIVE_DEGRADATION_012] Found ${degradingAgents.length} degrading agents`);
 
   const agents: RuleResult['agents'] = [];
 
