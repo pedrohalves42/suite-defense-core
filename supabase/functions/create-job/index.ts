@@ -1,3 +1,4 @@
+import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { handleException, handleValidationError, createErrorResponse, ErrorCode, corsHeaders } from '../_shared/error-handler.ts';
 import { CreateJobSchemaEnhanced } from '../_shared/validation.ts';
@@ -13,9 +14,9 @@ Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = requireEnv('SUPABASE_URL');
+    const supabaseAnonKey = requireEnv('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {

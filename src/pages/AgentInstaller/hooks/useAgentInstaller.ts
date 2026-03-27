@@ -335,7 +335,7 @@ export function useAgentInstaller() {
 
       const installUrl = getInstallUrl(credentials.enrollmentKey);
       const command = platform === 'windows'
-        ? `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm ${installUrl} | iex`
+        ? `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $sp="$env:TEMP\\cs-install-$(Get-Random).ps1"; Invoke-WebRequest -Uri ${installUrl} -OutFile $sp -UseBasicParsing; & $sp; Remove-Item $sp -Force`
         : `curl -sL ${installUrl} | sudo bash`;
       setInstallCommand(command);
 

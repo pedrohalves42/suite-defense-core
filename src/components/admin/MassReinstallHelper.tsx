@@ -37,7 +37,7 @@ export function MassReinstallHelper({ enrollmentKey: initialKey = "" }: MassRein
   };
 
   // One-liner command for quick reinstall
-  const oneLineCommand = `$K="${enrollmentKey || 'XXXX-XXXX-XXXX-XXXX'}"; $S="${SERVER_URL}"; Get-ScheduledTask | ? {$_.TaskName -like "CyberShield*"} | Unregister-ScheduledTask -Confirm:$false -EA 0; Remove-Item "C:\\CyberShield" -Recurse -Force -EA 0; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "$S/functions/v1/serve-installer/$K" | iex`;
+  const oneLineCommand = `$K="${enrollmentKey || 'XXXX-XXXX-XXXX-XXXX'}"; $S="${SERVER_URL}"; Get-ScheduledTask | ? {$_.TaskName -like "CyberShield*"} | Unregister-ScheduledTask -Confirm:$false -EA 0; Remove-Item "C:\\CyberShield" -Recurse -Force -EA 0; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $sp="$env:TEMP\\cs-install-$(Get-Random).ps1"; Invoke-WebRequest -Uri "$S/functions/v1/serve-installer/$K" -OutFile $sp -UseBasicParsing; & $sp; Remove-Item $sp -Force`;
 
   // Full script command
   const fullScriptCommand = `# CyberShield Mass Reinstall - v4.1.2
@@ -67,7 +67,10 @@ Write-Host "[OK] TLS 1.2 enabled" -ForegroundColor Green
 # Phase 3: Download and Execute Installer
 Write-Host "[3/4] Installing agent v4.1.2..." -ForegroundColor Yellow
 try {
-    irm "$ServerUrl/functions/v1/serve-installer/$EnrollmentKey" | iex
+    $sp = "$env:TEMP\\cs-install-$(Get-Random).ps1"
+    Invoke-WebRequest -Uri "$ServerUrl/functions/v1/serve-installer/$EnrollmentKey" -OutFile $sp -UseBasicParsing
+    & $sp
+    Remove-Item $sp -Force -ErrorAction SilentlyContinue
     Write-Host "[OK] Installation complete" -ForegroundColor Green
 } catch {
     Write-Host "[ERROR] Installation failed: $_" -ForegroundColor Red

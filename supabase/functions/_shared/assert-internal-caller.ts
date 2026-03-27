@@ -19,28 +19,29 @@
  */
 
 import { corsHeaders } from './cors.ts';
+import { timingSafeEqual } from './crypto-utils.ts';
 
-export function assertInternalCaller(req: Request, options?: { allowAuthenticatedUsers?: boolean }): Response | null {
+export async function assertInternalCaller(req: Request, options?: { allowAuthenticatedUsers?: boolean }): Promise<Response | null> {
   const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');
   const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
   const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_ANON_KEY_LEGACY');
 
-  // 1. X-Internal-Secret match
-  if (internalSecret && expectedSecret && internalSecret === expectedSecret) {
+  // 1. X-Internal-Secret match (timing-safe)
+  if (internalSecret && expectedSecret && await timingSafeEqual(internalSecret, expectedSecret)) {
     console.log('[assert-internal-caller] Authorized via X-Internal-Secret');
     return null;
   }
 
-  // 2. service_role key in Authorization header
-  if (authHeader && serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) {
+  // 2. service_role key in Authorization header (timing-safe)
+  if (authHeader && serviceRoleKey && await timingSafeEqual(authHeader, `Bearer ${serviceRoleKey}`)) {
     console.log('[assert-internal-caller] Authorized via service_role key');
     return null;
   }
 
-  // 3. Scheduled cron invocation via anon key (pg_cron + pg_net pattern)
-  if (authHeader && anonKey && authHeader === `Bearer ${anonKey}`) {
+  // 3. Scheduled cron invocation via anon key (timing-safe)
+  if (authHeader && anonKey && await timingSafeEqual(authHeader, `Bearer ${anonKey}`)) {
     console.log('[assert-internal-caller] Authorized via cron anon key');
     return null;
   }

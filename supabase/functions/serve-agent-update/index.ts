@@ -1,3 +1,4 @@
+import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { encodeBase64 } from 'https://deno.land/std@0.208.0/encoding/base64.ts';
 import { corsHeaders } from '../_shared/cors.ts';
@@ -10,8 +11,8 @@ import { INSTALLER_VERSION } from '../_shared/installer-version.ts';
 import { hashToken } from '../_shared/token-hash.ts';
 import { updateDecisionService, normalizeVersion, normalizeForWindows, calculateSha256 } from '../_shared/hexagonal/update-decision-service.ts';
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const SUPABASE_URL = requireEnv('SUPABASE_URL');
+const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {

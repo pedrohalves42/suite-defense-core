@@ -1,5 +1,7 @@
+import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
+import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -55,11 +57,11 @@ Deno.serve(async (req) => {
     // 3. Has valid JWT auth header
     const internalSecret = req.headers.get('x-internal-secret');
     const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-    const isCronCall = body.source === 'cron';
-    const isInternalCall = internalSecret && internalSecret === expectedSecret;
+    const isInternalCall = internalSecret && expectedSecret && 
+      await timingSafeEqual(internalSecret, expectedSecret);
     const authHeader = req.headers.get('Authorization');
     
-    if (!isCronCall && !isInternalCall && !authHeader) {
+    if (!isInternalCall && !authHeader) {
       logger.warn('[autonomous-safe-mode] Unauthorized: No valid origin');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
@@ -67,10 +69,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    logger.debug(`[autonomous-safe-mode] Authorized call from: ${isCronCall ? 'cron' : isInternalCall ? 'internal' : 'jwt'}`);
+    logger.debug(`[autonomous-safe-mode] Authorized call from: ${isInternalCall ? 'internal' : 'jwt'}`);
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = requireEnv('SUPABASE_URL');
+    const supabaseServiceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -257,8 +259,8 @@ Deno.serve(async (req) => {
 
     // Log failed job execution
     try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabaseUrl = requireEnv('SUPABASE_URL');
+      const supabaseServiceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
       await supabase.rpc('log_scheduled_job_run', {
         p_job_key: 'autonomous-safe-mode',

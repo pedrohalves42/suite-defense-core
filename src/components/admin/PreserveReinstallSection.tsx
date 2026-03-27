@@ -35,14 +35,14 @@ import { buildAgentReinstallCommand } from '@/lib/agentReinstallCommand';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const DASHBOARD_ORIGIN = typeof window !== 'undefined' ? window.location.origin : '';
 
-// Comando interativo legado (mantido como fallback)
-const INTERACTIVE_COMMAND = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" | iex`;
+// Comando seguro: baixa para arquivo temporário, verifica e executa (sem Invoke-Expression)
+const INTERACTIVE_COMMAND = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $sp="$env:TEMP\\cybershield-reinstall-$(Get-Random).ps1"; Invoke-WebRequest -Uri "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" -OutFile $sp -UseBasicParsing; if (Test-Path $sp) { & $sp; Remove-Item $sp -Force } else { Write-Error 'Download failed' }`;
 
 // Comando com Enrollment Key (deploy em massa via RMM/GPO) - com fallback de nome por hostname
-const EK_COMMAND_TEMPLATE = `$env:CYBERSHIELD_KEY="COLE_SUA_ENROLLMENT_KEY"; if (-not $env:CYBERSHIELD_AGENT_NAME) { $env:CYBERSHIELD_AGENT_NAME=$env:COMPUTERNAME }; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" | iex`;
+const EK_COMMAND_TEMPLATE = `$env:CYBERSHIELD_KEY="COLE_SUA_ENROLLMENT_KEY"; if (-not $env:CYBERSHIELD_AGENT_NAME) { $env:CYBERSHIELD_AGENT_NAME=$env:COMPUTERNAME }; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $sp="$env:TEMP\\cybershield-reinstall-$(Get-Random).ps1"; Invoke-WebRequest -Uri "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" -OutFile $sp -UseBasicParsing; if (Test-Path $sp) { & $sp; Remove-Item $sp -Force } else { Write-Error 'Download failed' }`;
 
-// Comando alternativo (Invoke-WebRequest + cache-bust - melhor compatibilidade com proxy)
-const FALLBACK_COMMAND = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $script = (Invoke-WebRequest -Uri "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" -UseBasicParsing).Content; Invoke-Expression $script`;
+// Comando alternativo (download seguro para arquivo temporário)
+const FALLBACK_COMMAND = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $sp="$env:TEMP\\cybershield-reinstall-$(Get-Random).ps1"; Invoke-WebRequest -Uri "${SUPABASE_URL}/functions/v1/get-reinstall-preserve-script?cb=$(Get-Random)" -OutFile $sp -UseBasicParsing; if (Test-Path $sp) { & $sp; Remove-Item $sp -Force } else { Write-Error 'Download failed' }`;
 
 // Comando de diagnóstico de rede
 const NETWORK_TEST_COMMAND = `Test-NetConnection -ComputerName "${new URL(SUPABASE_URL).hostname}" -Port 443`;

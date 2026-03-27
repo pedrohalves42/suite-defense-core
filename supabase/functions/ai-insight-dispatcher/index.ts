@@ -1,5 +1,7 @@
+import { requireEnv } from '../_shared/env.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -89,10 +91,10 @@ serve(async (req) => {
     const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');
     const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
     const authHeader = req.headers.get('Authorization');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
     
-    const isInternal = (internalSecret && expectedSecret && internalSecret === expectedSecret) ||
-                       (authHeader && authHeader === `Bearer ${serviceRoleKey}`);
+    const isInternal = (internalSecret && expectedSecret && await timingSafeEqual(internalSecret, expectedSecret)) ||
+                       (authHeader && await timingSafeEqual(authHeader, `Bearer ${serviceRoleKey}`));
     
     if (!isInternal) {
       return new Response(JSON.stringify({ error: 'Unauthorized: internal access only' }), {
@@ -100,7 +102,7 @@ serve(async (req) => {
       });
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseUrl = requireEnv('SUPABASE_URL');
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const body = await req.json();

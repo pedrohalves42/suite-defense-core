@@ -1,3 +1,4 @@
+import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { handleException, corsHeaders } from '../_shared/error-handler.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';

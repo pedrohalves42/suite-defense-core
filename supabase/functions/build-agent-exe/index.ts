@@ -1,3 +1,4 @@
+import { requireEnv } from '../_shared/env.ts';
 /**
  * build-agent-exe Edge Function
  * 
@@ -13,8 +14,8 @@ import { createErrorResponse, ErrorCode } from '../_shared/error-handler.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
 import { BuildTelemetry } from '../_shared/build-telemetry.ts';
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const SUPABASE_URL = requireEnv('SUPABASE_URL');
+const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 const BUILD_GH_TOKEN = Deno.env.get('BUILD_GH_TOKEN');
 const BUILD_GH_REPOSITORY = Deno.env.get('BUILD_GH_REPOSITORY'); // e.g., "username/repo"
 
@@ -91,7 +92,7 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const supabaseClient = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    const supabaseClient = createClient(SUPABASE_URL, requireEnv('SUPABASE_ANON_KEY'), {
       global: { headers: { Authorization: `Bearer ${token}` } }
     });
 

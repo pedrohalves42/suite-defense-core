@@ -1,4 +1,5 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { timingSafeEqual } from './crypto-utils.ts';
 
 interface CallerValidationResult {
   authorized: boolean;
@@ -28,14 +29,14 @@ export async function validateCallerTenant(
   const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
   const authHeader = req.headers.get('Authorization');
 
-  // 1. Check for internal call via secret
-  if (internalSecret && expectedSecret && internalSecret === expectedSecret) {
+  // 1. Check for internal call via secret (timing-safe)
+  if (internalSecret && expectedSecret && await timingSafeEqual(internalSecret, expectedSecret)) {
     return { authorized: true, isInternalCall: true };
   }
 
-  // 2. Check for service_role key in Authorization (internal function-to-function calls)
+  // 2. Check for service_role key in Authorization (timing-safe)
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (authHeader && serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) {
+  if (authHeader && serviceRoleKey && await timingSafeEqual(authHeader, `Bearer ${serviceRoleKey}`)) {
     return { authorized: true, isInternalCall: true };
   }
 

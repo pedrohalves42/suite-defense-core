@@ -1,6 +1,8 @@
+import { requireEnv } from '../_shared/env.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -68,7 +70,7 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     
     // Verificar se é chamada interna (cron) via secret
-    const isInternalCall = internalSecret && internalSecret === expectedSecret;
+    const isInternalCall = internalSecret && expectedSecret && await timingSafeEqual(internalSecret, expectedSecret);
     
     // Se não é interno, exigir autenticação JWT
     if (!isInternalCall) {

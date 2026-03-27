@@ -1,5 +1,7 @@
+import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
+import { timingSafeEqual } from '../_shared/crypto-utils.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,7 +17,7 @@ Deno.serve(async (req) => {
   }
 
   // V-1141: Defense-in-depth auth guard for cron function
-  const authError = assertInternalCaller(req)
+  const authError = await assertInternalCaller(req)
   if (authError) return authError
 
   // Parse request body
@@ -27,16 +29,15 @@ Deno.serve(async (req) => {
   }
 
   // Validate origin - accept if:
-  // 1. source === 'cron' (scheduled pg_cron call)
-  // 2. Has valid internal secret header
-  // 3. Has valid JWT auth header
+  // 1. Has valid internal secret header (timing-safe)
+  // 2. Has valid JWT auth header
   const internalSecret = req.headers.get('x-internal-secret');
   const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-  const isCronCall = body.source === 'cron';
-  const isInternalCall = internalSecret && internalSecret === expectedSecret;
+  const isInternalCall = internalSecret && expectedSecret && 
+    await timingSafeEqual(internalSecret, expectedSecret);
   const authHeader = req.headers.get('Authorization');
   
-  if (!isCronCall && !isInternalCall && !authHeader) {
+  if (!isInternalCall && !authHeader) {
     console.log('[integrity-sentinel] Unauthorized: No valid origin');
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
@@ -44,11 +45,11 @@ Deno.serve(async (req) => {
     );
   }
 
-  console.log(`[integrity-sentinel] Authorized call from: ${isCronCall ? 'cron' : isInternalCall ? 'internal' : 'jwt'}`);
+  console.log(`[integrity-sentinel] Authorized call from: ${isInternalCall ? 'internal' : 'jwt'}`);
 
   const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    requireEnv('SUPABASE_URL'),
+    requireEnv('SUPABASE_SERVICE_ROLE_KEY')
   )
 
   const startTime = Date.now()
