@@ -138,7 +138,7 @@ export class AICacheUseCase {
 
       if (cached) {
         // Record hit asynchronously (fire-and-forget)
-        this.cache.recordHit(cached.id).catch((e) => console.warn('[AICacheUseCase] recordHit failed:', e));
+        this.cache.recordHit(cached.id).catch((e) => logger.warn('[AICacheUseCase] recordHit failed:', e));
 
         logger.info('[AICacheUseCase] Cache HIT', {
           promptHash: promptHash.substring(0, 16) + '...',
