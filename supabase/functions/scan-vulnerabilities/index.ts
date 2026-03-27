@@ -1,9 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { serveTenant } from '../_shared/serve-tenant.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-import { validateCallerTenant } from '../_shared/validate-caller-tenant.ts';
-
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 interface SoftwareItem {
   name: string;
@@ -155,53 +151,21 @@ function getSeverityFromScoreHelper(score: number | null): string {
   return 'low';
 }
 
-Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+serveTenant(async (req, ctx) => {
+  const { supabase, tenantId, requestId, body } = ctx;
+  const { agent_id, mode } = body;
 
-  if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-
-  const requestId = crypto.randomUUID().slice(0, 8);
-  
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    const body = await req.json();
-    const { agent_id, tenant_id, mode } = body;
-
-    // V-1015 FIX: Validate caller has access to requested tenant
-    if (tenant_id) {
-      const validation = await validateCallerTenant(req, supabase, tenant_id);
-      if (!validation.authorized) {
-        return new Response(
-          JSON.stringify({ error: validation.error }),
-          { status: validation.statusCode || 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
-    // ✅ BATCH MODE: Scan all agents for a tenant
+    // ✅ BATCH MODE: Scan all agents for this tenant (serveTenant already validated access)
     if (mode === 'batch_all_agents') {
-      console.log(`[${requestId}] [SCAN-VULNS] Starting BATCH scan for tenant ${tenant_id || 'ALL'}`);
+      console.log(`[${requestId}] [SCAN-VULNS] Starting BATCH scan for tenant ${tenantId}`);
       
-      // Get all active agents
-      let query = supabase
+      const { data: agents, error: agentsError } = await supabase
         .from('agents')
         .select('id, tenant_id, agent_name')
-        .eq('status', 'active');
-      
-      if (tenant_id) {
-        query = query.eq('tenant_id', tenant_id);
-      }
-      
-      const { data: agents, error: agentsError } = await query.limit(100);
+        .eq('status', 'active')
+        .eq('tenant_id', tenantId)
+        .limit(100);
       
       if (agentsError) {
         console.error(`[${requestId}] [SCAN-VULNS] Error fetching agents:`, agentsError);
@@ -227,7 +191,6 @@ Deno.serve(async (req) => {
       let agentsScanned = 0;
       const results: { agent_id: string; agent_name: string; vulns_found: number }[] = [];
       
-      // Process each agent (limited concurrency)
       for (const agent of agents) {
         try {
           const scanResult = await scanAgentVulnerabilities(
@@ -251,9 +214,8 @@ Deno.serve(async (req) => {
       // Trigger playbooks for critical vulnerabilities found
       if (totalVulns > 0) {
         const criticalAgents = results.filter(r => r.vulns_found > 0);
-        for (const agentResult of criticalAgents.slice(0, 5)) { // Limit to 5 to avoid flooding
+        for (const agentResult of criticalAgents.slice(0, 5)) {
           try {
-            // Check if there are critical vulns for this agent
             const { data: criticalVulns } = await supabase
               .from('vuln_findings')
               .select('id, severity')
@@ -262,27 +224,18 @@ Deno.serve(async (req) => {
               .limit(1);
             
             if (criticalVulns && criticalVulns.length > 0) {
-              // Trigger playbook for critical vulnerability
-              const { data: agent } = await supabase
-                .from('agents')
-                .select('tenant_id')
-                .eq('id', agentResult.agent_id)
-                .single();
-              
-              if (agent) {
-                await supabase.functions.invoke('evaluate-playbook-triggers', {
-                  body: {
-                    tenant_id: agent.tenant_id,
-                    trigger_type: 'vulnerability_critical',
-                    agent_id: agentResult.agent_id,
-                    context: {
-                      vulns_found: agentResult.vulns_found,
-                      agent_name: agentResult.agent_name
-                    }
+              await supabase.functions.invoke('evaluate-playbook-triggers', {
+                body: {
+                  tenant_id: tenantId,
+                  trigger_type: 'vulnerability_critical',
+                  agent_id: agentResult.agent_id,
+                  context: {
+                    vulns_found: agentResult.vulns_found,
+                    agent_name: agentResult.agent_name
                   }
-                });
-                console.log(`[${requestId}] [SCAN-VULNS] Triggered playbook for agent ${agentResult.agent_name} with critical vulns`);
-              }
+                }
+              });
+              console.log(`[${requestId}] [SCAN-VULNS] Triggered playbook for agent ${agentResult.agent_name} with critical vulns`);
             }
           } catch (triggerError) {
             console.error(`[${requestId}] [SCAN-VULNS] Error triggering playbook:`, triggerError);
@@ -305,13 +258,14 @@ Deno.serve(async (req) => {
     }
 
     // Single agent scan (original behavior)
-
-    if (!agent_id || !tenant_id) {
+    if (!agent_id) {
       return new Response(
-        JSON.stringify({ error: 'agent_id and tenant_id required' }),
+        JSON.stringify({ error: 'agent_id required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const tenant_id = tenantId;
 
     console.log(`[${requestId}] [SCAN-VULNS] Starting vulnerability scan for agent ${agent_id}`);
 
