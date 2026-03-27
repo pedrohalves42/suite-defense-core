@@ -5,6 +5,7 @@
  */
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 serveTenant(async (_req, ctx) => {
   const { supabase, userId, tenantId, requestId } = ctx;
@@ -73,7 +74,7 @@ serveTenant(async (_req, ctx) => {
 
   let blockedCount = blocked?.length || 0;
   if (insertError) {
-    console.warn(`[${requestId}] Upsert failed, falling back to individual inserts:`, insertError.message);
+    logger.warn(`[${requestId}] Upsert failed, falling back to individual inserts: ${insertError.message}`);
     blockedCount = 0;
     for (const item of insertData) {
       const { error: singleErr } = await supabase.from('blocked_websites').insert(item);
@@ -132,7 +133,7 @@ serveTenant(async (_req, ctx) => {
         syncResult.jobs_created = createdJobs?.length || 0;
       }
     } catch (syncErr) {
-      console.error(`[${requestId}] Sync error (non-fatal):`, syncErr);
+      logger.error(`[${requestId}] Sync error (non-fatal)`, syncErr as Error);
     }
 
     await supabase.from('system_alerts').insert({

@@ -5,6 +5,7 @@
  */
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 serveTenant(async (_req, ctx) => {
   const { supabase, userId, requestId } = ctx;
@@ -23,14 +24,14 @@ serveTenant(async (_req, ctx) => {
   });
 
   if (roleError || !isSuperAdmin) {
-    console.error(`[get-admin-releases][${requestId}] Access denied for user: ${userId}`);
+    logger.warn(`[get-admin-releases][${requestId}] Access denied for user: ${userId}`);
     return new Response(
       JSON.stringify({ error: 'Forbidden - super_admin required' }),
       { status: 403, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  console.log(`[get-admin-releases][${requestId}] Super admin ${userId} fetching all releases`);
+  logger.info(`[get-admin-releases][${requestId}] Super admin ${userId} fetching all releases`);
 
   const { data: releases, error: fetchError } = await supabase
     .from('agent_releases')
@@ -38,7 +39,7 @@ serveTenant(async (_req, ctx) => {
     .order('created_at', { ascending: false });
 
   if (fetchError) {
-    console.error(`[get-admin-releases][${requestId}] Fetch error:`, fetchError);
+    logger.error(`[get-admin-releases][${requestId}] Fetch error`, fetchError as Error);
     return new Response(
       JSON.stringify({ error: 'Failed to fetch releases' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

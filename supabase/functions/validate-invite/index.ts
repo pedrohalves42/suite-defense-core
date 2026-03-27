@@ -6,6 +6,7 @@
  */
 
 import { servePublic } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface SafeInviteData {
   email: string;
@@ -36,7 +37,7 @@ servePublic(async (_req, { supabase, requestId, body }) => {
     .maybeSingle();
 
   if (inviteError) {
-    console.error(`[${requestId}] Database error:`, inviteError);
+    logger.error(`[${requestId}] Database error`, inviteError as Error);
     return new Response(
       JSON.stringify({ error: 'Erro ao validar convite' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
@@ -76,6 +77,6 @@ servePublic(async (_req, { supabase, requestId, body }) => {
     error_code: isExpired ? 'EXPIRED' : undefined,
   };
 
-  console.log(`[${requestId}] Invite validated: ${invite.email}, valid: ${response.is_valid}`);
+  logger.info(`[${requestId}] Invite validated: ${invite.email}, valid: ${response.is_valid}`);
   return response;
 });

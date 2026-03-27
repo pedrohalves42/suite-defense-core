@@ -5,6 +5,7 @@
  */
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 function extractIpAddress(req: Request): string {
   const cfConnectingIp = req.headers.get('cf-connecting-ip');
@@ -29,7 +30,7 @@ serveTenant(async (req, ctx) => {
     );
   }
 
-  console.log(`[clear-failed-logins][${requestId}] Clearing for IP: ${ipAddress}, user: ${userId}`);
+  logger.info(`[clear-failed-logins][${requestId}] Clearing for IP: ${ipAddress}, user: ${userId}`);
 
   await supabase
     .from('failed_login_attempts')
