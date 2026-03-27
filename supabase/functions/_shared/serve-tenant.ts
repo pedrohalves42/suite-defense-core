@@ -159,7 +159,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
       const expectedInternalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
 
       // 3. Parse body (only for methods that have body)
-      let body: any = {};
+      let body: unknown = {};
       if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
         try {
           body = await req.json();
@@ -240,13 +240,13 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
       }
 
       // 7. Build context and call handler
-      const ctx: TenantContext = {
+      const ctx: TenantContext<T> = {
         tenantId: tenantId!,
         userId,
         isInternal,
         supabase,
         requestId,
-        body,
+        body: body as T,
         req,
       };
 
@@ -275,7 +275,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
 
 // ─── servePublic: For webhooks and unauthenticated endpoints ─────────────────
 
-export type PublicHandler = (req: Request, ctx: { supabase: SupabaseClient; requestId: string; body: any }) => Promise<any>;
+export type PublicHandler = (req: Request, ctx: { supabase: SupabaseClient; requestId: string; body: unknown }) => Promise<Response | Record<string, unknown> | unknown>;
 
 export function servePublic(handler: PublicHandler) {
   Deno.serve(async (req: Request) => {
@@ -291,7 +291,7 @@ export function servePublic(handler: PublicHandler) {
         requireEnv('SUPABASE_SERVICE_ROLE_KEY')
       );
 
-      let body: any = {};
+      let body: unknown = {};
       if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
         try { body = await req.json(); } catch { body = {}; }
       }
@@ -319,11 +319,11 @@ export interface AgentContext {
   agentData: Record<string, unknown>;
   supabase: SupabaseClient;
   requestId: string;
-  body: any;
+  body: unknown;
   req: Request;
 }
 
-export type AgentHandler = (req: Request, ctx: AgentContext) => Promise<any>;
+export type AgentHandler = (req: Request, ctx: AgentContext) => Promise<Response | Record<string, unknown> | unknown>;
 
 export interface ServeAgentOptions {
   /** Additional columns to select from the agents table beyond the defaults */
@@ -360,7 +360,7 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
         return authResult.response;
       }
 
-      let body: any = {};
+      let body: unknown = {};
       if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
         try {
           const contentEncoding = req.headers.get('Content-Encoding');
