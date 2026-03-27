@@ -33,7 +33,7 @@ const ClientInstallWizard = () => {
 
       setInstallCommand(
         platform === 'windows'
-          ? `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm ${installUrl} | iex`
+          ? `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $sp="$env:TEMP\\cs-install-$(Get-Random).ps1"; Invoke-WebRequest -Uri ${installUrl} -OutFile $sp -UseBasicParsing; & $sp; Remove-Item $sp -Force`
           : `curl -sSL ${installUrl} | bash`
       );
       setStep('install');
