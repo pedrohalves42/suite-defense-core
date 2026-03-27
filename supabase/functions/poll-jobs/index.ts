@@ -1,3 +1,4 @@
+import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts'
 import { AgentTokenSchema } from '../_shared/validation.ts'
@@ -18,8 +19,8 @@ Deno.serve(async (req) => {
   if (methodError) return methodError
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabaseUrl = requireEnv('SUPABASE_URL')
+    const supabaseKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY')
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     // Verificar token do agente

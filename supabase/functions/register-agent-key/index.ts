@@ -1,3 +1,4 @@
+import { requireEnv } from '../_shared/env.ts';
 /**
  * P1: Register Agent Signing Key
  * 
@@ -33,8 +34,8 @@ Deno.serve(async (req) => {
   if (methodError) return methodError
 
   const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    requireEnv('SUPABASE_URL'),
+    requireEnv('SUPABASE_SERVICE_ROLE_KEY')
   )
 
   const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'

@@ -1,3 +1,4 @@
+import { requireEnv } from '../_shared/env.ts';
 /**
  * serve-installer Edge Function
  * 
@@ -27,7 +28,7 @@ import {
 // Linux/macOS scripts are now fetched from agent_releases database instead of placeholder files
 import { INSTALLER_VERSION, LAST_UPDATED, getVersionInfo } from '../_shared/installer-version.ts';
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_URL = requireEnv('SUPABASE_URL');
 
 /**
  * Valida que nao ha placeholders nao substituidos no script
@@ -160,7 +161,7 @@ Deno.serve(async (req) => {
       
       const supabaseClient = createClient(
         SUPABASE_URL,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        requireEnv('SUPABASE_SERVICE_ROLE_KEY')
       );
       
       // Check rate limit: 10 requests per hour per IP, block for 30 minutes if exceeded

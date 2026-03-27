@@ -1,3 +1,4 @@
+import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { handleException, handleValidationError, createErrorResponse, ErrorCode, corsHeaders } from '../_shared/error-handler.ts';
 import { EnrollAgentSchema } from '../_shared/validation.ts';
@@ -23,8 +24,8 @@ Deno.serve(async (req) => {
   logger.info(`[${requestId}] Starting enrollment request`);
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = requireEnv('SUPABASE_URL');
+    const supabaseKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Rate limiting por IP (prevenir brute force)
