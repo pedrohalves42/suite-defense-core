@@ -189,10 +189,10 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ServerUrl,
 
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [string]$AgentToken,
 
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [string]$HmacSecret,
 
     [Parameter(Mandatory = $false)]
@@ -206,6 +206,55 @@ param(
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $ErrorActionPreference = "Stop"
+
+# ============================================
+#  v5.0.16-hardening: SECURE TOKEN STORAGE
+#  Reads tokens from protected files if not provided via CLI.
+#  If CLI tokens are provided, migrates them to files for future runs.
+# ============================================
+$Global:BaseDir_Early = "C:\CyberShield"
+$secretsDir = Join-Path $Global:BaseDir_Early "secrets"
+
+if (-not $AgentToken -or -not $HmacSecret) {
+    # Try to read from secure files
+    $tokenFile = Join-Path $secretsDir "agent.token"
+    $hmacFile = Join-Path $secretsDir "hmac.secret"
+    if ((Test-Path $tokenFile) -and (Test-Path $hmacFile)) {
+        $AgentToken = (Get-Content $tokenFile -Raw -ErrorAction Stop).Trim()
+        $HmacSecret = (Get-Content $hmacFile -Raw -ErrorAction Stop).Trim()
+        Write-Host "[SECURITY] Tokens loaded from secure file storage" -ForegroundColor Cyan
+    } else {
+        Write-Error "CyberShield Agent: No AgentToken/HmacSecret provided and no secrets files found in $secretsDir. Cannot start."
+        [Environment]::Exit(9600)
+    }
+} else {
+    # CLI tokens provided - migrate to files for future runs (deprecation path)
+    Write-Host "[SECURITY] DEPRECATION WARNING: Tokens passed via command line. Migrating to secure file storage..." -ForegroundColor Yellow
+    try {
+        if (-not (Test-Path $secretsDir)) {
+            New-Item -ItemType Directory -Path $secretsDir -Force | Out-Null
+            # Restrict ACL to SYSTEM only (S-1-5-18)
+            $acl = New-Object System.Security.AccessControl.DirectorySecurity
+            $acl.SetAccessRuleProtection($true, $false)
+            $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")),
+                "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+            $acl.AddAccessRule($systemRule)
+            $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")),
+                "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+            $acl.AddAccessRule($adminRule)
+            Set-Acl -Path $secretsDir -AclObject $acl -ErrorAction Stop
+        }
+        $tokenFile = Join-Path $secretsDir "agent.token"
+        $hmacFile = Join-Path $secretsDir "hmac.secret"
+        [System.IO.File]::WriteAllText($tokenFile, $AgentToken)
+        [System.IO.File]::WriteAllText($hmacFile, $HmacSecret)
+        Write-Host "[SECURITY] Tokens migrated to secure file storage: $secretsDir" -ForegroundColor Green
+    } catch {
+        Write-Host "[SECURITY] Token migration failed (non-critical, CLI tokens still work): $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
 
 # ============================================
 #  v5.0.13-hardening: EVENTLOG SOURCE REGISTRATION
@@ -528,6 +577,15 @@ $Global:RollbackPaths = @{
     RollbackState = Join-Path $dataDir "rollback_state.json"
 }
 
+# v5.0.16-hardening: Update-in-progress flag for TOCTOU guard
+$Global:UpdateInProgress = $false
+
+# v5.0.16-hardening: EventLog toggle (server-configurable via heartbeat)
+$Global:EnableEventLog = $true
+
+# v5.0.16-hardening: BurntToast availability cache (checked once)
+$Global:BurntToastAvailable = $null
+
 # v5.0.1: FSM Enterprise States
 $Global:FSM_STATES = @{
     INITIALIZING = "INITIALIZING"
@@ -594,6 +652,7 @@ $Global:AggregationStats = @{
     events_sent = 0
     bursts_detected = 0
     reduction_percent = 0
+    buffer_overflow = 0
 }
 
 # v5.0.1: Hash Chain for execution
@@ -718,6 +777,26 @@ try {
     # non-fatal - Write-Log may not be available yet in some execution contexts
 }
 
+# ============================================
+#  v5.0.16-hardening: SAFE EVENTLOG WRAPPER
+#  Skips Write-EventLog when disabled by server policy
+# ============================================
+function Write-SafeEventLog {
+    param(
+        [string]$LogName = "Application",
+        [string]$Source = "CyberShield",
+        [int]$EventId = 5000,
+        [string]$EntryType = "Information",
+        [string]$Message = ""
+    )
+    if (-not $Global:EnableEventLog) { return }
+    try {
+        Write-EventLog -LogName $LogName -Source $Source -EventId $EventId -EntryType $EntryType -Message $Message -ErrorAction SilentlyContinue
+    } catch {
+        # EventLog write failed - non-critical
+    }
+}
+
 # v5.0.13: Scoped TLS validation function (called per-request, NOT global override)
 function Test-TlsCertificatePin {
     param([string]$Thumbprint)
@@ -790,9 +869,14 @@ function Test-RuntimeIntegrity {
                 }
                 return $true
             } else {
+                # v5.0.16-hardening: Skip TOCTOU violation if self-update is in progress
+                if ($Global:UpdateInProgress) {
+                    Write-Log "[INTEGRITY] Script changed during update-in-progress - expected, skipping TOCTOU violation" "DEBUG"
+                    return $true
+                }
                 # File ACTUALLY changed during execution (real TOCTOU)
                 Write-Log "[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running! Boot: $($Global:BootScriptHash.Substring(0,16))..., Now: $($currentHash.Substring(0,16))..." "ERROR"
-                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "RUNTIME INTEGRITY VIOLATION: Script SHA256 changed during execution (TOCTOU). Terminating." -ErrorAction SilentlyContinue
+                Write-SafeEventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "RUNTIME INTEGRITY VIOLATION: Script SHA256 changed during execution (TOCTOU). Terminating." -ErrorAction SilentlyContinue
                 return $false
             }
         }
@@ -875,7 +959,7 @@ function Save-SignedHashCache {
             $sigValid = Test-Ed25519HashSignature -Hash $Hash -SignatureBase64 $Signature
             if (-not $sigValid) {
                 Write-Log "[INTEGRITY] REJECTED hash cache update - Ed25519 signature INVALID. Possible server compromise!" "ERROR"
-                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Rejected script hash update - invalid Ed25519 signature. Possible supply chain attack." -ErrorAction SilentlyContinue
+                Write-SafeEventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Rejected script hash update - invalid Ed25519 signature. Possible supply chain attack." -ErrorAction SilentlyContinue
                 return
             }
             Write-Log "[INTEGRITY] Ed25519 signature verified for hash cache update" "DEBUG"
@@ -1286,9 +1370,27 @@ function Add-AggregatedEvent {
         burst_alerted = $false
     }
 
-    # Check buffer size limit
+    # v5.0.16-hardening: Per-entry size cap (10KB max metadata)
+    if ($Metadata) {
+        try {
+            $metaJson = $Metadata | ConvertTo-Json -Compress -Depth 3 -ErrorAction SilentlyContinue
+            if ($metaJson -and $metaJson.Length -gt 10240) {
+                Write-Log "[AGGREGATION] Entry metadata too large ($($metaJson.Length) chars) - truncating" "WARN"
+                $Metadata = @{ truncated = $true; original_size = $metaJson.Length }
+            }
+        } catch { }
+    }
+
+    # v5.0.16-hardening: Preemptive flush at 80% capacity
+    if ($Global:EventAggregationBuffer.Count -ge [int]($Global:AggregationMaxBufferSize * 0.8)) {
+        Write-Log "[AGGREGATION] Buffer at 80% ($($Global:EventAggregationBuffer.Count)/$($Global:AggregationMaxBufferSize)) - preemptive flush" "WARN"
+        Invoke-FlushAggregationBuffer
+    }
+
+    # Check buffer size limit (hard cap)
     if ($Global:EventAggregationBuffer.Count -ge $Global:AggregationMaxBufferSize) {
-        Write-Log "[AGGREGATION] Buffer full ($($Global:EventAggregationBuffer.Count)) - forcing flush" "WARN"
+        Write-Log "[AGGREGATION] Buffer FULL ($($Global:EventAggregationBuffer.Count)) - forcing flush" "WARN"
+        $Global:AggregationStats.buffer_overflow++
         Invoke-FlushAggregationBuffer
     }
 }
@@ -1333,6 +1435,19 @@ function Invoke-FlushAggregationBuffer {
     try {
         $flushed = 0
         $keys = @($Global:EventAggregationBuffer.Keys)
+
+        # v5.0.16-hardening: Truncate oldest entries if buffer exceeds max
+        if ($keys.Count -gt $Global:AggregationMaxBufferSize) {
+            $overflow = $keys.Count - $Global:AggregationMaxBufferSize
+            $Global:AggregationStats.buffer_overflow += $overflow
+            Write-Log "[AGGREGATION] Buffer overflow: dropping $overflow oldest entries" "WARN"
+            $sorted = $keys | Sort-Object { $Global:EventAggregationBuffer[$_].last_seen } 
+            $toDrop = $sorted | Select-Object -First $overflow
+            foreach ($dk in $toDrop) {
+                $Global:EventAggregationBuffer.Remove($dk)
+            }
+            $keys = @($Global:EventAggregationBuffer.Keys)
+        }
 
         foreach ($key in $keys) {
             $entry = $Global:EventAggregationBuffer[$key]
@@ -4996,7 +5111,7 @@ function Apply-ForcedUpdate {
         $maxBase64Length = 7340032  # ~5MB binary = ~7MB Base64
         if ($base64Content.Length -gt $maxBase64Length) {
             Write-Log "[FORCE UPDATE] REJECTED - Base64 payload too large BEFORE decode: $($base64Content.Length) chars (max $maxBase64Length)" "ERROR"
-            Write-EventLog -LogName Application -Source "CyberShield" -EventId 5101 -EntryType Error -Message "Update rejected: Base64 payload too large before decode ($($base64Content.Length) chars)" -ErrorAction SilentlyContinue
+            Write-SafeEventLog -LogName Application -Source "CyberShield" -EventId 5101 -EntryType Error -Message "Update rejected: Base64 payload too large before decode ($($base64Content.Length) chars)" -ErrorAction SilentlyContinue
             return @{ success = $false; error = "Base64 payload too large before decode ($($base64Content.Length) chars)" }
         }
 
@@ -5012,6 +5127,9 @@ function Apply-ForcedUpdate {
             Write-Log "[FORCE UPDATE] REJECTED - Payload too large: $($bytes.Length) bytes (max 5MB)" "ERROR"
             return @{ success = $false; error = "Update payload exceeds 5MB limit ($($bytes.Length) bytes)" }
         }
+        # v5.0.16-hardening: TOCTOU guard - signal that update is in progress
+        $Global:UpdateInProgress = $true
+        
         [System.IO.File]::WriteAllBytes($tempScript, $bytes)
         Write-Log "[FORCE UPDATE] Script salvo: $($bytes.Length) bytes" "DEBUG"
         
@@ -5037,7 +5155,7 @@ function Apply-ForcedUpdate {
             if (-not $sigValid) {
                 Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
                 Write-Log "[FORCE UPDATE] REJECTED - Update signature INVALID! Possible supply chain attack." "ERROR"
-                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9006 -EntryType Error -Message "FORCE UPDATE REJECTED: Invalid cryptographic signature on update payload. SHA256: $actualHash" -ErrorAction SilentlyContinue
+                Write-SafeEventLog -LogName Application -Source "CyberShield" -EventId 9006 -EntryType Error -Message "FORCE UPDATE REJECTED: Invalid cryptographic signature on update payload. SHA256: $actualHash" -ErrorAction SilentlyContinue
                 Add-EvidenceEntry -Type "security_alert" -Data @{
                     event = "update_signature_invalid"
                     target_version = $targetVersion
@@ -5050,7 +5168,7 @@ function Apply-ForcedUpdate {
             # FAIL-OPEN: Accept unsigned updates when SHA256 is already validated
             # This prevents lockout when releases lack signatures (common during rollouts)
             Write-Log "[FORCE UPDATE] WARNING - No cryptographic signature on update payload. Accepting based on SHA256 validation (fail-open policy)." "WARN"
-            Write-EventLog -LogName Application -Source "CyberShield" -EventId 5102 -EntryType Warning -Message "Update accepted without signature (fail-open): SHA256 validated ($actualHash)" -ErrorAction SilentlyContinue
+            Write-SafeEventLog -LogName Application -Source "CyberShield" -EventId 5102 -EntryType Warning -Message "Update accepted without signature (fail-open): SHA256 validated ($actualHash)" -ErrorAction SilentlyContinue
         }
         
         # Detectar script atual e diretorio de instalacao
@@ -5159,6 +5277,46 @@ function Apply-ForcedUpdate {
         
         # DYNAMIC TASK DETECTION: Find the correct Scheduled Task name
         Write-Log "[FORCE UPDATE] Detectando Scheduled Task..." "INFO"
+        
+        # v5.0.16-hardening: Safe argument builder with validation
+        function New-SafeTaskArguments {
+            param(
+                [string]$TargetScript,
+                [string]$SUrl,
+                [string]$AToken,
+                [string]$HSecret,
+                [string]$AName
+            )
+            # Validate formats to prevent injection
+            if ($AToken -and $AToken -notmatch '^[a-fA-F0-9\-]{20,}$') {
+                throw "Invalid AgentToken format - possible injection attempt"
+            }
+            if ($HSecret -and $HSecret -notmatch '^[a-fA-F0-9]{32,128}$') {
+                throw "Invalid HmacSecret format - possible injection attempt"
+            }
+            if ($AName -notmatch '^[a-zA-Z0-9\-_.]{1,64}$') {
+                throw "Invalid AgentName format - possible injection attempt"
+            }
+            if ($SUrl -notmatch '^https?://[a-zA-Z0-9\-.:]+') {
+                throw "Invalid ServerUrl format - possible injection attempt"
+            }
+            # Escape double quotes in all values
+            $safeScript = $TargetScript -replace '"', '\"'
+            $safeSUrl = $SUrl -replace '"', '\"'
+            $safeAName = $AName -replace '"', '\"'
+            
+            # v5.0.16: If secrets files exist, do NOT pass tokens on CLI
+            $secretsPath = Join-Path "C:\CyberShield" "secrets"
+            $hasSecretFiles = (Test-Path (Join-Path $secretsPath "agent.token")) -and (Test-Path (Join-Path $secretsPath "hmac.secret"))
+            
+            if ($hasSecretFiles) {
+                return '-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $safeScript + '" -ServerUrl "' + $safeSUrl + '" -AgentName "' + $safeAName + '"'
+            } else {
+                $safeAToken = $AToken -replace '"', '\"'
+                $safeHSecret = $HSecret -replace '"', '\"'
+                return '-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $safeScript + '" -ServerUrl "' + $safeSUrl + '" -AgentToken "' + $safeAToken + '" -HmacSecret "' + $safeHSecret + '" -AgentName "' + $safeAName + '"'
+            }
+        }
         $taskName = $null
         $taskPath = "\"
         $taskPatterns = @(
@@ -5188,7 +5346,7 @@ function Apply-ForcedUpdate {
                     }
                 } catch { }
 
-                $taskArgStr = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $targetScript + '" -ServerUrl "' + $Global:ServerUrl + '" -AgentToken "' + $Global:AgentToken + '" -HmacSecret "' + $Global:HmacSecret + '" -AgentName "' + $Global:AgentName + '"'
+                $taskArgStr = New-SafeTaskArguments -TargetScript $targetScript -SUrl $Global:ServerUrl -AToken $Global:AgentToken -HSecret $Global:HmacSecret -AName $Global:AgentName
                 $taskAction = New-ScheduledTaskAction -Execute $taskExecute -Argument $taskArgStr
                 Set-ScheduledTask -TaskName $taskName -TaskPath $taskPath -Action $taskAction -ErrorAction Stop | Out-Null
                 Write-Log "[FORCE UPDATE] Task '$taskName' atualizada para apontar para $targetScript" "SUCCESS"
@@ -5342,6 +5500,27 @@ function Send-Heartbeat {
                     }
 
                     # ============================================
+                    # v5.0.16-hardening: EVENTLOG TOGGLE FROM SERVER
+                    # ============================================
+                    $eventLogProp = $response.PSObject.Properties['enable_eventlog']
+                    if ($null -ne $eventLogProp) {
+                        $newVal = [bool]$eventLogProp.Value
+                        if ($newVal -ne $Global:EnableEventLog) {
+                            $Global:EnableEventLog = $newVal
+                            Write-Log "[CONFIG] EventLog writing $(if ($newVal) { 'ENABLED' } else { 'DISABLED' }) by server policy" "INFO"
+                            # Persist setting
+                            try {
+                                $configFile = Join-Path $Global:BaseDir "enable_eventlog.flag"
+                                if ($Global:EnableEventLog) {
+                                    "1" | Set-Content -Path $configFile -Force -ErrorAction SilentlyContinue
+                                } else {
+                                    "0" | Set-Content -Path $configFile -Force -ErrorAction SilentlyContinue
+                                }
+                            } catch { }
+                        }
+                    }
+
+                    # ============================================
                     # COST-OPT-V6: PROCESS JOBS FROM HEARTBEAT RESPONSE
                     # Jobs are now piggybacked on heartbeat to eliminate poll-jobs calls
                     # ============================================
@@ -5428,39 +5607,61 @@ function Show-SecurityToast {
     )
     
     try {
-        # Method 1: BurntToast module (if available)
-        if (Get-Module -ListAvailable -Name BurntToast -ErrorAction SilentlyContinue) {
-            $icon = switch ($Severity) {
-                "Error"   { "Warning" }
-                "Warning" { "Warning" }
-                default   { "None" }
+        # v5.0.16-hardening: Check BurntToast availability once and cache result
+        if ($null -eq $Global:BurntToastAvailable) {
+            $Global:BurntToastAvailable = $false
+            try {
+                if (Get-Module -ListAvailable -Name BurntToast -ErrorAction SilentlyContinue) {
+                    Import-Module BurntToast -ErrorAction Stop
+                    $Global:BurntToastAvailable = $true
+                    Write-Log "[TOAST] BurntToast module available and loaded" "DEBUG"
+                }
+            } catch {
+                Write-Log "[TOAST] BurntToast module not loadable: $($_.Exception.Message)" "DEBUG"
             }
-            New-BurntToastNotification -Text $Title, $Message -AppLogo $null -Sound $icon -ErrorAction SilentlyContinue
-            Write-Log "[TOAST] BurntToast: $Title" "DEBUG"
-            return
+        }
+        
+        # Method 1: BurntToast module (if available and loaded)
+        if ($Global:BurntToastAvailable) {
+            try {
+                $icon = switch ($Severity) {
+                    "Error"   { "Warning" }
+                    "Warning" { "Warning" }
+                    default   { "None" }
+                }
+                New-BurntToastNotification -Text $Title, $Message -AppLogo $null -Sound $icon -ErrorAction Stop
+                Write-Log "[TOAST] BurntToast: $Title" "DEBUG"
+                return
+            } catch {
+                Write-Log "[TOAST] BurntToast notification failed: $($_.Exception.Message)" "DEBUG"
+                # Fall through to BalloonTip
+            }
         }
         
         # Method 2: Windows BalloonTip (universal fallback)
-        Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
-        
-        $balloon = New-Object System.Windows.Forms.NotifyIcon
-        $balloon.Icon = [System.Drawing.SystemIcons]::Shield
-        $balloon.BalloonTipTitle = $Title
-        $balloon.BalloonTipText = $Message
-        $balloon.BalloonTipIcon = switch ($Severity) {
-            "Error"   { [System.Windows.Forms.ToolTipIcon]::Error }
-            "Warning" { [System.Windows.Forms.ToolTipIcon]::Warning }
-            default   { [System.Windows.Forms.ToolTipIcon]::Info }
+        try {
+            Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+            
+            $balloon = New-Object System.Windows.Forms.NotifyIcon
+            $balloon.Icon = [System.Drawing.SystemIcons]::Shield
+            $balloon.BalloonTipTitle = $Title
+            $balloon.BalloonTipText = $Message
+            $balloon.BalloonTipIcon = switch ($Severity) {
+                "Error"   { [System.Windows.Forms.ToolTipIcon]::Error }
+                "Warning" { [System.Windows.Forms.ToolTipIcon]::Warning }
+                default   { [System.Windows.Forms.ToolTipIcon]::Info }
+            }
+            $balloon.Visible = $true
+            $balloon.ShowBalloonTip($DurationMs)
+            
+            # Cleanup after display
+            Start-Sleep -Milliseconds 1000
+            $balloon.Dispose()
+            
+            Write-Log "[TOAST] BalloonTip: $Title" "DEBUG"
+        } catch {
+            Write-Log "[TOAST] BalloonTip fallback also failed: $($_.Exception.Message)" "DEBUG"
         }
-        $balloon.Visible = $true
-        $balloon.ShowBalloonTip($DurationMs)
-        
-        # Cleanup after display
-        # BUG 11 fix: Non-blocking - reduced from 10.5s to 1s
-        Start-Sleep -Milliseconds 1000
-        $balloon.Dispose()
-        
-        Write-Log "[TOAST] BalloonTip: $Title" "DEBUG"
     } catch {
         # Toast failures are non-critical - log and continue
         Write-Log "[TOAST] Failed to show notification (non-critical): $($_.Exception.Message)" "DEBUG"
@@ -6926,7 +7127,7 @@ while ($true) {
         if (($now - $Global:LastIntegrityCheck).TotalSeconds -ge $Global:IntegrityCheckIntervalSeconds) {
             if (-not (Test-RuntimeIntegrity)) {
                 Write-Log "[INTEGRITY] TOCTOU VIOLATION DETECTED - terminating agent immediately" "ERROR"
-                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "TOCTOU integrity violation - agent script modified during runtime. Terminating." -ErrorAction SilentlyContinue
+                Write-SafeEventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "TOCTOU integrity violation - agent script modified during runtime. Terminating." -ErrorAction SilentlyContinue
                 Flush-LogBuffer
                 [Environment]::Exit(9004)
             }

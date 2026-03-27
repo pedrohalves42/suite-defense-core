@@ -755,7 +755,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // COST-OPT: Send poll_interval to agents to reduce call frequency
+        // COST-OPT: Send poll_interval to agents to reduce call frequency
     return new Response(
       JSON.stringify({ 
         ok: true,
@@ -769,6 +769,8 @@ Deno.serve(async (req) => {
         poll_interval_seconds: 600,
         // Agent config flags
         skip_firewall_remediation: agent.skip_firewall_remediation || false,
+        // v5.0.16-hardening: EventLog toggle (default true = no behavior change)
+        enable_eventlog: true,
         // v5.0.14: Aggregation config (safe default so agents don't crash on missing property)
         aggregation: null,
         // v5.0.14-fix: Always include jobs array to prevent StrictMode error in PS 5.1
