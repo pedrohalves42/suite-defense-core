@@ -683,6 +683,8 @@ Deno.serve(async (req) => {
                   // COST-OPT v6: Unified intervals — BUG 5 fix: eliminates ping-pong
                   heartbeat_interval_seconds: 600,
                   poll_interval_seconds: 600,
+                  // v5.0.16-hardening: EventLog toggle (default true)
+                  enable_eventlog: true,
                   // v5.0.14: Aggregation config (safe default)
                   aggregation: null,
                   // v5.0.14-fix: Always include jobs array to prevent StrictMode error in PS 5.1
