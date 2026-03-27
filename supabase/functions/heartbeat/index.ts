@@ -258,12 +258,13 @@ Deno.serve(async (req) => {
     // Build all parallel promises
     const parallelOps: Promise<void>[] = []
 
-    // 1. Token last_used_at update (fire-and-forget)
+    // 1. Token last_used_at update (fire-and-forget) — uses agent_id since tokenHash is internal to authenticateAgent
     parallelOps.push(
       supabase
         .from('agent_tokens')
         .update({ last_used_at: new Date().toISOString() })
-        .eq('token_hash', tokenHash)
+        .eq('agent_id', agent.id)
+        .eq('is_active', true)
         .then(() => {})
     )
 
