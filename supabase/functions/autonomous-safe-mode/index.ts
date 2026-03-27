@@ -820,7 +820,7 @@ async function processAutoRevertThrottle(supabase: any, rule: any): Promise<Rule
       reason: 'Estabilização confirmada após cooldown de 2h'
     });
 
-    console.log(`[AUTO_REVERT_THROTTLE_006] Reverted throttle for ${candidate.agent_name}`);
+    logger.debug(`[AUTO_REVERT_THROTTLE_006] Reverted throttle for ${candidate.agent_name}`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
@@ -831,17 +831,17 @@ async function processAutoRevertThrottle(supabase: any, rule: any): Promise<Rule
 // Framework: DETECÇÃO + BLOQUEIO + PROVA AUTOMÁTICA
 // =============================================================
 async function processSilentFailureDetection(supabase: any, rule: any): Promise<RuleResult> {
-  console.log('[SILENT_FAILURE_007] Detecting silent job failures');
+  logger.debug('[SILENT_FAILURE_007] Detecting silent job failures');
 
   const { data: failures, error } = await supabase
     .rpc('detect_silent_job_failures');
 
   if (error) {
-    console.error('[SILENT_FAILURE_007] Detection error:', error);
+    logger.error('[SILENT_FAILURE_007] Detection error:', error);
     throw error;
   }
 
-  console.log(`[SILENT_FAILURE_007] Found ${failures?.length || 0} silent failures`);
+  logger.debug(`[SILENT_FAILURE_007] Found ${failures?.length || 0} silent failures`);
 
   const agents: RuleResult['agents'] = [];
   const processedTenants = new Map<string, typeof failures>();
@@ -935,7 +935,7 @@ async function processSilentFailureDetection(supabase: any, rule: any): Promise<
       });
     }
 
-    console.log(`[SILENT_FAILURE_007] Created alerts for tenant ${tenantId} with ${tenantFailures.length} violations`);
+    logger.debug(`[SILENT_FAILURE_007] Created alerts for tenant ${tenantId} with ${tenantFailures.length} violations`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
@@ -945,7 +945,7 @@ async function processSilentFailureDetection(supabase: any, rule: any): Promise<
 // JOB_SLOW_008: Detecta jobs sistematicamente lentos
 // =============================================================
 async function processSlowJobsRule(supabase: any, rule: any): Promise<RuleResult> {
-  console.log('[JOB_SLOW_008] Detecting systematically slow jobs');
+  logger.debug('[JOB_SLOW_008] Detecting systematically slow jobs');
 
   // Buscar jobs que consistentemente excedem o p95 de execução
   const { data: slowJobs, error } = await supabase.rpc('detect_slow_jobs', {
@@ -955,7 +955,7 @@ async function processSlowJobsRule(supabase: any, rule: any): Promise<RuleResult
 
   if (error) {
     // RPC might not exist yet, use fallback query
-    console.log('[JOB_SLOW_008] RPC not available, using fallback query');
+    logger.debug('[JOB_SLOW_008] RPC not available, using fallback query');
     
     const { data: fallbackData } = await supabase
       .from('jobs')
@@ -1015,7 +1015,7 @@ async function processSlowJobsRule(supabase: any, rule: any): Promise<RuleResult
     return { rule_code: rule.code, processed_count: slowTypes.length, agents: slowTypes };
   }
 
-  console.log(`[JOB_SLOW_008] Found ${slowJobs?.length || 0} slow job patterns`);
+  logger.debug(`[JOB_SLOW_008] Found ${slowJobs?.length || 0} slow job patterns`);
   return { rule_code: rule.code, processed_count: slowJobs?.length || 0, agents: [] };
 }
 
@@ -1023,7 +1023,7 @@ async function processSlowJobsRule(supabase: any, rule: any): Promise<RuleResult
 // INSIGHT_IGNORED_009: Escala insights críticos ignorados
 // =============================================================
 async function processIgnoredInsightsRule(supabase: any, rule: any): Promise<RuleResult> {
-  console.log('[INSIGHT_IGNORED_009] Checking ignored critical insights');
+  logger.debug('[INSIGHT_IGNORED_009] Checking ignored critical insights');
 
   // Buscar insights críticos não reconhecidos há mais de 72h
   const cutoffDate = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
@@ -1038,11 +1038,11 @@ async function processIgnoredInsightsRule(supabase: any, rule: any): Promise<Rul
     .limit(50);
 
   if (error) {
-    console.error('[INSIGHT_IGNORED_009] Query error:', error);
+    logger.error('[INSIGHT_IGNORED_009] Query error:', error);
     throw error;
   }
 
-  console.log(`[INSIGHT_IGNORED_009] Found ${ignoredInsights?.length || 0} ignored insights`);
+  logger.debug(`[INSIGHT_IGNORED_009] Found ${ignoredInsights?.length || 0} ignored insights`);
 
   const agents: RuleResult['agents'] = [];
 
@@ -1058,7 +1058,7 @@ async function processIgnoredInsightsRule(supabase: any, rule: any): Promise<Rul
       .eq('id', insight.id);
 
     if (updateError) {
-      console.error(`[INSIGHT_IGNORED_009] Error escalating insight ${insight.id}:`, updateError);
+      logger.error(`[INSIGHT_IGNORED_009] Error escalating insight ${insight.id}:`, updateError);
       continue;
     }
 
@@ -1086,7 +1086,7 @@ async function processIgnoredInsightsRule(supabase: any, rule: any): Promise<Rul
       reason: `Ignorado por ${Math.round((Date.now() - new Date(insight.created_at).getTime()) / (60 * 60 * 1000))}h`
     });
 
-    console.log(`[INSIGHT_IGNORED_009] Escalated insight: ${insight.title}`);
+    logger.debug(`[INSIGHT_IGNORED_009] Escalated insight: ${insight.title}`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
@@ -1101,7 +1101,7 @@ async function processBlockedAccessPatternRule(supabase: any, rule: any): Promis
     time_window_minutes: 30
   };
 
-  console.log(`[BLOCKED_ACCESS_PATTERN_010] Detecting blocked access patterns`);
+  logger.debug(`[BLOCKED_ACCESS_PATTERN_010] Detecting blocked access patterns`);
 
   // Buscar agentes com muitas tentativas bloqueadas
   const cutoffTime = new Date(Date.now() - conditions.time_window_minutes * 60 * 1000).toISOString();
