@@ -174,14 +174,14 @@ export default function MassReinstall() {
   // Gerar comando de reinstalação
   const getReinstallCommand = (key: string) => {
     if (!key.trim()) return '# Cole sua Enrollment Key acima para gerar o comando';
-    return `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "${SUPABASE_URL}/functions/v1/serve-installer/${key.trim()}?os_type=windows" | iex`;
+    return `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $sp="$env:TEMP\\cs-install-$(Get-Random).ps1"; Invoke-WebRequest -Uri "${SUPABASE_URL}/functions/v1/serve-installer/${key.trim()}?os_type=windows" -OutFile $sp -UseBasicParsing; & $sp; Remove-Item $sp -Force`;
   };
 
   // Gerar comando completo (limpeza + reinstalação)
   const getFullCommand = (key: string) => {
     if (!key.trim()) return '# Cole sua Enrollment Key acima para gerar o comando';
     return `# Limpeza + Reinstalação em um único comando
-Get-ScheduledTask -TaskName "CyberShield*" -EA 0 | Unregister-ScheduledTask -Confirm:$false -EA 0; Remove-Item "C:\\CyberShield" -Recurse -Force -EA 0; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm "${SUPABASE_URL}/functions/v1/serve-installer/${key.trim()}?os_type=windows" | iex`;
+Get-ScheduledTask -TaskName "CyberShield*" -EA 0 | Unregister-ScheduledTask -Confirm:$false -EA 0; Remove-Item "C:\\CyberShield" -Recurse -Force -EA 0; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $sp="$env:TEMP\\cs-install-$(Get-Random).ps1"; Invoke-WebRequest -Uri "${SUPABASE_URL}/functions/v1/serve-installer/${key.trim()}?os_type=windows" -OutFile $sp -UseBasicParsing; & $sp; Remove-Item $sp -Force`;
   };
 
   const formatLastHeartbeat = (lastHeartbeat: string | null) => {
