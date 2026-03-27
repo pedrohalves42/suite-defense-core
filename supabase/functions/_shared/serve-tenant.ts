@@ -314,6 +314,8 @@ export interface AgentContext {
   agentName: string;
   tenantId: string;
   hmacSecret: string | null;
+  /** Extra agent fields fetched via extraAgentFields option */
+  agentData: Record<string, unknown>;
   supabase: SupabaseClient;
   requestId: string;
   body: any;
@@ -322,11 +324,18 @@ export interface AgentContext {
 
 export type AgentHandler = (req: Request, ctx: AgentContext) => Promise<any>;
 
+export interface ServeAgentOptions {
+  /** Additional columns to select from the agents table beyond the defaults */
+  extraAgentFields?: string[];
+}
+
 /**
  * Middleware for agent-authenticated endpoints.
  * Uses X-Agent-Token header + token_hash lookup.
+ * 
+ * @param options.extraAgentFields - Additional agent columns to fetch (e.g. ['status', 'agent_version', 'force_update_version'])
  */
-export function serveAgent(handler: AgentHandler) {
+export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
   Deno.serve(async (req: Request) => {
     const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
 
@@ -342,7 +351,9 @@ export function serveAgent(handler: AgentHandler) {
 
       // Import agent auth dynamically to avoid circular deps
       const { authenticateAgent } = await import('./agent-auth.ts');
-      const authResult = await authenticateAgent(supabase, req, requestId);
+      const authResult = await authenticateAgent(supabase, req, requestId, {
+        extraAgentFields: options?.extraAgentFields,
+      });
       
       if (!authResult.success) {
         return authResult.response;
@@ -371,6 +382,7 @@ export function serveAgent(handler: AgentHandler) {
         agentName: authResult.agent.agent_name,
         tenantId: authResult.agent.tenant_id,
         hmacSecret: authResult.agent.hmac_secret,
+        agentData: authResult.agentData,
         supabase,
         requestId,
         body,
