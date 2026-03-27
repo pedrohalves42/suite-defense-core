@@ -1,8 +1,5 @@
+import { serveTenant } from '../_shared/serve-tenant.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const SYSTEM_PROMPT = `You are CyberShield Security Copilot — an expert cybersecurity analyst assistant embedded in the CyberShield platform.
 
@@ -55,99 +52,61 @@ ${(insights.data || []).slice(0, 5).map(i => `- [${i.severity}] ${i.title}: ${i.
 `;
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+serveTenant(async (req, ctx) => {
+  const { supabase, tenantId, requestId, body } = ctx;
 
-  try {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: 'AI service not configured' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Auth
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
-    // Extract JWT token and verify user
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      console.error('Auth error:', authError?.message);
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { data: role } = await supabase
-      .from('user_roles').select('tenant_id').eq('user_id', user.id).limit(1).maybeSingle();
-    const tenantId = role?.tenant_id;
-    if (!tenantId) {
-      return new Response(JSON.stringify({ error: 'No tenant' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { messages } = await req.json();
-    if (!messages || !Array.isArray(messages)) {
-      return new Response(JSON.stringify({ error: 'messages array required' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Fetch tenant context for the first message or periodically
-    const tenantContext = await getTenantContext(supabase, tenantId);
-
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT + '\n\n' + tenantContext },
-          ...messages,
-        ],
-        stream: true,
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded. Tente novamente em alguns segundos.' }), {
-          status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: 'Créditos de IA esgotados.' }), {
-          status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      const errText = await response.text();
-      console.error('AI gateway error:', response.status, errText);
-      return new Response(JSON.stringify({ error: 'AI service error' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    return new Response(response.body, {
-      headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' },
-    });
-  } catch (error) {
-    console.error('ai-security-copilot error:', error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  if (!LOVABLE_API_KEY) {
+    return new Response(JSON.stringify({ error: 'AI service not configured' }), {
+      status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }
-});
+
+  const { messages } = body || {};
+  if (!messages || !Array.isArray(messages)) {
+    return new Response(JSON.stringify({ error: 'messages array required' }), {
+      status: 400, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const tenantContext = await getTenantContext(supabase, tenantId);
+
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-3-flash-preview',
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT + '\n\n' + tenantContext },
+        ...messages,
+      ],
+      stream: true,
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 429) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded.' }), {
+        status: 429, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (response.status === 402) {
+      return new Response(JSON.stringify({ error: 'Créditos de IA esgotados.' }), {
+        status: 402, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    const errText = await response.text();
+    console.error('AI gateway error:', response.status, errText);
+    return new Response(JSON.stringify({ error: 'AI service error' }), {
+      status: 500, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Return streaming response directly
+  return new Response(response.body, {
+    headers: { 'Content-Type': 'text/event-stream' },
+  });
+}, { methods: ['POST'] });
