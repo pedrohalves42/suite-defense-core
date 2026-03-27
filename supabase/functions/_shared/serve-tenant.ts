@@ -89,7 +89,7 @@ type TenantHandler<T = unknown> = (req: Request, ctx: TenantContext<T>) => Promi
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function jsonResponse(data: any, status = 200, extraHeaders?: Record<string, string>) {
+function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json', ...extraHeaders },
@@ -127,7 +127,7 @@ async function verifyUserTenantAccess(supabase: SupabaseClient, userId: string, 
 
 // ─── Main Middleware ─────────────────────────────────────────────────────────
 
-export function serveTenant(handler: TenantHandler, options?: ServeOptions) {
+export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: ServeOptions) {
   const {
     tenantSource = 'auto',
     allowFallback = true,
