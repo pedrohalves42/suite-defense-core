@@ -18,20 +18,30 @@ export interface AuthenticatedAgent {
 export type AgentAuthResult = {
   success: true;
   agent: AuthenticatedAgent;
+  /** Extra agent fields requested via extraAgentFields option */
+  agentData: Record<string, unknown>;
 } | {
   success: false;
   response: Response;
 };
 
+export interface AuthenticateAgentOptions {
+  /** Additional columns to select from the agents table beyond the defaults */
+  extraAgentFields?: string[];
+}
+
 /**
  * Authenticates an agent via X-Agent-Token header.
  * Returns the agent info or an error response.
+ * 
+ * @param options.extraAgentFields - Additional agent columns to fetch (e.g. ['status', 'agent_version'])
  */
 export async function authenticateAgent(
   supabase: SupabaseClient,
   req: Request,
   endpoint: string,
-): Promise<{ success: true; agent: AuthenticatedAgent } | { success: false; response: Response }> {
+  options?: AuthenticateAgentOptions,
+): Promise<AgentAuthResult> {
   const agentToken = req.headers.get('X-Agent-Token');
 
   if (!agentToken) {
@@ -45,9 +55,17 @@ export async function authenticateAgent(
   }
 
   const tokenHash = await hashToken(agentToken);
+  
+  // Build select fields: base fields + any extra requested
+  const baseFields = 'id, agent_name, tenant_id, hmac_secret';
+  const extraFields = options?.extraAgentFields?.length 
+    ? ', ' + options.extraAgentFields.join(', ')
+    : '';
+  const agentSelect = `agent_id, expires_at, agents!inner(${baseFields}${extraFields})`;
+  
   const { data: token, error: tokenError } = await supabase
     .from('agent_tokens')
-    .select('agent_id, expires_at, agents!inner(id, agent_name, tenant_id, hmac_secret)')
+    .select(agentSelect)
     .eq('token_hash', tokenHash)
     .eq('is_active', true)
     .maybeSingle();
