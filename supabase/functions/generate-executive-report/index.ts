@@ -4,6 +4,7 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { callAISimple } from '../_shared/ai-provider-helper.ts';
+import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -127,16 +128,15 @@ Deno.serve(async (req) => {
     }
 
     // Validate origin - accept if:
-    // 1. source === 'cron' (scheduled pg_cron call)
-    // 2. Has valid internal secret header
-    // 3. Has valid JWT auth header
+    // 1. Has valid internal secret header (timing-safe)
+    // 2. Has valid JWT auth header
     const internalSecret = req.headers.get('x-internal-secret');
     const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-    const isCronCall = body.source === 'cron';
-    const isInternalCall = internalSecret && internalSecret === expectedSecret;
+    const isInternalCall = internalSecret && expectedSecret && 
+      await timingSafeEqual(internalSecret, expectedSecret);
     const authHeader = req.headers.get('Authorization');
     
-    if (!isCronCall && !isInternalCall && !authHeader) {
+    if (!isInternalCall && !authHeader) {
       console.log('[generate-executive-report] Unauthorized: No valid origin');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[generate-executive-report] Authorized call from: ${isCronCall ? 'cron' : isInternalCall ? 'internal' : 'jwt'}`);
+    console.log(`[generate-executive-report] Authorized call from: ${isInternalCall ? 'internal' : 'jwt'}`);
     
     const tenantId = body.tenantId;
     const targetDate = body.date || new Date().toISOString().split('T')[0];

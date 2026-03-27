@@ -68,7 +68,7 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     
     // Verificar se é chamada interna (cron) via secret
-    const isInternalCall = internalSecret && internalSecret === expectedSecret;
+    const isInternalCall = internalSecret && expectedSecret && await timingSafeEqual(internalSecret, expectedSecret);
     
     // Se não é interno, exigir autenticação JWT
     if (!isInternalCall) {
