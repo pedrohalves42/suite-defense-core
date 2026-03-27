@@ -130,7 +130,7 @@ serveTenant(async (req, ctx) => {
         console.log(`[execute-playbook-action] BLOCKED: Semi-automatic playbook requires approval`);
         
         await supabase.from('audit_logs').insert({
-          user_id: user.id,
+          user_id: userId,
           tenant_id: execution.tenant_id,
           action: 'blocked_semi_automatic_no_approval',
           resource_type: 'playbook_execution',
@@ -171,7 +171,7 @@ serveTenant(async (req, ctx) => {
         
         // Registrar tentativa bloqueada no audit log
         await supabase.from('audit_logs').insert({
-          user_id: user.id,
+          user_id: userId,
           tenant_id: execution.tenant_id,
           action: 'blocked_destructive_action',
           resource_type: 'playbook_execution',
@@ -211,7 +211,7 @@ serveTenant(async (req, ctx) => {
       .from('playbook_executions')
       .update({
         status: 'in_progress',
-        executed_by: user.id,
+        executed_by: userId,
         notes: notes || execution.notes,
       })
       .eq('id', execution_id);
@@ -244,7 +244,7 @@ serveTenant(async (req, ctx) => {
           supabase,
           action,
           execution,
-          user.id,
+          userId!,
           playbookSnapshot
         );
 
@@ -296,7 +296,7 @@ serveTenant(async (req, ctx) => {
 
     // ✅ ENTERPRISE: Criar audit log com referência ao snapshot
     await supabase.from('audit_logs').insert({
-      user_id: user.id,
+      user_id: userId,
       tenant_id: execution.tenant_id,
       action: 'execute_playbook',
       resource_type: 'playbook_execution',
@@ -326,16 +326,6 @@ serveTenant(async (req, ctx) => {
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-
-  } catch (error) {
-    console.error('[execute-playbook-action] Error:', error);
-    return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Internal server error',
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
 });
 
 async function executeAction(
