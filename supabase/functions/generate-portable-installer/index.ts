@@ -1,200 +1,162 @@
 /**
  * generate-portable-installer Edge Function
  * 
- * Generates a self-contained .CMD installer that embeds the PS1 agent script
- * and auto-executes it with PowerShell — no GitHub Actions needed.
- * 
- * Flow:
- * 1. Auth + validate enrollment key
- * 2. Fetch agent PS1 from storage
- * 3. Generate installer PS1 with embedded credentials
- * 4. Wrap in a .CMD auto-elevator that decodes and runs the PS1
- * 5. Upload to storage, return signed URL
+ * Generates a self-contained .CMD installer that embeds the PS1 agent script.
+ * Auth: JWT (dashboard user) via serveTenant
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { serveTenant } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+serveTenant(async (_req, ctx) => {
+  const { supabase, tenantId, userId, requestId, body } = ctx;
+
+  const { agent_name, enrollment_key } = body;
+  if (!agent_name || !enrollment_key) {
+    return new Response(
+      JSON.stringify({ error: 'Missing agent_name or enrollment_key' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
-  const requestId = crypto.randomUUID();
+  logger.info(`[generate-portable-installer][${requestId}] Generating for ${agent_name}`);
 
-  try {
-    // 1. Auth
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Authentication required' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+  // Validate enrollment key
+  const { data: enrollment, error: enrollErr } = await supabase
+    .from('enrollment_keys')
+    .select('id, agent_id, tenant_id, is_active, agent_token')
+    .eq('key', enrollment_key)
+    .maybeSingle();
 
-    const token = authHeader.replace('Bearer ', '');
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const userClient = createClient(SUPABASE_URL, anonKey, {
-      global: { headers: { Authorization: `Bearer ${token}` } }
-    });
-
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // 2. Parse body
-    const { agent_name, enrollment_key } = await req.json();
-    if (!agent_name || !enrollment_key) {
-      return new Response(JSON.stringify({ error: 'Missing agent_name or enrollment_key' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    console.log(`[${requestId}] Generating portable installer for ${agent_name}`);
-
-    const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    // 3. Validate enrollment key
-    const { data: enrollment, error: enrollErr } = await serviceClient
-      .from('enrollment_keys')
-      .select('id, agent_id, tenant_id, is_active, agent_token')
-      .eq('key', enrollment_key)
-      .maybeSingle();
-
-    if (enrollErr || !enrollment || !enrollment.is_active || !enrollment.agent_token) {
-      return new Response(JSON.stringify({ error: 'Invalid or expired enrollment key' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // 4. Get agent HMAC secret
-    const { data: agentData } = await serviceClient
-      .from('agents')
-      .select('hmac_secret')
-      .eq('id', enrollment.agent_id)
-      .maybeSingle();
-
-    if (!agentData?.hmac_secret) {
-      return new Response(JSON.stringify({ error: 'Agent credentials incomplete' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // 5. Fetch agent script from storage
-    const { data: fileData, error: storageErr } = await serviceClient.storage
-      .from('agent-installers')
-      .download('scripts/cybershield-agent-windows-v3.ps1');
-
-    if (storageErr || !fileData) {
-      console.error(`[${requestId}] Storage error:`, storageErr);
-      return new Response(JSON.stringify({ error: 'Agent script not found in storage' }), {
-        status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    const { validateAgentScriptContent, calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
-    const agentScriptContent = await fileData.text();
-
-    if (!validateAgentScriptContent(agentScriptContent)) {
-      return new Response(JSON.stringify({ error: 'Agent script validation failed' }), {
-        status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // 6. Build the installer PS1 (same template as build-agent-exe)
-    const installerPs1 = buildInstallerPs1({
-      agentToken: enrollment.agent_token,
-      hmacSecret: agentData.hmac_secret,
-      serverUrl: SUPABASE_URL,
-      agentName: agent_name,
-      agentScriptContent,
-    });
-
-    // 7. Encode PS1 to Base64 for embedding in CMD
-    const ps1Bytes = new TextEncoder().encode(installerPs1);
-    const ps1Base64 = btoa(String.fromCharCode(...ps1Bytes));
-
-    // 8. Build the CMD wrapper
-    const cmdContent = buildCmdWrapper(agent_name, ps1Base64);
-
-    // 9. Calculate hashes
-    const cmdBytes = new TextEncoder().encode(cmdContent);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', cmdBytes);
-    const sha256 = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-
-    // 10. Upload to storage
-    const fileName = `portable/CyberShield-${agent_name}-${Date.now()}.cmd`;
-    const { error: uploadErr } = await serviceClient.storage
-      .from('agent-installers')
-      .upload(fileName, cmdContent, {
-        contentType: 'application/x-bat',
-        upsert: true,
-      });
-
-    if (uploadErr) {
-      console.error(`[${requestId}] Upload error:`, uploadErr);
-      return new Response(JSON.stringify({ error: 'Failed to upload installer' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // 11. Generate signed URL (1 hour)
-    const { data: signedData } = await serviceClient.storage
-      .from('agent-installers')
-      .createSignedUrl(fileName, 3600);
-
-    // 12. Create build record
-    const scriptHash = await calculateScriptHash(agentScriptContent);
-    await serviceClient.from('agent_builds').insert({
-      tenant_id: enrollment.tenant_id,
-      agent_id: enrollment.agent_id,
-      enrollment_key_id: enrollment.id,
-      build_status: 'completed',
-      build_started_at: new Date().toISOString(),
-      build_completed_at: new Date().toISOString(),
-      created_by: user.id,
-      script_hash: scriptHash,
-      sha256_hash: sha256,
-      file_size_bytes: cmdBytes.length,
-      file_path: fileName,
-      download_url: signedData?.signedUrl || null,
-      download_expires_at: new Date(Date.now() + 3600000).toISOString(),
-      ps1_version: 'v3.0.0-portable',
-      build_duration_seconds: 0,
-    });
-
-    console.log(`[${requestId}] ✅ Portable installer generated: ${cmdBytes.length} bytes, SHA256: ${sha256}`);
-
-    return new Response(JSON.stringify({
-      success: true,
-      download_url: signedData?.signedUrl,
-      sha256_hash: sha256,
-      file_size_bytes: cmdBytes.length,
-      file_name: `CyberShield-${agent_name}.cmd`,
-      expires_in_seconds: 3600,
-      requestId,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-
-  } catch (error) {
-    console.error(`[${requestId}] Error:`, error);
-    return new Response(JSON.stringify({
-      error: 'Failed to generate installer',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      requestId,
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+  if (enrollErr || !enrollment || !enrollment.is_active || !enrollment.agent_token) {
+    return new Response(
+      JSON.stringify({ error: 'Invalid or expired enrollment key' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
-});
+
+  // Verify enrollment key belongs to tenant
+  if (enrollment.tenant_id !== tenantId) {
+    return new Response(
+      JSON.stringify({ error: 'Enrollment key belongs to different tenant' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Get agent HMAC secret
+  const { data: agentData } = await supabase
+    .from('agents')
+    .select('hmac_secret')
+    .eq('id', enrollment.agent_id)
+    .maybeSingle();
+
+  if (!agentData?.hmac_secret) {
+    return new Response(
+      JSON.stringify({ error: 'Agent credentials incomplete' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Fetch agent script from storage
+  const { data: fileData, error: storageErr } = await supabase.storage
+    .from('agent-installers')
+    .download('scripts/cybershield-agent-windows-v3.ps1');
+
+  if (storageErr || !fileData) {
+    logger.error(`[generate-portable-installer][${requestId}] Storage error:`, storageErr);
+    return new Response(
+      JSON.stringify({ error: 'Agent script not found in storage' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const { validateAgentScriptContent, calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
+  const agentScriptContent = await fileData.text();
+
+  if (!validateAgentScriptContent(agentScriptContent)) {
+    return new Response(
+      JSON.stringify({ error: 'Agent script validation failed' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Build the installer PS1
+  const installerPs1 = buildInstallerPs1({
+    agentToken: enrollment.agent_token,
+    hmacSecret: agentData.hmac_secret,
+    serverUrl: SUPABASE_URL,
+    agentName: agent_name,
+    agentScriptContent,
+  });
+
+  // Encode PS1 to Base64 for embedding in CMD
+  const ps1Bytes = new TextEncoder().encode(installerPs1);
+  const ps1Base64 = btoa(String.fromCharCode(...ps1Bytes));
+
+  // Build the CMD wrapper
+  const cmdContent = buildCmdWrapper(agent_name, ps1Base64);
+
+  // Calculate hashes
+  const cmdBytes = new TextEncoder().encode(cmdContent);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', cmdBytes);
+  const sha256 = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  // Upload to storage
+  const fileName = `portable/CyberShield-${agent_name}-${Date.now()}.cmd`;
+  const { error: uploadErr } = await supabase.storage
+    .from('agent-installers')
+    .upload(fileName, cmdContent, {
+      contentType: 'application/x-bat',
+      upsert: true,
+    });
+
+  if (uploadErr) {
+    logger.error(`[generate-portable-installer][${requestId}] Upload error:`, uploadErr);
+    return new Response(
+      JSON.stringify({ error: 'Failed to upload installer' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Generate signed URL (1 hour)
+  const { data: signedData } = await supabase.storage
+    .from('agent-installers')
+    .createSignedUrl(fileName, 3600);
+
+  // Create build record
+  const scriptHash = await calculateScriptHash(agentScriptContent);
+  await supabase.from('agent_builds').insert({
+    tenant_id: tenantId,
+    agent_id: enrollment.agent_id,
+    enrollment_key_id: enrollment.id,
+    build_status: 'completed',
+    build_started_at: new Date().toISOString(),
+    build_completed_at: new Date().toISOString(),
+    created_by: userId,
+    script_hash: scriptHash,
+    sha256_hash: sha256,
+    file_size_bytes: cmdBytes.length,
+    file_path: fileName,
+    download_url: signedData?.signedUrl || null,
+    download_expires_at: new Date(Date.now() + 3600000).toISOString(),
+    ps1_version: 'v3.0.0-portable',
+    build_duration_seconds: 0,
+  });
+
+  logger.info(`[generate-portable-installer][${requestId}] ✅ Generated: ${cmdBytes.length} bytes, SHA256: ${sha256}`);
+
+  return {
+    success: true,
+    download_url: signedData?.signedUrl,
+    sha256_hash: sha256,
+    file_size_bytes: cmdBytes.length,
+    file_name: `CyberShield-${agent_name}.cmd`,
+    expires_in_seconds: 3600,
+    requestId,
+  };
+}, { methods: ['POST'] });
 
 /** Build the installer PS1 with embedded credentials and agent script */
 function buildInstallerPs1(params: {
@@ -222,7 +184,6 @@ Write-Host "Portable Build" -ForegroundColor Cyan
 Write-Host "==================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Verificar admin
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "ERRO: Requer privilegios de administrador" -ForegroundColor Red
@@ -311,7 +272,6 @@ ${agentScriptContent}
     Write-Host "Logs: $LogDir\\agent.log" -ForegroundColor White
     Write-Host ""
 
-    # Telemetria
     try {
         $body = @{ agent_name = "$AgentName"; success = $true; os_version = (Get-WmiObject Win32_OperatingSystem).Caption; installation_time = (Get-Date).ToUniversalTime().ToString("o") } | ConvertTo-Json
         Invoke-RestMethod -Uri "$ServerUrl/functions/v1/post-installation-telemetry" -Method POST -Body $body -ContentType "application/json" -TimeoutSec 10 | Out-Null
@@ -332,7 +292,6 @@ ${agentScriptContent}
 
 /** Build the CMD wrapper that auto-elevates and runs the embedded PS1 */
 function buildCmdWrapper(agentName: string, ps1Base64: string): string {
-  // Split base64 into chunks for CMD echo commands (max ~8000 chars per line)
   const CHUNK_SIZE = 7500;
   const chunks: string[] = [];
   for (let i = 0; i < ps1Base64.length; i += CHUNK_SIZE) {

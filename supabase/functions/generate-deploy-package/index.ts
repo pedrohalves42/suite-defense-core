@@ -3,12 +3,10 @@
  * 
  * Zero-touch Deployment: Generates deployment scripts for Intune, GPO, and RMM.
  * Returns ready-to-use scripts with the enrollment key embedded.
- * 
- * Authentication: JWT (dashboard user)
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { serveTenant } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 type Platform = 'intune' | 'gpo' | 'rmm' | 'manual';
 
@@ -45,7 +43,6 @@ function Write-InstallLog {
 try {
     Write-InstallLog "CyberShield Intune deployment starting..."
     
-    # Check if already installed
     if (Test-Path "\$InstallDir\\config.json") {
         Write-InstallLog "CyberShield already installed. Checking version..."
         \$config = Get-Content "\$InstallDir\\config.json" -Raw | ConvertFrom-Json
@@ -53,7 +50,6 @@ try {
         exit 0
     }
     
-    # Download installer via enrollment endpoint
     Write-InstallLog "Downloading agent from server..."
     \$headers = @{
         'Content-Type' = 'application/json'
@@ -73,12 +69,10 @@ try {
     if (\$response.success) {
         Write-InstallLog "Enrollment successful. Agent ID: \$(\$response.agent_id)"
         
-        # Create install directory
         if (-not (Test-Path \$InstallDir)) {
             New-Item -Path \$InstallDir -ItemType Directory -Force | Out-Null
         }
         
-        # Save config
         \$config = @{
             agent_id = \$response.agent_id
             token = \$response.token
@@ -90,13 +84,11 @@ try {
         
         Set-Content -Path "\$InstallDir\\config.json" -Value \$config -Encoding UTF8
         
-        # Download and execute the agent script
         if (\$response.script_url) {
             Write-InstallLog "Downloading agent script..."
             Invoke-WebRequest -Uri \$response.script_url -OutFile "\$InstallDir\\cybershield-agent.ps1" -TimeoutSec 60
         }
         
-        # Register scheduled task
         \$action = New-ScheduledTaskAction -Execute 'powershell.exe' \`
             -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File \$InstallDir\\cybershield-agent.ps1"
         \$trigger = New-ScheduledTaskTrigger -AtStartup
@@ -180,122 +172,79 @@ try {
 } catch { Write-Host $_.Exception.Message; exit 1 }`;
 }
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+serveTenant(async (req, ctx) => {
+  const { supabase, tenantId, requestId } = ctx;
 
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 
-    // Authenticate via JWT
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+  const url = new URL(req.url);
+  const platform = (url.searchParams.get('platform') || 'manual') as Platform;
+  const enrollmentKeyId = url.searchParams.get('enrollment_key_id');
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Get user's tenant
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('tenant_id, role')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (!userRole) {
-      return new Response(JSON.stringify({ error: 'No tenant found' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    const url = new URL(req.url);
-    const platform = (url.searchParams.get('platform') || 'manual') as Platform;
-    const enrollmentKeyId = url.searchParams.get('enrollment_key_id');
-
-    if (!enrollmentKeyId) {
-      return new Response(JSON.stringify({ error: 'enrollment_key_id required' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Fetch enrollment key (verify it belongs to user's tenant)
-    const { data: enrollmentKey, error: ekError } = await supabase
-      .from('enrollment_keys')
-      .select('id, key_value, tenant_id, name')
-      .eq('id', enrollmentKeyId)
-      .eq('tenant_id', userRole.tenant_id)
-      .eq('is_active', true)
-      .maybeSingle();
-
-    if (ekError || !enrollmentKey) {
-      return new Response(JSON.stringify({ error: 'Enrollment key not found' }), {
-        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Get tenant name
-    const { data: tenant } = await supabase
-      .from('tenants')
-      .select('name')
-      .eq('id', userRole.tenant_id)
-      .maybeSingle();
-
-    const tenantName = tenant?.name || 'CyberShield Customer';
-    const keyValue = enrollmentKey.key_value;
-
-    let script = '';
-    let filename = '';
-    let contentType = 'text/plain';
-
-    switch (platform) {
-      case 'intune':
-        script = generateIntuneScript(keyValue, supabaseUrl, tenantName);
-        filename = `CyberShield-Intune-${enrollmentKey.name || 'deploy'}.ps1`;
-        break;
-      case 'gpo':
-        script = generateGPOScript(keyValue, supabaseUrl, tenantName);
-        filename = `CyberShield-GPO-${enrollmentKey.name || 'deploy'}.bat`;
-        break;
-      case 'rmm':
-        script = generateRMMScript(keyValue, supabaseUrl, tenantName);
-        filename = `CyberShield-RMM-${enrollmentKey.name || 'deploy'}.ps1`;
-        break;
-      default:
-        script = generateRMMScript(keyValue, supabaseUrl, tenantName);
-        filename = `CyberShield-Manual-${enrollmentKey.name || 'deploy'}.ps1`;
-    }
-
-    return new Response(JSON.stringify({
-      success: true,
-      platform,
-      filename,
-      script,
-      enrollment_key_name: enrollmentKey.name,
-      instructions: platform === 'intune'
-        ? 'Wrap this .ps1 in an .intunewin package. Detection Rule: File exists C:\\CyberShield\\config.json'
-        : platform === 'gpo'
-        ? 'Deploy as Computer Startup Script: Computer Configuration > Policies > Windows Settings > Scripts > Startup'
-        : 'Paste as a PowerShell script in your RMM platform. Run as SYSTEM.',
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+  if (!enrollmentKeyId) {
     return new Response(
-      JSON.stringify({ success: false, error: errorMsg }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'enrollment_key_id required' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
-});
+
+  // Fetch enrollment key (verify it belongs to user's tenant)
+  const { data: enrollmentKey, error: ekError } = await supabase
+    .from('enrollment_keys')
+    .select('id, key_value, tenant_id, name')
+    .eq('id', enrollmentKeyId)
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (ekError || !enrollmentKey) {
+    return new Response(
+      JSON.stringify({ error: 'Enrollment key not found' }),
+      { status: 404, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Get tenant name
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('name')
+    .eq('id', tenantId)
+    .maybeSingle();
+
+  const tenantName = tenant?.name || 'CyberShield Customer';
+  const keyValue = enrollmentKey.key_value;
+
+  let script = '';
+  let filename = '';
+
+  switch (platform) {
+    case 'intune':
+      script = generateIntuneScript(keyValue, supabaseUrl, tenantName);
+      filename = `CyberShield-Intune-${enrollmentKey.name || 'deploy'}.ps1`;
+      break;
+    case 'gpo':
+      script = generateGPOScript(keyValue, supabaseUrl, tenantName);
+      filename = `CyberShield-GPO-${enrollmentKey.name || 'deploy'}.bat`;
+      break;
+    case 'rmm':
+      script = generateRMMScript(keyValue, supabaseUrl, tenantName);
+      filename = `CyberShield-RMM-${enrollmentKey.name || 'deploy'}.ps1`;
+      break;
+    default:
+      script = generateRMMScript(keyValue, supabaseUrl, tenantName);
+      filename = `CyberShield-Manual-${enrollmentKey.name || 'deploy'}.ps1`;
+  }
+
+  return {
+    success: true,
+    platform,
+    filename,
+    script,
+    enrollment_key_name: enrollmentKey.name,
+    instructions: platform === 'intune'
+      ? 'Wrap this .ps1 in an .intunewin package. Detection Rule: File exists C:\\CyberShield\\config.json'
+      : platform === 'gpo'
+      ? 'Deploy as Computer Startup Script: Computer Configuration > Policies > Windows Settings > Scripts > Startup'
+      : 'Paste as a PowerShell script in your RMM platform. Run as SYSTEM.',
+  };
+}, { methods: ['GET'] });
