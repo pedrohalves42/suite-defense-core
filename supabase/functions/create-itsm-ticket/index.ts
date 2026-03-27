@@ -1,9 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
-import { handleException } from '../_shared/error-handler.ts';
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+import { serveTenant } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 interface CreateTicketRequest {
   integration_id: string;
@@ -25,7 +21,6 @@ async function createJiraTicket(
   const baseUrl = (integration.base_url as string).replace(/\/$/, '');
   const projectKey = integration.project_key as string;
   const issueType = integration.default_issue_type as string || 'Task';
-
   const jiraPriority = mapPriorityToJira(ticket.priority || integration.default_priority as string || 'Medium');
 
   const body = {
@@ -63,11 +58,7 @@ async function createJiraTicket(
   }
 
   const data = await response.json();
-  return {
-    id: data.id,
-    key: data.key,
-    url: `${baseUrl}/browse/${data.key}`,
-  };
+  return { id: data.id, key: data.key, url: `${baseUrl}/browse/${data.key}` };
 }
 
 // ── ServiceNow API ──
@@ -77,7 +68,6 @@ async function createServiceNowTicket(
 ): Promise<{ id: string; key: string; url: string }> {
   const creds = integration.credentials_encrypted as Record<string, string>;
   const baseUrl = (integration.base_url as string).replace(/\/$/, '');
-
   const snPriority = mapPriorityToServiceNow(ticket.priority || integration.default_priority as string || 'Medium');
 
   const body = {
@@ -109,12 +99,7 @@ async function createServiceNowTicket(
   const data = await response.json();
   const sysId = data.result?.sys_id;
   const number = data.result?.number;
-
-  return {
-    id: sysId,
-    key: number,
-    url: `${baseUrl}/nav_to.do?uri=incident.do?sys_id=${sysId}`,
-  };
+  return { id: sysId, key: number, url: `${baseUrl}/nav_to.do?uri=incident.do?sys_id=${sysId}` };
 }
 
 function mapPriorityToJira(priority: string): string {
@@ -131,114 +116,80 @@ function mapPriorityToServiceNow(priority: string): number {
   return map[priority.toLowerCase()] || 3;
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+serveTenant(async (req, ctx) => {
+  const { supabase, tenantId, userId, requestId, body } = ctx;
+
+  const ticketBody: CreateTicketRequest = body;
+
+  if (!ticketBody.integration_id || !ticketBody.summary || !ticketBody.source_type) {
+    return new Response(
+      JSON.stringify({ error: 'integration_id, summary, and source_type are required' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
-  const requestId = crypto.randomUUID();
+  // Get integration
+  const { data: integration, error: intErr } = await supabase
+    .from('itsm_integrations')
+    .select('*')
+    .eq('id', ticketBody.integration_id)
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .single();
 
-  try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  if (intErr || !integration) {
+    return new Response(
+      JSON.stringify({ error: 'Integration not found or inactive' }),
+      { status: 404, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
-    // Auth
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+  // Create ticket based on provider
+  let result: { id: string; key: string; url: string };
 
-    const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+  if (integration.provider === 'jira') {
+    result = await createJiraTicket(integration as Record<string, unknown>, ticketBody);
+  } else if (integration.provider === 'servicenow') {
+    result = await createServiceNowTicket(integration as Record<string, unknown>, ticketBody);
+  } else {
+    return new Response(
+      JSON.stringify({ error: `Unknown provider: ${integration.provider}` }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
-    const { data: role } = await supabase
-      .from('user_roles').select('tenant_id').eq('user_id', user.id).limit(1).maybeSingle();
-    const tenantId = role?.tenant_id;
-    if (!tenantId) {
-      return new Response(JSON.stringify({ error: 'No tenant' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const body: CreateTicketRequest = await req.json();
-
-    if (!body.integration_id || !body.summary || !body.source_type) {
-      return new Response(JSON.stringify({ error: 'integration_id, summary, and source_type are required' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Get integration
-    const { data: integration, error: intErr } = await supabase
-      .from('itsm_integrations')
-      .select('*')
-      .eq('id', body.integration_id)
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-      .single();
-
-    if (intErr || !integration) {
-      return new Response(JSON.stringify({ error: 'Integration not found or inactive' }), {
-        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Create ticket based on provider
-    let result: { id: string; key: string; url: string };
-
-    if (integration.provider === 'jira') {
-      result = await createJiraTicket(integration as Record<string, unknown>, body);
-    } else if (integration.provider === 'servicenow') {
-      result = await createServiceNowTicket(integration as Record<string, unknown>, body);
-    } else {
-      return new Response(JSON.stringify({ error: `Unknown provider: ${integration.provider}` }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Save ticket record
-    const { data: ticket, error: ticketErr } = await supabase
-      .from('itsm_tickets')
-      .insert({
-        tenant_id: tenantId,
-        integration_id: body.integration_id,
-        external_ticket_id: result.id,
-        external_ticket_key: result.key,
-        external_ticket_url: result.url,
-        provider: integration.provider,
-        source_type: body.source_type,
-        source_id: body.source_id || null,
-        summary: body.summary,
-        description: body.description,
-        priority: body.priority || integration.default_priority,
-        status: 'open',
-        agent_id: body.agent_id || null,
-        agent_name: body.agent_name || null,
-        created_by: user.id,
-      })
-      .select('id')
-      .single();
-
-    if (ticketErr) {
-      console.error('Failed to save ticket record:', ticketErr);
-    }
-
-    return new Response(JSON.stringify({
-      success: true,
-      ticket_id: ticket?.id,
-      external_key: result.key,
-      external_url: result.url,
+  // Save ticket record
+  const { data: ticket, error: ticketErr } = await supabase
+    .from('itsm_tickets')
+    .insert({
+      tenant_id: tenantId,
+      integration_id: ticketBody.integration_id,
+      external_ticket_id: result.id,
+      external_ticket_key: result.key,
+      external_ticket_url: result.url,
       provider: integration.provider,
-    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-  } catch (error) {
-    return handleException(error, requestId, 'create-itsm-ticket');
+      source_type: ticketBody.source_type,
+      source_id: ticketBody.source_id || null,
+      summary: ticketBody.summary,
+      description: ticketBody.description,
+      priority: ticketBody.priority || integration.default_priority,
+      status: 'open',
+      agent_id: ticketBody.agent_id || null,
+      agent_name: ticketBody.agent_name || null,
+      created_by: userId,
+    })
+    .select('id')
+    .single();
+
+  if (ticketErr) {
+    logger.error(`[create-itsm-ticket][${requestId}] Failed to save ticket record:`, ticketErr);
   }
-});
+
+  return {
+    success: true,
+    ticket_id: ticket?.id,
+    external_key: result.key,
+    external_url: result.url,
+    provider: integration.provider,
+  };
+}, { methods: ['POST'] });
