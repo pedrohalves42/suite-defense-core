@@ -770,6 +770,4 @@ schedule = "*/30 * * * *"
 [functions.threat-intelligence-lookup]
 verify_jwt = false
 
-# === Publish Threat IoC (on-demand) ===
-[functions.publish-threat-ioc]
-verify_jwt = false
+# (publish-threat-ioc already defined above at line 746)
