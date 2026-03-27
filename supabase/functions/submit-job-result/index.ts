@@ -7,6 +7,7 @@ import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-
 import { hashToken } from '../_shared/token-hash.ts'
 import { sanitizeJobOutput, sanitizeErrorMessage, sanitizeForStorage } from '../_shared/sanitize.ts'
 import { verifyResultSignature, computeOutputHash } from '../_shared/verify-result-signature.ts'
+import { logger } from '../_shared/logger.ts'
 
 Deno.serve(async (req) => {
   // QUAL-01: Proper HTTP method validation
