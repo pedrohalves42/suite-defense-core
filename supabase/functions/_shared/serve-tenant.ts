@@ -201,7 +201,8 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
       let tenantId: string | null = null;
 
       if (tenantSource === 'body' || tenantSource === 'auto') {
-        tenantId = body?.tenant_id || null;
+        const bodyObj = body as Record<string, unknown> | null;
+        tenantId = (bodyObj?.tenant_id as string) || null;
       }
       if (!tenantId && (tenantSource === 'header' || tenantSource === 'auto')) {
         tenantId = req.headers.get('x-tenant-id') || null;
