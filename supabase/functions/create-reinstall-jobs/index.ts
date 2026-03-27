@@ -1,244 +1,120 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+serveTenant(async (req, ctx) => {
+  const { supabase, tenantId, userId, requestId, body } = ctx;
 
-/**
- * Edge Function para criar jobs de reinstalacao de agentes
- * 
- * Cria jobs do tipo 'reinstall_agent' para agentes especificos ou todos os agentes
- * com bootstrap problem (nao conseguem atualizar devido a path incorreto)
- */
+  // Admin check
+  const { data: roles } = await supabase
+    .from('user_roles')
+    .select('role, tenant_id')
+    .eq('user_id', userId);
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  if (req.method !== 'POST') {
+  const adminRole = roles?.find(r => ['admin', 'super_admin'].includes(r.role) && r.tenant_id === tenantId);
+  if (!adminRole) {
     return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Requires admin role' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  const requestId = crypto.randomUUID();
+  const { agent_names, target_version } = body || {};
 
-  try {
-    logger.info('[create-reinstall-jobs] Request received', { requestId });
+  let agentsToReinstall: { id: string; agent_name: string; agent_version: string | null; tenant_id: string }[] = [];
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  if (agent_names && Array.isArray(agent_names) && agent_names.length > 0) {
+    const { data: agents, error: agentsError } = await supabase
+      .from('agents')
+      .select('id, agent_name, agent_version, tenant_id')
+      .in('agent_name', agent_names)
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active');
+    if (agentsError) throw agentsError;
+    agentsToReinstall = agents || [];
+  } else {
+    const { data: agents, error: agentsError } = await supabase
+      .from('agents')
+      .select('id, agent_name, agent_version, tenant_id')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active');
+    if (agentsError) throw agentsError;
 
-    // Verificar autenticacao (super admin ou admin)
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    agentsToReinstall = (agents || []).filter(agent => {
+      if (!agent.agent_version) return true;
+      const version = agent.agent_version.replace(/^v/, '');
+      const targetV = (target_version || 'v3.10.24').replace(/^v/, '');
+      const vParts = version.split('.').map(Number);
+      const tParts = targetV.split('.').map(Number);
+      for (let i = 0; i < Math.max(vParts.length, tParts.length); i++) {
+        const v = vParts[i] || 0;
+        const t = tParts[i] || 0;
+        if (v < t) return true;
+        if (v > t) return false;
+      }
+      return false;
+    });
+  }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
+  if (agentsToReinstall.length === 0) {
+    return { success: true, message: 'No agents need reinstallation', jobs_created: 0 };
+  }
+
+  // ADR-VELLUM V-310: Blast radius governance
+  const { data: blastCheck, error: blastError } = await supabase
+    .rpc('check_blast_radius' as any, {
+      p_tenant_id: tenantId,
+      p_action_type: 'force_update_agents',
+      p_affected_count: agentsToReinstall.length,
+    });
+
+  if (blastError) {
+    logger.error(`[${requestId}] Blast radius check failed`, blastError);
+    return new Response(
+      JSON.stringify({ error: 'BLAST_RADIUS_CHECK_FAILED', message: blastError.message, requestId }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
+  }
 
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Verificar se e admin ou super admin (suporta usuarios com multiplos roles)
-    const { data: roles } = await supabase
-      .from('user_roles')
-      .select('role, tenant_id')
-      .eq('user_id', user.id);
-
-    const adminRole = roles?.find(r => ['admin', 'super_admin'].includes(r.role));
-    if (!adminRole) {
-      return new Response(
-        JSON.stringify({ error: 'Requires admin role' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Parse payload
-    const payload = await req.json();
-    const { agent_names, target_version } = payload;
-
-    // Se agent_names fornecido, usar esses; senao buscar agentes com versao antiga
-    let agentsToReinstall: { id: string; agent_name: string; agent_version: string | null; tenant_id: string }[] = [];
-
-    if (agent_names && Array.isArray(agent_names) && agent_names.length > 0) {
-      // Buscar agentes especificos
-      const { data: agents, error: agentsError } = await supabase
-        .from('agents')
-        .select('id, agent_name, agent_version, tenant_id')
-        .in('agent_name', agent_names)
-        .eq('tenant_id', adminRole.tenant_id)
-        .eq('status', 'active');
-
-      if (agentsError) {
-        throw agentsError;
-      }
-
-      agentsToReinstall = agents || [];
-    } else {
-      // Buscar todos os agentes com versao < v3.10.24 (bootstrap problem)
-      const { data: agents, error: agentsError } = await supabase
-        .from('agents')
-        .select('id, agent_name, agent_version, tenant_id')
-        .eq('tenant_id', adminRole.tenant_id)
-        .eq('status', 'active');
-
-      if (agentsError) {
-        throw agentsError;
-      }
-
-      // Filtrar agentes com versao antiga (< v3.10.24)
-      agentsToReinstall = (agents || []).filter(agent => {
-        if (!agent.agent_version) return true; // Sem versao = precisa reinstalar
-        
-        // Normalizar versao (remover 'v' prefix)
-        const version = agent.agent_version.replace(/^v/, '');
-        const targetV = (target_version || 'v3.10.24').replace(/^v/, '');
-        
-        // Comparar versoes (simplificado)
-        const vParts = version.split('.').map(Number);
-        const tParts = targetV.split('.').map(Number);
-        
-        for (let i = 0; i < Math.max(vParts.length, tParts.length); i++) {
-          const v = vParts[i] || 0;
-          const t = tParts[i] || 0;
-          if (v < t) return true;
-          if (v > t) return false;
-        }
-        return false; // Igual ou maior
-      });
-    }
-
-    if (agentsToReinstall.length === 0) {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'No agents need reinstallation',
-          jobs_created: 0 
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // ADR-VELLUM V-310: Blast radius governance before mass job creation
-    // Uses existing blast radius engine (check_blast_radius) to fail-closed for oversized operations.
-    const { data: blastCheck, error: blastError } = await supabase
-      .rpc('check_blast_radius' as any, {
-        p_tenant_id: adminRole.tenant_id,
-        // Map reinstall to an existing mass-impact action type.
-        p_action_type: 'force_update_agents',
-        p_affected_count: agentsToReinstall.length,
-      });
-
-    if (blastError) {
-      logger.error('[create-reinstall-jobs] Blast radius check failed', {
-        requestId,
-        error: blastError.message,
-      });
-      return new Response(
-        JSON.stringify({
-          error: 'BLAST_RADIUS_CHECK_FAILED',
-          message: blastError.message,
-          requestId,
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!blastCheck?.allowed) {
-      logger.warn('[create-reinstall-jobs] Blast radius exceeded', {
-        requestId,
-        tenant_id: adminRole.tenant_id,
-        action_type: 'force_update_agents',
+  if (!blastCheck?.allowed) {
+    logger.warn(`[${requestId}] Blast radius exceeded`);
+    return new Response(
+      JSON.stringify({
+        error: 'BLAST_RADIUS_EXCEEDED',
         requested: agentsToReinstall.length,
         affected_percent: blastCheck?.affected_percent,
+        max_allowed_percent: blastCheck?.max_allowed_percent,
         requires_approval: blastCheck?.requires_approval,
-        message: blastCheck?.message,
-      });
-
-      return new Response(
-        JSON.stringify({
-          error: 'BLAST_RADIUS_EXCEEDED',
-          requested: agentsToReinstall.length,
-          affected_percent: blastCheck?.affected_percent,
-          max_allowed_percent: blastCheck?.max_allowed_percent,
-          requires_approval: blastCheck?.requires_approval,
-          message: blastCheck?.message || 'Blast radius exceeded',
-          requestId,
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Criar jobs de reinstalacao
-    const jobsToCreate = agentsToReinstall.map(agent => ({
-      agent_id: agent.id,
-      agent_name: agent.agent_name,
-      tenant_id: agent.tenant_id,
-      type: 'reinstall_agent',
-      status: 'queued',
-      payload: { 
-        target_version: target_version || 'v3.10.24-SMART-UPDATE',
-        reason: 'bootstrap_problem_fix'
-      },
-      approved: true,
-      created_by: user.id
-    }));
-
-    const { data: createdJobs, error: createError } = await supabase
-      .from('jobs')
-      .insert(jobsToCreate)
-      .select('id, agent_name');
-
-    if (createError) {
-      throw createError;
-    }
-
-    logger.info('[create-reinstall-jobs] Jobs created successfully', {
-      requestId,
-      jobs_created: createdJobs?.length || 0,
-      agents: agentsToReinstall.map(a => a.agent_name)
-    });
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        jobs_created: createdJobs?.length || 0,
-        agents: agentsToReinstall.map(a => ({
-          agent_name: a.agent_name,
-          current_version: a.agent_version
-        })),
-        jobs: createdJobs
+        message: blastCheck?.message || 'Blast radius exceeded',
+        requestId,
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    const err = error as Error;
-    logger.error('[create-reinstall-jobs] Internal error', {
-      requestId,
-      error: err.message,
-      stack: err.stack
-    });
-
-    return new Response(
-      JSON.stringify({
-        error: 'Internal server error',
-        message: err.message,
-        requestId
-      }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
-});
+
+  const jobsToCreate = agentsToReinstall.map(agent => ({
+    agent_id: agent.id,
+    agent_name: agent.agent_name,
+    tenant_id: agent.tenant_id,
+    type: 'reinstall_agent',
+    status: 'queued',
+    payload: { target_version: target_version || 'v3.10.24-SMART-UPDATE', reason: 'bootstrap_problem_fix' },
+    approved: true,
+    created_by: userId,
+  }));
+
+  const { data: createdJobs, error: createError } = await supabase
+    .from('jobs')
+    .insert(jobsToCreate)
+    .select('id, agent_name');
+
+  if (createError) throw createError;
+
+  logger.info(`[${requestId}] Jobs created: ${createdJobs?.length || 0}`);
+
+  return {
+    success: true,
+    jobs_created: createdJobs?.length || 0,
+    agents: agentsToReinstall.map(a => ({ agent_name: a.agent_name, current_version: a.agent_version })),
+    jobs: createdJobs,
+  };
+}, { methods: ['POST'] });
