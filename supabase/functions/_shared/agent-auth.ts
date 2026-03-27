@@ -96,13 +96,17 @@ export async function authenticateAgent(
 
   const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents;
 
+  // Extract extra fields into agentData (everything beyond the base 4)
+  const { id, agent_name, tenant_id, hmac_secret, ...extraData } = agent as Record<string, unknown>;
+
   return {
     success: true,
     agent: {
-      id: agent.id,
-      agent_name: agent.agent_name,
-      tenant_id: agent.tenant_id,
-      hmac_secret: agent.hmac_secret,
+      id: id as string,
+      agent_name: agent_name as string,
+      tenant_id: tenant_id as string,
+      hmac_secret: hmac_secret as string | null,
     },
+    agentData: extraData,
   };
 }
