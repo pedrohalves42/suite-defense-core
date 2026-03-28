@@ -205,8 +205,8 @@ export default function RealTimeSecurityDashboard() {
 
       const total = data.length;
       const isolated = data.filter(a => a.is_isolated).length;
-      const protectedCount = data.filter(a => !a.is_isolated && isAgentOnline(a.last_heartbeat)).length;
-      const offline = data.filter(a => !a.is_isolated && !isAgentOnline(a.last_heartbeat)).length;
+      const protectedCount = data.filter(a => !a.is_isolated && isAgentOnline(String(a.last_heartbeat || ''))).length;
+      const offline = data.filter(a => !a.is_isolated && !isAgentOnline(String(a.last_heartbeat || ''))).length;
 
       return { total, protected: protectedCount, isolated, offline };
     },
