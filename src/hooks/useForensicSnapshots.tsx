@@ -40,7 +40,7 @@ export const useForensicSnapshots = (agentId?: string) => {
       const { data, error } = await query;
 
       if (error) throw error;
-      return (data || []) as any as ForensicSnapshot[];
+      return (data || []) as unknown as ForensicSnapshot[];
     },
     enabled: !!tenant?.id
   });
@@ -70,7 +70,7 @@ export const useCreateForensicSnapshot = () => {
     }) => {
       if (!tenant?.id) throw new Error('Tenant not found');
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as never)
         .rpc('create_forensic_snapshot', {
           p_agent_id: agentId,
           p_tenant_id: tenant.id,
@@ -108,7 +108,7 @@ export const useForensicSnapshotById = (snapshotId: string) => {
         .maybeSingle();
 
       if (error) throw error;
-      return (data as any as ForensicSnapshot) || null;
+      return (data as unknown as ForensicSnapshot) || null;
     },
     enabled: !!snapshotId
   });

@@ -19,7 +19,7 @@ export function useAgentLifecycle(tenantId: string | undefined, loading?: boolea
       if (error) throw new Error(`Erro ao buscar agentes: ${error.message}`);
 
       // Transform AgentLifecycleState to DashboardAgentCard
-      return (data as any as AgentLifecycleState[]).map(transformToCard);
+      return (data as unknown as AgentLifecycleState[]).map(transformToCard);
     },
     enabled: !loading && !!tenantId,  // V-503a: Guard para sincronização
     staleTime: 30000, // Cache por 30s

@@ -60,7 +60,7 @@ export const useAutonomyMetrics = (days: number = 7) => {
       });
 
       if (error) throw error;
-      return data as any as AutonomyMetrics;
+      return data as unknown as AutonomyMetrics;
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval
@@ -81,7 +81,7 @@ export const useAuditTrailIntegrity = () => {
       });
 
       if (error) throw error;
-      return data as any as AuditTrailIntegrity;
+      return data as unknown as AuditTrailIntegrity;
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval
@@ -105,7 +105,7 @@ export const useDecisionTimeline = (options?: { limit?: number; ruleCode?: strin
       });
 
       if (error) throw error;
-      return (data || []) as any as DecisionTimelineItem[];
+      return (data || []) as unknown as DecisionTimelineItem[];
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval

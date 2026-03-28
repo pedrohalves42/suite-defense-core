@@ -27,7 +27,7 @@ export function useArchiveReasonTree(agentId: string | null) {
         .maybeSingle();
 
       if (error) throw error;
-      return data as any as ArchiveReason | null;
+      return data as unknown as ArchiveReason | null;
     },
     enabled: !!agentId,
     staleTime: 60000,

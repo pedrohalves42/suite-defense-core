@@ -67,7 +67,7 @@ export function useRedTeamHistory() {
         .limit(20);
 
       if (error) throw error;
-      return (data || []) as any as RedTeamAssessment[];
+      return (data || []) as unknown as RedTeamAssessment[];
     },
     enabled: !loading && !!activeTenant?.id,
   });
@@ -85,7 +85,7 @@ export function useRedTeamById(id: string | null) {
         .maybeSingle();
 
       if (error) throw error;
-      return data as any as RedTeamAssessment | null;
+      return data as unknown as RedTeamAssessment | null;
     },
     enabled: !!id,
   });
@@ -107,7 +107,7 @@ export function useLatestRedTeam() {
         .maybeSingle();
 
       if (error) throw error;
-      return data as any as RedTeamAssessment | null;
+      return data as unknown as RedTeamAssessment | null;
     },
     enabled: !loading && !!activeTenant?.id,
   });

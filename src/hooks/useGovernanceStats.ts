@@ -47,7 +47,7 @@ export function useGovernanceStats() {
       }
       
       // Cast to unknown first since the view schema has been updated
-      const record = data as any as Record<string, unknown>;
+      const record = data as unknown as Record<string, unknown>;
       return {
         tenant_id: String(record.tenant_id),
         active_tasks: Number(record.active_tasks) || 0,

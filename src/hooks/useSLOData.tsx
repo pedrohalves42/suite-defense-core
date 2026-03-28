@@ -138,7 +138,7 @@ export const useCalculatedSLOs = () => {
         p_tenant_id: tenant.id,
         p_include_archived: false
       });
-      const agents = (agentsRaw as any as Array<{ id: string; last_heartbeat: string | null }>) || [];
+      const agents = (agentsRaw as unknown as Array<{ id: string; last_heartbeat: string | null }>) || [];
 
       const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
       const onlineAgents = agents?.filter(a => 

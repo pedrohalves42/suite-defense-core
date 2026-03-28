@@ -59,7 +59,7 @@ export function useScheduledJobsHealth() {
         .order('job_key');
 
       if (error) throw error;
-      return (data || []) as any as JobHealthStatus[];
+      return (data || []) as unknown as JobHealthStatus[];
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
@@ -77,7 +77,7 @@ export function useScheduledJobsHealth() {
         .limit(100);
 
       if (error) throw error;
-      return (data || []) as any as ScheduledJobRun[];
+      return (data || []) as unknown as ScheduledJobRun[];
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval2,
@@ -92,7 +92,7 @@ export function useScheduledJobsHealth() {
 
       if (error) throw error;
       
-      const result = data as any as ScheduledJobsHealthSummary;
+      const result = data as unknown as ScheduledJobsHealthSummary;
       return result || {
         total_jobs: 0,
         healthy_jobs: 0,

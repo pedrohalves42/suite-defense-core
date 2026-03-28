@@ -89,7 +89,7 @@ export const useTenantMFAPolicy = (): TenantMFAStatus => {
 
         if (!cancelled) {
           setBreakGlassEnabled(tenantData?.break_glass_enabled || false);
-          setPolicy((data as any as MFAPolicy) || DEFAULT_POLICY);
+          setPolicy((data as unknown as MFAPolicy) || DEFAULT_POLICY);
           setError(null);
         }
       } catch (err) {

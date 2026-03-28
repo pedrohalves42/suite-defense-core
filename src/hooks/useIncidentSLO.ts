@@ -140,7 +140,7 @@ export const useIncidentGroupsWithSLO = (limit = 50) => {
         .limit(limit);
 
       if (error) throw error;
-      return (data || []) as any as IncidentGroupWithSLO[];
+      return (data || []) as unknown as IncidentGroupWithSLO[];
     },
     enabled: !loading && !!activeTenant?.id, // ADR-029 CRIT-04
     refetchInterval: adaptiveInterval,
