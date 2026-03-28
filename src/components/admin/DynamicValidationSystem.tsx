@@ -166,7 +166,7 @@ export function DynamicValidationSystem() {
       });
 
       setValidationJobs(jobs);
-    } catch (error: Record<string, unknown>) {
+    } catch (error: unknown) {
       logger.error('Error loading agents status:', error);
       toast.error('Erro ao carregar status dos agentes', {
         description: error.message
@@ -248,7 +248,7 @@ export function DynamicValidationSystem() {
 
       // Reload status after a delay
       setTimeout(loadAgentsStatus, 3000);
-    } catch (error: Record<string, unknown>) {
+    } catch (error: unknown) {
       logger.error('Error creating validation jobs:', error);
       toast.error('Erro ao criar jobs de validação', {
         description: error.message

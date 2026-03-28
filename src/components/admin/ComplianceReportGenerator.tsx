@@ -93,7 +93,7 @@ export function ComplianceReportGenerator() {
       const payload = await fetchComplianceReport(selectedTemplate);
       setReportPayload(payload);
       toast.success(`Relatório ${selectedTemplate} gerado com sucesso!`);
-    } catch (error: Record<string, unknown>) {
+    } catch (error: unknown) {
       logger.error("Error generating compliance report:", error);
       const errorMessage = error?.message || "Erro desconhecido";
       

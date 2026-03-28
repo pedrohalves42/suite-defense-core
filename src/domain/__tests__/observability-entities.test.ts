@@ -31,7 +31,7 @@ describe('ProcessSnapshot', () => {
   });
 
   it('rejects without agentId', () => {
-    const result = ProcessSnapshot.create(null as unknown, tenantId, processes, services);
+    const result = ProcessSnapshot.create(null as any, tenantId, processes, services);
     expect(result.isFailure).toBe(true);
   });
 

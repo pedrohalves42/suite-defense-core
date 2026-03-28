@@ -151,7 +151,7 @@ export default function AcceptInvite() {
 
       toast({ title: 'Conta criada com sucesso!' });
       navigate('/dashboard');
-    } catch (error: Record<string, unknown>) {
+    } catch (error: unknown) {
       logger.error('Error accepting invite', error);
       toast({ 
         title: 'Erro ao criar conta', 

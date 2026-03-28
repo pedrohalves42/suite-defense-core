@@ -75,7 +75,7 @@ export default function SecurityMonitoring() {
     queryFn: async () => {
       if (!tenant?.id) return null;
       const since = getTimeRangeDate().toISOString();
-      const sb = supabase as unknown;
+      const sb = supabase;
 
       const [rateLimitsRes, failedLoginsRes, blockedIpsRes, securityEventsRes, agentsRes, blockedAttemptsRes, evidenceRes, alertsRes] = await Promise.all([
         sb.from('rate_limits').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('window_start', since).not('blocked_until', 'is', null),
@@ -324,7 +324,7 @@ export default function SecurityMonitoring() {
       });
       if (error) throw error;
       toast.success(`Remediação enviada para ${event.agentName}`);
-    } catch (err: Record<string, unknown>) {
+    } catch (err: unknown) {
       toast.error(`Erro: ${err.message}`);
     }
   };

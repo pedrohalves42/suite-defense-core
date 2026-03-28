@@ -22,7 +22,7 @@ describe('useTenant', () => {
       tenants: [],
       setActiveTenantById: vi.fn(),
       isSyncing: false,
-    } as unknown);
+    } as any);
 
     const { result } = renderHook(() => useTenant());
     expect(result.current.loading).toBe(false);
@@ -38,7 +38,7 @@ describe('useTenant', () => {
       tenants: [mockTenant],
       setActiveTenantById: vi.fn(),
       isSyncing: false,
-    } as unknown);
+    } as any);
 
     const { result } = renderHook(() => useTenant());
     expect(result.current.tenant).toEqual(mockTenant);
@@ -52,7 +52,7 @@ describe('useTenant', () => {
       tenants: [],
       setActiveTenantById: vi.fn(),
       isSyncing: false,
-    } as unknown);
+    } as any);
 
     const { result } = renderHook(() => useTenant());
     expect(result.current.loading).toBe(false);
@@ -67,7 +67,7 @@ describe('useTenant', () => {
       tenants: [],
       setActiveTenantById: vi.fn(),
       isSyncing: false,
-    } as unknown);
+    } as any);
 
     const { result } = renderHook(() => useTenant());
     expect(result.current.loading).toBe(false);
@@ -81,7 +81,7 @@ describe('useTenant', () => {
       tenants: [],
       setActiveTenantById: vi.fn(),
       isSyncing: false,
-    } as unknown);
+    } as any);
 
     const { result } = renderHook(() => useTenant());
     expect(result.current.loading).toBe(false);

@@ -144,7 +144,7 @@ export function AutomationRulesPanel() {
       setShowCreateDialog(false);
       setNewRule({ name: '', description: '', trigger_metric: 'cpu_usage_percent', trigger_operator: '>', trigger_value: 90, action_type: 'send_alert', cooldown_minutes: 30, priority: 5 });
       fetchData();
-    } catch (error: Record<string, unknown>) {
+    } catch (error: unknown) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
   };
@@ -160,7 +160,7 @@ export function AutomationRulesPanel() {
 
       if (error) throw error;
       setRules(prev => prev.map(r => r.id === ruleId ? { ...r, is_active: isActive } : r));
-    } catch (error: Record<string, unknown>) {
+    } catch (error: unknown) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
   };
@@ -177,7 +177,7 @@ export function AutomationRulesPanel() {
       if (error) throw error;
       setRules(prev => prev.filter(r => r.id !== ruleId));
       toast({ title: 'Regra removida' });
-    } catch (error: Record<string, unknown>) {
+    } catch (error: unknown) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
   };
@@ -200,7 +200,7 @@ export function AutomationRulesPanel() {
         description: `${data.evaluated} regras avaliadas, ${data.triggered} acionadas`,
       });
       fetchData();
-    } catch (error: Record<string, unknown>) {
+    } catch (error: unknown) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
   };

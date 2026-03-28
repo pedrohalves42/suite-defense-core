@@ -41,7 +41,7 @@ describe('useAuth', () => {
     });
     vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((cb) => {
       setTimeout(() => cb('INITIAL_SESSION', null), 0);
-      return { data: { subscription: { unsubscribe: vi.fn() } } } as unknown;
+      return { data: { subscription: { unsubscribe: vi.fn() } } } as any;
     });
 
     const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
@@ -50,14 +50,14 @@ describe('useAuth', () => {
   });
 
   it('should return user when session exists', async () => {
-    const mockUser = { id: 'user-123', email: 'test@test.com', app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: '' } as unknown;
-    const mockSession = { user: mockUser, expires_at: Date.now() / 1000 + 3600, access_token: 'x', refresh_token: 'x', expires_in: 3600, token_type: 'bearer' as const } as unknown;
+    const mockUser = { id: 'user-123', email: 'test@test.com', app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: '' } as any;
+    const mockSession = { user: mockUser, expires_at: Date.now() / 1000 + 3600, access_token: 'x', refresh_token: 'x', expires_in: 3600, token_type: 'bearer' as const } as any;
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
       data: { session: mockSession }, error: null,
     });
     vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((cb) => {
       setTimeout(() => cb('SIGNED_IN', mockSession), 0);
-      return { data: { subscription: { unsubscribe: vi.fn() } } } as unknown;
+      return { data: { subscription: { unsubscribe: vi.fn() } } } as any;
     });
 
     const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
@@ -73,7 +73,7 @@ describe('useAuth', () => {
     });
     vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((cb) => {
       setTimeout(() => cb('INITIAL_SESSION', null), 0);
-      return { data: { subscription: { unsubscribe: vi.fn() } } } as unknown;
+      return { data: { subscription: { unsubscribe: vi.fn() } } } as any;
     });
 
     renderHook(() => useAuth(), { wrapper: createWrapper() });
@@ -87,7 +87,7 @@ describe('useAuth', () => {
     });
     vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((cb) => {
       setTimeout(() => cb('INITIAL_SESSION', null), 0);
-      return { data: { subscription: { unsubscribe: vi.fn() } } } as unknown;
+      return { data: { subscription: { unsubscribe: vi.fn() } } } as any;
     });
 
     const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
@@ -95,13 +95,13 @@ describe('useAuth', () => {
   });
 
   it('should refresh token when expiring soon', async () => {
-    const session = { user: { id: 'u1' }, expires_at: Math.floor(Date.now() / 1000) + 200, access_token: 'x', refresh_token: 'x', expires_in: 200, token_type: 'bearer' } as unknown;
+    const session = { user: { id: 'u1' }, expires_at: Math.floor(Date.now() / 1000) + 200, access_token: 'x', refresh_token: 'x', expires_in: 200, token_type: 'bearer' } as any;
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
       data: { session: session as unknown }, error: null,
     });
     vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((cb) => {
       setTimeout(() => cb('SIGNED_IN', session), 0);
-      return { data: { subscription: { unsubscribe: vi.fn() } } } as unknown;
+      return { data: { subscription: { unsubscribe: vi.fn() } } } as any;
     });
 
     renderHook(() => useAuth(), { wrapper: createWrapper() });
@@ -112,7 +112,7 @@ describe('useAuth', () => {
     const unsubscribeMock = vi.fn();
     vi.mocked(supabase.auth.onAuthStateChange).mockReturnValue({
       data: { subscription: { unsubscribe: unsubscribeMock } },
-    } as unknown);
+    } as any);
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
       data: { session: null }, error: null,
     });

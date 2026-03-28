@@ -38,7 +38,7 @@ describe('LightModeConfig', () => {
   });
 
   it('rejects null agentId', () => {
-    const result = LightModeConfig.create(null as unknown);
+    const result = LightModeConfig.create(null as any);
     expect(result.isFailure).toBe(true);
   });
 

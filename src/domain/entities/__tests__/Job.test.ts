@@ -32,7 +32,7 @@ describe('Job Entity', () => {
 
     it('rejects missing agentId', () => {
       const result = Job.create({
-        agentId: null as unknown,
+        agentId: null as any,
         tenantId: TenantId.create(crypto.randomUUID()).value,
         type: JobType.HEALTH_CHECK,
       });

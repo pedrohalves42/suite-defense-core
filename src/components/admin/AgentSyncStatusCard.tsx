@@ -26,7 +26,7 @@ export function AgentSyncStatusCard() {
       
       // Refresh status after a short delay to show updated data
       setTimeout(() => refetch(), 2000);
-    } catch (error: Record<string, unknown>) {
+    } catch (error: unknown) {
       logger.error('Sync error:', error);
       toast.error(error.message || 'Erro ao sincronizar');
     } finally {

@@ -204,7 +204,7 @@ export function ProcessControlDispatcher({ agents }: { agents: Agent[] }) {
       setSelectedJob(null);
       setTargetName("");
       setShowConfirmDialog(false);
-    } catch (error: Record<string, unknown>) {
+    } catch (error: unknown) {
       logger.error('Error creating process control job:', error);
       toast.error('Erro ao criar job', { description: error.message });
     } finally {

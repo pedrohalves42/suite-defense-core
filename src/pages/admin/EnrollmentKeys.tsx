@@ -281,7 +281,7 @@ export default function EnrollmentKeys() {
       queryClient.invalidateQueries({ queryKey: ['enrollment-keys'] });
       queryClient.invalidateQueries({ queryKey: ['enrollment-keys-stats'] });
       setShowCleanupDialog(false);
-    } catch (error: Record<string, unknown>) {
+    } catch (error: unknown) {
       toast({
         title: "Erro ao executar limpeza",
         description: error.message,

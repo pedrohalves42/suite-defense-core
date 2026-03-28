@@ -345,7 +345,7 @@ const JobCreator = () => {
       
       // Reload jobs
       loadJobs();
-    } catch (error: Record<string, unknown>) {
+    } catch (error: unknown) {
       logger.error("Erro inesperado ao criar job", error);
       toast.error("Erro inesperado ao criar job. Tente novamente.");
     } finally {
