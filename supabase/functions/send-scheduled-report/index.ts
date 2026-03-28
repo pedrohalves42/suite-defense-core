@@ -25,12 +25,12 @@ interface ScheduledReport {
 }
 
 interface ReportData {
-  agents: any[];
-  software: any[];
-  vulnerabilities: any[];
-  antivirus: any[];
-  webActivity: any[];
-  securityEvents: any[];
+  agents: Array<Record<string, unknown>>;
+  software: Array<Record<string, unknown>>;
+  vulnerabilities: Array<Record<string, unknown>>;
+  antivirus: Array<Record<string, unknown>>;
+  webActivity: Array<Record<string, unknown>>;
+  securityEvents: Array<Record<string, unknown>>;
 }
 
 serve(async (req: Request) => {

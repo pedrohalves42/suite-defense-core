@@ -21,8 +21,8 @@ async function getPlanConfig(supabase: any, planName: string): Promise<PlanConfi
     return null;
   }
   
-  const base = mappings.find((m: any) => m.plan_type === 'base');
-  const addon = mappings.find((m: any) => m.plan_type === 'addon');
+  const base = mappings.find((m: Record<string, unknown>) => m.plan_type === 'base');
+  const addon = mappings.find((m: Record<string, unknown>) => m.plan_type === 'addon');
   
   if (!base || !addon) return null;
   
@@ -34,13 +34,13 @@ async function getPlanConfig(supabase: any, planName: string): Promise<PlanConfi
 }
 
 // V4: Get all addon price IDs from database
-async function getAllAddonPriceIds(supabase: any): Promise<string[]> {
+async function getAllAddonPriceIds(supabase: Record<string, unknown>): Promise<string[]> {
   const { data } = await supabase
     .from("stripe_plan_mapping")
     .select("stripe_price_id")
     .eq("plan_type", "addon");
   
-  return data?.map((m: any) => m.stripe_price_id) || [];
+  return data?.map((m: Record<string, unknown>) => m.stripe_price_id) || [];
 }
 
 serveTenant(async (req, ctx) => {
@@ -82,7 +82,7 @@ serveTenant(async (req, ctx) => {
     throw new Error("No subscription found for this tenant");
   }
 
-  const currentPlan = (subscription as any).subscription_plans?.name;
+  const currentPlan = (subscription as Record<string, unknown>).subscription_plans?.name;
   const isLegacy = subscription.is_legacy || false;
 
   logStep("Current subscription", { currentPlan, isLegacy, subscriptionId: subscription.stripe_subscription_id });

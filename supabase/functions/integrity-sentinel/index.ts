@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
     } else if (violations && violations.length > 0) {
       logger.error('[integrity-sentinel] 🔴 CRITICAL: Found integrity violations!', {
         count: violations.length,
-        violations: violations.map((v: any) => ({
+        violations: violations.map((v: Record<string, unknown>) => ({
           job_id: v.job_id,
           job_type: v.job_type,
           agent_id: v.agent_id,
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
             severity: 'critical',
             message: `${tenantViolations.length} jobs marcados como completed SEM efeito colateral real detectados`,
             data: {
-              violations: tenantViolations.map((v: any) => ({
+              violations: tenantViolations.map((v: Record<string, unknown>) => ({
                 job_id: v.job_id,
                 job_type: v.job_type,
                 agent_id: v.agent_id,
@@ -225,7 +225,7 @@ Deno.serve(async (req) => {
         violations_found: violations?.length || 0,
         release_issues: releaseIntegrity?.filter((r: { is_valid: boolean }) => !r.is_valid).length || 0,
         empty_output_jobs: emptyOutputJobs?.length || 0,
-        alerts_created: violations && violations.length > 0 ? new Set(violations.map((v: any) => v.tenant_id)).size : 0
+        alerts_created: violations && violations.length > 0 ? new Set(violations.map((v: Record<string, unknown>) => v.tenant_id)).size : 0
       },
       p_processed_count: (violations?.length || 0) + (emptyOutputJobs?.length || 0),
       p_job_source: 'cron'
@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
         timestamp: new Date().toISOString(),
         duration_ms: duration,
         violations_found: violations?.length || 0,
-        alerts_created: violations && violations.length > 0 ? new Set(violations.map((v: any) => v.tenant_id)).size : 0
+        alerts_created: violations && violations.length > 0 ? new Set(violations.map((v: Record<string, unknown>) => v.tenant_id)).size : 0
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

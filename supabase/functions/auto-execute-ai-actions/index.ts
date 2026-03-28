@@ -388,7 +388,7 @@ Deno.serve(async (req) => {
         logger.info(`[${requestId}] Auto-executed action ${action.id} (policy_source=${policy.source})`)
         result.actions_executed++
 
-      } catch (execError: any) {
+      } catch (execError: Record<string, unknown>) {
         logger.error(`[${requestId}] Failed to execute action ${action.id}:`, execError)
         result.errors.push(`${action.id}: ${execError.message}`)
         

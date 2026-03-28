@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
     const riskCategories: Record<string, number> = {};
 
     for (const insight of insights || []) {
-      const action = (insight.ai_actions as any[])?.[0];
+      const action = (insight.ai_actions as Array<Record<string, unknown>>)?.[0];
       const hasCustomPolicy = policyMap.has(insight.insight_type);
       const executionMode = policyMap.get(insight.insight_type) || 
         (insight.auto_action_executed ? 'auto' : 'approval');

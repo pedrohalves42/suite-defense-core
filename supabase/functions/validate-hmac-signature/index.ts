@@ -6,7 +6,7 @@ import { checkRateLimit } from "../_shared/rate-limit.ts";
 import { logger } from '../_shared/logger.ts';
 
 const ValidateHmacSchema = {
-  parse: (data: any) => {
+  parse: (data: Record<string, unknown>) => {
     if (!data.hmac_secret || typeof data.hmac_secret !== 'string') {
       throw new Error('hmac_secret is required and must be a string');
     }
@@ -78,7 +78,7 @@ serve(async (req) => {
     let validatedData;
     try {
       validatedData = ValidateHmacSchema.parse(body);
-    } catch (validationError: any) {
+    } catch (validationError: Record<string, unknown>) {
       return new Response(JSON.stringify({
         valid: false,
         error: "Invalid payload",
@@ -101,7 +101,7 @@ serve(async (req) => {
       if (keyBytes.length !== 32) {
         throw new Error(`Expected 32 bytes, got ${keyBytes.length}`);
       }
-    } catch (conversionError: any) {
+    } catch (conversionError: Record<string, unknown>) {
       return new Response(JSON.stringify({
         valid: false,
         error: "Failed to convert HEX to bytes",
@@ -149,7 +149,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     });
     
-  } catch (error: any) {
+  } catch (error: Record<string, unknown>) {
     logger.error(`[${requestId}] Unexpected error during HMAC validation:`, error);
     
     return new Response(JSON.stringify({

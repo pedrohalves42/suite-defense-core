@@ -88,7 +88,7 @@ serve(async (req: Request): Promise<Response> => {
 
     for (const tenant of tenants) {
       try {
-        const planName = (tenant.subscription_plans as any)?.name || "free";
+        const planName = (tenant.subscription_plans as Record<string, unknown>)?.name || "free";
         const frequencyDays = PLAN_FREQUENCIES[planName] || PLAN_FREQUENCIES.starter;
 
         // For trial (free) plans, check if it's within 48h of first agent installation
@@ -149,7 +149,7 @@ serve(async (req: Request): Promise<Response> => {
           }
         }
 
-      } catch (tenantError: any) {
+      } catch (tenantError: Record<string, unknown>) {
         logger.error(`Error processing tenant ${tenant.tenant_id}:`, tenantError);
         errors.push(`${tenant.tenant_id}: ${tenantError.message}`);
       }
@@ -180,7 +180,7 @@ serve(async (req: Request): Promise<Response> => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-  } catch (error: any) {
+  } catch (error: Record<string, unknown>) {
     logger.error("Error in scheduled-report-generator:", error);
     
     // Log error observability
@@ -247,10 +247,10 @@ async function generateTenantReport(
     .eq("tenant_id", tenantId);
 
   // Calculate statistics
-  const criticalVulns = vulnStats?.filter((v: any) => v.severity === "critical").length || 0;
-  const highVulns = vulnStats?.filter((v: any) => v.severity === "high").length || 0;
+  const criticalVulns = vulnStats?.filter((v: Record<string, unknown>) => v.severity === "critical").length || 0;
+  const highVulns = vulnStats?.filter((v: Record<string, unknown>) => v.severity === "high").length || 0;
   const totalThreats = avStats?.reduce((sum: number, a: any) => sum + (a.threats_found || 0), 0) || 0;
-  const blockedSites = webStats?.filter((w: any) => w.is_blocked).length || 0;
+  const blockedSites = webStats?.filter((w: Record<string, unknown>) => w.is_blocked).length || 0;
 
   const statistics = {
     total_agents: agents.length,
@@ -317,7 +317,7 @@ async function generateTenantReport(
       risk_level: riskLevel,
       statistics,
       report_data: {
-        agents: agents.map((a: any) => a.agent_name),
+        agents: agents.map((a: Record<string, unknown>) => a.agent_name),
         generated_at: new Date().toISOString(),
         trigger: triggerType,
       },

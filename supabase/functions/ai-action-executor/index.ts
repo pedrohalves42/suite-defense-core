@@ -624,7 +624,7 @@ serve(async (req) => {
         default:
           throw new Error(`Action type ${action.action_type} not implemented`);
       }
-    } catch (execError: any) {
+    } catch (execError: Record<string, unknown>) {
       log.error('Execution failed: ' + execError.message, { action_type: action.action_type, error: execError.message });
       executionStatus = 'failed';
       errorMessage = execError.message;
@@ -704,7 +704,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error: any) {
+  } catch (error: Record<string, unknown>) {
     logger.error('AI action executor error', error);
     return new Response(
       JSON.stringify({ 

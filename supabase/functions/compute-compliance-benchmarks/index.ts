@@ -173,7 +173,7 @@ async function calculateTenantComplianceScore(
       .eq('tenant_id', tenantId);
     
     const totalAgents = agents?.length || 0;
-    const activeAgents = agents?.filter((a: any) => a.status === 'active').length || 0;
+    const activeAgents = agents?.filter((a: Record<string, unknown>) => a.status === 'active').length || 0;
     categories['agent_coverage'] = totalAgents > 0 ? Math.round((activeAgents / totalAgents) * 100) : 0;
 
     // 2. Alert Response (weight: 20%)
@@ -184,7 +184,7 @@ async function calculateTenantComplianceScore(
       .limit(100);
     
     const totalAlerts = alerts?.length || 0;
-    const ackAlerts = alerts?.filter((a: any) => a.acknowledged).length || 0;
+    const ackAlerts = alerts?.filter((a: Record<string, unknown>) => a.acknowledged).length || 0;
     categories['alert_response'] = totalAlerts > 0 ? Math.round((ackAlerts / totalAlerts) * 100) : 100;
 
     // 3. Job Success Rate (weight: 20%)
@@ -195,7 +195,7 @@ async function calculateTenantComplianceScore(
       .limit(500);
     
     const totalJobs = jobs?.length || 0;
-    const completedJobs = jobs?.filter((j: any) => j.status === 'completed').length || 0;
+    const completedJobs = jobs?.filter((j: Record<string, unknown>) => j.status === 'completed').length || 0;
     categories['job_reliability'] = totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 0;
 
     // 4. Evidence Coverage (weight: 20%)

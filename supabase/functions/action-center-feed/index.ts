@@ -253,7 +253,7 @@ function enrichActionItem(item: ActionItem): ActionItem & { humanized: typeof AC
   // For AI insights, prefer the real title/description from the database
   // over the generic ACTION_COPY map (which only has generic labels like "Oportunidade de otimização")
   if (item.source_type === 'ai_insight' && (item.title || item.description)) {
-    const recommendation = (item.context as any)?.recommendation;
+    const recommendation = (item.context as Record<string, unknown>)?.recommendation;
     return {
       ...item,
       humanized: {
@@ -504,7 +504,7 @@ Deno.serve(async (req) => {
       if (execError) {
         logger.error('[action-center-feed] Playbook query error:', execError);
       } else {
-        playbookItems = (executions || []).map((exec: any) => ({
+        playbookItems = (executions || []).map((exec: Record<string, unknown>) => ({
           item_id: exec.id,
           source_type: 'playbook' as const,
           agent_id: exec.agent_id,
@@ -610,7 +610,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        aiInsightItems = (insights || []).map((insight: any) => {
+        aiInsightItems = (insights || []).map((insight: Record<string, unknown>) => {
           const agent = insight.agent_id ? agentMap[insight.agent_id] : null;
           const severityScore = insight.severity === 'critical' ? 100 : 
                                 insight.severity === 'high' ? 75 : 
@@ -683,7 +683,7 @@ Deno.serve(async (req) => {
           (i.severity === 'critical' || i.severity === 'urgent' || i.severity === 'high' || i.priority_score >= 70)
         )
         .sort((a, b) => b.priority_score - a.priority_score)
-        .map(enrichActionItem) as any;
+        .map(enrichActionItem);
 
       // Recommended = recent non-urgent items + historical high-severity items
       const recommended = enrichedItems
@@ -700,7 +700,7 @@ Deno.serve(async (req) => {
            (i.severity === 'critical' || i.severity === 'urgent' || i.severity === 'high' || i.priority_score >= 70))
         )
         .sort((a, b) => b.priority_score - a.priority_score)
-        .map(enrichActionItem) as any;
+        .map(enrichActionItem);
 
       // Informational = low priority recent items + historical non-urgent items
       const informational = enrichedItems
@@ -715,7 +715,7 @@ Deno.serve(async (req) => {
            i.priority_score < 70)
         )
         .sort((a, b) => b.priority_score - a.priority_score)
-        .map(enrichActionItem) as any;
+        .map(enrichActionItem);
 
       const feed: ActionCenterFeed = {
         urgent,

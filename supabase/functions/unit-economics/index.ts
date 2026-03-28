@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
     let totalMrr = 0;
     let activeCount = 0;
 
-    subscriptions?.forEach((sub: any) => {
+    subscriptions?.forEach((sub: Record<string, unknown>) => {
       if (sub.status === 'active') {
         const pricePerDeviceCents = sub.subscription_plans?.price_per_device || 0;
         const quantity = sub.device_quantity || 1;

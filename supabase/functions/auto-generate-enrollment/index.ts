@@ -156,7 +156,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-    } catch (blocklistError: any) {
+    } catch (blocklistError: Record<string, unknown>) {
       logger.warn(`[${requestId}] IP blocklist check failed (non-blocking)`, blocklistError.message);
       // Continue - blocklist issues shouldn't block enrollment
     }
@@ -200,7 +200,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-    } catch (rateLimitError: any) {
+    } catch (rateLimitError: Record<string, unknown>) {
       logger.warn(`[${requestId}] Rate limit check failed (non-blocking)`, rateLimitError.message);
       // Continue - rate limit issues shouldn't block enrollment for legitimate admins
     }
@@ -248,7 +248,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
         hasAgentName: !!body?.agent_name,
         hasOsType: !!body?.os_type 
       });
-    } catch (parseError: any) {
+    } catch (parseError: Record<string, unknown>) {
       logger.error(`[${requestId}] JSON parse error`, { 
         error: parseError.message,
         contentType: req.headers.get('content-type')
@@ -426,7 +426,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       );
       await crypto.subtle.sign('HMAC', cryptoKey, messageData);
       logger.info(`[${requestId}] [OK]  HMAC secret auto-validation: PASSED`);
-    } catch (hmacError: any) {
+    } catch (hmacError: Record<string, unknown>) {
       logger.error(`[${requestId}] [WARN] ? HMAC secret auto-validation: FAILED`, { 
         error: hmacError.message,
         secretPrefix: hmacSecret.substring(0, 8)
@@ -639,7 +639,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
-  } catch (error: any) {
+  } catch (error: Record<string, unknown>) {
     // [OK]  FASE 1.2: Final error handler sempre inclui requestId e detalhes
     const duration = Date.now() - startTime;
     logger.error(`[${requestId}] Unexpected error in auto-generate-enrollment after ${duration}ms: ${error.message}`);

@@ -178,7 +178,7 @@ serveTenant(async (_req, ctx) => {
   // ─── Generate AI recommendations ────────────────────
 
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  let aiTips: any[] = [];
+  let aiTips: Array<Record<string, unknown>> = [];
 
   if (LOVABLE_API_KEY && gaps.length > 0) {
     try {

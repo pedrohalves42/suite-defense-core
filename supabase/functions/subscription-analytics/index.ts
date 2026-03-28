@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     let canceledCount = 0;
     let pastDueCount = 0;
 
-    subscriptions?.forEach((sub: any) => {
+    subscriptions?.forEach((sub: Record<string, unknown>) => {
       const status = sub.status;
       const pricePerDevice = sub.subscription_plans.price_per_device || 0;
       const quantity = sub.device_quantity || 1;
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
     let totalTrials = 0;
     let convertedTrials = 0;
 
-    subscriptions?.forEach((sub: any) => {
+    subscriptions?.forEach((sub: Record<string, unknown>) => {
       const createdDate = new Date(sub.created_at);
       const createdMonthKey = createdDate.toISOString().substring(0, 7);
       
@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
     });
 
     // Processar cancelamentos dos audit logs
-    auditLogs?.forEach((log: any) => {
+    auditLogs?.forEach((log: Record<string, unknown>) => {
       if (log.action === 'cancel_subscription') {
         const monthKey = new Date(log.created_at).toISOString().substring(0, 7);
         if (monthlyDataMap.has(monthKey)) {

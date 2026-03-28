@@ -11,11 +11,11 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 interface AnalysisData {
-  problematicJobs: any[];
-  failurePatterns: any[];
-  agentMetrics: any[];
-  installationStats: any[];
-  systemAlerts: any[];
+  problematicJobs: Array<Record<string, unknown>>;
+  failurePatterns: Array<Record<string, unknown>>;
+  agentMetrics: Array<Record<string, unknown>>;
+  installationStats: Array<Record<string, unknown>>;
+  systemAlerts: Array<Record<string, unknown>>;
 }
 
 interface AIInsight {
@@ -452,7 +452,7 @@ async function analyzeWithAI(
   tenantId: string, 
   tenantName: string, 
   data: AnalysisData,
-  jobStats: any[]
+  jobStats: Array<Record<string, unknown>>
 ): Promise<AIInsight[]> {
   // No API key check needed - multi-provider handles availability
 
@@ -720,7 +720,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
     );
 
     // Mapear para formato do banco de dados com Evidence Pack
-    return parsedInsights.map((insight: any) => ({
+    return parsedInsights.map((insight: Record<string, unknown>) => ({
       tenant_id: tenantId,
       insight_type: insight.insight_type,
       severity: insight.severity,
@@ -750,8 +750,8 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
 }
 
 // FASE 2: Funcao para gerar acoes sugeridas baseadas em insights
-async function generateSuggestedActions(insights: any[]) {
-  const actions: any[] = [];
+async function generateSuggestedActions(insights: Array<Record<string, unknown>>) {
+  const actions: Array<Record<string, unknown>> = [];
 
   for (const insight of insights) {
     // So gerar acoes para insights de alta severidade ou criticos

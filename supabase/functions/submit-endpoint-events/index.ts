@@ -31,7 +31,7 @@ interface DetectionRule {
   severity: 'low' | 'medium' | 'high' | 'critical';
   confidence: number;
   type: 'process' | 'file' | 'network' | 'registry';
-  match: (event: any) => boolean;
+  match: (event: Record<string, unknown>) => boolean;
 }
 
 // V-2007: Pre-compiled regex patterns to avoid 15K+ compilations per batch
@@ -155,9 +155,9 @@ const DETECTION_RULES: DetectionRule[] = [
   },
 ];
 
-function runDetections(events: any[], type: string): any[] {
+function runDetections(events: Array<Record<string, unknown>>, type: string): Array<Record<string, unknown>> {
   const rules = DETECTION_RULES.filter(r => r.type === type);
-  const detections: any[] = [];
+  const detections: Array<Record<string, unknown>> = [];
   
   for (const event of events) {
     for (const rule of rules) {
@@ -224,7 +224,7 @@ serveAgent(async (_req, ctx) => {
   const { body, agentId, tenantId, supabase } = ctx;
   
   const stats = { process: 0, file: 0, network: 0, registry: 0, detections: 0, buffered: 0 };
-  const allDetections: any[] = [];
+  const allDetections: Array<Record<string, unknown>> = [];
 
   // V-2006: Apply batch limits to prevent DoS from compromised agents
   const processEvents = (body.process_events || []).slice(0, MAX_EVENTS_PER_BATCH);
@@ -233,7 +233,7 @@ serveAgent(async (_req, ctx) => {
   const registryEvents = (body.registry_events || []).slice(0, MAX_EVENTS_PER_BATCH);
 
   // Prepare events with tenant/agent context
-  const prepareEvents = (events: any[]) => events.map((e: any) => ({
+  const prepareEvents = (events: Array<Record<string, unknown>>) => events.map((e: Record<string, unknown>) => ({
     ...e,
     tenant_id: tenantId,
     agent_id: agentId,
@@ -257,7 +257,7 @@ serveAgent(async (_req, ctx) => {
   const bufferRows: { tenant_id: string; agent_id: string; event_category: string; payload: any }[] = [];
 
   // V-AUDIT: Consolidated loop instead of 4 separate iterations
-  const categories: { events: any[]; category: string }[] = [
+  const categories: { events: Array<Record<string, unknown>>; category: string }[] = [
     { events: preparedProcess, category: 'process' },
     { events: preparedFile, category: 'file' },
     { events: preparedNetwork, category: 'network' },

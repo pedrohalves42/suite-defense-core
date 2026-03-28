@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
           }
         };
       } catch (error) {
-        const err = error as any;
+        const err = error as { message?: string; code?: string; statusCode?: number };
         logStep("Stripe API error", { 
           error: err?.message || 'Unknown error', 
           type: err?.type || 'UnknownError' 
@@ -227,7 +227,7 @@ Deno.serve(async (req) => {
         response.recommendations.push('? Nenhum produto Stripe configurado - clique em "Criar Produtos"');
       }
     } catch (error) {
-      const err = error as any;
+      const err = error as { message?: string; code?: string; statusCode?: number };
       logStep("Error checking products", { error: err?.message || 'Unknown error' });
       response.recommendations.push('[WARN] ? Erro ao verificar produtos no banco de dados');
     }

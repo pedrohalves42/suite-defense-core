@@ -114,8 +114,8 @@ serve(async (req) => {
 
     // Analyze patterns
     const tenantAnalyses: TenantAnalysis[] = [];
-    const insightsToCreate: any[] = [];
-    const alertsToCreate: any[] = [];
+    const insightsToCreate: Array<Record<string, unknown>> = [];
+    const alertsToCreate: Array<Record<string, unknown>> = [];
 
     for (const [tenantId, agentGroups] of tenantGroups) {
       const patterns: FailurePattern[] = [];

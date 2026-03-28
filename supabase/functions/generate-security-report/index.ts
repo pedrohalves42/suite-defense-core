@@ -41,7 +41,7 @@ async function generateEvidenceHash(data: unknown): Promise<string> {
 
 // ==================== RISK CALCULATION ====================
 
-function calculateRiskScore(stats: any, unprotectedPCs: any, failedLogins: any[]): number {
+function calculateRiskScore(stats: any, unprotectedPCs: any, failedLogins: Array<Record<string, unknown>>): number {
   let score = 100;
   
   score -= Math.min(40, (stats.critical_vulnerabilities || 0) * 10);
@@ -85,15 +85,15 @@ const TEMPLATE_INFO: Record<ComplianceTemplate, { name: string; description: str
 async function buildComplianceSections(
   template: ComplianceTemplate,
   data: {
-    auditLogs: any[];
-    securityEvents: any[];
-    activePolicies: any[];
-    agents: any[];
-    failedLogins: any[];
-    blockedAttempts: any[];
+    auditLogs: Array<Record<string, unknown>>;
+    securityEvents: Array<Record<string, unknown>>;
+    activePolicies: Array<Record<string, unknown>>;
+    agents: Array<Record<string, unknown>>;
+    failedLogins: Array<Record<string, unknown>>;
+    blockedAttempts: Array<Record<string, unknown>>;
   }
 ) {
-  const sections: any[] = [];
+  const sections: Array<Record<string, unknown>> = [];
 
   switch (template) {
     case 'LGPD': {
@@ -550,7 +550,7 @@ serve(async (req) => {
     }
 
     // ==================== FULL JSON FORMAT (DEFAULT) ====================
-    const recommendations: any[] = [];
+    const recommendations: Array<Record<string, unknown>> = [];
     
     if (stats.critical_vulnerabilities > 0) {
       recommendations.push({

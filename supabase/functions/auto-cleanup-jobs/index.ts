@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
 
       const totalAffected = (queuedCount ?? 0) + (deliveredCount ?? 0)
       if (totalAffected > 0) {
-        const { data: blastCheck, error: blastError } = await supabase.rpc('check_blast_radius' as any, {
+        const { data: blastCheck, error: blastError } = await supabase.rpc('check_blast_radius' as never, {
           p_tenant_id: targetTenantId,
           p_action_type: 'cancel_jobs',
           p_affected_count: totalAffected,

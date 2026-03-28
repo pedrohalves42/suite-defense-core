@@ -438,7 +438,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (latestProcesses?.processes) {
-        const processNames = (latestProcesses.processes as any[]).map((p: any) => p.name || '');
+        const processNames = (latestProcesses.processes as Array<Record<string, unknown>>).map((p: Record<string, unknown>) => p.name || '');
         const cpuPercent = metrics.cpu_usage_percent ?? 0;
         // Estimate network throughput from bytes (rough Mbps)
         const networkMbps = ((metrics.network_bytes_sent ?? 0) + (metrics.network_bytes_received ?? 0)) / (1024 * 1024);

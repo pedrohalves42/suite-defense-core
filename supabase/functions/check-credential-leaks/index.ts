@@ -54,7 +54,7 @@ serveTenant(async (req, ctx) => {
         });
         if (resp.ok) {
           const allBreaches = await resp.json();
-          const domainBreaches = allBreaches.filter((b: any) =>
+          const domainBreaches = allBreaches.filter((b: Record<string, unknown>) =>
             b.Domain?.toLowerCase().includes(monitor.email_domain.toLowerCase()) ||
             b.Name?.toLowerCase().includes(monitor.email_domain.split('.')[0].toLowerCase())
           );

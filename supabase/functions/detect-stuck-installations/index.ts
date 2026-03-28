@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
 
     // Process each tenant
     for (const [tenantId, agents] of Object.entries(stuckByTenant)) {
-      const agentList = agents as any[];
+      const agentList = agents as Array<Record<string, unknown>>;
       
       // Get tenant info and admin emails
       const { data: tenant, error: tenantError } = await supabaseClient

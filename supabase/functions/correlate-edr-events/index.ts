@@ -95,10 +95,10 @@ Deno.serve(async (req: Request) => {
       for (const rule of tenantRules) {
 
       const windowMs = rule.time_window_minutes * 60 * 1000;
-      const patterns = rule.event_patterns as any[];
+      const patterns = rule.event_patterns as Array<Record<string, unknown>>;
 
       // Check "distinct_tactics" pattern
-      const distinctTacticsRule = patterns.find((p: any) => p.distinct_tactics);
+      const distinctTacticsRule = patterns.find((p: Record<string, unknown>) => p.distinct_tactics);
       if (distinctTacticsRule) {
         // V-2003 FIX: True sliding window with two pointers
         let bestMatch: { tactics: Set<string>; dets: typeof agentDets } | null = null;
@@ -134,7 +134,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // Check sequential pattern matching
-      if (patterns.length >= 2 && !patterns.some((p: any) => p.distinct_tactics)) {
+      if (patterns.length >= 2 && !patterns.some((p: Record<string, unknown>) => p.distinct_tactics)) {
         const matched: typeof agentDets = [];
         let patternIdx = 0;
 
@@ -177,7 +177,7 @@ async function createIncident(
   tenantId: string,
   agentId: string,
   rule: any,
-  matchedDets: any[],
+  matchedDets: Array<Record<string, unknown>>,
   tactics: string[]
 ) {
   const techniques = [...new Set(matchedDets.map(m => m.mitre_technique_id).filter(Boolean))];

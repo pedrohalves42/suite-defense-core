@@ -18,8 +18,8 @@ Deno.serve(async (req) => {
     const { tenant_id } = await req.json();
     if (!tenant_id) throw new Error("tenant_id required");
 
-    const nodes: any[] = [];
-    const edges: any[] = [];
+    const nodes: Array<Record<string, unknown>> = [];
+    const edges: Array<Record<string, unknown>> = [];
     const nodeMap = new Map<string, string>(); // value -> id
 
     function addNode(type: string, value: string, label: string, risk: number, meta: any = {}) {

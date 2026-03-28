@@ -11,7 +11,7 @@ interface ReportGenerationPayload {
   triggered_by: 'job_completion' | 'scheduled' | 'manual'
 }
 
-function calculateRiskScore(stats: any): { score: number; level: string } {
+function calculateRiskScore(stats: Record<string, unknown>): { score: number; level: string } {
   let score = 0
   
   // Critical vulnerabilities add 30 points each (max 90)
@@ -204,9 +204,9 @@ Deno.serve(async (req) => {
       
       const { data: vulns } = await vulnQuery
       statistics.total_vulnerabilities = vulns?.length || 0
-      statistics.critical_vulnerabilities = vulns?.filter((v: any) => v.severity === 'critical').length || 0
-      statistics.high_vulnerabilities = vulns?.filter((v: any) => v.severity === 'high').length || 0
-      statistics.medium_vulnerabilities = vulns?.filter((v: any) => v.severity === 'medium').length || 0
+      statistics.critical_vulnerabilities = vulns?.filter((v: Record<string, unknown>) => v.severity === 'critical').length || 0
+      statistics.high_vulnerabilities = vulns?.filter((v: Record<string, unknown>) => v.severity === 'high').length || 0
+      statistics.medium_vulnerabilities = vulns?.filter((v: Record<string, unknown>) => v.severity === 'medium').length || 0
       reportData.vulnerabilities = vulns || []
     }
 
@@ -241,10 +241,10 @@ Deno.serve(async (req) => {
       const { data: webActivity } = await webQuery
       
       // Count unique domains
-      const uniqueDomains = new Set(webActivity?.map((w: any) => w.domain) || [])
+      const uniqueDomains = new Set(webActivity?.map((w: Record<string, unknown>) => w.domain) || [])
       statistics.unique_domains = uniqueDomains.size
-      statistics.malicious_scans = webActivity?.filter((w: any) => w.is_blocked).length || 0
-      statistics.blocked_sites = webActivity?.filter((w: any) => w.is_blocked).length || 0
+      statistics.malicious_scans = webActivity?.filter((w: Record<string, unknown>) => w.is_blocked).length || 0
+      statistics.blocked_sites = webActivity?.filter((w: Record<string, unknown>) => w.is_blocked).length || 0
       reportData.web_activity = webActivity || []
     }
 

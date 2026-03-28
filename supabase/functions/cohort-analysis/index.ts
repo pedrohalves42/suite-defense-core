@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     // Group tenants by month of creation
     const cohortMap = new Map<string, string[]>();
 
-    tenants?.forEach((tenant: any) => {
+    tenants?.forEach((tenant: Record<string, unknown>) => {
       const month = tenant.created_at.slice(0, 7); // YYYY-MM
       if (!cohortMap.has(month)) {
         cohortMap.set(month, []);
@@ -95,13 +95,13 @@ Deno.serve(async (req) => {
       );
 
       // Get subscriptions for this cohort
-      const cohortSubs = subscriptions?.filter((s: any) => tenantIds.includes(s.tenant_id)) || [];
+      const cohortSubs = subscriptions?.filter((s: Record<string, unknown>) => tenantIds.includes(s.tenant_id)) || [];
 
-      const activeCount = cohortSubs.filter((s: any) => 
+      const activeCount = cohortSubs.filter((s: Record<string, unknown>) => 
         s.status === 'active' || s.status === 'trialing'
       ).length;
 
-      const churnedCount = cohortSubs.filter((s: any) => s.status === 'canceled').length;
+      const churnedCount = cohortSubs.filter((s: Record<string, unknown>) => s.status === 'canceled').length;
 
       const retentionRate = tenantIds.length > 0 
         ? (activeCount / tenantIds.length) * 100 
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
 
     // Calculate summary metrics
     const totalTenants = tenants?.length || 0;
-    const activeTenants = subscriptions?.filter((s: any) => 
+    const activeTenants = subscriptions?.filter((s: Record<string, unknown>) => 
       s.status === 'active' || s.status === 'trialing'
     ).length || 0;
     const avgRetention = cohorts.length > 0

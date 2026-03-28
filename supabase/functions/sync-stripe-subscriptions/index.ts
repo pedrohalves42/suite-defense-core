@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
     let syncedCount = 0;
     let errorCount = 0;
 
-    const typedSubscriptions = (subscriptions || []).map((sub: any) => ({
+    const typedSubscriptions = (subscriptions || []).map((sub: Record<string, unknown>) => ({
       tenant_id: sub.tenant_id,
       stripe_subscription_id: sub.stripe_subscription_id,
       status: sub.status,

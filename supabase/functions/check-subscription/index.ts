@@ -112,7 +112,7 @@ serveTenant(async (req, ctx) => {
     .select("stripe_price_id")
     .eq("plan_type", "addon");
 
-  const ADDON_PRICE_IDS = addonMappings?.map((m: any) => m.stripe_price_id) || [];
+  const ADDON_PRICE_IDS = addonMappings?.map((m: Record<string, unknown>) => m.stripe_price_id) || [];
   let addonDevicesFromStripe = 0;
   for (const item of stripeSubscription.items.data) {
     if (ADDON_PRICE_IDS.includes(item.price.id)) {

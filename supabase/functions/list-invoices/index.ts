@@ -41,7 +41,7 @@ serveTenant(async (_req, ctx) => {
     limit: 12,
   });
 
-  const formattedInvoices = invoices.data.map((inv: any) => ({
+  const formattedInvoices = invoices.data.map((inv: Record<string, unknown>) => ({
     id: inv.id,
     number: inv.number,
     amount_due: inv.amount_due,

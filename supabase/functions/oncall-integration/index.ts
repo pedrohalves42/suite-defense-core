@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
 
     // ─── WHO IS ON-CALL ───
     if (action === 'who-is-oncall') {
-      let oncallUsers: any[] = []
+      let oncallUsers: Array<Record<string, unknown>> = []
 
       if (PAGERDUTY_API_KEY && PAGERDUTY_SCHEDULE_ID) {
         try {
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
             }
           )
           const pdData = await pdRes.json()
-          oncallUsers = pdData.oncalls?.map((oc: any) => ({
+          oncallUsers = pdData.oncalls?.map((oc: Record<string, unknown>) => ({
             id: oc.user?.id,
             name: oc.user?.name,
             email: oc.user?.email,

@@ -32,7 +32,7 @@ function evaluateOperator(value: number, operator: string, threshold: number): b
   }
 }
 
-function isInCooldown(rule: any): boolean {
+function isInCooldown(rule: Record<string, unknown>): boolean {
   if (!rule.last_triggered_at) return false;
   const cooldownMs = (rule.cooldown_minutes || 30) * 60 * 1000;
   return Date.now() - new Date(rule.last_triggered_at).getTime() < cooldownMs;
@@ -347,7 +347,7 @@ async function executeAction(
   agentId: string,
   tenantId: string,
   triggerData: any,
-  agents: any[]
+  agents: Array<Record<string, unknown>>
 ): Promise<{ status: string; result: any }> {
   const actionConfig = rule.action_config as any;
 
@@ -405,7 +405,7 @@ async function executeAction(
       return { status: 'executed', result: { alert_id: alertData?.id } };
 
     } else if (rule.action_type === 'create_job') {
-      const agent = agents.find((a: any) => a.id === agentId);
+      const agent = agents.find((a: Record<string, unknown>) => a.id === agentId);
       
       // V-OFFLINE: Block job creation for offline agents (no heartbeat in 2h)
       if (agent) {
@@ -449,7 +449,7 @@ async function executeAction(
     }
 
     return { status: 'skipped', result: { reason: `Unknown action: ${rule.action_type}` } };
-  } catch (error: any) {
+  } catch (error: Record<string, unknown>) {
     const errMsg = error?.message || (typeof error === 'string' ? error : JSON.stringify(error));
     return { status: 'failed', result: { error: errMsg } };
   }
@@ -463,7 +463,7 @@ interface TriggerCandidate {
 }
 
 async function evaluateMetricThreshold(
-  supabase: any, rule: any, tenantId: string, agents: any[], latestMetrics: Map<string, any>
+  supabase: any, rule: any, tenantId: string, agents: Array<Record<string, unknown>>, latestMetrics: Map<string, any>
 ): Promise<TriggerCandidate[]> {
   const conditions = rule.trigger_conditions as any;
   const candidates: TriggerCandidate[] = [];
@@ -501,11 +501,11 @@ async function evaluateMetricThreshold(
 }
 
 async function evaluateProcessAnomaly(
-  supabase: any, rule: any, tenantId: string, agents: any[]
+  supabase: any, rule: any, tenantId: string, agents: Array<Record<string, unknown>>
 ): Promise<TriggerCandidate[]> {
   const conditions = rule.trigger_conditions as any;
   const candidates: TriggerCandidate[] = [];
-  const agentIds = agents.map((a: any) => a.id);
+  const agentIds = agents.map((a: Record<string, unknown>) => a.id);
 
   const { data: processData } = await supabase
     .from('agent_processes')
@@ -514,7 +514,7 @@ async function evaluateProcessAnomaly(
     .order('collected_at', { ascending: false });
 
   const latestProcesses = new Map<string, any>();
-  (processData || []).forEach((p: any) => {
+  (processData || []).forEach((p: Record<string, unknown>) => {
     if (!latestProcesses.has(p.agent_id)) latestProcesses.set(p.agent_id, p);
   });
 
@@ -534,7 +534,7 @@ async function evaluateProcessAnomaly(
             count: suspiciousCount,
             threshold,
             severity: 'critical',
-            processes: (p.suspicious_processes || []).slice(0, 5).map((sp: any) => sp.name),
+            processes: (p.suspicious_processes || []).slice(0, 5).map((sp: Record<string, unknown>) => sp.name),
             message: `${suspiciousCount} suspicious process(es) detected (threshold: ${threshold})`,
           },
         });
@@ -561,7 +561,7 @@ async function evaluateProcessAnomaly(
 }
 
 async function evaluateAgentStatus(
-  supabase: any, rule: any, tenantId: string, agents: any[]
+  supabase: any, rule: any, tenantId: string, agents: Array<Record<string, unknown>>
 ): Promise<TriggerCandidate[]> {
   const conditions = rule.trigger_conditions as any;
   const candidates: TriggerCandidate[] = [];
@@ -603,12 +603,12 @@ async function evaluateAgentStatus(
 }
 
 async function evaluateSecurityCheck(
-  supabase: any, rule: any, tenantId: string, agents: any[]
+  supabase: any, rule: any, tenantId: string, agents: Array<Record<string, unknown>>
 ): Promise<TriggerCandidate[]> {
   const conditions = rule.trigger_conditions as any;
   const candidates: TriggerCandidate[] = [];
   const checkType = conditions.check;
-  const agentIds = agents.map((a: any) => a.id);
+  const agentIds = agents.map((a: Record<string, unknown>) => a.id);
 
   if (checkType === 'no_antivirus_detected' || checkType === 'antivirus_inactive') {
     const { data: avData } = await supabase
@@ -618,7 +618,7 @@ async function evaluateSecurityCheck(
       .order('collected_at', { ascending: false });
 
     const latestAv = new Map<string, any>();
-    (avData || []).forEach((av: any) => {
+    (avData || []).forEach((av: Record<string, unknown>) => {
       if (!latestAv.has(av.agent_id)) latestAv.set(av.agent_id, av);
     });
 
@@ -661,12 +661,12 @@ async function evaluateSecurityCheck(
       .ilike('title', '%firewall%');
 
     const affectedAgents = new Set<string>();
-    (fwEvidence || []).forEach((e: any) => affectedAgents.add(e.agent_id));
-    (fwAlerts || []).forEach((a: any) => affectedAgents.add(a.agent_id));
+    (fwEvidence || []).forEach((e: Record<string, unknown>) => affectedAgents.add(e.agent_id));
+    (fwAlerts || []).forEach((a: Record<string, unknown>) => affectedAgents.add(a.agent_id));
 
     for (const agentId of affectedAgents) {
       if (!matchesScope(rule, agentId)) continue;
-      const agent = agents.find((a: any) => a.id === agentId);
+      const agent = agents.find((a: Record<string, unknown>) => a.id === agentId);
       candidates.push({
         agentId,
         triggerData: {
@@ -687,7 +687,7 @@ async function evaluateSecurityCheck(
 
     for (const usb of (usbDevices || [])) {
       if (!matchesScope(rule, usb.agent_id)) continue;
-      const agent = agents.find((a: any) => a.id === usb.agent_id);
+      const agent = agents.find((a: Record<string, unknown>) => a.id === usb.agent_id);
       candidates.push({
         agentId: usb.agent_id,
         triggerData: {
@@ -711,14 +711,14 @@ async function evaluateSecurityCheck(
       .limit(50);
 
     const agentVulns = new Map<string, any[]>();
-    (vulns || []).forEach((v: any) => {
+    (vulns || []).forEach((v: Record<string, unknown>) => {
       if (!agentVulns.has(v.agent_id)) agentVulns.set(v.agent_id, []);
       agentVulns.get(v.agent_id)!.push(v);
     });
 
     for (const [agentId, agentVulnList] of agentVulns) {
       if (!matchesScope(rule, agentId)) continue;
-      const agent = agents.find((a: any) => a.id === agentId);
+      const agent = agents.find((a: Record<string, unknown>) => a.id === agentId);
       candidates.push({
         agentId,
         triggerData: {
@@ -726,7 +726,7 @@ async function evaluateSecurityCheck(
           check: checkType,
           agent_name: agent?.agent_name || 'Unknown',
           vuln_count: agentVulnList.length,
-          top_vulns: agentVulnList.slice(0, 3).map((v: any) => v.title),
+          top_vulns: agentVulnList.slice(0, 3).map((v: Record<string, unknown>) => v.title),
           severity: 'critical',
           message: `${agentVulnList.length} vulnerabilidade(s) crítica(s) no agente '${agent?.agent_name}'`,
         },
@@ -761,7 +761,7 @@ async function evaluateForTenant(
   if (!agents || agents.length === 0) return { evaluated: 0, triggered: 0, blocked: 0, decisions: 0 };
 
   const totalAgents = agents.length;
-  const agentIds = agents.map((a: any) => a.id);
+  const agentIds = agents.map((a: Record<string, unknown>) => a.id);
 
   // ─── P0: GLOBAL CIRCUIT BREAKER ───
   // Check fleet-wide impact before processing any rules
@@ -797,14 +797,14 @@ async function evaluateForTenant(
     .order('collected_at', { ascending: false });
 
   const latestMetrics = new Map<string, any>();
-  (metrics || []).forEach((m: any) => {
+  (metrics || []).forEach((m: Record<string, unknown>) => {
     if (!latestMetrics.has(m.agent_id)) latestMetrics.set(m.agent_id, m);
   });
 
   let totalTriggered = 0;
   let totalBlocked = 0;
   let totalDecisions = 0;
-  const allExecutions: any[] = [];
+  const allExecutions: Array<Record<string, unknown>> = [];
 
   for (const rule of rules) {
     // Global cooldown check (rule-level)
@@ -913,9 +913,9 @@ async function evaluateForTenant(
     await supabase.from('automation_executions').insert(allExecutions);
 
     // Update rule trigger metadata
-    const triggeredRuleIds = [...new Set(allExecutions.map((e: any) => e.rule_id))];
+    const triggeredRuleIds = [...new Set(allExecutions.map((e: Record<string, unknown>) => e.rule_id))];
     for (const ruleId of triggeredRuleIds) {
-      const rule = rules.find((r: any) => r.id === ruleId);
+      const rule = rules.find((r: Record<string, unknown>) => r.id === ruleId);
       await supabase
         .from('automation_rules')
         .update({

@@ -55,7 +55,7 @@ async function scanAgentVulnerabilities(
   }
 
   // Search CVEs
-  const vulnerabilities: any[] = [];
+  const vulnerabilities: Array<Record<string, unknown>> = [];
   const processedCVEs = new Set<string>();
 
   for (const keyword of Array.from(softwareKeywords).slice(0, 20)) {
@@ -139,7 +139,7 @@ function extractKeywordsHelper(name: string): string[] {
   return keywords;
 }
 
-function isVersionAffectedHelper(installedVersion: string, affectedVersions: any[]): boolean {
+function isVersionAffectedHelper(installedVersion: string, affectedVersions: Array<Record<string, unknown>>): boolean {
   if (!affectedVersions || affectedVersions.length === 0) return true;
   return true; // Simplified for batch mode
 }
@@ -318,7 +318,7 @@ serveTenant(async (req, ctx) => {
     logger.info(`[${requestId}] [SCAN-VULNS] Extracted ${softwareKeywords.size} unique keywords to search`);
 
     // 3. Search for CVEs in database (already cached from NVD)
-    const vulnerabilities: any[] = [];
+    const vulnerabilities: Array<Record<string, unknown>> = [];
     const processedCVEs = new Set<string>();
 
     // First, try to find matches in our CVE database cache
@@ -417,7 +417,7 @@ serveTenant(async (req, ctx) => {
     const message = error instanceof Error 
       ? error.message 
       : (typeof error === 'object' && error !== null && 'message' in error) 
-        ? String((error as any).message)
+        ? String((error as Record<string, unknown>).message)
         : JSON.stringify(error) || 'Unknown error';
     logger.error(`[${requestId}] [SCAN-VULNS] Error:`, message);
     return new Response(
@@ -487,7 +487,7 @@ function extractKeywords(name: string): string[] {
 }
 
 // Check if installed version is affected by CVE
-function isVersionAffected(installedVersion: string, affectedVersions: any[]): boolean {
+function isVersionAffected(installedVersion: string, affectedVersions: Array<Record<string, unknown>>): boolean {
   if (!affectedVersions || affectedVersions.length === 0) {
     return true; // If no version info, consider potentially affected
   }
@@ -578,7 +578,7 @@ async function scanWithFallback(
   agent_id: string, 
   tenant_id: string
 ): Promise<any[]> {
-  const vulnerabilities: any[] = [];
+  const vulnerabilities: Array<Record<string, unknown>> = [];
   const knownVulnerableSoftware = getKnownVulnerabilities();
 
   for (const item of software) {

@@ -304,7 +304,7 @@ serve(async (req) => {
         status: 200,
       }
     );
-  } catch (error: any) {
+  } catch (error: Record<string, unknown>) {
     logger.error(`[${requestId}] Unhandled error:`, { 
       message: error.message, 
       stack: error.stack 

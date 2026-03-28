@@ -15,8 +15,8 @@ serveTenant(async (req, ctx) => {
       .eq('tenant_id', tenantId).limit(100),
   ]);
 
-  const nodeUpserts: any[] = [];
-  const edgeUpserts: any[] = [];
+  const nodeUpserts: Array<Record<string, unknown>> = [];
+  const edgeUpserts: Array<Record<string, unknown>> = [];
   const nodeIds = new Map<string, string>();
 
   const ensureNode = (type: string, value: string, label?: string, riskScore = 0) => {
@@ -55,7 +55,7 @@ serveTenant(async (req, ctx) => {
   }
 
   for (const match of threatMatches.data || []) {
-    const indicator = (match as any).threat_indicators;
+    const indicator = (match as Record<string, unknown>).threat_indicators;
     if (indicator) {
       const nodeType = indicator.indicator_type === 'ip_address' ? 'ip'
         : indicator.indicator_type === 'domain' ? 'domain'

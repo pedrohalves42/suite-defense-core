@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
     let zombieCleaned = { orphaned_cleaned: 0, stale_cleaned: 0, total: 0 }
     try {
       const { data: zombieResult } = await supabase.rpc('cleanup_zombie_executions')
-      if (zombieResult) zombieCleaned = zombieResult as any
+      if (zombieResult) zombieCleaned = zombieResult as Record<string, unknown>
       logger.info(`[cleanup-stuck-jobs] Zombie executions cleaned: ${zombieCleaned.total}`)
     } catch (e) {
       logger.error('[cleanup-stuck-jobs] Error cleaning zombie executions:', e)
