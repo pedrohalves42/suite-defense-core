@@ -194,7 +194,7 @@ export function AgentVersionSync({ latestVersions }: AgentVersionSyncProps) {
       });
       toast.success('Comandos de reinstalação gerados!');
     } catch (error) {
-      toast.error(`Erro ao gerar comandos: ${error.message}`);
+      toast.error(`Erro ao gerar comandos: ${(error as Error).message}`);
     } finally {
       setNuclearLoading(false);
     }

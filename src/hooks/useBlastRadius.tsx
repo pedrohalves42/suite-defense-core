@@ -60,8 +60,8 @@ export const useCheckBlastRadius = () => {
         throw new Error('Tenant not found');
       }
 
-      const { data, error } = await supabase
-        .rpc('check_blast_radius' as never, {
+      const { data, error } = await (supabase as any)
+        .rpc('check_blast_radius', {
           p_tenant_id: tenant.id,
           p_action_type: actionType,
           p_affected_count: affectedCount

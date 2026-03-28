@@ -403,7 +403,7 @@ export function GeneratedReportsList() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(`/verificar/${(report as unknown as Record<string, unknown>).audit_id || report.id}`, '_blank')}
+                          onClick={() => window.open(`/verificar/${(report as any).audit_id || report.id}`, '_blank')}
                           title="Verificar autenticidade (abre em nova aba)"
                         >
                           <ExternalLink className="h-4 w-4 mr-1" />

@@ -15,7 +15,7 @@ export class SupabaseCertificateRepository implements CertificateRepository {
   async saveBatch(certs: Certificate[]): Promise<void> {
     if (certs.length === 0) return;
     const rows = certs.map(c => CertificateMapper.toPersistence(c));
-    const { error } = await supabase.from('agent_certificates').insert(rows as Array<Record<string, unknown>>);
+    const { error } = await supabase.from('agent_certificates').insert(rows as never);
     if (error) throw new Error(`Failed to save certificate batch: ${error.message}`);
   }
 
