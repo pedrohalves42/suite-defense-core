@@ -19,6 +19,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface Insight {
   id: string;
@@ -40,6 +41,7 @@ const severityConfig = {
 };
 
 export function InsightActionPanel() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   // V-302: Add loading guard to prevent race conditions during tenant sync
   const { activeTenant, loading } = useActiveTenant();
   const tenantId = activeTenant?.id;
@@ -67,8 +69,7 @@ export function InsightActionPanel() {
     },
     // V-302: Guard with !loading to prevent queries before JWT sync completes
     enabled: !loading && !!tenantId,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   const acknowledgeMutation = useMutation({

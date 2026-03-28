@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface RiskDebtItem {
   id: string;
@@ -17,6 +18,7 @@ export interface RiskDebtItem {
 }
 
 export function useRiskDebt() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant, loading } = useTenant();
 
   return useQuery({
@@ -32,9 +34,8 @@ export function useRiskDebt() {
       return data as RiskDebtItem[];
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false,
-    staleTime: 60_000,
+    refetchInterval: adaptiveInterval,
+    staleTime: 60_000
   });
 }
 
@@ -48,7 +49,7 @@ export function useRiskDebtSummary() {
       critical: riskDebt?.filter(r => r.severity === 'critical').length || 0,
       high: riskDebt?.filter(r => r.severity === 'high').length || 0,
       medium: riskDebt?.filter(r => r.severity === 'medium').length || 0,
-      low: riskDebt?.filter(r => r.severity === 'low').length || 0,
+      low: riskDebt?.filter(r => r.severity === 'low').length || 0
     }
   };
 

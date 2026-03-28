@@ -12,6 +12,7 @@ import { formatRelativeTime } from '@/lib/date-utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface OfflineAgent {
   agent_id: string;
@@ -128,6 +129,7 @@ function isWithinBusinessHours(businessHours: BusinessHours): boolean {
 }
 
 export function OfflineAgentAlerts() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
   const [acknowledgedAgents, setAcknowledgedAgents] = useState<Set<string>>(new Set());
@@ -204,8 +206,7 @@ export function OfflineAgentAlerts() {
       });
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   // Realtime subscription for agent status changes

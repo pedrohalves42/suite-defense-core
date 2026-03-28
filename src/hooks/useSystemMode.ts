@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export type SystemMode = 'normal' | 'restricted' | 'emergency_stop';
 
@@ -14,6 +15,7 @@ export interface SystemState {
 }
 
 export function useSystemMode() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   return useQuery({
     queryKey: ['system-mode'],
     queryFn: async () => {
@@ -40,7 +42,7 @@ export function useSystemMode() {
             triggered_at: stateRow.triggered_at,
             reason: stateRow.reason,
             triggered_by: stateRow.triggered_by,
-            expires_at: stateRow.expires_at,
+            expires_at: stateRow.expires_at
           } as SystemState;
         }
       }
@@ -50,12 +52,11 @@ export function useSystemMode() {
         triggered_at: null,
         reason: null,
         triggered_by: null,
-        expires_at: null,
+        expires_at: null
       } as SystemState;
     },
-    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min (system mode rarely changes)
-    staleTime: 120_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
+    staleTime: 120_000
   });
 }
 
@@ -82,7 +83,7 @@ export function useActivateKillSwitch() {
           mode,
           reason,
           triggered_by: user.id,
-          expires_at: expiresAt || null,
+          expires_at: expiresAt || null
         })
         .select()
         .single();
@@ -96,7 +97,7 @@ export function useActivateKillSwitch() {
       const modeLabels: Record<SystemMode, string> = {
         normal: 'Normal',
         restricted: 'Restrito',
-        emergency_stop: 'Parada de Emergência',
+        emergency_stop: 'Parada de Emergência'
       };
       
       toast.success(`Sistema alterado para modo: ${modeLabels[variables.mode]}`);
@@ -104,7 +105,7 @@ export function useActivateKillSwitch() {
     onError: (error) => {
       logger.error('Error activating kill switch:', error);
       toast.error('Erro ao alterar estado do sistema');
-    },
+    }
   });
 }
 
@@ -123,7 +124,7 @@ export function useDeactivateKillSwitch() {
         .insert({
           mode: 'normal',
           reason: 'Kill switch deactivated by administrator',
-          triggered_by: user.id,
+          triggered_by: user.id
         })
         .select()
         .single();
@@ -138,6 +139,6 @@ export function useDeactivateKillSwitch() {
     onError: (error) => {
       logger.error('Error deactivating kill switch:', error);
       toast.error('Erro ao restaurar sistema');
-    },
+    }
   });
 }

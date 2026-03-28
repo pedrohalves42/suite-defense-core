@@ -37,6 +37,7 @@ import { DiskMetricsPanel } from '@/components/agent/DiskMetricsPanel';
 import { ProcessControlDispatcher } from '@/components/admin/ProcessControlDispatcher';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface Agent {
   id: string;
@@ -55,6 +56,7 @@ type StatusFilter = 'all' | 'online' | 'offline' | 'pending' | 'disabled';
 type VersionFilter = 'all' | 'outdated' | 'current';
 
 export default function AgentManagement() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { t } = useTranslation();
   const { tenant } = useTenant();
   const { isAdmin, isSuperAdmin } = useUserRole();
@@ -125,8 +127,7 @@ export default function AgentManagement() {
       return (result.data || []) as Agent[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   const { data: installationStatus } = useQuery<Record<string, boolean>>({
@@ -193,8 +194,7 @@ export default function AgentManagement() {
       return metricsMap;
     },
     enabled: !!tenant?.id && !!agents && agents.length > 0,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   // Helper functions

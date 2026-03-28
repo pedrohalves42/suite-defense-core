@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface BackupStatusRecord {
   id: string;
@@ -33,6 +34,7 @@ export interface BackupSummary {
 }
 
 export function useBackupStatus() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
   return useQuery({
@@ -64,12 +66,11 @@ export function useBackupStatus() {
         critical,
         notConfigured,
         oldestBackupHours: ages.length > 0 ? Math.max(...ages) : null,
-        records,
+        records
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000, // COST-OPT v8: 60s → 5min (backup status is slow-changing)
-    staleTime: 120_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
+    staleTime: 120_000
   });
 }

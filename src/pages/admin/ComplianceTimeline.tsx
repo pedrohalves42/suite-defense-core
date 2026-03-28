@@ -19,6 +19,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 // jsPDF and autoTable imported dynamically to avoid test/build issues
 
 interface EvidenceLog {
@@ -53,6 +54,7 @@ const EVENT_TYPE_ICONS: Record<string, React.ElementType> = {
 };
 
 const ComplianceTimeline: React.FC = () => {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const [searchTerm, setSearchTerm] = useState('');
   const [eventTypeFilter, setEventTypeFilter] = useState<string>('all');
@@ -80,8 +82,7 @@ const ComplianceTimeline: React.FC = () => {
       return (data || []) as EvidenceLog[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   // Get unique agents for filter

@@ -12,6 +12,7 @@ import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { useTenant } from '@/hooks/useTenant';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface AgentWithCapabilities {
   id: string;
@@ -26,6 +27,7 @@ interface AgentWithCapabilities {
 }
 
 export default function AgentVersionMonitor() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const { toast } = useToast();
 
@@ -46,8 +48,7 @@ export default function AgentVersionMonitor() {
       );
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   const { data: latestRelease } = useQuery({

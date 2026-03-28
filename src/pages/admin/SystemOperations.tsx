@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { logger } from '@/lib/logger';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 import {
   Table,
   TableBody,
@@ -70,6 +71,7 @@ interface OperationsSummary {
 }
 
 export default function SystemOperations() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
@@ -86,8 +88,7 @@ export default function SystemOperations() {
       return data as unknown as OperationsSummary;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   // Fetch stuck jobs
@@ -103,8 +104,7 @@ export default function SystemOperations() {
       return data as StuckJob[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   // Fetch Edge Function stats
@@ -119,8 +119,7 @@ export default function SystemOperations() {
       if (error) throw error;
       return data as EdgeFunctionStat[];
     },
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   // Cleanup stuck jobs mutation

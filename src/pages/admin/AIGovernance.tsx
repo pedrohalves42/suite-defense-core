@@ -29,6 +29,7 @@ import {
   Zap
 } from 'lucide-react';
 import { formatBrazilDateTime } from '@/lib/date-utils';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface TenantAICosts {
   tenant_id: string;
@@ -57,6 +58,7 @@ interface PromptVersion {
 }
 
 export default function AIGovernance() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   // Fetch AI metrics summary
   const { data: metricsData, isLoading: metricsLoading } = useQuery({
     queryKey: ['ai-governance-metrics'],
@@ -70,8 +72,7 @@ export default function AIGovernance() {
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   // Calculate aggregated metrics

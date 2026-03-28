@@ -2,7 +2,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useTenant } from "@/hooks/useTenant";
-import { useEffect } from "react";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { useAdaptivePolling } from "@/hooks/useAdaptivePolling";
 import { logger } from "@/lib/logger";
 import type {
   DashboardAgent, DashboardJob, DashboardReport,
@@ -101,50 +102,71 @@ export function useDashboardQueries() {
   const queryClient = useQueryClient();
   const tenantId = tenant?.id;
   const enabled = !!tenantId && isOnline;
+  const adaptiveInterval = useAdaptivePolling(300_000);
 
-  // PERF-FIX: refetchOnWindowFocus pauses polling when tab is inactive
-  const queryOpts = { enabled, staleTime: STALE_TIME, refetchInterval: REFETCH_INTERVAL, refetchOnWindowFocus: true, refetchIntervalInBackground: false };
-
-  const agents = useQuery({
+  // Agents & Jobs use Realtime (tables already have publications)
+  const agents = useRealtimeQuery<DashboardAgent[]>({
     queryKey: ["dashboard", "agents", tenantId],
     queryFn: () => fetchAgents(tenantId!),
-    ...queryOpts,
+    enabled,
+    staleTime: STALE_TIME,
+    realtimeTable: 'agents',
+    realtimeFilter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
   });
 
-  const jobs = useQuery({
+  const jobs = useRealtimeQuery<DashboardJob[]>({
     queryKey: ["dashboard", "jobs", tenantId],
     queryFn: () => fetchJobs(tenantId!),
-    ...queryOpts,
+    enabled,
+    staleTime: STALE_TIME,
+    realtimeTable: 'jobs',
+    realtimeFilter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
+  });
+
+  // Virus scans — no Realtime publication, use adaptive polling
+  const virusScans = useQuery({
+    queryKey: ["dashboard", "virusScans", tenantId],
+    queryFn: () => fetchVirusScans(tenantId!),
+    enabled,
+    staleTime: STALE_TIME,
+    refetchInterval: adaptiveInterval,
+    refetchOnWindowFocus: true,
   });
 
   const reports = useQuery({
     queryKey: ["dashboard", "reports", tenantId],
     queryFn: () => fetchReports(tenantId!),
-    ...queryOpts,
+    enabled,
+    staleTime: STALE_TIME,
+    refetchInterval: adaptiveInterval,
+    refetchOnWindowFocus: true,
   });
 
   const agentTokens = useQuery({
     queryKey: ["dashboard", "tokens", tenantId],
     queryFn: () => fetchTokens(tenantId!),
-    ...queryOpts, refetchInterval: 300_000, // COST-OPT v8: tokens rarely change
+    enabled,
+    staleTime: STALE_TIME,
+    refetchInterval: adaptiveInterval,
+    refetchOnWindowFocus: true,
   });
 
   const rateLimits = useQuery({
     queryKey: ["dashboard", "rateLimits", tenantId],
     queryFn: () => fetchRateLimits(tenantId!),
-    ...queryOpts, refetchInterval: 300_000, // COST-OPT v8: rate limits rarely change
-  });
-
-  const virusScans = useQuery({
-    queryKey: ["dashboard", "virusScans", tenantId],
-    queryFn: () => fetchVirusScans(tenantId!),
-    ...queryOpts,
+    enabled,
+    staleTime: STALE_TIME,
+    refetchInterval: adaptiveInterval,
+    refetchOnWindowFocus: true,
   });
 
   const auditLogs = useQuery({
     queryKey: ["dashboard", "auditLogs", tenantId],
     queryFn: () => fetchAuditLogs(tenantId!),
-    ...queryOpts, refetchInterval: 300_000, // COST-OPT v8: audit logs don't need 30s polling
+    enabled,
+    staleTime: STALE_TIME,
+    refetchInterval: adaptiveInterval,
+    refetchOnWindowFocus: true,
   });
 
   const tenantNames = useQuery({
@@ -152,39 +174,6 @@ export function useDashboardQueries() {
     queryFn: fetchTenantNames,
     staleTime: 5 * 60 * 1000,
   });
-
-  // Realtime invalidation (instead of full refetch)
-  useEffect(() => {
-    if (!tenantId) return;
-
-    const agentsChannel = supabase
-      .channel(`rq-agents-${tenantId}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'agents',
-        filter: `tenant_id=eq.${tenantId}`,
-      }, () => {
-        // TUNING: Downgrade from info to debug - fires too frequently
-        logger.debug('[DashboardQueries] Agents changed, invalidating...');
-        queryClient.invalidateQueries({ queryKey: ["dashboard", "agents", tenantId] });
-      })
-      .subscribe();
-
-    const jobsChannel = supabase
-      .channel(`rq-jobs-${tenantId}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'jobs',
-        filter: `tenant_id=eq.${tenantId}`,
-      }, () => {
-        logger.debug('[DashboardQueries] Jobs changed, invalidating...');
-        queryClient.invalidateQueries({ queryKey: ["dashboard", "jobs", tenantId] });
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(agentsChannel);
-      supabase.removeChannel(jobsChannel);
-    };
-  }, [tenantId, queryClient]);
 
   const loading = agents.isLoading || jobs.isLoading || reports.isLoading;
 

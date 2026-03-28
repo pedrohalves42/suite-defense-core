@@ -10,6 +10,7 @@ import { Brain, Clock, CheckCircle, XCircle, Zap, DollarSign, Activity, Trending
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import CVEDatabaseStatus from '@/components/admin/CVEDatabaseStatus';
 import { formatBrazilTime } from '@/lib/date-utils';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface AIMetric {
   id: string;
@@ -29,6 +30,7 @@ interface AIMetric {
 const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
 export default function AIMetrics() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const [timeRange, setTimeRange] = useState('24h');
   
   const hoursBack = timeRange === '1h' ? 1 : timeRange === '24h' ? 24 : timeRange === '7d' ? 168 : 720;
@@ -49,8 +51,7 @@ export default function AIMetrics() {
       if (error) throw error;
       return data as AIMetric[];
     },
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
   
   // Calculate summary stats

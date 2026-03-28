@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface SubscriptionFeature {
   enabled: boolean;
@@ -22,6 +23,7 @@ interface SubscriptionData {
 }
 
 export const useSubscription = () => {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { user } = useAuth();
 
   const { data: subscription, isLoading, refetch } = useQuery<SubscriptionData>({
@@ -31,8 +33,8 @@ export const useSubscription = () => {
 
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
+          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        }
       });
 
       if (error) throw error;
@@ -40,13 +42,12 @@ export const useSubscription = () => {
     },
     enabled: !!user,
     staleTime: 2 * 60 * 1000, // 2 minutes - subscription data doesn't change frequently
-    refetchInterval: 5 * 60 * 1000,
-    refetchIntervalInBackground: false, // Refetch every 5 minutes (reduced from 30s - APEX optimization)
+    refetchInterval: adaptiveInterval,
   });
 
   return {
     subscription,
     isLoading,
-    refetch,
+    refetch
   };
 };

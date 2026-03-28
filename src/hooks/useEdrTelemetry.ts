@@ -5,18 +5,21 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 import type {
   EndpointProcessEvent,
   EndpointFileEvent,
   EndpointNetworkEvent,
   EndpointRegistryEvent,
   EndpointDetectionEvent,
-  TelemetryStats,
+  TelemetryStats
 } from '@/types/edr-telemetry';
 
 // ── Detection Events ──
 
-export function useDetectionEvents(options?: { agentId?: string; status?: string; limit?: number }) {
+export function useDetectionEvents(options?: {
+  agentId?: string; status?: string; limit?: number }) {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
   const limit = options?.limit ?? 100;
 
@@ -40,14 +43,14 @@ export function useDetectionEvents(options?: { agentId?: string; status?: string
     },
     enabled: !loading && !!activeTenant?.id,
     staleTime: 120_000,
-    refetchInterval: 300_000, // COST-OPT: 30s → 5min
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval
   });
 }
 
 // ── Process Events ──
 
 export function useProcessEvents(agentId: string, options?: { limit?: number; suspiciousOnly?: boolean }) {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
   const limit = options?.limit ?? 200;
 
@@ -70,13 +73,14 @@ export function useProcessEvents(agentId: string, options?: { limit?: number; su
       return (data || []) as any as EndpointProcessEvent[];
     },
     enabled: !loading && !!activeTenant?.id && !!agentId,
-    staleTime: 15_000,
+    staleTime: 15_000
   });
 }
 
 // ── File Events ──
 
 export function useFileEvents(agentId: string, options?: { limit?: number; suspiciousOnly?: boolean }) {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
   const limit = options?.limit ?? 200;
 
@@ -99,13 +103,14 @@ export function useFileEvents(agentId: string, options?: { limit?: number; suspi
       return (data || []) as any as EndpointFileEvent[];
     },
     enabled: !loading && !!activeTenant?.id && !!agentId,
-    staleTime: 15_000,
+    staleTime: 15_000
   });
 }
 
 // ── Network Events ──
 
 export function useNetworkEvents(agentId: string, options?: { limit?: number; suspiciousOnly?: boolean }) {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
   const limit = options?.limit ?? 200;
 
@@ -128,13 +133,14 @@ export function useNetworkEvents(agentId: string, options?: { limit?: number; su
       return (data || []) as any as EndpointNetworkEvent[];
     },
     enabled: !loading && !!activeTenant?.id && !!agentId,
-    staleTime: 15_000,
+    staleTime: 15_000
   });
 }
 
 // ── Registry Events ──
 
 export function useRegistryEvents(agentId: string, options?: { limit?: number; suspiciousOnly?: boolean }) {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
   const limit = options?.limit ?? 200;
 
@@ -157,13 +163,14 @@ export function useRegistryEvents(agentId: string, options?: { limit?: number; s
       return (data || []) as any as EndpointRegistryEvent[];
     },
     enabled: !loading && !!activeTenant?.id && !!agentId,
-    staleTime: 15_000,
+    staleTime: 15_000
   });
 }
 
 // ── Telemetry Stats ──
 
 export function useTelemetryStats() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
 
   return useQuery({
@@ -199,13 +206,12 @@ export function useTelemetryStats() {
         registryEvents24h: reg.count || 0,
         detections24h: dets.count || 0,
         criticalDetections: critical.count || 0,
-        mitretechniques: uniqueTechniques.size,
+        mitretechniques: uniqueTechniques.size
       } as TelemetryStats;
     },
     enabled: !loading && !!activeTenant?.id,
-    refetchInterval: 300_000, // COST-OPT: 60s → 5min
-    refetchIntervalInBackground: false,
-    staleTime: 120_000,
+    refetchInterval: adaptiveInterval,
+    staleTime: 120_000
   });
 }
 
@@ -249,7 +255,7 @@ export function useMitreAttackCoverage() {
             name: row.mitre_technique_name || row.mitre_technique_id,
             count: 1,
             lastSeen: row.event_time,
-            maxSeverity: row.severity,
+            maxSeverity: row.severity
           });
         }
       }
@@ -257,6 +263,6 @@ export function useMitreAttackCoverage() {
       return Array.from(techniqueMap.values()).sort((a, b) => b.count - a.count);
     },
     enabled: !loading && !!activeTenant?.id,
-    staleTime: 5 * 60_000,
+    staleTime: 5 * 60_000
   });
 }

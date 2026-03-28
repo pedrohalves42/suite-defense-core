@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { logger } from '@/lib/logger';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface JobSLOState {
   id: string;
@@ -35,6 +36,7 @@ export interface BurnRateStatus {
  * - < 1: OK
  */
 export function getBurnRateStatus(burnRate: number): BurnRateStatus {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   if (burnRate >= 10) {
     return { level: 'critical', label: 'CRÍTICO', color: 'red', bgColor: 'bg-destructive/10', textColor: 'text-destructive' };
   }
@@ -56,6 +58,7 @@ export function getBurnRateStatus(burnRate: number): BurnRateStatus {
  * ADR-029 CRIT-04: Added loading guard to prevent race conditions
  */
 export const useJobsSLO = () => {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();  // ADR-029 CRIT-04: Add loading
   
   const query = useQuery({
@@ -79,9 +82,8 @@ export const useJobsSLO = () => {
       return data as any as JobSLOState | null;
     },
     enabled: !loading && !!activeTenant?.id,  // ADR-029 CRIT-04: Guard with loading state
-    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
-    staleTime: 120_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
+    staleTime: 120_000
   });
 
   // Calculate derived values
@@ -108,6 +110,6 @@ export const useJobsSLO = () => {
     burnRateFormatted: burnRate.toFixed(2) + 'x',
     errorRateFormatted: (errorRate * 100).toFixed(2) + '%',
     sloTarget: '99.5%',
-    errorBudget: '0.5%',
+    errorBudget: '0.5%'
   };
 };

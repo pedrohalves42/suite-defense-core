@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTenant } from './useTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface ScheduledJobRun {
   id: string;
@@ -42,6 +43,8 @@ export interface ScheduledJobsHealthSummary {
 }
 
 export function useScheduledJobsHealth() {
+  const adaptiveInterval = useAdaptivePolling(300000);
+  const adaptiveInterval2 = useAdaptivePolling(300_000);
   const queryClient = useQueryClient();
   const { tenant } = useTenant();
 
@@ -59,8 +62,8 @@ export function useScheduledJobsHealth() {
       return (data || []) as any as JobHealthStatus[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    staleTime: 30000,
+    refetchInterval: adaptiveInterval,
+    staleTime: 30000
   });
 
   // Fetch recent job runs
@@ -77,9 +80,8 @@ export function useScheduledJobsHealth() {
       return (data || []) as any as ScheduledJobRun[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
-    staleTime: 120_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval2,
+    staleTime: 120_000
   });
 
   // Fetch health summary
@@ -97,12 +99,12 @@ export function useScheduledJobsHealth() {
         warning_jobs: 0,
         critical_jobs: 0,
         stale_jobs: 0,
-        never_ran_jobs: 0,
+        never_ran_jobs: 0
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    staleTime: 30000,
+    refetchInterval: adaptiveInterval,
+    staleTime: 30000
   });
 
   // Trigger health monitor manually
@@ -121,7 +123,7 @@ export function useScheduledJobsHealth() {
     },
     onError: (error) => {
       toast.error('Erro ao executar monitor: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
-    },
+    }
   });
 
   // Calculate derived stats
@@ -131,7 +133,7 @@ export function useScheduledJobsHealth() {
       : 0,
     hasIssues: (summaryQuery.data?.critical_jobs || 0) > 0 || (summaryQuery.data?.warning_jobs || 0) > 0,
     criticalJobs: healthQuery.data?.filter(j => j.severity === 'critical') || [],
-    warningJobs: healthQuery.data?.filter(j => j.severity === 'high') || [],
+    warningJobs: healthQuery.data?.filter(j => j.severity === 'high') || []
   };
 
   return {
@@ -143,7 +145,7 @@ export function useScheduledJobsHealth() {
       warning_jobs: 0,
       critical_jobs: 0,
       stale_jobs: 0,
-      never_ran_jobs: 0,
+      never_ran_jobs: 0
     },
     stats,
     isLoading: healthQuery.isLoading || summaryQuery.isLoading,
@@ -153,6 +155,6 @@ export function useScheduledJobsHealth() {
       healthQuery.refetch();
       recentRunsQuery.refetch();
       summaryQuery.refetch();
-    },
+    }
   };
 }

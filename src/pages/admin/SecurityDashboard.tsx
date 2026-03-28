@@ -15,6 +15,7 @@ import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion } from 'framer-motion';
 import { SecurityControlPlane } from '@/components/security/SecurityControlPlane';
 import { ThreatIntelDashboard } from '@/components/security/ThreatIntelDashboard';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface SecurityLog {
   id: string;
@@ -45,6 +46,7 @@ interface FailedAttempt {
 }
 
 export default function SecurityDashboard() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const queryClient = useQueryClient();
   const { isSuperAdmin } = useSuperAdmin();
   const { tenant } = useTenant();
@@ -64,8 +66,7 @@ export default function SecurityDashboard() {
       return data as SecurityLog[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
   });
 
   const { data: stats } = useQuery({
@@ -91,8 +92,7 @@ export default function SecurityDashboard() {
         uniqueIps,
       };
     },
-    refetchInterval: 300_000, // COST-OPT v8
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
   });
 
   const { data: blockedIPs } = useQuery({
@@ -107,8 +107,7 @@ export default function SecurityDashboard() {
       if (error) throw error;
       return data as BlockedIP[];
     },
-    refetchInterval: 300_000, // COST-OPT v8
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
     enabled: isSuperAdmin,
   });
 
@@ -126,8 +125,7 @@ export default function SecurityDashboard() {
       if (error) throw error;
       return data as FailedAttempt[];
     },
-    refetchInterval: 300_000, // COST-OPT v8
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
     enabled: isSuperAdmin,
   });
 

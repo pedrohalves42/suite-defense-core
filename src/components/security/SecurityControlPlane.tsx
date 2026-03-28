@@ -31,6 +31,7 @@ import { formatBrazilDateTime } from '@/lib/date-utils';
 import { TenantClaimAlerts } from './TenantClaimAlerts';
 import { useTenant } from '@/hooks/useTenant';
 import { PipelineHealthInline } from '@/components/pipeline/PipelineHealthInline';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +60,7 @@ interface SecurityDashboardData {
 }
 
 export function SecurityControlPlane() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const queryClient = useQueryClient();
   const { tenant, loading: tenantLoading } = useTenant();
 
@@ -109,8 +111,7 @@ export function SecurityControlPlane() {
         current_system_mode: String((systemModeResult.data as any)?.mode || 'normal')
       };
     },
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   // Run RLS tests manually

@@ -24,6 +24,7 @@ import {
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface GovernanceMetrics {
   totalUsers: number;
@@ -34,6 +35,7 @@ interface GovernanceMetrics {
 }
 
 export function GovernanceHealthBanner() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const { requiresMFA, hasMFA, isCompliant } = useMFAEnforcement();
   const [expanded, setExpanded] = useState(false);
@@ -144,8 +146,7 @@ export function GovernanceHealthBanner() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   // Calculate health score

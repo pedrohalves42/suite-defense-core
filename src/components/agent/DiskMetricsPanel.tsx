@@ -4,6 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { HardDrive, Server, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface DiskMetric {
   drive_letter: string;
@@ -43,6 +44,7 @@ const getProgressColor = (percent: number) => {
 };
 
 export const DiskMetricsPanel = ({ agentId, compact = false }: DiskMetricsPanelProps) => {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { data: disks, isLoading, error } = useQuery({
     queryKey: ['agent-disks', agentId],
     queryFn: async () => {
@@ -54,8 +56,7 @@ export const DiskMetricsPanel = ({ agentId, compact = false }: DiskMetricsPanelP
       return data as DiskMetric[];
     },
     enabled: !!agentId,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
     staleTime: 30000,
   });
 

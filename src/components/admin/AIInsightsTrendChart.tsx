@@ -10,10 +10,12 @@ import {
 import { format } from '@/lib/date-utils';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 type Period = '7d' | '30d' | '90d';
 
 export function AIInsightsTrendChart() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const [period, setPeriod] = useState<Period>('30d');
 
@@ -38,8 +40,7 @@ export function AIInsightsTrendChart() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
   });
 
   const chartData = useMemo(() => {

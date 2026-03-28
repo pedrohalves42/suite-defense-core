@@ -17,6 +17,7 @@ import {
 import { format, ptBR } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 // Cost mapping per action type (R$)
 const ACTION_COST_MAP: Record<string, number> = {
@@ -45,6 +46,7 @@ interface DailySummary {
 }
 
 export function DailySummaryCard() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const { data: snapshots } = useAgentSnapshots();
   const agentCounts = getAgentStatusCounts(snapshots);
@@ -129,8 +131,7 @@ export function DailySummaryCard() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
   });
 
   if (isLoading) {

@@ -2,23 +2,24 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import type { ThreatIntelStats } from '@/domain/entities/ThreatIndicator';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export function useThreatIntelStats() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
   return useQuery({
     queryKey: ['threat-intel-stats', tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_threat_intel_stats', {
-        p_tenant_id: tenant!.id,
+        p_tenant_id: tenant!.id
       });
       if (error) throw error;
       return data as any as ThreatIntelStats;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min (threat intel feeds sync hourly)
-    staleTime: 60_000,
+    refetchInterval: adaptiveInterval,
+    staleTime: 60_000
   });
 }
 
@@ -45,7 +46,7 @@ export function useThreatIndicators(options?: { limit?: number; source?: string 
       if (error) throw error;
       return data;
     },
-    enabled: !!tenant?.id,
+    enabled: !!tenant?.id
   });
 }
 
@@ -70,7 +71,7 @@ export function useThreatMatches(options?: { status?: string }) {
       if (error) throw error;
       return data;
     },
-    enabled: !!tenant?.id,
+    enabled: !!tenant?.id
   });
 }
 
@@ -89,7 +90,7 @@ export function useThreatFeedSyncLog() {
       if (error) throw error;
       return data;
     },
-    enabled: !!tenant?.id,
+    enabled: !!tenant?.id
   });
 }
 
@@ -100,7 +101,7 @@ export function useSyncThreatFeeds() {
   return useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('sync-threat-feeds', {
-        body: { tenant_id: tenant!.id },
+        body: { tenant_id: tenant!.id }
       });
       if (error) throw error;
       return data;
@@ -109,6 +110,6 @@ export function useSyncThreatFeeds() {
       queryClient.invalidateQueries({ queryKey: ['threat-intel-stats'] });
       queryClient.invalidateQueries({ queryKey: ['threat-indicators'] });
       queryClient.invalidateQueries({ queryKey: ['threat-feed-sync-log'] });
-    },
+    }
   });
 }

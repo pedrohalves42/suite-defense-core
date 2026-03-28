@@ -9,6 +9,7 @@ import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
 import { logger } from '@/lib/logger';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface ApprovalRequest {
   id: string;
@@ -42,6 +43,7 @@ export interface Approval {
 }
 
 export function usePendingApprovalRequests() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
@@ -66,8 +68,7 @@ export function usePendingApprovalRequests() {
       return (data || []) as ApprovalRequest[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
+    refetchInterval: adaptiveInterval
   });
 
   // Realtime subscription
@@ -82,7 +83,7 @@ export function usePendingApprovalRequests() {
           event: '*',
           schema: 'public',
           table: 'approval_requests',
-          filter: `tenant_id=eq.${tenant.id}`,
+          filter: `tenant_id=eq.${tenant.id}`
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['approval-requests'] });
@@ -121,7 +122,7 @@ export function useApprovalRequestHistory(limit = 50) {
       if (error) throw error;
       return (data || []) as ApprovalRequest[];
     },
-    enabled: !!tenant?.id,
+    enabled: !!tenant?.id
   });
 }
 
@@ -138,7 +139,7 @@ export function useApprovalVotes(requestId: string) {
       if (error) throw error;
       return (data || []) as Approval[];
     },
-    enabled: !!requestId,
+    enabled: !!requestId
   });
 }
 
@@ -149,7 +150,7 @@ export function useSubmitApproval() {
     mutationFn: async ({
       requestId,
       decision,
-      reason,
+      reason
     }: {
       requestId: string;
       decision: 'approved' | 'rejected';
@@ -158,7 +159,7 @@ export function useSubmitApproval() {
       const { data, error } = await supabase.rpc('submit_approval', {
         p_request_id: requestId,
         p_decision: decision,
-        p_reason: reason || null,
+        p_reason: reason || null
       });
 
       if (error) throw error;
@@ -185,7 +186,7 @@ export function useSubmitApproval() {
     onError: (error) => {
       logger.error('Failed to submit approval', error instanceof Error ? error : undefined);
       toast.error(error.message || 'Erro ao submeter aprovação');
-    },
+    }
   });
 }
 
@@ -197,7 +198,7 @@ export function useCreateApprovalRequest() {
       actionType,
       actionPayload,
       targetAgentId,
-      playbookExecutionId,
+      playbookExecutionId
     }: {
       actionType: string;
       actionPayload: Record<string, unknown>;
@@ -209,7 +210,7 @@ export function useCreateApprovalRequest() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         p_action_payload: actionPayload as any,
         p_target_agent_id: targetAgentId || null,
-        p_playbook_execution_id: playbookExecutionId || null,
+        p_playbook_execution_id: playbookExecutionId || null
       });
 
       if (error) throw error;
@@ -228,7 +229,7 @@ export function useCreateApprovalRequest() {
     onError: (error) => {
       logger.error('Failed to create approval request', error instanceof Error ? error : undefined);
       toast.error(error.message || 'Erro ao criar solicitação');
-    },
+    }
   });
 }
 
@@ -239,7 +240,7 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
   disable_service: 'Desabilitar Serviço',
   revoke_token: 'Revogar Token',
   quarantine: 'Quarentena',
-  network_isolate: 'Isolamento de Rede',
+  network_isolate: 'Isolamento de Rede'
 };
 
 export const ACTION_TYPE_SEVERITY: Record<string, 'low' | 'medium' | 'high' | 'critical'> = {
@@ -249,5 +250,5 @@ export const ACTION_TYPE_SEVERITY: Record<string, 'low' | 'medium' | 'high' | 'c
   disable_service: 'high',
   revoke_token: 'medium',
   quarantine: 'critical',
-  network_isolate: 'critical',
+  network_isolate: 'critical'
 };

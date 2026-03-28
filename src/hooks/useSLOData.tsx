@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface SLODefinition {
   id: string;
@@ -36,6 +37,7 @@ export interface SLOAlert {
 }
 
 export const useSLOData = () => {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   // V-9001 FIX: Add tenantId to queryKey to prevent cross-tenant cache pollution
@@ -119,6 +121,7 @@ export const useSLOData = () => {
 
 // Calculate real-time SLO metrics from actual data
 export const useCalculatedSLOs = () => {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   return useQuery({
@@ -133,7 +136,7 @@ export const useCalculatedSLOs = () => {
       // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
       const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
         p_tenant_id: tenant.id,
-        p_include_archived: false,
+        p_include_archived: false
       });
       const agents = (agentsRaw as any as Array<{ id: string; last_heartbeat: string | null }>) || [];
 
@@ -198,7 +201,6 @@ export const useCalculatedSLOs = () => {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval
   });
 };

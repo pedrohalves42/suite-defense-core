@@ -20,6 +20,7 @@ import {
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 // Health Score Gauge Component
 const HealthGauge = ({ score }: { score: number }) => {
@@ -77,6 +78,7 @@ const HealthGauge = ({ score }: { score: number }) => {
 };
 
 export const ClientDashboard = () => {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant: tenant, loading: tenantLoading } = useActiveTenant();
 
   const { data: stats, isLoading } = useQuery({
@@ -173,8 +175,7 @@ export const ClientDashboard = () => {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
+    refetchInterval: adaptiveInterval,
   });
 
   // Generate next steps based on current status

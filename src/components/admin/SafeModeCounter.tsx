@@ -12,6 +12,7 @@ import { ShieldCheck, ShieldAlert, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface SafeModeStats {
   active_safe_mode: number;
@@ -20,6 +21,7 @@ interface SafeModeStats {
 }
 
 export function SafeModeCounter() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   const { data: stats, isLoading } = useQuery({
@@ -63,8 +65,7 @@ export function SafeModeCounter() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   if (isLoading) {

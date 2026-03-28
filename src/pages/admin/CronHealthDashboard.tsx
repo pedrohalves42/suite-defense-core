@@ -13,6 +13,7 @@ import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTenant } from "@/hooks/useTenant";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 import {
   BarChart,
   Bar,
@@ -97,6 +98,7 @@ function DurationBar({ current, avg }: { current: number | null; avg: number | n
 }
 
 export default function CronHealthDashboard() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const [expandedCron, setExpandedCron] = useState<string | null>(null);
 
@@ -115,9 +117,8 @@ export default function CronHealthDashboard() {
       return (data || []) as any as CronHealthRecord[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000,
+    refetchInterval: adaptiveInterval,
     staleTime: 120_000,
-    refetchIntervalInBackground: false,
   });
 
   // Tenant-scoped job stats for cross-reference
@@ -142,9 +143,8 @@ export default function CronHealthDashboard() {
       return { total, completed, failed, successRate: total > 0 ? Math.round((completed / total) * 100) : 100 };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000,
+    refetchInterval: adaptiveInterval,
     staleTime: 120_000,
-    refetchIntervalInBackground: false,
   });
 
   const healthyCrons = records.filter(r => getStatusInfo(r).status === 'healthy').length;

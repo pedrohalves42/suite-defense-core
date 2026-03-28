@@ -2,8 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveTenant } from "@/hooks/useActiveTenant";
 import { logger } from "@/lib/logger";
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export function useCriticalInsights() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { activeTenant, loading } = useActiveTenant(); // V-1045 FIX: Use standard tenant hook
 
   return useQuery({
@@ -27,8 +29,7 @@ export function useCriticalInsights() {
       return count || 0;
     },
     enabled: !loading && !!activeTenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false,
-    staleTime: 30000,
+    refetchInterval: adaptiveInterval,
+    staleTime: 30000
   });
 }

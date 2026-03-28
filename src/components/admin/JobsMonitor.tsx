@@ -8,6 +8,7 @@ import { AlertTriangle, Clock, RefreshCw, Trash2, CheckCircle, XCircle, Loader2 
 import { formatRelativeTimePt } from '@/lib/agent-utils';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { JobStatusSimplified } from '@/components/admin/JobStatusSimplified';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface StuckJob {
   id: string;
@@ -19,6 +20,7 @@ interface StuckJob {
 }
 
 export function JobsMonitor() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -43,8 +45,7 @@ export function JobsMonitor() {
           : 0
       })) as StuckJob[];
     },
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
+    refetchInterval: adaptiveInterval,
   });
 
   const cancelJob = useMutation({

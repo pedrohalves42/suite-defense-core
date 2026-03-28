@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { type AgentState } from '@/lib/agent-state-machine';
 import { isAgentHealthy } from '@/lib/health-rules';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 import { 
   type DiagnosticIssue, 
   type DiagnosticSummary, 
@@ -22,7 +23,7 @@ import {
   getSeverityColor,
   getSeverityBorderColor,
   getSeverityLabel,
-  validateIssue,
+  validateIssue
 } from '@/types/diagnostic';
 
 // Re-export types for backward compatibility
@@ -43,6 +44,7 @@ export function useDiagnostic(
   tenantId: string | null,
   agentState?: AgentState | null
 ) {
+  const adaptiveInterval = useAdaptivePolling(300000);
   return useQuery({
     queryKey: ['agent-diagnostic', agentName, tenantId],
     queryFn: async (): Promise<DiagnosticResult> => {
@@ -51,13 +53,13 @@ export function useDiagnostic(
           isHealthy: true,
           issues: [],
           summary: { critical: 0, high: 0, medium: 0, info: 0, total: 0 },
-          lastCheck: new Date().toISOString(),
+          lastCheck: new Date().toISOString()
         };
       }
 
       const { data, error } = await supabase.rpc('diagnose_agent_issues', {
         p_agent_name: agentName,
-        p_tenant_id: tenantId,
+        p_tenant_id: tenantId
       });
 
       if (error) throw error;
@@ -77,7 +79,7 @@ export function useDiagnostic(
         severity: item.severity as DiagnosticIssue['severity'],
         description: item.message, // RPC returns 'message', type expects 'description'
         details: (typeof item.details === 'object' && item.details !== null ? item.details : {}) as Record<string, unknown>,
-        origin: item.origin ? { type: 'system' as const, source_name: item.origin } : undefined,
+        origin: item.origin ? { type: 'system' as const, source_name: item.origin } : undefined
       }));
       
       // Validate issues (logs warnings for critical/high without origin)
@@ -108,12 +110,11 @@ export function useDiagnostic(
         isHealthy: healthy,
         issues,
         summary,
-        lastCheck: new Date().toISOString(),
+        lastCheck: new Date().toISOString()
       };
     },
     enabled: !!agentName && !!tenantId,
     staleTime: 30000, // 30 seconds
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval
   });
 }

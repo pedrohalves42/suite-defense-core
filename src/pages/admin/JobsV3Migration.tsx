@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useTenant } from '@/hooks/useTenant';
 import { Activity, TrendingUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface AgentMigrationStats {
   agent_name: string;
@@ -17,6 +18,7 @@ interface AgentMigrationStats {
 }
 
 export default function JobsV3Migration() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   const { data: migrationStats, isLoading } = useQuery({
@@ -82,8 +84,7 @@ export default function JobsV3Migration() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   if (isLoading || !migrationStats) {

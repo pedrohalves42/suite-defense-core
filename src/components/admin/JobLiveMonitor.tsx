@@ -31,6 +31,7 @@ import { JOB_TYPE_LABELS } from '@/lib/job-labels';
 import { getFailureExplanation, formatErrorForUser } from '@/lib/leigo-translator';
 import { useSimplifiedMessage } from '@/hooks/useSimplifiedMessage';
 import { getJobStatusInfo } from '@/components/admin/JobStatusSimplified';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface LiveJob {
   id: string;
@@ -122,6 +123,7 @@ export function JobLiveMonitor({
   showSummary = true,
   compact = false 
 }: JobLiveMonitorProps) {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const [realtimeJobs, setRealtimeJobs] = useState<LiveJob[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -143,8 +145,7 @@ export function JobLiveMonitor({
       return (data || []) as LiveJob[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min (fallback)
+    refetchInterval: adaptiveInterval,
   });
   
   // Merge initial jobs with realtime updates

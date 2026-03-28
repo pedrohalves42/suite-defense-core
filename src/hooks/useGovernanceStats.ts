@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface GovernanceStats {
   tenant_id: string;
@@ -15,6 +16,7 @@ export interface GovernanceStats {
 }
 
 export function useGovernanceStats() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   return useQuery({
@@ -40,7 +42,7 @@ export function useGovernanceStats() {
           high_open: 0,
           avg_resolution_hours: null,
           resolved_24h: 0,
-          ignored_24h: 0,
+          ignored_24h: 0
         } as GovernanceStats;
       }
       
@@ -55,11 +57,10 @@ export function useGovernanceStats() {
         high_open: Number(record.high_open) || 0,
         avg_resolution_hours: record.avg_resolution_hours != null ? Number(record.avg_resolution_hours) : null,
         resolved_24h: Number(record.resolved_24h) || 0,
-        ignored_24h: Number(record.ignored_24h) || 0,
+        ignored_24h: Number(record.ignored_24h) || 0
       } as GovernanceStats;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval
   });
 }

@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { useTenant } from '@/hooks/useTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -123,6 +124,7 @@ Write-Host "=== Diagnóstico Concluído ===" -ForegroundColor Cyan
 `;
 
 export default function MassReinstall() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const [copiedScript, setCopiedScript] = useState<string | null>(null);
   const [enrollmentKey, setEnrollmentKey] = useState<string>('');
   const { tenant } = useTenant();
@@ -147,8 +149,7 @@ export default function MassReinstall() {
       return agents;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
+    refetchInterval: adaptiveInterval,
   });
 
   const copyToClipboard = (text: string, type: string) => {

@@ -10,6 +10,7 @@ import { AgentState, deriveAgentState, getStateDescription } from '@/lib/agent-s
 import { formatRelativeTime, formatDuration } from '@/lib/date-utils';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { logger } from '@/lib/logger';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface CausalEvent {
   id: string;
@@ -49,6 +50,7 @@ export interface AgentCausality {
 }
 
 export function useAgentCausality(agentId: string | null, tenantId?: string | null) {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { activeTenant, loading: tenantLoading } = useActiveTenant();
   
   // Usar tenantId explícito se fornecido, senão fallback para activeTenant
@@ -220,10 +222,9 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
       };
     },
     enabled: !!agentId && !tenantLoading && !!effectiveTenantId,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
     retry: 2,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000)
   });
 }
 
@@ -241,7 +242,7 @@ function deriveStateTransitions(
   const eventStateMap: Record<string, { from: AgentState; to: AgentState }> = {
     'safe_mode': { from: 'healthy', to: 'safe_mode' },
     'rollback': { from: 'updating', to: 'safe_mode' },
-    'isolation': { from: 'healthy', to: 'isolated' },
+    'isolation': { from: 'healthy', to: 'isolated' }
   };
 
   // Processar eventos para criar transições

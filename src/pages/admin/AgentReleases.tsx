@@ -13,6 +13,7 @@ import { useState } from "react";
 import { RegisterLatestRelease } from "@/components/admin/RegisterLatestRelease";
 import { useQuery } from "@tanstack/react-query";
 import { useAgentActions } from "@/hooks/useAgentActions";
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 // Admin-only interface with all fields
 interface AdminRelease {
@@ -31,6 +32,7 @@ interface AdminRelease {
 }
 
 export default function AgentReleases() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { isSuperAdmin } = useSuperAdmin();
   const [isSigningReleases, setIsSigningReleases] = useState(false);
   const [isProcessingUpdates, setIsProcessingUpdates] = useState(false);
@@ -46,8 +48,7 @@ export default function AgentReleases() {
       return data?.releases || [];
     },
     enabled: isSuperAdmin,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
     refetchOnWindowFocus: true,
   });
 

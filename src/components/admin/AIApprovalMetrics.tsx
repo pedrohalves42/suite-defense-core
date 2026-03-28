@@ -16,6 +16,7 @@ import { Brain, ThumbsUp, ThumbsDown, AlertTriangle, CheckCircle, MessageSquare,
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { logger } from '@/lib/logger';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface ApprovalMetrics {
   total_actions: number;
@@ -30,6 +31,7 @@ export interface ApprovalMetrics {
 
 // Export the hook for other components to check suspicious pattern
 export function useApprovalMetrics() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   return useQuery({
@@ -101,8 +103,7 @@ export function useApprovalMetrics() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
   });
 }
 

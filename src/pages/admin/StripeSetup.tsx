@@ -28,6 +28,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { StripeExtendedPricesSetup } from '@/components/admin/StripeExtendedPricesSetup';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface HealthCheckResponse {
   overall_status: 'healthy' | 'degraded' | 'down';
@@ -54,6 +55,7 @@ interface HealthCheckResponse {
 }
 
 export default function StripeSetup() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin, loading: adminLoading } = useIsAdmin();
@@ -67,8 +69,7 @@ export default function StripeSetup() {
       if (error) throw error;
       return data as HealthCheckResponse;
     },
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
     refetchOnWindowFocus: true,
     staleTime: 20000,
   });
