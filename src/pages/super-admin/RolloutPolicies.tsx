@@ -543,6 +543,7 @@ function AgentRolloutSimulator({ policies }: { policies: RolloutPolicy[] }) {
 
 // Componente de Telemetria de Decisões de Rollout
 function RolloutTelemetryDashboard() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const [selectedDecision, setSelectedDecision] = useState<string>('all');
 
   // Buscar decisões de rollout
@@ -679,6 +680,7 @@ function RolloutTelemetryDashboard() {
 
 // Componente de Eventos de Rollback
 function RollbackEventsDashboard() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { data: rollbacks, isLoading } = useQuery({
     queryKey: ['rollback-events'],
     queryFn: async () => {
