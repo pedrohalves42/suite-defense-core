@@ -15,10 +15,10 @@ const StatusPage = () => {
     queryKey: ['status-page-agents', tenant],
     queryFn: async () => {
       if (!tenant) return [];
-      const { data, error } = await supabase
-        .from('agents' )
+      const { data, error } = await (supabase as any)
+        .from('agents')
         .select('id, hostname, status, last_seen, agent_version')
-        .eq('tenant_id', tenant)
+        .eq('tenant_id', tenant?.id ?? '')
         .eq('is_archived', false)
         .order('hostname');
       if (error) throw error;

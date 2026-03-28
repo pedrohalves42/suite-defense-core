@@ -78,7 +78,7 @@ export default function SecurityMonitoring() {
       const sb = supabase;
 
       const [rateLimitsRes, failedLoginsRes, blockedIpsRes, securityEventsRes, agentsRes, blockedAttemptsRes, evidenceRes, alertsRes] = await Promise.all([
-        sb.from('rate_limits').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('window_start', since).not('blocked_until', 'is', null),
+        (sb as any).from('rate_limits').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('window_start', since).not('blocked_until', 'is', null),
         sb.from('failed_login_attempts').select('ip_address, created_at').eq('tenant_id', tenant.id).gte('created_at', since),
         sb.from('ip_blocklist').select('id, ip_address, reason, blocked_until, created_at').eq('tenant_id', tenant.id).gte('blocked_until', new Date().toISOString()).order('created_at', { ascending: false }).limit(20),
         sb.from('security_logs').select('id, attack_type, severity, ip_address, endpoint, details, created_at, blocked').eq('tenant_id', tenant.id).gte('created_at', since).order('created_at', { ascending: false }).limit(50),
