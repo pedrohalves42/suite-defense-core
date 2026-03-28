@@ -101,7 +101,7 @@ export default function SecurityPolicies() {
     let totalAgents = 0;
     assignedGroups.forEach((gp: any) => {
       const group = agentGroups.find(g => g.id === gp.group_id);
-      if (group) totalAgents += (group as never).memberCount || 0;
+      if (group) totalAgents += (group as Record<string, unknown>).memberCount || 0;
     });
     return { groups: assignedGroups.length, agents: totalAgents };
   };

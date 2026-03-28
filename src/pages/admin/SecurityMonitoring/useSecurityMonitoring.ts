@@ -78,9 +78,9 @@ export function useSecurityMonitoring() {
         .filter(e => e.severity !== 'info' && e.severity !== 'debug')
         .forEach(e => {
         const eventData = e.event_data || {};
-        const alertType = (eventData as never).alert_type as string || '';
-        const alertMsg = (eventData as never).alert_message as string || '';
-        const details = (eventData as never).details || {};
+        const alertType = (eventData as Record<string, unknown>).alert_type as string || '';
+        const alertMsg = (eventData as Record<string, unknown>).alert_message as string || '';
+        const details = (eventData as Record<string, unknown>).details || {};
         const skipRemediation = details?.skip_remediation === true;
 
         let label: string;
@@ -110,15 +110,15 @@ export function useSecurityMonitoring() {
           if (details.expected !== undefined && details.actual !== undefined) {
             parts.push(`Esperado: ${details.expected} → Atual: ${details.actual}`);
           }
-          if ((eventData as never).state_before && (eventData as never).state_after) {
-            parts.push(`${(eventData as never).state_before} → ${(eventData as never).state_after}`);
+          if ((eventData as Record<string, unknown>).state_before && (eventData as Record<string, unknown>).state_after) {
+            parts.push(`${(eventData as Record<string, unknown>).state_before} → ${(eventData as Record<string, unknown>).state_after}`);
           }
           detail = parts.join(' · ') || '';
         }
 
         unifiedEvents.push({
           id: e.id, type: alertType || e.event_type, label, detail,
-          severity: (eventData as never).severity || e.severity,
+          severity: (eventData as Record<string, unknown>).severity || e.severity,
           created_at: e.created_at, source: 'evidence_logs',
           agentName: e.agent_name, alertType,
           remediable: !skipRemediation && remediableAlerts.has(alertType),
