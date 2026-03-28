@@ -3,7 +3,7 @@ import { AgentId } from '@/domain/value-objects/AgentId';
 import { TenantId } from '@/domain/value-objects/TenantId';
 
 export class BehavioralBaselineMapper {
-  static toDomain(row: Record<string, unknown>): BehavioralBaseline {
+  static toDomain(row: any): BehavioralBaseline {
     return BehavioralBaseline.reconstitute({
       id: row.id as string,
       agentId: AgentId.create(row.agent_id as string).value,

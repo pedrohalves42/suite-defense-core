@@ -3,7 +3,7 @@ import { AgentId } from '@/domain/value-objects/AgentId';
 import { TenantId } from '@/domain/value-objects/TenantId';
 
 export class CertificateMapper {
-  static toDomain(row: Record<string, unknown>): Certificate {
+  static toDomain(row: any): Certificate {
     return Certificate.reconstitute({
       id: row.id as string,
       agentId: AgentId.create(row.agent_id as string).value,
