@@ -146,7 +146,7 @@ export default function SecurityDashboard() {
       queryClient.invalidateQueries({ queryKey: ['blocked-ips'] });
       toast.success('IP desbloqueado com sucesso');
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao desbloquear IP: ${error.message}`);
     },
   });

@@ -81,7 +81,7 @@ export const useCreateTag = () => {
       queryClient.invalidateQueries({ queryKey: ['agent-tags'] });
       toast.success('Tag criada com sucesso');
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       if (error?.code === '23505') {
         toast.error('Já existe uma tag com esse nome');
       } else {
@@ -153,7 +153,7 @@ export const useAssignTag = () => {
       queryClient.invalidateQueries({ queryKey: ['agent-tag-assignments'] });
       toast.success('Tag atribuída');
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       if (error?.code === '23505') {
         toast.info('Tag já atribuída');
       } else {

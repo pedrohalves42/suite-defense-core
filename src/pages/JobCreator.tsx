@@ -198,7 +198,7 @@ const JobCreator = () => {
       toast.success("Tarefas pendentes limpas com sucesso");
       loadJobs();
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao limpar tarefas: ${error.message}`);
     }
   });
@@ -345,7 +345,7 @@ const JobCreator = () => {
       
       // Reload jobs
       loadJobs();
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error("Erro inesperado ao criar job", error);
       toast.error("Erro inesperado ao criar job. Tente novamente.");
     } finally {

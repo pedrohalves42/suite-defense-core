@@ -83,9 +83,10 @@ export function AutoApprovalPanel() {
   const toggleApprovalMutation = useMutation({
     mutationFn: async ({ id, requires_approval }: { id: string; requires_approval: boolean }) => {
       // V-1062 FIX: Add tenant_id filter
-      const { error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TS2589 workaround
+      const { error } = await (supabase
         .from('ai_action_configs')
-        .update({ requires_approval })
+        .update({ requires_approval }) as any)
         .eq('id', id)
         .eq('tenant_id', tenant?.id);
       if (error) throw error;

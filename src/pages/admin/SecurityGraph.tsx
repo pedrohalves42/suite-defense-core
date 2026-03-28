@@ -123,7 +123,7 @@ export default function SecurityGraph() {
       queryClient.invalidateQueries({ queryKey: ["security-graph-edges"] });
       toast.success(`Análise concluída: ${data.nodes_created} itens encontrados`);
     },
-    onError: (err: Record<string, unknown>) => toast.error("Erro ao analisar: " + err.message),
+    onError: (err: Error) => toast.error("Erro ao analisar: " + err.message),
   });
 
   const autoBlock = useMutation({
@@ -144,7 +144,7 @@ export default function SecurityGraph() {
         toast.info("Nenhum domínio/IP perigoso encontrado para bloquear.");
       }
     },
-    onError: (err: Record<string, unknown>) => toast.error("Erro ao bloquear: " + err.message),
+    onError: (err: Error) => toast.error("Erro ao bloquear: " + err.message),
   });
 
   const { data: nodes = [], isLoading: nodesLoading } = useQuery({

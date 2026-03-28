@@ -71,7 +71,7 @@ export function SecurityJobDispatcher({ agents }: { agents: Agent[] }) {
       toast.success(`Job "${jobName}" criado com sucesso`, {
         description: `O agente ${agent.agent_name} processará o job em breve`
       });
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('Error creating security job:', error);
       toast.error('Erro ao criar job', {
         description: error.message

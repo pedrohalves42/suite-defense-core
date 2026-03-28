@@ -38,7 +38,7 @@ const ClientInstallWizard = () => {
       );
       setStep('install');
       toast.success('Comando gerado com sucesso!');
-    } catch (err: unknown) {
+    } catch (err) {
       toast.error('Erro: ' + (err.message || 'Tente novamente'));
     } finally {
       setLoading(false);

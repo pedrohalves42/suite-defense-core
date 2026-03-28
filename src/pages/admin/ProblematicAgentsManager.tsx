@@ -93,7 +93,7 @@ export default function ProblematicAgentsManager() {
       setShowCleanupDialog(false);
       setSelectedAgent(null);
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast({
         title: "Erro ao limpar computador",
         description: error.message,
@@ -122,7 +122,7 @@ export default function ProblematicAgentsManager() {
       queryClient.invalidateQueries({ queryKey: ['problematic-agents'] });
       setShowCleanupAllDialog(false);
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast({
         title: "Erro na limpeza em massa",
         description: error.message,

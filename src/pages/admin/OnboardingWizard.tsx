@@ -85,7 +85,7 @@ const OnboardingWizard = () => {
       }
 
       toast.success('Chave de instalação gerada!');
-    } catch (err: unknown) {
+    } catch (err) {
       toast.error('Erro ao gerar chave: ' + (err.message || 'Tente novamente'));
     } finally {
       setLoading(false);

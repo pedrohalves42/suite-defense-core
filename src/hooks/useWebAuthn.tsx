@@ -100,7 +100,7 @@ export const useWebAuthn = () => {
         });
 
         return true;
-      } catch (err: unknown) {
+      } catch (err) {
         const msg =
           err instanceof DOMException && err.name === 'NotAllowedError'
             ? 'Operação cancelada pelo usuário'

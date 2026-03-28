@@ -137,7 +137,7 @@ export default function AIInsights() {
         description: JSON.stringify(data.result)
       });
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast.error('Erro ao executar solucao', {
         description: error.message
       });

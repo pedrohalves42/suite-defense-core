@@ -62,7 +62,7 @@ export function BatchActionBar({ selectedIds, selectedNames, onClearSelection }:
       queryClient.invalidateQueries({ queryKey: ['fleet-health'] });
       queryClient.invalidateQueries({ queryKey: ['agent-health'] });
       onClearSelection();
-    } catch (err: unknown) {
+    } catch (err) {
       toast.error(`Erro ao agendar ${label.toLowerCase()}`, {
         description: err.message,
       });

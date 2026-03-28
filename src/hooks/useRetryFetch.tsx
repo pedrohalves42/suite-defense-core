@@ -37,7 +37,7 @@ export function useRetryFetch() {
         setIsRetrying(false);
         setRetryCount(0);
         return result;
-      } catch (error: unknown) {
+      } catch (error) {
         lastError = error;
         
         // Check if we should retry this error

@@ -136,7 +136,7 @@ export default function TenantSettings() {
       });
       queryClient.invalidateQueries({ queryKey: ["tenant"] });
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast({
         title: "Erro ao atualizar tenant",
         description: error.message,
@@ -166,7 +166,7 @@ export default function TenantSettings() {
       });
       queryClient.invalidateQueries({ queryKey: ["tenant-settings"] });
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast({
         title: "Erro ao salvar configuracoes",
         description: error.message,

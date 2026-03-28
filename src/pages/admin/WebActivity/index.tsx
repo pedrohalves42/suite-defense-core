@@ -94,7 +94,7 @@ export default function WebActivity() {
       const { error: insertError } = await (supabase as Record<string, unknown>).from('jobs').insert(jobs);
       if (insertError) throw insertError;
       toast.success(`Coleta disparada para ${onlineAgents.length} computador${onlineAgents.length > 1 ? 'es' : ''}`);
-    } catch (err: unknown) {
+    } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido';
       logger.error('Bulk collect error:', err);
       toast.error('Erro ao disparar coleta', { description: msg });

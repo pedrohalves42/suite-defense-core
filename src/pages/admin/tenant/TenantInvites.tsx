@@ -59,7 +59,7 @@ export default function TenantInvites() {
       setNewInviteRole("viewer");
       queryClient.invalidateQueries({ queryKey: ["tenant-invites"] });
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast({
         title: "Erro ao enviar convite",
         description: error.message || "Tente novamente",
@@ -84,7 +84,7 @@ export default function TenantInvites() {
       });
       queryClient.invalidateQueries({ queryKey: ["tenant-invites"] });
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast({
         title: "Erro ao excluir convite",
         description: error.message,

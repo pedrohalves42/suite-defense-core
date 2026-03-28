@@ -68,7 +68,7 @@ export default function Subscriptions() {
         });
       }
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast({
         title: 'Erro ao abrir portal',
         description: error.message || 'Tente novamente mais tarde.',

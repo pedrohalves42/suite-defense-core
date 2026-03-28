@@ -185,7 +185,7 @@ export function useDNSFilter() {
       queryClient.invalidateQueries({ queryKey: ['dns-filter-enabled'] });
       toast.success(enabled ? 'DNS Filter habilitado' : 'DNS Filter desabilitado');
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao alterar configuração: ${error.message}`);
     },
   });
@@ -302,7 +302,7 @@ export function useDNSFilter() {
         toast.info(result.message || 'Nenhuma coleta agendada');
       }
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao agendar coleta: ${error.message}`);
     },
   });

@@ -30,7 +30,7 @@ export default function AuthDebug() {
         title: `Teste ${name} passou`,
         description: 'Endpoint funcionando corretamente',
       });
-    } catch (error: unknown) {
+    } catch (error) {
       setTestResults(prev => ({
         ...prev,
         [name]: { success: false, message: error.message || 'Erro desconhecido' }

@@ -62,7 +62,7 @@ export class ProcessJobResult {
 
     // Transition job status
     if (execution.isSuccess()) {
-      job.complete(command.stdout);
+      job.complete(String(command.stdout || ""));
       await this.eventDispatcher.dispatch(
         new JobCompletedEvent(job.id.value, command.agentId, command.exitCode)
       );

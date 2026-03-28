@@ -291,7 +291,7 @@ export function useTriggerManualPlaybook() {
       toast.success('Playbook acionado manualmente');
       queryClient.invalidateQueries({ queryKey: ['playbook-executions-pending'] });
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       logger.error('Trigger manual playbook error:', error);
       toast.error(error.message || 'Erro ao acionar playbook');
     },

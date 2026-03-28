@@ -91,7 +91,7 @@ export default function Reports() {
         await refetchReport();
         toast.success('Relatório de segurança gerado com sucesso!');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('Error generating report:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       if (errorMessage.includes('NO_TENANT') || errorMessage.includes('não está associado')) {

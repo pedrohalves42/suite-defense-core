@@ -40,7 +40,8 @@ export function ProtectionTrendChart() {
         p_include_archived: false
       });
       const agents = ((agentsRaw || []) as Array<Record<string, unknown>>).map((a: Record<string, unknown>) => ({
-        id: a.id, status: a.status, last_heartbeat: a.last_heartbeat
+
+        id: String(a.id || ""), status: String(a.status || ""), last_heartbeat: String(a.last_heartbeat || "")
       }));
 
       // Get alerts for score calculation

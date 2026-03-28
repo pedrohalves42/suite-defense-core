@@ -87,7 +87,7 @@ export function DynamicValidationSystem() {
 
       // Check data completeness for each agent
       const agentsWithStatus = await Promise.all(
-        agentsData.map(async (agent: Record<string, unknown>) => {
+        agentsData.map(async (agent) => {
           const agentId = agent.id as string;
           // V-1051 FIX: Add tenant_id filter to prevent cross-tenant data leakage
           const [softwareInventory, antivirusStatus, webActivity, vulnerabilities] = await Promise.all([
@@ -166,10 +166,10 @@ export function DynamicValidationSystem() {
       });
 
       setValidationJobs(jobs);
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('Error loading agents status:', error);
       toast.error('Erro ao carregar status dos agentes', {
-        description: error.message
+        description: (error as Error).message
       });
     } finally {
       setIsLoading(false);
@@ -248,10 +248,10 @@ export function DynamicValidationSystem() {
 
       // Reload status after a delay
       setTimeout(loadAgentsStatus, 3000);
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('Error creating validation jobs:', error);
       toast.error('Erro ao criar jobs de validação', {
-        description: error.message
+        description: (error as Error).message
       });
     } finally {
       setIsCreating(false);

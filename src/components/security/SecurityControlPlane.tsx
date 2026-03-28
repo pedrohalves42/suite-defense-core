@@ -126,7 +126,7 @@ export function SecurityControlPlane() {
       toast.success(`Testes RLS executados: ${data.passed}/${data.total} passaram`);
       queryClient.invalidateQueries({ queryKey: ['security-control-plane'] });
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao executar testes: ${error.message}`);
     }
   });
@@ -145,7 +145,7 @@ export function SecurityControlPlane() {
       toast.warning('Kill Switch ativado! Sistema em modo de emergência.');
       queryClient.invalidateQueries({ queryKey: ['security-control-plane'] });
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao ativar Kill Switch: ${error.message}`);
     }
   });
@@ -164,7 +164,7 @@ export function SecurityControlPlane() {
       toast.success('Sistema normalizado.');
       queryClient.invalidateQueries({ queryKey: ['security-control-plane'] });
     },
-    onError: (error: Record<string, unknown>) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao normalizar sistema: ${error.message}`);
     }
   });

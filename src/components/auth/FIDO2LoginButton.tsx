@@ -108,7 +108,7 @@ export function FIDO2LoginButton({ email, onSuccess, disabled }: FIDO2LoginButto
 
       setShowDialog(false);
       onSuccess();
-    } catch (err: unknown) {
+    } catch (err) {
       if (err instanceof DOMException && err.name === 'NotAllowedError') {
         setError('Operação cancelada pelo usuário');
       } else if (err instanceof Error) {

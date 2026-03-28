@@ -324,7 +324,7 @@ export default function SecurityMonitoring() {
       });
       if (error) throw error;
       toast.success(`Remediação enviada para ${event.agentName}`);
-    } catch (err: unknown) {
+    } catch (err) {
       toast.error(`Erro: ${err.message}`);
     }
   };
