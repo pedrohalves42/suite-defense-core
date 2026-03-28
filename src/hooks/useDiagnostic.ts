@@ -14,8 +14,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { type AgentState } from '@/lib/agent-state-machine';
 import { isAgentHealthy } from '@/lib/health-rules';
-import { 
 import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { 
   type DiagnosticIssue, 
   type DiagnosticSummary, 
   type DiagnosticResult,

@@ -5,8 +5,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
-import type {
 import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import type {
   EndpointProcessEvent,
   EndpointFileEvent,
   EndpointNetworkEvent,
