@@ -43,7 +43,7 @@ export default function SecurityBenchmark() {
   const avgScore = latestBenchmark?.avg_score ? Number(latestBenchmark.avg_score) : 0;
   const diff = myScore - avgScore;
 
-  const trendData = benchmarks.slice(0, 6).reverse().map((b: Record<string, unknown>) => ({
+  const trendData = benchmarks.slice(0, 6).reverse().map((b: any) => ({
     month: b.period_month,
     avg: Number(b.avg_score),
     median: Number(b.median_score),

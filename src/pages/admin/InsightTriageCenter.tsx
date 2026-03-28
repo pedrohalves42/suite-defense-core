@@ -18,7 +18,7 @@ interface AIInsight {
   severity: string;
   title: string;
   description: string;
-  evidence: Record<string, unknown>;
+  evidence: any;
   suggested_action: string | null;
   created_at: string;
   acknowledged: boolean;
@@ -65,7 +65,7 @@ export default function InsightTriageCenter() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return (data || []).map((d: Record<string, unknown>) => ({
+      return (data || []).map((d: any) => ({
         ...d,
         suggested_action: d.suggested_action || null,
       })) as AIInsight[];

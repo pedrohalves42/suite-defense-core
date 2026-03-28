@@ -170,7 +170,7 @@ export default function WebActivity() {
 
   const syncBlockedWebsitesMutation = useMutation({
     mutationFn: async () => { const { data, error } = await supabase.functions.invoke('sync-blocked-websites', { body: {} }); if (error) throw error; return data; },
-    onSuccess: (data: Record<string, unknown>) => { toast.success((data?.message as string) || 'Sincronização agendada com sucesso'); },
+    onSuccess: (data: any) => { toast.success((data?.message as string) || 'Sincronização agendada com sucesso'); },
     onError: (error: Error) => { toast.error(`Erro ao sincronizar: ${error.message}`); },
   });
 

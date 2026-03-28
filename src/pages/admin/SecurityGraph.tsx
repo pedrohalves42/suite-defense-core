@@ -179,7 +179,7 @@ export default function SecurityGraph() {
   const filteredNodes = useMemo(() => {
     if (!searchTerm) return nodes;
     const term = searchTerm.toLowerCase();
-    return nodes.filter((n: Record<string, unknown>) =>
+    return nodes.filter((n: any) =>
       (n.label || "").toLowerCase().includes(term) ||
       (n.node_value || "").toLowerCase().includes(term)
     );
@@ -188,12 +188,12 @@ export default function SecurityGraph() {
   // Group by risk level
   const riskGroups = useMemo(() => {
     const groups = {
-      danger: [] as Array<Record<string, unknown>>,
-      warning: [] as Array<Record<string, unknown>>,
-      caution: [] as Array<Record<string, unknown>>,
-      safe: [] as Array<Record<string, unknown>>,
+      danger: [] as any[],
+      warning: [] as any[],
+      caution: [] as any[],
+      safe: [] as any[],
     };
-    filteredNodes.forEach((n: Record<string, unknown>) => {
+    filteredNodes.forEach((n: any) => {
       const risk = getRiskInfo(n.risk_score);
       groups[risk.level].push(n);
     });
@@ -203,11 +203,11 @@ export default function SecurityGraph() {
   const connectedNodes = useMemo(() => {
     if (!selectedNode) return [];
     const connectedIds = new Set<string>();
-    edges.forEach((e: Record<string, unknown>) => {
+    edges.forEach((e: any) => {
       if (e.source_node_id === selectedNode.id) connectedIds.add(e.target_node_id);
       if (e.target_node_id === selectedNode.id) connectedIds.add(e.source_node_id);
     });
-    return nodes.filter((n: Record<string, unknown>) => connectedIds.has(n.id));
+    return nodes.filter((n: any) => connectedIds.has(n.id));
   }, [selectedNode, edges, nodes]);
 
   const dangerCount = riskGroups.danger.length;
@@ -393,7 +393,7 @@ export default function SecurityGraph() {
                     <CollapsibleContent>
                       <ScrollArea className={items.length > 8 ? "h-[360px]" : ""}>
                         <div className="divide-y divide-border/30">
-                          {items.map((node: Record<string, unknown>) => {
+                          {items.map((node: any) => {
                             const risk = getRiskInfo(node.risk_score);
                             const isSelected = selectedNode?.id === node.id;
                             return (
@@ -524,7 +524,7 @@ export default function SecurityGraph() {
                         Ligado a ({connectedNodes.length})
                       </p>
                       <div className="space-y-1 max-h-40 overflow-y-auto">
-                        {connectedNodes.map((cn: Record<string, unknown>) => {
+                        {connectedNodes.map((cn: any) => {
                           const cnRisk = getRiskInfo(cn.risk_score);
                           return (
                             <button

@@ -75,13 +75,13 @@ export default function ThreatIntelligence() {
         .order('last_seen_at', { ascending: false });
 
       // Get agent names for correlation
-      const agentIds = [...new Set((vulns || []).map((v: Record<string, unknown>) => v.agent_id))];
+      const agentIds = [...new Set((vulns || []).map((v: any) => v.agent_id))];
       const { data: agents } = await supabase
         .from('agents')
         .select('id, agent_name')
         .in('id', agentIds.length > 0 ? agentIds : ['none']);
 
-      const agentMap = new Map((agents || []).map((a: Record<string, unknown>) => [a.id, a.agent_name]));
+      const agentMap = new Map((agents || []).map((a: any) => [a.id, a.agent_name]));
 
       // Also get CVE-based scans from agent_vulnerability_scans
       const { data: cveScans } = await supabase
@@ -142,7 +142,7 @@ export default function ThreatIntelligence() {
 
   // Add CVE-based scans
   const cveFeeds: ThreatFeed[] = (vulnData?.cveScans || [])
-    .filter((v: Record<string, unknown>) => v.cve_id)
+    .filter((v: any) => v.cve_id)
     .reduce((acc: ThreatFeed[], v: any) => {
       const existing = acc.find(f => f.cveId === v.cve_id);
       const agentName = vulnData?.agentMap?.get(v.agent_id) || 'Desconhecido';
@@ -176,7 +176,7 @@ export default function ThreatIntelligence() {
 
   // Correlate alerts with MITRE tactics
   const mitreTactics = MITRE_TACTICS.map(tactic => {
-    const relatedAlerts = (vulnData?.alerts || []).filter((a: Record<string, unknown>) => {
+    const relatedAlerts = (vulnData?.alerts || []).filter((a: any) => {
       const desc = (a.message || '').toLowerCase();
       if (tactic.id === 'T1059' && (desc.includes('script') || desc.includes('powershell'))) return true;
       if (tactic.id === 'T1486' && desc.includes('ransomware')) return true;

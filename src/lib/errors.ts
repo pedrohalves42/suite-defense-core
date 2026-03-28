@@ -7,14 +7,14 @@
 export class CyberShieldError extends Error {
   public readonly code: string;
   public readonly status: number;
-  public readonly context?: Record<string, unknown>;
+  public readonly context?: any;
   public readonly timestamp: string;
 
   constructor(
     message: string,
     code: string = 'CYBERSHIELD_ERROR',
     status: number = 500,
-    context?: Record<string, unknown>
+    context?: any
   ) {
     super(message);
     this.name = 'CyberShieldError';
@@ -24,7 +24,7 @@ export class CyberShieldError extends Error {
     this.timestamp = new Date().toISOString();
   }
 
-  toJSON(): Record<string, unknown> {
+  toJSON(): any {
     return {
       name: this.name,
       code: this.code,
@@ -37,7 +37,7 @@ export class CyberShieldError extends Error {
 }
 
 export class ValidationError extends CyberShieldError {
-  constructor(message: string, context?: Record<string, unknown>) {
+  constructor(message: string, context?: any) {
     super(message, 'VALIDATION_ERROR', 400, context);
     this.name = 'ValidationError';
   }
@@ -70,7 +70,7 @@ export class NotFoundError extends CyberShieldError {
 }
 
 export class ConflictError extends CyberShieldError {
-  constructor(message: string, context?: Record<string, unknown>) {
+  constructor(message: string, context?: any) {
     super(message, 'CONFLICT', 409, context);
     this.name = 'ConflictError';
   }

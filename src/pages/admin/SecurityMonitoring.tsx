@@ -90,13 +90,13 @@ export default function SecurityMonitoring() {
 
       const secLogEvents = (securityEventsRes.data || []) as Array<{
         id: string; attack_type: string; severity: string; ip_address: string;
-        endpoint: string; details: Record<string, unknown>; created_at: string; blocked: boolean;
+        endpoint: string; details: any; created_at: string; blocked: boolean;
       }>;
       const blockedAttempts = (blockedAttemptsRes.data || []) as Array<{
         id: string; agent_name: string; domain: string; attempted_at: string; blocked_by: string;
       }>;
       const evidenceLogs = (evidenceRes.data || []) as Array<{
-        id: string; event_type: string; severity: string; agent_name: string; created_at: string; event_data: Record<string, unknown>;
+        id: string; event_type: string; severity: string; agent_name: string; created_at: string; event_data: any;
       }>;
       const activeAlerts = (alertsRes.data || []) as Array<{
         id: string; title: string; severity: string; status: string; alert_type: string; created_at: string;

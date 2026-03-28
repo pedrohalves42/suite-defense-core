@@ -71,7 +71,7 @@ export default function SoftwareInventory() {
       });
       if (error) throw error;
       // Map RPC response to expected format
-      return ((data || []) as Array<Record<string, unknown>>).map((agent: Record<string, unknown>) => ({
+      return ((data || []) as any[]).map((agent: any) => ({
         id: agent.id,
         agent_name: agent.agent_name,
       }));

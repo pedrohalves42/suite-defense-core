@@ -147,7 +147,7 @@ export default function TenantSettings() {
 
   // Update settings mutation
   const updateSettings = useMutation({
-    mutationFn: async (newSettings: Record<string, unknown>) => {
+    mutationFn: async (newSettings: any) => {
       if (!tenant?.id) throw new Error("Tenant ID not found");
       
       const { error } = await supabase

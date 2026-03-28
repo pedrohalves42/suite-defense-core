@@ -97,9 +97,9 @@ export default function SecurityPolicies() {
   // Calculate total impact for selected policy
   const getPolicyImpact = () => {
     if (!selectedPolicy) return { groups: 0, agents: 0 };
-    const assignedGroups = groupPolicies.filter((gp: Record<string, unknown>) => gp.policy_id === selectedPolicy.id);
+    const assignedGroups = groupPolicies.filter((gp: any) => gp.policy_id === selectedPolicy.id);
     let totalAgents = 0;
-    assignedGroups.forEach((gp: Record<string, unknown>) => {
+    assignedGroups.forEach((gp: any) => {
       const group = agentGroups.find(g => g.id === gp.group_id);
       if (group) totalAgents += (group as Record<string, unknown>).memberCount || 0;
     });

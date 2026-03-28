@@ -34,7 +34,7 @@ interface CronHealthRecord {
   total_failures: number;
   avg_duration_ms: number | null;
   last_duration_ms: number | null;
-  metadata: Record<string, unknown> | null;
+  metadata: any | null;
   updated_at: string;
 }
 

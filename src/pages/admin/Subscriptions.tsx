@@ -334,7 +334,7 @@ export default function Subscriptions() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {invoices.map((invoice: Record<string, unknown>) => (
+                  {invoices.map((invoice: any) => (
                     <TableRow key={invoice.id}>
                       <TableCell>{formatDate(invoice.created)}</TableCell>
                       <TableCell className="font-mono text-sm">{invoice.number}</TableCell>

@@ -38,7 +38,7 @@ const EVIDENCE_OPTIONS = [
   { key: 'auditLogs', label: 'Logs de Auditoria', icon: '📝', description: 'Trilha de auditoria imutável completa' },
 ] as const;
 
-function generatePDF(bundleData: Record<string, unknown>, result: ExportResult, logoDataUrl?: string | null) {
+function generatePDF(bundleData: any, result: ExportResult, logoDataUrl?: string | null) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -173,7 +173,7 @@ interface ExportResult {
   verificationUrl: string;
   recordCount: number;
   sizeBytes: number;
-  bundle?: Record<string, unknown>;
+  bundle?: any;
 }
 
 export default function EvidenceBundlePage() {

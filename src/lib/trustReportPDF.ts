@@ -106,7 +106,7 @@ async function collectTrustData(tenantId: string, startDate: Date, endDate: Date
   });
 
   // Threat Intel
-  const sources = [...new Set(threatInd.map((t: Record<string, unknown>) => t.source).filter(Boolean))];
+  const sources = [...new Set(threatInd.map((t: any) => t.source).filter(Boolean))];
   const lastSync = feedSync.length > 0 ? (feedSync as Array<Record<string, unknown>>)[0].sync_completed_at : null;
 
   // Compliance categories

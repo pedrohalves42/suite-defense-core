@@ -155,7 +155,7 @@ export default function DiagnosticsCenter() {
         .gte('created_at', since);
       if (error) return [];
       // Unique agent names with failures
-      const names = [...new Set((data || []).map((j: Record<string, unknown>) => j.agent_name))];
+      const names = [...new Set((data || []).map((j: any) => j.agent_name))];
       return names as string[];
     },
     enabled: !tenantLoading && !!tenant?.id,

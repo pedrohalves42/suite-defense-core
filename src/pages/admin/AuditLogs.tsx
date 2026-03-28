@@ -132,7 +132,7 @@ export default function AuditLogs() {
 
       // Build CSV
       const headers = ['Data/Hora', 'Usuário', 'Ação', 'Recurso', 'ID Recurso', 'Resultado', 'IP'];
-      const rows = (data || []).map((log: Record<string, unknown>) => [
+      const rows = (data || []).map((log: any) => [
         formatBrazilDateTime(log.created_at, 'full'),
         log.actor?.full_name || 'Sistema',
         getActionLabel(log.action),
@@ -325,7 +325,7 @@ export default function AuditLogs() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {logs?.data?.map((log: Record<string, unknown>) => (
+                    {logs?.data?.map((log: any) => (
                       <TableRow key={log.id} className="hover:bg-muted/50">
                         <TableCell className="text-sm font-mono">
                           {formatBrazilDateTime(log.created_at, 'full')}

@@ -74,7 +74,7 @@ export default function DataExport() {
             p_tenant_id: tenant.id,
             p_include_archived: true,
           });
-          const agentsList = (agentsRaw as unknown as Array<Record<string, unknown>>) || [];
+          const agentsList = (agentsRaw as unknown as any[]) || [];
           const agentsSorted = dateFilter 
             ? agentsList.filter((a: any) => a.enrolled_at >= dateFilter)
             : agentsList;

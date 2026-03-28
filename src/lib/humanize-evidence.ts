@@ -198,7 +198,7 @@ const EVIDENCE_LABELS: Record<string, {
 /**
  * Transform raw evidence object into array of humanized items
  */
-export function humanizeEvidence(evidence: Record<string, unknown>): HumanizedEvidence[] {
+export function humanizeEvidence(evidence: any): HumanizedEvidence[] {
   if (!evidence || typeof evidence !== 'object') {
     return [];
   }
@@ -329,7 +329,7 @@ export function humanizeEvidence(evidence: Record<string, unknown>): HumanizedEv
 /**
  * Get a summary string from evidence (for compact views)
  */
-export function getEvidenceSummary(evidence: Record<string, unknown>): string {
+export function getEvidenceSummary(evidence: any): string {
   const items = humanizeEvidence(evidence);
   if (items.length === 0) return '';
   

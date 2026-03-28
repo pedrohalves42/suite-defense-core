@@ -106,7 +106,7 @@ export async function generateEvidenceHash(
  * Remove sha256 e hmac_signature do objeto antes de serializar
  * para permitir verificação posterior
  */
-export function serializeForHash(payload: Record<string, unknown>): string {
+export function serializeForHash(payload: any): string {
   const { sha256, hmac_signature, ...rest } = payload;
   return JSON.stringify(rest, null, 2);
 }

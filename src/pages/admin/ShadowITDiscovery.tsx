@@ -53,7 +53,7 @@ export default function ShadowITDiscovery() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data: Record<string, unknown>) => {
+    onSuccess: (data: any) => {
       const msg = data?.ai_classified > 0 
         ? `${data.classified} apps classificados (${data.local_classified} por regras, ${data.ai_classified} por IA)`
         : `${data?.classified ?? 0} apps classificados`;
@@ -77,7 +77,7 @@ export default function ShadowITDiscovery() {
     },
   });
 
-  const filtered = catalog.filter((app: Record<string, unknown>) => {
+  const filtered = catalog.filter((app: any) => {
     const matchSearch = !search || app.app_name.toLowerCase().includes(search.toLowerCase());
     const matchRisk = filterRisk === "all" || app.risk_level === filterRisk;
     return matchSearch && matchRisk;
@@ -85,10 +85,10 @@ export default function ShadowITDiscovery() {
 
   const stats = {
     total: catalog.length,
-    approved: catalog.filter((a: Record<string, unknown>) => a.risk_level === "approved").length,
-    review: catalog.filter((a: Record<string, unknown>) => a.risk_level === "review").length,
-    blocked: catalog.filter((a: Record<string, unknown>) => a.risk_level === "blocked").length,
-    unknown: catalog.filter((a: Record<string, unknown>) => a.risk_level === "unknown").length,
+    approved: catalog.filter((a: any) => a.risk_level === "approved").length,
+    review: catalog.filter((a: any) => a.risk_level === "review").length,
+    blocked: catalog.filter((a: any) => a.risk_level === "blocked").length,
+    unknown: catalog.filter((a: any) => a.risk_level === "unknown").length,
   };
 
   return (
@@ -168,7 +168,7 @@ export default function ShadowITDiscovery() {
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Nenhuma aplicação encontrada. Clique em "Classificar com IA" para iniciar.
                 </TableCell></TableRow>
-              ) : filtered.map((app: Record<string, unknown>) => {
+              ) : filtered.map((app: any) => {
                 const Icon = categoryIcons[app.app_category] || Search;
                 return (
                   <TableRow key={app.id}>

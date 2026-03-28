@@ -62,7 +62,7 @@ function getEventInfo(raw: string): { title: string; explanation: string; icon: 
   };
 }
 
-function extractFriendlyDetails(raw: Record<string, unknown>): { computer?: string; ip?: string; extra?: string } {
+function extractFriendlyDetails(raw: any): { computer?: string; ip?: string; extra?: string } {
   try {
     const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
     if (!obj || typeof obj !== 'object') return {};
@@ -196,7 +196,7 @@ export default function RealTimeSecurityDashboard() {
       });
       if (error) throw error;
 
-      const data = (rpcData as Array<Record<string, unknown>> || []).map((a: Record<string, unknown>) => ({
+      const data = (rpcData as any[] || []).map((a: any) => ({
         id: a.id,
         last_heartbeat: a.last_heartbeat,
         is_isolated: !!a.is_isolated,

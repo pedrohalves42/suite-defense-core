@@ -24,7 +24,7 @@ interface NotificationChannel {
   tenant_id: string;
   channel_type: 'email' | 'telegram' | 'whatsapp' | 'webhook';
   name: string;
-  config: Record<string, unknown>;
+  config: any;
   is_verified: boolean;
   is_active: boolean;
   verified_at: string | null;
@@ -157,7 +157,7 @@ export default function NotificationChannels() {
       const functionName = `send-${channel.channel_type}-notification`;
       
       // Build payload matching the expected format for each channel type
-      let payload: Record<string, unknown> = {
+      let payload: any = {
         channel_id: channel.id,
         tenant_id: tenant?.id || '',
         alert: {

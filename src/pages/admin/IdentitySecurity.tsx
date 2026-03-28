@@ -73,7 +73,7 @@ export default function IdentitySecurity() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data: Record<string, unknown>) => {
+    onSuccess: (data: any) => {
       toast.success(`Verificação concluída: ${data?.leaks_found ?? 0} vazamentos encontrados`);
       queryClient.invalidateQueries({ queryKey: ["credential-leaks"] });
     },
@@ -99,8 +99,8 @@ export default function IdentitySecurity() {
 
   const stats = {
     total: leaks.length,
-    new: leaks.filter((l: Record<string, unknown>) => l.status === "new").length,
-    critical: leaks.filter((l: Record<string, unknown>) => l.severity === "critical").length,
+    new: leaks.filter((l: any) => l.status === "new").length,
+    critical: leaks.filter((l: any) => l.severity === "critical").length,
     domains: monitors.length,
   };
 
@@ -155,7 +155,7 @@ export default function IdentitySecurity() {
           </div>
           {monitors.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
-              {monitors.map((m: Record<string, unknown>) => (
+              {monitors.map((m: any) => (
                 <Badge key={m.id} variant="outline">{m.email_domain}</Badge>
               ))}
             </div>
@@ -186,7 +186,7 @@ export default function IdentitySecurity() {
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Nenhum vazamento detectado. Adicione domínios e clique em "Verificar".
                 </TableCell></TableRow>
-              ) : leaks.map((leak: Record<string, unknown>) => (
+              ) : leaks.map((leak: any) => (
                 <TableRow key={leak.id}>
                   <TableCell className="font-mono text-sm">{leak.email}</TableCell>
                   <TableCell>{leak.breach_name || leak.breach_source || "—"}</TableCell>

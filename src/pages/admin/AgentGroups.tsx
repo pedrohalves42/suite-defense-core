@@ -500,7 +500,7 @@ export default function AgentGroups() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {members.map((member: Record<string, unknown>) => {
+                      {members.map((member: any) => {
                         const agent = member.agents;
                         if (!agent) return null;
                         return (

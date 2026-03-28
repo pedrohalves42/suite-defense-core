@@ -55,7 +55,7 @@ export default function AttackSimulation() {
   });
 
   const latestByType = simTypes.map((t) => {
-    const latest = simulations.find((s: Record<string, unknown>) => s.simulation_type === t.value && s.status === "completed");
+    const latest = simulations.find((s: any) => s.simulation_type === t.value && s.status === "completed");
     return { ...t, latest };
   });
 
@@ -144,7 +144,7 @@ export default function AttackSimulation() {
                 <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : simulations.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma simulação executada</TableCell></TableRow>
-              ) : simulations.map((sim: Record<string, unknown>) => (
+              ) : simulations.map((sim: any) => (
                 <TableRow key={sim.id}>
                   <TableCell>{simTypes.find((t) => t.value === sim.simulation_type)?.label || sim.simulation_type}</TableCell>
                   <TableCell>
