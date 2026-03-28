@@ -73,7 +73,7 @@ const JobCreator = () => {
       });
 
       if (error) throw error;
-      const mapped = ((data || []) as unknown as RpcAgentRow[]).map((agent): Agent => ({
+      const mapped = ((data || []) as any as RpcAgentRow[]).map((agent): Agent => ({
         id: agent.id,
         agent_name: agent.agent_name,
         hostname: agent.hostname,

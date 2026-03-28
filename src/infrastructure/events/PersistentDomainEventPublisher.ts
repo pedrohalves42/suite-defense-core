@@ -17,7 +17,7 @@ export class PersistentDomainEventPublisher implements DomainEventDispatcher {
           aggregate_id: event.aggregateId,
           aggregate_type: this.inferAggregateType(event.eventType),
           event_type: event.eventType,
-          payload: this.buildPayload(event) as unknown as Json,
+          payload: this.buildPayload(event) as any as Json,
           occurred_on: event.occurredOn.toISOString(),
           tenant_id: this.extractTenantId(event),
         });
@@ -39,7 +39,7 @@ export class PersistentDomainEventPublisher implements DomainEventDispatcher {
         aggregate_id: event.aggregateId,
         aggregate_type: this.inferAggregateType(event.eventType),
         event_type: event.eventType,
-        payload: this.buildPayload(event) as unknown as Json,
+        payload: this.buildPayload(event) as any as Json,
         occurred_on: event.occurredOn.toISOString(),
         tenant_id: this.extractTenantId(event),
       }));

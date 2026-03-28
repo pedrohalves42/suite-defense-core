@@ -75,7 +75,7 @@ export function FirstTimeSetupWizard() {
           p_tenant_id: tenantId,
           p_include_archived: false,
         });
-        return ((data as unknown[]) || []).length > 0;
+        return ((data as any[]) || []).length > 0;
       },
       actionText: 'Instalar Agente',
       actionLink: '/installer',
@@ -93,7 +93,7 @@ export function FirstTimeSetupWizard() {
           p_tenant_id: tenantId,
           p_include_archived: false,
         });
-        const agents = (data as unknown as Array<{ last_heartbeat: string | null }>) || [];
+        const agents = (data as any as Array<{ last_heartbeat: string | null }>) || [];
         return agents.some(a => a.last_heartbeat !== null);
       },
       actionText: 'Ver Dashboard',

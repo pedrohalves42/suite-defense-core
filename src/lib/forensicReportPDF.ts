@@ -76,7 +76,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
 
   if (!agentRow) throw new Error('Agente não encontrado');
 
-  const agent = agentRow as unknown as AgentInfo;
+  const agent = agentRow as any as AgentInfo;
 
   // Fetch latest process snapshot
   const { data: processRows } = await supabase

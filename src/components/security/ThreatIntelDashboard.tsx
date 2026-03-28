@@ -199,7 +199,7 @@ function IndicatorsList() {
   return (
     <ScrollArea className="h-[500px]">
       <div className="space-y-2">
-        {(indicators ?? []).map((ind: Record<string, unknown>) => (
+        {(indicators ?? []).map((ind: any) => (
           <Card key={ind.id as string} className="border-border/30">
             <CardContent className="py-3 px-4">
               <div className="flex items-center gap-3">
@@ -256,7 +256,7 @@ function MatchesList() {
   return (
     <ScrollArea className="h-[500px]">
       <div className="space-y-2">
-        {(matches ?? []).map((match: Record<string, unknown>) => (
+        {(matches ?? []).map((match: any) => (
           <Card key={match.id as string} className="border-destructive/20">
             <CardContent className="py-3 px-4">
               <div className="flex items-center justify-between">
@@ -300,7 +300,7 @@ function SyncHistory() {
   return (
     <ScrollArea className="h-[500px]">
       <div className="space-y-2">
-        {(logs ?? []).map((log: Record<string, unknown>) => (
+        {(logs ?? []).map((log: any) => (
           <Card key={log.id as string} className="border-border/30">
             <CardContent className="py-3 px-4">
               <div className="flex items-center justify-between">

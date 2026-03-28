@@ -204,7 +204,7 @@ export default function SecurityMonitoring() {
       // Metrics
       const criticalCount = dedupedEvents.filter(e => e.severity === 'high' || e.severity === 'critical').length;
       const offlineThreshold = subHours(new Date(), AGENT_STATUS_THRESHOLDS.OFFLINE_ALERT_HOURS).toISOString();
-      const allAgents = (agentsRes.data as unknown as Array<{ last_heartbeat: string | null; status: string }>) || [];
+      const allAgents = (agentsRes.data as any as Array<{ last_heartbeat: string | null; status: string }>) || [];
       const offlineAgents = allAgents.filter(a => a.status === 'active' && a.last_heartbeat && a.last_heartbeat < offlineThreshold).length;
 
       const failedLogins = (failedLoginsRes.data || []) as Array<{ ip_address: string; created_at: string }>;

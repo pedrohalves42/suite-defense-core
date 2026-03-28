@@ -68,7 +68,7 @@ const ClientOnboarding = () => {
         p_include_archived: false
       });
       
-      const agentsList = (agents || []) as unknown as RpcAgentRow[];
+      const agentsList = (agents || []) as any as RpcAgentRow[];
       setAgentCount(agentsList.length);
       const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString(); // 30min threshold
       setHasOnlineAgent(agentsList.some((a) => a.last_heartbeat && a.last_heartbeat > cutoff));

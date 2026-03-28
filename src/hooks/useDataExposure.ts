@@ -52,7 +52,7 @@ export function useDataExposure() {
 
       if (error) throw error;
 
-      const findings = (data || []) as unknown as DataExposureFinding[];
+      const findings = (data || []) as any as DataExposureFinding[];
       const open = findings.filter(f => f.status === 'open');
 
       const byCategory: Record<string, number> = {};

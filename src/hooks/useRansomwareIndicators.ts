@@ -49,7 +49,7 @@ export function useRansomwareIndicators() {
 
       if (error) throw error;
 
-      const indicators = (data || []) as unknown as RansomwareIndicator[];
+      const indicators = (data || []) as any as RansomwareIndicator[];
       const active = indicators.filter(i => i.status === 'active');
       const contained = indicators.filter(i => i.status === 'contained');
       const critical = indicators.filter(i => i.severity === 'critical' && i.status === 'active');

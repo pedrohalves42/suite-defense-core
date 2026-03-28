@@ -86,7 +86,7 @@ export function AlertResolutionPanel() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      const updates: Record<string, unknown> = {};
+      const updates: any = {};
       
       if (action === 'acknowledge') {
         updates.acknowledged_at = new Date().toISOString();

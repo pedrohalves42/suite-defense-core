@@ -227,7 +227,7 @@ export function getActionCopy(triggerType: string): ActionCopy {
 // Generate dynamic content based on context
 export function generateDynamicContent(
   triggerType: string, 
-  context: Record<string, unknown> | null | undefined,
+  context: any | null | undefined,
   agentName?: string | null,
   hostname?: string | null
 ): DynamicContent {

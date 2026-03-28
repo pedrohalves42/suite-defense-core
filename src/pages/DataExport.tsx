@@ -42,7 +42,7 @@ export default function DataExport() {
       ]);
 
       return {
-        agents: ((agents.data as unknown[]) || []).length,
+        agents: ((agents.data as any[]) || []).length,
         scans: scans.count || 0,
         jobs: jobs.count || 0,
         quarantine: quarantine.count || 0,
@@ -74,7 +74,7 @@ export default function DataExport() {
             p_tenant_id: tenant.id,
             p_include_archived: true,
           });
-          const agentsList = (agentsRaw as unknown as any[]) || [];
+          const agentsList = (agentsRaw as any as any[]) || [];
           const agentsSorted = dateFilter 
             ? agentsList.filter((a: any) => a.enrolled_at >= dateFilter)
             : agentsList;

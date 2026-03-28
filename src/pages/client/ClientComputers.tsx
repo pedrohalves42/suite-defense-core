@@ -84,7 +84,7 @@ export const ClientComputers = () => {
       });
 
       if (error) throw error;
-      const agentsData = ((rawData as unknown as any[]) || [])
+      const agentsData = ((rawData as any as any[]) || [])
         .sort((a: any, b: any) => {
           const aHb = a.last_heartbeat || '';
           const bHb = b.last_heartbeat || '';

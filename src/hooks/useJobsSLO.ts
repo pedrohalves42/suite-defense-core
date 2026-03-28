@@ -76,7 +76,7 @@ export const useJobsSLO = () => {
         throw error;
       }
       
-      return data as unknown as JobSLOState | null;
+      return data as any as JobSLOState | null;
     },
     enabled: !loading && !!activeTenant?.id,  // ADR-029 CRIT-04: Guard with loading state
     refetchInterval: 300_000, // COST-OPT v8: 2min → 5min

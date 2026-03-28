@@ -56,7 +56,7 @@ export function useScheduledJobsHealth() {
         .order('job_key');
 
       if (error) throw error;
-      return (data || []) as unknown as JobHealthStatus[];
+      return (data || []) as any as JobHealthStatus[];
     },
     enabled: !!tenant?.id,
     refetchInterval: 300000,
@@ -74,7 +74,7 @@ export function useScheduledJobsHealth() {
         .limit(100);
 
       if (error) throw error;
-      return (data || []) as unknown as ScheduledJobRun[];
+      return (data || []) as any as ScheduledJobRun[];
     },
     enabled: !!tenant?.id,
     refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
@@ -90,7 +90,7 @@ export function useScheduledJobsHealth() {
 
       if (error) throw error;
       
-      const result = data as unknown as ScheduledJobsHealthSummary;
+      const result = data as any as ScheduledJobsHealthSummary;
       return result || {
         total_jobs: 0,
         healthy_jobs: 0,

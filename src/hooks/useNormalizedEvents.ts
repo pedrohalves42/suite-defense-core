@@ -73,7 +73,7 @@ export function useNormalizedEvents(filters: NormalizedEventFilters, enabled = t
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as unknown as NormalizedEvent[];
+      return (data || []) as any as NormalizedEvent[];
     },
     enabled: enabled && !loading && !!activeTenant?.id,
   });

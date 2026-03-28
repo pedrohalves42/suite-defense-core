@@ -141,7 +141,7 @@ export default function MassReinstall() {
       
       if (error) throw error;
       const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString(); // 30min - matches AGENT_STATUS_THRESHOLDS
-      const agents = ((rawData as unknown as Array<{id: string; agent_name: string; hostname: string; agent_version: string; last_heartbeat: string | null; status: string}>) || [])
+      const agents = ((rawData as any as Array<{id: string; agent_name: string; hostname: string; agent_version: string; last_heartbeat: string | null; status: string}>) || [])
         .filter(a => !a.last_heartbeat || a.last_heartbeat < cutoff)
         .sort((a, b) => (a.agent_name || '').localeCompare(b.agent_name || ''));
       return agents;

@@ -106,7 +106,7 @@ export function usePendingPlaybookExecutions() {
         .limit(20);
 
       if (error) throw error;
-      return (data || []) as unknown as PlaybookExecution[];
+      return (data || []) as any as PlaybookExecution[];
     },
     enabled: !!tenant?.id,
     refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
@@ -167,7 +167,7 @@ export function usePlaybookExecutionHistory(limit = 50) {
         .limit(limit);
 
       if (error) throw error;
-      return (data || []) as unknown as PlaybookExecution[];
+      return (data || []) as any as PlaybookExecution[];
     },
     enabled: !!tenant?.id,
   });

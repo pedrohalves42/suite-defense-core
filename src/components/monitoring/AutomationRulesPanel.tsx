@@ -27,7 +27,7 @@ interface AutomationRule {
     duration_minutes?: number;
   };
   action_type: string;
-  action_config: Record<string, unknown>;
+  action_config: any;
   target_scope: string;
   cooldown_minutes: number;
   last_triggered_at: string | null;
@@ -40,9 +40,9 @@ interface AutomationExecution {
   id: string;
   rule_id: string;
   agent_id: string | null;
-  trigger_data: Record<string, unknown>;
+  trigger_data: any;
   action_taken: string;
-  action_result: Record<string, unknown> | null;
+  action_result: any | null;
   status: string;
   triggered_at: string;
 }
@@ -101,8 +101,8 @@ export function AutomationRulesPanel() {
           .limit(50),
       ]);
 
-      if (rulesRes.data) setRules(rulesRes.data as unknown as AutomationRule[]);
-      if (execRes.data) setExecutions(execRes.data as unknown as AutomationExecution[]);
+      if (rulesRes.data) setRules(rulesRes.data as any as AutomationRule[]);
+      if (execRes.data) setExecutions(execRes.data as any as AutomationExecution[]);
     } catch (error) {
       logger.error('Error fetching automation data', error);
     } finally {

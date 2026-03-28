@@ -39,7 +39,7 @@ export const useBlastRadiusPolicies = () => {
         .order('action_type');
 
       if (error) throw error;
-      return (data || []) as unknown as BlastRadiusPolicy[];
+      return (data || []) as any as BlastRadiusPolicy[];
     },
     enabled: !!tenant?.id
   });
@@ -68,7 +68,7 @@ export const useCheckBlastRadius = () => {
         });
 
       if (error) throw error;
-      return data as unknown as BlastRadiusCheck;
+      return data as any as BlastRadiusCheck;
     }
   });
 };

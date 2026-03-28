@@ -64,7 +64,7 @@ export default function TenantSecurity() {
       });
 
       if (error) throw error;
-      const data = (rawData as unknown as Array<{ status: string }>) || [];
+      const data = (rawData as any as Array<{ status: string }>) || [];
 
       if (error) throw error;
       

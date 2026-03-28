@@ -17,7 +17,7 @@ export function useAgentActions() {
         p_agent_id: agentId,
       });
       if (error) throw error;
-      return data as unknown as { success: boolean; previous_interval?: number };
+      return data as any as { success: boolean; previous_interval?: number };
     },
     onSuccess: (result) => {
       toast({
@@ -157,7 +157,7 @@ export function useAgentActions() {
         p_include_archived: false,
       });
       if (rpcError) throw rpcError;
-      const agent = (agentsList as unknown as Array<Record<string, unknown>>)?.find(
+      const agent = (agentsList as any as Array<Record<string, unknown>>)?.find(
         (a) => a.id === agentId
       );
       if (!agent) throw new Error('Agente não encontrado');

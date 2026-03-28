@@ -30,7 +30,7 @@ interface Insight {
   acknowledged: boolean;
   created_at: string;
   agent_id?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: any;
 }
 
 const severityConfig = {

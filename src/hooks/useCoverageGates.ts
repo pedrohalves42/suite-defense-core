@@ -28,7 +28,7 @@ export function useCoverageGates() {
       });
 
       if (error) throw error;
-      return data as unknown as CoverageResult;
+      return data as any as CoverageResult;
     },
     enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
     refetchInterval: 300000,

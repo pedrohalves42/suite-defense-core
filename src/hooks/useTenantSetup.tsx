@@ -142,7 +142,7 @@ export const useTenantSetup = () => {
         const { error: settingsError } = await supabase
           .from('tenant_settings')
           .update({
-            business_hours: data.businessHours as unknown as Json,
+            business_hours: data.businessHours as any as Json,
             updated_at: new Date().toISOString(),
           })
           .eq('tenant_id', activeTenant.id);
@@ -154,7 +154,7 @@ export const useTenantSetup = () => {
           .from('tenant_settings')
           .insert([{
             tenant_id: activeTenant.id,
-            business_hours: data.businessHours as unknown as Json,
+            business_hours: data.businessHours as any as Json,
           }] as never);
 
         if (settingsError) throw settingsError;

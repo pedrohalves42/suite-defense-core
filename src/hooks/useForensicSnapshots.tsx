@@ -40,7 +40,7 @@ export const useForensicSnapshots = (agentId?: string) => {
       const { data, error } = await query;
 
       if (error) throw error;
-      return (data || []) as unknown as ForensicSnapshot[];
+      return (data || []) as any as ForensicSnapshot[];
     },
     enabled: !!tenant?.id
   });
@@ -108,7 +108,7 @@ export const useForensicSnapshotById = (snapshotId: string) => {
         .maybeSingle();
 
       if (error) throw error;
-      return (data as unknown as ForensicSnapshot) || null;
+      return (data as any as ForensicSnapshot) || null;
     },
     enabled: !!snapshotId
   });

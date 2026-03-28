@@ -31,7 +31,7 @@ export function useAgentSnapshots() {
         throw new Error(error.message || 'Failed to fetch agent snapshots list');
       }
       
-      return (data || []) as unknown as AgentSnapshot[];
+      return (data || []) as any as AgentSnapshot[];
     },
     enabled: !tenantLoading && !!tenant?.id,
     staleTime: 60_000,

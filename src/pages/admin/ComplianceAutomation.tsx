@@ -135,7 +135,7 @@ export default function ComplianceAutomation() {
       ]);
 
       return {
-        agents: ((agentsRes.data as unknown[]) || []).length,
+        agents: ((agentsRes.data as any[]) || []).length,
         alerts: alertsRes.count || 0,
         vulns: vulnsRes.count || 0,
       };

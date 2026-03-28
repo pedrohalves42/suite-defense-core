@@ -61,7 +61,7 @@ export function useAgentExecutionHealth() {
         .order('severity', { ascending: false });
 
       if (error) throw error;
-      return (data || []) as unknown as AgentExecutionHealth[];
+      return (data || []) as any as AgentExecutionHealth[];
     },
     enabled: !loading && !!tenant?.id,
     refetchInterval: 300000,

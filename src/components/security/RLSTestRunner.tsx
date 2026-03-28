@@ -12,7 +12,7 @@ interface RLSTestResult {
   id: string;
   test_name: string;
   passed: boolean;
-  details: Record<string, unknown> | null;
+  details: any | null;
   tested_at: string;
   table_name: string;
   test_run_id: string;

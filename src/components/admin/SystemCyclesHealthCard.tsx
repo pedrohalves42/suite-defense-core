@@ -60,7 +60,7 @@ export function SystemCyclesHealthCard() {
             p_include_archived: false
           });
           const threshold = new Date(Date.now() - 86400000).toISOString();
-          const count = ((data || []) as unknown as RpcAgentRow[]).filter((a) => a.last_heartbeat && a.last_heartbeat < threshold).length;
+          const count = ((data || []) as any as RpcAgentRow[]).filter((a) => a.last_heartbeat && a.last_heartbeat < threshold).length;
           return { count, error: null };
         })(),
         

@@ -127,13 +127,13 @@ function generatePDF(bundleData: any, result: ExportResult, logoDataUrl?: string
   y += 8;
 
   const summaryRows: string[][] = [];
-  if (evidence.securityEvents) summaryRows.push(['Eventos de Segurança', String((evidence.securityEvents as unknown[]).length)]);
-  if (evidence.jobs) summaryRows.push(['Jobs Executados', String((evidence.jobs as unknown[]).length)]);
-  if (evidence.signedExecutions) summaryRows.push(['Execuções Assinadas', String((evidence.signedExecutions as unknown[]).length)]);
+  if (evidence.securityEvents) summaryRows.push(['Eventos de Segurança', String((evidence.securityEvents as any[]).length)]);
+  if (evidence.jobs) summaryRows.push(['Jobs Executados', String((evidence.jobs as any[]).length)]);
+  if (evidence.signedExecutions) summaryRows.push(['Execuções Assinadas', String((evidence.signedExecutions as any[]).length)]);
   if (evidence.hashChain) summaryRows.push(['Cadeia de Hash', evidence.hashChain ? '1 (ativa)' : '0']);
-  if (evidence.riskDecisions) summaryRows.push(['Decisões de Risco', String((evidence.riskDecisions as unknown[]).length)]);
-  if (evidence.playbookExecutions) summaryRows.push(['Execuções de Playbook', String((evidence.playbookExecutions as unknown[]).length)]);
-  if (evidence.auditLogs) summaryRows.push(['Logs de Auditoria', String((evidence.auditLogs as unknown[]).length)]);
+  if (evidence.riskDecisions) summaryRows.push(['Decisões de Risco', String((evidence.riskDecisions as any[]).length)]);
+  if (evidence.playbookExecutions) summaryRows.push(['Execuções de Playbook', String((evidence.playbookExecutions as any[]).length)]);
+  if (evidence.auditLogs) summaryRows.push(['Logs de Auditoria', String((evidence.auditLogs as any[]).length)]);
 
   if (summaryRows.length > 0) {
     autoTable(doc, {

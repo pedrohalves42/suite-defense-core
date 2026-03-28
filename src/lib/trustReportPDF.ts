@@ -71,7 +71,7 @@ async function collectTrustData(tenantId: string, startDate: Date, endDate: Date
   const feedSync = feedSyncRes.data || [];
   const auditChain = auditRes.data?.[0] || { total_logs: 0, chain_valid: true };
   const compliance = complianceRes.data?.[0] || null;
-  const coverage = coverageRes.data as unknown as TrustReportData['coverageGates'];
+  const coverage = coverageRes.data as any as TrustReportData['coverageGates'];
   const execChains = execChainRes.data || [];
 
   // Aggregate detection rules

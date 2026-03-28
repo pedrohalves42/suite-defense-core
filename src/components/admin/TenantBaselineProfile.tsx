@@ -82,7 +82,7 @@ export function TenantBaselineProfile() {
       // Calculate avg processes per agent
       const procData = procRes.data || [];
       const agentProcCounts = new Map<string, number>();
-      procData.forEach((p: Record<string, unknown>) => {
+      procData.forEach((p: any) => {
         agentProcCounts.set(String(p.agent_id), (agentProcCounts.get(String(p.agent_id)) || 0) + 1);
       });
       const avgProcs = agentProcCounts.size > 0

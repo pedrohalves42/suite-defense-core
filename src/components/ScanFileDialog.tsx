@@ -31,7 +31,7 @@ export function ScanFileDialog() {
       });
       
       if (error) throw error;
-      return ((data || []) as unknown as RpcAgentRow[])
+      return ((data || []) as any as RpcAgentRow[])
         .filter((a) => a.status === 'active')
         .map((a) => ({ agent_name: a.agent_name, status: a.status }))
         .sort((a, b) => a.agent_name.localeCompare(b.agent_name));
