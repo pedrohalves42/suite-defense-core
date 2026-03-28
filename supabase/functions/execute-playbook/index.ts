@@ -1,40 +1,49 @@
+/**
+ * Execute Playbook - Migrated to assertInternalCaller
+ */
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { handleException } from '../_shared/error-handler.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const PlaybookSchema = z.object({
+  playbook_id: z.string().uuid(),
+  trigger_data: z.object({
+    tenant_id: z.string().uuid(),
+    agent_id: z.string().uuid().optional(),
+    trigger_source: z.string().optional(),
+    reason: z.string().optional(),
+  }).passthrough(),
+});
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
+
   const requestId = crypto.randomUUID();
 
   try {
-    const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-    const authHeader = req.headers.get('X-Internal-Secret');
-    if (!authHeader || authHeader !== internalSecret) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { playbook_id, trigger_data } = await req.json();
-
-    // V-10003 FIX: Validate tenant_id is present in trigger_data
-    if (!trigger_data?.tenant_id) {
+    const parsed = PlaybookSchema.safeParse(await req.json());
+    if (!parsed.success) {
       return new Response(
-        JSON.stringify({ error: 'trigger_data.tenant_id is required' }),
+        JSON.stringify({ error: 'Invalid input', details: parsed.error.flatten().fieldErrors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get playbook ? V-10003 FIX: Also filter by tenant_id to prevent cross-tenant execution
+    const { playbook_id, trigger_data } = parsed.data;
+
     const { data: playbook, error: pbError } = await supabase
       .from('playbooks')
       .select('*')
@@ -52,10 +61,8 @@ Deno.serve(async (req: Request) => {
 
     logger.info('[execute-playbook] Starting execution', { requestId, playbookId: playbook_id, playbookName: playbook.name });
 
-    const results: Array<{ action: string; success: boolean; result?: any; error?: string }> = [];
-    const triggerConditions = playbook.trigger_conditions || {};
+    const results: Array<{ action: string; success: boolean; result?: unknown; error?: string }> = [];
 
-    // Execute actions based on playbook trigger type
     const actions = [
       { action: 'create_alert', execute: () => createAlert(supabase, playbook, trigger_data) },
       { action: 'collect_evidence', execute: () => collectEvidence(supabase, trigger_data) },
@@ -71,7 +78,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Record execution in playbook_executions
     const { error: execError } = await supabase
       .from('playbook_executions')
       .insert({
@@ -101,8 +107,7 @@ Deno.serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify({
-        success: true,
-        request_id: requestId,
+        success: true, request_id: requestId,
         steps_executed: results.length,
         successful_steps: results.filter(r => r.success).length,
         results,
@@ -114,6 +119,7 @@ Deno.serve(async (req: Request) => {
   }
 });
 
+// deno-lint-ignore no-explicit-any
 async function createAlert(supabase: any, playbook: any, triggerData: any) {
   const { error } = await supabase.from('system_alerts').insert({
     tenant_id: triggerData.tenant_id,
@@ -128,6 +134,7 @@ async function createAlert(supabase: any, playbook: any, triggerData: any) {
   return { alert_created: true };
 }
 
+// deno-lint-ignore no-explicit-any
 async function collectEvidence(supabase: any, triggerData: any) {
   if (!triggerData.agent_id) return { skipped: true, reason: 'no_agent_id' };
 
@@ -139,7 +146,6 @@ async function collectEvidence(supabase: any, triggerData: any) {
 
   if (!agent) return { skipped: true, reason: 'agent_not_found' };
 
-  // Create evidence collection job using supported type
   const { data: job, error } = await supabase
     .from('jobs')
     .insert({
