@@ -79,6 +79,8 @@ export default function JobTestRunner() {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Create test job mutation

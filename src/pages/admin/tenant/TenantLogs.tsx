@@ -72,6 +72,8 @@ export default function TenantLogs() {
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   if (tenantLoading || isLoading) {

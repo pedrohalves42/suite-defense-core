@@ -52,6 +52,8 @@ export default function AIMetrics() {
       return data as AIMetric[];
     },
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
   
   // Calculate summary stats

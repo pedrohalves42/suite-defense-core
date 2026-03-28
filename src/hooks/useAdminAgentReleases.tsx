@@ -25,7 +25,8 @@ export const useAdminAgentReleases = () => {
       return data?.releases || [];
     },
     refetchInterval: adaptiveInterval,
-    refetchOnWindowFocus: true
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   return {

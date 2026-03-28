@@ -112,6 +112,8 @@ export function SecurityControlPlane() {
       };
     },
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Run RLS tests manually

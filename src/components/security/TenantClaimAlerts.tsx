@@ -71,6 +71,8 @@ export function TenantClaimAlerts() {
       };
     },
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const hasCriticalIssues = (claimHealth?.total_missing_24h || 0) > 0 || 

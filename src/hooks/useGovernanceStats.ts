@@ -61,6 +61,8 @@ export function useGovernanceStats() {
       } as GovernanceStats;
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval
+    refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }

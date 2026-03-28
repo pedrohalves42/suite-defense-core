@@ -57,7 +57,9 @@ export function useDecisionEvents(options: UseDecisionEventsOptions = {}) {
       return data as DecisionEvent[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval
+    refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 

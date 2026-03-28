@@ -66,6 +66,8 @@ export default function AIInsights() {
       return data as { insights: AIInsight[]; statistics: Statistics };
     },
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const acknowledgeMutation = useMutation({

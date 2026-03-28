@@ -67,6 +67,8 @@ export default function SecurityDashboard() {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: stats } = useQuery({
@@ -93,6 +95,8 @@ export default function SecurityDashboard() {
       };
     },
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: blockedIPs } = useQuery({
@@ -108,6 +112,8 @@ export default function SecurityDashboard() {
       return data as BlockedIP[];
     },
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
     enabled: isSuperAdmin,
   });
 
@@ -126,6 +132,8 @@ export default function SecurityDashboard() {
       return data as FailedAttempt[];
     },
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
     enabled: isSuperAdmin,
   });
 

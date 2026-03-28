@@ -81,6 +81,8 @@ export default function RateLimitingStats() {
       return stats;
     },
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const formatEndpoint = (endpoint: string) => {

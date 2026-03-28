@@ -49,7 +49,8 @@ export default function AgentReleases() {
     },
     enabled: isSuperAdmin,
     refetchInterval: adaptiveInterval,
-    refetchOnWindowFocus: true,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
 

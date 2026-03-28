@@ -68,6 +68,8 @@ export function SecurityImpactFeed() {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch today's automation executions
@@ -90,6 +92,8 @@ export function SecurityImpactFeed() {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch today's playbook executions
@@ -111,6 +115,8 @@ export function SecurityImpactFeed() {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch weekly trend for comparison
@@ -131,6 +137,8 @@ export function SecurityImpactFeed() {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const impactMetrics: ImpactMetric[] = useMemo(() => {

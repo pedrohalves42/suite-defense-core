@@ -40,6 +40,8 @@ export function CronHealthAlert() {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const unhealthyJobs = cronJobs?.filter(j => (j.consecutive_failures || 0) > 0 || j.status === 'failing') || [];

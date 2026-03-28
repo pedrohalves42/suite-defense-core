@@ -39,6 +39,8 @@ export function RLSTestRunner() {
       return data as RLSTestResult[];
     },
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Mutation para executar testes RLS
