@@ -1,133 +1,161 @@
 
 
-# Plano: Finalizar Pendencias da Auditoria
+# Plano Final: Conclusão da Auditoria CyberShield
 
-## Estado Atual (verificado no código)
+## Visão Geral
 
-| Item | Status Real | Detalhes |
-|---|---|---|
-| Decomposição JobCreator | DONE | 6 arquivos em `src/pages/JobCreator/` |
-| Decomposição RolloutPolicies | DONE | 7 arquivos em `src/pages/super-admin/RolloutPolicies/` |
-| B1: admin-create-user | DONE | Já usa `serveTenant` |
-| B1: send-invite | DONE | Já migrado |
-| B1: delete-invite | DONE | Já usa `serveTenant` |
-| B1: remove-member | DONE | Já migrado |
-| B1: force-reinstall-fleet | DONE | Já migrado |
-| B1: create-job | DONE | Já migrado |
-| B1: quarantine-agent | N/A | Usa `assertInternalCaller` (interno/cron) — deve permanecer |
-| B1: apply-security-patch | N/A | Usa `assertInternalCaller` (interno/cron) — deve permanecer |
-| B1: build-agent-exe | PENDING | 1060 linhas, `Deno.serve`, auth JWT manual |
-| AI Router | PARCIAL | Proxy criado, mas não consolida (16 funções individuais permanecem) |
-| `as any` no frontend | 1.353 ocorrências em 159 arquivos | Nenhuma eliminada |
-| Edge functions Deno.serve | ~148 funções | ~80 migradas, ~57 internal, ~12 HMAC |
+Restam 3 frentes principais: migração de ~70 edge functions com `Deno.serve`, testes de integração, e infraestrutura operacional.
 
 ---
 
-## Pendencias Reais a Executar (em ordem)
+## 1. Migração Edge Functions (Batches B3, B6, B7, B8)
 
-### 1. Migrar `build-agent-exe` para `serveTenant` (B1 final)
+Cada função migrada segue o padrão: substituir `Deno.serve` pelo middleware correto, remover CORS/auth/client boilerplate, usar `ctx.*`, adicionar Zod.
 
-**Problema:** 1060 linhas com `Deno.serve`, auth manual, GET health check + POST build.
+### Batch B3 — Relatórios/Compliance → `serveTenant`
 
-**Ação:**
-- Modularizar em `build-agent-exe/index.ts` (orquestrador ~100L) + módulos: `validation.ts`, `cache.ts`, `build-executor.ts`, `installer-generator.ts`
-- Migrar para `serveTenant` com opção `methods: ['GET', 'POST']`
-- GET health check pode ser tratado antes do middleware ou via `servePublic` separado
-- Manter a lógica complexa intacta, apenas trocar boilerplate
+| Função | Linhas | Auth atual | Notas |
+|--------|--------|------------|-------|
+| `generate-compliance-report` | 726 | JWT manual | Complexa, modularizar |
+| `generate-executive-report` | 335 | `assertInternalCaller` + `timingSafeEqual` | **Mantém** `Deno.serve` (interno) |
+| `generate-security-report` | 618 | JWT manual | Complexa, modularizar |
+| `generate-explainable-report` | ? | Verificar | Migrar se JWT |
+| `generate-weekly-report` | ? | Verificar | Provavelmente cron (interno) |
+| `calculate-risk-score` | 206 | JWT + `validateCallerTenant` | → `serveTenant` |
+| `export-evidence-bundle` | 328 | JWT manual | → `serveTenant` |
+| `verify-compliance-report` | ? | Verificar | → `serveTenant` |
+| `scan-vulnerabilities` | 719 | **Já `serveTenant`** | ✅ Pronto |
 
-### 2. AI Router — Consolidação Real (16 → 1 função)
+**Estimativa:** ~6 funções a migrar, 2-3 permanecem internas.
 
-**Estado atual:** `ai-router/index.ts` é um proxy HTTP que reencaminha para as funções individuais. Não consolida.
+### Batch B6 — Admin reads → `serveTenant`
 
-**Ação:** Para cada uma das 16 funções AI que ainda usam `Deno.serve`:
-1. Extrair a lógica de negócio para `ai-router/handlers/<action>.ts`
-2. Cada handler exporta uma função `(ctx, payload) => Promise<Response>`
-3. O roteador importa e despacha diretamente (sem fetch HTTP)
-4. Remover funções individuais após migração
+| Função | Status | Notas |
+|--------|--------|-------|
+| `list-all-users-admin` | ✅ Já `serveTenant` | Pronto |
+| `get-web-activity` | ✅ Já `serveTenant` | Pronto |
+| `siem-export` | ✅ Já `serveTenant` | Pronto |
+| `block-website` | `Deno.serve` + `X-Internal-Secret` | **Mantém** (é chamado internamente por automação) |
+| `export-evidence-bundle` | `Deno.serve` + JWT | → `serveTenant` |
 
-**Funções a consolidar:**
-- `auto-execute-ai-actions` (Deno.serve)
-- `auto-triage-insights` (Deno.serve)
-- As 14 já migradas para serveTenant continuam como estão; o router passa a chamá-las diretamente
+**Estimativa:** ~1-2 funções a migrar, maioria já pronta.
 
-**Estrutura:**
-```text
-supabase/functions/ai-router/
-├── index.ts              (dispatcher, ~80 linhas)
-├── handlers/
-│   ├── analyze-agent.ts
-│   ├── security-copilot.ts
-│   ├── correlate-alerts.ts
-│   └── ... (16 handlers)
-└── shared/
-    └── types.ts
-```
+### Batch B7 — Public/Webhook
 
-### 3. Migração Edge Functions Restantes (Batches B2-B8)
+| Função | Status | Middleware |
+|--------|--------|-----------|
+| `submit-contact` | ✅ Já `servePublic` | Pronto |
+| `health` | `Deno.serve` | → `servePublic` (simples, ~125 linhas) |
+| `build-callback` | `Deno.serve` | Verificar auth (provavelmente `servePublic` ou HMAC) |
+| `stripe-webhook` | `Deno.serve` | **Mantém** (precisa raw body para signature verification, similar a HMAC) |
 
-**~70 funções** restantes com `Deno.serve` (excluindo internal e HMAC). Executar em batches:
+**Estimativa:** ~1-2 funções a migrar.
 
-| Batch | Funções | Prioridade |
-|---|---|---|
-| B3: Relatórios/Compliance | `generate-compliance-report`, `generate-security-report`, `generate-executive-report`, etc. (9 funções) | Alta |
-| B5: Agent submit (non-HMAC) | `submit-network-info`, `submit-vuln-findings`, `submit-agent-evidence`, etc. (9 funções) | Alta |
-| B6: Admin reads | `list-all-users-admin`, `get-web-activity`, `block-website`, etc. (7 funções) | Média |
-| B7: Public/Webhook | `submit-contact`, `health`, `build-callback`, etc. (5 funções) | Média |
-| B8: Diversos | `notification-dispatcher`, `send-*`, `sync-*`, etc. (~20 funções) | Baixa |
+### Batch B8 — Diversos
 
-**Padrão por função:**
-1. Substituir `Deno.serve` por `serveTenant`/`serveAgent`/`servePublic`
-2. Remover CORS boilerplate, `createClient()` manual, auth manual
+| Função | Status | Decisão |
+|--------|--------|---------|
+| `notification-dispatcher` | `Deno.serve` + `assertInternalCaller` | **Mantém** (interno/cron) |
+| `send-notification` | `Deno.serve` + redirect | **Mantém** (deprecated redirect) |
+| `send-email-notification` | `Deno.serve` | → `assertInternalCaller` pattern (chamado por dispatcher) |
+| `send-telegram-notification` | `Deno.serve` | Idem |
+| `send-whatsapp-notification` | `Deno.serve` | Idem |
+| `translate-cve` | `Deno.serve` | → `serveTenant` |
+| `sync-blocked-websites` | `Deno.serve` | → `serveTenant` |
+| `sync-stripe-subscriptions` | `Deno.serve` | Verificar (provavelmente cron/interno) |
+| `sync-cve-database` | `Deno.serve` | Verificar |
+| `track-installation-event` | `Deno.serve` | → `serveAgent` ou `servePublic` |
+
+**Funções restantes com `Deno.serve` que são cron/interno** (mantêm `Deno.serve` + `assertInternalCaller`): ~40-50 funções. Estas **não** precisam de migração pois já seguem o padrão correto para funções internas.
+
+### Resumo real de migração
+
+Após análise detalhada, o número de funções que realmente precisam migrar é **~15-20** (não 70), porque:
+- ~63 funções já usam `serveTenant`/`serveAgent`/`servePublic`
+- ~50 funções usam `assertInternalCaller` (cron/interno) — correto, não migrar
+- ~12 funções usam HMAC com raw body — correto, não migrar
+- ~3-5 funções são webhooks que precisam raw body (Stripe, etc.) — não migrar
+
+**Ações por função migrada:**
+1. Substituir `Deno.serve` pelo middleware correspondente
+2. Remover CORS, `createClient()`, JWT manual
 3. Usar `ctx.supabase`, `ctx.tenantId`, `ctx.userId`, `ctx.body`
-4. Adicionar validação Zod no body
-
-### 4. Eliminação de `as any` no Frontend
-
-**1.353 ocorrências em 159 arquivos.** Abordagem por categoria:
-
-| Categoria | ~Ocorrências | Solução |
-|---|---|---|
-| RPC results `(data as any as Type[])` | ~400 | Criar helper `typedRpc<T>()` ou cast via `unknown` |
-| Testes `(mock as any)` | ~300 | Criar factories tipadas, usar `Partial<T>` |
-| Supabase SDK limitation `from('table' as any)` | ~100 | Manter com `// eslint-disable` (limitação SDK) |
-| JSON fields `(data.field as any)` | ~200 | Zod parse ou interfaces explícitas |
-| Componentes admin (views, props) | ~350 | Tipagem explícita |
-
-**Execução em 8 batches de ~20 arquivos:**
-1. `src/hooks/` (44 arquivos, 487 ocorrências) — maior impacto
-2. `src/pages/admin/` (33 arquivos, 255 ocorrências)
-3. `src/components/admin/` 
-4. `src/pages/super-admin/`
-5. `src/infrastructure/`
-6. `src/lib/`
-7. Testes (`*.test.tsx`)
-8. Restantes
-
-### 5. Testes de Integração para Funções Críticas
-
-Criar testes Deno para 30 funções, priorizando:
-- Agent lifecycle: `heartbeat`, `poll-jobs`, `submit-job-result`, `enroll-agent`
-- Telemetry: `submit-system-metrics`, `submit-software-inventory`
-- Security: `scan-vulnerabilities`, `send-security-alert`
-- Admin: `admin-create-user`, `create-job`
-
-### 6. Infraestrutura (Fase 3)
-
-- Dead-letter queue: tabela `dead_letter_jobs` + lógica em `process-failed-jobs`
-- Rate limiting: integrar `checkRateLimit` no `serveTenant` como opt-in
-- Cache: tabela `kv_cache` + helpers `cacheGet/cacheSet`
-- Feature flags: tabela `feature_flags` + helper `isFeatureEnabled`
-- Particionamento: `agent_system_metrics`, `audit_logs`, `job_executions`
+4. Adicionar validação Zod
+5. Funções >400 linhas: modularizar (`index.ts` + módulos)
 
 ---
 
-## Ordem de Execução Recomendada
+## 2. Testes de Integração (30 funções críticas)
 
-1. **build-agent-exe** — única função B1 pendente
-2. **Eliminação `as any` batch 1** — `src/hooks/` (maior impacto)
-3. **AI Router consolidação real** — 16 → 1 função
-4. **Batches B3-B8** — migração edge functions
-5. **Eliminação `as any` batches 2-8**
-6. **Testes de integração**
-7. **Infraestrutura** (DLQ, rate limit, cache, flags)
+Criar `supabase/functions/__tests__/` com testes Deno para:
+
+**Tier 1 — Agent lifecycle (HMAC):**
+- `heartbeat`, `poll-jobs`, `submit-job-result`, `enroll-agent`
+
+**Tier 2 — Telemetria:**
+- `submit-system-metrics`, `submit-software-inventory`, `submit-web-activity`
+
+**Tier 3 — Security/Admin:**
+- `admin-create-user`, `create-job`, `generate-enrollment-key`
+- `scan-vulnerabilities`, `block-website`
+
+**Tier 4 — Auth:**
+- `fido2-register`, `fido2-authenticate`, `change-password`
+
+**Tier 5 — Automação:**
+- `evaluate-automation-rules`, `check-production-health`
+
+**Padrão de teste:**
+- Mock do Supabase client
+- Testar caminho feliz + erros de auth/validação
+- Verificar tenant isolation
+
+---
+
+## 3. Infraestrutura (Fase 3)
+
+### 3.1 Dead-Letter Queue
+- Migração SQL: criar tabela `dead_letter_jobs`
+- Lógica em `process-failed-jobs`: após N falhas → mover para DLQ
+- Endpoint admin para reprocessamento via `dlq-action` (já existe parcialmente)
+
+### 3.2 Rate Limiting
+- Integrar `checkRateLimit` como opção no `serveTenant`
+- Configurável por tenant via tabela existente
+
+### 3.3 Cache KV
+- Migração SQL: tabela `kv_cache` (key, value JSONB, expires_at)
+- Helpers `cacheGet`/`cacheSet` em `_shared/kv-cache.ts`
+
+### 3.4 Feature Flags
+- Migração SQL: tabela `feature_flags` (name, enabled, rollout_pct, metadata)
+- Helper `isFeatureEnabled(supabase, tenantId, flagName)`
+
+### 3.5 Particionamento
+- `agent_system_metrics` por mês
+- `audit_logs` por mês
+- Cron para criação automática de partições futuras
+
+---
+
+## Ordem de Execução
+
+| Step | Tarefa | Estimativa |
+|------|--------|------------|
+| 1 | Migrar B3 (relatórios: `generate-compliance-report`, `generate-security-report`, `calculate-risk-score`, `export-evidence-bundle`) | 3h |
+| 2 | Migrar B7-B8 restantes (`health`, `translate-cve`, `sync-blocked-websites`, `track-installation-event`, ~5 funções diversas) | 2h |
+| 3 | Testes de integração Tier 1-2 (agent lifecycle + telemetria) | 3h |
+| 4 | Testes de integração Tier 3-5 (admin + auth + automação) | 3h |
+| 5 | Infraestrutura: DLQ + Rate limiting | 3h |
+| 6 | Infraestrutura: Cache KV + Feature flags | 2h |
+| 7 | Infraestrutura: Particionamento | 2h |
+| **Total** | | **18h** |
+
+## Critérios de Aceite
+
+- Zero `Deno.serve` fora de HMAC, cron/interno e webhooks com raw body
+- 30 funções críticas com testes de integração
+- DLQ, rate limiting, cache e feature flags operacionais
+- Particionamento ativo em tabelas de alta volumetria
+- Build TypeScript limpo
 
