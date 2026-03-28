@@ -69,7 +69,7 @@ describe('useAuth', () => {
     const { toast } = await import('@/hooks/use-toast');
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
       data: { session: null },
-      error: { message: 'issued in the future 1000000 999000 998000' } as unknown,
+      error: { message: 'issued in the future 1000000 999000 998000' } as any,
     });
     vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((cb) => {
       setTimeout(() => cb('INITIAL_SESSION', null), 0);
@@ -97,7 +97,7 @@ describe('useAuth', () => {
   it('should refresh token when expiring soon', async () => {
     const session = { user: { id: 'u1' }, expires_at: Math.floor(Date.now() / 1000) + 200, access_token: 'x', refresh_token: 'x', expires_in: 200, token_type: 'bearer' } as any;
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
-      data: { session: session as unknown }, error: null,
+      data: { session: session as any }, error: null,
     });
     vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((cb) => {
       setTimeout(() => cb('SIGNED_IN', session), 0);
