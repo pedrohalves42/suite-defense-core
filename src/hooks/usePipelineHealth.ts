@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export type PipelineSignalKey = 'heartbeats' | 'jobs' | 'web_activity' | 'dns_policy';
 export type PipelineFreshnessStatus = 'fresh' | 'stale' | 'critical' | 'disabled' | 'no_data' | 'unknown';

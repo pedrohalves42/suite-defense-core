@@ -23,7 +23,7 @@ interface SubscriptionData {
 }
 
 export const useSubscription = () => {
-  const adaptiveInterval = useAdaptivePolling(5);
+  const adaptiveInterval = useAdaptivePolling(5_000);
   const { user } = useAuth();
 
   const { data: subscription, isLoading, refetch } = useQuery<SubscriptionData>({
