@@ -114,7 +114,7 @@ async function collectTrustData(tenantId: string, startDate: Date, endDate: Date
   if (compliance?.category_scores && typeof compliance.category_scores === 'object') {
     const sd = compliance.category_scores as Record<string, unknown>;
     Object.entries(sd).forEach(([name, val]) => {
-      const score = typeof val === 'number' ? val : (val as any)?.score ?? 0;
+      const score = typeof val === 'number' ? val : (val as Record<string, unknown>)?.score ?? 0;
       categories.push({ name, score });
     });
   }
