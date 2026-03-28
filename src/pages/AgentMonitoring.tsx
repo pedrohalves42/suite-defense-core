@@ -68,7 +68,7 @@ const AgentMonitoring = () => {
       
       if (error) throw error;
       // RPC retorna jsonb objects com nomes de campos corretos, ordenar por enrolled_at
-      return ((data || []) as Array<Record<string, unknown>>)
+      return ((data || []) as any[])
         .map((agent: any) => ({
           id: agent.id,
           agent_name: agent.agent_name,
@@ -686,7 +686,7 @@ const AgentMonitoring = () => {
                     border: '1px solid hsl(var(--border))', 
                     borderRadius: '6px' 
                   }}
-                  formatter={(value: Record<string, unknown>) => [`${value}%`, 'Uptime']}
+                  formatter={(value: any) => [`${value}%`, 'Uptime']}
                 />
                 <Bar dataKey="uptime" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
               </BarChart>

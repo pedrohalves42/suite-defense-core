@@ -31,10 +31,10 @@ export default function AgentGroups() {
   
   // Build policy counts per group
   const policyCountsByGroup = groupPolicies.reduce((acc, gp) => {
-    const groupId = (gp as Record<string, unknown>).agent_groups?.id || gp.group_id;
+    const groupId = (gp as any).agent_groups?.id || gp.group_id;
     acc[groupId] = acc[groupId] || { count: 0, names: [] };
     acc[groupId].count++;
-    const policyName = (gp as Record<string, unknown>).security_policies?.name;
+    const policyName = (gp as any).security_policies?.name;
     if (policyName) acc[groupId].names.push(policyName);
     return acc;
   }, {} as Record<string, { count: number; names: string[] }>);
@@ -66,7 +66,7 @@ export default function AgentGroups() {
     const newGroup = await createGroup.mutateAsync({ name: groupName, description: groupDescription || undefined });
     // If agents were selected, add them to the new group
     if (createSelectedAgentIds.length > 0 && newGroup?.id) {
-      const tenantId = (newGroup as Record<string, unknown>).tenant_id;
+      const tenantId = (newGroup as any).tenant_id;
       const inserts = createSelectedAgentIds.map(agent_id => ({ agent_id, group_id: newGroup.id, tenant_id: tenantId }));
       await supabase.from('agents_groups').insert(inserts);
     }

@@ -7,7 +7,7 @@ import { TenantId } from '../../../../domain/value-objects/TenantId';
  */
 export class ProcessSnapshotMapper {
   static toDomain(row: any): ProcessSnapshot {
-    const processes: ProcessEntry[] = (row.processes || []).map((p: Record<string, unknown>) => ({
+    const processes: ProcessEntry[] = (row.processes || []).map((p: any) => ({
       pid: p.pid,
       name: p.name,
       cpuPercent: p.cpu_percent ?? 0,
@@ -17,7 +17,7 @@ export class ProcessSnapshotMapper {
       startTime: p.start_time ? new Date(p.start_time) : undefined,
     }));
 
-    const services: ServiceEntry[] = (row.services || []).map((s: Record<string, unknown>) => ({
+    const services: ServiceEntry[] = (row.services || []).map((s: any) => ({
       name: s.name,
       displayName: s.display_name ?? s.name,
       status: s.status,
@@ -25,7 +25,7 @@ export class ProcessSnapshotMapper {
       description: s.description,
     }));
 
-    const newProcesses: ProcessEntry[] = (row.new_processes || []).map((p: Record<string, unknown>) => ({
+    const newProcesses: ProcessEntry[] = (row.new_processes || []).map((p: any) => ({
       pid: p.pid,
       name: p.name,
       cpuPercent: p.cpu_percent ?? 0,
@@ -34,7 +34,7 @@ export class ProcessSnapshotMapper {
       commandLine: p.command_line,
     }));
 
-    const suspiciousProcesses: ProcessEntry[] = (row.suspicious_processes || []).map((p: Record<string, unknown>) => ({
+    const suspiciousProcesses: ProcessEntry[] = (row.suspicious_processes || []).map((p: any) => ({
       pid: p.pid,
       name: p.name,
       cpuPercent: p.cpu_percent ?? 0,
