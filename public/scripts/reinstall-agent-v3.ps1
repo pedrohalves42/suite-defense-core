@@ -216,5 +216,5 @@ Write-Host ""
 Write-Host "SUPORTE:" -ForegroundColor Yellow
 Write-Host "  Se o agente nao aparecer online apos 5 minutos:" -ForegroundColor White
 Write-Host "  1. Execute: Get-Content '$installPath\agent.log' -Tail 50" -ForegroundColor Cyan
-Write-Host "  2. Execute: irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/get-diagnostic-script | iex" -ForegroundColor Cyan
+Write-Host "  2. Execute: Invoke-WebRequest -Uri 'https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/get-diagnostic-script' -OutFile '$env:TEMP\diag.ps1'; & '$env:TEMP\diag.ps1'" -ForegroundColor Cyan
 Write-Host ""
