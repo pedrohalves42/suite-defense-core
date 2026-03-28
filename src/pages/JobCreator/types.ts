@@ -14,7 +14,7 @@ export interface Job {
   status: string;
   created_at: string;
   approved: boolean;
-  payload: Record<string, unknown>;
+  payload: unknown;
   scheduled_at?: string | null;
   is_recurring?: boolean;
   recurrence_pattern?: string | null;
