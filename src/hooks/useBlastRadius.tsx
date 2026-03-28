@@ -61,7 +61,7 @@ export const useCheckBlastRadius = () => {
       }
 
       const { data, error } = await supabase
-        .rpc('check_blast_radius' as any, {
+        .rpc('check_blast_radius' as never, {
           p_tenant_id: tenant.id,
           p_action_type: actionType,
           p_affected_count: affectedCount
