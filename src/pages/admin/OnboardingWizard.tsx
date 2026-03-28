@@ -108,7 +108,7 @@ const OnboardingWizard = () => {
       try {
         const fiveMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString(); // 30min threshold
         const { data } = await supabase
-          .from('agents' as never)
+          .from('agents' )
           .select('id')
           .eq('tenant_id', tenant)
           .gte('last_seen', fiveMinAgo)

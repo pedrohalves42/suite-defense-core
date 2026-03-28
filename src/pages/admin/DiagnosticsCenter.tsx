@@ -147,7 +147,7 @@ export default function DiagnosticsCenter() {
     queryFn: async () => {
       if (!tenant?.id) return [];
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data, error } = await (supabase as never)
+      const { data, error } = await (supabase )
         .from('jobs')
         .select('agent_name')
         .eq('tenant_id', tenant.id)

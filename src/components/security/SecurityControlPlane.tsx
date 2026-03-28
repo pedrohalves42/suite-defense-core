@@ -88,7 +88,7 @@ export function SecurityControlPlane() {
         supabase.from('jobs').select('*', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id).eq('status', 'failed').gte('created_at', last1h),
         // V-1094 FIX: Add tenant_id filter to prevent cross-tenant data leak
-        (supabase.from('rls_test_results').select('*', { count: 'exact', head: true }) as never)
+        (supabase.from('rls_test_results').select('*', { count: 'exact', head: true }) )
           .eq('tenant_id', tenant.id).eq('passed', false).gte('tested_at', last24h),
         supabase.from('system_global_state').select('mode')
           .order('triggered_at', { ascending: false }).limit(1).maybeSingle()

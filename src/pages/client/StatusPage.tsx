@@ -16,7 +16,7 @@ const StatusPage = () => {
     queryFn: async () => {
       if (!tenant) return [];
       const { data, error } = await supabase
-        .from('agents' as never)
+        .from('agents' )
         .select('id, hostname, status, last_seen, agent_version')
         .eq('tenant_id', tenant)
         .eq('is_archived', false)

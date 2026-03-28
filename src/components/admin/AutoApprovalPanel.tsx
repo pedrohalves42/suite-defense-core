@@ -84,7 +84,7 @@ export function AutoApprovalPanel() {
     mutationFn: async ({ id, requires_approval }: { id: string; requires_approval: boolean }) => {
       // V-1062 FIX: Add tenant_id filter
       const { error } = await (supabase
-        .from('ai_action_configs') as never)
+        .from('ai_action_configs')
         .update({ requires_approval })
         .eq('id', id)
         .eq('tenant_id', tenant?.id);

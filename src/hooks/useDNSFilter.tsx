@@ -216,7 +216,7 @@ export function useDNSFilter() {
 
       const { data, error } = await (supabase
         .from('jobs')
-        .insert(jobs as never) as never)
+        .insert(jobs as never) )
         .select('id');
 
       if (error) throw error;
@@ -289,7 +289,7 @@ export function useDNSFilter() {
 
       const { data, error } = await supabase
         .from('jobs')
-        .insert(jobs as never)
+        .insert(jobs )
         .select('id');
 
       if (error) throw error;

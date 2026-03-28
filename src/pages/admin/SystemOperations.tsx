@@ -78,7 +78,7 @@ export default function SystemOperations() {
     queryKey: ['system-operations-summary', tenant?.id],
     queryFn: async () => {
       // Using type assertion until types are regenerated after migration
-      const { data, error } = await (supabase as never)
+      const { data, error } = await (supabase )
         .from('v_system_operations_summary')
         .select('*')
         .single();

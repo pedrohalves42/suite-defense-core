@@ -86,7 +86,7 @@ export default function IdentitySecurity() {
       // V-1066 FIX: Add tenant_id filter
       const { error } = await supabase
         .from("credential_leaks")
-        .update({ status: "resolved", resolved_at: new Date().toISOString() } as never)
+        .update({ status: "resolved", resolved_at: new Date().toISOString() } )
         .eq("id", id)
         .eq("tenant_id", tenant.id);
       if (error) throw error;

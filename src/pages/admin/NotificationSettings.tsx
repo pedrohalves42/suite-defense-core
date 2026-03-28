@@ -347,7 +347,7 @@ export default function NotificationSettings() {
         // V-1067 FIX: Add tenant_id filter
         const { error } = await supabase
           .from('notification_preferences')
-          .update(updates as never)
+          .update(updates )
           .eq('id', existing.id)
           .eq('tenant_id', tenantId);
 

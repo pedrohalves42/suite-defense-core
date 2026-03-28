@@ -43,7 +43,7 @@ function usePendingCriticalApprovals() {
       if (!tenant?.id) return [];
 
       const { data, error } = await supabase
-        .from('v_pending_critical_approvals' as never)
+        .from('v_pending_critical_approvals' )
         .select('*')
         .order('created_at', { ascending: false })
         .limit(20);
