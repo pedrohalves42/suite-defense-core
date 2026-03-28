@@ -1,12 +1,26 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { requireEnv } from '../_shared/env.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const FleetReinstallSchema = z.object({
+  agent_ids: z.array(z.string().uuid()).optional(),
+  action: z.enum(['generate-key', 'reinstall']).optional(),
+});
 
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, userId, requestId, body } = ctx;
   const supabaseUrl = requireEnv('SUPABASE_URL');
 
-  const { agent_ids, action } = body;
+  const parsed = FleetReinstallSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const { agent_ids, action } = parsed.data;
 
   // Verify user has admin/operator role for this tenant
   const { data: userRole } = await supabase
