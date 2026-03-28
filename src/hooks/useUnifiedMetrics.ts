@@ -23,7 +23,6 @@ import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 // === Modelo de custo REALISTA para PMEs brasileiras ===
 // Valores conservadores baseados em custo médio de suporte técnico local
 export const COST_MODEL = {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   security_event_critical: 500,   // Incidente crítico real (ransomware, breach)
   security_event_high: 200,       // Ameaça alta real
   security_event_medium: 60,      // Ameaça média

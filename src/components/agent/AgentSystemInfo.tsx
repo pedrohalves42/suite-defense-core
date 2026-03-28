@@ -43,7 +43,7 @@ interface AgentInfo {
 }
 
 function InfoRow({
-  const adaptiveInterval = useAdaptivePolling(300_000); icon: Icon, label, value, badge }: { 
+  icon: Icon, label, value, badge }: { 
   icon: typeof Monitor; 
   label: string; 
   value: string | null | undefined;

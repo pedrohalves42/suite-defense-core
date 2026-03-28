@@ -52,7 +52,7 @@ const EVENT_LABELS: Record<string, { title: string; explanation: string; icon: s
 };
 
 function getEventInfo(raw: string): {
-  const adaptiveInterval = useAdaptivePolling(300_000); title: string; explanation: string; icon: string } {
+  title: string; explanation: string; icon: string } {
   if (EVENT_LABELS[raw]) return EVENT_LABELS[raw];
   for (const [key, info] of Object.entries(EVENT_LABELS)) {
     if (raw.toLowerCase().includes(key.toLowerCase())) return info;
