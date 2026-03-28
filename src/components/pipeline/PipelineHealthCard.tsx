@@ -75,7 +75,7 @@ export function PipelineHealthCard({
 }) {
   const { data, isLoading, isError, error } = usePipelineHealth(tenantId, {
     enabled: !tenantLoading && !!tenantId,
-    refetchIntervalMs: 600_000,
+    refetchIntervalMs: 60000,
   });
 
   const overall = data?.overall_status ?? 'unknown';

@@ -151,8 +151,7 @@ describe('LightModeConfig', () => {
     config.activate('test', ['chrome']);
 
     // Manually set expires_at to the past
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (config as any).props.expiresAt = new Date(Date.now() - 1000);
+    (config as unknown).props.expiresAt = new Date(Date.now() - 1000);
 
     const expired = config.checkExpiration();
     expect(expired).toBe(true);

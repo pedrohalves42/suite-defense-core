@@ -3,7 +3,7 @@ import { AgentId } from '@/domain/value-objects/AgentId';
 import { TenantId } from '@/domain/value-objects/TenantId';
 
 export class UsbDeviceMapper {
-  static toDomain(row: Record<string, any>): UsbDevice {
+  static toDomain(row: Record<string, unknown>): UsbDevice {
     return UsbDevice.reconstitute({
       id: row.id as string,
       agentId: AgentId.create(row.agent_id as string).value,

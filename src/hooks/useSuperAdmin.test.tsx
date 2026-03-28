@@ -55,7 +55,7 @@ describe('useSuperAdmin', () => {
   it('should return true when user is super_admin', async () => {
     const { useAuth } = await import('./useAuth')
     vi.mocked(useAuth).mockReturnValue({
-      user: mockUser as any,
+      user: mockUser as unknown,
       loading: false,
     })
 
@@ -80,7 +80,7 @@ describe('useSuperAdmin', () => {
   it('should return false when user is not super_admin', async () => {
     const { useAuth } = await import('./useAuth')
     vi.mocked(useAuth).mockReturnValue({
-      user: mockUser as any,
+      user: mockUser as unknown,
       loading: false,
     })
 
@@ -102,7 +102,7 @@ describe('useSuperAdmin', () => {
   it('should handle RPC errors and set error state', async () => {
     const { useAuth } = await import('./useAuth')
     vi.mocked(useAuth).mockReturnValue({
-      user: mockUser as any,
+      user: mockUser as unknown,
       loading: false,
     })
 
@@ -136,7 +136,7 @@ describe('useSuperAdmin', () => {
   it('should handle null RPC response as false', async () => {
     const { useAuth } = await import('./useAuth')
     vi.mocked(useAuth).mockReturnValue({
-      user: mockUser as any,
+      user: mockUser as unknown,
       loading: false,
     })
 
@@ -157,7 +157,7 @@ describe('useSuperAdmin', () => {
   it('should handle race conditions with isCancelled flag', async () => {
     const { useAuth } = await import('./useAuth')
     vi.mocked(useAuth).mockReturnValue({
-      user: mockUser as any,
+      user: mockUser as unknown,
       loading: false,
     })
 
@@ -182,7 +182,7 @@ describe('useSuperAdmin', () => {
     
     const mockUseAuth = vi.mocked(useAuth)
     mockUseAuth.mockReturnValue({
-      user: mockUser as any,
+      user: mockUser as unknown,
       loading: false,
     })
 
@@ -200,7 +200,7 @@ describe('useSuperAdmin', () => {
     // Simulate user change
     const newUser = { ...mockUser, id: 'new-user-456' }
     mockUseAuth.mockReturnValue({
-      user: newUser as any,
+      user: newUser as unknown,
       loading: false,
     })
 

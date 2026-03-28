@@ -37,7 +37,7 @@ describe('Job Entity', () => {
       const result = Job.create({
         agentId: AgentId.generate(),
         tenantId: makeTenantId(),
-        type: 'invalid' as never,
+        type: 'invalid' as unknown,
       });
       expect(result.isSuccess).toBe(false);
     });
