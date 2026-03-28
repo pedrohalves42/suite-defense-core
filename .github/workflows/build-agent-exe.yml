@@ -4,10 +4,6 @@ name: Build Agent EXE
 on:
   repository_dispatch:
     types: [build-agent-exe]
-  workflow_run:  # ✅ FASE 6: RETRY AUTOMÁTICO
-    workflows: ["Build Agent EXE"]
-    types: [completed]
-    branches: [main]
 
 jobs:
   build:
