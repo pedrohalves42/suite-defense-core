@@ -130,8 +130,8 @@ export default function Signup() {
     if (error) {
       logger.error('[Signup Error]', {
         message: error.message,
-        status: (error as Record<string, unknown>).status,
-        code: (error as Record<string, unknown>).code,
+        status: (error as unknown as Record<string, unknown>).status,
+        code: (error as unknown as Record<string, unknown>).code,
         details: error
       });
       logger.error('Signup failed', { email: validation.data.email, error: error.message });
